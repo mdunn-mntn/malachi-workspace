@@ -560,7 +560,16 @@ track), `audi_1089_audit_map.md` (every claim → query → expected number). Sp
 `ddp_mm_winners_imp` `tv_cpm` = $0.50 whenever ANY paid vendor wins, $0 only when none does — free
 co-presence is IGNORED (268.9M June imps billed $0.50 despite a free log co-winning). The meter does NOT preempt.
 
-**AUGMENTOR CORRECTION (user challenge — supersedes the §4d13 same-day $273.7K):** augmentor (DS30) is the
+**REVERTED 2026-07-21 — the DOMAIN answer is SAME-DATE cohold ($274.6K), not the prior-day $200.4K below.**
+The prior-day adjustment assumed same-day augmentor cohold was tautological; the IP-grain check disproved it
+(same-DOMAIN 52.9% vs any-domain 88.5% — a tautology would be ~88%). So the same-date cohold is a genuine
+same-visit overlap. Correct domain measure = "did a free log have the same exact (ip,domain,date)?" = q3c /
+`q3g_domain_sameday_cohold.sql` = **$274.6K** (33Across $223.3K). Workbook sheet 2 now shows DOMAIN (same-visit)
+$274.6K + VERTICAL $412.4K; the "Augmentor Fix / Why $200K not $274K" sheet was REMOVED (user: confusing). The
+prior-day $200.4K / $612K residual in the paragraph below is kept only as history. The VERTICAL $412.4K and the
+CATEGORY-grain paragraph further down still stand.
+
+**AUGMENTOR CORRECTION (SUPERSEDED — prior-day detour, see reversal above):** augmentor (DS30) is the
 SSP bid stream, so it necessarily logs an IP the day it's bid on. A same-day free-cohold (q3c, the basis of
 $273.7K) is therefore CIRCULAR for augmentor. Fair test (`q3e_v2_free_prior_lookback.sql`, 37d scan / 7d
 measure = full 30d lookback, ALL IPs): did a free log have the (ip×domain) on a PRIOR day within the window

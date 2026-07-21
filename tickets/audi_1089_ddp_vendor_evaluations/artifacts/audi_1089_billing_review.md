@@ -15,9 +15,9 @@ Windows (identical everywhere): delivery/uniqueness = 30-day svs `dt 2026-06-02.
 > (guid_log DS23, augmentor DS30) also capture — so there's nothing to recover."
 
 **The data says the opposite.** The meter does **not** preempt. It pays $0.50 CPM on households our own
-free logs already had — **~$200K/yr** at the exact-domain grain (a conservative floor), and **~$412K/yr**
-measured the way MM actually bids (a free log put the IP in the same vertical, on any website). That's
-**about half the metered bill**, for data we already get free. It's visible several independent ways, each
+free logs already had — **~$275K/yr** where a free log delivered the exact same (ip × domain × date)
+visit, and **~$412K/yr** measured the way MM actually bids (a free log put the IP in the same vertical, on
+any website). That's **about half the metered bill**, for data we already get free. It's visible several independent ways, each
 reproducible by you. That's the spine of this review. Everything after it is: *how I know each vendor's
 fair value, and what we should actually pay.*
 
@@ -71,7 +71,13 @@ Distinct (IP × domain × date), 30 days, usable rows only:
 
 So a **majority** of every billable signal is already ours at $0. *(deck_d1 / q3c)*
 
-### 3.2 The meter pays vendors for that free-covered signal anyway — ~$200K/yr (fair)
+### 3.2 The meter pays vendors for that free-covered signal anyway — ~$275K domain / ~$412K vertical
+
+> **UPDATED 2026-07-21 — the authoritative numbers are in the workbook (Drive `Tickets/AUDI-1089`), sheet 2.**
+> The domain measure is the **same-date cohold** (did a free log have the exact same (ip×domain×date)?) =
+> **$274.6K**, plus the **vertical** (targeting) measure = **$412.4K**. The "prior-day $200.4K" detail below
+> is SUPERSEDED — it was solving a non-problem (the IP-grain check proved the same-day cohold is genuine, not
+> an augmentor artifact). Read the workbook, not the prior-day table below.
 Three independent proofs, each runnable by you:
 
 **Proof 1 — the billing table itself (`gold.reporting.ddp_mm_winners_imp_202606`, verified live).** The
