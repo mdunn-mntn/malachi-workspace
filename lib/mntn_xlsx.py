@@ -42,7 +42,6 @@ Notes
 """
 from __future__ import annotations
 
-import math
 import os
 from dataclasses import dataclass
 
@@ -445,17 +444,17 @@ class MntnWorkbook:
         ws.merge_cells(f"A1:{wide}3")
         if self.logo_path:
             try:
-                from io import BytesIO
                 from PIL import Image as PILImage
                 target_h = 44  # px; fits inside the 3-row band with breathing room
                 lg = PILImage.open(self.logo_path).convert("RGBA")
                 w = max(1, int(lg.width * target_h / lg.height))
-                buf = BytesIO()
-                lg.resize((w, target_h)).save(buf, format="PNG")
-                buf.seek(0)
-                self._logo_buf = buf  # keep the buffer alive until wb.save()
-                img = XLImage(buf)
-                ws.add_image(img, "A2")  # row 2 -> vertically centered in the band
+                # Render the resized logo to a PERSISTENT temp file, not a BytesIO: openpyxl re-reads the
+                # image ref on EVERY wb.save(), so save_local()+save_drive() would exhaust a one-shot
+                # buffer ("I/O operation on closed file"). A file path is re-readable across saves.
+                render_path = os.path.join(_ASSET_DIR, "_logo_render.png")
+                lg.resize((w, target_h)).save(render_path, format="PNG")
+                self._logo_render = render_path  # keep a ref; the file persists (gitignored)
+                ws.add_image(XLImage(render_path), "A2")  # row 2 -> vertically centered in the band
             except Exception:
                 self.logo_path = None
         if not self.logo_path:
