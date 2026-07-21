@@ -1277,6 +1277,11 @@ How an MM/CRM impression's credit is actually assigned (authoritative, from the 
 - **Interest-segment dilution.** Many campaigns mix MM + interest segments (LiveRamp/ShareThis). When an
   interest segment also matches the IP, it takes a slot first (e.g. LiveRamp 50% + MM 50%), then the MM 50%
   is split 1/N across the MM vendors — further shrinking each MM vendor's share.
+- **Sherwin's guid-causality caveat — DON'T over-weight (per Malachi 2026-07-21):** Sherwin floated that guid
+  coverage might be vendor-caused (vendor → impression → advertiser-site visit → guid). But guid_log is MNTN's
+  own pixel and those visits are overwhelmingly the household's own behavior (organic/direct), not
+  vendor-manufactured — a speculative edge case. Keep free logs = **guid + augmentor together**; no
+  augmentor-only carve-out. (augmentor is the bid stream = has the IP regardless, so it's clean anyway.)
 - **OWNERSHIP: no one owns the crediting logic.** BAE (Sherwin/Maya, under Kristen Colley) just execute the
   rules they were handed when MM/targeted_signal was introduced; they own steps 6-8 (reporting/audit/email)
   and inherited 1-5. **Andy Everson owns the vendor relationships/contracts/terms** (and has the flat-fee

@@ -620,10 +620,11 @@ Maya Triman present the 8-step pipeline) and `meetings/audi_1089_04_ddp_creditin
 - **So our ~$275K (same-date) / $412K (vertical) is the INCREMENTAL saving from FULL preemption** (pay paid
   vendors $0 when a free log covers the imp), on top of the partial preemption already in place. Sherwin
   agreed the direction is valid ("we're onto something").
-- **Sherwin's causality caveat (matters):** guid-log (23) coverage may be VENDOR-CAUSED (vendor introduced the
-  IP → we bid → guid captured the resulting visit) → preempting on guid over-credits free; augmentor (30) is
-  the bid stream (has the IP regardless) → clean. **Defensible full-preemption is on AUGMENTOR overlap; guid
-  overlap is debatable** — a refinement for the next analysis pass.
+- **Sherwin's guid-causality caveat — DON'T over-weight (Malachi, 2026-07-21):** Sherwin floated that guid
+  coverage might be vendor-caused (vendor → impression → advertiser-site visit → guid). But guid_log is MNTN's
+  own pixel; those visits are overwhelmingly the household's own behavior (organic/direct), not
+  vendor-manufactured — a speculative edge case. **Keep free logs = guid + augmentor together; no
+  augmentor-only carve-out.** The $275K/$412K numbers stand.
 - **OWNERSHIP: nobody owns the credit logic.** BAE (Sherwin/Maya under Kristen) execute MM-launch instructions;
   **Andy Everson owns vendor contracts/terms + the flat-fee $ (BAE has no visibility)**; a change needs Andy's
   blessing + contract check; Mike Doltz/Kristen can formalize review time.
