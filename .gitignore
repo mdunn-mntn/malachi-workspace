@@ -81,3 +81,6 @@ _temporary/
 
 # Vendored Todoist MCP tool — kept on disk for the MCP server, not part of the analytics repo
 todoist-mcp-transfer/
+
+# Licensed MNTN brand kit (paid Neue Haas fonts, logos) — local only, never committed
+documentation/mntn_assets/

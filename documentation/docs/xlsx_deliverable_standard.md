@@ -77,25 +77,32 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 
 ## 3. Visual system (locked)
 
-### Palette — `BRAND` dict in `lib/mntn_xlsx.py`
-| Token | Hex | Use |
-|-------|-----|-----|
-| `INK` | `#10263B` | Cover band background, deepest text |
-| `PRIMARY` | `#1A3C5E` | Table header fills, finding titles (**MNTN identity navy**) |
-| `ACCENT` | `#1F8FE5` | Cover rule, active tab, key numbers, contents links |
-| `BAND` | `#F1F5F8` | Zebra band on data rows |
-| `PAPER` | `#FBFCFD` | Off-white sheet fill (never pure white) |
-| `GREY` / `MUTE` | `#667085` / `#98A2B3` | Method subtitles / footnotes |
-| `LINE` | `#D9E1E8` | Thin cell borders |
-| `POS` / `NEG` / `WARN` | `#1B9E77` / `#D1495B` / `#E9A23B` | RAG traffic-lights & deltas |
+### Palette — `BRAND` dict in `lib/mntn_xlsx.py` (official MNTN brand, brand.mountain.com 2025)
+| Token | Hex | MNTN name | Use |
+|-------|-----|-----------|-----|
+| `INK` | `#191E28` | Slate Grey | Cover band bg, footer, dark copy |
+| `PRIMARY` | `#262E3C` | Slate Grey | Table header fills, finding titles, row labels |
+| `ACCENT` | `#1AC9AA` | Mountain Green | Cover rule, key numbers, takeaway ticks, positive heat |
+| `LINK` | `#0AABC5` | Mountain Blue | Contents hyperlinks |
+| `BAND` | `#EEF2F6` | — | Zebra band on data rows |
+| `PAPER` | `#F6F6F6` | Glacier White | Off-white fill / neutral heat start |
+| `GREY` / `MUTE` | `#5C6675` / `#98A2B3` | Slate | Method subtitles / footnotes |
+| `LINE` | `#DCE3EA` | — | Thin cell borders |
+| `POS` / `NEG` / `WARN` | `#1AC9AA` / `#D1495B` / `#E9A23B` | Mtn Green / — / — | RAG traffic-lights & deltas |
 
-**Swapping in official MNTN brand (zero code change):**
-- **Logo** — drop a transparent PNG (white/reversed reads best on the navy band) at
-  `lib/assets/mntn_logo.png`. Every cover uses it automatically in place of the "MNTN" wordmark.
-- **Colors** — drop official hexes in `lib/assets/brand.json` (e.g. `{"PRIMARY": "…", "ACCENT": "…"}`);
-  they override the `BRAND` defaults. Any subset is fine. See `lib/assets/README.md`.
-- (Both asset files are gitignored. Until they're provided, the palette above is built on the navy
-  already used across our deliverables.)
+The **structure is neutral (Slate Grey), the brand brights are accents** — the logo, the green rule, the
+green key numbers/heat, the blue links. That's the sophisticated read of a bright brand: it keeps wide
+data tables readable while still being unmistakably MNTN. (MNTN has no brand red, so `NEG` is a reserved
+tasteful red for genuinely-bad values only.) Other official brights available for charts: Mountain Blue
+`#26D1EA`, Mountain Green `#22E5BE`, Pacific Blue `#0853E6` / `#0E44BF`.
+
+**Brand assets (in place as of v2).** The official kit lives at `documentation/mntn_assets/` (gitignored —
+it holds paid Neue Haas fonts + logos, local only). The builder's logo is
+`lib/assets/mntn_logo.png` = the **Primary Horizontal Colored / White-wordmark** mark, which brand
+guidelines mandate for dark/image backgrounds (the cover band is Slate Grey). To override the palette
+without code, drop `lib/assets/brand.json` (e.g. `{"PRIMARY": "…", "ACCENT": "…"}`). See
+`lib/assets/README.md`. Logo rules honored: no drop-shadow marks (white-bg only), the "M" symbol is never
+split into a sub-brand.
 
 **Attribution** — the cover's *Prepared by* defaults to **`Malachi Dunn · Audience Intelligence`**
 (author + team). Override per-workbook with `owner=`. This is the deliberate exception to the
@@ -107,9 +114,12 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
   column** — a color-scale and a manual fill collide in Excel.
 
 ### Typography
-- **Arial** everywhere (it round-trips identically into Google Sheets; Calibri is Excel-only and gets
-  substituted). **Consolas/Menlo** for SQL.
-- Cover title 24 · finding title 15 bold navy · method subtitle 10 italic grey · header 11 bold white ·
+- **Inter** everywhere — the official MNTN body/UI font (open-license/OFL), and it renders natively in
+  Google Sheets, which is the actual delivery surface. **Consolas/Menlo** for SQL. Set `FONT_BODY =
+  "Arial"` in the module only if recipients open in desktop Excel without Inter installed and you need
+  guaranteed-identical column metrics. (Neue Haas Grotesk is the brand *headline* font but is paid/not in
+  Sheets, so we standardize on Inter for both.)
+- Cover title 24 · finding title 15 bold slate · method subtitle 10 italic grey · header 11 bold white ·
   body 10 · footnote 9 grey.
 
 ### Number formatting (auditable)
@@ -179,8 +189,10 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-21 · v2** — Official brand applied: real MNTN logo on the cover (Primary Horizontal
+  Colored/White), Slate Grey structure + Mountain Green/Blue accents from brand.mountain.com, **Inter**
+  font (installed locally; renders in Google Sheets). Licensed kit gitignored under
+  `documentation/mntn_assets/`. Fixed logo scaling (pre-resize via PIL→BytesIO).
 - **2026-07-21 · v1** — Initial standard + `lib/mntn_xlsx.py` (`MntnWorkbook`): branded cover with
   clickable contents, finding-led table sheets with heat + RAG, glossary/SQL/notes sheets, color-coded
-  tabs, locked palette/typography/naming/Drive structure. Sample at
-  `My Drive/Tickets/_FORMAT_SAMPLE/`. Built on the existing navy; official MNTN logo/hexes are a one-line
-  swap (`BRAND` + `logo_path`) once provided.
+  tabs, locked palette/typography/naming/Drive structure. Sample at `My Drive/Tickets/_FORMAT_SAMPLE/`.

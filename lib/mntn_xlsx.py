@@ -60,16 +60,18 @@ from openpyxl.worksheet.properties import PageSetupProperties
 # hexes when we have them; everything downstream re-colors automatically.
 # ---------------------------------------------------------------------------
 BRAND = {
-    "INK":     "10263B",  # deepest navy — cover band background
-    "PRIMARY": "1A3C5E",  # navy — table header fills, finding titles (MNTN identity navy)
-    "ACCENT":  "1F8FE5",  # azure pop — cover rule, active tab, key numbers (positive, not alarm)
-    "BAND":    "F1F5F8",  # zebra band on data rows (cool, near-white)
-    "PAPER":   "FBFCFD",  # off-white sheet fill (never pure white)
-    "GREY":    "667085",  # subtitles, methodology lines
+    # Official MNTN brand palette (brand.mountain.com, 2025 guidelines).
+    "INK":     "191E28",  # Slate Grey (deepest) — cover band bg, footer, brand copy on light
+    "PRIMARY": "262E3C",  # Slate Grey — table header fills, finding titles, row labels
+    "ACCENT":  "1AC9AA",  # Mountain Green (core brand color) — cover rule, key numbers, takeaway ticks
+    "LINK":    "0AABC5",  # Mountain Blue — hyperlinks (better small-text contrast than the green)
+    "BAND":    "EEF2F6",  # zebra band on data rows (cool slate tint)
+    "PAPER":   "F6F6F6",  # Glacier White — off-white fill / neutral heat start
+    "GREY":    "5C6675",  # subtitles, methodology lines (mid slate)
     "MUTE":    "98A2B3",  # footnotes, appendix tab color
-    "LINE":    "D9E1E8",  # thin cell borders / rules
-    "POS":     "1B9E77",  # good delta / RAG green
-    "NEG":     "D1495B",  # bad delta / RAG red (reserved — reads "bad" to execs)
+    "LINE":    "DCE3EA",  # thin cell borders / rules
+    "POS":     "1AC9AA",  # Mountain Green — good delta / RAG green
+    "NEG":     "D1495B",  # bad delta / RAG red (brand has no red; reserved — reads "bad" to execs)
     "WARN":    "E9A23B",  # caution / RAG amber
     "WHITE":   "FFFFFF",
 }
@@ -88,9 +90,10 @@ try:
 except Exception:
     pass  # malformed override never breaks a build; fall back to defaults
 
-# Typography. Arial round-trips identically into Google Sheets (Calibri is Excel-only and
-# gets substituted). Consolas/Menlo for SQL.
-FONT_BODY = "Arial"
+# Typography. Inter is the official MNTN body/UI font (open-license) and renders natively in Google
+# Sheets — the actual delivery surface. Set FONT_BODY = "Arial" if recipients open in desktop Excel
+# without Inter installed and you need guaranteed-identical metrics. Consolas/Menlo for SQL.
+FONT_BODY = "Inter"
 FONT_MONO = "Consolas"
 
 
@@ -393,10 +396,17 @@ class MntnWorkbook:
         ws.merge_cells(f"A1:{wide}3")
         if self.logo_path:
             try:
-                img = XLImage(self.logo_path)
-                img.height = min(img.height, 54)
-                img.width = int(img.width * (54 / max(img.height, 1))) if img.height else img.width
-                ws.add_image(img, "A1")
+                from io import BytesIO
+                from PIL import Image as PILImage
+                target_h = 44  # px; fits inside the 3-row band with breathing room
+                lg = PILImage.open(self.logo_path).convert("RGBA")
+                w = max(1, int(lg.width * target_h / lg.height))
+                buf = BytesIO()
+                lg.resize((w, target_h)).save(buf, format="PNG")
+                buf.seek(0)
+                self._logo_buf = buf  # keep the buffer alive until wb.save()
+                img = XLImage(buf)
+                ws.add_image(img, "A2")  # row 2 -> vertically centered in the band
             except Exception:
                 self.logo_path = None
         if not self.logo_path:
@@ -461,7 +471,7 @@ class MntnWorkbook:
         for sheet_name, desc, role in self._toc:
             link = ws.cell(row=r, column=1, value=sheet_name)
             link.hyperlink = Hyperlink(ref=f"A{r}", location=f"'{sheet_name}'!A1", display=sheet_name)
-            link.font = _font(10, bold=True, color=BRAND["ACCENT"], name=FONT_BODY)
+            link.font = _font(10, bold=True, color=BRAND["LINK"], name=FONT_BODY)
             link.alignment = _LEFT_MID
             ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
             d = ws.cell(row=r, column=2, value=desc)
