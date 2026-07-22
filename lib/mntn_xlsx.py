@@ -43,6 +43,7 @@ Notes
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 
 import numpy as np
@@ -65,7 +66,7 @@ BRAND = {
     "PRIMARY": "262E3C",  # Slate Grey — table header fills, finding titles, row labels
     "ACCENT":  "1AC9AA",  # Mountain Green (core brand color) — cover rule, key numbers, takeaway ticks
     "LINK":    "0AABC5",  # Mountain Blue — hyperlinks (better small-text contrast than the green)
-    "BAND":    "EEF2F6",  # zebra band on data rows (cool slate tint)
+    "BAND":    "E4F7F2",  # zebra band on data rows — light Mountain Green tint (brand, not grey)
     "PAPER":   "F6F6F6",  # Glacier White — off-white fill / neutral heat start
     "GREY":    "5C6675",  # subtitles, methodology lines (mid slate)
     "MUTE":    "98A2B3",  # footnotes, appendix tab color
@@ -131,6 +132,9 @@ TAB = {
 _THIN = Side(style="thin", color=BRAND["LINE"])
 _BORDER = Border(left=_THIN, right=_THIN, top=_THIN, bottom=_THIN)
 _NOBORDER = Border()
+# header cells get a thick Mountain Green underline — ties the slate header to the brand
+_HEADER_BORDER = Border(left=_THIN, right=_THIN, top=_THIN,
+                        bottom=Side(style="thick", color=BRAND["ACCENT"]))
 _CEN = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _CEN_FLAT = Alignment(horizontal="center", vertical="center")
 _CEN_WRAP = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -147,8 +151,18 @@ def _fill(hex_):
     return PatternFill("solid", fgColor=hex_)
 
 
+_DASH_RE = re.compile(r"\s*[—–]\s*")
+
+
+def _demdash(s):
+    """Replace em/en dashes with a spaced hyphen. People read '—' as AI-written, so no MNTN
+    deliverable should ship one. ASCII hyphens ('sub-vertical', '2026-07-21') are untouched."""
+    return _DASH_RE.sub(" - ", s) if isinstance(s, str) else s
+
+
 def _to_native(v):
-    """numpy/pandas -> json-native, NaN/NaT -> None so Excel shows a truly empty cell."""
+    """numpy/pandas -> json-native, NaN/NaT -> None so Excel shows a truly empty cell.
+    String cells are em-dash-sanitized on the way in."""
     if v is None:
         return None
     if isinstance(v, (np.integer,)):
@@ -162,7 +176,7 @@ def _to_native(v):
             return None
     except (TypeError, ValueError):
         pass
-    return v
+    return _demdash(v) if isinstance(v, str) else v
 
 
 class MntnWorkbook:
@@ -170,9 +184,9 @@ class MntnWorkbook:
 
     def __init__(self, title, ticket, subtitle="", period="", owner="Malachi Dunn · Audience Intelligence",
                  logo_path=None, generated=None, status="Final"):
-        self.title = title
+        self.title = _demdash(title)
         self.ticket = ticket.upper().strip()
-        self.subtitle = subtitle
+        self.subtitle = _demdash(subtitle)
         self.period = period
         self.owner = owner
         # explicit logo_path wins; else use the canonical asset if it's been dropped in
@@ -207,10 +221,10 @@ class MntnWorkbook:
 
     def _titleblock(self, ws, finding, method, first_col_span=6):
         """Finding-led title (states the finding) + grey italic methodology line."""
-        c = ws.cell(row=1, column=1, value=finding)
+        c = ws.cell(row=1, column=1, value=_demdash(finding))
         c.font = _font(15, bold=True, color=BRAND["PRIMARY"])
         if method:
-            m = ws.cell(row=2, column=1, value=method)
+            m = ws.cell(row=2, column=1, value=_demdash(method))
             m.font = _font(10, italic=True, color=BRAND["GREY"])
         # accent tick under the title
         ws.cell(row=3, column=1, value=None)
@@ -299,13 +313,13 @@ class MntnWorkbook:
         start = 4
         ncols = len(df.columns)
 
-        # header row
+        # header row (slate fill, white text, Mountain Green underline)
         for j, col in enumerate(df.columns, 1):
             c = ws.cell(row=start, column=j, value=str(col))
             c.font = _font(11, bold=True, color=BRAND["WHITE"])
             c.fill = _fill(BRAND["PRIMARY"])
             c.alignment = _CEN
-            c.border = _BORDER
+            c.border = _HEADER_BORDER
         ws.row_dimensions[start].height = 30
 
         # body
@@ -366,15 +380,15 @@ class MntnWorkbook:
         A row of ('', '') renders a blank spacer; a row of ('Header', '') renders a bold sub-head."""
         ws = self._new_sheet(name, "glossary")
         ws.cell(row=1, column=1, value=self.title).font = _font(15, bold=True, color=BRAND["PRIMARY"])
-        sub = f"{self.ticket}." + (f"  {intro}" if intro else "")
+        sub = f"{self.ticket}." + (f"  {_demdash(intro)}" if intro else "")
         ws.cell(row=2, column=1, value=sub).font = _font(10, italic=True, color=BRAND["GREY"])
         r = 4
         def_rows = []
         for k, v in rows:
-            kc = ws.cell(row=r, column=1, value=(k or None))
+            kc = ws.cell(row=r, column=1, value=(_demdash(k) or None))
             kc.font = _font(10, bold=True, color=BRAND["PRIMARY"] if v else BRAND["INK"])
             kc.alignment = _LEFT
-            vc = ws.cell(row=r, column=2, value=(v or None))
+            vc = ws.cell(row=r, column=2, value=(_demdash(v) or None))
             vc.alignment = _LEFT
             vc.font = _font(10)
             def_rows.append((r, v))
@@ -391,9 +405,9 @@ class MntnWorkbook:
         ws = self._new_sheet(name, "sql")
         ws.cell(row=1, column=1, value="Queries used (for validation)").font = _font(15, bold=True, color=BRAND["PRIMARY"])
         if note:
-            ws.cell(row=2, column=1, value=note).font = _font(10, italic=True, color=BRAND["GREY"])
+            ws.cell(row=2, column=1, value=_demdash(note)).font = _font(10, italic=True, color=BRAND["GREY"])
         r = 4
-        for line in sql_text.split("\n"):
+        for line in sql_text.split("\n"):  # SQL body left verbatim (never sanitized)
             c = ws.cell(row=r, column=1, value=line)
             c.font = _font(9, name=FONT_MONO, color=BRAND["INK"])
             r += 1
@@ -408,15 +422,15 @@ class MntnWorkbook:
         ws = self._new_sheet(name, "notes")
         ws.cell(row=1, column=1, value=name).font = _font(15, bold=True, color=BRAND["PRIMARY"])
         if intro:
-            ws.cell(row=2, column=1, value=intro).font = _font(10, italic=True, color=BRAND["GREY"])
+            ws.cell(row=2, column=1, value=_demdash(intro)).font = _font(10, italic=True, color=BRAND["GREY"])
         r = 4
         body_rows = []
         for head, body in blocks:
             if head:
-                hc = ws.cell(row=r, column=1, value=head)
+                hc = ws.cell(row=r, column=1, value=_demdash(head))
                 hc.font = _font(11, bold=True, color=BRAND["PRIMARY"])
                 r += 1
-            bc = ws.cell(row=r, column=1, value=body)
+            bc = ws.cell(row=r, column=1, value=_demdash(body))
             bc.font = _font(10)
             bc.alignment = _LEFT
             body_rows.append((r, body))
@@ -498,7 +512,7 @@ class MntnWorkbook:
             for i, tk in enumerate(takeaways, 1):
                 ws.cell(row=r, column=1, value=str(i)).font = _font(12, bold=True, color=BRAND["ACCENT"])
                 ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
-                c = ws.cell(row=r, column=2, value=tk)
+                c = ws.cell(row=r, column=2, value=_demdash(tk))
                 c.font = _font(11, color=BRAND["INK"])
                 c.alignment = _LEFT_MID
                 ws.row_dimensions[r].height = 30
@@ -522,7 +536,7 @@ class MntnWorkbook:
             link.font = _font(10, bold=True, color=BRAND["LINK"], name=FONT_BODY)
             link.alignment = _LEFT_MID
             ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
-            d = ws.cell(row=r, column=2, value=desc)
+            d = ws.cell(row=r, column=2, value=_demdash(desc))
             d.font = _font(10, color=BRAND["GREY"])
             d.alignment = _LEFT_MID
             r += 1

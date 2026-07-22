@@ -84,7 +84,7 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 | `PRIMARY` | `#262E3C` | Slate Grey | Table header fills, finding titles, row labels |
 | `ACCENT` | `#1AC9AA` | Mountain Green | Cover rule, key numbers, takeaway ticks, positive heat |
 | `LINK` | `#0AABC5` | Mountain Blue | Contents hyperlinks |
-| `BAND` | `#EEF2F6` | — | Zebra band on data rows |
+| `BAND` | `#E4F7F2` | light Mtn Green | Zebra band on data rows (brand-tinted, not grey) |
 | `PAPER` | `#F6F6F6` | Glacier White | Off-white fill / neutral heat start |
 | `GREY` / `MUTE` | `#5C6675` / `#98A2B3` | Slate | Method subtitles / footnotes |
 | `LINE` | `#DCE3EA` | — | Thin cell borders |
@@ -189,6 +189,13 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-21 · v4** — Stakeholder-feedback pass: (1) **brand green in the table shading** — zebra bands
+  are now a light Mountain Green tint (`#E4F7F2`) instead of grey, and the slate header carries a thick
+  Mountain Green underline, so the tables read as MNTN, not generic grey. (2) **Automatic em-dash strip**
+  — every string written (titles, methods, takeaways, cells, glossary, notes) has `—`/`–` replaced with a
+  spaced hyphen via `_demdash()`; ASCII hyphens and SQL bodies are untouched. Readers associate em-dashes
+  with AI-generated text, so no deliverable ships one. Reminder: `table()`'s `sql()` tab already satisfies
+  the common "add a SQL tab" ask — call `wb.sql(name, sql_text)`.
 - **2026-07-21 · v3** — Text-heavy tables now render readably: body cells wrap in every column (not
   just the first), auto-computed column widths cap at 58 (was 46) while explicit `widths=` are honored
   up to 72, and `table()`/`notes()`/`glossary()` set per-row heights sized to the wrapped content so
