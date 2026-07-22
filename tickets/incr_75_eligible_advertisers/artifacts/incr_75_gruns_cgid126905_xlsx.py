@@ -78,17 +78,6 @@ perf.append({
 })
 perf_df = pd.DataFrame(perf)
 
-# ---------------------------------------------------------------------------
-# 3. Platform-wide persuadables gradient (the well-powered answer to the hypothesis).
-# ---------------------------------------------------------------------------
-grad_df = pd.DataFrame([
-    {"Intent band": "High intent (blocked here)", "Incremental visit lift": 0.002, "Read": "Incrementally dead — visits anyway"},
-    {"Intent band": "Prime prospect (PP)", "Incremental visit lift": 0.016, "Read": "Some incremental lift"},
-    {"Intent band": "Mid intent", "Incremental visit lift": 0.033, "Read": "Carries the lift"},
-    {"Intent band": "MaxReach (low intent)", "Incremental visit lift": 0.034, "Read": "Carries the lift"},
-    {"Intent band": "No score (untargeted reach)", "Incremental visit lift": 0.001, "Read": "Incrementally dead — reach only.  ← THIS campaign is ~100% here"},
-])
-
 os.makedirs(OUT, exist_ok=True)
 lift_df.to_csv(os.path.join(OUT, "incr_75_gruns_cgid126905_lift.csv"), index=False)
 perf_df.to_csv(os.path.join(OUT, "incr_75_gruns_cgid126905_performance.csv"), index=False)
@@ -109,10 +98,9 @@ SIGN_PCT = "+0.0%;-0.0%"
 wb.table(
     "Incremental lift", lift_df,
     finding="Incremental visit lift is +15%, but not distinguishable from zero on this campaign",
-    method=("Served 0.103% vs holdout 0.089% = +15% relative, 95% CI [−32%, +63%], p = 0.53. "
-            "Ghost-bid holdout: ~9% of prospects were bid on but never served. Visit = a site visit within 7 days of first bid. "
-            "Entry-cohort method, window Jun 24 – Jul 14 (the active incrementality data). Only 19 holdout visits → underpowered, "
-            "not a weak effect. Reproduces the incrementality pipeline's numbers exactly."),
+    method=("Served 0.103% vs holdout 0.089% = +15% relative, 95% CI [−32%, +63%], p = 0.53. Holdout = ~9% of prospects bid on but "
+            "never served; visit = within 7 days of first bid; window Jun 24 – Jul 14. Only 19 holdout visits, so underpowered. "
+            "Matches the ghost-bid pipeline and the gold rollup exactly."),
     formats={"Prospects reached": FMT.INT, "Visits": FMT.INT, "Visit rate": FMT.PCT3,
              "Lift vs holdout": SIGN_PCT},
     kind="headline",
@@ -122,12 +110,10 @@ wb.table(
 wb.table(
     "Performance", perf_df,
     finding="A 44-day, $33K CTV flight; the prospecting stage ran a 0.19% visit rate — low by design",
-    method=("Flight to date Jun 8 – Jul 22, 2026. Spend = media + data + platform. "
-            "Visits = MNTN view-through visits (industry-standard lens: last-touch + competing; corroborated by the visit pixel log). "
-            "CPV = spend ÷ visits (group CPV goal = $2.50). Households reached = distinct IPs; not summed across campaigns. "
-            "Stage column = who the campaign targets: Prospecting = a new audience; Exposed to Prior Ad = households that already "
-            "saw a campaign ad; Has a Prior VV = households that already visited (Multi-Touch Plus). The high-intent exclusion and "
-            "the incrementality holdout apply to the prospecting stage only."),
+    method=("Flight to date Jun 8 – Jul 22, 2026. Spend = media + data + platform. Visits = MNTN view-through (industry-standard: "
+            "last-touch + competing). CPV = spend ÷ visits ($2.50 goal). Stage = who the campaign targets: Prospecting = new "
+            "audience; Exposed to Prior Ad = already saw an ad; Has a Prior VV = already visited. The high-intent exclusion and "
+            "the holdout apply to Prospecting only."),
     formats={"Impressions": FMT.INT, "Households reached": FMT.INT, "Spend": FMT.USD0,
              "Visits": FMT.INT, "Visit rate": FMT.PCT2, "CPV": FMT.USD2, "Conv.": FMT.INT},
     heat={"Visit rate": "high"},
@@ -135,44 +121,27 @@ wb.table(
     toc="Delivery, spend, visits, visit rate and CPV by campaign in the group",
 )
 
-wb.table(
-    "Platform evidence", grad_df,
-    finding="Mid intent carries the lift; high intent and no-score reach are dead — and this campaign's audience is ~100% no-score",
-    method=("Population-wide ghost-bid analysis (100M+ IPs, all advertisers, clean holdout). Relative incremental visit lift by "
-            "intent band. Well-powered, unlike any single campaign. The catch for THIS campaign: its audience is ~100% no-score — "
-            "the ghost-bid strata show High and Mid intent essentially excluded (5 and 30 of 207K prospects). No-score is the dead "
-            "reach band, not the mid-intent band that lifts, so excluding high intent here shifted spend to reach, not mid intent."),
-    formats={"Incremental visit lift": SIGN_PCT},
-    heat={"Incremental visit lift": "high"},
-    kind="data",
-    toc="The well-powered answer to “does excluding high intent improve incrementality?”",
-)
-
 wb.notes(
     "Read me",
     intro="Plain-English guide: what the campaign is, what the lift does and doesn't show, and the platform-wide answer.",
     blocks=[
         ("What this campaign is",
-         "Gruns (advertiser 42097) ran a CTV prospecting campaign group (126905) that excludes high intent: top-of-funnel, "
-         "high-population DMAs, live Jun 8 to Aug 1, 2026, on a $2.50 cost-per-visit goal. CTV-only; the paired display and Ego "
-         "campaigns never delivered."),
-        ("The incremental read, in plain terms",
-         "The served group visited at 0.103% vs 0.089% for the ~9% holdout (bid on, never shown an ad): a +15% relative lift over "
-         "Jun 24 to Jul 14. Directionally positive: the ads look like they cause extra visits, not just take credit for visits that "
-         "would have happened anyway."),
-        ("Why it is not conclusive (and why a longer window won't fix it soon)",
-         "Not significant: the 95% CI runs -32% to +63% (p = 0.53). The cause is sample size, not a weak effect: the holdout produced "
-         "only 19 visits and accrues ~1/day, so running to the Aug 1 flight end reaches only ~29. A fixed ~10% platform holdout on a "
-         "0.1%-visit-rate campaign can't resolve a few-percent lift."),
-        ("Does excluding high intent improve incrementality? (see the Platform evidence tab)",
-         "Not for this audience. Platform-wide (100M+ IPs), the lift is in mid intent (~+3%); high intent (~0%) and untargeted reach / "
-         "no-score (~0%) are incrementally dead. The catch: this campaign's audience is ~100% no-score — the ghost-bid strata show High "
-         "and Mid intent essentially excluded (5 and 30 of 207K prospects). So excluding high intent here moved spend to no-score reach, "
-         "not to the mid-intent band that lifts. ~0 incremental lift is the expected result; the +15% is noise consistent with zero."),
+         "Gruns (advertiser 42097) ran a CTV prospecting campaign group (126905) that excludes high intent — top-of-funnel, "
+         "high-population DMAs, live Jun 8 to Aug 1, 2026, $2.50 cost-per-visit goal. CTV-only."),
+        ("The incremental read",
+         "Served group visited at 0.103% vs 0.089% for the ~9% holdout (bid on, never shown an ad) = +15% relative, over Jun 24 to "
+         "Jul 14."),
+        ("Why it is not conclusive",
+         "Not significant: 95% CI −32% to +63%, p = 0.53. The holdout produced only 19 visits and grows ~1/day, so even by the Aug 1 "
+         "flight end it reaches only ~29. A fixed ~10% holdout on a 0.1%-visit-rate campaign can't resolve a few-percent lift."),
+        ("Why ~0 lift is the expected result here",
+         "The audience is almost entirely UNSCORED (\"no-score\") households — it excludes high AND mid intent, not just high (of 207K "
+         "prospects, 5 are high-intent and 30 mid-intent; the rest have no score). Across MNTN, unscored / reach audiences show "
+         "essentially no incremental lift — they visit anyway. The audiences that DO lift are mid-intent, which this campaign excludes. "
+         "So ~0 is the expected result; the +15% is noise consistent with zero."),
         ("Reading the performance numbers",
-         "The ~0.2% visit rate and ~$11 CPV (vs the $2.50 goal) are by design: a cold, high-intent-excluded audience visits less than "
-         "warm retargeting, so standalone CPV is higher but incremental value is higher. Visits are MNTN view-through (TV ads are "
-         "rarely clicked); conversions are sparse, so visit rate is the KPI."),
+         "The ~0.2% visit rate and ~$11 CPV (vs the $2.50 goal) are by design: a cold, intent-excluded audience visits less than warm "
+         "retargeting. Visits are MNTN view-through (TV ads are rarely clicked); conversions are sparse, so visit rate is the KPI."),
     ],
 )
 
@@ -210,9 +179,9 @@ GROUP BY campaign_id;"""
 wb.sql("Queries", SQL, note="Run 2026-07-22. The gold rollup reproduces the silver entry-cohort calc to the digit (+15.2%, CI, z) — cross-validated.")
 
 wb.cover(takeaways=[
-    "Raw visit rate is ~0.2% — low by design: excluding high intent removes the users who would visit anyway, so a low raw rate is expected, not a failure.",
-    "Incremental lift on this campaign is +15% (served 0.103% vs holdout 0.089%) but NOT significant: 95% CI −32% to +63%, p = 0.53, only 19 holdout visits.",
-    "This campaign's audience is ~100% no-score (unscored) households — High and Mid intent are excluded, not just High. No-score is the platform-wide 'reach' band that is incrementally ~0%, so excluding high intent here shifted spend to reach, not to the mid-intent band that lifts; ~0 is the expected result and the +15% is noise consistent with zero.",
+    "Incremental visit lift is +15% but not significant (95% CI −32% to +63%, only 19 holdout visits) — the campaign is too small to resolve it.",
+    "The audience is ~100% unscored (\"no-score\") households: it excludes high AND mid intent. Unscored / reach audiences don't drive incremental lift, so ~0 is the expected result here, not +15%.",
+    "Raw visit rate ~0.2% and CPV ~$11 (vs the $2.50 goal) are low by design for a cold, intent-excluded audience.",
 ])
 
 local = wb.save_local(os.path.join(OUT, "incr_75_gruns_cgid126905_incrementality.xlsx"))

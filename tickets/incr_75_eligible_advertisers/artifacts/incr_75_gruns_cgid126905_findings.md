@@ -53,23 +53,14 @@ longer includes the left-censored day), so a single `SELECT *` off the rollup is
 
 ## Does excluding high intent improve incrementality? Not for this audience.
 
-The audience here is **~100% no-score** (unscored) households. The gold ghost-bid strata
+The audience is **~100% no-score** (unscored) households. The gold ghost-bid strata
 (`reporting.lift__ghost_bid_results`, WHERE `campaign_group_id` = 126905, `stratum_type='score_band'`)
-show High and Mid intent essentially excluded — **5 and 30 of 207K prospects**; the rest are no-score.
-So this campaign excludes high **and** mid intent, landing on untargeted reach.
+show only **5 high-intent and 30 mid-intent of 207K** prospects — both essentially excluded; the rest
+have no score. So this campaign excludes high **and** mid intent, landing on untargeted reach.
 
-That matters, because platform-wide (100M+ IPs, all advertisers, clean holdout) the lift is
-concentrated in mid intent — and no-score is the incrementally-dead reach band:
-
-| Intent band | Incremental lift | Read |
-|---|---|---|
-| High intent (excluded here) | +0.2% | Incrementally dead — visits anyway |
-| Prime prospect | +1.6% | Some lift |
-| Mid intent (excluded here) | +3.3% | Carries the lift |
-| MaxReach (low intent) | +3.4% | Carries the lift |
-| **No score — THIS campaign is ~100% here** | **+0.1%** | **Incrementally dead — reach only** |
-
-So excluding high intent here shifted spend to no-score **reach**, not to the mid-intent band that
-lifts. **~0 incremental lift is the expected result** — the +15% point estimate is noise consistent
-with zero (n.s.), not a signal the audience improves incrementality. To actually test the hypothesis
-you'd want a mid-intent audience, not this one.
+That matters because, platform-wide (100M+ IPs, all advertisers, clean holdout), incremental lift is
+concentrated in **mid intent** (~+3%); **no-score / reach is incrementally dead (~0%)**, as are
+high-intent audiences (they visit anyway). This campaign is entirely in the no-score band, so
+excluding high intent here shifted spend to reach, not to the mid-intent band that lifts.
+**~0 incremental lift is the expected result** — the +15% is noise consistent with zero, not a signal
+the audience works. Testing the hypothesis properly needs a mid-intent audience.
