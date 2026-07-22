@@ -237,12 +237,14 @@ class MntnWorkbook:
         c.font = _font(9, italic=True, color=BRAND["MUTE"])
         c.alignment = _LEFT
 
-    def _autosize(self, ws, df, widths=None, first_col=None, cap=58):
-        """Fit the WHOLE header (+ padding for bold + filter dropdown), then widen for long data.
+    def _autosize(self, ws, df, widths=None, first_col=None, cap=38, filter_pad=7):
+        """Size each column to the WIDER of (a) its longest header WORD + padding for bold text and the
+        autofilter dropdown icon — so a header word never breaks mid-word ("Spend" -> "Spen/d") — and
+        (b) its actual DATA, up to `cap` (longer data wraps on word boundaries).
 
         Returns {column_name: final_width_chars} so row heights can be sized to the wrapped text.
-        Explicit `widths` are honored as-is (up to a sane ceiling) so a caller can make a prose
-        column genuinely wide; auto-computed widths are capped at `cap` and the cell text wraps.
+        Explicit `widths` are honored as-is (up to a sane ceiling) so a caller can make a prose column
+        genuinely wide.
         """
         widths = widths or {}
         final = {}
@@ -250,12 +252,20 @@ class MntnWorkbook:
             if col in widths:
                 w = min(max(int(widths[col]), 8), 72)   # honor caller intent, sane ceiling
             else:
-                header_w = len(str(col))
-                data_w = 0
-                if df[col].dtype == object:  # only strings can be longer than the header
-                    sample = df[col].dropna().astype(str).head(200)
-                    data_w = int(sample.map(len).max()) if len(sample) else 0
-                w = min(max(header_w + 4, 10), cap)
+                header = str(col)
+                longest_word = max([len(x) for x in header.split()] or [len(header)])
+                cd = df[col].dropna()
+                if df[col].dtype == object:
+                    data_w = int(cd.astype(str).map(len).head(200).max()) if len(cd) else 0
+                else:
+                    # numbers are display-FORMATTED (%, $, commas) — never measure the raw float repr
+                    # (str(0.00189)="0.00189372…"). Estimate from magnitude + room for separators/symbol.
+                    mx = pd.to_numeric(cd, errors="coerce").replace([np.inf, -np.inf], np.nan).abs().max()
+                    int_digits = len(f"{int(mx):,}") if (pd.notna(mx) and mx >= 1) else 3
+                    data_w = int_digits + 5
+                # header word must fit (never break mid-word); data fits up to cap (wraps beyond); floor 10
+                need = max(longest_word + filter_pad, min(data_w, cap) + 2, 10)
+                w = min(need, cap)
             ws.column_dimensions[get_column_letter(j)].width = w
             final[col] = w
         if first_col:
