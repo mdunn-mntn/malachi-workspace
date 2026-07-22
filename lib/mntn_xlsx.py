@@ -117,15 +117,18 @@ class _Fmt:
 
 FMT = _Fmt()
 
-# Tab color by role, so the tab strip is a legend of its own.
+# Tab color by role, so the tab strip itself is a color-coded legend. Distinct MNTN brand hues:
+# a dark anchor for the cover, bright greens/blues for content, muted greys for the appendix.
+# NOTE: apply with a leading "FF" (opaque) — a bare 6-hex string makes openpyxl store alpha 00
+# (transparent), which renders as NO tab color in Google Sheets. See _new_sheet().
 TAB = {
-    "cover":    BRAND["INK"],
-    "headline": BRAND["PRIMARY"],
-    "data":     BRAND["PRIMARY"],
-    "detail":   BRAND["GREY"],
-    "glossary": BRAND["ACCENT"],
-    "sql":      BRAND["MUTE"],
-    "notes":    BRAND["MUTE"],
+    "cover":    "191E28",  # Slate INK — dark anchor / "start here"
+    "headline": "1AC9AA",  # Mountain Green — the hero content tab
+    "data":     "0AABC5",  # Mountain Blue — content
+    "detail":   "26D1EA",  # Mountain Blue (light) — supporting detail
+    "glossary": "22E5BE",  # Mountain Green (light) — the Read me / reference
+    "sql":      "667085",  # Slate grey — appendix
+    "notes":    "98A2B3",  # Light slate grey — appendix
 }
 
 # Reusable style objects -----------------------------------------------------
@@ -209,7 +212,7 @@ class MntnWorkbook:
     def _new_sheet(self, name, role):
         ws = self.wb.create_sheet(name[:31])  # Excel 31-char tab limit
         ws.sheet_view.showGridLines = False
-        ws.sheet_properties.tabColor = TAB.get(role, BRAND["PRIMARY"])
+        ws.sheet_properties.tabColor = "FF" + TAB.get(role, BRAND["PRIMARY"])  # FF = opaque (bare hex -> alpha 00 = invisible)
         ws.sheet_view.zoomScale = 100
         ws.page_setup.orientation = "landscape"
         ws.page_setup.fitToWidth = 1

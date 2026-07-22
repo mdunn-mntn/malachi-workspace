@@ -200,6 +200,12 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-22 · v6** — Color-coded tab strip now actually renders. Two fixes: (1) tab colors were stored
+  with alpha `00` (transparent) because a bare 6-hex string makes openpyxl prepend `00` — now applied as
+  `FF`+hex (opaque), so they show in Google Sheets. (2) The `TAB` palette was mostly slate/grey; it's now
+  distinct MNTN hues — Slate INK anchor (Overview), Mountain Green (headline), Mountain Blue (data), light
+  Mountain Blue (detail), light Mountain Green (Read me), slate greys (Queries/Method). The tab strip is
+  now a color-coded legend: bright greens/blues = content, greys = appendix, dark = the cover.
 - **2026-07-22 · v5** — Column auto-sizing fixed (INCR-75 feedback: cut-off words). `_autosize` now sizes
   each auto column to the WIDER of its longest header word (+ padding for bold text and the autofilter
   dropdown, so `Spend`/`Group` no longer break to `Spen/d`) and its actual data (so long first-column
