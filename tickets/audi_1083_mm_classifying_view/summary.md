@@ -162,6 +162,11 @@ appended to the SQL. Confluence spec → v4.
   RTC firing. `tiers_reachable`: vertical_only_legacy fixed 'HI·PP' → 'PP·MI (no HI)'. Verify query:
   `queries/audi_1083_ds13_vs_ds46_score_bands.sql`. Confluence spec → v5. Canonical taxonomy page
   3691708511 corrected → v4 (fixed §1 DS13 component cell, §3 DS13-only row, §4 HI rule).
+- **DS19-only VERIFIED reaches HI (2026-07-22, 14d RTC-excl):** 69% HI band / ~1% PP / 7% MI — so
+  `mm_keywords_only = HI·MI·MaxReach (no PP)` is correct. Confirms rule both directions: HI needs
+  keywords, PP needs vertical anchor, independent. Mechanism: scoring uses the ADVERTISER's vertical
+  (not a DS13/DS46 leaf); leaves drive biddability, not the score. Controls: DS19+DS46 47% HI / 8.5%
+  PP; DS19+DS13 51% HI / 41% PP (v1 categorical). Spec voice rewritten plain (no AI-report tone) → v6.
 
 ### 4g. NULL / orphan investigation (2026-07-22) — no live gap
 The group-inheritance NULLs (13.5% all-time) are **100% dormant**: of DELIVERED (45d) Stage 2/3
