@@ -1,6 +1,6 @@
 # AUDI-1091 [SPIKE] Full augmentor_log as a free site-visit source
 
-**Status:** In Progress (first cut done, go/no-go leaning NO-GO) · **Parent:** AUDI-1054 · **Assignee:** Malachi
+**Status:** DONE — NO-GO (closed 2026-07-22) · **Parent:** AUDI-1054 · **Assignee:** Malachi
 
 ## Introduction
 Alex's claim (AUDI-1089 review, 2026-07-13): augmentor display rows are site visits with URLs, and the full augmentor_log is a much bigger free site-visit source than the DS30 subset in `site_visit_signal` (svs) today. If true, ingesting it could displace paid DDP credit at $0 (relates to the AUDI-1093 free-log preemption thesis).
