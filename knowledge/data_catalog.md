@@ -2429,7 +2429,9 @@ FROM us_blocks b JOIN studios s
 | household_score | INTEGER | Fangorn household score |
 
 **Query tip:** Join on `advertiser_id` + `ip` to link back to impression/visit tables.
-Source scoring pipeline: `gs://household-scoring-prod/output/scoring/prospecting_intent/` (daily, 35-day retention).
+Source scoring pipeline: `gs://household-scoring-prod/output/scoring/prospecting_intent/` (daily, 35-day retention). **DAG: `audience_intent` in airflow-ti (`dags/audience_intent/audience_intent.py`), daily batch ~3–7 AM UTC (Ryan Kleck's page).** It writes TWO products, and we consume the **prospecting** one:
+- **prospecting** (per `ip, advertiser_id, campaign_group_id, campaign_id`; `…/scoring/prospecting_intent`): **HI 10K = in Vertical (DS13) AND in Keywords (DS19)**; PP 8K = in vertical, no keyword; MI 3333–6665 = in bucket, not vertical; Unscored (prev Max Reach) = outside bucket/vertical but inside keywords.
+- **advertiser** (per `ip, advertiser_id`; `…/scoring/advertiser_intent`; sibling `household_scoring__advertiser_intent__v1`): a pre-batch fallback so a new campaign has scores before the batch runs. **HI 10K = in Vertical only (NO keyword split); PP = N/A.** We don't really use this one.
 
 ---
 

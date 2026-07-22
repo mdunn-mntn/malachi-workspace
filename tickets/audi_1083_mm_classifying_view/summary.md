@@ -162,11 +162,25 @@ appended to the SQL. Confluence spec → v4.
   RTC firing. `tiers_reachable`: vertical_only_legacy fixed 'HI·PP' → 'PP·MI (no HI)'. Verify query:
   `queries/audi_1083_ds13_vs_ds46_score_bands.sql`. Confluence spec → v5. Canonical taxonomy page
   3691708511 corrected → v4 (fixed §1 DS13 component cell, §3 DS13-only row, §4 HI rule).
-- **DS19-only VERIFIED reaches HI (2026-07-22, 14d RTC-excl):** 69% HI band / ~1% PP / 7% MI — so
-  `mm_keywords_only = HI·MI·MaxReach (no PP)` is correct. Confirms rule both directions: HI needs
-  keywords, PP needs vertical anchor, independent. Mechanism: scoring uses the ADVERTISER's vertical
-  (not a DS13/DS46 leaf); leaves drive biddability, not the score. Controls: DS19+DS46 47% HI / 8.5%
-  PP; DS19+DS13 51% HI / 41% PP (v1 categorical). Spec voice rewritten plain (no AI-report tone) → v6.
+- **DS19-only VERIFIED reaches HI (2026-07-22, 14d RTC-excl):** 69% HI band / ~1% PP / 7% MI / ~22%
+  MR-unscored — so `mm_keywords_only = HI·MI·MaxReach (no PP)` is correct. Controls: DS19+DS46 47% HI /
+  8.5% PP; DS19+DS13 51% HI / 41% PP (v1 categorical). Spec voice rewritten plain → v6.
+- **AUTHORITATIVE MODEL (Ryan Kleck `audience_intent` DAG page; user provided 2026-07-22) — corrects my
+  "independent axes" framing.** PROSPECTING scores (the ones we use): **HI (10K) = in Vertical (DS13)
+  AND in Keywords (DS19) — BOTH**; PP (8K) = vertical, no keyword; MI = bucket, not vertical; Unscored
+  (prev Max Reach) = outside bucket/vertical but INSIDE keywords. NOT independent — HI is the
+  intersection. **DS19-only still reaches HI because the Vertical is the ADVERTISER's, always fed into
+  the score; Keywords require the DS19 leaf.** That asymmetry is the whole thing. The DS19-only split
+  maps 1:1 onto Ryan's four rows (69/1/7/22 = HI/PP/MI/unscored), confirming the model. DAG:
+  `audience_intent` in airflow-ti, daily ~3-7 AM UTC, writes prospecting_intent (per campaign, used)
+  + advertiser_intent (per advertiser, HI=vertical-only, not used). Spec rule → v8; taxonomy HI clause
+  clarified → v5; data_knowledge + data_catalog updated.
+- **CAMPAIGN-COUNT DISTRIBUTION (active Stage 1, 14,475 campaigns; `queries/audi_1083_distribution.sql`,
+  `outputs/audi_1083_distribution.csv`):** by config — non-MM 56.5% / keyword-only 24.8% / both 14.3% /
+  vertical-only 4.3%. **MM = 43.5% by COUNT vs 72.4% by SPEND (MM campaigns spend bigger).** Within MM:
+  57% keyword-only, 33% both, 10% vertical-only. Modified vs not — 27.3% national/un-narrowed, 72.7%
+  narrowed (geo 59.9% / audience 3.9% / geo+audience 8.9%); within MM only **20% unmodified / 80%
+  modified**; flagship (DS19+DS46, unmodified) = 191 = 3% of MM. Added as spec Distribution section → v9.
 
 ### 4g. NULL / orphan investigation (2026-07-22) — no live gap
 The group-inheritance NULLs (13.5% all-time) are **100% dormant**: of DELIVERED (45d) Stage 2/3

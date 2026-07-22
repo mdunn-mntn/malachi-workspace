@@ -9,7 +9,8 @@
 
 <h2>The rule</h2>
 <p>MM is any of DS13, DS19 or DS46 (per the <a href="https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511">MM Taxonomy</a>). DS19 (&quot;MM Core&quot;) is one component inside MM, not the definition, so a &quot;has DS19&quot; test undercounts MM by about 7.6%.</p>
-<p>HI (10000) needs the keyword layer (DS19). PP (8000) needs the vertical anchor (DS13 or DS46). So a vertical-only config caps at PP, and a keyword-only config reaches HI but not PP. This holds for both generations; DS13 (legacy) pins at 8000, DS46 (Fangorn) spreads 6666 to 8000, but neither reaches HI without keywords.</p>
+<p>Scoring follows the prospecting-intent model. Each IP scores on two sets: the advertiser's vertical (DS13) and the campaign's keywords (DS19). In the vertical and a keyword match scores HI (10000). In the vertical with no keyword scores PP (8000). In the bucket but not the vertical scores MI. Outside both is unscored. So HI needs both the vertical and keywords.</p>
+<p>The vertical is the advertiser's and is always in the score, so the keyword layer (DS19) is the config lever for HI. A keyword-only config scores its keyword IPs against the advertiser's vertical and reaches HI, with no vertical-only IPs to score PP. A vertical-only config has no keywords, so its vertical IPs cap at PP and it reaches no HI. DS13 (legacy) pins at 8000, DS46 (Fangorn) spreads 6666 to 8000; neither reaches HI without keywords.</p>
 
 <table><tbody>
 <tr><th>DS leaves</th><th><code>mm_class</code></th><th><code>tiers_reachable</code></th></tr>
@@ -24,7 +25,7 @@
 <h2>Restrictions</h2>
 <p><code>restriction_level</code> is the most severe of <code>geo</code> (a sub-country geo include, or a radius), <code>audience</code> (a 3P segment AND-joined, or a seeded 1P list), or <code>geo+audience</code>. An OR-additive 3P or a CRM exclusion do not count, since neither narrows the scored pool. The gate (<code>hhst_gated</code>) is exposed but not folded into &quot;unmodified&quot;, because it flips daily for pacing rather than reflecting how the campaign was built.</p>
 
-<h2>Columns</h2>
+<h2>Distribution</h2><p>14,475 active Stage 1 prospecting campaigns, counting campaigns (not spend). By config:</p><table><tbody><tr><th>Config</th><th>Campaigns</th><th>Share</th></tr><tr><td>Non-MM (no DS13/19/46)</td><td>8,184</td><td>56.5%</td></tr><tr><td>Keyword only (DS19)</td><td>3,593</td><td>24.8%</td></tr><tr><td>Keyword + vertical (DS19 + DS13/46)</td><td>2,072</td><td>14.3%</td></tr><tr><td>Vertical only (DS13/46, no keyword)</td><td>626</td><td>4.3%</td></tr></tbody></table><p>So 43.5% (6,291) are MM. Of the MM campaigns, 57% are keyword-only, 33% carry both layers, 10% are vertical-only.</p><p>Modified vs not: 27.3% of all campaigns run a national, un-narrowed config; the other 72.7% carry a geo (59.9%), audience (3.9%), or both (8.9%) narrowing. Within MM only 20% run an unmodified config and 80% are narrowed. Clean flagship Fangorn (DS19 + DS46, unmodified) is 191 campaigns, 3% of MM.</p><h2>Columns</h2>
 <table><tbody>
 <tr><th>Column</th><th>Meaning</th></tr>
 <tr><td><code>campaign_id</code>, <code>campaign_group_id</code>, <code>advertiser_id</code></td><td>Keys. Grain is the campaign, latest targeted segment.</td></tr>
