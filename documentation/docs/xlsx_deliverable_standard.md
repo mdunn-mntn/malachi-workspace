@@ -196,6 +196,13 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-22 · v5** — Column auto-sizing fixed (INCR-75 feedback: cut-off words). `_autosize` now sizes
+  each auto column to the WIDER of its longest header word (+ padding for bold text and the autofilter
+  dropdown, so `Spend`/`Group` no longer break to `Spen/d`) and its actual data (so long first-column
+  labels like `Ad served (treatment)` fit instead of crushing to header width). Two bugs fixed: `data_w`
+  was computed but never used; and numeric width was measured from the raw float repr
+  (`str(0.00189)="0.0018937…"`) — now estimated from magnitude + the `%`/`$`/comma format, so `Visit rate`
+  is ~12 wide, not ~26. Pass `widths=` to override.
 - **2026-07-21 · v4** — Stakeholder-feedback pass: (1) **brand green in the table shading** — zebra bands
   are now a light Mountain Green tint (`#E4F7F2`) instead of grey, and the slate header carries a thick
   Mountain Green underline, so the tables read as MNTN, not generic grey. (2) **Automatic em-dash strip**
