@@ -182,23 +182,29 @@ fang AS (
     LOGICAL_OR(is_express) AS is_express
   FROM `dw-main-bronze.integrationprod.tpa_fangorn_advertiser_inclusion`
   GROUP BY advertiser_id
-)
+),
+classified AS (
 SELECT
   p.campaign_id, p.campaign_group_id, p.advertiser_id, p.objective_id, p.funnel_level,
 
-  -- ── Axis A: engine / config ──
+  -- ── Axis A: engine / config (authoritative TI-1037 2x3 taxonomy grid) ──
+  -- The 6 live cells = DS19(kw) y/n × vertical anchor {none / DS13 legacy / DS46 Fangorn}.
+  -- DS13∧DS46 never co-occur (same slot, two generations). Anchor sets tier: DS46>DS13>none.
+  -- FLAGSHIP = DS19+DS46 specifically; DS46-only is "Fangorn vertical-only" (caps at PP band).
   CASE
-    WHEN d.has_ds46 THEN 'fangorn_v2'
-    WHEN d.has_ds13 THEN 'peak_performance_v1'
-    WHEN d.has_ds19 OR d.has_ds38 THEN 'mm_core'
-    ELSE 'non_mm'
-  END AS mm_engine,
-  CASE
-    WHEN NOT (d.has_ds13 OR d.has_ds19 OR d.has_ds38 OR d.has_ds46) THEN 'non_mm'
-    WHEN (d.has_ds13 OR d.has_ds46) AND (d.has_ds19 OR d.has_ds38) THEN 'vertical_plus_keyword'
-    WHEN (d.has_ds13 OR d.has_ds46) THEN 'vertical_only'
-    ELSE 'keyword_only'
-  END AS mm_config,
+    WHEN (d.has_ds19 OR d.has_ds38) AND d.has_ds46 THEN 'mm_flagship_fangorn'   -- ~18.9%
+    WHEN d.has_ds46                                 THEN 'fangorn_vertical_only'-- ~6.5%
+    WHEN (d.has_ds19 OR d.has_ds38) AND d.has_ds13  THEN 'mm_classic'           -- ~4.0% (PP config)
+    WHEN d.has_ds13                                 THEN 'vertical_only_legacy' -- ~1.1% (MM 1.0)
+    WHEN (d.has_ds19 OR d.has_ds38)                 THEN 'mm_keywords_only'      -- ~42.7% (Max Reach)
+    ELSE 'non_mm'                                                               -- ~26.8%
+  END AS mm_class,
+  CASE                                    -- engine quality rank (higher = stronger MM tier)
+    WHEN d.has_ds46 THEN 3                -- Fangorn anchor
+    WHEN d.has_ds13 THEN 2                -- Peak Performance (legacy) anchor
+    WHEN d.has_ds19 OR d.has_ds38 THEN 1  -- keywords-only (Max Reach band)
+    ELSE 0
+  END AS mm_engine_rank,
   d.has_ds13, d.has_ds19, d.has_ds38, d.has_ds46,
   (d.has_ds13 OR d.has_ds19 OR d.has_ds38 OR d.has_ds46) AS has_mm,
 
@@ -231,12 +237,13 @@ SELECT
     ELSE 'none'
   END AS restriction_level,
 
+  -- is_unmodified_mm: real, well-configured MM of ANY engine (gated, national, no hard-narrow)
   (   (d.has_ds13 OR d.has_ds19 OR d.has_ds38 OR d.has_ds46)     -- is MM
       AND COALESCE(g.hhst_current,0) > 0                          -- gate on
       AND NOT (COALESCE(gl.has_geo_narrow_incl,FALSE) OR p.has_geo_radii)  -- national geo
       AND NOT (p.three_p_semantics IN ('and_include','mixed'))    -- no AND-3P
       AND NOT d.has_1p_incl                                       -- no seeded 1P
-  ) AS is_flagship_mm
+  ) AS is_unmodified_mm
 
 FROM parsed p
 LEFT JOIN ds       d  USING (campaign_id)
@@ -244,4 +251,12 @@ LEFT JOIN geo_lvl  gl USING (campaign_id)
 LEFT JOIN geo_excl gx USING (campaign_id)
 LEFT JOIN gate     g  USING (campaign_id)
 LEFT JOIN fang     f  ON f.advertiser_id = p.advertiser_id
+)
+-- is_flagship = well-configured MM in the CURRENT flagship cell (DS19+DS46 = MM flagship Fangorn).
+-- DS46-only ("fangorn_vertical_only") is real, unmodified MM but NOT flagship (caps at PP band).
+-- Composable: is_unmodified_mm = broad "real MM" cut; is_flagship = flagship-Fangorn;
+-- (is_unmodified_mm AND mm_class='mm_keywords_only') = keyword/Max-Reach flagship; etc.
+SELECT classified.*,
+       (is_unmodified_mm AND mm_class = 'mm_flagship_fangorn') AS is_flagship
+FROM classified
 ;

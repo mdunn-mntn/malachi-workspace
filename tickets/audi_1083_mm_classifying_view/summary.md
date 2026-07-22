@@ -92,24 +92,28 @@ why B is a set of exposed components + a rule, not a multiplied composite.
   `mm_engine='fangorn_v2' AND hhst_gated AND geo_reach_pct >= τ_geo AND NOT and_3p_narrowed AND NOT and_1p_narrowed`
   (τ_geo TBD by calibration; start ~50%). A "legacy-flagship" variant swaps `fangorn_v2`→any MM engine.
 
-## 5. Proposed view schema (campaign grain)
+## 5. FINAL view schema (campaign grain) — implemented in queries/audi_1083_mm_classifier_view.sql
 ```
 -- keys / grain
-campaign_id, campaign_group_id, advertiser_id, objective_id, funnel_level, expression_updated_at
--- Axis A: engine
-mm_engine, mm_config, has_ds13, has_ds19, has_ds38, has_ds46, has_mm
--- scoring / gate / generation
-hhst_current, hhst_gated, fangorn_tier            -- from tpa.fangorn_advertiser_inclusion
+campaign_id, campaign_group_id, advertiser_id, objective_id, funnel_level
+-- Axis A: engine (authoritative taxonomy)
+mm_class, mm_engine_rank, has_ds13, has_ds19, has_ds38, has_ds46, has_mm
+-- scoring / gate / rollout generation
+hhst_current, hhst_gated, fangorn_tier, is_express   -- integrationprod.tpa_fangorn_advertiser_inclusion
 -- Axis B: restriction components
-geo_reach_pct, geo_narrowest_type, has_geo_narrow_incl, has_geo_excl,
-has_3p_incl, three_p_semantics (OR/AND/mixed/none), and_3p_narrowed, or_3p_additive,
-has_1p_incl, and_1p_narrowed, crm_excl_hygiene
+geo_reach_pct (deferred=NULL), geo_narrowest_type, has_geo_narrow_incl, has_geo_excl,
+has_3p_incl, three_p_semantics (or_include/and_include/mixed/three_p_only/none),
+and_3p_narrowed, or_3p_additive, and_1p_narrowed, crm_excl_hygiene
 -- rollups
-restriction_level, is_flagship_mm
+restriction_level, is_unmodified_mm, is_flagship
 ```
-Grain = campaign (matches `audience_segments`, latest targeted segment rn=1 by update_time).
-`campaign_group_id` is an attribute for rollup; a group-level verdict is a GROUP BY (e.g. all-
-flagship vs mixed) — provide as a companion view, don't bake into the base grain.
+Grain = campaign (latest targeted segment rn=1 by update_time; `deleted=FALSE AND is_test=FALSE`).
+View classifies ALL campaigns — no prospecting/delivered pre-filter (objective_id/funnel_level are
+exposed for downstream). `campaign_group_id` is an attribute for rollup; a group-level verdict is a
+GROUP BY (all-flagship vs mixed) — companion view, not baked into the base grain.
+
+**Status: draft view validated end-to-end on live data. Remaining = materialization (SQLMesh) +
+the v2 geo_reach_pct / camperbid pool upgrade.**
 
 ### 4a. Locked decisions (2026-07-22)
 - **Quantification = exposed components**, NOT a single composite %. `geo_reach_pct` is the one
@@ -121,13 +125,26 @@ flagship vs mixed) — provide as a companion view, don't bake into the base gra
   `is_flagship_mm AND mm_engine='fangorn_v2'` for flagship-Fangorn, or `... AND != 'fangorn_v2'`
   for flagship-legacy.
 
-### 4b. Locked naming
-- `mm_engine`: `non_mm` | `mm_core` | `peak_performance_v1` | `fangorn_v2`
-- `mm_config`: `keyword_only` | `vertical_only` | `vertical_plus_keyword` (× engine)
-- `restriction_level` (what got carved, most-severe wins): `none` | `geo` | `audience` | `geo+audience`
-- `is_flagship_mm` (bool) = `mm_engine != 'non_mm' AND hhst_gated AND restriction_level = 'none'`
+### 4b. Locked naming (aligned to TI-1037 authoritative 2×3 taxonomy grid)
+- **`mm_class`** (the 6 live cells = DS19 kw × anchor {none/DS13/DS46}):
+  `mm_flagship_fangorn` (DS19+DS46) · `fangorn_vertical_only` (DS46 only) · `mm_classic`
+  (DS19+DS13, the shipped PP config) · `vertical_only_legacy` (DS13 only, MM 1.0) ·
+  `mm_keywords_only` (DS19 only → Max Reach band) · `non_mm`.
+- `mm_engine_rank`: 3=Fangorn(DS46) · 2=PeakPerformance(DS13) · 1=keywords/MaxReach · 0=non_mm.
+- `restriction_level` (what got carved, most-severe wins): `none` | `geo` | `audience` | `geo+audience`.
+- **Two booleans (user decision 2026-07-22):**
+  - `is_unmodified_mm` = any MM engine, gated, national, no AND-narrow → **$14.0M / 32.5%** of prospecting spend.
+  - `is_flagship` = `is_unmodified_mm AND mm_class='mm_flagship_fangorn'` (DS19+DS46 specifically —
+    DS46-only "fangorn_vertical_only" is unmodified MM but caps at PP band, so NOT flagship) →
+    **$2.9M / 6.7%**. Composable: `is_unmodified_mm AND mm_class='mm_keywords_only'` = Max-Reach flagship, etc.
 - geo "narrow" = positive include at location_type ∈ {DMA, state, city, ZIP} or a `geo_radii` clause;
-  country-level (US=237) / no-geo = default (`geo_reach_pct = 1.0`).
+  country-level (US=237) / no-geo = default. `geo_reach_pct` deferred (no HH table — item 8.1).
+
+**Definitive headline (live prospecting, 45d, $43.2M):** MM-labelled (`has_mm`) = **70.9%** ·
+unmodified MM = **32.5%** · flagship Fangorn = **6.7%**. Of every MM-labelled dollar, <half is
+unmodified. `mm_class` distribution reproduces the TI-1037 grid (keywords-only 42.2% vs 42.7%,
+flagship-Fangorn 20.3% vs 18.9%, fangorn-vertical-only 6.8% vs 6.5%); the DS13 cells are smaller
+(mm_classic 1.1% vs 4.0%) — continued DS13→DS46 migration, as expected. CSVs in `outputs/`.
 
 ### 4c. Draft view SQL
 `queries/audi_1083_mm_classifier_view.sql` — full campaign-grain SELECT ready to materialize
