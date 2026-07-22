@@ -111,6 +111,29 @@ Grain = campaign (matches `audience_segments`, latest targeted segment rn=1 by u
 `campaign_group_id` is an attribute for rollup; a group-level verdict is a GROUP BY (e.g. all-
 flagship vs mixed) — provide as a companion view, don't bake into the base grain.
 
+### 4a. Locked decisions (2026-07-22)
+- **Quantification = exposed components**, NOT a single composite %. `geo_reach_pct` is the one
+  exact number; AND-narrowing + gate are binary flags; `restriction_level` is a rule over them.
+- **AND-3P / AND-1P = binary flags only in v1.** No magnitude estimate (can't cheaply size
+  |MM∩3P|/|MM| without IP intersection; segment-reach independence approximation too shaky).
+- **FLAGSHIP and FANGORN decoupled:** `mm_engine` carries the generation (has the `fangorn_v2`
+  value); `is_flagship_mm` is generation-agnostic ("well-configured MM"). Filter
+  `is_flagship_mm AND mm_engine='fangorn_v2'` for flagship-Fangorn, or `... AND != 'fangorn_v2'`
+  for flagship-legacy.
+
+### 4b. Locked naming
+- `mm_engine`: `non_mm` | `mm_core` | `peak_performance_v1` | `fangorn_v2`
+- `mm_config`: `keyword_only` | `vertical_only` | `vertical_plus_keyword` (× engine)
+- `restriction_level` (what got carved, most-severe wins): `none` | `geo` | `audience` | `geo+audience`
+- `is_flagship_mm` (bool) = `mm_engine != 'non_mm' AND hhst_gated AND restriction_level = 'none'`
+- geo "narrow" = positive include at location_type ∈ {DMA, state, city, ZIP} or a `geo_radii` clause;
+  country-level (US=237) / no-geo = default (`geo_reach_pct = 1.0`).
+
+### 4c. Draft view SQL
+`queries/audi_1083_mm_classifier_view.sql` — full campaign-grain SELECT ready to materialize
+(SQLMesh view). Two blockers before it runs clean: BQ re-auth + confirm the per-location HH table
+(open item 8.1).
+
 ## 6. Open Items / Follow-ups
 1. **[EMPIRICAL — blocked on BQ auth]** Does a per-location population/HH table exist so
    `geo_reach_pct` is exact? If not, fall back to a location-type retention heuristic and flag it.
