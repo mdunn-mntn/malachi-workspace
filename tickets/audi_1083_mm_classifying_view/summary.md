@@ -134,6 +134,51 @@ flagship vs mixed) — provide as a companion view, don't bake into the base gra
 (SQLMesh view). Two blockers before it runs clean: BQ re-auth + confirm the per-location HH table
 (open item 8.1).
 
+## 4d. Calibration — draft view run on live prospecting (2026-07-22)
+View compiles and runs. Distribution over **live prospecting** campaigns (obj∈1,5,6 · funnel=1 ·
+delivered 45d · $43.2M spend · `outputs/audi_1083_calibration_prospecting_45d.csv`):
+
+| engine | flagship | non-flagship (restricted/ungated) | engine total |
+|---|---|---|---|
+| **mm_core** (DS19 keyword-only) | $10.1M / 23.4% | $8.1M | **$18.2M / 42%** |
+| **fangorn_v2** (DS46) | $3.9M / 9.0% | $7.8M | **$11.7M / 27%** |
+| **peak_performance_v1** (DS13) | $0.07M | $0.6M | $0.7M / 1.6% |
+| **non_mm** | — | $12.6M | $12.6M / 29% |
+
+**Headline findings:**
+1. **`is_flagship_mm` (current def: any gated, national, un-narrowed MM) = $14.05M / 32.5% of
+   prospecting spend.** ~2/3 of prospecting spend is "MM-labelled" but modified or non-MM —
+   empirically confirms the ticket thesis (>74% modified).
+2. **Geo is the #1 modifier.** Fangorn geo-narrowed ($5.9M) > Fangorn flagship ($3.9M); mm_core
+   geo ($5.8M) similar. Most "MM" spend is geo-carved. Validates geo as the primary Axis B signal.
+3. **mm_core (keyword-only) is the biggest MM engine ($18.2M, 42%)** and its flagship slice
+   (23.4%) alone exceeds all Fangorn. → forces the flagship-definition decision (below).
+4. **peak_performance_v1 nearly dead ($0.7M).** DS13→DS46 migration ~complete, as expected.
+5. **AND-narrowing (audience) is real but smaller** (~$4M across engines).
+
+**THE decision (needs sign-off):** does `is_flagship_mm` require a **vertical-anchor engine**
+(Fangorn/PP) or does **keyword-only mm_core** count?
+- Inclusive (current): any MM engine → **$14.05M / 32.5%**
+- Vertical-anchor only (Fangorn + PP): **~$3.94M / 9.1%**
+- Fangorn-flagship config only (DS46+DS19, gated, national): pinnable if we go strict
+The swing is 9% ↔ 32% of prospecting spend. `mm_engine`/`mm_config` stay exposed either way; this
+only sets the default boolean.
+
+## 5b. Verified table facts (2026-07-22)
+- Fangorn tiers: `dw-main-bronze.integrationprod.tpa_fangorn_advertiser_inclusion`
+  (`advertiser_id`, `vertical_id`, `is_express`, **`fangorn_rollout_tier_num`**,
+  `fangorn_advertiser_inclusion_date`). NOT `tpa.fangorn_advertiser_inclusion`.
+- HHST gate: `dw-main-silver.dso.household_score_thresholds` = **exactly one row per campaign**
+  (32,467 campaigns; 10,647 gated; join on `campaign_id`). `campaign_group_id`/`advertiser_id`
+  are denormalized attributes, not a separate grain.
+- `geos` JSON shape CONFIRMED: `{"op":"any","value":{"location_ids":[...]}}` under an
+  and/or/not tree — `parse_geo` UDF validated (positive include extracted, negation-depth polarity).
+- geo.location_data has **NO** household/pop column → `geo_reach_pct` deferred (open item 8.1).
+- Live per-campaign addressable-pool signal EXISTS but experimental:
+  `dw-main-bronze.external.camperbid_prod__hhst_v3__campaign_bucket_population`
+  (per-campaign population by intent band, refreshed hourly; v2 `campaign_qualified_rate` is DEAD
+  since 2025-11). Candidate v2 upgrade for a real targetable-pool %.
+
 ## 6. Open Items / Follow-ups
 1. **[EMPIRICAL — blocked on BQ auth]** Does a per-location population/HH table exist so
    `geo_reach_pct` is exact? If not, fall back to a location-type retention heuristic and flag it.

@@ -127,7 +127,7 @@ camp AS (
          c.objective_id, c.funnel_level, s.expression
   FROM `dw-main-bronze.integrationprod.campaigns` c
   JOIN seg s USING (campaign_id)
-  WHERE c.deleted = FALSE
+  WHERE c.deleted = FALSE AND c.is_test = FALSE
 ),
 parsed AS (
   SELECT campaign_id, campaign_group_id, advertiser_id, objective_id, funnel_level,
@@ -151,32 +151,25 @@ ds AS (
   GROUP BY campaign_id
 ),
 -- ── geo: narrowest positive-include level + (optional) exact reach % ─────────
-geo_inc AS (          -- positive-include locations only
-  SELECT p.campaign_id, g.location_id
-  FROM parsed p, UNNEST(p.geos) g
-  WHERE g.polarity = 'positive'
+geo_excl AS (         -- any negative geo clause present (exact, no location_data needed)
+  SELECT p.campaign_id, LOGICAL_OR(g.polarity = 'negative') AS has_geo_excl
+  FROM parsed p, UNNEST(p.geos) g GROUP BY 1
 ),
-geo_lvl AS (
+geo_lvl AS (          -- narrowest positive-INCLUDE level (exact, from location_data)
   SELECT gi.campaign_id,
     -- location_type_id: 2=country 3=DMAcode 4=DMAname 5=state 6=city 7=ZIP
-    MAX(ld.location_type_id) AS narrowest_type_id,   -- higher id = narrower
-    LOGICAL_OR(ld.location_type_id >= 3) AS has_geo_narrow_incl,
-    LOGICAL_OR(ld.location_type_id  = 3 OR ld.location_type_id = 2) AS has_geo_excl_placeholder
-  FROM geo_inc gi
+    MAX(ld.location_type_id) AS narrowest_type_id,     -- higher id = narrower
+    LOGICAL_OR(ld.location_type_id >= 3) AS has_geo_narrow_incl
+  FROM (SELECT p.campaign_id, g.location_id
+        FROM parsed p, UNNEST(p.geos) g WHERE g.polarity = 'positive') gi
   JOIN `dw-main-silver.geo.location_data` ld USING (location_id)
   GROUP BY 1
 ),
--- [V2] EXACT geo_reach_pct once a per-location HH table is confirmed (item 8.1).
---      Until then geo_reach_col = NULL and restriction runs off has_geo_narrow_incl.
---      Expected shape:  loc_hh(location_id, households) ; US_total = SUM over country row.
-geo_reach AS (
-  SELECT gi.campaign_id, CAST(NULL AS FLOAT64) AS geo_reach_pct   -- TODO(V2): wire loc_hh
-  FROM geo_inc gi GROUP BY 1
-  /*  once loc_hh exists, replace with:
-  SELECT gi.campaign_id,
-         SUM(h.households) / (SELECT SUM(households) FROM `loc_hh` WHERE location_type_id=2)
-  FROM geo_inc gi JOIN `loc_hh` h USING (location_id) GROUP BY 1  */
-),
+-- geo_reach_pct: DEFERRED to v2 (open item 8.1). geo.location_data has NO
+-- household/pop column and no clean per-location census table was found. The
+-- restriction rule does NOT need it — it runs off the exact has_geo_narrow_incl
+-- flag. Candidate v2 sources: a census HH-per-location table, or derive the
+-- addressable pool empirically from camperbid_prod__hhst_v3__campaign_bucket_population.
 -- ── HHST gate (live) ────────────────────────────────────────────────────────
 gate AS (
   SELECT campaign_id, threshold AS hhst_current
@@ -184,8 +177,10 @@ gate AS (
 ),
 -- ── Fangorn rollout tier (advertiser grain) ─────────────────────────────────
 fang AS (
-  SELECT advertiser_id, ANY_VALUE(tier) AS fangorn_tier    -- [V3] confirm col names
-  FROM `dw-main-bronze.tpa.fangorn_advertiser_inclusion`
+  SELECT advertiser_id,
+    ANY_VALUE(fangorn_rollout_tier_num) AS fangorn_tier,
+    LOGICAL_OR(is_express) AS is_express
+  FROM `dw-main-bronze.integrationprod.tpa_fangorn_advertiser_inclusion`
   GROUP BY advertiser_id
 )
 SELECT
@@ -211,13 +206,15 @@ SELECT
   g.hhst_current,
   COALESCE(g.hhst_current, 0) > 0 AS hhst_gated,
   f.fangorn_tier,
+  COALESCE(f.is_express, FALSE) AS is_express,
 
   -- ── Axis B: restriction components ──
-  gr.geo_reach_pct,
+  CAST(NULL AS FLOAT64) AS geo_reach_pct,          -- DEFERRED v2 (open item 8.1)
   CASE gl.narrowest_type_id
     WHEN 7 THEN 'zip' WHEN 6 THEN 'city' WHEN 5 THEN 'state'
     WHEN 4 THEN 'dma' WHEN 3 THEN 'dma' WHEN 2 THEN 'country' ELSE 'none' END AS geo_narrowest_type,
   COALESCE(gl.has_geo_narrow_incl, FALSE) OR p.has_geo_radii AS has_geo_narrow_incl,
+  COALESCE(gx.has_geo_excl, FALSE) AS has_geo_excl,
   d.has_3p_incl,
   p.three_p_semantics,
   (p.three_p_semantics IN ('and_include','mixed')) AS and_3p_narrowed,
@@ -244,7 +241,7 @@ SELECT
 FROM parsed p
 LEFT JOIN ds       d  USING (campaign_id)
 LEFT JOIN geo_lvl  gl USING (campaign_id)
-LEFT JOIN geo_reach gr USING (campaign_id)
+LEFT JOIN geo_excl gx USING (campaign_id)
 LEFT JOIN gate     g  USING (campaign_id)
 LEFT JOIN fang     f  ON f.advertiser_id = p.advertiser_id
 ;
