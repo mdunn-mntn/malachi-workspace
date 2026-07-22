@@ -1,0 +1,357 @@
+{
+  "cover": {
+    "title": "Customer Goal Attainment: Data Source Map",
+    "subtitle": "Which tables answer 'what % of our customers hit their goal?'",
+    "ticket": "GOAL-ATTAINMENT",
+    "period": "Snapshot 2026-07-21",
+    "generated": "2026-07-21",
+    "status": "Final",
+    "takeaways": [
+      "A live report already answers this ('Campaign Groups Hitting Goal Percentage', Mode, runs daily): ~63% of active campaign groups hitting goal on 2026-07-20 (Upper Mid 71%, Mid 66%, SMB 58%).",
+      "Goals are stored, not guessed: bae.v_daily_goal_by_campaign_group gives each group's goal_type + goal_value per day; compare to actual performance from the summary facts.",
+      "Before quoting it: CostPerCompletedView auto-passes (~25% of goals), the grain is campaign-group not advertiser, and it's a trailing-3-day status; those are the refinements."
+    ],
+    "toc": {
+      "Table map": "The list: tables that answer whether customers hit their goal, with join keys",
+      "Goal types": "The 16 goal types a customer can set (the decode for goal_type_id)",
+      "Already built": "Prior art: the existing Mode report, what it reads today, and its caveats",
+      "Join map": "The paragraph write-up: which column joins to what, table by table",
+      "How to answer it": "The recipe: how to turn these tables into the % that hit their goal"
+    }
+  },
+  "sheets": [
+    {
+      "kind": "table",
+      "name": "Table map",
+      "finding": "MNTN already stores each customer's goal; these tables let you score it",
+      "method": "Grouped by role: the goal, the customer, what they achieved, reach, incrementality, and how the numbers are computed. Top two rows are the ready-made goal spine the existing report uses. Full BQ paths; join keys in the last two columns.",
+      "columns": [
+        "Table",
+        "Role",
+        "What's in it",
+        "Grain",
+        "Join key(s)",
+        "Joins to"
+      ],
+      "rows": [
+        {
+          "Table": "dw-main-gold.bae.v_daily_goal_by_campaign_group",
+          "Role": "The goal",
+          "What's in it": "Authoritative as-of-day goal per campaign group: goal_type_id + goal_value + goal_type_name, one row per group per day. Prefer over live campaign_groups.goal_value when you need the goal as it stood on a date.",
+          "Grain": "1 / campaign group x day",
+          "Join key(s)": "campaign_group_id; day",
+          "Joins to": "sum_by_campaign_by_day (campaign_group_id, day); goal_types (goal_type_id)"
+        },
+        {
+          "Table": "dw-main-gold.bae.v_campaign_feature_date",
+          "Role": "The customer",
+          "What's in it": "Maps each campaign group to the targeting feature it had active (feature_type = KW / PP / KW+PP) over [start_date, end_date). Lets you cut goal attainment by AUDI feature.",
+          "Grain": "1 / campaign group x feature interval",
+          "Join key(s)": "campaign_group_id; day in [start_date, end_date)",
+          "Joins to": "campaign_groups (campaign_group_id)"
+        },
+        {
+          "Table": "bronze.integrationprod.campaign_groups",
+          "Role": "The goal",
+          "What's in it": "Where the goal actually lives: goal_type_id (which metric) + goal_value (the target number) + budget + objective_id, one row per campaign group.",
+          "Grain": "1 / campaign group",
+          "Join key(s)": "campaign_group_id (PK); advertiser_id",
+          "Joins to": "goal_types (goal_type_id); advertisers (advertiser_id); campaigns (campaign_group_id)"
+        },
+        {
+          "Table": "silver.core.goal_types",
+          "Role": "The goal",
+          "What's in it": "Decodes goal_type_id into the goal metric + plain-English definition. 16 types: ROAS, eCPA, CPA, CostPerVisit, VisitRate, Visits, Efficiency (reach), CTR, etc.",
+          "Grain": "16-row enum",
+          "Join key(s)": "goal_type_id (PK)",
+          "Joins to": "campaign_groups.goal_type_id"
+        },
+        {
+          "Table": "silver.core.objectives",
+          "Role": "The goal",
+          "What's in it": "Objective enum (Prospecting, Retargeting, etc.) - the campaign's intent, separate from its numeric goal.",
+          "Grain": "small enum",
+          "Join key(s)": "objective_id (PK)",
+          "Joins to": "campaigns.objective_id; campaign_groups.objective_id"
+        },
+        {
+          "Table": "silver.core.media_plan",
+          "Role": "The goal",
+          "What's in it": "The recommended media plan + deliverability_classification (high/med/low delivery risk) - signals whether the goal was even reachable.",
+          "Grain": "1 / advertiser x campaign group",
+          "Join key(s)": "advertiser_id; campaign_group_id",
+          "Joins to": "advertisers; campaign_groups"
+        },
+        {
+          "Table": "bronze.integrationprod.advertisers",
+          "Role": "The customer",
+          "What's in it": "Advertiser master dim: company_name (authoritative), active/deleted/is_test flags, attribution windows, control_group_percentage.",
+          "Grain": "1 / advertiser",
+          "Join key(s)": "advertiser_id (PK)",
+          "Joins to": "everything keyed on advertiser_id"
+        },
+        {
+          "Table": "bronze.integrationprod.campaigns",
+          "Role": "The customer",
+          "What's in it": "Maps campaign -> campaign_group -> advertiser; carries funnel_level, objective_id, channel_id (8=CTV, 1=display).",
+          "Grain": "1 / campaign",
+          "Join key(s)": "campaign_id (PK); campaign_group_id; advertiser_id",
+          "Joins to": "campaign_groups (campaign_group_id); advertisers (advertiser_id)"
+        },
+        {
+          "Table": "silver.fpa.advertiser_verticals",
+          "Role": "The customer",
+          "What's in it": "Advertiser -> industry vertical (parent + sub-vertical) - used to benchmark 'good' against peer verticals.",
+          "Grain": "2 / advertiser",
+          "Join key(s)": "advertiser_id -> vertical_id",
+          "Joins to": "advertisers (advertiser_id)"
+        },
+        {
+          "Table": "silver.summarydata.sum_by_campaign_group_by_day",
+          "Role": "What they achieved",
+          "What's in it": "PRIMARY scoreboard: daily spend, visits (views+clicks), conversions, order value at campaign-GROUP grain - the exact grain goals are set at.",
+          "Grain": "1 / campaign group x day",
+          "Join key(s)": "campaign_group_id; advertiser_id; day",
+          "Joins to": "campaign_groups (campaign_group_id)"
+        },
+        {
+          "Table": "silver.summarydata.sum_by_advertiser_by_day",
+          "Role": "What they achieved",
+          "What's in it": "Same KPIs rolled up to the whole advertiser account - answers 'the advertiser as a whole'.",
+          "Grain": "1 / advertiser x day",
+          "Join key(s)": "advertiser_id; day",
+          "Joins to": "advertisers (advertiser_id)"
+        },
+        {
+          "Table": "silver.summarydata.sum_by_campaign_by_day",
+          "Role": "What they achieved",
+          "What's in it": "Campaign-grain daily KPIs; history back to 2024 - best table for long trends / pre-periods.",
+          "Grain": "1 / campaign x day",
+          "Join key(s)": "campaign_id; advertiser_id; day",
+          "Joins to": "campaigns (campaign_id)"
+        },
+        {
+          "Table": "silver.summarydata.all_facts",
+          "Role": "What they achieved",
+          "What's in it": "Wide combined fact (spend+visits+conversions+impressions+reach) that powers the client-facing UI via CHAPI - the number customers actually see.",
+          "Grain": "1 / 19 dims x hour",
+          "Join key(s)": "advertiser_id; campaign_group_id; campaign_id; hour",
+          "Joins to": "all dims above"
+        },
+        {
+          "Table": "silver.summarydata.{spend,visit,conversion,impression}_facts",
+          "Role": "What they achieved",
+          "What's in it": "The four component fact tables at fresh hourly grain - use these when the daily rollups lag (~2 weeks).",
+          "Grain": "1 / 19 dims x hour",
+          "Join key(s)": "advertiser_id; campaign_group_id; campaign_id; hour",
+          "Joins to": "all dims above"
+        },
+        {
+          "Table": "silver.summarydata.sum_by_campaign_group_by_hour",
+          "Role": "Reach",
+          "What's in it": "Households / users reached (HLL sketch) at group grain - for reach / awareness goals. Merge the HLL, never SUM it.",
+          "Grain": "1 / campaign group x hour",
+          "Join key(s)": "campaign_group_id; hour",
+          "Joins to": "campaign_groups (campaign_group_id)"
+        },
+        {
+          "Table": "silver.enriched.lift__ghost_bid_visits  (+ gold.reporting.lift__ghost_bid_rollup)",
+          "Role": "Incrementality",
+          "What's in it": "Ghost-bid holdout lift: treatment vs holdout visits/conversions per advertiser & campaign group - success beyond attribution. Rollup is pre-aggregated.",
+          "Grain": "1 / day x adv x cg x campaign x ip x arm",
+          "Join key(s)": "advertiser_id; campaign_group_id; campaign_id",
+          "Joins to": "campaign_groups; campaigns; advertisers"
+        },
+        {
+          "Table": "bronze.integrationprod.r2_advertiser_settings  (+ archives_advertiser_setting_archives)",
+          "Role": "How it's computed",
+          "What's in it": "reporting_style = industry_standard vs last_touch - decides WHICH visit/conversion columns count toward the goal. Archive gives as-of-date history.",
+          "Grain": "1 / advertiser",
+          "Join key(s)": "advertiser_id",
+          "Joins to": "advertisers (advertiser_id)"
+        },
+        {
+          "Table": "silver.logdata.spend_log",
+          "Role": "How it's computed",
+          "What's in it": "Media cost at event grain - the spend denominator behind ROAS/CPA/CPV when you need it below daily grain.",
+          "Grain": "1 / spend event",
+          "Join key(s)": "advertiser_id; campaign_id",
+          "Joins to": "campaigns (campaign_id)"
+        }
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "Goal types",
+      "finding": "Every campaign group carries one of 16 goal types plus a target value",
+      "method": "silver.core.goal_types decodes campaign_groups.goal_type_id; the target number is campaign_groups.goal_value, in the units of that metric.",
+      "columns": [
+        "ID",
+        "Goal type",
+        "What the customer is aiming for"
+      ],
+      "rows": [
+        {
+          "ID": 1,
+          "Goal type": "ROAS",
+          "What the customer is aiming for": "Desired gross revenue return for every $1 spent"
+        },
+        {
+          "ID": 2,
+          "Goal type": "Click ROAS",
+          "What the customer is aiming for": "Desired gross revenue return per click for every $1 spent"
+        },
+        {
+          "ID": 3,
+          "Goal type": "eCPA",
+          "What the customer is aiming for": "Target cost per desired action"
+        },
+        {
+          "ID": 4,
+          "Goal type": "Click CPA",
+          "What the customer is aiming for": "Target cost per click"
+        },
+        {
+          "ID": 5,
+          "Goal type": "ROI",
+          "What the customer is aiming for": "Desired gross percentage return for every $1 spent"
+        },
+        {
+          "ID": 6,
+          "Goal type": "Click ROI",
+          "What the customer is aiming for": "Desired gross percentage return per click for every $1 spent"
+        },
+        {
+          "ID": 7,
+          "Goal type": "A/S",
+          "What the customer is aiming for": "Desired gross percentage return per acquisition cost"
+        },
+        {
+          "ID": 8,
+          "Goal type": "Click A/S",
+          "What the customer is aiming for": "Desired gross percentage click return per acquisition cost"
+        },
+        {
+          "ID": 9,
+          "Goal type": "Efficiency",
+          "What the customer is aiming for": "Reach as many high-intent customers as possible"
+        },
+        {
+          "ID": 10,
+          "Goal type": "CTR",
+          "What the customer is aiming for": "Drive the highest possible volume of click-throughs back to site"
+        },
+        {
+          "ID": 11,
+          "Goal type": "Average Daily Spend",
+          "What the customer is aiming for": "Spend an average amount each day over the month"
+        },
+        {
+          "ID": 12,
+          "Goal type": "Visits",
+          "What the customer is aiming for": "Drive as many site visits to high-intent customers as possible"
+        },
+        {
+          "ID": 13,
+          "Goal type": "CostPerVisit",
+          "What the customer is aiming for": "Cost per Verified Visit"
+        },
+        {
+          "ID": 14,
+          "Goal type": "CostPerCompletedView",
+          "What the customer is aiming for": "Ratio of total spend over completed views"
+        },
+        {
+          "ID": 15,
+          "Goal type": "VisitRate",
+          "What the customer is aiming for": "Percentage of impressions that resulted in a Verified Visit"
+        },
+        {
+          "ID": 16,
+          "Goal type": "CPA",
+          "What the customer is aiming for": "Cost per Verified Conversion"
+        }
+      ]
+    },
+    {
+      "kind": "notes",
+      "name": "Already built",
+      "finding": "Already built",
+      "intro": "A live report already answers this question end to end; start there.",
+      "blocks": [
+        [
+          "A report already does this",
+          "A Mode report, 'Campaign Groups Hitting Goal Percentage' (app.mode.com/mntn/reports/30fb4d3f8447), runs daily and answers this directly. For each active campaign group it scores trailing-3-day performance against the as-of goal in bae.v_daily_goal_by_campaign_group and reports the daily % hitting goal, split by advertiser spend tier and by targeting feature. Reuse its logic before building anything new."
+        ],
+        [
+          "What it reads today (2026-07-20)",
+          "About 63% of active campaign groups are hitting goal: Upper Mid Market 71%, Mid Market 66%, SMB 58% (larger advertisers hit goal more often). By feature: KW 57%, KW+PP 58%, PP 56%. Tiers are advertiser monthly spend: SMB under $25k, Mid Market $25-65k, Upper Mid Market $65k+."
+        ],
+        [
+          "How it decides 'hit'",
+          "ROAS (goal_type 1): order_value / spend, hit if >= goal. CostPerVisit (13) and CPA (16): spend / visits or / conversions, hit if <= goal. CostPerCompletedView (14): hit is hard-coded to 1. Active = trailing-3-day spend >= $100. Visits / conversions / revenue include competing_* (first-touch), i.e. industry_standard attribution for everyone."
+        ],
+        [
+          "Caveats before quoting the number (where we can add value)",
+          "- CostPerCompletedView auto-passes regardless of performance and is ~25% of all campaign groups with a goal, which inflates the headline; strip or properly score it for a true rate. - It is campaign-GROUP grain; 'what % of customers' needs a roll-up to advertiser. - 'Hitting goal' is a trailing-3-day live status, not a whole-flight outcome. - Attribution is industry_standard for all, not each advertiser's reporting_style. - Four goal types are scored, but they cover ~95% of groups that have a goal (only Efficiency / reach is dropped)."
+        ]
+      ]
+    },
+    {
+      "kind": "notes",
+      "name": "Join map",
+      "finding": "Join map",
+      "intro": "How the tables connect - the appropriate join column, table by table.",
+      "blocks": [
+        [
+          "The spine: three keys",
+          "Almost every join runs on three columns. advertiser_id is the account. campaign_group_id is the GOAL grain - the goal (goal_type_id + goal_value) is set on the campaign group, so this is the key you attribute success at. campaign_id rolls up to campaign_group_id via integrationprod.campaigns (campaign_id is the PK -> campaign_group_id -> advertiser_id). Everything else hangs off these three."
+        ],
+        [
+          "Decoding the goal",
+          "campaign_groups.goal_type_id -> silver.core.goal_types.goal_type_id turns the code into the metric name + definition (16 types). campaign_groups.goal_value is the target number, expressed in the units of that metric (goal_type CostPerVisit -> a $ per visit; ROAS -> a multiple; VisitRate -> a percentage). campaign_groups already denormalizes goal_type_name, so you only need the join when you also want the description. objective_id -> silver.core.objectives separates prospecting vs retargeting intent."
+        ],
+        [
+          "Joining the goal to the result",
+          "The cleanest attainment join is campaign_groups -> sum_by_campaign_group_by_day on campaign_group_id (plus a date filter on day), because both sit at campaign-group grain. For the whole-account view, roll to sum_by_advertiser_by_day on advertiser_id. For long trends use sum_by_campaign_by_day on campaign_id, then map campaign_id -> campaigns.campaign_group_id. all_facts and the four *_facts tables share the same 19 dimension keys (advertiser_id, campaign_group_id, campaign_id, channel, objective, ..., hour) - join any of them on the subset you need."
+        ],
+        [
+          "Reach and incrementality",
+          "Reach: sum_by_campaign_group_by_hour on campaign_group_id - its user-count columns are HLL sketches, so use HLL_COUNT.MERGE, never SUM. Incrementality: lift__ghost_bid_visits on advertiser_id / campaign_group_id / campaign_id (arm = 'ghost' = holdout vs 'submitted' = treatment); the pre-rolled gold.reporting.lift__ghost_bid_rollup is already per advertiser & campaign_group."
+        ],
+        [
+          "The column that changes the answer",
+          "r2_advertiser_settings.reporting_style (join on advertiser_id) is industry_standard vs last_touch, and it decides WHICH visit/conversion columns count. Under industry_standard the client UI = the default columns + competing_* (first-touch); under last_touch it drops competing_*. Resolve this per advertiser before scoring, or two analysts get two different 'did they hit it' answers. Field-level history for as-of-date resolution is in archives_advertiser_setting_archives."
+        ],
+        [
+          "Naming and hygiene gotchas",
+          "For a current advertiser name always join integrationprod.advertisers.company_name - advertiser_verticals.advertiser_name is write-once and ~80% empty for recent accounts. On every integrationprod dim, filter deleted = FALSE AND is_test = FALSE."
+        ]
+      ]
+    },
+    {
+      "kind": "notes",
+      "name": "How to answer it",
+      "finding": "How to answer it",
+      "intro": "A recipe for turning these tables into the percentage the request asks for.",
+      "blocks": [
+        [
+          "Recipe: campaign (group) level",
+          "1) Pull the as-of goal per group per day from bae.v_daily_goal_by_campaign_group (goal_type_id + goal_value). 2) From sum_by_campaign_by_day (or _group_by_day) over the window, compute the ACTUAL value of that same metric (ROAS = order_value / spend; CostPerVisit = spend / visits; VisitRate = visits / impressions; CPA = spend / conversions), deciding whether to apply competing_* / reporting_style. 3) met = actual beats goal_value in the right direction (>= for ROAS / VisitRate / Visits; <= for the cost / CPA goals). 4) % = met / (campaign groups that have a goal set). This is exactly what the existing Mode report does on a trailing-3-day window; see the 'Already built' tab."
+        ],
+        [
+          "Recipe: advertiser level",
+          "Roll the same logic to sum_by_advertiser_by_day, or define account-level 'goal met' as e.g. >= X% of the advertiser's campaign groups hitting their goal. The request is answerable at either grain; pick which one up front, because the percentages differ."
+        ],
+        [
+          "Watch-outs",
+          "- goal_value can be null or 0 (no goal set): exclude or bucket those separately. - Low-impression weeks give extreme rates; filter weeks under ~1,000 impressions. - The daily rollups lag ~2 weeks; for the latest window read the *_facts tables directly. - 'Met the goal' here is attribution-based; ghost-bid lift answers the harder 'was it incremental'."
+        ],
+        [
+          "If the ask needs to be richer later",
+          "Goals as set today are a single metric per campaign group. A blended 'success' score (performance + reach + incrementality together) is a scoring model built on top of these tables, not a column that already exists; treat that as a follow-up, not part of this pull."
+        ]
+      ]
+    }
+  ]
+}

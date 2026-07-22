@@ -183,8 +183,15 @@ over time — pulling in what worked from past workbooks (AUDI-1089 heat scales,
 sizing) and reacting to how shared files actually land. When we change the look:
 
 1. Edit `lib/mntn_xlsx.py` (palette, a sheet method, spacing).
-2. Regenerate the sample (`python3 lib/mntn_xlsx_demo.py`) and eyeball it.
+2. **Regenerate the Drive template sample — REQUIRED, never skip.** Run `python3 lib/mntn_xlsx_demo.py`;
+   it writes the reference workbook to **`My Drive/Tickets/_FORMAT_SAMPLE/`**. Eyeball it. **The live
+   template sample must always reflect the current format** — every `lib/mntn_xlsx.py` change is followed
+   by this regen in the same commit (user rule, 2026-07-21). The Drive sample is how the format is judged;
+   a stale sample is a bug.
 3. Note the change in the Changelog below and commit.
+4. Regenerate any live deliverables that should carry the new look (each has a committed builder — e.g.
+   `tickets/goal_attainment_customer_goal_map/artifacts/goal_attainment_build_xlsx.py`; re-running it
+   re-applies the standard and overwrites the Drive copy).
 
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
