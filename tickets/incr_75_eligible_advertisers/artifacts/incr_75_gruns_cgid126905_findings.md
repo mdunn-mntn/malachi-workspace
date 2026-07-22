@@ -46,19 +46,30 @@ campaign yields ~1 holdout visit/day, so running to the Aug 1 flight end takes u
 holdout visits — still far short. The table only reaches back to Jun 22 (raw feed ~10-day
 retention), so the Jun 8–21 launch period is unrecoverable.
 
-## Does excluding high intent improve incrementality? (the well-powered answer)
+**Cross-validated (2026-07-22):** the gold `reporting.lift__ghost_bid_rollup` (WHERE `entity_id`
+= 126905) reproduces this to the digit — `rel_itt` 0.15223, abs 0.00013574, z 0.628,
+`significant_95` false, n 207,324 / 21,309. The gold layer is now correctly time-boxed (it no
+longer includes the left-censored day), so a single `SELECT *` off the rollup is the simplest path.
 
-Yes, directionally — but the evidence is **platform-wide**, not from this one campaign. Across
-100M+ IPs (all advertisers, clean holdout), relative incremental visit lift by intent band:
+## Does excluding high intent improve incrementality? Not for this audience.
+
+The audience here is **~100% no-score** (unscored) households. The gold ghost-bid strata
+(`reporting.lift__ghost_bid_results`, WHERE `campaign_group_id` = 126905, `stratum_type='score_band'`)
+show High and Mid intent essentially excluded — **5 and 30 of 207K prospects**; the rest are no-score.
+So this campaign excludes high **and** mid intent, landing on untargeted reach.
+
+That matters, because platform-wide (100M+ IPs, all advertisers, clean holdout) the lift is
+concentrated in mid intent — and no-score is the incrementally-dead reach band:
 
 | Intent band | Incremental lift | Read |
 |---|---|---|
-| High intent (blocked here) | +0.2% | Incrementally dead — visits anyway |
+| High intent (excluded here) | +0.2% | Incrementally dead — visits anyway |
 | Prime prospect | +1.6% | Some lift |
-| Mid intent | +3.3% | Carries the lift |
+| Mid intent (excluded here) | +3.3% | Carries the lift |
 | MaxReach (low intent) | +3.4% | Carries the lift |
-| No score (untargeted reach) | +0.1% | Incrementally dead — reach only |
+| **No score — THIS campaign is ~100% here** | **+0.1%** | **Incrementally dead — reach only** |
 
-So blocking high intent **should** improve incrementality — provided the freed spend flows to
-**mid-intent** prospects, because untargeted reach is incrementally dead too. This single Gruns
-campaign is directionally consistent with that, just too small to prove on its own.
+So excluding high intent here shifted spend to no-score **reach**, not to the mid-intent band that
+lifts. **~0 incremental lift is the expected result** — the +15% point estimate is noise consistent
+with zero (n.s.), not a signal the audience improves incrementality. To actually test the hypothesis
+you'd want a mid-intent audience, not this one.

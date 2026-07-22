@@ -86,7 +86,7 @@ grad_df = pd.DataFrame([
     {"Intent band": "Prime prospect (PP)", "Incremental visit lift": 0.016, "Read": "Some incremental lift"},
     {"Intent band": "Mid intent", "Incremental visit lift": 0.033, "Read": "Carries the lift"},
     {"Intent band": "MaxReach (low intent)", "Incremental visit lift": 0.034, "Read": "Carries the lift"},
-    {"Intent band": "No score (untargeted reach)", "Incremental visit lift": 0.001, "Read": "Incrementally dead — reach only"},
+    {"Intent band": "No score (untargeted reach)", "Incremental visit lift": 0.001, "Read": "Incrementally dead — reach only.  ← THIS campaign is ~100% here"},
 ])
 
 os.makedirs(OUT, exist_ok=True)
@@ -137,10 +137,11 @@ wb.table(
 
 wb.table(
     "Platform evidence", grad_df,
-    finding="Platform-wide, the hypothesis holds: high intent is incrementally dead; mid intent carries the lift",
+    finding="Mid intent carries the lift; high intent and no-score reach are dead — and this campaign's audience is ~100% no-score",
     method=("Population-wide ghost-bid analysis (100M+ IPs, all advertisers, clean holdout). Relative incremental visit lift by "
-            "intent band. Well-powered, unlike any single campaign. Blocking high intent should improve incrementality — as long as "
-            "the freed spend flows to mid intent, not untargeted reach (reach is incrementally dead too)."),
+            "intent band. Well-powered, unlike any single campaign. The catch for THIS campaign: its audience is ~100% no-score — "
+            "the ghost-bid strata show High and Mid intent essentially excluded (5 and 30 of 207K prospects). No-score is the dead "
+            "reach band, not the mid-intent band that lifts, so excluding high intent here shifted spend to reach, not mid intent."),
     formats={"Incremental visit lift": SIGN_PCT},
     heat={"Incremental visit lift": "high"},
     kind="data",
@@ -164,9 +165,10 @@ wb.notes(
          "only 19 visits and accrues ~1/day, so running to the Aug 1 flight end reaches only ~29. A fixed ~10% platform holdout on a "
          "0.1%-visit-rate campaign can't resolve a few-percent lift."),
         ("Does excluding high intent improve incrementality? (see the Platform evidence tab)",
-         "Yes, directionally, but the evidence is platform-wide, not this one campaign. Across 100M+ IPs, high-intent audiences are "
-         "incrementally ~0% (they visit anyway) while mid intent carries the lift (~+3%). Blocking high intent should help, provided "
-         "the freed spend goes to mid intent, not untargeted reach (also ~0%)."),
+         "Not for this audience. Platform-wide (100M+ IPs), the lift is in mid intent (~+3%); high intent (~0%) and untargeted reach / "
+         "no-score (~0%) are incrementally dead. The catch: this campaign's audience is ~100% no-score — the ghost-bid strata show High "
+         "and Mid intent essentially excluded (5 and 30 of 207K prospects). So excluding high intent here moved spend to no-score reach, "
+         "not to the mid-intent band that lifts. ~0 incremental lift is the expected result; the +15% is noise consistent with zero."),
         ("Reading the performance numbers",
          "The ~0.2% visit rate and ~$11 CPV (vs the $2.50 goal) are by design: a cold, high-intent-excluded audience visits less than "
          "warm retargeting, so standalone CPV is higher but incremental value is higher. Visits are MNTN view-through (TV ads are "
@@ -174,7 +176,11 @@ wb.notes(
     ],
 )
 
-SQL = """-- Incremental lift (entry-cohort; active window Jun 24 - Jul 14, 2026)
+SQL = """-- SIMPLEST PATH (gold layer, already time-boxed): reproduces the aggregate lift below exactly.
+SELECT * FROM `dw-main-gold.reporting.lift__ghost_bid_rollup`  WHERE entity_id = 126905;          -- aggregate
+SELECT * FROM `dw-main-gold.reporting.lift__ghost_bid_results` WHERE campaign_group_id = 126905;  -- per score_band / bid_count stratum (confirms High+Mid excluded -> ~100% no_score)
+
+-- Incremental lift, from silver (entry-cohort; active window Jun 24 - Jul 14, 2026)
 WITH e AS (
   SELECT advertiser_id, campaign_id, ip, dt, arm, visited, won,
     ROW_NUMBER() OVER (PARTITION BY advertiser_id, campaign_id, ip ORDER BY dt) AS rn
@@ -201,12 +207,12 @@ FROM `dw-main-silver.summarydata.all_facts`
 WHERE CAST(hour AS DATE) BETWEEN '2026-06-08' AND CURRENT_DATE()
   AND advertiser_id = 42097 AND campaign_group_id = 126905
 GROUP BY campaign_id;"""
-wb.sql("Queries", SQL, note="BigQuery run via bq_run.sh on 2026-07-22 (dw-main-silver).")
+wb.sql("Queries", SQL, note="Run 2026-07-22. The gold rollup reproduces the silver entry-cohort calc to the digit (+15.2%, CI, z) — cross-validated.")
 
 wb.cover(takeaways=[
     "Raw visit rate is ~0.2% — low by design: excluding high intent removes the users who would visit anyway, so a low raw rate is expected, not a failure.",
     "Incremental lift on this campaign is +15% (served 0.103% vs holdout 0.089%) but NOT significant: 95% CI −32% to +63%, p = 0.53, only 19 holdout visits.",
-    "The hypothesis holds platform-wide: high-intent audiences are incrementally ~0%, mid-intent carry the lift (~+3%). This single small campaign is directionally consistent but too small to confirm it on its own.",
+    "This campaign's audience is ~100% no-score (unscored) households — High and Mid intent are excluded, not just High. No-score is the platform-wide 'reach' band that is incrementally ~0%, so excluding high intent here shifted spend to reach, not to the mid-intent band that lifts; ~0 is the expected result and the +15% is noise consistent with zero.",
 ])
 
 local = wb.save_local(os.path.join(OUT, "incr_75_gruns_cgid126905_incrementality.xlsx"))
