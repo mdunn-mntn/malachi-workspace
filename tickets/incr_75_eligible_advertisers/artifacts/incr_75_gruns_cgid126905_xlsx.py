@@ -58,9 +58,9 @@ lift_df = pd.DataFrame([
 # ---------------------------------------------------------------------------
 perf_rows = [
     # campaign, stage, imps, reach, spend, visits, conv
-    ("Prospecting — excludes high intent (626276)", "Prospecting", 440919, 348769, 9575.63, 835, 21),
-    ("Multi-Touch (626275)", "Mid-funnel", 1069040, 179478, 23461.21, 543, 7),
-    ("Multi-Touch Plus (626274)", "Lower-funnel", 9510, 695, 214.76, 165, 1),
+    ("Prospecting — excludes high intent (626276)", "Prospecting (Stage 1)", 440919, 348769, 9575.63, 835, 21),
+    ("Multi-Touch (626275)", "Multi-Touch (Stage 2)", 1069040, 179478, 23461.21, 543, 7),
+    ("Multi-Touch Plus (626274)", "Multi-Touch Plus (Stage 3)", 9510, 695, 214.76, 165, 1),
 ]
 perf = []
 for name, stage, imps, reach, spend, visits, conv in perf_rows:
@@ -124,7 +124,10 @@ wb.table(
     finding="A 44-day, $33K CTV flight; the prospecting stage ran a 0.19% visit rate — low by design",
     method=("Flight to date Jun 8 – Jul 22, 2026. Spend = media + data + platform. "
             "Visits = MNTN view-through visits (industry-standard lens: last-touch + competing; corroborated by the visit pixel log). "
-            "CPV = spend ÷ visits (group CPV goal = $2.50). Households reached = distinct IPs; not summed across campaigns."),
+            "CPV = spend ÷ visits (group CPV goal = $2.50). Households reached = distinct IPs; not summed across campaigns. "
+            "Stages are MNTN's sequential retargeting cascade: Stage 1 prospects a fresh audience; Stage 2 retargets Stage-1 "
+            "view-through visitors; Stage 3 retargets Stage-2 visitors. The high-intent exclusion and the incrementality "
+            "holdout apply to Stage 1 (prospecting) only."),
     formats={"Impressions": FMT.INT, "Households reached": FMT.INT, "Spend": FMT.USD0,
              "Visits": FMT.INT, "Visit rate": FMT.PCT2, "CPV": FMT.USD2, "Conv.": FMT.INT},
     heat={"Visit rate": "high"},
