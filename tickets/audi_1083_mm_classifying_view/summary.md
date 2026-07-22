@@ -206,5 +206,13 @@ only sets the default boolean.
 4. **Where it lives / materialization** — SQLMesh view vs scheduled table; grain confirmed campaign.
 5. **Model/version scheme** — how to keep `mm_engine` robust when the next generation (post-Fangorn) ships.
 
+## 6b. Team feedback artifact (2026-07-22)
+Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
+**https://mntn.atlassian.net/wiki/spaces/TAR/pages/3712811252** — "AUDI-1083: MNTN Matched
+Classifying View — Spec for Feedback". Draft-for-feedback banner, problem framing, the mm_class
+taxonomy grid, column dictionary, live sample rows, join snippets, and 6 open questions teed up for
+inline comments (flagship def, gate rule, geo threshold, keyword-only-as-MM, grain, materialization).
+Source HTML: `artifacts/audi_1083_confluence_spec.html`.
+
 ## 7. Data Documentation Updates
 (pending — will land taxonomy/gate/geo confirmations into data_knowledge.md as the view is built)

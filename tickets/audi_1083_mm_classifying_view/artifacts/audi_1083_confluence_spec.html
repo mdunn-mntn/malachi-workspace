@@ -1,0 +1,100 @@
+<ac:structured-macro ac:name="info"><ac:rich-text-body><p><strong>DRAFT FOR FEEDBACK.</strong> This is a proposed spec for a campaign-grain view that grades MNTN Matched. Nothing is materialized yet. Please leave inline comments &mdash; the <strong>Open questions</strong> section at the bottom is where I most need your input (flagship definition, gate rule, geo threshold, columns). Owner: Malachi Dunn (AUDI-1083). Operationalizes the <a href="https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511">MM Taxonomy</a> page.</p></ac:rich-text-body></ac:structured-macro>
+
+<h2>The problem</h2>
+<p>"MM" can't be identified by DS13/DS19/DS46 presence alone. A keyword campaign narrowed to a single ZIP, or hard-intersected with a 3P segment, or with the intent gate off, still reads as "MM" under datasource-existence filtering. Presence both <strong>over-counts</strong> (a 1-ZIP DS19 campaign) and <strong>under-counts</strong> MM (DS46-only carries no DS19). We need a systematic grade that stays robust as the model generation changes (Fangorn today, more later).</p>
+<p><strong>How big is the gap?</strong> On live prospecting spend (trailing 45d, $43.2M):</p>
+<table><tbody>
+<tr><th>Cut</th><th>Spend</th><th>Share of prospecting</th></tr>
+<tr><td>MM-labelled (<code>has_mm</code> &mdash; any DS13/19/38/46)</td><td>$30.6M</td><td><strong>70.9%</strong></td></tr>
+<tr><td>Unmodified MM (<code>is_unmodified_mm</code>)</td><td>$14.0M</td><td><strong>32.5%</strong></td></tr>
+<tr><td>Clean flagship Fangorn (<code>is_flagship</code>)</td><td>$2.9M</td><td><strong>6.7%</strong></td></tr>
+</tbody></table>
+<p>Of every dollar labelled "MM," less than half is actually unmodified. That gap is what this view exposes.</p>
+
+<h2>What the view does</h2>
+<p>One row per campaign. LEFT JOIN it on <code>campaign_id</code> (or roll up by <code>campaign_group_id</code>) and filter. It grades two independent things &mdash; kept separate on purpose, because collapsing them into one score hides signal:</p>
+<ul>
+<li><strong>Axis A &mdash; which MM engine</strong> (<code>mm_class</code>): the datasource config, named per the settled taxonomy grid.</li>
+<li><strong>Axis B &mdash; how carved-down the pool is</strong> (<code>restriction_level</code> + component flags): geo narrowing, AND-3P/1P intersection, and the intent gate.</li>
+</ul>
+<p>Then two composable booleans everyone actually filters on: <code>is_unmodified_mm</code> (real, well-configured MM of any engine) and <code>is_flagship</code> (that, on the current flagship config).</p>
+
+<h2>Axis A &mdash; the mm_class taxonomy (6 live cells)</h2>
+<p>DS19 (keywords) &times; vertical anchor {none / DS13 legacy / DS46 Fangorn}. DS13 and DS46 never co-occur (same slot, two model generations).</p>
+<table><tbody>
+<tr><th></th><th>No vertical anchor</th><th>DS13 anchor (legacy scoring)</th><th>DS46 anchor (Fangorn)</th></tr>
+<tr><th>+ DS19 (keywords)</th><td><code>mm_keywords_only</code> &mdash; ~42% (Max Reach band)</td><td><code>mm_classic</code> &mdash; ~1-4% (the shipped Peak Performance config)</td><td><code>mm_flagship_fangorn</code> &mdash; ~19% <strong>(FLAGSHIP)</strong></td></tr>
+<tr><th>no DS19</th><td><code>non_mm</code> &mdash; ~27%</td><td><code>vertical_only_legacy</code> &mdash; ~1% (MM 1.0)</td><td><code>fangorn_vertical_only</code> &mdash; ~7%</td></tr>
+</tbody></table>
+<p>Quality ladder is captured in <code>mm_engine_rank</code>: 3 = Fangorn (DS46) &gt; 2 = Peak Performance (DS13) &gt; 1 = keywords-only / Max Reach &gt; 0 = non-MM. <strong>Flagship = DS19+DS46 specifically</strong> &mdash; DS46-only ("fangorn_vertical_only") is real MM but caps at the Peak Performance band (the High-Intent band needs the keyword layer), so it is not flagship.</p>
+
+<h2>Axis B &mdash; the restriction components</h2>
+<p><code>restriction_level</code> (most-severe wins): <code>none</code> / <code>geo</code> (narrower-than-country positive include, or a radius) / <code>audience</code> (AND-3P or seeded 1P intersection) / <code>geo+audience</code>. Cosmetic layers do NOT demote: an <strong>OR-additive 3P</strong> is bidder-inert under a live gate, and a <strong>CRM-exclude</strong> is hygiene &mdash; both stay flagship.</p>
+
+<h2>Column dictionary</h2>
+<table><tbody>
+<tr><th>Column</th><th>Meaning</th></tr>
+<tr><td><code>campaign_id</code>, <code>campaign_group_id</code>, <code>advertiser_id</code></td><td>Keys. Grain = campaign (latest bidder-facing targeted segment).</td></tr>
+<tr><td><code>objective_id</code>, <code>funnel_level</code></td><td>Exposed so you filter to prospecting yourself (the view classifies ALL campaigns).</td></tr>
+<tr><td><code>mm_class</code></td><td>The 6-cell taxonomy label (above).</td></tr>
+<tr><td><code>mm_engine_rank</code></td><td>0-3 quality ladder for sorting.</td></tr>
+<tr><td><code>has_ds13 / has_ds19 / has_ds38 / has_ds46 / has_mm</code></td><td>Raw polarity-aware datasource flags (positive clauses).</td></tr>
+<tr><td><code>hhst_current</code>, <code>hhst_gated</code></td><td>Household Score Threshold (the intent gate). Gated = threshold &gt; 0.</td></tr>
+<tr><td><code>fangorn_tier</code>, <code>is_express</code></td><td>Advertiser Fangorn rollout tier + Express flag.</td></tr>
+<tr><td><code>geo_narrowest_type</code></td><td>country / dma / state / city / zip &mdash; narrowest positive geo include.</td></tr>
+<tr><td><code>has_geo_narrow_incl</code>, <code>has_geo_excl</code></td><td>Narrower-than-country include present; any geo exclusion present.</td></tr>
+<tr><td><code>geo_reach_pct</code></td><td>Exact % of US households reachable. <strong>Deferred (NULL) in v1</strong> &mdash; see Open questions.</td></tr>
+<tr><td><code>three_p_semantics</code></td><td>How 3P joins MM: <code>or_include</code> (additive) / <code>and_include</code> (narrows) / <code>mixed</code> / <code>three_p_only</code> / <code>none</code>.</td></tr>
+<tr><td><code>and_3p_narrowed</code>, <code>or_3p_additive</code>, <code>and_1p_narrowed</code>, <code>crm_excl_hygiene</code></td><td>Restriction component flags.</td></tr>
+<tr><td><code>restriction_level</code></td><td>none / geo / audience / geo+audience.</td></tr>
+<tr><td><code>is_unmodified_mm</code></td><td>Any MM engine, gated, national geo, no AND-narrow. "Real, well-configured MM."</td></tr>
+<tr><td><code>is_flagship</code></td><td><code>is_unmodified_mm</code> AND <code>mm_class = 'mm_flagship_fangorn'</code>. The current flagship product, clean.</td></tr>
+</tbody></table>
+
+<h2>Sample classified campaigns (live prospecting, trailing 45d)</h2>
+<p>Two per cell by spend. Note the instructive edge cases: <strong>624917</strong> (fangorn_vertical_only, gated national &mdash; unmodified MM but not flagship) and <strong>246796</strong> (mm_keywords_only, gated national &mdash; unmodified but Max Reach, not flagship).</p>
+<table><tbody>
+<tr><th>campaign_id</th><th>mm_class</th><th>restriction_level</th><th>gated</th><th>geo</th><th>3P semantics</th><th>unmodified</th><th>flagship</th><th>spend_45d</th></tr>
+<tr><td>579102</td><td>mm_flagship_fangorn</td><td>none</td><td>Y</td><td>country</td><td>none</td><td>Y</td><td><strong>Y</strong></td><td>$257,592</td></tr>
+<tr><td>521344</td><td>mm_flagship_fangorn</td><td>none</td><td>Y</td><td>country</td><td>or_include</td><td>Y</td><td><strong>Y</strong></td><td>$188,296</td></tr>
+<tr><td>624917</td><td>fangorn_vertical_only</td><td>none</td><td>Y</td><td>country</td><td>or_include</td><td>Y</td><td>N</td><td>$220,359</td></tr>
+<tr><td>325113</td><td>fangorn_vertical_only</td><td>audience</td><td>N</td><td>country</td><td>mixed</td><td>N</td><td>N</td><td>$289,739</td></tr>
+<tr><td>619590</td><td>mm_classic</td><td>geo</td><td>Y</td><td>state</td><td>or_include</td><td>N</td><td>N</td><td>$95,597</td></tr>
+<tr><td>632379</td><td>mm_classic</td><td>none</td><td>Y</td><td>country</td><td>or_include</td><td>Y</td><td>N</td><td>$27,597</td></tr>
+<tr><td>573974</td><td>vertical_only_legacy</td><td>audience</td><td>Y</td><td>country</td><td>mixed</td><td>N</td><td>N</td><td>$169,650</td></tr>
+<tr><td>246796</td><td>mm_keywords_only</td><td>none</td><td>Y</td><td>country</td><td>or_include</td><td>Y</td><td>N</td><td>$403,334</td></tr>
+<tr><td>397337</td><td>mm_keywords_only</td><td>none</td><td>Y</td><td>country</td><td>none</td><td>Y</td><td>N</td><td>$368,774</td></tr>
+<tr><td>608814</td><td>non_mm</td><td>geo</td><td>N</td><td>state</td><td>three_p_only</td><td>N</td><td>N</td><td>$1,155,063</td></tr>
+</tbody></table>
+
+<h2>How to use it</h2>
+<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">sql</ac:parameter><ac:plain-text-body><![CDATA[-- broad "is this real MM" cut
+SELECT * FROM mm_classifier v WHERE v.is_unmodified_mm;
+
+-- flagship Fangorn only
+SELECT * FROM mm_classifier v WHERE v.is_flagship;
+
+-- your own bar: gated national Fangorn incl. vertical-only, no AND-3P
+SELECT * FROM mm_classifier v
+WHERE v.has_ds46 AND v.hhst_gated
+  AND v.restriction_level = 'none';
+
+-- attach to any analysis
+SELECT a.*, v.mm_class, v.is_flagship, v.restriction_level
+FROM my_analysis a LEFT JOIN mm_classifier v USING (campaign_id);]]></ac:plain-text-body></ac:structured-macro>
+
+<h2>Open questions (please comment)</h2>
+<ol>
+<li><strong>Flagship = DS19+DS46 only?</strong> I excluded DS46-only ("fangorn_vertical_only") from <code>is_flagship</code> because it caps at the Peak Performance band. Agree, or should flagship include DS46-only?</li>
+<li><strong>Should <code>is_unmodified_mm</code> require the gate?</strong> Gate-off MM bids broadly like Max Reach. I treat gate-off as not-unmodified. Right call?</li>
+<li><strong>Geo threshold.</strong> Today <em>any</em> narrower-than-country positive include flags <code>restriction_level='geo'</code>. Should a light narrowing count, or only material shrinkage? The v2 <code>geo_reach_pct</code> (exact % of US HH reachable) would let us set a real cutoff &mdash; is that worth building? (Candidate source: the bidder's per-campaign <code>campaign_bucket_population</code>.)</li>
+<li><strong>Is keyword-only "real MM"?</strong> <code>mm_keywords_only</code> (Max Reach) counts toward <code>is_unmodified_mm</code>. Keep it, or should "unmodified MM" require a vertical anchor?</li>
+<li><strong>Grain + rollup.</strong> Campaign-level, with a companion group-level view (all-flagship vs mixed). Right grain?</li>
+<li><strong>Where should it live / be materialized</strong> (SQLMesh view vs scheduled table), and <strong>any columns missing?</strong></li>
+</ol>
+
+<h2>Status &amp; links</h2>
+<ul>
+<li><strong>Status:</strong> draft view validated end-to-end on live data; reproduces the taxonomy grid. Pending: materialization + the v2 exact-geo upgrade.</li>
+<li><strong>Ticket:</strong> <a href="https://mntn.atlassian.net/browse/AUDI-1083">AUDI-1083</a>. SQL + calibration CSVs in the ticket workspace.</li>
+</ul>
