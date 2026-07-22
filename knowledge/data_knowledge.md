@@ -982,6 +982,17 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   serverless). `ENABLED_DSIDS = [23,25,26,28,30,36]`; per-DS lag hours (5x5=5h, augmentor/guid=1h, 33across=8h).
   Two outputs per vendor: stage-1 `gs://mntn-data-archive-{env}/fpa_vendor_log/data_source_id=NN/` (raw archive),
   stage-2 `…/signals/site_visit_signal/dt=/hh=/data_source_id=NN/`.
+- **DS30 (augmentor) and DS23 (guid) feeder specifics (from the actual Spark jobs, AUDI-1091, 2026-07-22):**
+  `dsid30_augmentor_log_processing.py` reads full `augmentor_log` (east+west) then **filters to
+  `placement_type IN ("BANNER","BANNER_AND_VIDEO")`** — so **svs DS30 is only the BANNER slice of augmentor.**
+  It builds site visits from BOTH `page` and `referrer` (referrer stamped 1s earlier), normalizes URLs
+  (`http://` prefix if missing), requires non-empty `ip`, first-touch dedup per (ip, url).
+  `dsid23_guid_log_processing.py`: guid_log, left-anti-join to pixel-isolation blocked advertisers, URL =
+  `product_referer`, `.distinct()`. **AUDI-1091 headroom finding:** the DROPPED augmentor placements are NOT
+  site visits — in a 1-hr sample VIDEO was 75% of augmentor rows but **99.6% URL-less** (CTV/video, no webpage;
+  only 0.39% carry a page/referrer URL). The URL-bearing augmentor rows are essentially all BANNER, already in
+  svs → "full augmentor as a bigger free site-visit source" is a NO-GO (net-new ~1% of rows, ≤16% of IPs upper
+  bound, vs ~4x the row volume to ingest). Detail: `tickets/audi_1091_augmentor_full_source/`.
 - **Unified `site_visit_signal` schema** (all vendors): `uid, advertiser_id, ip, url, query_parameters, user_agent,
   time, data_source_id, dt, hh`. **Separable by `data_source_id`.** ~250 GiB/day total.
   **`uid` is a ULID → a free ingest-latency instrument (AUDI-1116, 2026-07-16):** first 10 Crockford-base32
