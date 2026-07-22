@@ -46,13 +46,6 @@ campaign yields ~1 holdout visit/day, so running to the Aug 1 flight end takes u
 holdout visits — still far short. The table only reaches back to Jun 22 (raw feed ~10-day
 retention), so the Jun 8–21 launch period is unrecoverable.
 
-**How to get a well-powered read on this audience:** the holdout is fixed at ~10% (no plans to
-change it), so widening it on one campaign isn't an option. The realistic path is to **pool several
-high-intent-excluded prospecting campaigns and advertisers into a single read** — aggregating their
-10% holdouts is exactly how the platform-wide gradient below reaches significance. A standalone
-significant read is only realistic on large, high-spend flights; a small campaign like this can't
-resolve a few-percent lift on its own.
-
 ## Does excluding high intent improve incrementality? (the well-powered answer)
 
 Yes, directionally — but the evidence is **platform-wide**, not from this one campaign. Across

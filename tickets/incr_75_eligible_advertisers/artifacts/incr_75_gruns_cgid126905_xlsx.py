@@ -174,15 +174,6 @@ wb.notes(
          "visit rate and ~$11 CPV (above the $2.50 blended-account goal) are expected and by design: a cold, high-intent-excluded "
          "audience has a lower raw visit rate than warm retargeting, so its standalone CPV is higher while its INCREMENTAL value is "
          "higher. Conversions are sparse at this top-of-funnel stage, so visit rate (not conversions) is the meaningful KPI here."),
-        ("How to get a well-powered read on this audience",
-         "The ghost-bid holdout is a fixed ~10% platform-wide (no plans to change it), so we can't add power by widening the holdout on "
-         "one campaign. The realistic path is to POOL several high-intent-excluded prospecting campaigns and advertisers into a single "
-         "read — aggregating their 10% holdouts is exactly how the platform-wide gradient (see Platform evidence) reaches significance, "
-         "and it's the right way to answer the audience-level question. A standalone significant read is only realistic on large, "
-         "high-spend flights where a 10% holdout still accumulates enough visits; a small campaign like this one can't resolve a "
-         "few-percent lift on its own. Data notes: lift window drops the first logging day (Jun 22, left-censored); clean holdout "
-         "fraction ~9%; leg = Beeswax bidder; the table only reaches back to Jun 22, so the Jun 8–21 launch period isn't recoverable "
-         "(raw feed ~10-day retention)."),
     ],
 )
 
@@ -218,7 +209,7 @@ wb.sql("Queries", SQL, note="BigQuery run via bq_run.sh on 2026-07-22 (dw-main-s
 wb.cover(takeaways=[
     "Raw visit rate is ~0.2% — low by design: excluding high intent removes the users who would visit anyway, so a low raw rate is expected, not a failure.",
     "Incremental lift on this campaign is +15% (served 0.103% vs holdout 0.089%) but NOT significant: 95% CI −32% to +63%, p = 0.53, only 19 holdout visits.",
-    "The hypothesis holds platform-wide: high-intent audiences are incrementally ~0%, mid-intent carry the lift (~+3%). A single small campaign can't confirm it at the fixed 10% holdout — the well-powered read comes from pooling many exclude-high-intent campaigns.",
+    "The hypothesis holds platform-wide: high-intent audiences are incrementally ~0%, mid-intent carry the lift (~+3%). This single small campaign is directionally consistent but too small to confirm it on its own.",
 ])
 
 local = wb.save_local(os.path.join(OUT, "incr_75_gruns_cgid126905_incrementality.xlsx"))
