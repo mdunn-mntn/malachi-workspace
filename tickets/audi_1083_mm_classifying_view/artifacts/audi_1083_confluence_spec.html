@@ -5,27 +5,24 @@
 <li>the config (<code>mm_class</code>) and which intent tiers it can bid (<code>tiers_reachable</code>)</li>
 <li>how far the buyer narrowed the audience (<code>restriction_level</code>, plus the geo, 3P, 1P and gate flags)</li>
 </ul>
-<p>They are split because two campaigns both labelled "MM" can deliver completely different tier mixes. The config decides which tiers are reachable at all. The restrictions and the gate decide how much of that actually delivers. Filtering on "has DS19" tells you neither.</p>
+<p>They are split because two campaigns both labelled &quot;MM&quot; can deliver completely different tier mixes. The config decides which tiers are reachable at all. The restrictions and the gate decide how much of that actually delivers. Filtering on &quot;has DS19&quot; tells you neither.</p>
 
 <h2>The rule</h2>
-<p>MM is any of DS13, DS19 or DS46 (per the <a href="https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511">MM Taxonomy</a>). DS19 ("MM Core") is one component inside MM, not the definition, so a "has DS19" test undercounts MM by about 7.6%.</p>
+<p>MM is any of DS13, DS19 or DS46 (per the <a href="https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511">MM Taxonomy</a>). DS19 (&quot;MM Core&quot;) is one component inside MM, not the definition, so a &quot;has DS19&quot; test undercounts MM by about 7.6%.</p>
 <p>HI (10000) needs the keyword layer (DS19). PP (8000) needs the vertical anchor (DS13 or DS46). So a vertical-only config caps at PP, and a keyword-only config reaches HI but not PP. This holds for both generations; DS13 (legacy) pins at 8000, DS46 (Fangorn) spreads 6666 to 8000, but neither reaches HI without keywords.</p>
 
 <table><tbody>
-<tr><th>DS leaves</th><th><code>mm_class</code></th><th><code>tiers_reachable</code></th><th>Share of prospecting</th></tr>
-<tr><td>DS19 + DS46</td><td><code>mm_flagship_fangorn</code></td><td>HI, PP, MI, MaxReach</td><td>18.9% (flagship)</td></tr>
-<tr><td>DS19 + DS13</td><td><code>mm_classic</code></td><td>HI, PP, MI, MaxReach</td><td>4.0%</td></tr>
-<tr><td>DS19</td><td><code>mm_keywords_only</code></td><td>HI, MI, MaxReach (no PP)</td><td>42.7%</td></tr>
-<tr><td>DS46</td><td><code>fangorn_vertical_only</code></td><td>PP, MI (no HI)</td><td>6.5%</td></tr>
-<tr><td>DS13</td><td><code>vertical_only_legacy</code></td><td>PP, MI (no HI)</td><td>1.1%</td></tr>
-<tr><td>none</td><td><code>non_mm</code></td><td>unscored</td><td>26.8%</td></tr>
+<tr><th>DS leaves</th><th><code>mm_class</code></th><th><code>tiers_reachable</code></th></tr>
+<tr><td>DS19 + DS46</td><td><code>mm_flagship_fangorn</code></td><td>HI, PP, MI, MaxReach</td></tr>
+<tr><td>DS19 + DS13</td><td><code>mm_classic</code></td><td>HI, PP, MI, MaxReach</td></tr>
+<tr><td>DS19</td><td><code>mm_keywords_only</code></td><td>HI, MI, MaxReach (no PP)</td></tr>
+<tr><td>DS46</td><td><code>fangorn_vertical_only</code></td><td>PP, MI (no HI)</td></tr>
+<tr><td>DS13</td><td><code>vertical_only_legacy</code></td><td>PP, MI (no HI)</td></tr>
+<tr><td>none</td><td><code>non_mm</code></td><td>unscored</td></tr>
 </tbody></table>
 
 <h2>Restrictions</h2>
-<p><code>restriction_level</code> is the most severe of <code>geo</code> (a sub-country geo include, or a radius), <code>audience</code> (a 3P segment AND-joined, or a seeded 1P list), or <code>geo+audience</code>. An OR-additive 3P or a CRM exclusion do not count, since neither narrows the scored pool. The gate (<code>hhst_gated</code>) is exposed but not folded into "unmodified", because it flips daily for pacing rather than reflecting how the campaign was built.</p>
-
-<h2>How much of prospecting is what</h2>
-<p>Active Stage 1 prospecting spend, trailing 45 days ($39.5M): 72.4% is MM, 34.6% runs an unmodified config, 6.9% is clean flagship Fangorn. Less than half of MM spend runs an unmodified config, which is the whole reason for grading it.</p>
+<p><code>restriction_level</code> is the most severe of <code>geo</code> (a sub-country geo include, or a radius), <code>audience</code> (a 3P segment AND-joined, or a seeded 1P list), or <code>geo+audience</code>. An OR-additive 3P or a CRM exclusion do not count, since neither narrows the scored pool. The gate (<code>hhst_gated</code>) is exposed but not folded into &quot;unmodified&quot;, because it flips daily for pacing rather than reflecting how the campaign was built.</p>
 
 <h2>Columns</h2>
 <table><tbody>
@@ -55,7 +52,7 @@
 </tbody></table>
 
 <h2>Using it</h2>
-<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">sql</ac:parameter><ac:plain-text-body><![CDATA[-- real MM, well configured
+<ac:structured-macro ac:name="code" ac:schema-version="1" ac:macro-id="ed838c5a-8fbb-4475-8bcb-28b593e6e407"><ac:parameter ac:name="language">sql</ac:parameter><ac:plain-text-body><![CDATA[-- real MM, well configured
 SELECT * FROM mm_classifier WHERE is_unmodified_mm;
 
 -- flagship Fangorn only
@@ -77,6 +74,6 @@ FROM stage23_campaigns s LEFT JOIN mm_classifier_by_group g USING (campaign_grou
 <p>Active (Live) Stage 1 campaigns only. Only Stage 1 carries the datasource expression. Stage 2 and 3 retarget users already exposed at Stage 1 and hold no audience detail, so they classify through <code>campaign_group_id</code> against their group's Stage 1. Every Stage 2 or 3 campaign that actually delivers resolves to a Stage 1 in its group; the ones that do not are dormant, with no spend.</p>
 
 <h2>Decisions and open items</h2>
-<p>Settled so far: the gate is not required for "unmodified" (it flips daily for pacing); geo is a binary flag in v1, with an exact reach percent as a later add; the view refreshes daily as a SQLMesh FULL model. Still open: whether the binary geo flag is enough or it needs the exact reach percent, and any columns you would want that are not here.</p>
+<p>Settled so far: the gate is not required for &quot;unmodified&quot; (it flips daily for pacing); geo is a binary flag in v1, with an exact reach percent as a later add; the view refreshes daily as a SQLMesh FULL model. Still open: whether the binary geo flag is enough or it needs the exact reach percent, and any columns you would want that are not here.</p>
 
 <p>References: <a href="https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511">MM Taxonomy</a>, <a href="https://mntn.atlassian.net/wiki/spaces/TAR/pages/3487891474">Prospecting vs Advertiser Scores</a>, <a href="https://mntn.atlassian.net/browse/AUDI-1083">AUDI-1083</a>.</p>
