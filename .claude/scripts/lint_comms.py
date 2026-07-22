@@ -26,11 +26,13 @@ Usage:
 import argparse, json, os, re, sys
 
 CAPS = {
-    "comment":     {"chars": 500, "words": 75,  "bullets": 5},
-    "completion":  {"chars": 800, "words": 120, "bullets": 8},
-    "description": {"chars": 400, "words": 60,  "bullets": 4},
-    "xlsx":        {"chars": 200, "words": 30,  "lines": 12},  # chars = per-line cap
+    "comment":        {"chars": 500, "words": 75,  "bullets": 5},
+    "completion":     {"chars": 800, "words": 120, "bullets": 8},
+    "description":    {"chars": 400, "words": 60,  "bullets": 4},
+    "xlsx":           {"chars": 200, "words": 30,  "lines": 12},  # terse notes cell; chars = per-line cap
+    "xlsx_explainer": {"chars": 320, "words": 55,  "lines": 7},   # narrative Read-me sheet; chars = per-section cap, lines = sections
 }
+LINE_KINDS = {"xlsx", "xlsx_explainer"}  # measured per line/section, not as one blob
 TITLE_CAP = 120  # Jira summary/title (hard Jira limit is 255; our guidance is far tighter)
 
 HEDGES = [
@@ -72,13 +74,14 @@ def lint_text(text, kind):
     lines = [l for l in text.splitlines() if l.strip()]
     bullets = sum(1 for l in lines if l.lstrip().startswith(("*", "-", "•")))
 
-    if kind == "xlsx":
+    if kind in LINE_KINDS:
+        unit = "section" if kind == "xlsx_explainer" else "line"
         over = [(i + 1, len(l)) for i, l in enumerate(lines) if len(l) > cap["chars"]]
         for ln, n in over:
-            violations.append(f"line {ln} is {n} chars (cap {cap['chars']}/line)")
+            violations.append(f"{unit} {ln} is {n} chars (cap {cap['chars']}/{unit})")
         if len(lines) > cap["lines"]:
-            violations.append(f"{len(lines)} lines (cap {cap['lines']})")
-        stats = f"{len(lines)} lines, longest {max((len(l) for l in lines), default=0)} chars"
+            violations.append(f"{len(lines)} {unit}s (cap {cap['lines']})")
+        stats = f"{len(lines)} {unit}s, longest {max((len(l) for l in lines), default=0)} chars"
     else:
         if chars > cap["chars"]:
             violations.append(f"{chars} chars (cap {cap['chars']}) — over by {chars - cap['chars']}")

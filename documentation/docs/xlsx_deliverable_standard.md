@@ -73,6 +73,10 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 | `sql(name, sql_text, note)` | The SQL behind the numbers, monospaced. | light grey |
 | `notes(name, blocks, intro)` | Long-form method & caveats, `(heading, body)` blocks. | light grey |
 
+**Read-me / notes length caps (Terse Comms Standard — global `CLAUDE.md §9`).** Lead every section with its answer, then stop. Two surfaces, two caps, both checkable with `.claude/scripts/lint_comms.py`:
+- **Terse notes cell** (`--kind xlsx`): ≤12 lines, ≤200 chars/line — clipped facts, one per line.
+- **Narrative "Read me" explainer sheet** (`--kind xlsx_explainer`): ≤6 sections, ≤320 chars/section — plain-English prose, but each `(heading, body)` block leads with the answer. Do NOT compress an explainer to the notes-cell cap; do trim each block ~40-50% versus a first draft. Canonical example: the Gruns `Read me` (`incr_75_gruns_cgid126905_xlsx.py`), 5 sections, longest 313 chars.
+
 ---
 
 ## 3. Visual system (locked)

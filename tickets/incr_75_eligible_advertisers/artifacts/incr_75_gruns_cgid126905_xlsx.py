@@ -149,34 +149,28 @@ wb.table(
 
 wb.notes(
     "Read me",
-    intro="Plain-English guide — what the campaign is, what the lift does and doesn't show, and the platform-wide answer.",
+    intro="Plain-English guide: what the campaign is, what the lift does and doesn't show, and the platform-wide answer.",
     blocks=[
         ("What this campaign is",
-         "Gruns (advertiser 42097) ran a Connected-TV prospecting campaign group — 126905, “CTV Prospecting TOFU "
-         "High DMA” — whose prospecting audience EXCLUDES high intent. Top-of-funnel, high-population DMAs, live "
-         "Jun 8 – Aug 1, 2026, on a $2.50 cost-per-visit goal. Delivery is CTV-only (the paired display and “Ego” "
-         "campaigns never delivered)."),
+         "Gruns (advertiser 42097) ran a CTV prospecting campaign group (126905) that excludes high intent: top-of-funnel, "
+         "high-population DMAs, live Jun 8 to Aug 1, 2026, on a $2.50 cost-per-visit goal. CTV-only; the paired display and Ego "
+         "campaigns never delivered."),
         ("The incremental read, in plain terms",
-         "Of the prospects MNTN identified, ~9% were withheld (bid on but never shown an ad) to form a holdout. Over the active "
-         "window (Jun 24 – Jul 14) the served group visited at 0.103% and the holdout at 0.089% — a +15% relative point estimate. "
-         "Directionally positive, i.e. the ads look like they cause some extra visits rather than only taking credit for visits that "
+         "The served group visited at 0.103% vs 0.089% for the ~9% holdout (bid on, never shown an ad): a +15% relative lift over "
+         "Jun 24 to Jul 14. Directionally positive: the ads look like they cause extra visits, not just take credit for visits that "
          "would have happened anyway."),
         ("Why it is not conclusive (and why a longer window won't fix it soon)",
-         "The 95% confidence interval runs from −32% to +63% (p = 0.53), so we can't rule out zero. The reason is sample size, not a "
-         "weak effect: the holdout produced only 19 visits. A longer window helps slowly — the holdout accrues ~1 visit/day, so "
-         "running to the Aug 1 flight end takes us from ~19 to ~29 holdout visits, still far short. The binding limit is holdout visit "
-         "count: the holdout is a fixed ~10% platform-wide, and 10% of a 0.1%-visit-rate campaign simply can't generate enough visits "
-         "to resolve a few-percent lift, no matter how long it runs."),
-        ("Does excluding high intent improve incrementality? (the well-powered answer — see the Platform evidence tab)",
-         "Yes, directionally — but the evidence is platform-wide, not from this one campaign. Across 100M+ IPs, high-intent audiences "
-         "are incrementally ~0% (they visit anyway) while mid intent carries the lift (~+3% relative). So blocking high intent should "
-         "improve incrementality — provided the freed spend flows to mid-intent prospects, because untargeted reach is incrementally "
-         "dead too (~0%). This single Gruns campaign is directionally consistent with that, just too small to prove on its own."),
+         "Not significant: the 95% CI runs -32% to +63% (p = 0.53). The cause is sample size, not a weak effect: the holdout produced "
+         "only 19 visits and accrues ~1/day, so running to the Aug 1 flight end reaches only ~29. A fixed ~10% platform holdout on a "
+         "0.1%-visit-rate campaign can't resolve a few-percent lift."),
+        ("Does excluding high intent improve incrementality? (see the Platform evidence tab)",
+         "Yes, directionally, but the evidence is platform-wide, not this one campaign. Across 100M+ IPs, high-intent audiences are "
+         "incrementally ~0% (they visit anyway) while mid intent carries the lift (~+3%). Blocking high intent should help, provided "
+         "the freed spend goes to mid intent, not untargeted reach (also ~0%)."),
         ("Reading the performance numbers",
-         "Visits are MNTN view-through visits (a TV ad is rarely clicked, so visits are attributed by exposure). The ~0.2% prospecting "
-         "visit rate and ~$11 CPV (above the $2.50 blended-account goal) are expected and by design: a cold, high-intent-excluded "
-         "audience has a lower raw visit rate than warm retargeting, so its standalone CPV is higher while its INCREMENTAL value is "
-         "higher. Conversions are sparse at this top-of-funnel stage, so visit rate (not conversions) is the meaningful KPI here."),
+         "The ~0.2% visit rate and ~$11 CPV (vs the $2.50 goal) are by design: a cold, high-intent-excluded audience visits less than "
+         "warm retargeting, so standalone CPV is higher but incremental value is higher. Visits are MNTN view-through (TV ads are "
+         "rarely clicked); conversions are sparse, so visit rate is the KPI."),
     ],
 )
 
