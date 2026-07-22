@@ -1567,11 +1567,12 @@ These are the bronze-layer SQLMesh models that eventually feed silver.
 - **GCS archive:** `gs://mntn-data-archive-prod/augmentor_log/` — full historical archive in Parquet, no TTL constraint. **Read directly from GCS via Spark** for high-volume scans on Databricks (bypasses BQ slot contention + scan billing). (via Victor Savitskiy 2026-04-28, TI-837)
 - **GCS partition layout (verified 2026-04-29, TI-837):**
   - Top level: `region={east,west}/`
-  - Date level: `dt=YYYY-MM-DD/` (a single string column, NOT separate year/month/day)
+  - Date level: `dt=YYYY-MM-DD/`, then hour level `hh=HH/` (the svs feeders read `region={east,west}/dt=$dt/hh=$hh`)
   - Full path example: `gs://mntn-data-archive-prod/augmentor_log/region=east/dt=2026-04-23/`
   - Earliest partition: ~`2026-03-30` (archive history is ~30 days; not infinite as the "no TTL" framing suggests)
   - For a complete daily scan you must read BOTH `region=east` and `region=west`. Spark loads both if you read the parent path with `.filter("dt = '2026-04-23'")`, but explicit per-region paths give better partition pruning.
 
+- **`placement_type` composition (AUDI-1091, 1-hr sample 2026-07-20):** ~75% of rows are `VIDEO` (CTV/video, and **99.6% carry no `page`/`referrer` URL** — not site visits), ~25% `BANNER` (~100% URL-bearing, ~9M IPs/hr), and a tiny `BANNER_AND_VIDEO` sliver. The svs DS30 feeder (`spark/fpa/dsid30_augmentor_log_processing.py`) **keeps only BANNER + BANNER_AND_VIDEO**. BQ scan cost: a 1-hr projection of placement_type/page/referrer/ip ≈ **67 GB**; a full day ≈ **1.54 TB** → use Spark on the GCS archive for full scans, not BQ.
 - **Row-level schema gotcha:** `augmentor_log` has **NO `advertiser_id` column at the row level**. Augmentor is a per-bid-request log — one row per upstream bid eval, not per advertiser. The only advertiser-relatable signal at this layer is `mntn_segments` (array of segment IDs that evaluated this IP). To attribute an augmentor row to an advertiser, you must join `mntn_segments` ↦ `audience_segments.expression` ↦ advertiser. See TI-837 v5 SQL `queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql` for the canonical pattern.
 
 | Column | Type | Notes |

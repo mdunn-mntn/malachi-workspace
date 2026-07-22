@@ -258,6 +258,13 @@ Slack with Ryan (Sean out). Verified in airflow-ti where possible:
 
 ## 4d2. AUDI-1092 RESOLVED same-day (2026-07-13): billing regime change found — cost analysis VALID
 
+**CORRECTION 2026-07-22 (AUDI-1092 closed Done):** the "May-Jun = INTEGER single-vendor credit / AP-3779
+first-reporter = current era" read below was DISPROVEN by reading the crediting code + BAE testimony (see §4h).
+The current model is a **1/N fractional split** (`impression_cnt / mm_dsid_count`, free logs in the divisor at
+$0); the integer appearance in `usage_reporting_data` is a downstream rollup artifact (the upstream winners
+table still shows fractional 0.5 splits in June). The q3b LOO savings still stand as floors. Keep the residue
+analysis below as history.
+
 **Decisive evidence (residue analysis, `usage_reporting_data` MM vendors 24/28/33/36/40):** the
 table is row-per-(vendor, domain/segment, month); Jan-Apr 2026 rows are ~100% FRACTIONAL impressions
 (clean 1/N fractions: .5, .33, .25, .67, .83 = halves/thirds/quarters/sixths — equal credit SPLIT
