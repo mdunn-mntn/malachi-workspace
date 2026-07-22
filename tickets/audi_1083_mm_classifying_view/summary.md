@@ -160,8 +160,8 @@ appended to the SQL. Confluence spec → v4.
   the vertical anchor.** Both vertical-only configs cap at PP. Canonical taxonomy page 3691708511 §3
   ("DS13-only → HI+PP") and data_knowledge.md's old "PP v1 only → HI 10000" were WRONG — that HI was
   RTC firing. `tiers_reachable`: vertical_only_legacy fixed 'HI·PP' → 'PP·MI (no HI)'. Verify query:
-  `queries/` (DS13-only vs DS46-only band distribution). Confluence spec → v5. **TODO: propose
-  correcting taxonomy page 3691708511 §3 with Matt/owner.**
+  `queries/audi_1083_ds13_vs_ds46_score_bands.sql`. Confluence spec → v5. Canonical taxonomy page
+  3691708511 corrected → v4 (fixed §1 DS13 component cell, §3 DS13-only row, §4 HI rule).
 
 ### 4g. NULL / orphan investigation (2026-07-22) — no live gap
 The group-inheritance NULLs (13.5% all-time) are **100% dormant**: of DELIVERED (45d) Stage 2/3
