@@ -58,9 +58,9 @@ lift_df = pd.DataFrame([
 # ---------------------------------------------------------------------------
 perf_rows = [
     # campaign, stage, imps, reach, spend, visits, conv
-    ("Prospecting — excludes high intent (626276)", "Prospecting (Stage 1)", 440919, 348769, 9575.63, 835, 21),
-    ("Multi-Touch (626275)", "Multi-Touch (Stage 2)", 1069040, 179478, 23461.21, 543, 7),
-    ("Multi-Touch Plus (626274)", "Multi-Touch Plus (Stage 3)", 9510, 695, 214.76, 165, 1),
+    ("Prospecting — excludes high intent (626276)", "Prospecting", 440919, 348769, 9575.63, 835, 21),
+    ("Multi-Touch (626275)", "Exposed to Prior Ad", 1069040, 179478, 23461.21, 543, 7),
+    ("Multi-Touch Plus (626274)", "Has a Prior VV", 9510, 695, 214.76, 165, 1),
 ]
 perf = []
 for name, stage, imps, reach, spend, visits, conv in perf_rows:
@@ -125,9 +125,9 @@ wb.table(
     method=("Flight to date Jun 8 – Jul 22, 2026. Spend = media + data + platform. "
             "Visits = MNTN view-through visits (industry-standard lens: last-touch + competing; corroborated by the visit pixel log). "
             "CPV = spend ÷ visits (group CPV goal = $2.50). Households reached = distinct IPs; not summed across campaigns. "
-            "Stages are MNTN's prospecting → multi-touch retargeting stages: Stage 1 = prospecting (the audience targeted in the "
-            "UI); Stage 2 = households engaged (seen a campaign ad); Stage 3 (Multi-Touch Plus) = engaged and registered a visit. "
-            "The high-intent exclusion and the incrementality holdout apply to Stage 1 (prospecting) only."),
+            "Stage column = who the campaign targets: Prospecting = a new audience; Exposed to Prior Ad = households that already "
+            "saw a campaign ad; Has a Prior VV = households that already visited (Multi-Touch Plus). The high-intent exclusion and "
+            "the incrementality holdout apply to the prospecting stage only."),
     formats={"Impressions": FMT.INT, "Households reached": FMT.INT, "Spend": FMT.USD0,
              "Visits": FMT.INT, "Visit rate": FMT.PCT2, "CPV": FMT.USD2, "Conv.": FMT.INT},
     heat={"Visit rate": "high"},
