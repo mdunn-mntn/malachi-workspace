@@ -162,7 +162,8 @@ wb.notes(
          "The 95% confidence interval runs from −32% to +63% (p = 0.53), so we can't rule out zero. The reason is sample size, not a "
          "weak effect: the holdout produced only 19 visits. A longer window helps slowly — the holdout accrues ~1 visit/day, so "
          "running to the Aug 1 flight end takes us from ~19 to ~29 holdout visits, still far short. The binding limit is holdout visit "
-         "count, not window length: a ~10% holdout of a 0.1%-visit-rate campaign can't resolve a few-percent lift."),
+         "count: the holdout is a fixed ~10% platform-wide, and 10% of a 0.1%-visit-rate campaign simply can't generate enough visits "
+         "to resolve a few-percent lift, no matter how long it runs."),
         ("Does excluding high intent improve incrementality? (the well-powered answer — see the Platform evidence tab)",
          "Yes, directionally — but the evidence is platform-wide, not from this one campaign. Across 100M+ IPs, high-intent audiences "
          "are incrementally ~0% (they visit anyway) while mid intent carries the lift (~+3% relative). So blocking high intent should "
@@ -173,11 +174,15 @@ wb.notes(
          "visit rate and ~$11 CPV (above the $2.50 blended-account goal) are expected and by design: a cold, high-intent-excluded "
          "audience has a lower raw visit rate than warm retargeting, so its standalone CPV is higher while its INCREMENTAL value is "
          "higher. Conversions are sparse at this top-of-funnel stage, so visit rate (not conversions) is the meaningful KPI here."),
-        ("How to measure this audience cleanly",
-         "To get a campaign-specific incrementality number that resolves, use a bigger holdout (25–50%) on the high-intent-excluded "
-         "audience going forward, or pool several high-intent-excluded prospecting campaigns together. Data notes: lift window drops "
-         "the first logging day (Jun 22, left-censored); clean holdout fraction ~9%; leg = Beeswax bidder; the table only reaches back "
-         "to Jun 22, so the Jun 8–21 launch period isn't recoverable (raw feed ~10-day retention)."),
+        ("How to get a well-powered read on this audience",
+         "The ghost-bid holdout is a fixed ~10% platform-wide (no plans to change it), so we can't add power by widening the holdout on "
+         "one campaign. The realistic path is to POOL several high-intent-excluded prospecting campaigns and advertisers into a single "
+         "read — aggregating their 10% holdouts is exactly how the platform-wide gradient (see Platform evidence) reaches significance, "
+         "and it's the right way to answer the audience-level question. A standalone significant read is only realistic on large, "
+         "high-spend flights where a 10% holdout still accumulates enough visits; a small campaign like this one can't resolve a "
+         "few-percent lift on its own. Data notes: lift window drops the first logging day (Jun 22, left-censored); clean holdout "
+         "fraction ~9%; leg = Beeswax bidder; the table only reaches back to Jun 22, so the Jun 8–21 launch period isn't recoverable "
+         "(raw feed ~10-day retention)."),
     ],
 )
 
@@ -213,7 +218,7 @@ wb.sql("Queries", SQL, note="BigQuery run via bq_run.sh on 2026-07-22 (dw-main-s
 wb.cover(takeaways=[
     "Raw visit rate is ~0.2% — low by design: excluding high intent removes the users who would visit anyway, so a low raw rate is expected, not a failure.",
     "Incremental lift on this campaign is +15% (served 0.103% vs holdout 0.089%) but NOT significant: 95% CI −32% to +63%, p = 0.53, only 19 holdout visits.",
-    "The hypothesis holds platform-wide: high-intent audiences are incrementally ~0%, mid-intent carry the lift (~+3%). Confirming it on one campaign needs a bigger holdout or a longer flight than Aug 1 allows.",
+    "The hypothesis holds platform-wide: high-intent audiences are incrementally ~0%, mid-intent carry the lift (~+3%). A single small campaign can't confirm it at the fixed 10% holdout — the well-powered read comes from pooling many exclude-high-intent campaigns.",
 ])
 
 local = wb.save_local(os.path.join(OUT, "incr_75_gruns_cgid126905_incrementality.xlsx"))

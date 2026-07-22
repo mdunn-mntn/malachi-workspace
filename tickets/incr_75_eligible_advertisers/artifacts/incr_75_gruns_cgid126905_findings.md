@@ -41,11 +41,17 @@ Directionally positive but **not statistically significant** — the holdout pro
 This reproduces the incrementality pipeline's numbers exactly.
 
 **Why it can't be confirmed on this campaign, and won't be soon:** the limit is holdout visit
-count, not window length. A 10% holdout of a 0.1%-visit-rate campaign yields ~1 holdout visit/day,
-so running to the Aug 1 flight end takes us from ~19 to ~29 holdout visits — still far short. The
-table only reaches back to Jun 22 (raw feed ~10-day retention), so the Jun 8–21 launch period is
-unrecoverable. To measure this audience cleanly: use a bigger holdout (25–50%) or pool several
-high-intent-excluded prospecting campaigns.
+count, not window length. The holdout is a fixed ~10% platform-wide, and 10% of a 0.1%-visit-rate
+campaign yields ~1 holdout visit/day, so running to the Aug 1 flight end takes us from ~19 to ~29
+holdout visits — still far short. The table only reaches back to Jun 22 (raw feed ~10-day
+retention), so the Jun 8–21 launch period is unrecoverable.
+
+**How to get a well-powered read on this audience:** the holdout is fixed at ~10% (no plans to
+change it), so widening it on one campaign isn't an option. The realistic path is to **pool several
+high-intent-excluded prospecting campaigns and advertisers into a single read** — aggregating their
+10% holdouts is exactly how the platform-wide gradient below reaches significance. A standalone
+significant read is only realistic on large, high-spend flights; a small campaign like this can't
+resolve a few-percent lift on its own.
 
 ## Does excluding high intent improve incrementality? (the well-powered answer)
 
