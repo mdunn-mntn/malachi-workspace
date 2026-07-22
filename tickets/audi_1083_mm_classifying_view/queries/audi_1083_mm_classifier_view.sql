@@ -131,9 +131,10 @@ camp AS (
   FROM `dw-main-bronze.integrationprod.campaigns` c
   JOIN seg s USING (campaign_id)
   WHERE c.deleted = FALSE AND c.is_test = FALSE
-    -- GOTCHA: campaign_status_id 8="Deleted" / 9="Legacy Archived" are NOT caught by the
-    -- `deleted` boolean. Exclude them so archived/dead Stage 1s don't pollute the group rollup.
-    AND c.campaign_status_id NOT IN (8, 9)
+    -- ACTIVE only: campaign_status_id = 3 ("Live"). NB status 8="Deleted"/9="Legacy Archived"
+    -- are NOT caught by the `deleted` boolean; = 3 excludes them plus Ready/Paused/Inactive.
+    -- Broaden to IN (3,4,5) if you also want recently-paused campaigns.
+    AND c.campaign_status_id = 3
     AND c.funnel_level = 1   -- Stage 1 only: the only stage with a DS audience expression
 ),
 parsed AS (
@@ -268,15 +269,17 @@ LEFT JOIN fang     f  ON f.advertiser_id = p.advertiser_id
 -- (is_unmodified_mm AND mm_class='mm_keywords_only') = keyword/Max-Reach flagship; etc.
 SELECT classified.*,
        (is_unmodified_mm AND mm_class = 'mm_flagship_fangorn') AS is_flagship,
-       -- tiers this config can BID (per canonical taxonomy §3; tiers are per-IP, the
-       -- include leaves decide which are biddable). A config's reachable-tier profile,
-       -- NOT a single ceiling: DS19-only reaches HI (via vertical∩keyword IPs) but not PP.
+       -- tiers this config can BID. Clean rule (empirically verified 2026-07-22, RTC-excluded
+       -- delivered scores): HI (10000) requires the keyword layer (DS19); PP (8000) requires the
+       -- vertical anchor (DS13/DS46). BOTH vertical-only configs cap at PP — DS13-only delivers
+       -- 0% HI (83.9% at exactly 8000), same ceiling as DS46-only. (Corrects taxonomy §3's
+       -- "DS13-only → HI+PP" — that HI was RTC, not categorical.) v1 = 8000 pin, v2 = 6666-8000 spread.
        CASE mm_class
          WHEN 'mm_flagship_fangorn'   THEN 'HI·PP·MI·MaxReach'
          WHEN 'mm_classic'            THEN 'HI·PP·MI·MaxReach'
          WHEN 'mm_keywords_only'      THEN 'HI·MI·MaxReach (no PP)'
-         WHEN 'fangorn_vertical_only' THEN 'PP only'
-         WHEN 'vertical_only_legacy'  THEN 'HI·PP'
+         WHEN 'fangorn_vertical_only' THEN 'PP·MI (no HI)'
+         WHEN 'vertical_only_legacy'  THEN 'PP·MI (no HI)'
          ELSE 'unscored'
        END AS tiers_reachable
 FROM classified

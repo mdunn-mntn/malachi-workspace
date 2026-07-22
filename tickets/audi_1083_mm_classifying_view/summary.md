@@ -122,8 +122,9 @@ the v2 geo_reach_pct / camperbid pool upgrade.**
   So the view's original `has_mm = DS13/19/38/46` was already correct; no change. A DS46-only
   gated/national campaign is correctly `is_unmodified_mm=TRUE`, `is_flagship=FALSE`.
 - **Tiers are per-IP; the config's leaves decide which are biddable** (scoring page 3487891474):
-  DS19-only reaches HI·MI·MaxReach (NOT PP); DS46-only = PP only; DS13-only = HI·PP; DS19+anchor =
-  all four; non_mm = unscored. Captured in new column `tiers_reachable`. (Earlier session claim
+  DS19-only reaches HI·MI·MaxReach (NOT PP); vertical-only (DS46-only AND DS13-only) = PP·MI, NO HI
+  (see §4h — HI needs keywords, empirically verified; corrects the "DS13-only = HI·PP" first draft);
+  DS19+anchor = all four; non_mm = unscored. Captured in new column `tiers_reachable`. (Earlier session claim
   "DS19-only = unscored/max-reach" was wrong — corrected in data_knowledge.md.)
 - Added column **`tiers_reachable`** (per taxonomy §3). Confluence spec page updated to v2 with the
   canonical definition + tier profiles + corrected mechanics.
@@ -149,6 +150,18 @@ Stage 2/3 directly would mislabel ~10K campaigns as non_mm. **Stage 2/3 join pat
 → group rollup** (86.5% of Stage 2/3 share a group with a Stage 1 campaign). Objective_id NOT filtered
 (kept exposed). Headline unchanged (calibration already used funnel_level=1). Group-rollup companion
 appended to the SQL. Confluence spec → v4.
+
+### 4h. Active filter + tier-mechanics correction (2026-07-22)
+- **Active filter:** view now `campaign_status_id = 3` (Live). Headline (active + delivered 45d,
+  $39.5M): MM **72.4%** / unmodified **34.6%** / flagship **6.9%** (was 70.9/33.3/6.8 pre-active-filter).
+- **DS13-only is PP-capped, NOT HI (empirically verified, corrects the taxonomy).** RTC-excluded 30d
+  delivered `household_score`: DS13-only = 83.9% at exactly 8000, **0% at 10000**; DS46-only = 0.1%
+  above 8000, 0% at 10000. **Clean rule: HI (10000) needs the keyword layer (DS19); PP (8000) needs
+  the vertical anchor.** Both vertical-only configs cap at PP. Canonical taxonomy page 3691708511 §3
+  ("DS13-only → HI+PP") and data_knowledge.md's old "PP v1 only → HI 10000" were WRONG — that HI was
+  RTC firing. `tiers_reachable`: vertical_only_legacy fixed 'HI·PP' → 'PP·MI (no HI)'. Verify query:
+  `queries/` (DS13-only vs DS46-only band distribution). Confluence spec → v5. **TODO: propose
+  correcting taxonomy page 3691708511 §3 with Matt/owner.**
 
 ### 4g. NULL / orphan investigation (2026-07-22) — no live gap
 The group-inheritance NULLs (13.5% all-time) are **100% dormant**: of DELIVERED (45d) Stage 2/3
