@@ -14,9 +14,13 @@
 
    Grain: campaign. Latest bidder-facing targeted segment
           (audience.audience_segments, expression_type_id=2, is_targeted, rn=1).
-   Scope: ALL campaigns with a targeted segment (do NOT pre-filter to prospecting
-          or to delivered — objective_id/funnel_level are exposed so downstream
-          filters). Materialize as a SQLMesh view; refresh with segments.
+   Scope: funnel_level = 1 (Stage 1) ONLY — the ONLY stage that carries the DS
+          audience expression. Verified 2026-07-22: funnel_level 2/3/4 campaigns are
+          100% non_mm (zero DS leaves) — Stage 2/3 are subsets of Stage 1 and inherit
+          its audience. To classify a Stage 2/3 campaign, join by campaign_group_id
+          (86.5% share a group with a Stage 1 campaign) — see the group rollup at the
+          bottom. Objective_id is NOT filtered (retargeting/other objectives at Stage 1
+          keep real expressions) — it's exposed so downstream filters. SQLMesh FULL, daily.
 
    STATUS: DRAFT — not yet executed (BQ re-auth pending). Verify markers:
      [V1] geos block shape (location_ids under geos.where, op:any) — spot-check.
@@ -127,6 +131,7 @@ camp AS (
   FROM `dw-main-bronze.integrationprod.campaigns` c
   JOIN seg s USING (campaign_id)
   WHERE c.deleted = FALSE AND c.is_test = FALSE
+    AND c.funnel_level = 1   -- Stage 1 only: the only stage with a DS audience expression
 ),
 parsed AS (
   SELECT campaign_id, campaign_group_id, advertiser_id, objective_id, funnel_level,
@@ -273,3 +278,29 @@ SELECT classified.*,
        END AS tiers_reachable
 FROM classified
 ;
+
+
+/* ============================================================================
+   COMPANION — group-level rollup (mm_campaign_classifier_by_group)
+   ----------------------------------------------------------------------------
+   The audience is defined at Stage 1 and applies to the whole campaign_group, so
+   this is the join path for Stage 2/3 campaigns (which carry no expression):
+     SELECT s23.campaign_id, g.*
+     FROM stage23_campaigns s23
+     LEFT JOIN mm_campaign_classifier_by_group g USING (campaign_group_id);
+   Selects from the materialized base table (mm_campaign_classifier). 86.5% of
+   Stage 2/3 campaigns share a group with a Stage 1 campaign; the rest resolve NULL.
+   ============================================================================ */
+-- SELECT
+--   campaign_group_id,
+--   COUNT(*)                                   AS n_stage1_campaigns,
+--   LOGICAL_OR(has_mm)                         AS group_any_mm,
+--   LOGICAL_AND(has_mm)                        AS group_all_mm,
+--   LOGICAL_OR(is_unmodified_mm)               AS group_any_unmodified_mm,
+--   LOGICAL_OR(is_flagship)                    AS group_any_flagship,
+--   LOGICAL_AND(is_flagship)                   AS group_all_flagship,
+--   MAX(mm_engine_rank)                        AS group_best_engine_rank,
+--   IF(COUNT(DISTINCT mm_class) = 1, ANY_VALUE(mm_class), 'mixed') AS group_mm_class,
+--   IF(COUNT(DISTINCT restriction_level) = 1, ANY_VALUE(restriction_level), 'mixed') AS group_restriction_level
+-- FROM `mm_campaign_classifier`
+-- GROUP BY campaign_group_id;

@@ -22,6 +22,7 @@
 <li><strong>Axis A &mdash; which config / tier profile</strong> (<code>mm_class</code>, <code>tiers_reachable</code>).</li>
 <li><strong>Axis B &mdash; how modified</strong> (<code>restriction_level</code> + geo / 3P / 1P / gate flags).</li>
 </ul>
+<ac:structured-macro ac:name="note"><ac:rich-text-body><p><strong>Scope: Stage 1 (funnel_level = 1) only.</strong> Only Stage 1 carries the DS audience expression &mdash; Stage 2/3 campaigns are subsets of Stage 1 and hold no audience detail (verified: funnel 2/3/4 are 100% non-MM). To classify a Stage 2/3 campaign, join by <code>campaign_group_id</code> to the <strong>group rollup</strong> (the audience is defined at Stage 1 and applies to the whole group; 86.5% of Stage 2/3 campaigns share a group with a Stage 1 campaign).</p></ac:rich-text-body></ac:structured-macro>
 
 <h2>Axis A &mdash; config &rarr; reachable tiers</h2>
 <p><strong>MM = any of DS13/19/46</strong> (taxonomy §4; a "has DS19" test undercounts ~7.6% &mdash; the vertical-only cells are MM too). <strong>"MM Core" = DS19 is a component <em>inside</em> MM</strong>, not the definition. The vertical anchor (DS13/DS46) is the scoring engine; the keyword layer (DS19) is what makes the top (HI) tier reachable. Tiers are per-IP; a config's DS leaves decide which are biddable:</p>
@@ -43,7 +44,7 @@
 <table><tbody>
 <tr><th>Column</th><th>Meaning</th></tr>
 <tr><td><code>campaign_id</code>, <code>campaign_group_id</code>, <code>advertiser_id</code></td><td>Keys. Grain = campaign (latest bidder-facing targeted segment).</td></tr>
-<tr><td><code>objective_id</code>, <code>funnel_level</code></td><td>Exposed so you filter to prospecting yourself (the view classifies ALL campaigns).</td></tr>
+<tr><td><code>objective_id</code>, <code>funnel_level</code></td><td>Scope = <code>funnel_level = 1</code> (Stage 1) only &mdash; the only stage with a DS audience expression. <code>objective_id</code> exposed for prospecting-vs-retargeting filtering.</td></tr>
 <tr><td><code>expression_updated_at</code></td><td>When the campaign's targeted segment was last updated (classification freshness).</td></tr>
 <tr><td><code>mm_class</code></td><td>The 6-cell config label (above).</td></tr>
 <tr><td><code>tiers_reachable</code></td><td>Which intent tiers this config can bid (per taxonomy §3).</td></tr>
@@ -86,9 +87,14 @@ SELECT * FROM mm_classifier v
 WHERE v.tiers_reachable LIKE 'HI%' AND v.hhst_gated
   AND v.restriction_level = 'none';
 
--- attach to any analysis
+-- attach to any analysis (Stage 1 campaign_id)
 SELECT a.*, v.mm_class, v.tiers_reachable, v.is_flagship, v.restriction_level
-FROM my_analysis a LEFT JOIN mm_classifier v USING (campaign_id);]]></ac:plain-text-body></ac:structured-macro>
+FROM my_analysis a LEFT JOIN mm_classifier v USING (campaign_id);
+
+-- Stage 2/3 campaign: resolve its audience via the group rollup
+SELECT s.campaign_id, g.group_mm_class, g.group_any_flagship
+FROM stage23_campaigns s
+LEFT JOIN mm_classifier_by_group g USING (campaign_group_id);]]></ac:plain-text-body></ac:structured-macro>
 
 <h2>Design decisions (feedback welcome)</h2>
 <ul>

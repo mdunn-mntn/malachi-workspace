@@ -141,6 +141,15 @@ the v2 geo_reach_pct / camperbid pool upgrade.**
   scheduling wired by pipeline owner (Ryan); exact dataset TBD.
 - Added **`expression_updated_at`** (classification freshness). `snapshot_date` to be added at materialization.
 
+### 4f. Scope fix — funnel_level = 1 only (2026-07-22, user + verified)
+Only Stage 1 (funnel_level=1) campaigns carry the DS audience expression. Verified: delivered
+funnel_level 2/3/4 campaigns are **100% non_mm / zero DS leaves** (funnel=1 = 59% has_mm). Stage 2/3
+are subsets of Stage 1 and inherit its audience. View now filters `funnel_level = 1`; classifying
+Stage 2/3 directly would mislabel ~10K campaigns as non_mm. **Stage 2/3 join path = `campaign_group_id`
+→ group rollup** (86.5% of Stage 2/3 share a group with a Stage 1 campaign). Objective_id NOT filtered
+(kept exposed). Headline unchanged (calibration already used funnel_level=1). Group-rollup companion
+appended to the SQL. Confluence spec → v4.
+
 ### 4a. Locked decisions (2026-07-22)
 - **Quantification = exposed components**, NOT a single composite %. `geo_reach_pct` is the one
   exact number; AND-narrowing + gate are binary flags; `restriction_level` is a rule over them.
