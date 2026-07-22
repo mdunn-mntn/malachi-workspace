@@ -125,9 +125,9 @@ wb.table(
     method=("Flight to date Jun 8 – Jul 22, 2026. Spend = media + data + platform. "
             "Visits = MNTN view-through visits (industry-standard lens: last-touch + competing; corroborated by the visit pixel log). "
             "CPV = spend ÷ visits (group CPV goal = $2.50). Households reached = distinct IPs; not summed across campaigns. "
-            "Stages are MNTN's sequential retargeting cascade: Stage 1 prospects a fresh audience; Stage 2 retargets Stage-1 "
-            "view-through visitors; Stage 3 retargets Stage-2 visitors. The high-intent exclusion and the incrementality "
-            "holdout apply to Stage 1 (prospecting) only."),
+            "Stage 1 prospects a fresh audience; Stages 2 and 3 retarget households that view-through-visited from an earlier "
+            "stage (a Stage 1 visitor can enter Stage 3 directly, not only via Stage 2). The high-intent exclusion and the "
+            "incrementality holdout apply to Stage 1 (prospecting) only."),
     formats={"Impressions": FMT.INT, "Households reached": FMT.INT, "Spend": FMT.USD0,
              "Visits": FMT.INT, "Visit rate": FMT.PCT2, "CPV": FMT.USD2, "Conv.": FMT.INT},
     heat={"Visit rate": "high"},
