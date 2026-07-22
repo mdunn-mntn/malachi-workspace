@@ -218,9 +218,13 @@ file is the single source of truth for each role (no drift). A headless driver
 
 ## 9. Deterministic backbone: hooks + wrappers
 
-`.claude/settings.json` registers **5 hooks** (all defensive: missing file / non-match → silent exit 0):
+`.claude/settings.json` registers **7 hooks** (all defensive: missing file / non-match → silent exit 0):
 - **PreToolUse : Bash** → `enforce_bq_wrapper.sh` — blocks a raw `bq … query` (exit 2) unless it goes
   through `bq_run.sh`, is a `--dry_run`, or is an `INFORMATION_SCHEMA` read. The teeth behind G3.
+- **PreToolUse : Bash** → `comms_lint_precheck.sh` — when the command is a Jira REST v2 write (comment
+  or issue-create curl), lint the body/description/title against the Terse Comms Standard
+  (`scripts/lint_comms.py`) before it posts. Advisory (exit 0; one-line flip to exit 2 for a hard gate).
+  The `bq_*` guards protect analysis *inputs*; this guards outward-facing *outputs*.
 - **PostToolUse : Bash** → `flag_net_new_tables.sh` — after a `bq_run.sh` call, append any referenced
   `dataset.table` lacking a catalog doc to `knowledge/bq/_UNDOCUMENTED.queue` (sort -u). G2/G4 detection.
 - **SessionStart** → `session_start_routing.sh` — print a ~15-line orientation: tiered-retrieval
@@ -232,6 +236,8 @@ file is the single source of truth for each role (no drift). A headless driver
   `request_digest.py`, which PROPOSES a `/skill` for recurring shapes. Silent, always exit 0.
 - **Stop** → `capture_reminder.sh` — advisory: if the queue is non-empty OR any `knowledge/**.md` is
   newer than `INDEX.md`, print "capture due → run /capture then scripts/build_index.sh" (exit 0).
+- **Stop** → `comms_cap_reminder.sh` — advisory: soft nudge on the Terse Comms Standard caps before
+  anything ships to Jira / an .xlsx read-me (exit 0). The real check is the PreToolUse gate above.
 
 Documented **opt-in** add-ons in `.claude/README.md` (off by default to avoid noise): `SubagentStop`
 (queue-growth reminder), `PreCompact` (snapshot pending knowledge to `_staging/`), and a "hard mode"

@@ -22,10 +22,11 @@ table reaches `enriched`/`verified` in `bq/_COVERAGE.md`, its `data_catalog.md` 
 (regenerates schema, preserves human sections + view-resolved partition/cluster).
 
 **Deterministic layer (`.claude/`, runs itself):** the existing `bq_run.sh` wrapper now also logs
-`sql_tables` (clean names). Five hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
-wrapper), flag net-new tables to `knowledge/bq/_UNDOCUMENTED.queue`, print routing/coverage +
-health at SessionStart, log a keyword-only record of each prompt at UserPromptSubmit, and remind to
-`/capture` at Stop. `.claude/scripts/build_index.sh` regenerates every index from front-matter (run
+`sql_tables` (clean names). Seven hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
+wrapper), lint any Jira write-curl against the Terse Comms Standard before it posts
+(`comms_lint_precheck.sh` → `lint_comms.py`), flag net-new tables to `knowledge/bq/_UNDOCUMENTED.queue`,
+print routing/coverage + health at SessionStart, log a keyword-only record of each prompt at
+UserPromptSubmit, and remind to `/capture` + keep comments terse at Stop. `.claude/scripts/build_index.sh` regenerates every index from front-matter (run
 after any `knowledge/` change). `perf_digest.py` mines the perf log. **Self-improvement (read/append-only,
 no delete authority):** `health_scorecard.py` prints days-since-`/capture` + orphan-doc + dup-title
 signals into the SessionStart block; `request_digest.py` mines `knowledge/.request_log.jsonl` (the
