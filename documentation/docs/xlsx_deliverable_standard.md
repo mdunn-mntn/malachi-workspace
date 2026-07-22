@@ -146,6 +146,10 @@ split into a sub-brand.
 - Sheet 1 is always **`Overview`** (the cover).
 - Then headline data → supporting/detail → **`Read me`** → **`Queries`** → **`Method & caveats`**.
 - Title Case, ≤ 31 chars, **no emoji**. Tab colors are set by `kind`/method (a legend in the tab strip).
+- **A tab can only carry a name + a color** — the `.xlsx` format has no tab font/size/weight/text-color,
+  so those can't be styled (the tab bar is app UI chrome). Google Sheets renders `tabColor` as an
+  underline, Excel as a fill; that's app-controlled, not file-controlled. Emoji/unicode in the tab *name*
+  do render (the only lever for more per-tab variety) but we keep tabs clean text, color-coded only.
 
 ### File name
 - **Drive (shareable):** `<KEY> <Title Case Description>.xlsx` — e.g. `AUDI-1141 MM vs 3P Scorecard.xlsx`.
