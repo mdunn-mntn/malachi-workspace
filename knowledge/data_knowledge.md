@@ -849,6 +849,17 @@ MM audience. [[reference_fangorn_audience_overlay]]
 - **Tiers are PER-IP; the config's include leaves decide which tiers are BIDDABLE — there is no single "ceiling."** Per-IP score (taxonomy §2): HI 10000 = in vertical ∩ keywords; PP 8000 = in vertical, no keyword; MI 3333–6665 = in bucket not vertical (engagement-ranked); Max Reach 1–3332 = keyword-only outside bucket; non-MM = unscored (−1). Config → biddable/reachable tiers (§3): **DS19-only ("MM Core") bids keyword-matchers → reaches HI · MI · Max Reach but NOT PP** (PP IPs are vertical-no-keyword, don't match the keyword leaf; but the vertical∩keyword HI IPs DO match it, so DS19-only bids HI too); **DS46-only → PP band only** (v2 HI needs the keyword layer); **DS13-only → HI + PP** (v1 categorical); **DS19+anchor → all four**. **CORRECTION of an earlier over-simplification this session:** DS19-only is NOT "unscored / Max-Reach only" — Max Reach is merely the *marginal* tier DS19 uniquely unlocks; the config still bids the HI vertical∩keyword slice.
 - **Bidder score waterfall (scoring page https://mntn.atlassian.net/wiki/spaces/TAR/pages/3487891474):** RTC → campaign-level prospecting score → advertiser-level intent score (per-(IP,advertiser), vertical-only, no keyword split) → unscored.
 - **ONLY funnel_level=1 (Stage 1) campaigns carry the DS audience expression (AUDI-1083, verified 2026-07-22).** Among delivered campaigns with a targeted segment: funnel_level=1 = 59% has_mm (real DS13/19/46 expressions); **funnel_level 2/3/4 = 100% non_mm / zero DS leaves.** Stage 2/3 are downstream subsets of Stage 1 (target prior-exposed users) and hold no audience detail — so any DS/MM classification is meaningful ONLY at Stage 1. To classify a Stage 2/3 campaign's audience, resolve it via `campaign_group_id` to the group's Stage 1 campaign (**86.5% of Stage 2/3 campaigns share a campaign_group with a Stage 1 campaign**; the rest resolve NULL). The AUDI-1083 classifier view is therefore scoped `funnel_level = 1`, with a companion group-level rollup as the Stage 2/3 join path.
+- **Stage 2/3 group-inheritance is 100% for LIVE campaigns (AUDI-1083, 2026-07-22).** Of Stage 2/3
+  campaigns that DELIVERED in 45d, **100% (9,794 camps / $12.2M) resolve to a clean Stage 1 in their
+  group** — zero NULLs. The all-time 86.5% inheritance rate is dragged down purely by 39,628 DORMANT
+  orphan Stage 2/3 campaigns (groups that never had a Stage 1), of which **0 delivered anything**:
+  64% status 9 "Legacy Archived", 30% status 8 "Deleted", 5% status 1 "Ready" (never-launched drafts),
+  rest paused/inactive. So the NULLs are dead history, not a coverage gap.
+- **DATA GOTCHA: `campaign_status_id` 8 ("Deleted") and 9 ("Legacy Archived") are NOT caught by the
+  `deleted` BOOLEAN** (`deleted=FALSE` still returns them). To exclude dead campaigns fully, add
+  `campaign_status_id NOT IN (8,9)`. Status enum (`integrationprod.core_campaign_statuses`):
+  1=Ready · 3=Live · 4=Pause By Advertisers · 5=Pause By MNTN · 7=Inactive · 8=Deleted · 9=Legacy
+  Archived. Only status 3 "Live" delivers materially (13,906 of ~16K delivered-45d campaigns).
 - **Vendor contribution to DS19 ("MM Core"/Keyword-Only) is unscored dark breadth, not scored audience
   (AUDI-1089 q13a+q13b, 2026-07-15):** of 271.3M DS19-member IPs (37d), free logs alone keep 69.7%; the
   vendor-only 30.3% (82.3M IPs) has a 0.48% serve rate (vs 14.4% free-covered), VR 0.061% (26x below

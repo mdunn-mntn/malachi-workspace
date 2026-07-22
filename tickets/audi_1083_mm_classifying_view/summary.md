@@ -150,6 +150,14 @@ Stage 2/3 directly would mislabel ~10K campaigns as non_mm. **Stage 2/3 join pat
 (kept exposed). Headline unchanged (calibration already used funnel_level=1). Group-rollup companion
 appended to the SQL. Confluence spec → v4.
 
+### 4g. NULL / orphan investigation (2026-07-22) — no live gap
+The group-inheritance NULLs (13.5% all-time) are **100% dormant**: of DELIVERED (45d) Stage 2/3
+campaigns, **100% (9,794 / $12.2M) resolve to a clean Stage 1** — zero NULLs. The 39,628 orphans
+(no Stage 1 ever in group) never delivered: 64% status 9 Legacy Archived, 30% status 8 Deleted, 5%
+Ready-drafts, rest paused. **Gotcha found:** `campaign_status_id` 8/9 (Deleted / Legacy Archived) are
+NOT caught by the `deleted` boolean — added `campaign_status_id NOT IN (8,9)` to the base view so
+archived Stage 1s don't pollute the group rollup. Headline unchanged (70.9/33.3/6.8; -10 dead camps).
+
 ### 4a. Locked decisions (2026-07-22)
 - **Quantification = exposed components**, NOT a single composite %. `geo_reach_pct` is the one
   exact number; AND-narrowing + gate are binary flags; `restriction_level` is a rule over them.

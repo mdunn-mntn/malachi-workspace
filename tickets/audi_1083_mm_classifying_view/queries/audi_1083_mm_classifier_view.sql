@@ -131,6 +131,9 @@ camp AS (
   FROM `dw-main-bronze.integrationprod.campaigns` c
   JOIN seg s USING (campaign_id)
   WHERE c.deleted = FALSE AND c.is_test = FALSE
+    -- GOTCHA: campaign_status_id 8="Deleted" / 9="Legacy Archived" are NOT caught by the
+    -- `deleted` boolean. Exclude them so archived/dead Stage 1s don't pollute the group rollup.
+    AND c.campaign_status_id NOT IN (8, 9)
     AND c.funnel_level = 1   -- Stage 1 only: the only stage with a DS audience expression
 ),
 parsed AS (
