@@ -97,7 +97,7 @@ why B is a set of exposed components + a rule, not a multiplied composite.
 -- keys / grain
 campaign_id, campaign_group_id, advertiser_id, objective_id, funnel_level
 -- Axis A: engine (authoritative taxonomy)
-mm_class, mm_engine_rank, has_ds13, has_ds19, has_ds38, has_ds46, has_mm
+expression_updated_at, mm_class, tiers_reachable, mm_engine_rank, has_ds13, has_ds19, has_ds38, has_ds46, has_mm
 -- scoring / gate / rollout generation
 hhst_current, hhst_gated, fangorn_tier, is_express   -- integrationprod.tpa_fangorn_advertiser_inclusion
 -- Axis B: restriction components
@@ -127,6 +127,19 @@ the v2 geo_reach_pct / camperbid pool upgrade.**
   "DS19-only = unscored/max-reach" was wrong — corrected in data_knowledge.md.)
 - Added column **`tiers_reachable`** (per taxonomy §3). Confluence spec page updated to v2 with the
   canonical definition + tier profiles + corrected mechanics.
+
+### 4e. Open questions resolved (2026-07-22) — Confluence spec now at v3
+- **Gate NOT required for `is_unmodified_mm`** (user: HHST flips daily for pacing, an operational
+  lever not a structural modification; exposed separately as `hhst_gated`). Removing it moved the
+  headline only 32.5% → **33.3%** unmodified (98% of clean-config MM is gated anyway); flagship
+  6.7% → **6.8%**. Updated headline: MM-labelled **70.9%** / unmodified **33.3%** / flagship **6.8%**.
+- **Geo = binary in v1** (any positive sub-country include → `restriction_level='geo'`; exclusions
+  don't count; `geo_narrowest_type` exposed for a zip/city-only bar). Exact `geo_reach_pct` = v2
+  (no clean per-location HH table; candidate = camperbid `campaign_bucket_population`).
+- **Grain = campaign** + companion group-level rollup (all-flagship vs mixed, spend-weighted modal class).
+- **Materialization = daily SQLMesh `FULL` model** + `snapshot_date`; feature branch in airflow-ti,
+  scheduling wired by pipeline owner (Ryan); exact dataset TBD.
+- Added **`expression_updated_at`** (classification freshness). `snapshot_date` to be added at materialization.
 
 ### 4a. Locked decisions (2026-07-22)
 - **Quantification = exposed components**, NOT a single composite %. `geo_reach_pct` is the one

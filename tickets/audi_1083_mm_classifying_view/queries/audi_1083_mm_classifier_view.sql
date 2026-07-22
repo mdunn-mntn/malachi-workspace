@@ -114,23 +114,23 @@ LANGUAGE js AS r"""
 
 -- ── base: latest targeted segment per campaign ──────────────────────────────
 WITH seg AS (
-  SELECT campaign_id, expression FROM (
-    SELECT s.campaign_id, s.expression,
-      ROW_NUMBER() OVER (PARTITION BY s.campaign_id ORDER BY s.update_time DESC) AS rn,
-      MAX(s.update_time) OVER (PARTITION BY s.campaign_id) AS expr_updated_at
+  SELECT campaign_id, expression, update_time AS expression_updated_at FROM (
+    SELECT s.campaign_id, s.expression, s.update_time,
+      ROW_NUMBER() OVER (PARTITION BY s.campaign_id ORDER BY s.update_time DESC) AS rn
     FROM `dw-main-silver.audience.audience_segments` s
     WHERE s.expression_type_id = 2 AND s.is_targeted = TRUE
   ) WHERE rn = 1
 ),
 camp AS (
   SELECT c.campaign_id, c.campaign_group_id, c.advertiser_id,
-         c.objective_id, c.funnel_level, s.expression
+         c.objective_id, c.funnel_level, s.expression, s.expression_updated_at
   FROM `dw-main-bronze.integrationprod.campaigns` c
   JOIN seg s USING (campaign_id)
   WHERE c.deleted = FALSE AND c.is_test = FALSE
 ),
 parsed AS (
   SELECT campaign_id, campaign_group_id, advertiser_id, objective_id, funnel_level,
+         expression_updated_at,
          parse_cats(expression)  AS cats,
          parse_geo(expression)   AS geos,
          three_p_semantics(expression) AS three_p_semantics,
@@ -186,6 +186,7 @@ fang AS (
 classified AS (
 SELECT
   p.campaign_id, p.campaign_group_id, p.advertiser_id, p.objective_id, p.funnel_level,
+  p.expression_updated_at,
 
   -- ── Axis A: engine / config (authoritative TI-1037 2x3 taxonomy grid) ──
   -- The 6 live cells = DS19(kw) y/n × vertical anchor {none / DS13 legacy / DS46 Fangorn}.
@@ -237,9 +238,10 @@ SELECT
     ELSE 'none'
   END AS restriction_level,
 
-  -- is_unmodified_mm: real, well-configured MM of ANY engine (gated, national, no hard-narrow)
+  -- is_unmodified_mm: MM (any DS13/19/46) with a clean CONFIG — national geo, no AND-narrow.
+  -- Gate NOT required (user 2026-07-22): HHST flips daily for pacing/deliverability reasons, so it's
+  -- an operational lever, not a structural modification. Filter hhst_gated separately if you need it.
   (   (d.has_ds13 OR d.has_ds19 OR d.has_ds38 OR d.has_ds46)     -- is MM
-      AND COALESCE(g.hhst_current,0) > 0                          -- gate on
       AND NOT (COALESCE(gl.has_geo_narrow_incl,FALSE) OR p.has_geo_radii)  -- national geo
       AND NOT (p.three_p_semantics IN ('and_include','mixed'))    -- no AND-3P
       AND NOT d.has_1p_incl                                       -- no seeded 1P

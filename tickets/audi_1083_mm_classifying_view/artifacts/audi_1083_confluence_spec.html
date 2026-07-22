@@ -11,8 +11,8 @@
 <table><tbody>
 <tr><th>Cut</th><th>Spend</th><th>Share</th></tr>
 <tr><td>MM (<code>has_mm</code> &mdash; any DS13/19/46, per taxonomy §4)</td><td>$30.6M</td><td><strong>70.9%</strong></td></tr>
-<tr><td>Unmodified MM (<code>is_unmodified_mm</code>)</td><td>$14.0M</td><td><strong>32.5%</strong></td></tr>
-<tr><td>Clean flagship Fangorn (<code>is_flagship</code>)</td><td>$2.9M</td><td><strong>6.7%</strong></td></tr>
+<tr><td>Unmodified MM (<code>is_unmodified_mm</code> &mdash; clean config)</td><td>$14.4M</td><td><strong>33.3%</strong></td></tr>
+<tr><td>Clean flagship Fangorn (<code>is_flagship</code>)</td><td>$3.0M</td><td><strong>6.8%</strong></td></tr>
 </tbody></table>
 <p>Of every dollar that is MM, less than half is unmodified.</p>
 
@@ -44,6 +44,7 @@
 <tr><th>Column</th><th>Meaning</th></tr>
 <tr><td><code>campaign_id</code>, <code>campaign_group_id</code>, <code>advertiser_id</code></td><td>Keys. Grain = campaign (latest bidder-facing targeted segment).</td></tr>
 <tr><td><code>objective_id</code>, <code>funnel_level</code></td><td>Exposed so you filter to prospecting yourself (the view classifies ALL campaigns).</td></tr>
+<tr><td><code>expression_updated_at</code></td><td>When the campaign's targeted segment was last updated (classification freshness).</td></tr>
 <tr><td><code>mm_class</code></td><td>The 6-cell config label (above).</td></tr>
 <tr><td><code>tiers_reachable</code></td><td>Which intent tiers this config can bid (per taxonomy §3).</td></tr>
 <tr><td><code>mm_engine_rank</code></td><td>0-3 by vertical anchor (3 Fangorn / 2 PP / 1 keywords / 0 non-MM).</td></tr>
@@ -54,7 +55,7 @@
 <tr><td><code>geo_reach_pct</code></td><td>Exact % of US households reachable. <strong>Deferred (NULL) in v1</strong> &mdash; see Open questions.</td></tr>
 <tr><td><code>three_p_semantics</code>, <code>and_3p_narrowed</code>, <code>or_3p_additive</code>, <code>and_1p_narrowed</code>, <code>crm_excl_hygiene</code></td><td>How 3P/1P join MM and whether they narrow. OR-additive / CRM-exclude are cosmetic.</td></tr>
 <tr><td><code>restriction_level</code></td><td>none / geo / audience / geo+audience.</td></tr>
-<tr><td><code>is_unmodified_mm</code></td><td>MM (any DS13/19/46), gated, national, no AND-narrow. "Real, well-configured MM."</td></tr>
+<tr><td><code>is_unmodified_mm</code></td><td>MM (any DS13/19/46), national, no AND-narrow. Gate NOT required (operational lever &mdash; filter <code>hhst_gated</code> separately). "Clean-config MM."</td></tr>
 <tr><td><code>is_flagship</code></td><td><code>is_unmodified_mm</code> AND <code>mm_class = 'mm_flagship_fangorn'</code> (DS19+DS46 &mdash; the taxonomy's named flagship).</td></tr>
 </tbody></table>
 
@@ -89,14 +90,14 @@ WHERE v.tiers_reachable LIKE 'HI%' AND v.hhst_gated
 SELECT a.*, v.mm_class, v.tiers_reachable, v.is_flagship, v.restriction_level
 FROM my_analysis a LEFT JOIN mm_classifier v USING (campaign_id);]]></ac:plain-text-body></ac:structured-macro>
 
-<h2>Open questions (please comment)</h2>
-<ol>
-<li><strong>Should <code>is_unmodified_mm</code> require the gate?</strong> Gate-off MM bids broadly (Max Reach). I treat gate-off as not-unmodified. Right call?</li>
-<li><strong>Geo threshold.</strong> Today <em>any</em> narrower-than-country include flags <code>restriction_level='geo'</code>. Should a light narrowing count, or only material shrinkage? A v2 <code>geo_reach_pct</code> (exact % of US HH reachable) would let us set a real cutoff &mdash; worth building? (Candidate source: the bidder's per-campaign <code>campaign_bucket_population</code>.)</li>
-<li><strong>Grain + rollup.</strong> Campaign-level, with a companion group-level view (all-flagship vs mixed). Right grain?</li>
-<li><strong>Materialization.</strong> Plan is a <strong>daily SQLMesh <code>FULL</code> model</strong> (snapshot of current config; a view would recompute JS-UDF JSON parsing on every join). Confirm cadence + which project/dataset it lives in.</li>
-<li><strong>Any columns missing</strong> for how you'd use it?</li>
-</ol>
+<h2>Design decisions (feedback welcome)</h2>
+<ul>
+<li><strong>Gate is NOT required for <code>is_unmodified_mm</code>.</strong> HHST flips daily for pacing/deliverability, so it's an operational lever, not a structural modification &mdash; exposed separately as <code>hhst_gated</code>. (98% of clean-config MM is gated anyway, so including it only added ~0.8pp.)</li>
+<li><strong>Geo: binary in v1.</strong> Any positive sub-country include flags <code>restriction_level='geo'</code> (exclusions don't count); <code>geo_narrowest_type</code> is exposed so you can set a zip/city-only bar. Exact <code>geo_reach_pct</code> (% of US HH reachable) is a v2 add &mdash; no clean per-location HH table exists yet; candidate source is the bidder's per-campaign <code>campaign_bucket_population</code>.</li>
+<li><strong>Grain: campaign-level</strong>, plus a companion group-level rollup (all-flagship vs mixed, spend-weighted modal <code>mm_class</code>).</li>
+<li><strong>Materialization: daily SQLMesh <code>FULL</code> model</strong> (a live view would recompute JS-UDF JSON parsing on every join) with a <code>snapshot_date</code>. Feature branch in airflow-ti; scheduling wired by the pipeline owner. Exact dataset TBD.</li>
+</ul>
+<p><strong>Still want your input on:</strong> any columns missing for how you'd use this, and whether the binary geo flag is good enough or needs the exact reach %.</p>
 
 <h2>Status &amp; links</h2>
 <ul>
