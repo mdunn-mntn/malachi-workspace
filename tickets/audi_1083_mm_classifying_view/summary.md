@@ -115,6 +115,19 @@ GROUP BY (all-flagship vs mixed) — companion view, not baked into the base gra
 **Status: draft view validated end-to-end on live data. Remaining = materialization (SQLMesh) +
 the v2 geo_reach_pct / camperbid pool upgrade.**
 
+### 4a-canon. MM definition — CANONICAL (2026-07-22, resolved via two Confluence pages)
+- **MM = any of DS13/19/46 (BROAD)** per the canonical taxonomy page §4
+  (https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511) — "has DS19" UNDERCOUNTS ~7.6%
+  (the vertical-only cells ARE MM). **DS19 = "MM Core" is a COMPONENT inside MM, not the definition.**
+  So the view's original `has_mm = DS13/19/38/46` was already correct; no change. A DS46-only
+  gated/national campaign is correctly `is_unmodified_mm=TRUE`, `is_flagship=FALSE`.
+- **Tiers are per-IP; the config's leaves decide which are biddable** (scoring page 3487891474):
+  DS19-only reaches HI·MI·MaxReach (NOT PP); DS46-only = PP only; DS13-only = HI·PP; DS19+anchor =
+  all four; non_mm = unscored. Captured in new column `tiers_reachable`. (Earlier session claim
+  "DS19-only = unscored/max-reach" was wrong — corrected in data_knowledge.md.)
+- Added column **`tiers_reachable`** (per taxonomy §3). Confluence spec page updated to v2 with the
+  canonical definition + tier profiles + corrected mechanics.
+
 ### 4a. Locked decisions (2026-07-22)
 - **Quantification = exposed components**, NOT a single composite %. `geo_reach_pct` is the one
   exact number; AND-narrowing + gate are binary flags; `restriction_level` is a rule over them.

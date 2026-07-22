@@ -257,6 +257,17 @@ LEFT JOIN fang     f  ON f.advertiser_id = p.advertiser_id
 -- Composable: is_unmodified_mm = broad "real MM" cut; is_flagship = flagship-Fangorn;
 -- (is_unmodified_mm AND mm_class='mm_keywords_only') = keyword/Max-Reach flagship; etc.
 SELECT classified.*,
-       (is_unmodified_mm AND mm_class = 'mm_flagship_fangorn') AS is_flagship
+       (is_unmodified_mm AND mm_class = 'mm_flagship_fangorn') AS is_flagship,
+       -- tiers this config can BID (per canonical taxonomy §3; tiers are per-IP, the
+       -- include leaves decide which are biddable). A config's reachable-tier profile,
+       -- NOT a single ceiling: DS19-only reaches HI (via vertical∩keyword IPs) but not PP.
+       CASE mm_class
+         WHEN 'mm_flagship_fangorn'   THEN 'HI·PP·MI·MaxReach'
+         WHEN 'mm_classic'            THEN 'HI·PP·MI·MaxReach'
+         WHEN 'mm_keywords_only'      THEN 'HI·MI·MaxReach (no PP)'
+         WHEN 'fangorn_vertical_only' THEN 'PP only'
+         WHEN 'vertical_only_legacy'  THEN 'HI·PP'
+         ELSE 'unscored'
+       END AS tiers_reachable
 FROM classified
 ;
