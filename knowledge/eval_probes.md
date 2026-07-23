@@ -19,6 +19,11 @@ in routing (add a keyword / a START_HERE task row / a cross-link), then re-run. 
 cold-start miss happens in normal work**, add it here as a new probe — misses become permanent
 regression tests, never silently dropped.
 
+**Recording a run (feeds the SessionStart health signal):** the workflow can't write files, so after each
+run append one line to `knowledge/eval_runs.log` (`<date> | suite_pass=<bool> | <n_pass>/<total> | passed: …`)
+and commit with a message containing `retrieval-eval: run —`. `.claude/scripts/health_scorecard.py` reads
+that signature and prints `retrieval-eval Nd ago` on the SessionStart Health line, flagging STALE after 14 days.
+
 Machine-readable block below (the `## PROBES` fenced JSON) is what the workflow parses. Keep it valid JSON.
 
 ## PROBES

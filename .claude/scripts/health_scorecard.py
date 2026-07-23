@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 KDIR = os.path.join(ROOT, "knowledge")
 STALE_DAYS = 120
+EVAL_STALE_DAYS = 14   # retrieval regression suite should run at least biweekly
 DAY = 86400
 
 
@@ -37,6 +38,18 @@ def days_since_capture():
     degrades safely to "no /capture commits" (which nudges a capture) rather than a false "0d ago".
     """
     ts = _git("log", "-1", "--format=%ct", "-i", "-E", "--grep=: capture —").strip()
+    if not ts.isdigit():
+        return None
+    return int((time.time() - int(ts)) // DAY)
+
+
+def days_since_eval():
+    """Days since the last retrieval-eval run (commit message signature `retrieval-eval: run —`).
+
+    The eval workflow (claude-prompts/retrieval_eval.js) can't write files, so each run is recorded by
+    appending to knowledge/eval_runs.log and committing with this signature. Degrades safely to None
+    (never run) → nudges a run, rather than a false "0d ago"."""
+    ts = _git("log", "-1", "--format=%ct", "-E", "--grep=retrieval-eval: run —").strip()
     if not ts.isdigit():
         return None
     return int((time.time() - int(ts)) // DAY)
@@ -98,13 +111,20 @@ def main():
     verbose = "--verbose" in sys.argv
     try:
         dc = days_since_capture()
+        de = days_since_eval()
         orph = orphans()
         dups = dup_titles()
     except Exception:
         return 0  # never break the caller
 
     cap = "no /capture commits" if dc is None else f"last /capture {dc}d ago"
-    print(f"Health  : {cap} · {len(orph)} stale doc(s) (>{STALE_DAYS}d) · {len(dups)} dup-title")
+    if de is None:
+        ev = "retrieval-eval never run (Workflow scriptPath: claude-prompts/retrieval_eval.js)"
+    elif de > EVAL_STALE_DAYS:
+        ev = f"retrieval-eval {de}d ago — STALE, run claude-prompts/retrieval_eval.js"
+    else:
+        ev = f"retrieval-eval {de}d ago"
+    print(f"Health  : {cap} · {len(orph)} stale doc(s) (>{STALE_DAYS}d) · {len(dups)} dup-title · {ev}")
 
     if verbose:
         if orph:
