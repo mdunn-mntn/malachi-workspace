@@ -5,7 +5,29 @@ status: done
 date: 2026-03-03
 summary: "New-to-Brand misclassification investigation — returning visitors classed as new"
 result: "NTB misclassification: missing page views + cross-device tracking (TI-650 quantified)"
+keywords: [ntb, new-to-brand, is_new, misclassification, cross-device, missing page views, ti-650, ti-254, disagreement rate]
 ---
+
+## TL;DR
+
+**Q:** What did TI-310 (NTB Investigations) find about New-to-Brand misclassification?
+
+**A:** TI-310 was a broader New-to-Brand (NTB) misclassification investigation following TI-254, exploring why returning visitors were being classified as new-to-brand (inflating NTB metrics). Findings: NTB misclassification is caused by missing page views plus cross-device tracking, with TI-650 as the quantitative follow-up (NTB disagreement rate = 42%). The investigation confirmed the is_new column means "new visitor to advertiser's site for this guid/cookie." Status: Complete — findings socialized and NTB documentation written. All work products live on Drive (no local files); the New-to-Brand (NTB) Documentation.gdoc is likely the canonical org reference for the NTB definition. Open follow-up: extract key points from that gdoc into knowledge/data_knowledge.md.
+
+**How:** Read tickets/ti_310_ntb_investigations/summary.md in full (only file in the folder; no outputs/ or queries/ subdirs exist). Grepped knowledge/data_knowledge.md, data_catalog.md, experimentation.md, mntn_business.md for is_new/NTB/disagreement to check delta facts.
+
+**Learned:**
+- NTB misclassification causes = missing page views + cross-device tracking; TI-650 quantified the NTB disagreement rate at 42%.
+- is_new means a first-time (new) visitor to the advertiser's site for that guid/cookie.
+- All durable data facts in this summary are already documented in knowledge/data_knowledge.md and data_catalog.md (is_new = client-side JS pixel, 41-56% disagreement, cross-device primary driver).
+
+**Reuse when:**
+- asking about NTB / New-to-Brand misclassification causes
+- asking what the is_new column means
+- tracing the relationship between TI-254, TI-310, and TI-650
+
+---
+
 
 # TI-310: NTB Investigations
 

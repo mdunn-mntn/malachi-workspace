@@ -5,7 +5,31 @@ status: done
 date: 2026-03-03
 summary: "Freshness monitoring for the IP identity graph and blocklist sync pipeline"
 result: "Delivered freshness SQL monitoring max(update_time) on tpa.membership_updates_logs"
+keywords: [identity sync freshness, ip blocklist, tpa.membership_updates_logs, update_time, staleness threshold, identity graph, ti-34, membership sync]
 ---
+
+## TL;DR
+
+**Q:** TI-34 Identity Sync Freshness: how was IP identity graph / blocklist sync staleness detected, and what freshness signal was delivered?
+
+**A:** TI-34 (done, 2026-03-03) built freshness monitoring for the IP identity graph and blocklist sync pipeline, addressing the absence of any mechanism to detect a lagging sync (stale exclusion lists keep targeting fresh converters; stale inclusion lists miss new members). Delivered: freshness monitoring SQL that watches max(update_time) on the Greenplum table tpa.membership_updates_logs versus the expected sync cadence (sync should run daily). update_time is the key recency column; datastream_metadata.source_timestamp must not be used as a proxy for it. Caveat: the SQL file ti_34_identity_sync_freshness.sql actually contains NTB email-prevalence analysis (conversion_log.email / email_data, threshold 0.5), a likely mismatch with the file's stated purpose — the canonical freshness findings live in the Drive gdoc/gsheet. Related follow-up: TI-684 (missing IPs from IPDSC), since freshness issues can cause missing IPs.
+
+**How:** Investigated Greenplum timestamp columns for sync-recency signals, landed on max(update_time) on tpa.membership_updates_logs compared to expected daily cadence as the staleness detector. Freshness monitoring SQL and staleness thresholds were delivered; canonical findings documented in Drive.
+
+**Tables:** tpa.membership_updates_logs, conversion_log, ti_34_identity_sync_freshness.sql
+
+**Learned:**
+- Stale IP identity-graph sync is detected by monitoring max(update_time) on Greenplum tpa.membership_updates_logs against the expected (daily) sync cadence
+- update_time is the freshness column on tpa.membership_updates_logs; datastream_metadata.source_timestamp is NOT a valid proxy for it
+- The file ti_34_identity_sync_freshness.sql actually holds NTB email-prevalence analysis, likely a mismatch; canonical freshness findings are in the Drive documents
+
+**Reuse when:**
+- Building or auditing freshness/staleness monitoring for an IP identity graph or blocklist sync pipeline
+- Detecting a lagging Greenplum tpa membership sync
+- Investigating missing IPs (e.g. TI-684 / IPDSC) that could stem from stale sync
+
+---
+
 
 # TI-34: Identity Sync Freshness — IP Blocklist Freshness Measures
 

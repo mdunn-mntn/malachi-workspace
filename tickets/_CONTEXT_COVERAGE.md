@@ -43,3 +43,11 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_200_whitelist_blocklist | carded | 0 | batch 6 |
 | ti_253_tpa_monitor | carded | 0 | batch 6 |
 | ti_254_investigate_low_ntb_percentage | carded | 0 | batch 6 |
+| ti_270_pre_post_analysis_ga | carded | 0 | batch 7; Jaguar GA pre/post, results in Drive |
+| ti_310_ntb_investigations | carded | 0 | batch 7; NTB misclassification, facts already in knowledge |
+| ti_34_identity_sync_freshness | carded | 1 | batch 7; membership sync freshness monitoring |
+| ti_391_audience_intent_scoring | carded | 0 | batch 7; AIS pre/post, results in Drive |
+| ti_501_jaguar_kpi | carded | 0 | batch 7; Jaguar KPI + causal impact, lift in notebooks |
+| ti_502_ip_scoring | carded | 0 | batch 7; how-we-use-scores reference doc |
+| ti_504_causal_impact_experimentation | carded | 0 | batch 7; Fangorn RCT vs CausalImpact framework |
+| ti_541_ip_scoring_pipeline | carded | 0 | batch 7; DS13 pipeline documentation |

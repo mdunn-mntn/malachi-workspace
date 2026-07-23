@@ -5,7 +5,29 @@ status: done
 date: 2026-03-03
 summary: "Measure whether the updated Audience Intent Scoring model improved campaign performance"
 result: "Complete — pre/post analysis done; findings documented in Drive gdoc/gsheet"
+keywords: [audience intent scoring, jaguar, ds13, pre/post analysis, ivr, cpv, ip scoring, ti-391, ti-541]
 ---
+
+## TL;DR
+
+**Q:** TI-391: Did the updated Audience Intent Scoring (Jaguar/DS13) model improve campaign performance vs the prior scoring model? (pre/post analysis)
+
+**A:** Pre/post analysis complete; all findings and data live only in Drive (gdoc + gsheet), not locally. The summary does not restate the performance conclusion — it defers to "See Drive gdoc for results." So the card can only report that the analysis was done, not whether performance improved.
+
+**How:** Defined pre/post windows around the scoring-model change date, pulled performance metrics (IVR, conversions, CPV) segmented by score tier/model version, ran a statistical comparison, and wrote findings to Drive. No local queries or outputs exist; queries/ and outputs/ are empty. Architecture diagrams referenced: documentation/architecture/audience_intent_scoring.png and audience_intent_graph.png (also in TI-541 Drive folder).
+
+**Learned:**
+- Audience Intent Scoring = Jaguar/DS13; it ranks IPs by likelihood to convert, and scoring-model changes shift which IPs get targeted.
+- TI-391 findings and data live only in Drive (gdoc + gsheet); no local files, queries, or outputs. The summary does not restate the performance conclusion.
+- TI-541 (IP Scoring Pipeline) is the broader pipeline-documentation ticket related to TI-391.
+
+**Reuse when:**
+- Doing a pre/post analysis of an Audience Intent / IP scoring model change
+- Looking for TI-391 results (they are in Drive, not the repo)
+- Questions about Jaguar/DS13 scoring performance impact
+
+---
+
 
 # TI-391: Analyze Pre-Post of Audience Intent Scoring Changes
 

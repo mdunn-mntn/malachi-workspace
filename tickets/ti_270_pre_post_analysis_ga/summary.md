@@ -5,7 +5,32 @@ status: done
 date: 2026-03-04
 summary: "Pre/post analysis of campaign KPIs around the Jaguar IP-scoring GA release"
 result: "Delivered pre/post performance comparison for Jaguar GA (results in Drive sheet)"
+keywords: [jaguar, ga, pre-post, ip scoring, cost_impression_log, ui_visits, ivr, cpv, ti-270, ti-501, ti-452]
 ---
+
+## TL;DR
+
+**Q:** TL;DR card for TI-270 (Pre-Post Analysis — GA / Jaguar release), plus any new durable facts.
+
+**A:** TI-270 delivered a pre/post performance comparison for the Jaguar IP-scoring system's GA (General Availability) release, checking whether scored IPs outperformed unscored IPs and whether GA had a measurable positive effect on campaign KPIs (IVR, CPV, conversion rate). The analysis pattern filtered cost_impression_log by Jaguar score presence and joined to ui_visits for visit metrics. Status is Complete; the actual results live in a Drive spreadsheet (`[TI-452] - Pre Post Analysis Jaguar Release.gsheet`) and are not stated in the summary — the "Questions Answered" section only points to that sheet rather than concluding a numeric outcome. Two SQL files back the work (main pre/post query plus a ti_254-labeled carry-over from NTB work). TI-501 (Jaguar KPI) is the deeper causal follow-up.
+
+**How:** Defined pre/post windows around the Jaguar GA date, pulled impression + visit metrics by scored vs. unscored IPs (filter cost_impression_log by Jaguar score presence, join to ui_visits), ran a statistical comparison, and reported results to the Drive sheet. The summary does not state the numeric result — it defers to the Drive spreadsheet.
+
+**Tables:** cost_impression_log, ui_visits
+
+**Learned:**
+- Jaguar GA pre/post analysis pattern: filter cost_impression_log by Jaguar score presence, join to ui_visits for visit metrics
+- Results are in the Drive sheet only; the summary states no numeric outcome for whether Jaguar GA improved performance
+- Drive file is named TI-452 but stored in the TI-270 folder (likely a re-labeled version); the ti_254-labeled SQL is a carry-over from NTB investigation work
+- TI-501 (Jaguar KPI) is the deeper causal analysis of Jaguar impact
+
+**Reuse when:**
+- pre/post analysis of an IP-scoring / Jaguar release
+- measuring scored vs unscored IP performance on IVR/CPV/conversion
+- looking for the Jaguar GA results spreadsheet
+
+---
+
 
 # TI-270: Pre-Post Analysis — GA (Jaguar) Release
 

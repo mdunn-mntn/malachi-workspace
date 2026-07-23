@@ -5,7 +5,33 @@ status: done
 date: 2026-03-04
 summary: "End-to-end documentation of the DS13 IP scoring pipeline + unscored-IP investigation."
 result: "IP scoring pipeline documented end-to-end + unscored-IP investigation completed."
+keywords: [ip scoring, ds13, audience intent, jaguar, tmul_daily, membership db, unscored ips, bidder, bid time]
 ---
+
+## TL;DR
+
+**Q:** Summarize TI-541 (IP Scoring Pipeline) and extract any durable facts not already in the knowledge docs.
+
+**A:** TI-541 documented the DS13 / Audience Intent / Jaguar IP scoring pipeline end-to-end and investigated why some IPs go unscored. Deliverables: a pipeline HTML doc, overview/walkthrough/unscored-IPs .docx files (gitignored, also on Drive), and architecture diagrams in documentation/architecture/ (audience_intent_graph, audience_intent_scoring, biddable_inventory_funnel, ds13_data_pipeline, ecommerce_classification_architecture_api). Pipeline: bronze.raw.tmul_daily → membership DB → bidder, with IP scores applied at bid time from membership DB snapshots. Status: complete (2026-03-04). TI-542 (Max Reach Causal Impact) followed as the performance analysis; TI-644 complete_context.md holds schema details.
+
+**How:** Read summary.md in full; the outputs/ and queries/ dirs do not exist for this ticket. Grepped data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md for the Section 7 facts.
+
+**Tables:** bronze.raw.tmul_daily
+
+**Learned:**
+- DS13 IP scoring pipeline runs bronze.raw.tmul_daily → membership DB → bidder
+- IP scores are applied at bid time from membership DB snapshots, not stored long-term in BQ event tables
+- TI-541 is a documentation ticket; deliverable docs are gitignored .docx files plus architecture diagrams in documentation/architecture/
+- TI-542 (Max Reach Causal Impact) is the follow-on performance analysis; TI-644 complete_context.md has schema details
+
+**Reuse when:**
+- asking how MNTN scores IPs for audience targeting
+- asking why some IPs are unscored
+- looking for DS13 pipeline architecture diagrams
+- referencing the membership DB / bid-time scoring flow
+
+---
+
 
 # TI-541: IP Scoring Pipeline — Architecture & Documentation
 

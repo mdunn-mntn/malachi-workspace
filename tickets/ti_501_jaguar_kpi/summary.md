@@ -5,7 +5,32 @@ status: done
 date: 2026-05-06
 summary: "KPI + causal-impact analysis of the Jaguar IP scoring system by score tier"
 result: "Jaguar improves IVR/conversion; score-tier breakdown shows which tiers drive most lift"
+keywords: [jaguar, score tier, causal impact, ivr, conversion, ds13, audience intent, model_params, cost_impression_log]
 ---
+
+## TL;DR
+
+**Q:** Produce the TL;DR card for TI-501 Jaguar KPI Analysis (summary.md), plus delta_facts and any front-matter fix.
+
+**A:** TI-501 delivered a KPI + causal-impact analysis of the Jaguar IP scoring system, segmented by Jaguar score tier. Per the summary: Jaguar score improves IVR/conversion rate ("Yes — see causal impact notebook for quantified lift"), and a score-tier breakdown shows which tiers drive the most incremental lift (specific tier values live in the notebooks, not stated in the summary). Status: Complete. Work delivered as three notebooks (causal impact via Bayesian structural time series, KPI-by-score, score-distribution analysis) plus one IP-level KPI SQL query; written analysis and score-usage reference live on Drive.
+
+**How:** Pulled impression + visit data segmented by Jaguar score tier, ran causal impact analysis (Bayesian structural time series), segmented KPIs by score bucket. Jaguar score lives in cost_impression_log.model_params (same field as RTC score); IP-level scoring from the DS13 Audience Intent pipeline. Quantified lift figures are in the notebooks, not restated in the summary.
+
+**Tables:** cost_impression_log
+
+**Learned:**
+- Jaguar score lives in cost_impression_log.model_params (same field as RTC score)
+- IP-level Jaguar scoring is from the DS13 Audience Intent pipeline
+- Jaguar improves IVR/conversion per the causal impact analysis, with a score-tier breakdown identifying the highest-lift tiers
+
+**Reuse when:**
+- Jaguar score-tier KPI analysis
+- causal impact of an IP scoring system
+- DS13 Audience Intent scoring performance
+- mapping model_params score to campaign KPI lift
+
+---
+
 
 # TI-501: Jaguar KPI Analysis
 

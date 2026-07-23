@@ -168,3 +168,10 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **[ti_1058_ds13_ds19_pipeline_map]** The DS13 vertical leg is a separate OpenAI batch from DS19 and its code is located at airflow-ti/spark/vertical_classification/{distinct_site_visit_signal_domains,prepare_html_content,submit_html_content,fetch_vertical_response,update_website_verticals}.py, airflow-ti/dags/targeting/fetch_common_crawl.py, airflow-ti/dags/vertical_classification/*, and SteelHouse/dbt ml_squad/models/vertical_categorization/*.
   - source_line: DS13-leg code located (§4): airflow-ti/spark/vertical_classification/{...}.py, airflow-ti/dags/targeting/fetch_common_crawl.py, airflow-ti/dags/vertical_classification/*, and SteelHouse/dbt ml_squad/models/vertical_categorization/*. It is a separate OpenAI batch from DS19.
 
+
+<!-- batch 7 appended -->
+
+## data_catalog.md
+- **fact:** tpa.membership_updates_logs (Greenplum) tracks IP audience membership timestamps; its freshness column is update_time and the sync should run daily, so staleness is detected by comparing max(update_time) against expected daily cadence.
+  - source ticket: `ti_34_identity_sync_freshness`
+  - source_line: "- `tpa.membership_updates_logs`: key freshness column is `update_time`; sync should run daily."

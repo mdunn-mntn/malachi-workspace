@@ -5,7 +5,29 @@ status: done
 date: 2026-03-03
 summary: "Document how MNTN uses IP scores across the bidding and targeting pipeline"
 result: "Reference doc created; scores live in cost_impression_log.model_params + membership DB"
+keywords: [ip scoring, model_params, realtime_conquest_score, rtc, jaguar, ds13, membership db, cost_impression_log]
 ---
+
+## TL;DR
+
+**Q:** How does MNTN use IP scores across the bidding/targeting pipeline, and where do the scores live in the data?
+
+**A:** TI-502 (done) is a reference-doc ticket documenting how MNTN uses IP scores. Findings: IP scores live in cost_impression_log.model_params as key=value pairs for per-impression scores, and in the membership DB for IP-level targeting scores applied at bid time. Key score types: realtime_conquest_score=10000 is the RTC (Real-Time Conquest) flag in model_params; Jaguar/DS13 audience-intent scores are stored in the membership DB and applied at bid time. Deliverable = a reference spreadsheet/PDF ("How We Use Scores"); the gsheet lives in the TI-501 Drive folder. Follow-up TI-541 covers the full IP scoring pipeline architecture.
+
+**How:** Read the summary in full; checked for queries/ and outputs/ (neither folder exists). This is a documentation ticket with no BQ queries run — findings are the reference-doc content, not analysis results.
+
+**Tables:** cost_impression_log
+
+**Learned:**
+- TI-502 is a reference/documentation ticket with no queries/ or outputs/ folders.
+
+**Reuse when:**
+- Someone asks where IP scores live in the data
+- Someone asks what realtime_conquest_score=10000 means
+- Someone wants a reference on how MNTN uses scores in bidding
+
+---
+
 
 # TI-502: IP Scoring — How We Use Scores
 

@@ -5,7 +5,36 @@ status: done
 date: 2026-03-31
 summary: "Build a CausalImpact analysis/framework for the Experimentation team"
 result: "Delivered DiD + CausalImpact framework (two complementary methods applied)"
+keywords: [ti-504, causalimpact, fangorn, ais, rct, ivr, proportion z-test, population discontinuity, advertiser_household_score, hhst, is_test, cost_impression_log, clickpass_log, placebo fpr, intent group, peak performance]
 ---
+
+## TL;DR
+
+**Q:** TI-504: Build a CausalImpact analysis/framework for the Experimentation team (starting with Fangorn AIS). Does Fangorn improve IVR, and which method validly measures it?
+
+**A:** Delivered a dual-method framework (direct RCT + CausalImpact) for the Fangorn AIS experiment (5 advertisers, cloned prospecting campaigns split into control/treatment arms with 4 intent groupings each). The direct RCT is the only valid analysis: Fangorn showed strong significant IVR lift for Edward Martin (+41%) and Collector Store (+40%), small positive for Reedsy (+6.5%), no effect for G-Shock (-0.4%) and Zumba (-7.5%); pooled +3.4%, p=0.78 (not significant). PP (Peak Performance) intent group showed the most consistent treatment effect. High-confidence results significant across all 5 tests: Edward Martin PP +123%, MI_PP +70%, Collector Store PP +60%, MI +43%. CausalImpact was found INVALID for this design due to population discontinuity — parent campaigns target the full audience (IP buckets 0-599) while experiment campaigns target a subset (600-999), producing a 3-10x IVR gap that no covariate can bridge (average placebo FPR 69%, should be <20%). HI-tier segmentation (advertiser_household_score >= 6666) confirmed the gap is structural, not audience composition: old prospecting campaigns were 89-99% HI-tier, and even within HI tier the experiment ran at 0.08-0.53x of historical HI IVR. CausalImpact is expected to be the right tool for the broader Fangorn rollout (same campaigns before/after enablement). is_test=true is a reporting flag only (excludes campaigns from summary/aggregate tables, does not affect delivery), so test campaigns had to be queried from cost_impression_log and clickpass_log directly. Status: Done.
+
+**How:** Pulled the 5-advertiser campaign_group_id list from Nick's spreadsheet; queried the 40 experiment campaigns (excluded from summary tables by is_test=true) directly from cost_impression_log for impressions and clickpass_log for VVs (3.2M impressions, 38.6K VVs, 2026-03-04 to 2026-03-24, 21 days). Track 1 (direct RCT) applied five tests per intent-group comparison (proportion z-test, chi-squared, Welch t-test, Mann-Whitney U, bootstrap 95% CI over 10K resamples) plus advertiser-level and pooled summaries; Nick Martin confirmed the proportion z-test is the team IVR standard. Track 2 applied the TI-748 CausalImpact methodology (VIF then BIC covariate selection, cross-validation, sensitivity, placebo tests) using parent-campaign pre-period IVR as baseline across three iterations, then a HI-tier segmented analysis using advertiser_household_score (HHST) on cost_impression_log (HI = HHST >= 6666). Scripts: artifacts/ti_504_fangorn_rct_analysis.py, artifacts/ti_504_causal_impact_plots.py; data in outputs/ti_504_experiment_daily_metrics.csv; 10 visualization PNGs in outputs/.
+
+**Tables:** cost_impression_log, clickpass_log
+
+**Learned:**
+- Direct RCT is the only valid analysis when a real matched control arm exists; CausalImpact (synthetic control) is for when you don't have a control group.
+- CausalImpact fails under population discontinuity: parent campaigns target full audience (IP buckets 0-599), experiment campaigns a subset (600-999), giving a 3-10x IVR gap no covariate can bridge (avg placebo FPR 69%, should be <20%).
+- Fangorn IVR lift is mixed by advertiser: Edward Martin +41% and Collector Store +40% significant; Reedsy +6.5%, G-Shock -0.4%, Zumba -7.5% not; pooled +3.4%, p=0.78; PP intent group most consistent.
+- Self-referencing covariate trap: setting control_ivr = y during the pre-period gives artificially perfect pre-period fit but is cheating; when removed the model collapsed to -70% effects.
+- is_test=true is a reporting flag only — it excludes campaigns from all summary/aggregate tables (query cost_impression_log and clickpass_log directly) but does NOT affect delivery priority or bidder behavior.
+- Old prospecting campaigns are 89-99% HI-tier traffic (HHST >= 6666); even within HI tier, experiment campaigns ran at 0.08-0.53x of historical HI-tier IVR, so the IVR gap is structural (audience split, creative removal, budget, maturity), not audience composition.
+- Open: quantify which factor (audience split, creative, budget, or maturity) contributes most to the experiment-campaign IVR gap; re-run CausalImpact once Fangorn ships to live non-test campaigns.
+
+**Reuse when:**
+- Evaluating a Fangorn / AIS rollout or any intent-scoring experiment on IVR
+- Deciding between direct RCT and CausalImpact for an experiment with cloned/split-audience campaigns
+- Analyzing is_test=true experiment campaigns that are missing from summary/aggregate tables
+- Segmenting campaign traffic by intent tier via advertiser_household_score (HHST) thresholds
+
+---
+
 
 # TI-504: Create Causal Impact Analysis for Experimentation Team
 
