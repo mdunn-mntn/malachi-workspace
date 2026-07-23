@@ -281,14 +281,22 @@ only sets the default boolean.
 4. **Where it lives / materialization** — SQLMesh view vs scheduled table; grain confirmed campaign.
 5. **Model/version scheme** — how to keep `mm_engine` robust when the next generation (post-Fangorn) ships.
 
-## 6c. Team feedback — naming (Alyson, 2026-07-22)
-Team refers to MM campaign types by **MM VERSION**, not the structural `mm_class` labels. Confirmed map:
-`mm_keywords_only` (DS19-only) = **mmv2** · `mm_classic` (DS19+DS13) = **mmv3** · `vertical_only_legacy`
-(DS13-only) = **mmv1 OR mmv3 depending on the campaign's create date**. So version is NOT purely
-structural — has a temporal component. **Plan:** add a `mm_version` column (team names) alongside the
-precise structural `mm_class`. **Blocked-on-Alyson:** (1) the create-date cutoff for DS13-only mmv1-vs-mmv3;
-(2) the Fangorn cells' names — `mm_flagship_fangorn` (DS19+DS46) and `fangorn_vertical_only` (DS46-only) —
-mmv3 (Fangorn = current mmv3 scoring) or a separate label. Empirical check to inform (1) blocked on BQ re-auth.
+## 6c. Team naming adopted (Alyson, 2026-07-22; IMPLEMENTED 2026-07-23)
+Team refers to MM campaign types by **MM VERSION**. Per Alyson's answers, renamed 3 `mm_class` values
+IN PLACE (kept the other 3 structural): `mm_keywords_only`→**mmv2** (DS19-only) · `mm_classic`→**mmv3**
+(DS19+DS13) · `vertical_only_legacy`→**mmv1 (created < ~Sept 2024) else mmv3**. `mm_flagship_fangorn`
+(DS19+DS46), `fangorn_vertical_only` (DS46-only), `non_mm` unchanged — Fangorn = "updated DS13" (DS46),
+its cells keep structural names (user OK).
+- **Create-date cutoff:** mmv1 shipped ~Dec 2023-Jan 2024, mmv3 ~Sept 2024 (AP holds exact date). Verified
+  empirically: DS13-only creation ramps through 2024, **collapses Sept→Oct 2024 (15→3)**, trickle from late
+  2025 — a clean ~2024-09-01 boundary. View uses `IF(campaign_created < TIMESTAMP('2024-09-01'),'mmv1','mmv3')`
+  (constant MMV3_CUTOFF, flagged approximate).
+- **Structural consequence handled:** `mmv3` now spans DS19+DS13 AND DS13-only-post-cutoff (different tiers),
+  so `tiers_reachable` is now computed from the raw DS flags, NOT `mm_class`. Exposed new col `campaign_created`.
+- **Verified (2026-07-23):** mmv2 3,594 (all reach HI) · mm_flagship_fangorn 1,761 · fangorn_vertical_only 411
+  (PP-capped) · **mmv3 393 = 312 DS19+DS13 (reach HI) + 81 DS13-only post-cutoff (PP-capped)** · **mmv1 134
+  (latest_created 2024-08-30, all pre-cutoff, PP-capped)** · non_mm 8,182. Old vertical_only_legacy 215 = 134
+  mmv1 + 81 mmv3. Spec page → v10 (label rename + naming note + campaign_created). Query `queries/audi_1083_distribution.sql`.
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):

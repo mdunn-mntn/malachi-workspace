@@ -127,7 +127,8 @@ WITH seg AS (
 ),
 camp AS (
   SELECT c.campaign_id, c.campaign_group_id, c.advertiser_id,
-         c.objective_id, c.funnel_level, s.expression, s.expression_updated_at
+         c.objective_id, c.funnel_level, c.create_time AS campaign_created,
+         s.expression, s.expression_updated_at
   FROM `dw-main-bronze.integrationprod.campaigns` c
   JOIN seg s USING (campaign_id)
   WHERE c.deleted = FALSE AND c.is_test = FALSE
@@ -139,7 +140,7 @@ camp AS (
 ),
 parsed AS (
   SELECT campaign_id, campaign_group_id, advertiser_id, objective_id, funnel_level,
-         expression_updated_at,
+         campaign_created, expression_updated_at,
          parse_cats(expression)  AS cats,
          parse_geo(expression)   AS geos,
          three_p_semantics(expression) AS three_p_semantics,
@@ -195,19 +196,26 @@ fang AS (
 classified AS (
 SELECT
   p.campaign_id, p.campaign_group_id, p.advertiser_id, p.objective_id, p.funnel_level,
-  p.expression_updated_at,
+  p.campaign_created, p.expression_updated_at,
 
   -- ── Axis A: engine / config (authoritative TI-1037 2x3 taxonomy grid) ──
   -- The 6 live cells = DS19(kw) y/n × vertical anchor {none / DS13 legacy / DS46 Fangorn}.
   -- DS13∧DS46 never co-occur (same slot, two generations). Anchor sets tier: DS46>DS13>none.
   -- FLAGSHIP = DS19+DS46 specifically; DS46-only is "Fangorn vertical-only" (caps at PP band).
+  -- NAMING (Alyson, 2026-07-22): the team refers to three of these by MM VERSION, not the
+  -- structural label. Renamed in place: mm_keywords_only→mmv2 (DS19="MNTN Matched V2"),
+  -- mm_classic→mmv3, vertical_only_legacy→mmv1 OR mmv3 by CREATE DATE (mmv3 shipped ~Sept 2024).
+  -- The other three keep structural names. NB 'mmv3' therefore covers TWO structural configs
+  -- (DS19+DS13 and DS13-only-post-cutoff) → tiers_reachable is driven off the raw DS flags, not
+  -- mm_class, so it stays correct. MMV3_CUTOFF is approximate — AP holds the exact release date.
   CASE
-    WHEN (d.has_ds19 OR d.has_ds38) AND d.has_ds46 THEN 'mm_flagship_fangorn'   -- ~18.9%
-    WHEN d.has_ds46                                 THEN 'fangorn_vertical_only'-- ~6.5%
-    WHEN (d.has_ds19 OR d.has_ds38) AND d.has_ds13  THEN 'mm_classic'           -- ~4.0% (PP config)
-    WHEN d.has_ds13                                 THEN 'vertical_only_legacy' -- ~1.1% (MM 1.0)
-    WHEN (d.has_ds19 OR d.has_ds38)                 THEN 'mm_keywords_only'      -- ~42.7% (Max Reach)
-    ELSE 'non_mm'                                                               -- ~26.8%
+    WHEN (d.has_ds19 OR d.has_ds38) AND d.has_ds46 THEN 'mm_flagship_fangorn'   -- unchanged (DS19+DS46)
+    WHEN d.has_ds46                                 THEN 'fangorn_vertical_only'-- unchanged (DS46-only)
+    WHEN (d.has_ds19 OR d.has_ds38) AND d.has_ds13  THEN 'mmv3'                  -- was mm_classic (DS19+DS13)
+    WHEN d.has_ds13                                 THEN                          -- was vertical_only_legacy (DS13-only)
+         IF(p.campaign_created < TIMESTAMP('2024-09-01'), 'mmv1', 'mmv3')        -- MMV3_CUTOFF ~Sept 2024 (confirm w/ AP)
+    WHEN (d.has_ds19 OR d.has_ds38)                 THEN 'mmv2'                  -- was mm_keywords_only (DS19-only)
+    ELSE 'non_mm'                                                               -- unchanged
   END AS mm_class,
   CASE                                    -- engine quality rank (higher = stronger MM tier)
     WHEN d.has_ds46 THEN 3                -- Fangorn anchor
@@ -269,17 +277,16 @@ LEFT JOIN fang     f  ON f.advertiser_id = p.advertiser_id
 -- (is_unmodified_mm AND mm_class='mm_keywords_only') = keyword/Max-Reach flagship; etc.
 SELECT classified.*,
        (is_unmodified_mm AND mm_class = 'mm_flagship_fangorn') AS is_flagship,
-       -- tiers this config can BID. Clean rule (empirically verified 2026-07-22, RTC-excluded
-       -- delivered scores): HI (10000) requires the keyword layer (DS19); PP (8000) requires the
-       -- vertical anchor (DS13/DS46). BOTH vertical-only configs cap at PP — DS13-only delivers
-       -- 0% HI (83.9% at exactly 8000), same ceiling as DS46-only. (Corrects taxonomy §3's
-       -- "DS13-only → HI+PP" — that HI was RTC, not categorical.) v1 = 8000 pin, v2 = 6666-8000 spread.
-       CASE mm_class
-         WHEN 'mm_flagship_fangorn'   THEN 'HI·PP·MI·MaxReach'
-         WHEN 'mm_classic'            THEN 'HI·PP·MI·MaxReach'
-         WHEN 'mm_keywords_only'      THEN 'HI·MI·MaxReach (no PP)'
-         WHEN 'fangorn_vertical_only' THEN 'PP·MI (no HI)'
-         WHEN 'vertical_only_legacy'  THEN 'PP·MI (no HI)'
+       -- tiers this config can BID. Driven off the raw DS flags (NOT mm_class, since 'mmv3' now
+       -- spans DS19+DS13 and DS13-only-post-cutoff, which differ). Authoritative rule (Ryan Kleck
+       -- audience_intent prospecting model, verified 2026-07-22): HI (10000) = in Vertical (DS13/46)
+       -- AND in Keywords (DS19); PP (8000) = vertical, no keyword; both vertical-only configs cap at
+       -- PP (DS13-only 84% at exactly 8000, 0% HI). Keyword-only reaches HI (advertiser vertical is
+       -- always in the score) but has no vertical-only IPs to score PP.
+       CASE
+         WHEN (has_ds19 OR has_ds38) AND (has_ds13 OR has_ds46) THEN 'HI·PP·MI·MaxReach'
+         WHEN (has_ds19 OR has_ds38)                            THEN 'HI·MI·MaxReach (no PP)'
+         WHEN (has_ds13 OR has_ds46)                            THEN 'PP·MI (no HI)'
          ELSE 'unscored'
        END AS tiers_reachable
 FROM classified
