@@ -274,4 +274,14 @@ LIMIT 200;
        FROM classified) WHERE campaign_id = <ID>;
    Only real/flagship MM:
      ... FROM classified WHERE is_unmodified_mm;   -- or  WHERE (is_unmodified_mm AND mm_class='mm_flagship_fangorn')
+   Materialize once into a scratch dataset (then `SELECT *` repeatedly; static snapshot, re-run for fresh):
+     CREATE OR REPLACE TABLE `your-project.your_dataset.mm_campaign_classifier` AS
+     SELECT classified.*,
+            (is_unmodified_mm AND mm_class='mm_flagship_fangorn') AS is_flagship,
+            CASE WHEN (has_ds19 OR has_ds38) AND (has_ds13 OR has_ds46) THEN 'HI·PP·MI·MaxReach'
+                 WHEN (has_ds19 OR has_ds38)                            THEN 'HI·MI·MaxReach (no PP)'
+                 WHEN (has_ds13 OR has_ds46)                            THEN 'PP·MI (no HI)'
+                 ELSE 'unscored' END AS tiers_reachable
+     FROM classified;
+   (The deployed SQLMesh model does exactly this daily as dw-main-silver.audience.mm_campaign_classifier.)
    NB scope is already active (campaign_status_id=3) Stage-1 (funnel_level=1); edit the `camp` CTE to widen. */
