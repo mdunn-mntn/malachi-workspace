@@ -5,6 +5,28 @@ status: done
 date: 2026-03-04
 summary: "Trace household-count discrepancies in the IPDSC / MES IP-to-household pipeline"
 result: "HH-count divergence traced through MES/IPDSC enrichment stages; see investigation doc"
+keywords: [mm-44, ipdsc, mes, household discrepancy, membership enrichment service, ip to household, ti-684]
+---
+
+## TL;DR
+
+**Q:** Where in the MES/IPDSC pipeline do household (HH) counts diverge, and how large is the discrepancy?
+
+**A:** MM-44 investigated household-count discrepancies in the IPDSC (IP Data Source Category) pipeline, where the MES (Membership Enrichment Service) pipeline maps IPs to households and observed HH counts did not match expected values. The plan was to trace HH counts through each MES stage, find where they diverge, quantify the gap, and recommend a fix. The summary marks the ticket Complete but does NOT record the conclusion in-line: Solution is "TBD" and the answer to "Where do HH counts diverge?" is deferred to the investigation doc (artifacts/mm_44_investigation.md / .docx, artifacts/mm_44_household_discrepancy.doc, with a pipeline diagram in artifacts/mm_44_mes_pipeline.png). Documented takeaway captured in the summary: IP-to-HH mapping goes through IPDSC enrichment stages. Related follow-up: TI-684 (missing IPs from IPDSC).
+
+**How:** Per the summary Plan: trace HH counts through each MES pipeline stage, identify the divergence stage, quantify the gap, document findings. Findings/Solution are not concluded in the summary itself; the actual results live in the artifacts investigation docs, which the summary points to without restating.
+
+**Learned:**
+- Summary is a stub: status=done but Solution and the Q6 answer are TBD/deferred to artifacts/mm_44_investigation.md — the divergence stage and gap size are not stated in the summary.
+- MES = Membership Enrichment Service; IPDSC = IP Data Source Category; MES maps IPs to households via IPDSC enrichment stages (both already documented in knowledge/data_knowledge.md).
+- TI-684 (missing IPs from IPDSC) is a related follow-up investigation.
+- No queries/ or outputs/ directories exist for this ticket; work products are Word/PNG artifacts, not SQL.
+
+**Reuse when:**
+- Investigating IPDSC or MES household/IP mapping discrepancies
+- Tracing HH counts through MES pipeline enrichment stages
+- Following up on TI-684 missing IPs from IPDSC
+
 ---
 
 # MM-44: IPDSC Household Discrepancy Investigation

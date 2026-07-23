@@ -5,6 +5,30 @@ status: done
 date: 2026-03-03
 summary: "Repeatable query to monitor RTC campaign performance vs standard targeting"
 result: "Delivered monitoring SQL segmenting RTC vs non-RTC impressions by IVR, CPM, CPV"
+keywords: [rtc, real-time conquest, realtime_conquest_score, cost_impression_log, ui_visits]
+---
+
+## TL;DR
+
+**Q:** What is DM-3118 (RTC Monitor) and what did it deliver?
+
+**A:** DM-3118 delivered a repeatable monitoring SQL query comparing Real-Time Conquest (RTC) vs. non-RTC impressions on the same CTV prospecting campaign, segmented by IVR, CPM, and CPV. RTC impressions are identified by `model_params ~ 'realtime_conquest_score=10000'` in `cost_impression_log`; the query filters `funnel_level = 1` (pure prospecting) and `channel_id = 8` (CTV), joins `cost_impression_log` to `ui_visits` on `impression_id`, and filters visits by `from_verified_impression = true` and `elapsed_time <= 1 day`. It was built for advertiser 32205 / campaign group 42173 / campaign 195395. Status: complete. Written in Greenplum SQL (BQ port noted as an open item); DM-3188 is the follow-up comparison ticket with actual results.
+
+**How:** Read summary.md in full and listed the ticket folder (only queries/dm_3118_rtc_monitor.sql present, no outputs). Grepped knowledge docs for realtime_conquest_score, from_verified_impression, elapsed_time, and cost_impression_log to check whether the summary's facts were already documented.
+
+**Tables:** cost_impression_log, ui_visits
+
+**Learned:**
+- RTC flag: model_params ~ 'realtime_conquest_score=10000' in cost_impression_log identifies Real-Time Conquest impressions.
+- RTC campaign filters used: funnel_level = 1 (pure prospecting) and channel_id = 8 (CTV).
+- Impression-to-visit join in this query: cost_impression_log.impression_id = ui_visits.impression_id, with visit filters from_verified_impression = true and elapsed_time <= 1 day.
+- Query was written in Greenplum SQL (not BQ); BQ port is an open follow-up. DM-3188 is the follow-up comparison ticket with actual results.
+
+**Reuse when:**
+- Monitoring or comparing RTC vs non-RTC CTV prospecting performance
+- Identifying Real-Time Conquest impressions
+- Impression-to-visit joins for IVR/CPM/CPV segmentation
+
 ---
 
 # DM-3118: RTC Monitor — Real-Time Conquest Impressions vs. Visits

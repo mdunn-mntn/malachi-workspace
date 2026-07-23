@@ -127,3 +127,18 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **fact:** Cross-validation of TI-884 MDE against Lauren's completed tests: GLD (0.67% reported lift vs 3.12% raw / 1.86% stack MDE), Ownerly (0.72% vs 5.92% / 3.53%), Boll & Branch (1.00%, paused/no traffic, 88.4% / 52.6% MDE) all reported lifts 4.7x-8.2x below the MDE, statistically indistinguishable from zero.
   - source ticket: `ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis`
   - source_line: the 3 measurable cases all reported lifts well below detection threshold.
+
+## data_catalog.md
+- **fact:** The airflow-ti feature-store output aug_log_ip can substitute for raw bronze.raw.augmentor_log as the biddability filter in Spark lift runs (much smaller, same biddability filter).
+  - source ticket: `ber_2250_incrementality_overhaul/ti_933_select_lift_analysis`
+  - source_line: substitute the airflow-ti `aug_log_ip` feature-store output for raw `augmentor_log` (much smaller; same biddability filter)
+
+## experimentation.md
+- **fact:** MNTN Select drives pooled incremental lift: +2.055 pp visit-rate (95% CI [+2.011, +2.100]) and +0.140 pp conversion-rate (95% CI [+0.133, +0.147]), both significant, over a 7-day holdout window across 23 active Select advertisers (TI-933). Select lift sits between TI-917's all-campaigns (+3.12 pp) and prospecting-only (+0.78 pp) baselines.
+  - source ticket: `ber_2250_incrementality_overhaul/ti_933_select_lift_analysis`
+  - source_line: Pooled MNTN Select visit-rate lift = +2.055 pp (95% CI [+2.011, +2.100]), conversion-rate lift = +0.140 pp (95% CI [+0.133, +0.147]). Both significant. Select is incremental.
+
+## mntn_business.md
+- **fact:** Active MNTN Select advertisers run entirely prospecting/awareness campaigns with zero retargeting; no single Select advertiser has the volume to be individually powered for visit-rate lift, so pooling is required.
+  - source ticket: `ber_2250_incrementality_overhaul/ti_933_select_lift_analysis`
+  - source_line: zero retargeting campaigns across all 38 - confirms Kale's framing that Select is purely awareness/prospecting

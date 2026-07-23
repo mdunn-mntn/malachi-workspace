@@ -5,6 +5,27 @@ status: done
 date: 2026-05-06
 summary: "Tune and evaluate ecommerce domain classifier thresholds for precision/recall"
 result: "Delivered threshold analysis with a recommended value; full results in the notebook"
+keywords: [ecommerce classifier, threshold, precision recall, domain classification, tgt-4016, product lookup]
+---
+
+## TL;DR
+
+**Q:** What ecommerce classifier threshold was chosen and how was it evaluated (TGT-4016)?
+
+**A:** TGT-4016 evaluated and tuned the ecommerce domain classifier's thresholds, trading off precision (too permissive includes non-ecommerce sites) against recall (too strict excludes legitimate ecommerce domains). A product lookup CSV served as ground truth. The analysis ran candidate thresholds and assessed precision/recall tradeoffs, delivering a recommended threshold value. The summary does not state the specific recommended value in text — it defers to the notebook (artifacts/tgt_4016_thresholds.ipynb) and companion script (artifacts/tgt_4016_thresholds_script.py) for full results. Status: complete. Downstream whitelist/blocklist work using these thresholds is tracked in TI-200.
+
+**How:** Loaded product lookup CSV as ground truth, ran classifier threshold analysis across candidate values (in both a Python script and Jupyter notebook), evaluated precision/recall tradeoffs, and recommended a threshold. Numeric results live only in the notebook, not the summary text.
+
+**Learned:**
+- Classifier-specific work; the summary explicitly records no BQ table knowledge to document.
+- The companion Python file was renamed from .py to avoid a Databricks Repos collision with the .ipynb of the same base name.
+- The recommended threshold value is not written in the summary text; it lives in the notebook.
+
+**Reuse when:**
+- tuning or evaluating the ecommerce domain classifier
+- precision/recall threshold analysis for a domain classifier
+- downstream whitelist/blocklist work (TI-200) referencing these thresholds
+
 ---
 
 # TGT-4016: Ecommerce Classifier Thresholds

@@ -24,3 +24,9 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis | carded | 2 | context-full batch 3; MDE self-test + Lauren cross-val → experimentation.md |
 | ber_2250_incrementality_overhaul/ti_885_mid_intent_experiment_setup | carded | 0 | context-full batch 3; design-only, Kirsa blocker |
 | ber_2250_incrementality_overhaul/ti_886_uplift_model_implementation | carded | 0 | context-full batch 3; plan-only stub |
+| ber_2250_incrementality_overhaul/ti_933_select_lift_analysis | carded | 3 | context-full batch 4; Select incremental pooled lift |
+| dm_3118_rtc_monitor | carded | 0 | context-full batch 4; RTC monitoring SQL |
+| dm_3188_comparison_rt_and_non_rt | carded | 0 | context-full batch 4; RT vs non-RT export, numbers in Drive CSV |
+| goal_attainment_customer_goal_map | carded | 0 | context-full batch 4; added front-matter; Mode report data map |
+| mm_44_ipdsc_hh_discrepancy | carded | 0 | context-full batch 4; stub, findings in artifacts |
+| tgt_4016_ecomm_classifier_thresholds | carded | 0 | context-full batch 4; threshold in notebook |

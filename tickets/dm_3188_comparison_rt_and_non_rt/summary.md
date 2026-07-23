@@ -5,6 +5,27 @@ status: done
 date: 2026-03-03
 summary: "Compare performance and IP-level behavior of RTC vs non-RTC impressions and visits"
 result: "Delivered RT vs non-RT comparison CSV export and reusable monitoring SQL"
+keywords: [rtc, real-time conquest, non-rtc, rt vs non-rt, dm-3188, dm-3118, ip comparison]
+---
+
+## TL;DR
+
+**Q:** How do real-time conquest (RTC) IPs compare to non-RTC IPs in performance and IP-level behavior?
+
+**A:** Follow-up to DM-3118. Produced a RT vs non-RT IP comparison: two SQL approaches (dm_3188_comparison_rtc_and_non_rtc.sql initial, dm_3188_rtc_vs_nonrtc.sql refined) plus a CSV export delivered to Drive. The summary does not state any actual comparison numbers — the answer to "do RTC impressions show different visit rates vs non-RTC?" is deferred to the Drive CSV (`Comparisson of Real Time To Non-Realtime IPs.csv`). No data-doc updates beyond DM-3118; no open items.
+
+**How:** Ran RTC vs non-RTC comparison queries, exported results as CSV to Drive for stakeholder review. Numbers live in the Drive CSV, not the summary.
+
+**Learned:**
+- DM-3188 is a follow-up to DM-3118 (RTC monitoring query), producing the actual RT vs non-RT comparison export
+- Deliverables: two SQL queries (initial comparison + refined dm_3188_rtc_vs_nonrtc.sql) and a Drive CSV export
+- Actual comparison numbers are not in the summary — they reside only in the Drive CSV
+
+**Reuse when:**
+- comparing RTC vs non-RTC impression/visit performance
+- looking for the RT vs non-RT IP comparison export
+- following up on DM-3118 RTC monitoring
+
 ---
 
 # DM-3188: Comparison of Real-Time vs. Non-Real-Time IPs

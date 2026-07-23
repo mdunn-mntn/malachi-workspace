@@ -5,6 +5,35 @@ status: done
 date: 2026-06-04
 summary: "Does MNTN Select drive incremental lift? Pooled holdout lift across Select advertisers"
 result: "MNTN Select drives +2.06 pp visit-rate lift (pooled, significant); it is incremental"
+keywords: [mntn select, product_id=2, incrementality, visit-rate lift, holdout, biddability, augmentor_log, aug_log_ip, ti-933, ti-917, ber-2250, ghost-bidder, ti-886, pooled lift, prospecting, databricks spark]
+---
+
+## TL;DR
+
+**Q:** Does MNTN Select drive incremental lift? (Select-only holdout lift cut, follow-up to TI-917)
+
+**A:** Yes. Pooled across 23 active MNTN Select advertisers (7-day window 2026-04-29 to 2026-05-05), Select drives a visit-rate (guid) lift of +2.055 pp (treated 2.6334% vs holdout 0.5782%, 95% CI [+2.011, +2.100], significant) and a conversion-rate lift of +0.140 pp (95% CI [+0.133, +0.147], significant). Select sits between TI-917's 'all campaigns' (+3.12 pp) and 'prospecting' (+0.78 pp) baselines, well above prospecting-only, confirming Select is incremental. Pooling is the only defensible path: no single Select advertiser has enough volume to be individually powered (0/23 have CIs excluding zero; largest, Hugo Insurance AID 41034, at 437,262 treated IPs). Clickpass visit-rate lift (+1.655 pp) is flagged biased (needs MNTN imp). Per-advertiser readouts are gated on ghost-bidder (TI-886). Treated arm 1,513,123 IPs; holdout arm 167,257 IPs.
+
+**How:** Phase 1 volume recon: queried campaign_groups WHERE product_id=2 AND deleted=FALSE AND is_test=FALSE, giving 38 active Select advertisers last 30d (87 campaign_groups, 192 campaigns, ~27M imps, ~$549k spend); 0 cleared TI-917's $200k/mo MDE floor, 0 retargeting campaigns (entirely prospecting). Phase 2: on 2026-05-04, 99.99% of Select-served IPs (409,580/409,604) appear in augmentor_log, so the per-(AID,IP) 10% biddable-holdout filter (MD5(advertiser_id||ip) mod 1000) applies unchanged. Cross-checked cohort against Kale's 58-AID 'Select Live Campaigns' xlsx: the 38 are a complete superset of his actionable list. Phase 3 lift query hit the 6-hour BigQuery interactive wall on three attempts (~73% done at shuffle of 9-34B records); ported to Spark on Databricks (400-core c3d-highmem, ~3h). Victor's optimizations: substitute the airflow-ti aug_log_ip feature-store output for raw augmentor_log (same biddability filter), and materialize ip_assigned to GCS parquet sorted by bucket. 15 of 38 advertisers dropped for no biddable-holdout/served-treatment overlap in the 7d window. Delivered as an 11-slide RevealJS deck.
+
+**Tables:** bronze.integrationprod.campaign_groups, augmentor_log, aug_log_ip, bidder_bid_events, prospecting_intent__v1
+
+**Learned:**
+- MNTN Select (product_id=2) is incremental: pooled visit-rate lift +2.055 pp and conversion lift +0.140 pp, both significant, over a 7-day holdout window across 23 advertisers.
+- No single Select advertiser is individually statistically powered for visit-rate lift; 0/23 have CIs excluding zero, so pooling is the only defensible readout until ghost-bidder (TI-886) lands.
+- Active Select advertisers are entirely prospecting/awareness with zero retargeting campaigns, so TI-917's prosp/stage1/rtg segment split collapses to a single 'all Select' segment.
+- No active Select advertiser clears TI-917's $200k/mo visit-rate MDE floor (top: Masterbuilt ~$106k/mo).
+- 99.99% of Select-served IPs appear in augmentor_log, so the biddable-holdout methodology applies to Select unchanged (no pivot to bidder_bid_events needed).
+- The airflow-ti aug_log_ip feature-store output can substitute for raw augmentor_log as the biddability filter (much smaller, same filter) in Spark lift runs.
+- This lift query exceeds BigQuery's 6-hour interactive wall (9-34B record shuffle) and must run on Spark/Databricks.
+
+**Reuse when:**
+- Someone asks whether MNTN Select is incremental or how Select lift compares to prospecting/retargeting
+- Designing a product-specific (product_id) holdout lift cut
+- Deciding whether to pool advertisers vs report per-advertiser lift given volume/MDE constraints
+- Choosing between augmentor_log, aug_log_ip, or bidder_bid_events for a biddability filter
+- A BER-2250 lift query times out in BigQuery and needs porting to Spark/Databricks
+
 ---
 
 # TI-933: Lift analysis on MNTN Select campaigns
