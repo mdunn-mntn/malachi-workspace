@@ -19,6 +19,7 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ber_2250_incrementality_overhaul/ti_1039_liftlab_design_review | carded | 0 | context-full batch 2 |
 | ber_2250_incrementality_overhaul/ti_831_audience_deciles | carded | 0 | context-full batch 3; random-bucketing clarification |
 | ber_2250_incrementality_overhaul/ti_835_control_group_design | carded | 0 | context-full batch 3; guid vs clickpass two-stories |
+| ber_2250_incrementality_overhaul/ti_837_implementation_plan | carded | 4 | context-full batch 3; ghost-bidding ATT — retargeting +21pp, Stage1 ~0, clickpass wedge, augmentor_log batching |
 | ber_2250_incrementality_overhaul/ti_839_measure_results | carded | 0 | context-full batch 3; backlog stub |
 | ber_2250_incrementality_overhaul/ti_842_present_results | carded | 0 | context-full batch 3; backlog stub |
 | ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis | carded | 2 | context-full batch 3; MDE self-test + Lauren cross-val → experimentation.md |

@@ -281,3 +281,19 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
   - source_line: "Sovrn (FMX) is also a **PMP inventory vendor** in gary-ql (`core.partners` id 68, prefix `svr`)"
 - **[audi_1089_ddp_vendor_evaluations/ds39_klickly]** Klickly (DS39) registry row in tpa.direct_data_partners: billing_type flat_fee (fixed_cpm null), enabled, used_in_mntn_match=true, used_in_interests=false, type=mntn_matched, valid_from 2025-07-01 (~July 1 contract anniversary), valid_to null, notes NULL (no fee amount stored in our data).
   - source_line: "billing_type flat_fee (fixed_cpm null), enabled, used_in_mntn_match=true, used_in_interests=false, type=mntn_matched, valid_from 2025-07-01 (≈ contract anniversary July 1 ...), valid_to null, notes NULL — no fee amount anywhere in our data"
+
+## context-full batch 3 append (ti_837)
+
+### experimentation.md
+- **[ber_2250_incrementality_overhaul/ti_837_implementation_plan]** TI-837 v5 ghost-bidding ATT: retargeting-only high-intent guid IVW lift +21.07pp, all-campaigns-combined +3.12pp, prospecting-all-stages +0.78pp, Stage 1 only −0.06pp (30-advertiser cohort, 2026-04-20→04-26).
+  - source_line: | **Retargeting only** | **+21.07pp** | +28.89pp | +13.97pp | 0.66× | 8/8 |
+- **[ber_2250_incrementality_overhaul/ti_837_implementation_plan]** Ghost-bidding ATT recovers guid lift that ITT could not: ITT-on-guid showed ~0% because only 14-16% of the targeted group is actually served, diluting the signal.
+  - source_line: guid_log: ~0% lift across 9 advertisers ... ITT (Intent to Treat) shows zero because only 14-16% of the "treatment" group actually receives impressions
+
+### data_knowledge.md
+- **[ber_2250_incrementality_overhaul/ti_837_implementation_plan]** Clickpass over-credits vs guid at high intent (~24%) but under-credits at peak (~38%) — the attribution wedge inverts by funnel position; aggregate hides both.
+  - source_line: At high intent: clickpass +4.17pp > guid +3.36pp (over-credit by 24%). At peak: clickpass +0.55pp < guid +0.88pp (under-credit by 38%).
+- **[ber_2250_incrementality_overhaul/ti_837_implementation_plan]** Single-query batching for ghost-bidding lift is near-free: the augmentor_log scan dominates bytes, so a 7-advertiser scan costs the same 18.2 TB as a 1-advertiser smoke test.
+  - source_line: Stage 1 7-advertiser scan cost 18.2 TB, the same as the 1-advertiser smoke.
+- **[ber_2250_incrementality_overhaul/ti_837_implementation_plan]** Holdout IPs appear in augmentor_log at the uniform 10.0% rate, but their mntn_segments array does NOT include the segment they are a holdout of — targetable audience must be reconstructed externally before intersecting the holdout hash.
+  - source_line: holdout IPs appear in augmentor_log, but their `mntn_segments` array does NOT include the segment the IP is a holdout of

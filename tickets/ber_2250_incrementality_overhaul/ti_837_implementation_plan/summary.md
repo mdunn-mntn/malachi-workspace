@@ -5,6 +5,33 @@ status: in_progress
 date: 2026-05-06
 summary: "Ghost-bidding ATT framework to measure incremental lift of intent-tier targeting"
 result: "Retargeting drives lift (+21pp); Stage 1 prospecting ~0; combined views hide both"
+keywords: [ghost bidding, incrementality, att, 10% holdout, retargeting lift, prospecting, clickpass wedge, augmentor_log, ti-837, ber-2250]
+---
+
+## TL;DR
+
+**Q:** How much incremental lift does MNTN's intent-tier targeting drive, measured via ghost-bidding ATT on the 10% holdout (TI-837)?
+
+**A:** Retargeting drives the lift (+21.07pp high-intent guid IVW); Stage 1 prospecting alone shows ~0 (−0.06pp); the combined view (+3.12pp) hides both. v5 4-segment run on a 30-advertiser cohort, 7-day window 2026-04-20→04-26.
+
+**How:** Ghost-bidding ATT on the existing 10% holdout: reconstruct the targetable audience externally, apply MD5(advertiser_id:ip) mod 1000 holdout hash (buckets 0-99), verify appearance in augmentor_log, propensity-match to actually-served IPs from cost_impression_log, compare visit rates. Per-segment win-rate correction on the biddable-holdout denominator; IVW meta-analysis across cells.
+
+**Tables:** augmentor_log, cost_impression_log, clickpass_log, guid_log, household_scoring__prospecting_intent__v1, agg__daily_sum_by_campaign, fpa_advertiser_verticals
+
+**Learned:**
+- Retargeting concentrates the measured lift (+21pp high-intent, +17pp peak); likely part real causal, part selection bias, so true effect is bounded between 0 and +21pp.
+- Stage 1 prospecting alone shows zero incremental lift at high intent (guid-ATT IVW −0.06pp, only 12/25 advertisers positive).
+- Combined +3.12pp view conflates retargeting and Stage 1, hiding both stories.
+- Clickpass over/under-credits vs guid depending on funnel position: over-credits ~24% at high intent, under-credits ~38% at peak.
+- Single-query batching is essentially free — augmentor_log scan dominates bytes, so batching 7-30 advertisers costs ~same as one.
+- Ghost-bidding ATT recovers a real guid signal that ITT couldn't see (ITT diluted by 14-16% impression coverage).
+
+**Reuse when:**
+- measuring incrementality / lift of intent-tier targeting
+- building a ghost-bidding ATT estimate off the 10% holdout without bidder changes
+- explaining why combined incrementality numbers understate retargeting and overstate prospecting
+- quantifying the clickpass-vs-guid attribution wedge
+
 ---
 
 # TI-837: Ghost Bidding Incrementality Experiment — Implementation Plan
