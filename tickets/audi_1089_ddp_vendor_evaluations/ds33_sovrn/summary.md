@@ -5,6 +5,28 @@ status: done
 date: 2026-07-10
 summary: "Renewal pass/play eval of Sovrn (DS33) $0.50-CPM MNTN Matched data vendor"
 result: "DROP — do not renew per-use; keep only if re-papered to a nominal flat insurance fee"
+keywords: [sovrn, ds33, audi-1089, ddp renewal, fixed_cpm, sole pairs, same-day redundancy, usage_reporting_data, mntn matched, insurance framing]
+---
+
+## TL;DR
+
+**Q:** TL;DR card for AUDI-1089 Sovrn (DS33) renewal evaluation, plus new durable facts.
+
+**A:** DROP — do not renew Sovrn (DS33) per-use; keep only if re-papered to a nominal flat insurance fee (~$1-2K/yr, metering removed). Sovrn is a live $0.50-CPM MNTN-Matched pixel/streaming data vendor whose signal is almost entirely redundant: 80.1% of its (ip,domain) pairs are same-day-tied by other paid feeds (highest same-day-redundancy of all 10 sources; next 33Across 54.3%), only 0.9% of domains and 12.5% of pairs are sole, and its sole-IP cohort (2.71M IPs) is the most adversely-selected measured — 866 delivered (0.03%), 95.0% unscored, 0 visits on all 4,380 sole impressions in the valuation week (VR 0.000%). Both value lenses (domain->vertical coverage and unique deliverable reach) independently land at ~zero. Implied max defensible value ~$0.1-2.4K/yr vs a meter that credits co-touched IPs across 334M touched imps/wk. Redundancy has option-value only, priced as a small flat fee not a per-impression premium. No dependency rescue: MM site-visit path + negligible BUK enrichment (0.05 weight/5% sample, degrades gracefully) + passive dashboards; the billing metering pipeline is itself a DS33 consumer on the cost side, not value. The separate Sovrn/FMX PMP inventory relationship (gary-ql core.partners id 68, prefix svr) is unaffected. Caveats: $0.50-per-1,000 basis not confirmed vs an actual invoice; actual monthly bill not pulled (out of allowed scans); one-week valuation window; 0-visit VR is a small-n bound (4,380 imps).
+
+**How:** 30d scale/uniqueness window 2026-06-02->07-01; CIL valuation week 07-02->07-08; soleness judged on the 37d union (temporal ordering held). Registry read from tpa.direct_data_partners (billing_type fixed_cpm, fixed_cpm 0.5, valid_from 2025-05-28). Delivery confirmed LIVE/streaming via svs partitions carrying DS33. Org-wide code sweep (sovrn, dsid33, "data_source_id = 33") mapped consumers and verified non-consumers (identity graph, attribution, bidder/serving, interests = zero hits). Media/data-cost tiered lens (T3 all-touched / T2 sole-IP imps / T1 scored non-RTC sole) plus per-ray visit-rate on sole impressions. Method cross-checked vs DS25 (69.3% sole pairs vs TI-1027 69.8%). Actual monthly bill (coredw.usage_reporting_data DS33) flagged as immediate next query, not yet pulled.
+
+**Tables:** tpa.direct_data_partners · coredw.usage_reporting_data · external.targeted_signal · cost_impression_log · core.partners · site_visit_signal
+
+**Learned:**
+- Verdict: DROP Sovrn (DS33) per-use; keep only if re-papered to a nominal flat fee (~$1-2K/yr, metering removed) or meter re-scoped to sole-contribution imps (~$114/yr).
+- Sovrn's 80.1% same-day-tied pairs is the highest same-day-redundancy share of all 10 sources (next 33Across 54.3%); net-new-vs-free 99.7% means the redundant cover comes from other PAID feeds (33Across DS28/33Across API DS40), not internal guid/augmentor.
+- Sovrn-SOLE cohort (2.71M IPs, its true unique contribution) is effectively unbiddable: 866 delivered (0.03%), 95.0% unscored, 2 IPs at HI; 0 visits on all 4,380 sole impressions in a week.
+- Off-switch for a streaming/pixel DDP like Sovrn is vendor-side (stop the stream), NOT a batch-DAG change — DS33 is not in the batch DAG's ENABLED_DSIDS (23,25,26,28,30,36 = file-drop vendors).
+- The DDP billing metering pipeline is itself a DS33 consumer on the COST side: bae-sql-utility ddp/usage-reporting joins MM-targeted imps to targeted_signal on IP over 30d, credits every vendor that touched the IP at its fixed_cpm, lands in coredw.usage_reporting_data, and ddpmonthlyusageemail-Sovrn.py emails it from partnerbilling@mountain.com to cchumley@sovrn.com / dataaccountsreporting@sovrn.com monthly.
+
+**Reuse when:** evaluating a per-use ($X CPM) MM data vendor for renewal/drop · pricing redundancy/insurance value of a data feed · finding the off-switch or actual monthly bill for a streaming DDP · distinguishing sole-contribution vs co-occurrence value of a vendor.
+
 ---
 
 # AUDI-1089 / Sovrn (DS33) — Renewal Pass/Play

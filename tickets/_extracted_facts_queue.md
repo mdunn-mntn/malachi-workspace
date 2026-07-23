@@ -259,3 +259,19 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 ### mntn_business.md
 - **[ti_adhoc_advertiser_scoring_filter]** Over 730 days, 79% of MNTN's $477.9M total flight spend runs in flights >=15 days; only 6.9% of flight spend lands on a flight's day-1, and flights of 1-3 days (highest day-1 exposure) are only 4.3% of total spend.
   - source_line: 79% of MNTN's spend runs in flights >=15 days... Across the whole population, only 6.9% of flight spend lands on a flight day-1... The flights where day-1 lag matters most (1-3 days, 32-100% exposure) are only 4.3% of total spend.
+
+## context-full batch 1 append
+
+### data_knowledge.md
+- **[audi_1089_ddp_vendor_evaluations/ds33_sovrn]** Sovrn (DS33) has the highest same-day-redundancy share of all 10 sources: 80.1% of its (ip,domain) pairs are same-day tied by other feeds (next: 33Across 54.3%); recency mix on the 37d union = 12.5% sole / 2.2% freshest / 80.1% tied / 5.2% stale, and net-new-vs-free is 99.7% (its tied cover comes from other paid feeds, not internal guid/augmentor).
+  - source_line: "**Recency (37d union, 84.1M pairs): 12.5% sole · 2.2% freshest · 80.1% tied · 5.2% stale.** **80.1% tied is the highest same-day-redundancy share of all 10 sources** (next: 33Across 54.3%)."
+- **[audi_1089_ddp_vendor_evaluations/ds33_sovrn]** Sovrn's SOLE-IP cohort (2.71M IPs = its true unique contribution) is effectively unbiddable/unscorable: 866 delivered (0.03%), 95.0% unscored, 2 IPs at HI — the most adversely-selected sole cohort measured (Klickly sole was 0.2% delivered).
+  - source_line: "**Sovrn-SOLE IPs (its actual unique contribution): 2.71M IPs → 866 delivered (0.03%), 95.0% unscored, 2 IPs at HI.** The most adversely-selected sole cohort measured so far"
+- **[audi_1089_ddp_vendor_evaluations/ds33_sovrn]** The off-switch for a streaming/pixel DDP like Sovrn is vendor-side (stop the stream), not a DAG change: DS33 is NOT in the batch DAG's ENABLED_DSIDS (that list = file-drop vendors 23,25,26,28,30,36).
+  - source_line: "Not in the batch DAG's ENABLED_DSIDS (expected — that list is file-drop vendors 23,25,26,28,30,36). Off-switch is vendor-side (stop the stream), not a DAG change."
+- **[audi_1089_ddp_vendor_evaluations/ds33_sovrn]** ddpmonthlyusageemail-Sovrn.py emails the monthly DDP usage report from partnerbilling@mountain.com to cchumley@sovrn.com / dataaccountsreporting@sovrn.com; the metering waterfall lives in SteelHouse/bae-sql-utility ddp/usage-reporting and coredw/lds populate_usage_reporting_data.sql in SteelHouse/db_repo.
+  - source_line: "`ddpmonthlyusageemail-Sovrn.py` emails the report from partnerbilling@mountain.com to cchumley@sovrn.com / dataaccountsreporting@sovrn.com monthly."
+- **[audi_1089_ddp_vendor_evaluations/ds33_sovrn]** Sovrn/FMX PMP inventory relationship in gary-ql core.partners is id 68 with prefix svr (supply-side deals, separate from and unaffected by the DS33 data feed).
+  - source_line: "Sovrn (FMX) is also a **PMP inventory vendor** in gary-ql (`core.partners` id 68, prefix `svr`)"
+- **[audi_1089_ddp_vendor_evaluations/ds39_klickly]** Klickly (DS39) registry row in tpa.direct_data_partners: billing_type flat_fee (fixed_cpm null), enabled, used_in_mntn_match=true, used_in_interests=false, type=mntn_matched, valid_from 2025-07-01 (~July 1 contract anniversary), valid_to null, notes NULL (no fee amount stored in our data).
+  - source_line: "billing_type flat_fee (fixed_cpm null), enabled, used_in_mntn_match=true, used_in_interests=false, type=mntn_matched, valid_from 2025-07-01 (≈ contract anniversary July 1 ...), valid_to null, notes NULL — no fee amount anywhere in our data"

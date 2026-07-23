@@ -74,3 +74,5 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_kafka_secret_sweep | carded | 3 | batch 11; Kafka SOPS->Vault/ESO sweep, targeting cutover pending |
 | ti_xxx_power_analysis_workshop | carded | 0 | batch 11; power/MDE workshop deck + calculator |
 | ti_xxx_ticket_theme_analysis | carded | 0 | batch 11; PMO ticket-theme epic grouping |
+| audi_1070_yoy_decline_caraway_avon_hexclad | carded | 0 | context-full batch 1; MM not degrading — HHST gate thrash vs over-scaling; all facts already in knowledge/*.md |
+| audi_1089_ddp_vendor_evaluations/ds33_sovrn | carded | 5 | context-full batch 1; DROP verdict; same-day redundancy, sole-IP cohort, off-switch, billing email, PMP id68 |
