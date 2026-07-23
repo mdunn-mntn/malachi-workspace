@@ -5,7 +5,33 @@ status: done
 date: 2026-05-06
 summary: "BUK ALS keyword-model knowledge transfer from Alex Knorr; roadmap + DCG validation"
 result: "DCG keyword score validated monotonic (771x top-bin lift); 5-priority roadmap drafted"
+keywords: [buk, bottoms up keywords, dcg, continuous scoring, als, fangorn, mountain match v2, beta calibration 1.863, audience size confounding, keyword scoring, ipdsc, alex knorr, ti-273]
 ---
+
+## TL;DR
+
+**Q:** Produce the TL;DR card for TI-797 (BUK Knowledge Transfer and Action Plan) and surface durable facts not yet in the knowledge docs.
+
+**A:** TI-797 captured a full BUK (Bottoms Up Keywords) knowledge transfer from Alex Knorr (2026-03-31) and independently validated the DCG keyword-scoring signal. BUK replaces LLM-only Mountain Match V2 with an implicit-ALS collaborative-filtering model (users=advertiser_id, items=DS19 data_source_category_id) trained on a 30-day window of good_log + conversion_log pixel activity, with post-model popularity penalty + advertiser lift adjustments and a percentile threshold (~top 42%) replacing the old fixed-200-keyword rule. The initiative (TI-273) is Paused pending a clean performance story: online A/B results are confounded by audience-size changes (IVR moves inversely to audience size; Hello Molly +137% IVR with -83% size, Hatch -25% IVR with +93% size). Headline: the DCG continuous-scoring signal was reproduced in BigQuery and is monotonically increasing in visit rate, perfectly monotonic across all 16 bins at 500 advertisers, with 771x visit-rate lift in the top score bin (0.95) vs the bottom (0.20). All 7 beta advertisers showed large per-advertiser lift for IPs scored >=0.9 (50x to 1,152x, one inf). Live beta pre/post on the same campaign group confirmed the size-performance tradeoff (Samy's Camera +55% IVR, West Bend +137% IVR, both with ~57-71% impression drop). A 5-priority roadmap was drafted. Per Kale, BUK is NOT dead: keywords are a valid feature in the incrementality predictive model; the separate-audience-mechanism interface is the concern, not the underlying signal.
+
+**How:** Independent BQ replication of Alex's Databricks DCG pipeline. Read BUK predictions from GCS (dt=2026-03-16), ipdsc DS19 30-day window, ui_visits 10-day post-period. Per-IP DCG = sum of 1/log2(rank+1) over matched keywords, normalized via adjusted_keyword_score = 1 - exp(-beta*dcg), beta=1.863 (calibrated so p90 DCG maps to 0.9). Binned IPs by adjusted score (0.05 bins), measured visit rate per bin. Ran at 50 advertisers (118 GB, ~6 min; dips at 0.45/0.60 = sample noise), then 500 (perfectly monotonic, 771x top-bin lift, 575K visitors in top bin). Full-scale 5,699 exceeds BQ resource limits (why Alex uses Databricks). Beta pre/post used audience_segment_archives to find the prior audience on the same campaign group before the BUK swap. Queries: queries/ti_797_dcg_scoring_sample.sql, queries/ti_797_buk_beta_queries.sql.
+
+**Tables:** good_log, conversion_log, ui_visits, cost_impression_log, audience_segment_archives, sum_by_campaign_by_day, sum_by_campaign_group_by_day, ipdsc, data_source_category_id
+
+**Learned:**
+- DCG keyword-evidence scoring reproduced in BQ is monotonic in visit rate: perfectly monotonic across 16 bins at 500 advertisers, 771x lift top bin (0.95) vs bottom (0.20); 50-advertiser sample dips at 0.45/0.60 were sample noise; full 5,699 exceeds BQ resource limits (needs Databricks)
+- DCG normalization uses adjusted_keyword_score = 1 - exp(-beta*dcg), beta=1.863, calibrated by beta = -ln(1-target)/dcg_at_percentile so target 0.9 at p90 DCG=1.2357; DCG distribution p50=0.30, p75=0.63, p90=1.24, p95=1.86, p99=3.99
+- All 7 BUK beta advertisers show large lift for IPs scored >=0.9 vs below (Experience Scottsdale 129x, Global Rescue 73x, Samy's 50x, West Bend 65x, Amsterdam Printing 101x, Apollo.io 1,152x, Apolla inf)
+- BUK Exp1 (Sep 2025) fixed 200 keywords pushed vertical coverage to 80-88% and control (MM V2) won across all 5 advertisers (IVR 1.53% vs 0.67%, CPV $5.07 vs $9.08); within treatment, IPs overlapping control keywords performed 5-10x better
+- Live beta pre/post confirmed the size-performance tradeoff: Samy's Camera (CG 104020) +55.2% IVR, West Bend (CG 107024) +137.4% IVR, both with 57-71% impression drop; Alex's Greenplum def gave +64% / +278%
+- Alex validates DCG against Greenplum ui_visits + logdata.cost_impression_log via JDBC, not BQ; Malachi's replication used BQ equivalents
+
+**Reuse when:**
+- Designing or evaluating a BUK / keyword-scoring / continuous-scoring experiment
+- Replicating the DCG per-IP scoring pipeline or beta calibration in BigQuery
+- Explaining why BUK online A/B results look inconsistent (audience-size confounding)
+- Finding the prior audience on a campaign group before an audience swap (audience_segment_archives)
+- Questions about MM V2 vs BUK keyword generation or the ALS model
 
 # TI-797: Bottoms Up Keywords (BUK) — Knowledge Transfer & Action Plan
 

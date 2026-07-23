@@ -253,6 +253,18 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **[ti_813_buk_500_advertiser_scale]** The Fangorn experiment (TI-704) ran March 4 – April 2 (2026) across 5 advertisers: Zumba Fitness (36420), Edward Martin (40956), G-Shock (46920), Reedsy (42273), Collector Store (42692).
   - source_line: Fangorn experiment ran March 4 – April 2 across 5 advertisers: Zumba Fitness (36420), Edward Martin (40956), G-Shock (46920), Reedsy (42273), Collector Store (42692)
 
+### data_knowledge.md (ti_797)
+- **[ti_797_buk_knowledge_transfer]** BUK DCG normalization uses adjusted_keyword_score = 1 - exp(-beta*dcg) with beta=1.863, calibrated via beta = -ln(1-target)/dcg_at_percentile so target 0.9 maps to p90 DCG=1.2357; DCG distribution: p50=0.30, p75=0.63, p90=1.24, p95=1.86, p99=3.99.
+  - source_line: Beta calibrated so 90th percentile of DCG -> 0.9 adjusted score. Current beta = 1.863 (derived from DCG distribution: p50=0.30, p75=0.63, p90=1.24, p95=1.86, p99=3.99)
+
+### experimentation.md (ti_797)
+- **[ti_797_buk_knowledge_transfer]** Independent BQ replication of the DCG visit-rate curve is perfectly monotonic across all 16 bins at 500 advertisers with 771x visit-rate lift in the top score bin (0.95) vs bottom (0.20); at 50 advertisers dips at 0.45/0.60 were sample noise; full 5,699 exceeds BQ resource limits (needs Databricks).
+  - source_line: Result: PERFECTLY MONOTONIC across all 16 bins. ... 2.42e-04 | 771x
+- **[ti_797_buk_knowledge_transfer]** All 7 BUK beta advertisers show large visit-rate lift for IPs scored >=0.9 vs below (Experience Scottsdale 129x, Global Rescue 73x, Samy's 50x, West Bend 65x, Amsterdam Printing 101x, Apollo.io 1,152x, Apolla inf).
+  - source_line: Every beta advertiser shows massive lift. Signal holds per-advertiser, not just in aggregate.
+- **[ti_797_buk_knowledge_transfer]** Live BUK beta pre/post on the same campaign group confirmed the size-performance tradeoff: Samy's Camera (CG 104020, switch 2026-03-04) +55.2% IVR, West Bend (CG 107024, switch 2026-02-27) +137.4% IVR, both with ~57-71% impression drop; using Alex's Greenplum definition the changes were +64% and +278%.
+  - source_line: Same pattern as DPL experiments: IVR up significantly, but impressions/audience size down (57-71% drop).
+
 ## Batch 10 append
 
 ### data_knowledge.md
