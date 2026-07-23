@@ -5,7 +5,33 @@ status: in_progress
 date: 2026-06-26
 summary: "Measure whether ElevenLabs US CTV drove incremental CVR lift + why it's unmeasurable"
 result: "Incremental lift ~0 (clean ITT CVR -1.7%, n.s.); test underpowered at 0.062% CVR base"
+keywords: [ElevenLabs, TI-1044, CTV incrementality, ghost-bid ITT, win-selection bias, value-selection, B2B CVR power floor, MDE, attribution vs incrementality, guid_log cross-device, advertiser_configurations block defaults, 0.062% CVR]
 ---
+
+## TL;DR
+
+**Q:** Produce the TL;DR card for TI-1044 (ElevenLabs CTV incrementality) and extract durable delta_facts not already in the knowledge docs.
+
+**A:** ElevenLabs US CTV drove ~0 incremental lift, and the finding is credible because the conversion test is underpowered, not because MNTN failed. The clean randomized ghost-bid ITT (targeted-and-bid vs ghost-holdout, both pre-auction) gives conversion-rate lift -1.7% (p=0.84, NS) and total-visit (guid_log) lift ~0% (CI -2 to +2, p=0.84) / +1.7% (p=0.10, NS) on the visit-lag-robust cohort, matching ElevenLabs' own geo null (~0%, p=0.81) and an independent -2% CVR read in the Edgar review. The large served-vs-ghost ATT numbers (conversions +35%, total visits +36%) are win-selection / value-selection bias (serving the highest-value auction-winning households, win rate ~57%); a ghost-win simulation showed the frequency correction is only ~2-6pp, so the ATT bias is value-selection, not frequency. The +143 to +276% clickpass "visit" lift is attribution (impression-gated credit metric), not incremental demand. Power math explains the null: at ElevenLabs' 0.062% B2B CVR, detecting a 5% lift needs ~$1.8-2.0M/mo (2% needs ~$11M); the same 5% on visits (3.07% base) needs only ~$36K, a ~50x gap set purely by the base rate. Recommendation: stop measuring CTV incrementality on conversions for this account (statistically impossible at this spend), lead on visits or size a geo test to the $2M+ MDE; the dilution story (high-intent geo tests then broad national scale dilutes lift) is the real lever, though no incrementality-trained model exists so audience-change gains are speculative. An earlier "ElevenLabs blocks off, re-serving demand" read was retracted: absence from advertiser_configurations = defaults = blocks ON (block_conversion/block_prospecting at 30/30). Status: in_progress; ElevenLabs-facing deck drafted for internal review; ghost-ad/PSA number handed to Matt Brorby's augmentor pipeline; block-verification follow-up = TI-1061.
+
+**How:** Read tickets/ti_1044_elevenlabs_ctv_incrementality/summary.md in full and skimmed queries/ and outputs/ filenames. Then grepped knowledge/data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md for each candidate fact (bid_price_log/ghostBid, ATT-vs-ITT win-selection, B2B CVR power floor, block-config defaults, all_facts HLL, cross-device/guid holdout) to determine which durable facts were already documented vs net-new.
+
+**Tables:** bronze.raw.bid_price_log, silver.logdata.guid_log, summarydata.all_facts, clickpass_log, advertiser_configurations, bidder_bid_events, silver.audience.advertiser_configurations
+
+**Learned:**
+- The clean randomized ghost-bid ITT (both arms pre-auction) is the trustworthy incrementality number here: CVR -1.7% (p=0.84, NS), total-visit ~0%; served-vs-ghost ATT (+35% conv / +36% visits) is win-selection/value-selection bias, not media-caused lift.
+- Attribution and incrementality are different metrics, not better/worse: the +143 to +276% clickpass lift is impression-gated attributed-visit credit, while true incremental total traffic (guid_log) and conversions are ~0.
+- A ghost-win simulation (sampling ghost bids at win rate w=0.27) moved conversions only +32% to +26% and visits +35% to +33%, so the ATT bias is value-selection (winning the households who convert anyway), not frequency; uniform win-rate sampling cannot remove it, only ITT/IV-TOT can.
+- The guid-based total-visit holdout has a cross-device IP-matching limitation: it joins the CTV-impression IP (TV/home router) to the web-visit IP (phone/laptop), so cross-device/cellular/away visits are missed, undercounting served visits and biasing measured visit lift DOWNWARD; device-agnostic geo test is cleaner; fix = rebuild with household/identity-graph matching.
+- ElevenLabs earlier 'blocks off -> re-serving demand' read was a false alarm (Zach): advertiser_configurations only stores a row when an advertiser changes from defaults, and defaults are block_conversion/block_prospecting ON at 30/30, so absence = blocks ON.
+
+**Reuse when:**
+- Measuring ghost-ad/holdout incrementality for a single advertiser (especially B2B or low-CVR)
+- Deciding whether to report a conversion-lift vs visit-lift number and how to power it
+- Explaining to a customer or leadership why an attributed number is large but incremental lift is ~0
+- Building or interpreting a guid_log-based visit holdout and worrying about cross-device undercount
+- Checking an advertiser's block/lookback config from advertiser_configurations
+
 
 # TI-1044: ElevenLabs CTV Incrementality — CVR-lift triangulation + power review
 

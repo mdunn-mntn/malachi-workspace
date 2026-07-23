@@ -5,7 +5,34 @@ status: done
 date: 2026-06-26
 summary: "Recommend 3P interest segments for ElevenLabs' incrementality-focused CTV campaign"
 result: "v3 final: 7 relevant-at-scale 3P picks; 3P viable but MM keywords the bigger win"
+keywords: [ElevenLabs, 51660, 3P segments, LiveRamp, DS35, tpa.categories, path_from_root, ipdsc, data_source_category_sizes, incrementality, stale-3P, TI-1044, TI-999, niche B2B, demand-harvesting]
 ---
+
+## TL;DR
+
+**Q:** What 3P interest segments should ElevenLabs use for an incrementality-focused CTV campaign, and how viable is 3P as a lever?
+
+**A:** v3 FINAL: 7 relevant-at-scale 3P (LiveRamp DS35) picks are recommended, and 3P is a viable-but-secondary lever for ElevenLabs (AID 51660); MM keywords/contextual is the bigger win (ElevenLabs = MNTN's #2 stale-3P advertiser, per TI-999). ElevenLabs is niche B2B (AI voice/audio for developers/API, creators, media/production, AI/ML, marketers, edtech, enterprise CX), so broad "general B2B/IT" firmographic is down-ranked as dilution (the TI-1044 lesson). The 7 PRIMARY picks (relevant + scaled): OnAudience AI/ML (10.0M), OnAudience Computer Software (9.8M) & Business Software (9.6M), Alliant B2B Business Software (15M*), LBDigital Machine Learning & AI (12M*), Audigent Drawing & Animation Software (11.8M), Alike Software Developer/Engineer/Programmer (2.1M) (* = platform size per Edgar). 9 SCALE segments (big but weaker fit; b2b-intent = closer to demand-harvesting, docked for incrementality) and 3 DROP (consumers/remarketing). Ranked deliverable = ti_1053_elevenlabs_3p_recommendations.{xlsx,csv} with verdicts. Load-bearing caveat: name is a pre-screen, not proof of incrementality; the only real test is a visit-based holdout/ghost-bid lift test (reuse TI-1044 pipeline), since ElevenLabs CVR ~0.062% is underpowered and visits are well-powered. Size/CPM not scored per request.
+
+**How:** Parsed current 3P footprint (audience 77883: 112 LiveRamp DS35 + 4 ShareThis DS17 = 116 segments + 33 DS19 MM keywords). Built candidate pool from tpa.categories DS35 non-deprecated leaf nodes via an ICP-keyword regex, name-scored with niche-ICP keyword tiers plus incrementality modifiers (down-rank in-market/shopper, demographic-only, mixed bundles), themed/tiered. v1 = name-only ranked 30. v2 added a buyer-lens re-score + ipdsc 30d DISTINCT-IP sizing (~30TB) and concluded only ~4 usable / "3P is weak." v3 (FINAL) fixed a candidate-filter bug Edgar caught: the regex ran on COALESCE(path_from_root, names, name), but path_from_root is an unreadable struct for most premium-B2B providers (ZoomInfo, Anteriad/180byTwo, Alliant, LBDigital, OnAudience, NetWise, Skydeo, Audigent), so COALESCE returned the struct and silently dropped them. Fix = regex on CONCAT(path_from_root, names, name), provider = names[1]. Relevant pool went 24 -> 1,759; re-curated 44, sized via ipdsc 7d (2026-06-17->23, 6.7TB) into PRIMARY/SCALE/DROP verdicts. This flipped v2's "3P is thin/weak" conclusion (that was a bug artifact).
+
+**Tables:** audience 77883, tpa.categories, external_ddm.data_source_category_sizes, bronze.external.ipdsc__v1
+
+**Learned:**
+- The v2 conclusion that '3P is a thin/weak lever for ElevenLabs' was a candidate-filter bug artifact; the corrected (v3) universe is richer and on-target, so 3P is actually viable.
+- tpa.categories.path_from_root is a readable 'A > B > C' string for ~half of DS35 providers but an unreadable struct {pathFromRoot:[ids]} for the rest (mostly premium B2B); COALESCE(path_from_root, names, name) silently drops the struct providers, so name-match regex on CONCAT(path_from_root, names, name) with provider=names[1].
+- LiveRamp DS35 has almost no precise inventory for a niche AI-voice product: profiling all 210K non-deprecated leaves found 0 real voice/speech-tech (matches are brand/TV-title noise), 3 AI/ML, 0 conversational-AI, 0 Bombora, and 'creator/gamer' matches are almost all consumers not buyers.
+- ipdsc DISTINCT-IP sizing is expensive (30-day ~30TB, 7-day 6.7TB) and BQ jobs cannot be cancelled without jobs.update perm; the authoritative + cheap size source is external_ddm.data_source_category_sizes (matches platform UI) but it is access-gated (needs Storage Object Viewer on mntn-data-monitoring).
+- For a niche product, the incrementality trap is picking highest-reach or highest-attributed-performance segments (usually demand-harvesting, as in TI-1044's +35% ATT = value-selection); favor relevant-but-not-already-in-market niche audiences and treat broad B2B/IT as scale-filler only.
+- v3 is FINAL and supersedes v1/v2; build_v3.py is the self-contained builder, build_deliverable.py is a shared util reused by INCR-75.
+
+**Reuse when:**
+- recommending or curating 3P/LiveRamp (DS35) interest segments for an advertiser
+- name-matching or keyword-filtering tpa.categories and hitting the path_from_root struct-vs-string format issue
+- sizing 3P segments and deciding between ipdsc DISTINCT-IP scans vs external_ddm.data_source_category_sizes
+- designing an incrementality-focused audience for a niche B2B advertiser (avoiding demand-harvesting)
+- follow-on work to TI-1044 / ElevenLabs incrementality or the #2 stale-3P advertiser (TI-999)
+
 
 # TI-1053: ElevenLabs (51660) — 3P segment recommendations for incrementality-focused CTV
 

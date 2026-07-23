@@ -5,7 +5,27 @@ status: done
 date: 2026-03-04
 summary: "Find domains missing from the TPA IP-to-vertical pipeline and monitor future gaps"
 result: "Built a monitor for missing TPA domains; created IP-vertical associations to fill gaps"
+keywords: [TPA, third-party audience, missing domains, IP-to-vertical, membership_updates_logs, vertical mapping, DDP URL, monitor]
 ---
+
+## TL;DR
+
+**Q:** Produce the TL;DR card for ti_253_tpa_monitor and extract any durable delta_facts not already in the knowledge docs.
+
+**A:** TI-253 (TPA Monitor — Missing Domains, done 2026-03-04): built monitoring for domains missing from the TPA (Third-Party Audience) IP-to-vertical pipeline, and created IP-vertical associations to fill identified gaps. Some domains present in DDP URL data were absent from TPA vertical mappings (targeting gaps); these were identified, a monitor script was built to catch future gaps, and IP-to-vertical associations were created as the fix. The tracked missing-domain list lives in artifacts/ti_253_missing_domains.yml. Deliverable artifacts (Python scripts + yml) are in the ticket's artifacts/ folder; the monitor may need periodic re-runs.
+
+**How:** Read tickets/ti_253_tpa_monitor/summary.md in full (outputs/ and queries/ dirs do not exist for this ticket). Reported only what the Findings/Solution/Questions-Answered sections state. Grepped knowledge/data_catalog.md, data_knowledge.md, mntn_business.md, experimentation.md for the summary's named facts.
+
+**Tables:** tpa.membership_updates_logs
+
+**Learned:**
+- TI-253 mapped IP addresses to domain verticals via the TPA pipeline; domains missing from vertical mappings represent targeting gaps.
+- The summary's two named facts (tpa.membership_updates_logs and the IP->vertical->TPA data flow) are already documented in data_catalog.md and data_knowledge.md, so no delta facts.
+
+**Reuse when:**
+- Investigating TPA missing-domain gaps or IP-to-vertical associations
+- Reviving or re-running the ti_253 monitor script for future TPA vertical-coverage gaps
+
 
 # TI-253: TPA Monitor — Missing Domains
 

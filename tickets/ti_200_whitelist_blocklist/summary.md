@@ -5,7 +5,23 @@ status: done
 date: 2026-05-06
 summary: "Maintenance: manual overrides of ecommerce domain classifier via whitelist/blocklist"
 result: "Delivered updated ecommerce whitelist and blocklist domain lists (CSV exports)"
+keywords: [whitelist, blocklist, ecommerce classifier, domain list, TI-200, domain override, targeting precision]
 ---
+
+## TL;DR
+
+**Q:** What is TI-200 (whitelist/blocklist) and what did it deliver?
+
+**A:** TI-200 is a maintenance ticket for the ecommerce domain whitelist and blocklist. Domains are manually added to the whitelist (confirmed ecommerce) or blocklist (confirmed non-ecommerce/excluded) to override imperfect classifier results and improve targeting precision. It delivered updated whitelist and blocklist domain lists as CSV exports. The _2 files (ti_200_ecommerce_whitelist_2.csv.gz, ti_200_ecommerce_blocklist_2.csv) are the latest/blessed shipped versions; the blocklist appears three times byte-identical (22,351 B) and whitelist_2.csv.gz is the gzipped ecommerce_whitelist.csv. All output CSVs are untracked/gitignored. Analysis lives in artifacts/ti_200_output.ipynb. Status: complete.
+
+**How:** Read summary.md in full and listed the outputs/ and queries/ directories. The summary states it is a maintenance ticket managing additions to the ecommerce whitelist/blocklist, lists the CSV exports in outputs/domain_lists/, and includes a 2026-07-20 audit note that the _2 files are canonical and several blocklist copies are byte-identical duplicates, all gitignored. No queries/ directory exists.
+
+**Learned:**
+- TI-200 is a maintenance ticket for manual override of the ecommerce domain classifier via whitelist/blocklist; deliverable = updated CSV domain lists (untracked/gitignored).
+
+**Reuse when:**
+- Working on ecommerce domain classification, whitelist/blocklist domain overrides, or ecommerce classifier threshold tuning.
+
 
 # TI-200: Adding Domains to Whitelist / Blocklist
 

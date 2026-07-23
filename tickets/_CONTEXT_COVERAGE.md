@@ -36,3 +36,10 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_1016_memdb_bidder_cache_optimization | carded | 2 | context-full batch 5; cache-shrink killed, segmentless-score lever |
 | ti_1027_5x5_data_evaluation | carded | 1 | context-full batch 5; 5x5 DDP KEEP eval |
 | ti_1033_experiment_archive_deploy | carded | 0 | context-full batch 5; archive host/ship/polish |
+| ti_1037_audience_diagnostic_tool | carded | 0 | batch 6 |
+| ti_1044_elevenlabs_ctv_incrementality | carded | 2 | batch 6 |
+| ti_1053_elevenlabs_3p_segments | carded | 0 | batch 6 |
+| ti_1058_ds13_ds19_pipeline_map | carded | 1 | batch 6 |
+| ti_200_whitelist_blocklist | carded | 0 | batch 6 |
+| ti_253_tpa_monitor | carded | 0 | batch 6 |
+| ti_254_investigate_low_ntb_percentage | carded | 0 | batch 6 |

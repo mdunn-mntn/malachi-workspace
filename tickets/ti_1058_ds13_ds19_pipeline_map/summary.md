@@ -5,7 +5,39 @@ status: in_progress
 date: 2026-06-26
 summary: "Map the DS13/DS19 MNTN Matched OpenAI pipeline end-to-end (files, diagram, why)"
 result: "Verified end-to-end map; DS19 keyword daily = cost driver; one OpenAI call per URL"
+keywords: [DS13, DS19, MNTN Matched, MM 2.0, OpenAI, gpt-4o-mini, product_categorization, product_category, composite_key, site_visit_signal, website_crawl_verticals, BGE-large, vector search, Batch API, billing attribution, TI-1060, shopper_graph, vertical_classification, product_uniques, Peak Performance]
 ---
+
+## TL;DR
+
+**Q:** Read TI-1058 summary; produce the TL;DR card, delta_facts, and front-matter check for the DS13/DS19 (MNTN Matched) OpenAI pipeline map.
+
+**A:** TI-1058 maps the DS13/DS19 (MNTN Matched / MM 2.0) OpenAI pipeline end-to-end: one verified mermaid diagram plus a ~95-file manifest across 5 repos. Both DSes read the shared site_visit_signal substrate but run as two separate flows with very different economics. DS13 (vertical) is domain-to-vertical, cached and refreshed roughly every few months (manual, Victor+Ryan) via Common Crawl homepage HTML to OpenAI to website_crawl_verticals (~1.42M domains). DS19 (keyword) is URL-to-keyword, run DAILY and is the OpenAI cost driver.
+
+Resolved the ticket's #1 question: data_source_id does NOT multiply OpenAI cost. Dedup is on composite_key (query-stripped URL), so a URL is sent to OpenAI exactly once regardless of how many vendors report it; data_source_id is retained only for billing attribution (augmentor_log DS30 duplicate URLs are absorbed by the anti-join). The DS19 keyword = the OpenAI product_category field (gpt-4o-mini, Batch API, ~24h async), then snapped to the taxonomy via Step1 exact match vs product_category_reassignment and Step2 BGE-large vector search @ threshold 0.6; Step3 auto-add is currently COMMENTED OUT. The real DS19 cost driver is the sheer number of distinct path-level URLs.
+
+Waste candidates handed to TI-1060: product_sku hardcoded to literal 1 (dead prompt tokens every request); homepage-description join hardcoded to only apollaperformance.com (enrichment effectively off elsewhere, likely leftover/test); missing prompt spaces; disabled taxonomy auto-add; free in-pipeline BGE-large as a candidate to replace gpt-4o-mini for many URLs. Status: in_progress; DS13 vertical leg now located; 19 remaining unknowns tracked in the manifest artifact.
+
+**How:** Verified by primary-source reads at SteelHouse/shopper_graph commit 4f0fc37 plus a Ryan Kleck walkthrough (2026-06-26, meetings/ti_1058_01). Section 5 traces the anti-join (composite_key only) in product_uniques.py, the collect_set(data_source_id) with one-custom_id-per-URL groupBy in openai_batch_input_raw.py, and the row_number rn=1 collapse in openai_batch_input_formatted.py, concluding exactly one OpenAI request per unique URL. The manifest (section 4) is a completeness-gated GitHub sweep (222 raw hits to ~95 files), with the DS13 vertical leg located in airflow-ti/spark/vertical_classification and SteelHouse/dbt ml_squad/models/vertical_categorization. Per-row DS inference in the manifest is flagged unreliable; authoritative DS split is by leg, verified by primary reads.
+
+**Tables:** site_visit_signal, website_crawl_verticals, product_categorization, product_uniques, openai_batch_input_raw, openai_batch_input_formatted, openai_batch_results_joined, product_categorization_temp, product_category_reassignment, etl_mm_taxonomy_vector_index, tpa_export, mntn_matched_taxonomy_bq, website_home_pages, site_visit_signal_advertiser_id_dsc_id
+
+**Learned:**
+- DS13 (vertical) and DS19 (keyword) share one input (site_visit_signal) but are two separate OpenAI flows: DS13 cached/refreshed ~every few months, DS19 daily and the cost driver
+- data_source_id does NOT multiply OpenAI cost; dedup is on composite_key (query-stripped URL) so a URL is classified once regardless of vendor count; data_source_id kept only for billing attribution
+- DS19 keyword = the OpenAI product_category field (of industry/subindustry/category/subcategory), via gpt-4o-mini Batch API ~24h
+- Taxonomy mapping: Step1 exact match vs product_category_reassignment, Step2 BGE-large (bge_large_en_v1_5) vector search @ threshold 0.6; Step3 auto-add is currently COMMENTED OUT so sub-threshold categories are dropped
+- The real DS19 cost driver is the number of distinct path-level URLs (product_name = URL minus query string)
+- Known waste for TI-1060: product_sku hardcoded to 1, homepage-description join hardcoded to only apollaperformance.com, missing prompt spaces, disabled auto-add, free BGE-large as gpt-4o-mini replacement candidate
+- DS13 vertical leg located: airflow-ti/spark/vertical_classification/* + dags/targeting/fetch_common_crawl.py + dags/vertical_classification/* + SteelHouse/dbt ml_squad/models/vertical_categorization/* (a separate OpenAI batch from DS19)
+
+**Reuse when:**
+- asked how MNTN Matched (MM 2.0) / DS13 / DS19 keywords are produced
+- asked whether data_source_id causes duplicate OpenAI requests or drives OpenAI cost
+- planning or scoping OpenAI cost optimization for the MM pipeline (TI-1060)
+- asked which OpenAI output field becomes the DS19 keyword
+- tracing site_visit_signal to product_categorization or website_crawl_verticals lineage
+
 
 # TI-1058 — Document the DS13/DS19 (MNTN Matched) OpenAI Pipeline
 

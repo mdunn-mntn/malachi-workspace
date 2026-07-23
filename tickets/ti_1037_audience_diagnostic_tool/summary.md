@@ -5,7 +5,31 @@ status: in_progress
 date: 2026-07-16
 summary: "Parameterized on-demand client audience + performance diagnostic tool, ported to Mode."
 result: "in progress — perf_report tool built, porting to Mode dashboard; modules under review"
+keywords: [ti-1037, audience diagnostic, perf_report, mode dashboard, prospecting decline, DS16 gate, VV window, peer pacing, MM taxonomy, Kindred, Bouqs, pixel health, expr.py]
 ---
+
+## TL;DR
+
+**Q:** TI-1037: automated audience/client-performance diagnostic tool — status and findings?
+
+**A:** TI-1037 productizes the systematic "why is this client performing this way?" investigation (proven on TI-1026 Orange Theory) into a parameterized on-demand diagnostic. Two deliverables, both IN PROGRESS. (1) Steps 0-9 audience diagnostic (spec knowledge/audience_diagnostic_playbook.md): hybrid SQL-templates + importable diag/ Python package + CLI (diagnose.py) emitting one markdown report + findings.json (~5 SP honest vs ticket's 3). Done: v2 segment-expression walker (artifacts/diag/expr.py, the long pole) golden-filed vs OTF. Step 9 deliverability scoped via Chris Addy: no predictive targetable-IP model, so answered empirically as peer-pacing-to-96%-of-budget (operative budget = DSO-managed tables; active_flight_id stale; spend = spend_log.win_cost_micros_usd/1e6). Next = resolver.py then templatize 16 SQL files; 2nd-advertiser candidate iMemories (37423). (2) perf_report/ sub-tool (Kindred build, 2026-07-02): parameterized YoY report, ~24-25 SQL+chart modules via run_report.py, advertiser-agnostic, run for Kindred (35094), Bouqs eCommerce (32147), Bouqs Subs (31906), leads with an overview flag scorecard + auto-TL;DR. Direction (Allison/Nick, 2026-07-07): port to Mode dashboard; spine = Nick's 5 reasons prospecting declines YoY (audience-size filters, HI% drop, DS16 excludes, HI recirculation, VV-window change). Mode can't render matplotlib (charts rebuilt HTML/JS); Mode deploy now zero-paste/API (deploy_mode.sh) as of 2026-07-16. Findings: Kindred = REAL decline (prospecting ROAS ~11.4 to 1.87x), ~90% from flagship top-20-DMA "High Pop" collapsing (9.74 to 2.39x) + fragmentation 1 to 6 campaigns across 210 DMAs + DS16 net-new-gated variants; NO MM-AND-3P narrowing (all MM DS19 OR 3P DS35 additive); VV window 45 to 14d confound; HI-share 98.9 to 89.6%; HI pool not exhausted (cum 5.3M rising). Bouqs eCommerce = fixable low-HI-scaling decline; Bouqs Subs = unprofitable wind-down. MM taxonomy settled (Matt Brorby): DS19=MM Core, DS13=PP v1, DS46=PP v2 Fangorn; "MM=has DS19" undercounts prospecting spend 7.6%. A 22-agent adversarial audit of module-13 pixel-health flagged incomplete sentinel exclusion (SIX pseudo-types -100/-101/-102/-105/-106/-107 not two), zero-fire months failing open, and digest truncation.
+
+**How:** Read summary.md in full (674 lines); listed outputs/ and queries/; grepped the four knowledge docs for every candidate durable fact (conversion_window 720:00:00, sentinels, order_amt NULLing, DSO budget/stale active_flight_id, 96% peer pacing, DS16 gate, Nielsen two-id geo, RT frequency medians, bq positional-arg bug, CIL floor) — all already captured.
+
+**Tables:** spend_log, audience.audience_segments, cost_impression_log, core_flights, core_advertiser_conversion_types, sum_by_campaign_by_day, flight_cid_day_audience_sizes
+
+**Learned:**
+- Front-matter summary and result are both populated — no fix needed.
+- Durable facts from this ticket are already captured in knowledge/data_catalog.md and data_knowledge.md; delta_facts empty.
+
+**Reuse when:**
+- TI-1037 audience diagnostic or perf_report modules
+- Mode dashboard port / deploy_mode.sh
+- Nick's 5 reasons a prospecting campaign declines YoY
+- Kindred/Bouqs decline diagnosis
+- MM taxonomy DS19/DS13/DS46
+- peer-pacing deliverability benchmark
+
 
 # TI-1037: Automate client-performance diagnostics (audience-expression-driven)
 
