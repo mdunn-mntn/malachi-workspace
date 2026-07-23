@@ -5,6 +5,26 @@ status: in_progress
 date: 2026-06-17
 summary: "Diagnose OTF audience sizing + why 3P segments underperform; recommend fixes"
 result: "Drop all 11 3P segments (score-gated out); grow reach via MNTN keywords, not bought 3P"
+keywords: [ti_1026, orange theory, otf, advertiser 39718, audience evaluation, 3p segments, ds35 liveramp, ds19 mntn matched, ds14 augmentor gate, audience_segments, size vs availability, deprecated segments]
+---
+
+## TL;DR
+
+**Q:** TI-1026: Orange Theory National (advertiser 39718) audience eval — why 3P segments underperform + how to size without hurting reach.
+
+**A (in-progress):** Recommend dropping all 11 bought 3P LiveRamp (DS35) segments — 3 are deprecated/dead and the rest are score-gated out and redundant with the MNTN Matched keyword layer; grow reach via MNTN keywords (DS19), not bought 3P. The agency's 8–10x-worse 3P visit rate is consistent with score-gating. True deliverable size is smaller than the UI number because the bidder adds a DS14 7-day augmentor-activity availability gate.
+
+**How:** Parsed audience 34668's `audience.audiences` expression (379 DS19 keyword cats OR 11 DS35 3P segments, AND 946 7-mile studio geo-radii, minus income/age/CRM/retargeting/T-Mobile excludes); then parsed the SEGMENT-level `audience_segments` expression the bidder actually evaluates, which adds DS14 (7-day augmentor activity), DS34/DS21 OTF retargeting hygiene, a 10% MD5 holdout, and an RTC score directive (HHST 6501). Mapped audience→campaigns for 90d performance. Reach/overlap (IPDSC), per-segment quality scoring, and geo-fence sizing still pending.
+
+**Tables:** audience.audiences · audience.audience_segments · tpa.categories · logdata.v_augmentor_log
+
+**Learned:**
+- The bidder evaluates the SEGMENT expression (`audience_segments`), not the user's `audience.audiences` selections — it layers on a DS14 7-day augmentor-log activity filter that IS the platform's formal availability gate (not in IPDSC; computed at bid time; separate from the 30-day RTC site-visit lookback). So the UI audience-size number OVERSTATES deliverable size.
+- 3 of 11 included DS35 3P segments are DEPRECATED (Epsilon Gym Customers/Moderate/Heavy Spenders); the rest are broad fitness/competitor-gym segments heavily overlapping the MNTN Matched keyword layer.
+- OTF audience 34668 = 379 DS19 MNTN-Matched keyword cats OR 11 DS35 3P segments, geo-fenced to 946 7-mile studio radii.
+
+**Reuse when:** diagnosing why an advertiser's 3P segments underperform vs MNTN Matched · audience expression decomposition (`audiences` vs `audience_segments`) · the DS14 augmentor availability gate / size ≠ availability · OTF / advertiser 39718.
+
 ---
 
 # TI-1026: Orange Theory National — Audience Evaluation

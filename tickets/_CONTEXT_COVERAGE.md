@@ -91,3 +91,6 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | tgt_4016_ecomm_classifier_thresholds | carded | 0 | context-full batch 4; ecomm classifier threshold tuning; value in notebook |
 | ti_956_interest_segment_scoring_schedule | carded | 3 | scheduled LiveRamp DS35 segment scoring; airflow-ti Dataproc/Iceberg; wheel-fix pending re-trigger |
 | ti_961_fangorn_causal_impact | carded | 2 | CausalImpact on Fangorn rollout; ~+27% Tier-2 lift; Tier 5 control, Tier 99 excluded |
+| ti_790_bidstream_feature_inventory | carded | 0 | hand-carded (schema-cap straggler) |
+| audi_1089_ddp_vendor_evaluations/ds36_cybba | carded | 0 | hand-carded (schema-cap straggler) |
+| ti_1026_orange_theory_audience_eval | carded | 0 | hand-carded (schema-cap straggler) |

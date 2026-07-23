@@ -5,6 +5,27 @@ status: done
 date: 2026-05-06
 summary: "Catalog + rank IP-level log-table features for Fangorn feature store by SHAP"
 result: "46 pre-visit features cataloged; XGBoost AUC 0.831, top 1% of IPs = 10x visit lift"
+keywords: [ti_790, bidstream, feature store, feature inventory, shap, xgboost, visit prediction, fangorn, win_logs, augmentor_log, pre-visit features, ti_789]
+---
+
+## TL;DR
+
+**Q:** TI-790: inventory + quality-rank every IP-level log-table feature for the Fangorn feature store (TI-789 epic).
+
+**A:** 46 pre-visit features cataloged across 6 of 25 log tables; temporally-correct XGBoost AUC 0.831 (0.777 NEW-only), top 1% of IPs = 8.2% visit rate ≈ 10x lift *within the Fangorn-selected pool*. 37 of the 46 are genuinely new signals; top NEW = device-model diversity (household-size proxy), video format, content-domain breadth.
+
+**How:** Scanned 25 log tables for unique columns; 6 carried unique signal → 6 daily snapshot queries joined into a 372K (IP,advertiser) training set (features day N-1, labels day N, 0.84% visit rate, no temporal leakage). XGBoost ranked by mean-abs SHAP; pre-visit (targeting) split from feedback (retraining) features. Ran all-features vs NEW-only models.
+
+**Tables:** win_logs · augmentor_log · ci · guid_log · conversion_log
+
+**Learned:**
+- Temporally-correct AUC 0.831 (all) / 0.777 (NEW-only); lift is within the Fangorn-selected pool, not vs random population.
+- Top NEW features: device model diversity (win_logs, SHAP 0.413), video format (ci, 0.341), content domain breadth (augmentor_log, 0.320).
+- Temporal leakage real but small: same-day AUC 0.842 → day N-1/N 0.831, rankings stable. guid_log/conversion_log give AUC 0.999 but tautological (fire on visit) — retraining only, not prediction.
+- 97% of mntn_segments are MNTN's own outputs (1P, not 3P).
+
+**Reuse when:** ranking log-table features for the feature store · which bidstream/log signals predict visits · SHAP importance with pre-visit vs feedback leakage split · TI-789 bidstream epic.
+
 ---
 
 # TI-790: Feature Inventory & Quality Assessment

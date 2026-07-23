@@ -5,6 +5,27 @@ status: done
 date: 2026-07-10
 summary: "Renewal evaluation of Cybba (DS36) DDP vendor for the MNTN match pipeline"
 result: "DROP unless effectively free; ~zero unique value at the metered $0.50 CPM per-use bill"
+keywords: [cybba, ds36, ddp renewal, willingness to pay, fixed_cpm, usage_reporting_data, site_visit_signal, sole ips, batch file drop, direct_data_partners, buk training]
+---
+
+## TL;DR
+
+**Q:** AUDI-1089: Cybba (DS36) DDP renewal evaluation — keep/drop + willingness to pay.
+
+**A:** DROP unless effectively free (metered bill ≤ ~$1–5K/yr). Cybba is a live batch file-drop retargeting/cart-abandonment feed (thin: ip/url/time), the smallest external IP/pair base of all 8 vendors, unique contribution ~zero on both lenses: 362 sole classified domains (0.09% of MM's universe) and 4,668 sole imps/wk with 0 visits (VR 0.00%). Max defensible ~$1.1–4.7K/yr; per-use billed at $0.50 CPM so dropping saves immediately.
+
+**How:** Six-step renewal pass (30d 2026-06-02→07-01, CIL valuation week 07-02→07-08, soleness on the 37d union). Registry/lineage (fixed_cpm=0.5, notes NULL; batch DAG off-switch = Sean's ENABLED_DSIDS change; MM path + negligible BUK training the only consumers; metering surface = coredw.usage_reporting_data behind the monthly Cybba usage email). Scale 1.75M rows/day, 8.77M IPs / 26.1K domains 30d. Uniqueness 26,242→1,475 sole→362 sole+classified (68.3% classification rate, highest of 10 = quality without uniqueness). Sole IPs adversely selected (397.7K→739 delivered 0.19%, 8 at HI). Tiered value: T2 sole 4,668 imps/$53.90/wk, T1 gated 33 imps.
+
+**Tables:** tpa.direct_data_partners · site_visit_signal · coredw.usage_reporting_data
+
+**Learned:**
+- Cybba (DS36) verdict: drop unless effectively free; both lenses (domain coverage AND unique reach) independently ~zero; 0 visits across all 4,668 sole imps in the valuation week.
+- Per-use billed at $0.50 CPM (unlike flat-fee vendors) → dropping realizes immediate savings; off-switch is OUR DAG change (remove 36 from ENABLED_DSIDS, Sean Yang), not vendor-side.
+- Actual metered bill lives in dw-main-bronze.coredw.usage_reporting_data WHERE data_source_id=36 (behind the monthly usage email); never price the drop off signal-row volume — impressions-counter semantics unverified vs invoice.
+- Highest classification rate of all 10 sources (68.3%) yet only 5.6% sole domains: it sees commercial head-domains everyone already covers = redundancy.
+
+**Reuse when:** evaluating a DDP vendor renewal / WTP · Cybba / DS36 value, lineage, billing · per-use vs flat-fee DDP off-switch mechanics · who consumes site_visit_signal / DS36.
+
 ---
 
 # AUDI-1089 / Cybba (DS36) — Renewal Pass/Play
