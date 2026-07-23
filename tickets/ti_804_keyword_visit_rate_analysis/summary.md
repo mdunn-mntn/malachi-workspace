@@ -5,7 +5,33 @@ status: done
 date: 2026-04-02
 summary: "Quantify visit-rate gap between well-chosen and poorly-chosen DS19/BUK keywords"
 result: "Keyword selection matters — 184x visit-rate lift top-5 vs bottom, and advertiser-specific"
+keywords: [buk, keyword rank, visit rate, 184x, ds19, ipdsc, als, collaborative filtering, per-advertiser, rtc flat 10000, ti-804, ti-803]
 ---
+
+## TL;DR
+
+**Q:** What is the visit-rate gap between well-chosen and poorly-chosen keywords, and does keyword selection matter (TI-804, Phase 1 of BUK Value Analysis epic TI-803)?
+
+**A:** Keyword selection matters enormously and is advertiser-specific. Ranking IPs by their best-matched BUK keyword rank (per-advertiser), IPs whose best keyword is rank 1-5 visit at 184x the rate of IPs whose best keyword is rank 51+, with a steep monotonic drop-off across 6 buckets. Median per-advertiser lift is 148x (top-10 vs bottom-31+); 14/15 advertisers (93%) show >10x lift and 10/15 (67%) show >50x. All 15 verticals show positive lift (median 66x). Ranking keywords globally instead of per-advertiser collapses the differentiation to only 3x (correlation with BUK rank 0.11), proving keyword value is advertiser-specific — BUK's per-advertiser ALS collaborative filtering captures a ~60x stronger signal than a global keyword-quality score. The current flat 10,000 RTC score for all BUK-matched high-intent IPs throws away this 184x signal. Evidence is observational with temporal separation by design (keywords scored 3/1-3/15, visits measured 3/16-3/26); causal validation is deferred to TI-806.
+
+**How:** Sampled 50 advertisers from BUK predictions via deterministic hash (not cherry-picked). For each IP, found the best (lowest) BUK rank among matched DS19 keywords from ipdsc, bucketed IPs by best keyword rank, and computed 10-day post-period visit rates from ui_visits (any visit to advertiser). Denominator is ALL ipdsc IPs. Filtered per-advertiser breakdown to advertisers with >10 visitors. Ran a parallel global-ranking variant to test whether keywords are universally good.
+
+**Tables:** ipdsc, ui_visits, BUK predictions
+
+**Learned:**
+- Per-advertiser BUK keyword rank predicts visit propensity: rank 1-5 best-matched keyword = 184x visit rate vs rank 51+, monotonic across 6 buckets
+- Keyword value is advertiser-specific: per-advertiser ranking gives 184x vs only 3x for global ranking (0.11 correlation) — ~60x more signal from ALS per-advertiser collaborative filtering
+- Median per-advertiser lift 148x; 93% of advertisers >10x, 67% >50x; all 15 verticals positive (median 66x)
+- Flat 10,000 RTC score for all BUK-matched high-intent IPs discards the 184x keyword-rank signal
+- Best-matched keyword rank chosen over average rank or match count as the purest, most conservative test
+- Observational with temporal separation; IP churn biases toward zero so 184x is a lower bound; causal test deferred to TI-806
+
+**Reuse when:**
+- Proving keyword or intent-signal selection matters for visit rates
+- Comparing per-advertiser vs global keyword ranking / BUK ALS signal strength
+- Justifying rank-weighted RTC scoring instead of flat 10,000 for BUK-matched IPs
+- Framing methodology defense against circularity/leakage, bucket-size, survivorship-bias questions
+- Building the TI-803 BUK Value Analysis narrative (TI-805/806/808)
 
 # TI-804: Keyword-Level Visit Rate Analysis — Prove Keyword Selection Matters
 

@@ -189,3 +189,35 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
   - source_line: **The pattern:** 90% reduction (->16 publishers) = positive IVR. 80% reduction (->26 publishers) = negative IVR. Threshold ~88% / ~16-19 target publishers. All advertisers had 10-15x IVR variance between best and worst publisher pre-adoption.
 - **[ti_780_campaign_ramp_up_research]** Excluding the first 4 weeks of new-campaign ramp-up in TI-748 v5 reduced the placebo false-positive rate from 30% to 24%.
   - source_line: A: Yes - excluding the first 4 weeks reduced placebo FPR from 30% to 24% in TI-748 v5.
+
+<!-- batch 9 appended -->
+
+## Batch 9
+
+### data_catalog.md
+- **[ti_810_feature_store_pipeline]** 6 new Layer-1 IP-grain feature-store models (win_logs_ip, bae_ip, cil_ip, guid_log_ip, aug_log_ip_hourly, aug_log_ip daily) run in prod daily since 2026-04-09 (PR #962, merged 2026-04-08), writing to gs://mntn-data-archive-prod/feature_store/feature_group_1_source/, built for Fangorn model training. (conv_log_ip, the 7th, is already cataloged.)
+  - source_line: All 7 models running in prod daily since 2026-04-09. ... 7 Layer 1 PySpark models written, tested, compiled (PR #962 CI green) ... Prod DAGs running daily since merge — all 7 models current through dt=2026-04-16
+- **[ti_810_feature_store_pipeline]** cost_impression_log has NO parquet archive in the mntn-data-archive-prod bucket; to read it in Spark you must use the BQ Spark connector (or skip it).
+  - source_line: | cost_impression_log | **NO PARQUET ARCHIVE** | — | Not in bucket. Must read from BQ via Spark connector or skip. |
+- **[ti_810_feature_store_pipeline]** win_logs parquet archive is at gs://mntn-data-archive-prod/win_logs/ partitioned dt=YYYY-MM-DD/hh=HH (confirmed via gsutil ls).
+  - source_line: | win_logs | `gs://mntn-data-archive-prod/win_logs/` | `dt=YYYY-MM-DD/hh=HH` | Confirmed (gsutil ls) |
+- **[ti_810_feature_store_pipeline]** bidder_auction_events parquet archive is at gs://mntn-data-archive-prod/bidder_auction_events/ partitioned region={east,west}/dt=YYYY-MM-DD (confirmed via gsutil ls).
+  - source_line: | bidder_auction_events | `gs://mntn-data-archive-prod/bidder_auction_events/` | `region={east,west}/dt=YYYY-MM-DD` | Confirmed (gsutil ls) |
+- **[ti_810_feature_store_pipeline]** conversion_log parquet archive is at gs://mntn-data-archive-prod/conversion_log/ partitioned dt=YYYY-MM-DD.
+  - source_line: | conversion_log | `gs://mntn-data-archive-prod/conversion_log/` | `dt=YYYY-MM-DD` | Confirmed (existing pipeline) |
+- **[ti_810_feature_store_pipeline]** Feature-store partitioning convention: Layer 1 partitions on dt (event date, optionally dt/hh); Layer 2 and 3 partition on effective_date (midnight after the lookback window).
+  - source_line: Layer 1: `dt=YYYY-MM-DD` (event date), optionally `dt=YYYY-MM-DD/hh=HH` ... Layer 2/3: `effective_date=YYYY-MM-DD` (midnight after lookback window)
+
+### data_knowledge.md
+- **[ti_804_keyword_visit_rate_analysis]** ipdsc DS19 keywords are populated from the IP's prior browsing behavior on the advertiser's site.
+  - source_line: ipdsc DS19 keywords are populated from the IP's prior browsing behavior on the advertiser's site, so we're measuring: "which IPs are most likely to come back?"
+
+### experimentation.md
+- **[ti_804_keyword_visit_rate_analysis]** Ranking BUK keywords per-advertiser yields 184x visit-rate differentiation (top rank vs bottom) vs only 3x when keywords are ranked globally across all advertisers (0.11 correlation with BUK rank) — keyword value is advertiser-specific, a ~60x signal-strength gain from BUK's per-advertiser ALS collaborative filtering.
+  - source_line: A global keyword quality score captures only 3x differentiation. BUK's per-advertiser ALS model captures 184x — a 60x improvement in signal strength.
+- **[ti_809_multiday_validation]** Visit rate varies by day of week: 0.84% (Fri) to 1.13% (Mon), higher early week and lower Fri/Sat.
+  - source_line: Confirmed: visit rate varies 0.84%-1.13% across days (higher early week, lower Fri/Sat)
+- **[ti_809_multiday_validation]** Sunday traffic patterns differ from Mon-Sat: Sunday 3/22 was a Spearman feature-ranking outlier (ρ = 0.10-0.41 vs other days); excluding it, mean ρ ≈ 0.90.
+  - source_line: **Spearman rank correlation:** Mean ρ = 0.743 (all), 0.694 (NEW-only). But **3/22 is an outlier** (ρ = 0.10-0.41 vs other days). Excluding 3/22, mean ρ ≈ 0.90 — very stable.
+- **[ti_813_buk_500_advertiser_scale]** The Fangorn experiment (TI-704) ran March 4 – April 2 (2026) across 5 advertisers: Zumba Fitness (36420), Edward Martin (40956), G-Shock (46920), Reedsy (42273), Collector Store (42692).
+  - source_line: Fangorn experiment ran March 4 – April 2 across 5 advertisers: Zumba Fitness (36420), Edward Martin (40956), G-Shock (46920), Reedsy (42273), Collector Store (42692)

@@ -5,7 +5,31 @@ status: done
 date: 2026-05-06
 summary: "Scale BUK keyword visit-rate lift analysis from 50 to 500 advertisers."
 result: "BUK ranking holds at 500 advs: 72x aggregate / 82x median lift; Fangorn eval confirms."
+keywords: [buk, bottoms-up keywords, keyword rank lift, visit rate, als, dcg, mm v2, fangorn, ti-704, ti-804, ivr, ipdsc]
 ---
+
+## TL;DR
+
+**Q:** What did TI-813 find when scaling the BUK keyword visit-rate lift analysis from 50 to 500 advertisers, and was it independently validated?
+
+**A:** Scaling the TI-804 BUK keyword visit-rate analysis from 50 to 500 advertisers confirmed the ranking signal holds at scale. Aggregate lift attenuated from 184x (50 advs) to 72x (500 advs) — expected dilution from pooling more advertisers — but the monotonic decline across rank buckets is preserved (72x → 14x → 5.6x → 2.9x → 1.9x → 1x). Per-advertiser median lift (top-10 vs bottom-31+) is 82x, with 85% (106/125) of qualifying advertisers showing >10x lift, 61% (76/125) >50x, and 42% (52/125) >100x. 125 advertisers cleared the >10-visitor threshold (vs 15 in TI-804), spanning 67 verticals (all 67 positive), on 30.9B IPs scored and 754K total visitors. Top per-advertiser lifts: ASRT (4,068x), Prompt Health (1,884x), Catholic Charities (1,731x), Le Creuset (1,213x); lowest 1.1x (still positive). Alex Knorr independently validated the signal via the Fangorn experiment (TI-704) offline evaluation: BUK DCG continuous scores joined retroactively to experiment IPs show the same monotonic pattern in live IVR (visits/impressions) data across all 5 advertisers, and the group with the higher median BUK score had the higher IVR in every case with a meaningful score gap. Two independent methods (observational keyword→visit vs experiment-based impression→visit), same conclusion. Status: complete; awaiting Kale/Paulo/Richard feedback on the Loom (TI-829) and deck.
+
+**How:** Copied TI-804 queries and changed LIMIT 50 to LIMIT 500 (ipdsc is the ~65GB cost bottleneck). Ran three queries: rank-bucket aggregate visit rates, per-advertiser rank lift (125 advertisers with >10 visitors), and per-vertical rank lift (67 verticals). Visit rate = visitors/IPs per rank bucket; lift = bucket rate vs worst (rank 51+) bucket. Fangorn eval (Alex, Databricks): BUK model trained as of March 1 on a 30-day window, DCG continuous scores computed per IP, joined to Fangorn experiment IPs (March 4–April 2), compared median BUK score vs IVR across 5 advertisers × 8 groups.
+
+**Tables:** ipdsc, guid_logs, conversion_logs
+
+**Learned:**
+- BUK ranking signal holds at 500-advertiser scale: aggregate lift 72x (down from 184x at 50 advs due to pooling dilution), per-advertiser median 82x, monotonic across rank buckets, 85% of 125 qualifying advertisers >10x
+- Aggregate lift attenuates as advertiser count grows; per-advertiser median is the more meaningful metric
+- Fangorn experiment (TI-704) offline eval independently confirmed BUK: higher-median-BUK-score group had higher IVR in every case with a meaningful score gap, across all 5 advertisers
+- TI-813 measures observational keyword→visit (binary); Fangorn eval measures experiment-based impression→visit (IVR), closer to actual campaign performance — two data sources, same conclusion
+- Zero-scored IPs in the Fangorn eval have mixed visit rates — open investigation area for keywords BUK may be missing
+
+**Reuse when:**
+- Making the BUK value case or comparing BUK vs MM V2 keyword ranking
+- Questions about how BUK keyword rank predicts visit rate or IVR
+- Scaling a rank-bucket visit-rate lift analysis to more advertisers
+- Looking for the Fangorn TI-704 experiment roster or offline BUK/DCG evaluation methodology
 
 # TI-813: Scale BUK Keyword Visit Rate Analysis to 500 Advertisers
 

@@ -5,7 +5,26 @@ status: in_progress
 date: 2026-04-23
 summary: "Multi-phase analysis proving BUK keyword rankings are valuable, size-independent"
 result: "Phase 1 done: per-advertiser BUK ranking = 184x visit-rate lift vs 3x global; P2-4 open"
+keywords: [buk, bottoms up keywords, 184x, mm v2, continuous scoring, fangorn, keyword ranking, als collaborative filtering, vertical taxonomy, kirsa, ti-804, experiment design]
 ---
+
+## TL;DR
+
+**Q:** What does TI-803 (Prove BUK Keyword Value) contain — status, findings, and plan?
+
+**A:** TI-803 is an in-progress epic building a rigorous, multi-phase case that BUK (Bottoms Up Keywords) keyword rankings are valuable independent of audience-size effects, to present to management (BUK was deprioritized because prior experiments' IVR gains were confounded by audience-size changes). Plan — four phases (children): Phase 1 (TI-804) keyword-level visit-rate analysis DONE; Phase 2 (TI-805) BUK vs MM V2 keyword-quality head-to-head open; Phase 3 (TI-806) CausalImpact on beta pre/post (West Bend switched 2026-02-27, Samy's Camera 2026-03-04) open; Phase 3b (TI-807) offline eval via Fangorn experiment open (needs Fangorn details from Alex); Phase 4 (TI-808) executive presentation open. Phase 1 result (2026-04-02): per-advertiser BUK keyword ranking produces a 184x visit-rate differential (monotonic across 6 rank buckets) vs only 3x for global keyword ranking (correlation of global rank with BUK rank = 0.11). 14/15 advertisers (93%) show >10x lift, median 148x; all 15 verticals positive, median 66x. Keyword value is advertiser-specific — BUK's per-advertiser ALS collaborative filtering captures a signal generic/LLM approaches (MM V2 homepage scrape) cannot. A 2026-04-23 Kirsa meeting scoped the forthcoming combined Fangorn + full continuous scoring + BUK experiment: proposed control = Fangorn + "mini" continuous scoring ("Fangorn Plus"); Treatment 1 = + full continuous scoring + ranked BUK; Treatment 2 = + MM V2 keywords (for cold-start advertisers). Design leans to dropping mid-intent (already continuous) → 6 arms (3 thresholds × 2). Side thread: ~100+ advertisers await manual vertical assignment; Fangorn depends more on vertical assignment (scores produced at vertical level), and the vertical taxonomy (Kirsa, late-2023/early-2024) is stale.
+
+**How:** Read summary.md in full; the ticket folder has only meetings/ and summary.md (no queries/ or outputs/). Cross-checked each durable fact against knowledge/data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md via grep.
+
+**Learned:**
+- Per-advertiser BUK keyword ranking = 184x visit-rate lift vs 3x for global ranking (global-vs-BUK rank correlation 0.11); 93% of 15 advertisers >10x, median 148x; all 15 verticals positive median 66x
+- The forthcoming experiment leans to 6 arms (3 thresholds x 2 treatments), dropping mid-intent because it is already continuous; Treatment 2 (MM V2 keywords) evaluates cold-start advertiser fallback
+- Kirsa's vertical taxonomy (late-2023/early-2024) is stale; Fangorn depends more on vertical assignment since scores are produced at vertical level then joined to advertisers
+
+**Reuse when:**
+- Questions about BUK / Bottoms Up Keywords value or the 184x per-advertiser keyword finding
+- Designing the combined Fangorn + continuous scoring + BUK experiment (arm count, thresholds)
+- BUK vs MM V2 keyword quality comparison
 
 # TI-803: Prove BUK Keyword Value — Rigorous Analysis for Management
 

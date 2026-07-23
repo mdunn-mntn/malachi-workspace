@@ -5,7 +5,32 @@ status: done
 date: 2026-04-17
 summary: "Add IP-level bidstream features to the feature-store pipeline for Fangorn training"
 result: "7 Layer-1 PySpark models live in prod daily since 2026-04-09 (PR #962); Layer 2 next"
+keywords: [feature store, feature_group_1_source, fangorn training, bidstream features, airflow-ti, dataproc serverless, layer 1 ip rollup, pr 962, win_logs_ip, aug_log_ip, parquet archive, hll sketch, ti-810, ti-790]
 ---
+
+## TL;DR
+
+**Q:** TI-810: Adapt the feature-store pipeline for new bidstream (IP-level) features to train the Fangorn model. What was done, and what durable data facts does the summary add?
+
+**A:** TI-810 added IP-level bidstream features to MNTN's three-layer PySpark feature-store pipeline (SteelHouse/airflow-ti, Dataproc via Airflow) so the Fangorn targeting model has richer training signals. Scope: features are for training Fangorn, not real-time scoring, so the pre-visit vs feedback distinction was dropped and all sources (incl. guid_log, conversion_log, and existing non-scoring features) are in scope; IPs with a blank IP are skipped (no IPv6 fallback). Feature set drawn from TI-790's SHAP rankings across augmentor_log, win_logs, bidder_auction_events, cost_impression_log, guid_log, conversion_log. Result (Current Status 2026-04-17): 7 Layer-1 PySpark models written, tested, and running in prod daily since 2026-04-09 via PR #962 (merged 2026-04-08, approved by Ryan). Models: win_logs_ip, bae_ip, cil_ip, guid_log_ip, conv_log_ip, aug_log_ip_hourly, aug_log_ip. All 7 backfilled 30 days in dev (~530 Dataproc Serverless jobs, zero errors), current through dt=2026-04-16. Two parquet schema bugs fixed (guid_log product STRUCT; aug_log nested LIST fields pmp/iab/segments, via isNotNull() workaround). Layer 2 derived model is next, using guid_log_derived_ip_vertical_id.py as template. Section 5 (Solution) and Section 7 (Data Documentation Updates) remain unfilled. Confirmed parquet-archive availability: win_logs, bidder_auction_events, guid_log, conversion_log, augmentor_log have parquet archives; cost_impression_log has NO parquet archive (must read from BQ via Spark connector or skip).
+
+**How:** Read summary.md in full. outputs/ and queries/ folders do not exist. Grepped knowledge/data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md for feature_store, mntn-data-archive, the 7 model names, and source parquet archive paths.
+
+**Tables:** win_logs_ip, bae_ip, cil_ip, guid_log_ip, conv_log_ip, aug_log_ip_hourly, aug_log_ip, augmentor_log, win_logs, bidder_auction_events, cost_impression_log, guid_log, conversion_log
+
+**Learned:**
+- 7 Layer-1 IP-grain feature-store models live in prod daily since 2026-04-09 via PR #962 for Fangorn training; conv_log_ip already in data_catalog, the other 6 are not
+- cost_impression_log has NO parquet archive; must be read from BQ via Spark connector or skipped
+- win_logs and bidder_auction_events parquet archives exist and were used as Layer-1 sources; win_logs partitioned dt=YYYY-MM-DD/hh=HH, bidder_auction_events partitioned region={east,west}/dt=YYYY-MM-DD
+- Feature-store naming: Layer 1 partitions on dt, Layer 2/3 on effective_date; Layer 1 stores raw counts, percentages computed in Layer 2
+- Scope decision: feature store is for training Fangorn (not real-time serving); blank-IP rows skipped, no IPv6 fallback
+
+**Reuse when:**
+- Working on the feature-store pipeline (airflow-ti models/feature_store) or adding Layer 1/2/3 models
+- Looking for IP-level feature tables to train or analyze Fangorn
+- Needing a GCS parquet archive path/partition for win_logs, bidder_auction_events, conversion_log, guid_log, or augmentor_log
+- Building Spark aggregations over raw parquet (LIST/STRUCT schema gotchas)
+- Working the TI-789 bidstream epic or a Layer 2 derived model
 
 # TI-810: Adapt Feature Store Pipeline for New Bidstream Features
 

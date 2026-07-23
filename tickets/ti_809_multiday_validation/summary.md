@@ -5,7 +5,31 @@ status: done
 date: 2026-04-01
 summary: "Run XGBoost/SHAP on 7 date pairs to test top-feature rank stability before TI-810 pipeline"
 result: "Rankings stable enough to proceed; AUC 0.843±0.008; win_logs/BAE stable, augmentor noisy"
+keywords: [ti-809, ti-790, ti-810, bidstream, feature ranking, shap, xgboost, rank stability, augmentor_log, win_logs, bae, visit rate, spearman, auc]
 ---
+
+## TL;DR
+
+**Q:** TL;DR card for TI-809 multi-day validation of feature rankings.
+
+**A:** Rankings are stable enough to proceed with the TI-810 pipeline. Across 7 date pairs (Mon-Sun), AUC held tight: all-features 0.843 ± 0.008, NEW-only 0.794 ± 0.013 (both above TI-790's single-day 0.831 / 0.777). win_logs and BAE features are very stable (rank CV < 0.30; e.g. wl_avg_price rank 4.9 ± 1.3, bae_pct_ent 11.1 ± 1.8), while augmentor_log features (al_n_domains, al_pct_ctv, al_pct_video, al_pct_iab) are noisy (rank CV ≥ 0.77) — attributed to the 4-hour BQ sample (12:00-16:00); expected to stabilize once the pipeline uses full-day parquet. Spearman mean ρ = 0.743 (all) / 0.694 (NEW), but Sunday 3/22 is an outlier (ρ = 0.10-0.41 vs other days); excluding it, ρ ≈ 0.90. Recommended pipeline features: wl_avg_price, wl_n_adv, bae_pct_genre, bae_pct_ent, bae_pct_news, bae_n_genres, plus all augmentor_log features (to re-validate with full-day data).
+
+**How:** Ran the TI-790 XGBoost + SHAP model on 7 feature/label date pairs covering Mon-Sun (parameterized training query, ~65 GB each via partition pruning). Computed per-feature mean rank, std, and rank CV, plus a Spearman rank-correlation matrix across days, for both an all-features and a NEW-only model. Classified features stable (rank CV < 0.30) vs unstable (≥ 0.30).
+
+**Tables:** win_logs, BAE, augmentor_log, CIL
+
+**Learned:**
+- Multi-day AUC is tight: all-features 0.843 ± 0.008, NEW-only 0.794 ± 0.013 across 7 days, both above TI-790 single-day (0.831 / 0.777)
+- win_logs and BAE features rank-stable (rank CV < 0.30); augmentor_log unstable (rank CV ≥ 0.77), attributed to the 4-hour BQ sample — expected to stabilize with full-day parquet
+- Visit rate varies 0.84% (Fri) to 1.13% (Mon) across days — higher early week, lower Fri/Sat
+- Sunday 3/22 is a Spearman ranking outlier (ρ = 0.10-0.41); excluding it mean ρ ≈ 0.90. Rankings stable Mon-Sat
+- Recommended NEW pipeline features: wl_avg_price, wl_n_adv, bae_pct_genre, bae_pct_ent, bae_pct_news, bae_n_genres; augmentor_log to be re-validated on full-day data
+
+**Reuse when:**
+- Validating feature-ranking stability across days before committing pipeline features
+- Deciding whether a 4-hour augmentor_log BQ sample is adequate vs needing full-day parquet
+- Assessing day-of-week / weekend effects on visit rate or model rankings
+- Building TI-810 bidstream feature pipeline or TI-811 day-of-week enhancement
 
 # TI-809: Multi-Day Validation of Feature Rankings
 
