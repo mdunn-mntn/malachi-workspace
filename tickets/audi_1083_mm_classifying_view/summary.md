@@ -309,11 +309,13 @@ tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, featur
   `campaign_segment_history.sql`).
 - **`mm_campaign_classifier_by_group.sql`** — FULL group rollup, `grain campaign_group_id` (Stage 2/3 join path).
 - **Validated:** sqlglot 30.13 bigquery parse clean (4 + 1 statements, JS triple-quote OK); SELECT logic
-  already BQ-verified via the distribution/verification runs. **NOT yet done (gated):** `sqlmesh plan dev_<user>`
-  (needs sqlmesh install + dev gateway creds: BQ dev + GCP Postgres state) → push → PR → review → first prod
-  run on next daily cron. CI runs `verify-impact` which FAILS until a dev plan generates the snapshot.
-- **Open decisions:** (1) owner `targeting-infrastructure` (alerts → #monitor-test) vs `ber` (→ #ber_sqlmesh_alerts,
-  the neighbor model's owner); (2) scope kept active Stage 1 only per user; (3) `geo_reach_pct` stays NULL (v2).
+  already BQ-verified via the distribution/verification runs.
+- **DECISIONS (user, 2026-07-23):** owner = **`targeting-infrastructure`** (true AUDI ownership; NB alerts
+  route to #monitor-test — revisit if real paging wanted); scope = active Stage 1 only; `geo_reach_pct` NULL (v2).
+- **STATUS: LEFT LOCAL — branch not pushed, no PR (user's call).** To resume: `sqlmesh plan dev_<user>`
+  (needs sqlmesh install + dev creds: BQ dev + GCP Postgres state `dw-main-bronze:us-central1:data-platform-state`)
+  → push → PR → review → first prod run = next daily cron. CI `verify-impact` FAILS until a dev plan snapshot
+  exists. Audience models are BER-shepherded in practice, so a BER reviewer likely runs the plan + merges.
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
