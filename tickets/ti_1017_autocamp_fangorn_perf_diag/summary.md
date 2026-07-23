@@ -5,6 +5,31 @@ status: done
 date: 2026-06-02
 summary: "Diagnose Autocamp HHST collapse and perceived performance drop after Fangorn flip"
 result: "Not a Fangorn regression — IVR doubled; HHST collapse a rare one-off from YoY scaling"
+keywords: [fangorn, hhst, autocamp, household_score_threshold, ivr, roas, rtc, ds46, ds19, unscored fallback, pacing, cost_impression_log, campaign 570106, advertiser 37569, yoy saturation]
+---
+
+## TL;DR
+
+**Q:** Diagnose Autocamp's HHST collapse and perceived performance drop after the Fangorn flip (TI-1017).
+
+**A:** Not a Fangorn regression. After Autocamp campaign 570106 flipped onto Fangorn on 2026-05-18, the visually-alarming HHST collapse (10000 to 0 over 5/19-5/22) was a rare one-off driven by 3x YoY spend scaling against a similarly-sized scored pool, while Fangorn actually helped: IVR roughly doubled (~0.48% pre to ~1.0% steady-state, still climbing) and campaign-570106 ROAS was up ~9% (1.41x to 1.54x, noisy). The real customer-facing concern is a separate 12-month YoY degradation (8x to 2x ROAS, CVR down ~50%, spend up ~$25K to $80K+), not the 2-week Fangorn flip. Cohort check confirms a one-off: across 316 advertisers flipped since 4/01 the median HHST=10000 share barely moved (-1.6pp) and 66% stayed within +/-5pp, while Autocamp ranked 4th-worst of 316 (-50.2pp, bottom 1.3 percentile).
+
+**How:** Pulled daily HHST band mix from cost_impression_log (Q1); daily KPIs (imps, spend, completes, visits, convs, IVR, CVR, CPM, ROAS) from all_facts + event_log + clickpass_log + ui_conversions (Q2, Q6); parsed the single targeted audience expression from audience.audience_segments (Q3: DS46 vertical 135001 OR DS19 161 keyword cats, RTC id=135001, West Coast geos); RTC firing rate (Q4); and a 316-advertiser Fangorn-cohort HHST trajectory comparison (Q7). At HHST=10000 only IPs in MM (DS46) intersect DS19-keyword at raw>0.8 qualify; that pool was too small to fill the ~$1,850/day pacing target on West Coast geo, compounded by YoY spend tripling, so 5/19 volume collapsed 78%. Both bidder-driven and operator-driven (Tofer loosened the secondary frequency cap 1x/14 to 4x/3d and let HHST drop, then re-tightened). Diagnostic spike; no code/config changes recommended.
+
+**Tables:** cost_impression_log, all_facts, event_log, clickpass_log, ui_conversions, audience.audience_segments
+
+**Learned:**
+- A Fangorn HHST collapse (10000 to 0) can look like a performance regression in the bidder UI while steady-state KPIs improve. The bidder tier chart shows bid-time classification of IPs bid on, not audience composition; when HHST drops to fill pacing the classification shifts HI to PP/MI/MR though the audience is unchanged.
+- An (MM OR keywords) audience at HHST=10000 is structurally fragile post-Fangorn: bid-eligible HI is only MM intersect keyword at raw>0.8, smaller than either pool, so high-spend advertisers maxing out HI hit an audience ceiling and the bidder must drop HHST to fill spend.
+- Running in unscored mode (HHST=-1) turns RTC effectively off since RTC is gated by HHST (Autocamp RTC ~8% pre to ~0.5% during HHST=0, ~3-4% steady state).
+
+**Reuse when:**
+- An advertiser or CS raises a performance concern shortly after a Fangorn flip
+- An HHST trajectory collapses from 10000 toward 0 and looks like a regression
+- Diagnosing whether a KPI change is Fangorn-caused vs a YoY spend-scaling / saturation problem
+- Assessing whether an (MM OR keyword) audience at HHST=10000 can sustain pacing
+- Checking whether a post-flip HHST collapse is a one-off vs cohort-wide
+
 ---
 
 # TI-1017: Autocamp Fangorn HHST collapse + performance diagnostic
