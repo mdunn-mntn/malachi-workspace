@@ -305,3 +305,15 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
   - source_line: "- Join key: `cost_impression_log.impression_id` → `ui_visits.impression_id`"
 - **[incr_75_eligible_advertisers]** In cost_impression_log and ui_conversions, the column group_id = campaign_group_id.
   - source_line: "Note: `group_id` in `cost_impression_log`/`ui_conversions` = `campaign_group_id`."
+
+## context-full batch 6 append
+
+### data_catalog.md
+- **[ti_1053_elevenlabs_3p_segments]** LiveRamp DS35 has almost no precise inventory for a niche AI-voice product: profiling all 210K non-deprecated DS35 leaves found 0 real voice/speech-tech (the 8 matches are brand-name/TV-title noise), 3 AI/ML, 0 conversational-AI, 0 Bombora (not in DS35), and the 'creator/gamer' matches (56/60) are almost all consumers, not buyers.
+  - source_line: "0 real voice/speech-tech (the 8 matches are brand-name/TV-title noise), 3 AI/ML, 0 conversational-AI, 0 Bombora (not in DS35), and the creator/gamer matches (56/60) are almost all consumers ... LiveRamp DS35 has almost no precise inventory for a niche AI-voice product."
+- **[ti_1053_elevenlabs_3p_segments]** malachi@ cannot cancel a running BigQuery job (no jobs.update permission), so a mistakenly-launched expensive ipdsc scan runs to completion.
+  - source_line: "ipdsc DISTINCT-IP is expensive (30d=30TB, 7d=6.7TB) and I cannot cancel running BQ jobs (no jobs.update perm)."
+
+### mntn_business.md
+- **[ti_1053_elevenlabs_3p_segments]** ElevenLabs (AID 51660) is MNTN's #2 stale-3P advertiser (per TI-999).
+  - source_line: "ElevenLabs is MNTN's #2 stale-3P advertiser (TI-999)."

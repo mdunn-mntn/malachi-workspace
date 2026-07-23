@@ -5,7 +5,29 @@ status: backlog
 date: 2026-06-26
 summary: "Find levers to cut OpenAI spend on the DS19 daily keyword classification pipeline"
 result: "in progress — ranked 7 levers; biggest bet is BGE-large embedding to replace gpt-4o-mini"
+keywords: [ti-1060, ds19, openai cost, gpt-4o-mini, bge-large, shopper_graph, product_categorization, mntn matched, composite_key, eval harness]
 ---
+
+## TL;DR
+
+**Q:** What are the levers to reduce OpenAI cost in the MNTN Matched (DS19) daily keyword classification pipeline?
+
+**A:** In-progress investigation (TI-1060, blocked by TI-1058's pipeline map). The cost driver is the raw count of distinct path-level URLs sent daily to the gpt-4o-mini Batch API, NOT data_source_id multiplication (that hypothesis is disproven: dedup is on composite_key, one request per URL, data_source_id kept only for billing attribution). Seven ranked levers: (A) biggest bet, replace gpt-4o-mini with the in-pipeline free BGE-large embedding (system.ai.bge_large_en_v1_5/3) by embedding URL/product text and nearest-neighbor into the taxonomy directly, skipping the LLM for many/most URLs (goal: "cut costs by half"); (B) prompt token reduction (product_sku hardcoded to literal 1 = dead tokens, missing spaces, max_tokens=1000 generous, no Batch API prompt caching); (C) low-frequency URL/keyword filtering pre-batch by recurrence; (D) re-enable/fix homepage-description enrichment (hardcoded to apollaperformance.com only); (E) re-evaluate gpt-4o-mini vs newer/cheaper models; (F) build an accuracy eval harness (sample ~100 rows from prod.mntn_matched.product_categorization) as the regression gate for all changes; (G) re-enable disabled taxonomy auto-add (coverage, not direct cost). Sequencing: B (quick token wins) now; A is the big bet but needs F. Open: get actual OpenAI spend numbers to size the prize. Collaborators: Victor (Common Crawl / taxonomy auto-add), Alex Knorr (advertiser keywords / better model).
+
+**How:** Ryan Kleck walkthrough 2026-06-26 plus code trace of SteelHouse/shopper_graph @ 4f0fc37; levers ranked in summary, none yet executed (all "next check" steps are proposed, not done).
+
+**Tables:** prod.mntn_matched.product_categorization
+
+**Learned:**
+- The DS19 daily keyword OpenAI cost is driven by the count of distinct query-stripped URLs (composite_key), not by data_source_id fan-out.
+- BGE-large is already in the pipeline and free (Databricks Unity Catalog), used post-batch to snap OpenAI's free-text category to a taxonomy keyword at threshold 0.6, making it a candidate to replace gpt-4o-mini.
+- Biggest proposed cost lever is embedding-based classification (A); quick prompt-token wins (B) are immediate; both gated on an accuracy eval harness (F).
+
+**Reuse when:**
+- Reducing LLM/OpenAI cost in the MNTN Matched DS19 keyword pipeline
+- Evaluating whether an embedding model can replace an LLM classification step
+- Questions about what drives OpenAI batch cost in shopper_graph
+
 
 # TI-1060 — Reduce OpenAI Cost in the MNTN Matched (DS19) Keyword Pipeline
 

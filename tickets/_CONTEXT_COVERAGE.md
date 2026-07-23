@@ -40,7 +40,8 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_1033_experiment_archive_deploy | carded | 0 | context-full batch 5; archive host/ship/polish |
 | ti_1037_audience_diagnostic_tool | carded | 0 | batch 6 |
 | ti_1044_elevenlabs_ctv_incrementality | carded | 2 | batch 6 |
-| ti_1053_elevenlabs_3p_segments | carded | 0 | batch 6 |
+| ti_1053_elevenlabs_3p_segments | carded | 3 | batch 6 |
+| ti_1060_mntn_matched_openai_cost | carded | 0 | batch 6 |
 | ti_1058_ds13_ds19_pipeline_map | carded | 1 | batch 6 |
 | ti_200_whitelist_blocklist | carded | 0 | batch 6 |
 | ti_253_tpa_monitor | carded | 0 | batch 6 |
