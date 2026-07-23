@@ -294,6 +294,9 @@ Paulo asked the AUDI team to **own high-quality Bombora audience design** for a 
 
 ## Business Metrics & KPIs
 
+### Flight-Spend Distribution (TI-adhoc, 730-day window)
+- **79% of MNTN's $477.9M total flight spend runs in flights ≥15 days.** Only 6.9% of flight spend lands on a flight's day-1, and flights of 1-3 days (highest day-1 exposure) are just 4.3% of total spend. Implication: day-1 scoring latency affects a small slice of spend.
+
 ### Attribution Model
 - **Current default:** First touch attribution (changed from last touch)
 - **⚠️ TERMINOLOGY TRAP (AUDI-1070, Johnny/Prod Ops 2026-06-30):** in MNTN, `r2_advertiser_settings.reporting_style = "industry_standard"` means **FIRST TOUCH**, and `"last_touch"` means last touch. This INVERTS the MMP convention (Kochava/AppsFlyer "industry standard" = last touch). History: ~2yr ago MNTN switched the reporting standard LT→FT for all new + most existing customers; some "grandpa" accounts remain on LT. FT credits the S1 prospecting impression (`first_touch_ad_served_id` always points to a `funnel_level=1, objective_id=1` impression), so **FT structurally reports much lower visits/ROAS than LT for prospecting-heavy CTV advertisers** — a big swing, not a small one (HexClad FT ROAS <1x vs LT ~8x on identical spend).
@@ -443,6 +446,7 @@ All three yes → valid ghost-bid candidate for that campaign. All three fields 
 | **Multi-touch** | Display ad campaigns that complement CTV campaigns (retargeting via display) |
 | **Mountain Match** | MNTN's proprietary targeting system (replaced interest audiences) |
 | **Fangorn** | IP-level scoring model (0-1 score per IP per advertiser). Currently all high-intent IPs scored at flat 10,000. As of 2026-04-07: all-verticals support complete (Brian), final validation running. TI-457 close to ready for full rollout. TI-745 (model validation methodology) converted to spike — not blocking rollout, targeting end of Q2. |
+| **Fangorn V2** | Parallel XGBoost classifier (Matt Brorby) trained on **conversions instead of visits**. The bidder picks Fangorn vs Fangorn V2 per campaign based on `goal_type_id` (CPV vs ROAS, etc.). |
 | **BUK (Bottoms Up Keywords)** | Data-driven keyword recommendation via ALS collaborative filtering model (TI-273, Paused). Replaces LLM-only MM V2 with pixel-data-driven recommendations |
 | **DAR (Dynamic Attribute Recommendations)** | Original name for the BUK initiative |
 | **ALS (Alternating Least Squares)** | Collaborative filtering matrix factorization model used in BUK. Users=advertisers, items=DS19 keywords |
@@ -890,6 +894,8 @@ Legacy CoreDW is being decommissioned on **May 19, 2026**. All teams with tables
 - ## Select Reached Audiences — New Product Feature
 
 **Select Reached Audiences** is a retargeting capability that allows advertisers to re-engage households that previously saw a MNTN Select ad across 150+ premium networks, directly within Performance TV campaigns. It is designed to be combined with Select Content Targeting and intent-based targeting to create a layered awareness-to-conversion funnel on CTV. This feature was being previewed to revenue-facing teams in late April/early May 2026. (via Gabs Fuchs, #sales, 2026-04-29)
+
+**In practice, active MNTN Select advertisers run entirely prospecting/awareness campaigns with zero retargeting** (all 38 active advertisers, TI-933 — confirms Kale's framing that Select is purely awareness/prospecting). No single Select advertiser has the volume to be individually powered for a visit-rate lift measurement, so incrementality analysis must pool advertisers.
 - ## Sales Tool Transition: Outreach → Nooks
 
 MNTN is transitioning all Brand and Agency Account Executives from Outreach to **Nooks** as the primary sales engagement/dialing platform. The cutover date for all Brand and Agency AEs was Monday, May 4, 2026. Nooks accounts are provisioned via Okta SSO. (via Abe Lofy, #sales, 2026-04-29)

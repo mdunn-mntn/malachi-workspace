@@ -356,12 +356,15 @@ This pattern is consistent across spend tiers (high/mid/low) and is driven by bi
 
 **Steady-state IVR varies by launch quarter** (0.008–0.013). Campaigns launched in different quarters converge to different baselines. Future analyses should consider cohort-specific baselines (by launch quarter) rather than assuming a single global steady-state value.
 
-**Rule: Exclude the first 4 weeks of any new campaign from causal analysis.**
+**Rule: Exclude the first 4 weeks of any new campaign from causal analysis.** Empirically load-bearing: excluding the first 4 weeks of ramp cut the placebo false-positive rate from 30% to 24% in TI-748 v5.
 
 This applies to:
 - CausalImpact post-period start (shift 4 weeks after first delivery)
 - Within-advertiser comparisons (only include campaigns with 4+ weeks of delivery)
 - Any future experiment comparing new vs existing campaigns
+
+### MDE shortcut correction — 2/√N is ~50% power, not 80% (TI-923)
+The quick `MDE ≈ 2/√N` (the 95% CI half-width on a Poisson count) is a **~50%-power detection threshold, not the 80%-power MDE**. The standard 80%-power / α=0.05 two-tailed formula is `(z_{α/2} + z_β)·√(2/N) ≈ 4/√N` — roughly **twice** the shortcut. Using `2/√N` understates the real MDE by ~2x (e.g. 600 conversions/cell gives a real MDE ~16%, not the ~8% the shortcut implies). Always quote the 80%-power figure when telling someone "we can detect X% lift."
 
 ### Validating Production Holdout Enforcement Empirically (TI-837 Lesson)
 
@@ -374,6 +377,10 @@ TI-837 result (2026-04-30): 0 of 5,432,546 served IPs across 8 (objective_id × 
 **Adjacent check — audience-system coverage.** If the production system has multiple audience-evaluation paths, confirm the holdout enforces on all of them. TI-837: `audience.audience_segments` has both `expression_type=1` (OPM source representation) and `expression_type=2` (TPA, with embedded holdout JSON). Empirical: 0 of 64,202 type=1 retargeting rows have `is_targeted=TRUE` org-wide → only the type=2 path is ever live → there's no "OPM lane" that could bypass holdout. Always identify all evaluation paths and confirm `is_targeted` flagging before assuming uniform enforcement.
 
 **Pattern, generalized:** before any production-experiment result depends on a system invariant (randomization integrity, holdout enforcement, eligibility gates), write the SQL that would falsify the invariant. If it returns the expected zero/ones, the result is defensible. If it doesn't, you've caught a methodology bug before the results meeting.
+
+**Reconstruct the targetable audience externally — holdout IPs hide their own segment (TI-837).** Holdout IPs appear in `augmentor_log` at the uniform 10.0% rate, but their `mntn_segments` array does NOT include the segment they are a holdout of. You cannot read holdout membership off the served-side segment array; reconstruct the targetable audience externally, then intersect the holdout hash.
+
+**Ghost-bidding lift scans are near-free to widen — batch them (TI-837).** The `augmentor_log` scan dominates bytes, so a 7-advertiser Stage-1 scan cost the same 18.2 TB as a 1-advertiser smoke test. Batch all cohort advertisers into one query rather than looping per advertiser.
 
 ### Selection Bias
 Advertisers who adopt a new feature may be systematically different:
@@ -435,6 +442,9 @@ control_pool["delta_pp"] = (control_pool["loo_rate"] - pool_rate) * 100  # in pe
 
 Discovered 2026-06-10 via TI-961 — diagnostic identified Angi (32766, adv_cvr 207%), Cheddar's (34834, adv_cvr 27%), Mountain Mike's Pizza (31297, 63%), Station Casinos (59584, 108%), SpotHero (35872, 48%), Goldfish Swim School (45921, 30%) as Tier 5 CVR-leverage advertisers. Removing Angi alone would drop Tier 5 pool CVR by ~0.57pp → would make treated DiD CVR comparisons look meaningfully better. Confirmed Wave 3 selection bias structurally, didn't change the methodology recommendation (use CausalImpact as primary inference).
 
+### Concentrate a lift panel on eligible volume (TI-921)
+For a Fangorn (or any audience-feature) lift read, restrict to campaign groups that actually carry the treated audience before measuring. The `mntn_matched_cgids` filter (campaign groups carrying an MNTN-Matched DS13/19/46 audience) drops ~25-45% of impressions but concentrates the panel on Fangorn-eligible volume, cleaning the lift signal. Diluting the denominator with never-eligible impressions shrinks and noises the estimate.
+
 ### Staggered Adoption
 When units adopt at different times:
 - Run per-unit CausalImpact (not pooled)
@@ -459,6 +469,8 @@ These behave VERY differently. Always analyze separately:
 When analyzing a feature's impact over time, **check for algorithm/config changes during the observation window.** In TI-748, a config change on Feb 3, 2026 (`max_networks` 18→25→15, `min_allocation` 1%→0.5%, spend capacity filter added — PERML-412) split our 8 advertisers into two groups — pre-change plans hurt IVR, post-change plans helped.
 
 **Refined understanding (Chris Addy, 2026-03-31):** The initial framing was "config version predicts who benefits." The corrected framing is **"concentration is the mechanism, and the config change made concentration the default."** Lighting New York proves this: they got 16 publishers under the *old* config (Oct 2025) — not from an override, but because natural pruning from their budget/vertical dropped networks below the old 1% `min_allocation` floor. Same concentration, same positive result, different config era. The mechanism is publisher concentration itself, regardless of how it was achieved.
+
+**The concentration threshold (TI-748, N=8, directional — not statistically confirmable):** ~90% publisher reduction (→ ~16 publishers) yields positive IVR; ~80% reduction (→ ~26 publishers) yields negative IVR. Threshold ≈ 88% reduction / 16-19 target publishers. All eight advertisers had 10-15x IVR variance between their best and worst publisher pre-adoption, which is why pruning the worst publishers moves IVR.
 
 **Rule:** Before attributing results to a feature, check:
 1. Were there algorithm updates during the treatment period? (git log the relevant service repo)
@@ -805,10 +817,19 @@ When analyzing features that affect publisher/network allocation:
 - **Cost vs. performance differential is negligible between intent tiers**: Cost difference between high/mid/low intent is only a few percent, but visit rate difference is 10-50x. Should always bid on highest-value IPs first — continuous scoring enables this without sacrificing audience size.
 
 ### Keyword Analysis Methodology Lesson (TI-804, 2026-04-02)
-- **Per-advertiser keyword analysis >> global keyword analysis**: Global keyword ranking shows only 3x visit rate range. Per-advertiser ranking shows 184x. Always analyze keyword performance per-advertiser, not globally.
+- **Per-advertiser keyword analysis >> global keyword analysis**: Global keyword ranking shows only 3x visit rate range. Per-advertiser ranking shows 184x — a ~60x signal-strength gain attributable to BUK's per-advertiser ALS collaborative filtering (keyword value is advertiser-specific, not a universal keyword-quality score). Always analyze keyword performance per-advertiser, not globally.
 - **"Best keyword rank" approach works better than per-keyword visit rates**: Computing visit rate per individual keyword is too sparse (most keyword-advertiser pairs have 0 visitors in a 10-day window, medians are 0). Instead, find each IP's best-ranked matched keyword, bucket by that rank, and compute visit rates per bucket. This aggregates signal effectively.
 - **Temporal separation prevents circularity**: ipdsc DS19 keywords are from PAST browsing behavior. Measure visits in a FUTURE window. Same IP universe, different time periods. No campaign-scoping needed for "does the signal predict?" questions — campaign-scoping needed for "did our ads cause?" questions (TI-806).
 - **50-advertiser sample is sufficient for directional findings** but only 15 had >10 visitors in a 10-day window. Scale to 500 for presentation-quality results.
+
+### BUK Score Validation & Live Read (TI-797)
+- **The DCG-score → visit-rate curve is monotonic at scale**: Independent BQ replication across 500 advertisers is perfectly monotonic over all 16 score bins, with 771x visit-rate lift in the top bin (score 0.95) vs bottom (0.20). At 50 advertisers the dips at 0.45/0.60 were sample noise; the full 5,699-advertiser run exceeds BQ resource limits (needs Databricks). Scale resolves apparent non-monotonicity before you distrust the score.
+- **Signal holds per-advertiser, not just pooled**: all 7 BUK beta advertisers show large visit-rate lift for IPs scored ≥0.9 vs below (Experience Scottsdale 129x, Global Rescue 73x, Samy's 50x, West Bend 65x, Amsterdam Printing 101x, Apollo.io 1,152x, Apolla ∞). A per-advertiser check guards against an aggregate that's driven by a few advertisers.
+- **Live pre/post confirms the size-performance tradeoff**: on the same campaign group, Samy's Camera (CG 104020, switch 2026-03-04) +55.2% IVR and West Bend (CG 107024, switch 2026-02-27) +137.4% IVR, both with a ~57-71% impression drop (Alex's Greenplum definition: +64% / +278%). Concentrating on the highest-scored IPs raises IVR but shrinks audience — report both, never IVR alone.
+
+### Day-of-Week Effects in Visit-Rate Validation (TI-809)
+- **Visit rate varies by day of week**: 0.84% (Fri) to 1.13% (Mon) — higher early week, lower Fri/Sat. Any pre/post or feature-ranking read spanning uneven weekday coverage must control for DoW (or align on full weeks) or the mix leaks into the estimate.
+- **Sunday is a feature-ranking outlier**: Sunday 3/22 broke the otherwise-stable Spearman rank correlation (ρ = 0.10-0.41 vs other days); excluding it, mean ρ ≈ 0.90. Traffic composition on Sunday differs from Mon-Sat — check a suspicious low-correlation day against day-of-week before treating it as instability.
 
 ### Exploitation vs Exploration in Optimization (Kale, 2026-03-31)
 
@@ -831,12 +852,15 @@ Kirsten's observation from past experiments: retargeting the same people repeate
 - **Pre-visit vs feedback feature leakage**: guid_log and conversion_log features are outcome-adjacent — they exist BECAUSE the IP visited. Including them produces AUC ~0.999 (tautological — `gl_n_events > 0` perfectly identifies visitors by definition). Pre-visit features alone give AUC 0.831. Always separate features by when they become available (bid time vs post-visit).
 - **Temporal leakage — use day N-1 features, day N labels**: Same-day features and labels allow post-visit impressions to leak into "pre-visit" features (an IP that visited at 8am has 9pm impressions counted as features). Fixing this (day N-1 features, day N labels) dropped AUC from 0.842 to 0.831 — leakage was real but small (0.011). Rankings were stable across the correction, confirming findings hold. Always enforce strict temporal separation.
 - **Sample selection bias in targeting-system evaluation**: When training data is pre-filtered by an existing targeting system (e.g., Fangorn selects which IPs get impressions), you CANNOT claim new features "work independently." Every IP in the sample was already chosen by the system. A NEW-only model (existing features removed) showing 7x lift means the new features add discriminative power *within the Fangorn-selected pool* — not that they'd perform equally on a random untargeted population. To test true independence, you'd need a random sample of IPs that were NOT pre-filtered by targeting, which doesn't exist in production data. Frame claims accordingly: "adds signal on top of current targeting" not "predicts visits independently."
+- **Feature set is stable — few features carry the signal (TI-789)**: In the larger pre-visit run, pre-visit features alone reach AUC ~0.896 (vs ~0.999 with feedback features — the leakage ceiling), and importance barely changes between 11 and 58 features (AUC stable at 0.896 ± 0.005). Adding features past the top ~11 buys almost nothing; separate pre-visit from feedback features first, then stop early.
 - **Composite importance method works**: XGBoost with gain, weight, cover averaged into composite rank produces stable rankings. SHAP (mean absolute Shapley value) is preferred for final reporting — it captures per-prediction contributions, not just tree-structure importance.
 - **Existing Fangorn signals dominate pre-visit features**: `ci_pct_new`, `n_wins_this_adv`, `al_avg_segments` hold top 3 ranks. New bidstream features (device diversity, content genre, clearing price) add incremental signal. When existing features are removed, new features still achieve AUC 0.777 (7x lift at top 1%) within the Fangorn-selected population.
 - **Content genre rises with proper sampling**: With 1-hour augmentor/BAE samples, content features ranked mid-tier. With 4-hour augmentor + full-day BAE, `bae_pct_ent` jumped from #26 to #8. Sampling window materially affects count-based AND genre-percentage features. Use full-day data when possible; disclose sampling window when not.
 - **Content genre is mid-tier for prediction but high-value for segmentation**: content_genre ranked ~8th for general visit prediction (up from ~25th with proper sampling), and is the best candidate for *vertical classification* (mapping IPs to advertiser categories). Different use case than IVR prediction — both valuable.
 - **Scale matters for feature extraction**: augmentor_log = 241 GB/day (~43 GB for 4-hour sample), bidder_auction_events = ~400 GB/day. Always dry-run first. guid_log and win_logs are cheap (~13-75 GB/day).
 - **fillna(0) vs NaN for ratio features**: XGBoost handles NaN natively. For ratio/percentage features, 0 is a real value (e.g., avg_price=0 means free inventory), while NaN means "no data." Preserving NaN for ratios and using fillna(0) only for counts is the correct approach.
+- **Conversion-history features carry standalone IP-grain signal (TI-832)**: a conv-history-only XGBoost reaches test AUC 0.7485; folded into the combined model AUC is 0.8187 (+0.0097 over pre-bid-only 0.8090), 18.8x lift at the top 1% (60.6% conv rate vs 0.32% base). Real, but a small marginal add on top of pre-bid features — worth including, not a headline mover.
+- **Not every requested feature earns its place — test SHAP before shipping (TI-832)**: device-class conversion counts (desktop/mobile/tablet) showed no measurable SHAP signal at IP grain (redundant with bidstream device features at bid time — same household/gear) and were dropped despite an explicit ask. Also, the (IP, advertiser) feature-pair grain is intentionally avoided in Fangorn/Fangorn V2 — features generalize to IP level so inference stays fast and scores all advertisers without per-request munging.
 
 ---
 
@@ -967,6 +991,8 @@ Mountain functions as a **mid-funnel priming channel** that feeds bottom-funnel 
 ITT is the established methodology for intent-assignment questions. It compares outcomes based on the group an IP was *assigned* to, not what actually happened. This prevents selection bias — e.g., the 90% targeted group includes IPs that never actually received impressions (budget constraints, not watching TV at the time, etc.). Comparing only impression-recipients vs holdout would introduce bias because impression-receipt correlates with behavioral differences.
 
 **Limitation discovered (April 2026):** When impression coverage is very low (14-16% of treatment group), ITT structurally biases toward zero because the vast majority of "treated" IPs are behaviorally identical to holdout. Ghost bidding (ATT) addresses this by comparing only IPs that would have been served.
+
+**ATT recovers lift ITT cannot see (TI-837 v5, 30-advertiser cohort, 2026-04-20→04-26).** ITT-on-guid showed ~0% lift because only 14-16% of the "treated" group is actually served; ghost-bidding ATT (served-vs-would-have-been-served) recovers it. ATT lift is concentrated by funnel position: retargeting-only high-intent guid IVW **+21.07pp**, all-campaigns-combined **+3.12pp**, prospecting-all-stages **+0.78pp**, Stage 1 only **−0.06pp**. Report ATT by segment — the pooled number hides that essentially all guid lift sits in retargeting.
 
 ### Key Metrics
 - Incremental lift by original intent tier vs assigned tier
@@ -1606,6 +1632,8 @@ Both directions live in the same calculator file. The variance-reduction stack (
 
 **See also:** [TI-917 combined deck](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/artifacts/ti_917_combined_deck_standalone.html); [revenue MDE per advertiser](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/outputs/ti_917_revenue_mde_per_advertiser.csv).
 
+**Regression anchor for the MDE engine (TI-884).** The two-proportion binomial calculator is self-tested against a Lewis-Rao hand calc: at `p=0.05`, `N=10,000`, no variance reduction, it returns `MDE_rel = 17.27%`. Keep this as a fixed unit-test anchor — any refactor of `mde_binomial` that shifts this number has changed the math. Cross-validated against Lauren's three completed lift tests: every reported lift landed 4.7×–8.2× *below* its own MDE, i.e. statistically indistinguishable from zero — GLD (reported +0.67% vs 3.12% raw / 1.86% post-stack MDE), Ownerly (+0.72% vs 5.92% / 3.53%), Boll & Branch (+1.00%, paused/no traffic, 88.4% / 52.6% MDE). The lesson these three make concrete: a reported point lift is meaningless without the MDE beside it — under-powered tests routinely produce small "positive" numbers that the design could never have detected.
+
 <!-- ti_1019: 2026-06-24 -->
 ### Canonical MDE baseline-rate definition — and the `graph.visits` numerator trap
 
@@ -1667,6 +1695,7 @@ Option 1 is preferred — same SQL pattern works in both BQ and Spark. The win-r
 A quasi-experimental lift analysis was run on Select-only campaigns with the following findings:
 
 - **Estimated average lift:** ~1.5–3 percentage points (pooled average), subject to advertiser. Zazzle was a notable outlier at +11.6 pp.
+- **Final pooled result (TI-933):** visit-rate lift **+2.055 pp** (95% CI [+2.011, +2.100]), conversion-rate lift **+0.140 pp** (95% CI [+0.133, +0.147]) — both significant, 7-day holdout window, 23 active Select advertisers. Select is incremental, and sits between TI-917's all-campaigns baseline (+3.12 pp) and its prospecting-only baseline (+0.78 pp). **Pooling is required, not a convenience:** Select advertisers run entirely prospecting/awareness campaigns with zero retargeting, and no single Select advertiser has the visit volume to be individually powered — the per-advertiser MDE exceeds any realistic per-advertiser lift, so the incrementality signal only clears detection when advertisers are pooled.
 - **3-day window result:** >2.0% lift on pooled average. Likely an underestimate due to the short conversion window.
 - **14-day follow-up:** Confirmed positive lift, slightly lower than initial estimate. Variance attributed to unequal conversion windows across impressions in the first pass.
 - **Why Select may be more incremental:** Select campaigns are not subject to MNTN's standard targeting bias, so enhanced incrementality is expected.
@@ -1711,6 +1740,10 @@ corrected ATT à la TI-837/TI-933), never raw served-vs-ghost, as the incrementa
 **Also:** clickpass (attributed) lift hugely overstates (TI-1044 +143–276%) vs guid_log total traffic — always
 pull guid_log for the true visit-incrementality signal (north star / TI-835). Ghost holdout source for Beeswax
 advertisers = `bronze.raw.bid_price_log` (`threshold_failure_reasons='ghostBid'`), live 2026-05-27, 10-day TTL.
+
+**Cross-device IP-matching biases a guid-based total-visit holdout DOWNWARD (TI-1044).** The guid join matches the CTV-impression IP (the TV / home router) to the web-visit IP (phone / laptop). Cross-device, cellular, and away-from-home visits carry a *different* IP → they are missed, so the absolute served-arm visit rate is an undercount (ElevenLabs: 2.83% observed). This is **not a symmetric loss**: it preferentially drops ad-induced cross-device visits from the *served* arm (the holdout arm has no ad to induce a device switch), so the measured visit lift is biased **downward**, not just noisier. A device-agnostic geo test does not have this leak and is the cleaner instrument. **Fix:** rebuild the total-visit holdout with household / identity-graph matching (IP → household → all visits on any household device) to remove the cross-device undercount. General rule: any IP-keyed exposure→outcome match on a CTV impression silently loses the cross-device tail — sign the direction (it flatters the null) before reporting.
+
+**Ghost-win value-selection is not a frequency artifact (TI-1044).** To ask whether the served-vs-ghost ATT gap is just a frequency difference, form the served-counterfactual by sampling ghost bids at the per-bid win rate `w = 0.27` (10.96M imps / 40.79M real bids) and frequency-weight the control: visits move +35% → +33%, conversions +32% → +26%. The frequency correction is only ~2–6 pp, so the ATT bias is **value-selection, not frequency** — the bidder wins impressions for the households it bid highest on, who visit/convert anyway. The takeaway: **uniform win-rate sampling cannot remove value-selection bias** — only a randomized ITT (or IV/TOT scaled from it) does, and both were ≈0 here, matching the vendor geo test.
 
 ## Ghost-bid lift — bias register + the persuadables gradient (Matt Brorby, databricks_targeting `INCR`, 2026-06)
 Source: `SteelHouse/databricks_targeting` → `exploration/INCR-first-ascent/ghost_bid_lift_bias_register.md` (the most complete catalogue of ghost-bid lift biases A1–A8/B/C/D/E/F — read it before any ghost-bid lift analysis). Beeswax leg, interim; signed magnitude pending the MNTN fcap-symmetric leg (INCR-63). Key durable findings:

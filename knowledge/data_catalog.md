@@ -324,6 +324,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 - **GCS archive:** `gs://mntn-data-archive-prod/guid_log/` — read directly from GCS via Spark for high-volume scans on Databricks. (via Victor Savitskiy 2026-04-28, TI-837)
 - **What it actually is (Zach Schoenberger 2026-04-30):** **page-view events.** One row per page view on an advertiser site by a tracked household — fires for every page view regardless of whether MNTN ever served an ad. **Not** the same as visits — clickpass_log is visits.
 - **Use for:** site-traffic / page-view-level analysis; cause-agnostic "did this IP hit the advertiser site?" signal at IP-day granularity (after dedup).
+- **DS23 svs feeder (AUDI-1091, `spark/fpa/dsid23_guid_log_processing.py`):** reads `guid_log`, left-anti-joins pixel-isolation blocked advertisers, uses **URL = `product_referer`**, and returns distinct rows into `site_visit_signal/data_source_id=23`.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -1574,6 +1575,8 @@ These are the bronze-layer SQLMesh models that eventually feed silver.
   - For a complete daily scan you must read BOTH `region=east` and `region=west`. Spark loads both if you read the parent path with `.filter("dt = '2026-04-23'")`, but explicit per-region paths give better partition pruning.
 
 - **`placement_type` composition (AUDI-1091, 1-hr sample 2026-07-20):** ~75% of rows are `VIDEO` (CTV/video, and **99.6% carry no `page`/`referrer` URL** — not site visits), ~25% `BANNER` (~100% URL-bearing, ~9M IPs/hr), and a tiny `BANNER_AND_VIDEO` sliver. The svs DS30 feeder (`spark/fpa/dsid30_augmentor_log_processing.py`) **keeps only BANNER + BANNER_AND_VIDEO**. BQ scan cost: a 1-hr projection of placement_type/page/referrer/ip ≈ **67 GB**; a full day ≈ **1.54 TB** → use Spark on the GCS archive for full scans, not BQ.
+- **DS30 svs feeder mechanics (AUDI-1091, `spark/fpa/dsid30_augmentor_log_processing.py`):** builds site-visit rows from **BOTH the `page` and `referrer` columns** (the referrer-derived visit is timestamped 1s earlier than the page visit), normalizes URLs by prepending `http://`, requires non-empty `ip`, and first-touch dedups per `(ip, url)`.
+- **`aug_log_ip` feature-store substitute (TI-933):** the airflow-ti feature-store output `aug_log_ip` can substitute for raw `bronze.raw.augmentor_log` as the biddability filter in Spark lift runs — much smaller, same biddability filter.
 - **Row-level schema gotcha:** `augmentor_log` has **NO `advertiser_id` column at the row level**. Augmentor is a per-bid-request log — one row per upstream bid eval, not per advertiser. The only advertiser-relatable signal at this layer is `mntn_segments` (array of segment IDs that evaluated this IP). To attribute an augmentor row to an advertiser, you must join `mntn_segments` ↦ `audience_segments.expression` ↦ advertiser. See TI-837 v5 SQL `queries/ti_837_lift_analysis_30adv_7day_v5_segments.sql` for the canonical pattern.
 
 | Column | Type | Notes |
@@ -2298,6 +2301,10 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
   recent security change. **Read path: request PAM temp access.** Schema unverified until then.
 - Scripts: `SteelHouse/bae-sql-utility/ddp/`.
 
+### DDP file-drop batch ingestion → fpa_vendor_log + site_visit_signal (AUDI-1089)
+- **`ENABLED_DSIDS = [23, 25, 26, 28, 30, 36]`** — the batch-ingest DAG's file-drop vendor set (streaming/pixel DDPs like DS33 Sovrn are NOT here; their off-switch is vendor-side).
+- **Per-vendor ingest (DS26 Predactiv example):** reads hourly drops `gs://mntn-data-partners/partners/predactiv/dt=YYYYMMDDHH/*.parquet`, then (stage 1) writes the **FULL payload** to `gs://mntn-data-archive-prod/fpa_vendor_log/data_source_id=26/`, and (stage 2) a **thin `ip`/`url`/`time` projection** to `site_visit_signal/data_source_id=26` (`user_agent`/`query_parameters`/`advertiser_id` nulled in the svs projection).
+
 ---
 
 # bronze.external
@@ -2432,6 +2439,8 @@ FROM us_blocks b JOIN studios s
 Source scoring pipeline: `gs://household-scoring-prod/output/scoring/prospecting_intent/` (daily, 35-day retention). **DAG: `audience_intent` in airflow-ti (`dags/audience_intent/audience_intent.py`), daily batch ~3–7 AM UTC (Ryan Kleck's page).** It writes TWO products, and we consume the **prospecting** one:
 - **prospecting** (per `ip, advertiser_id, campaign_group_id, campaign_id`; `…/scoring/prospecting_intent`): **HI 10K = in Vertical (DS13) AND in Keywords (DS19)**; PP 8K = in vertical, no keyword; MI 3333–6665 = in bucket, not vertical; Unscored (prev Max Reach) = outside bucket/vertical but inside keywords.
 - **advertiser** (per `ip, advertiser_id`; `…/scoring/advertiser_intent`; sibling `household_scoring__advertiser_intent__v1`): a pre-batch fallback so a new campaign has scores before the batch runs. **HI 10K = in Vertical only (NO keyword split); PP = N/A.** We don't really use this one.
+
+**⚠ COST TIP (TI-1027):** the full all-IP MM scoring universe `household_scoring.prospecting_intent_daily` is **~19.4 TB/day to scan** — do NOT scan it for realized-score lookups. Use the **delivered `household_score` in `cost_impression_log`** (e.g. 7-day window) as the cheap realized-score substitute when joining vendor/site-visit IPs to the MM score they actually got served with.
 
 ---
 

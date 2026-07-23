@@ -444,6 +444,7 @@ not a WGU priority**; open items are event taxonomy (lead vs app-submitted vs st
 - Zach suggested investigating it for display viewable inventory IPs, but empirical check shows no incremental coverage.
 - **Multiple rows per ad_served_id (display only):** `viewability_type_id` 1=measurable, 2=viewable. Each display impression produces two viewability events. CTV does NOT go through viewability_log — uses event_log VAST events instead. When joining, either GROUP BY to dedup or keep both rows if you need the type breakdown.
 - **viewability_log is the display equivalent of event_log:** Use it to trace viewable display impressions in the pipeline (clickpass → viewability_log → win_logs → bid_logs).
+- **`impression_type` is inferred from which IP columns are populated in a trace (TI-650):** `vast_start_ip` NOT NULL = CTV; `viewability_ip` NOT NULL with vast columns NULL = Viewable Display; only `impression_ip` populated (vast + viewability NULL) = Non-Viewable Display. NULL IP columns indicate the impression type, not missing data.
 
 ### pa_model_id
 Probabilistic attribution model ID. Present in visit_facts, conversion_facts, visits, ui_visits.
@@ -973,6 +974,10 @@ This means:
 - Cross-device visits are the primary driver of NTB misclassification (61.2% mutation rate when
   cross-device is involved)
 
+### Clickpass vs guid attribution wedge inverts by funnel position (TI-837)
+Clickpass **over-credits** vs guid at high intent (~+24%: clickpass +4.17pp vs guid +3.36pp) but **under-credits** at
+peak (~−38%: clickpass +0.55pp vs guid +0.88pp) — the attribution wedge inverts by funnel position; the aggregate hides both.
+
 ### Pre/Post Analysis Pattern
 Standard pattern for measuring feature release impact:
 1. Define a release date (e.g., July 15/22, 2025 for vertical classification changes)
@@ -1261,6 +1266,29 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   `site_visit_signal_advertiser_id_dsc_id` → `mntn_match_incrementals_submit` (MNTN Matched scoring).
   **Implication:** site-visit DDP value lives in distinct DOMAIN→vertical coverage, not IP reach; and only the domain
   matters (URL path is stripped), so a domain-only feed loses nothing on this path.
+- **Per-vendor pipeline/lineage facts (AUDI-1089 lineage sweep, 2026-07-10..22):**
+  - **DS24 Justuno IPv6 = 19.61% of its feed** (111.2M of 566.7M rows; daily 16.8→21.7%, trending up) — the highest
+    of all 10 sources by far (next 33Across 8.2%, Predactiv 7.9%, every other source ≤0.07%). IPv4-only measurement
+    captures only 80.4% of DS24 rows → its true footprint ≈ measured × 1.244.
+  - **DS26 Predactiv hashed-email DAG:** `hashed_email_ds_26_signals` explodes `hem_sha256`, dedupes (ip,hashed_email),
+    applies **privacy caps ≤10 IPs/email and ≤100 emails/IP**, writes
+    `signals/hashed_email_signal/.../data_source_id=26/hash_type=sha256`. `HEMSignalReader`'s HEM inventory =
+    **{21, 22=Experian, 23=guid_log, 26=Predactiv, 29=Deepsync}**; DS26 is the ONLY MM site-visit DDP among them →
+    dropping it removes one of just three external hashed-email suppliers.
+  - **DS17 ShareThis + DS26 Predactiv are two feeds of ONE ShareThis/Predactiv vendor relationship.**
+    `ddpmonthlyusageemail-Sharethis.py` (impressions × tv_cpm from `usage_reporting_data`) covers **DS17 (interests),
+    NOT DS26**; DS26 is the flat-fee MM arm.
+  - **DS39 Klickly is the ONLY real non-MM svs consumer:** feeds BUK ALS training enrichment via feature-store
+    rollups (`site_visit_signal_advertiser_id_dsc_id`, excludes only DS23) at **source_weight=0.05 + a 5% stratified
+    sample** — DSID-agnostic, degrades gracefully, no hard DS39 dependency.
+  - **DS40 33Across API ≈ 81% of the whole pixel-page-view Kafka topic** (89.5K of 110K rows in a sampled hour;
+    ~363M rows/day; Klickly by contrast ~850 rows) → dropping it shrinks the pixel-page-view pipeline ~5×.
+  - **device_id_33across_signal.py** (`airflow/dags/targeting/`, device-ID/IFA extraction) is **DS28-only** — reads
+    `fpa_dsid28_log.device_ids` (pipe-delimited GAID/IDFA), inserts `data_source_id=28`, `schedule=None`/manual;
+    **DS40 does not feed it.** It writes legacy `data_archive.device_id_signal` (Athena/Redshift) and every
+    `device_id_signal` consumer lives in legacy AWS repos — no GCP-side consumer of DS28 device IDs.
+  - **LiveRamp is a separate pipeline** (separate bucket + ingestion; aggregates 33Across, Dstillery, etc. for
+    interest segments) — svs vendor drops do NOT touch interest segments.
 
 ### `tpa.direct_data_partners` (vendor billing/usage registry)
 View `dw-main-silver.tpa.direct_data_partners` (filter `is_current=true`). Key cols: `data_source_id`,
@@ -1451,7 +1479,10 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   (yes/no cutoff) → Common Crawl homepage HTML (`website_home_pages`) → OpenAI → vertical → stored
   `vertical_categorizations/website_crawl_verticals/` (domain→vertical, ~1.42M) → feature store
   `site_visit_signal_advertiser_id_dsc_id`. Run manually by Victor+Ryan. DS13 historically used the DS19 product
-  flow's `industry` field but **no longer does**. (Exact DS13 file/DAG locations still being confirmed.)
+  flow's `industry` field but **no longer does**. **DS13-leg code (TI-1058 §4, located — a separate OpenAI batch from DS19):**
+  `airflow-ti/spark/vertical_classification/{distinct_site_visit_signal_domains,prepare_html_content,submit_html_content,fetch_vertical_response,update_website_verticals}.py`,
+  `airflow-ti/dags/targeting/fetch_common_crawl.py`, `airflow-ti/dags/vertical_classification/*`, and
+  `SteelHouse/dbt ml_squad/models/vertical_categorization/*`.
 - **DS19 (keyword) — daily, the OpenAI cost driver.** `product_uniques.py` strips query params (URL→`product_name`;
   `product_sku` hardcoded literal `1`; `composite_key = product_name_1`), **anti-joins on `composite_key`** vs stored
   → only new URLs → `openai_batch_input_raw.py` groups by (product_name, sku, domain) with
@@ -2282,6 +2313,10 @@ SSP/Beeswax win-notif → Notification service (HTTP webhook) → raw wins to
 
 **Intent/MM scores are NOT stored in MembershipDB.** Scoring team → **GCS** (durable source) → membership consumer → **Aerospike** (serving copy). MembershipDB emits the **segments**; the membership consumer writes those too. So: GCS = system of record for scores, Aerospike = bid-time serving store, MembershipDB = segment/membership authority + holdout logic.
 
+**Three inputs gate a bid (TI-1016):** (1) score (GCS→consumer→Aerospike), (2) segments (MembershipDB), (3) HHST
+threshold. To safely drop data for an IP you need **no threshold AND no score, OR no segments** — the clean, safe cut
+is no-segments → don't write the intent score.
+
 #### Holdout logic (ghost-bidding / BER-2250 relevance)
 
 **Holdout logic lives in MembershipDB**; holdout IPs are mirrored into the Aerospike household profile. Ryan flagged that moving **geo-radius targeting into the bidder** would force the ghost-bid holdout logic to move there too (or a new mechanism) — a reason to be cautious about pushing geo logic bidder-side. Many IPs lack MaxMind geo data; the bid request itself carries geo.
@@ -3010,6 +3045,7 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - Flow: `good_log` + `conversion_log` (30-day window) → build advertiser × DS19 keyword interaction matrix → Train implicit ALS model → Generate ranked DS19 recommendations per advertiser → k-means cluster by embedding into ~20 groups → LLM generates parent keyword labels/descriptions → audience expression
 - **Confidence signal**: Weighted blend of distinct IP count, conversion count, cart volume, avg daily IPs, avg daily conversions (log1p transformed, configurable weights per signal)
 - **Score adjustments**: (1) Popularity penalty — log odds ratio of keyword rarity, suppresses generic keywords like "accessories", "web services". (2) Advertiser lift — how popular keyword is for this advertiser vs. global average
+- **DCG normalization (TI-797)**: `adjusted_keyword_score = 1 − exp(−β·dcg)` with **β=1.863**, calibrated via `β = −ln(1−target)/dcg_at_percentile` so target 0.9 maps to p90 DCG=1.2357. DCG distribution: p50=0.30, p75=0.63, p90=1.24, p95=1.86, p99=3.99.
 - **Threshold**: Single percentile-based cutoff on model scores (~top 42%). Replaces fixed 200-keyword rule. Stronger-signal advertisers naturally get more keywords
 - **Cold start**: Advertisers not in training data can't get ALS recommendations. Current fallback = vertical averages. Planned = MM V2 fallback
 - **"Web services" pollution**: Google Tag Manager URLs get classified as web services by the LLM, associating this keyword with nearly every advertiser. Popularity penalty suppresses it
@@ -3068,6 +3104,7 @@ SELECT advertiser_id FROM `dw-main-bronze.integrationprod.audience_advertiser_co
 **Empirical count (2026-06-01):** 364 advertisers (2.56% of 14,196 total configs) have `vertical_data_source = 46`. The remaining 13,832 (97.44%) have NULL = default DS13 (Vertical) substrate. Most of the 14k configs are inactive/historical accounts; the 364 corresponds roughly to "Fangorn-on advertisers across all stages." Per prior memory snapshot, ~22% of S1 advertisers are on Fangorn → 364 is in the right ballpark for the active subset.
 
 **Note (corrected 2026-05-05):** `tpa.fangorn_advertiser_inclusion` IS the source-of-truth inclusion list — but it lives in TPA-service Postgres, NOT in BQ. Schema: `(advertiser_id, fangorn_advertiser_inclusion_date)`. The `_date` column is the planned PT flip date. Joins to `audience.advertiser_configurations` (also Postgres). Updates happen when Matt/Ryan run a rollout — Ryan's `select ff.advertiser_id, cc.vertical_data_source FROM tpa.fangorn_advertiser_inclusion ff JOIN audience.advertiser_configurations cc ON ff.advertiser_id = cc.advertiser_id WHERE fangorn_advertiser_inclusion_date = 'YYYY-MM-DD'` is the canonical Postgres-side query. The BQ-observable effect is `audience_advertiser_configurations.vertical_data_source = 46`, which propagates after the nightly household-scoring run completes (midnight-1am PT). Fangorn-targeted bidding starts the next morning.
+**Tier semantics (TI-961):** tier column = `fangorn_rollout_tier_num`. **Tier 5 = the permanent holdout (never-flipped), sentinel inclusion date `2099-01-01`** — the methodologically cleanest CONTROL for Fangorn causal analysis. **Tier 99 = auto-enrollment (Express product / auto-verticals), NOT part of the structured rollout; its inclusion-date field stores a record-creation timestamp (not a flip date), so it must be EXCLUDED from causal analysis** — structured tiers 1–5 use the field as a planned flip date, so inclusion-date semantics differ across tiers and explicit tier filtering is required.
 
 **Flip-time detection in BQ:** `TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)` on `audience_advertiser_configurations` reliably gives the moment `vertical_data_source` was last set per advertiser. The `update_time` column is frequently NULL — don't use it. Verified 2026-05-05 against the 3 May-1 launch AIDs (all source_ts = 08:00-08:01 UTC matching the 08:00 UTC DAG completion) and 46538 authenTEAK (source_ts = 2026-05-05 22:26 UTC, the day Wave 2 vanguard flip happened).
 
@@ -3123,6 +3160,8 @@ When building IP-level feature vectors to predict visits (IVR), features split i
 - **Feedback features** (available after site visit): guid_log pixel events, conversion_log purchase data. AUC ~0.999 but leaky — presence of guid_log data implies a visit already happened.
 
 **Do NOT mix pre-visit and feedback features in a single targeting model** — guid_log/conversion_log features will dominate and mask the real predictive signal from bidstream features. Use feedback features for retraining, scoring returning visitors, and identity resolution.
+
+**The (IP, advertiser) feature-pair grain is intentionally avoided in Fangorn and Fangorn V2 (Matt/Ryan, TI-832)** — features are generalized to IP-level so inference stays fast and a single score serves ALL advertisers without per-request data munging.
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP
@@ -3899,7 +3938,7 @@ Then LEFT JOIN to `guid_log` (causal lift) and/or `clickpass_log` (attribution w
 
 - **DS1:** Legacy Oracle data source. No longer present in IPDSC but still available in the taxonomy/UI. ~553 active prospecting campaigns reference it. May have been disabled by the AUD team — status should be confirmed.
 - **DS11:** Legacy Liveramp data source (deprecated). Used device_id to map to IP for targeting. Retained in the TPA taxonomy because reporting still requires it, but not used for active targeting.
-- **DS14:** MNTN global data — automatically added to all audience expressions to filter down to only IPs seen in `guid_log` (4-day window) and `augmentor_log` (1-day window). Functions as an activity recency filter. Implemented as a **global filter at MembershipDB / audience-service level** (Sean Yang, 2026-07-16 readout); expanding the pool by admitting other site_visit_signal IPs into DS14 was floated at the readout — overlap + option sizing in AUDI-1117. (NOTE: window claims conflict with the ~7-day augmentor-log reading at the audience-expression decode (§DS14 cat [1]) — AUDI-1117 resolves empirically.)
+- **DS14:** MNTN global data — automatically added to all audience expressions to filter down to only IPs seen in `guid_log` (4-day window) and `augmentor_log` (1-day window). Functions as an activity recency filter. Implemented as a **global filter at MembershipDB / audience-service level** (Sean Yang, 2026-07-16 readout); expanding the pool by admitting other site_visit_signal IPs into DS14 was floated at the readout — overlap + option sizing in AUDI-1117. (NOTE: window claims conflict with the ~7-day augmentor-log reading at the audience-expression decode (§DS14 cat [1]) — AUDI-1117 resolves empirically.) **AUDI-1117 empirical (all imps 2026-07-01): the documented windows are NOT a hard universal cliff — lag distributions decay smoothly with no cliff at 1d/4d/7d.** Display delivery is a **100.00% same-day augmentor echo by construction** (aug_log mirrors the display bid stream), so DS14-gate evidence must come from CTV; CTV-prospecting has only a **soft edge** (12.2% of imps outside aug(1d)|guid(4d), 4.3% outside both free logs within 11d).
 - **DS19:** Used as an input source for the BUK model (see BUK/DAR entry).
 - **DS35:** Current Liveramp data source. Liveramp now sends IP addresses directly (replacing the older device_id mapping approach of DS11).
 - **DS46:** Mountain Match Peak Performance feature flag data source. Impressions associated with DS46 should be reported as Peak Performance in audience segment reporting, equivalent to how DS13 is handled (clean swap of DS46 in place of DS13).
@@ -4103,6 +4142,23 @@ So `graph.usersreached` = ClickHouse `all_facts_local_daily.uniques` = BQ `all_f
 **reach_meter link (separate widget, same storage pattern):** the CTV "Households Reached" reach_meter widget is a DIFFERENT, audience-segment-grained metric — ClickHouse `info.reach_meters`, loaded hourly (`load_reporting_data_hourly.load_reach_meters`, exchange_tables) from BQ `dw-main-silver.summarydata.reach_meters` (legacy Greenplum twin: `db_repo` `coredw/summarydata/views/reach_meters.sql`, which uses audience-segment `total_audience_reach` + `reach_ips.ips_reached_last_7_days`, CTV channel_id=8, third-party segments). It is NOT the same as per-advertiser `graph.usersreached`. The older Spark `aggregates.audience_hll_by_day` → GCS → CoreDW-external → ClickHouse-copy DAG (PR #1024 disabled it, breaking the UI reach_meter copy DAG; revive under discussion — slack_review_queue.md) is the audience-side reach pipeline, parallel to but distinct from the `all_facts`/CHAPI impression-side reach.
 
 **Ownership / routing:** SQLMesh `all_facts`/`impression_facts` models are `owner 'ber'` (BER = the reporting/analytics-eng group). The CHAPI ClickHouse load DAGs live in `SteelHouse/airflow-reporting` (`dags/chapi/`), owned by the **data-platform / reporting** team — route ClickHouse/CHAPI/R2 reporting-metric questions to **#data-platform** (cross-cutting) or **#reporting_helpdesk_ask_anything** (Ray answers R2/graph metric-definition questions there; cf. the `graph.visits` vs `graph.sitevisitors` clarification, 2026-04-28). Verified-visit / attribution-grain (`site_visitors`, resolved `ip`) authority = Zach Schoenberger.
+
+### CHAPI 30-day advertiser-metric query mechanics + IVR reconciliation (TI-1019, 2026-07)
+- The literal CHAPI graph query for a 30-day advertiser metric runs against **`summarydata.all_facts_by_day_ramp_combined`**
+  (daily grain, ClickHouse `Distributed`, no `FINAL`). Time column `day`; predicate is **half-open GMT literals**
+  `day >= timestamp '<30d-ago>' AND day < timestamp '<today 00:00>'` (30d ending yesterday, NOT `today()-30`).
+  `graph.spend`/`graph.impressions` are `SUM`med; **`graph.usersreached` = `uniqArrayMergeState`/`uniqArrayMerge` over
+  `uniques_arr`** (cross-day distinct merge, not a SUM). `aid` → `WHERE advertiser_id IN (...)`, sum-grain → `GROUP BY advertiser_id`.
+- **No CHAPI /apidata debug/explain/sql/dryrun param exists.** Capture the executed SQL from the INFO service log
+  `Built SQL Command` (`DataService.kt:143`, logged unconditionally per request) or from ClickHouse `system.query_log`
+  pinned on the table + `advertiser_id IN (aid)`.
+- **Mixed CTV+display advertisers cannot get cross-channel-deduped served-IP reach via a channel split:** the two legs
+  overlap (WGU CTV-IP 12.79M + display-IP 7.93M = 20.71M summed vs **15.61M distinct → 5.10M/33% cross-channel overlap**;
+  1 in 4 served IPs see both). CTV-only advertisers CAN use a `channel_id=8` filter (that leg is already IP-keyed).
+- **IVR-vs-graph parity is unreachable from the graph layer:** the in-window impression restriction needs
+  `impression_hour`/`day_number`, which live only in `ber_stg.visit_facts__base` and are grouped away before
+  `visit_facts`/`all_facts`. (WGU denom 15.61M: all-verified-visitors 12.31%, impression-in-window 10.83%,
+  visiting-AND-served-in-window 10.71% = the standalone calculator.)
 
 ## archives_audience_segment_archives.version is NON-MONOTONIC — order by create_time (AUDI-1070, 2026-06-30)
 

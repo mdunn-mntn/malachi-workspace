@@ -1,5 +1,11 @@
 # Extracted Facts Queue (human review → knowledge/)
 
+> **PROCESSED 2026-07-23.** All facts below were reviewed by per-doc curators and either merged into
+> their home doc (~45 merged: data_knowledge ~24, experimentation 13, data_catalog 5, mntn_business 3)
+> or skipped with a reason (duplicate = already documented; too-specific = ticket bookkeeping / one-off
+> numbers with no durable mechanism). Kept as an audit trail — future context passes append below this line;
+> re-process the new tail, not the whole file.
+
 Append-only queue of durable facts surfaced during the context pass. A human reviews
 each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 
