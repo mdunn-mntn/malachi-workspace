@@ -281,6 +281,15 @@ only sets the default boolean.
 4. **Where it lives / materialization** — SQLMesh view vs scheduled table; grain confirmed campaign.
 5. **Model/version scheme** — how to keep `mm_engine` robust when the next generation (post-Fangorn) ships.
 
+## 6c. Team feedback — naming (Alyson, 2026-07-22)
+Team refers to MM campaign types by **MM VERSION**, not the structural `mm_class` labels. Confirmed map:
+`mm_keywords_only` (DS19-only) = **mmv2** · `mm_classic` (DS19+DS13) = **mmv3** · `vertical_only_legacy`
+(DS13-only) = **mmv1 OR mmv3 depending on the campaign's create date**. So version is NOT purely
+structural — has a temporal component. **Plan:** add a `mm_version` column (team names) alongside the
+precise structural `mm_class`. **Blocked-on-Alyson:** (1) the create-date cutoff for DS13-only mmv1-vs-mmv3;
+(2) the Fangorn cells' names — `mm_flagship_fangorn` (DS19+DS46) and `fangorn_vertical_only` (DS46-only) —
+mmv3 (Fangorn = current mmv3 scoring) or a separate label. Empirical check to inform (1) blocked on BQ re-auth.
+
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
 **https://mntn.atlassian.net/wiki/spaces/TAR/pages/3712811252** — "AUDI-1083: MNTN Matched
