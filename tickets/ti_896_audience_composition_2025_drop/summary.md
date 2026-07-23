@@ -5,7 +5,35 @@ status: done
 date: 2026-04-22
 summary: "War-room analysis of audience-type mix shift during the late-2025 conversion drop"
 result: "Two shifts: Peak Performance 0→12% adoption; MM spend share cliffed 75%→44% Oct 2025"
+keywords: [ti-896, peak performance adoption, mountain matched spend cliff, audience composition, ds13, ds19, ds35, data_sources, archives_audience_segment_archives, default vs custom pp, max reach scoring off, war room 2025 conversion drop, spend-weighted composition, track c roas]
 ---
+
+## TL;DR
+
+**Q:** TI-896: Did the mix of audience types used by 2025-active advertisers shift during the late-2025 conversion drop, and in which direction/cohorts?
+
+**A:** Yes — two coincident audience shifts in the war-room cohort (every advertiser with any 2025 campaign spend). (A) Peak Performance adoption rose from near-zero to ~12% of currently-active advertisers (and ~12% of cohort spend) starting its Oct-6-2025 launch week; presence and spend-weighted views AGREE at ~12% after the LEAD-cap fix (V11/M10), and PP adopters do NOT skew smaller than cohort average. (B) Mountain Matched spend share cliffed from 73-79% to 44% in the single week starting Oct 27 2025, sustaining 42-46% through April 2026 — the larger absolute-dollar shift, promoted to co-equal headline. Other buckets Sep-Dec 2025: Keywords -5pp, 3P -3.5pp, MM presence -2pp, CRM flat (the "everything else flat" claim weakened after the paused-campaign correction). Max Reach scoring turned off Nov 19 shows no cohort-level composition signal; the PP ramp continued smoothly through it and past the early-Oct scoring-bug fix. Track C ROAS cross-check: PP adopters +64% median [+25%,+121%] vs non-adopters +130% [+104%,+154%] — CIs OVERLAP, so directional not statistically robust, and adopters had ~1.5x higher baseline ROAS (self-selected, not exchangeable). Among PP adopters: ~34% default-only template (pure DS13+DS19), ~58% custom-only, ~3% both, ~5% unclassified — stable across the ramp.
+
+**How:** Cohort = every advertiser with any 2025 campaign spend. Reconstructed per-(advertiser,audience) effective-window timelines from archive expressions, tagged by data_source_id set, rolled up weekly (77 weeks, Nov 2024→Apr 2026). Peak Performance detected via score_type=rtc + DS13 + DS19. Spend-weighted view joined effective windows to sum_by_campaign_by_day weighted by media_cost (archive-joined Oct-Dec 2025 spend matches cohort total ~$48M/14wk). Default-vs-custom PP via structural heuristic (pure DS13+DS19 template = default vs DS13+DS19 + additional DS = custom); name-pattern and user_id heuristics failed. Track C ROAS via pre/post windows (Aug-Sep vs Dec, ≥1,000 VVs in both), medians on the valid-ROAS subset (~half have $0 order value), 1,000-resample bootstrap 95% CIs. Post-critique fixes M1-M10 + V11 LEAD-cap corrected an earlier inflated "21% PP adoption / everything-else-flat" read caused by paused-but-not-deleted campaigns whose archive expressions extended past last delivery. Archive tables live entirely in BQ (archives_audience_segment_archives, archives_audiences_archives) — no Greenplum dependency.
+
+**Tables:** archives_audience_segment_archives, archives_audiences_archives, data_sources, sum_by_campaign_by_day
+
+**Learned:**
+- Two coincident late-2025 audience shifts: PP adoption 0→~12% (Oct 6 launch) and MM spend share cliff 73-79%→44% in the week of Oct 27 2025, sustained 42-46% through Apr 2026
+- After LEAD-cap fix (V11/M10) PP presence and spend-weighted views agree at ~12%; the earlier 21% adoption and 'everything else flat' claims were paused-campaign attribution artifacts
+- Canonical DS mapping (data_sources dim): DS2=MNTN First Party, DS3=MNTN Third Party (NOT LiveRamp), DS4=CRM, DS11=LiveRamp segments, DS13=Vertical Categorization=Peak Performance, DS19=MNTN Matched=Keywords, DS35=LiveRamp IP
+- PP default-vs-custom best proxy is structural (pure DS13+DS19 template = default); name-pattern (7/1000) and user_id (one account 28% of templates) heuristics failed to give a clean split
+- Track C ROAS cross-check is directional only — adopter vs non-adopter median-ROAS-delta CIs overlap, and adopters had ~1.5x higher baseline ROAS (self-selected, not exchangeable; no propensity matching done)
+- Peak Performance had a scoring bug at its early-Oct-2025 launch, fixed end of October; the adoption ramp continued past the fix so the composition signal is post-fix
+- Max Reach scoring turned off Nov 19 2025 shows no cohort-level composition signal (PP ramp smooth through it); nobody had checked its conversion-rate impact at the time
+
+**Reuse when:**
+- Analyzing audience-type mix shifts over time across an advertiser cohort
+- Detecting Peak Performance adoption or Mountain Matched spend-share changes
+- Reconstructing historical audience expressions from BQ archive tables
+- Classifying default vs custom Peak Performance audiences
+- Building a war-room / revenue-drop audience-composition analysis
+
 
 # TI-896: Audience composition shift analysis — 2025 performance drop war room
 

@@ -5,7 +5,33 @@ status: in_progress
 date: 2026-05-05
 summary: "Validate Edgar's Scout lift-test feasibility metrics against MNTN incrementality priors"
 result: "Review done (3 corrections + ITT-holdout gate added); delivery to Edgar pending doc URL"
+keywords: [incrementality, feasibility, mde, power analysis, scout, lift test, holdout, itt, prospecting filter, objective_id, funnel_level, ti-923, test duration, ramp-up, attribution-incrementality tension]
 ---
+
+## TL;DR
+
+**Q:** Review Edgar's Scout incrementality-test feasibility metrics (an 8-metric 'cheat sheet') against MNTN's holdout/incrementality priors: confirm what aligns, flag what doesn't, recommend additions (TI-923).
+
+**A:** Review done: 3 corrections plus an ITT-holdout gate added; delivery to Edgar pending the Google Doc URL. Three highest-impact corrections to Edgar's cheat sheet: (1) Row 2 MDE, his 2/sqrt(N) is the ~50%-power detection threshold, not the 80%-power MDE (standard 80%-power version is ~4/sqrt(N)), so his number is optimistic by ~2x (600 conv/cell gives real MDE ~16%, not 8%). (2) Row 5 prospecting filter, use objective_id IN (1,5,6), NOT funnel_level (funnel_level is MNTN product stage and contains retargeting at every stage; verified empirically 2026-05-05, 21,639 retargeting campaigns sit inside funnel_level=1, ~27% of Stage 1); tier diversity (% spend outside high-intent) predicts incrementality better than prospecting weight alone (TI-885). (3) Row 8 duration, window x 2 undershoots short windows (14-day gives 4 weeks, below MNTN's TI-885 standard of 6w active + 2w post); fix to max(window x 2, 6 weeks) active + 2 weeks post. Recommended additions ahead of the table: ITT on the always-on 10% per-advertiser holdout as the first, cheapest feasibility check (Zach 2026-04-30); pre-period availability (>=26/52 weeks in sum_by_campaign_by_day, not agg__daily_sum_by_campaign); attribution-incrementality tension flag (TI-835 'Two Stories'); multi-KPI breadth (BER-2250 Lesson 4); spend stability; CTV/display isolation via channel_id. Operational gotchas to encode: fpa_advertiser_verticals.advertiser_name stale (JOIN advertisers.company_name); WGU (AID 31357) ~30% of monthly spend (normalization risk); agg__daily_sum_by_campaign starts 2025-09-01 with unreliable uniques; Ray's objective_id bug (~48,934 S3 campaigns tagged objective_id=1 instead of 6) affects stage classification only (use funnel_level for stage), not the prospecting/retargeting split (both 1 and 6 are prospecting flavors). Status: In Progress, delivery (doc comments + Slack reply) and Jira close pending the Google Doc URL.
+
+**How:** Read Edgar's 8-metric cheat sheet (artifacts/edgar_ctv_incrementality_cheat_sheet.docx) and mapped each metric to load-bearing MNTN incrementality priors: Edgar's own 55-test/8-platform lessons, TI-748 CausalImpact, TI-884 power analysis, TI-885 mid-intent design, the 10% per-advertiser holdout (Zach 2026-04-30), TI-835 'Two Stories', and BER-2250 bidder-level ghost bidding. Verified the funnel_level-vs-objective_id prospecting split empirically on 2026-05-05 (21,639 retargeting campaigns inside funnel_level=1). Drafted per-row doc comments (artifacts/ti_923_feedback_doc_comments.md) and a Slack reply (artifacts/ti_923_slack_reply_draft.md). Outputs/ and queries/ folders were absent. Findings recorded in summary.md sections 5-6; delivery to Edgar not yet done (open item: get Google Doc link).
+
+**Tables:** sum_by_campaign_by_day, agg__daily_sum_by_campaign, fpa_advertiser_verticals, advertisers, campaigns
+
+**Learned:**
+- MDE formula distinction: 2/sqrt(N) is the ~50%-power detection threshold (95% CI half-width on a Poisson count), while the standard 80%-power MDE is (z_alpha/2 + z_beta) x sqrt(2/N) ~= 4/sqrt(N); using 2/sqrt(N) is optimistic by ~2x
+- A pre-flight incrementality-feasibility scorecard should gate on ITT viability against the existing always-on 10% per-advertiser holdout FIRST (cheapest lift test), before considering external geo holdout
+- Feasibility != success: 'feasible' (sufficient power) does not mean a test will show lift; high-attribution/heavy-retargeting advertisers can have sufficient power yet low expected incrementality (TI-835 attribution-incrementality tension)
+- 6-week active + 2-week post is a hard minimum independent of the attribution window (ad delivery and CTV viewer behavior need ~6 weeks to settle); separate from the TI-748/TI-780 4-week start-of-test ramp-up exclusion
+- objective_id IN (1,5,6) is the correct prospecting filter (not funnel_level); Ray's 48,934-campaign objective_id bug corrupts stage classification only, not the prospecting/retargeting split, since both 1 and 6 are prospecting flavors
+
+**Reuse when:**
+- designing or reviewing an incrementality/lift-test feasibility scorecard or MDE calculation
+- someone proposes 2/sqrt(N) or a similar MDE shortcut
+- picking a prospecting-only filter and tempted to use funnel_level
+- deciding minimum test duration for a CTV lift test
+- choosing between ITT-on-holdout and external geo holdout for a lift test
+
 
 # TI-923: Review Scout Incrementality-Feasibility Metrics
 

@@ -5,7 +5,34 @@ status: done
 date: 2026-05-01
 summary: "Pre/post KPI monitoring infra for the May-1 Fangorn rollout (3 Tier-1 advertisers)"
 result: "Pre/post KPI monitoring built for 3 Tier-1 flips; infra-complete, eval in TI-921"
+keywords: [fangorn, ti-849, ti-921, pre/post kpi, vertical_data_source, ds13 ds46, impression_facts, visit_facts, sum_by_campaign_group_by_day, industry_standard, ivr vvr cvr, prospecting funnel_level]
 ---
+
+## TL;DR
+
+**Q:** What did TI-849 (Fangorn score monitoring) build, and what were the findings?
+
+**A:** TI-849 built pre/post KPI monitoring infrastructure for the May-1 Fangorn rollout, which flipped 3 Tier-1 advertisers (32320 Biz2Credit, 38659 Big Blue Bubble, 32233 UNW Ohio) to vertical_data_source=46, triggering DS13 to DS46 audience swaps. Per user direction the method is a descriptive pre/post KPI suite (TI-221/TI-270 Jaguar pattern), NOT a formal causal-lift estimator; the user explicitly rejected a lift claim because the spend confound is real. A CausalImpact synthetic-control pipeline was scoped as Phase-2/optional. Closed as infrastructure-complete 2026-05-01; final evaluation and Mode dashboard deferred to TI-921.
+
+Key findings: (1) Pre-period baseline (Mar 31 to Apr 29, prospecting only) established per AID, e.g. Biz2Credit IVR 1.06%/VVR 1.87%/CVR 4.90%; Big Blue Bubble has no conversion pixel (CVR/ROAS/AOV not meaningful); UNW Ohio IVR 0.41%. (2) Source-table pivot (D0): the summarydata sum_by_*_by_day rollups were stale at 2026-04-14 (17 days behind, missing the whole post window) and agg__daily_sum_by_campaign was empty since 2026-03-31, so queries were repointed to the underlying silver.summarydata fact tables (impression_facts, visit_facts, conversion_facts, spend_facts), fresh through 2026-05-01. All 3 launch AIDs use industry_standard reporting, simplifying the TI-221 attribution logic. AOV/ROAS unreliable for these AIDs (lead-gen and gaming, no $-value conversions). Periods: Pre = Mar 31 to Apr 29 (30d), Post = May 1 onward; launch day 2026-04-30 excluded from both.
+
+**How:** Read summary.md in full and skimmed queries/ filenames (pre_post_summary, daily_trend, campaign_breakdown, state_of_rollout, method2_did_period_lift [deprecated], method3_covariate_pull, method3_control_aid_selection); no outputs/ dir. Baseline KPIs and the source-table pivot come from summary section 4. KPI suite sourced from silver.summarydata fact tables filtered to funnel_level=1 and deleted=FALSE AND is_test=FALSE, flipped AIDs auto-detected via vertical_data_source=46.
+
+**Tables:** silver.summarydata.impression_facts, silver.summarydata.visit_facts, silver.summarydata.conversion_facts, silver.summarydata.spend_facts, silver.summarydata.sum_by_campaign_group_by_day, silver.aggregates.agg__daily_sum_by_campaign, audience.advertiser_configurations
+
+**Learned:**
+- TI-849 = pre/post KPI monitoring infra for the May-1 Fangorn rollout; closed infrastructure-complete, eval handed to TI-921
+- User rejected a formal lift metric; the deliverable is descriptive pre/post KPIs (TI-221/TI-270 pattern) with the spend confound noted, not a causal claim
+- Method-2 within-AID DiD via TI-835 holdout + augmentor_log was deprecated as infeasible (TB-scale daily augmentor scan); CausalImpact absorbs the same confounds
+- Pre-period per-AID baseline: Biz2Credit IVR 1.06%/VVR 1.87%/CVR 4.90%; Big Blue Bubble no conversion pixel; UNW Ohio IVR 0.41%
+- sum_by_*_by_day rollups were stale at 2026-04-14 and agg__daily_sum_by_campaign empty since 2026-03-31; underlying silver.summarydata fact tables stay fresh through current day (already in knowledge docs)
+
+**Reuse when:**
+- Monitoring a scoring/audience rollout with pre/post KPIs
+- Deciding pre/post-descriptive vs formal causal-lift for a rollout ask
+- Hitting stale summarydata rollups and needing fresh fact-table sources
+- Looking up the 3 May-1 Fangorn Tier-1 launch AIDs and their verticals
+
 
 # TI-849: Monitor Fangorn score lift and visit rate improvements
 

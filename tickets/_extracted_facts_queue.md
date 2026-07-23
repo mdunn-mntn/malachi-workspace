@@ -221,3 +221,25 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
   - source_line: **Spearman rank correlation:** Mean ρ = 0.743 (all), 0.694 (NEW-only). But **3/22 is an outlier** (ρ = 0.10-0.41 vs other days). Excluding 3/22, mean ρ ≈ 0.90 — very stable.
 - **[ti_813_buk_500_advertiser_scale]** The Fangorn experiment (TI-704) ran March 4 – April 2 (2026) across 5 advertisers: Zumba Fitness (36420), Edward Martin (40956), G-Shock (46920), Reedsy (42273), Collector Store (42692).
   - source_line: Fangorn experiment ran March 4 – April 2 across 5 advertisers: Zumba Fitness (36420), Edward Martin (40956), G-Shock (46920), Reedsy (42273), Collector Store (42692)
+
+## Batch 10 append
+
+### data_knowledge.md
+- **[ti_832_feature_store_roas_cpa]** The (IP, advertiser) feature-pair grain is intentionally avoided in Fangorn and Fangorn V2 — features are generalized to IP-level so inference stays fast and scores all advertisers without per-request data munging.
+  - source_line: Matt: the (IP, advertiser) feature pair is a big issue we also tried to avoid with Fangorn… skip that for now and try to generalize features to be at the IP-level. Ryan: shape it the way it needs to be shaped for scoring ALL advertisers, because inference needs to be quick.
+
+### experimentation.md
+- **[ti_832_feature_store_roas_cpa]** At IP grain, conversion-history features carry real standalone signal (conv-history-only XGBoost test AUC 0.7485; combined model 0.8187, +0.0097 over pre-bid-only 0.8090; lift 18.8x at top 1%, 60.6% conv rate vs 0.32% base).
+  - source_line: B — conv-history only | 21 | 0.7485 (real standalone signal) ... C — combined | 49 | 0.8187 (ΔAUC +0.0097 vs pre-bid alone) ... Lift @ top 1%: 18.8x (60.6% conv rate vs 0.32% base).
+- **[ti_832_feature_store_roas_cpa]** Device-class conversion counts (desktop/mobile/tablet) have no measurable SHAP signal at IP grain — redundant with bidstream device features at bid time — so they were dropped despite Matt's explicit ask.
+  - source_line: Device-class counts surprisingly weak — dropping despite Matt's explicit ask. ... the bidstream side already represents device at bid time ... at IP grain conversion-side device is largely the same household / same gear — redundant.
+- **[ti_921_fangorn_lift_dashboard]** The mntn_matched_cgids filter (restrict to campaign groups carrying an MNTN-Matched DS13/19/46 audience) drops ~25-45% of impressions, concentrating a Fangorn panel on Fangorn-eligible volume and cleaning the lift signal.
+  - source_line: **`mntn_matched_cgids` filter** narrows to campaign groups that actually carry an MNTN-Matched audience. Drops ~25-45% of impressions, concentrating the panel on Fangorn-eligible volume. Makes the lift signal cleaner.
+- **[ti_923_scout_feasibility_review]** The MDE shortcut 2/sqrt(N) is the ~50%-power detection threshold (95% CI half-width on a Poisson count), not the 80%-power MDE; the standard 80%-power/alpha=0.05 two-tailed formula is (z_alpha/2 + z_beta) x sqrt(2/N) ~= 4/sqrt(N). Using 2/sqrt(N) understates the real MDE by ~2x (e.g. 600 conv/cell gives real MDE ~16%, not 8%).
+  - source_line: Row 2 MDE formula - `2/sqrt(N)` is the ~50%-power detection threshold, not 80% power. Standard 80%-power version is `≈ 4/sqrt(N)`. 600 conv/cell -> real MDE ~16%, not 8%.
+
+### mntn_business.md
+- **[ti_832_feature_store_roas_cpa]** Fangorn V2 is a parallel XGBoost classifier (Matt Brorby) trained on conversions instead of visits; the bidder picks Fangorn vs Fangorn V2 per campaign based on goal_type_id (CPV vs ROAS, etc.).
+  - source_line: Fangorn V2 is a parallel XGBoost classifier (Matt Brorby) trained on **conversions instead of visits** — the bidder picks Fangorn vs Fangorn V2 per campaign based on `goal_type_id` (CPV vs ROAS, etc.).
+- **[ti_896_audience_composition_2025_drop]** Peak Performance had a scoring bug present at its early-October-2025 launch that was fixed end of October; the adoption ramp continued past the fix, so the composition signal is post-fix (not a random-scoring artifact).
+  - source_line: Peak Performance scoring bug ruled out ... Scoring bug existed at PP launch (early Oct 2025), fixed end of Oct. Adoption ramp continued well past the fix

@@ -5,7 +5,32 @@ status: in_progress
 date: 2026-05-28
 summary: "Build a wave-aware durable Fangorn lift evaluation system and Mode dashboard"
 result: "in progress — reproduced Tier-1 positive lift (+20-24%); DiD control + dashboard pending"
+keywords: [fangorn, ds46, ti-921, wave-aware, lift evaluation, objective_id, funnel_level, mntn_matched_cgids, causalimpact, did, mode dashboard, tier-1, wave_config.csv, rollouttierevaluations, ti-780 maturity]
 ---
+
+## TL;DR
+
+**Q:** What is the state of TI-921 (wave-aware Fangorn lift evaluation + Mode dashboard), and did the Tier-1 lift reproduce?
+
+**A:** In progress. TI-921 turns TI-849's one-shot 3-advertiser Fangorn (DS46) measurement into a wave-aware, durable evaluation that auto-detects new flips, normalizes across cohorts flipping on different days via days_since_flip, and surfaces results in a Mode dashboard (three views: live cohort, advertiser drill-down, archive). CausalImpact synthetic control is the headline lift claim, with pre/post reported alongside as the naive comparison. Verified Alex Knorr's RolloutTierEvaluations notebook: the pooled Tier-1 positive lift reproduces and is stronger than the looser baseline once a retargeting bug is removed. Tier1-Wave1 +20.1% (vs +14.1% loose baseline); Tier1-Wave2 +23.9% (vs +12.8%). Alex's higher number comes from (1) objective_id=1 excluding objective_id=4 retargeting campaigns the baseline over-counted, and (2) an mntn_matched_cgids filter concentrating on Fangorn-eligible volume. Per-AID under Alex's pass: Wave 1 = 2/3 rose, median +135%; Wave 2 = 32/41 rose, 7/41 dropped, median +59%; 6 AIDs had no post data. Still pending/unverified: the DiD-adjusted lift (Alex's headline) is blocked because the Tier 2/3 control AID list lives in Postgres-only tpa.fangorn_advertiser_inclusion; plus the pacing diagnostic (same Postgres gap), CVR/ROAS/CPA tiles (most launch AIDs lack a conversion pixel/order_value so only IVR is meaningful), and the Mode dashboard itself. Handoff to Alex Knorr during Malachi's ~2-week OOO.
+
+**How:** Reproduced numbers via a local pandas/BQ port (verify_alex_results.py; query ti_921_verify_alex_daily_perf.sql): 51 Tier-1 AIDs from wave_config.csv x 14d pre + 11d post (Wave 2) / 14d pre + 16d post (Wave 1), flip day excluded; pooled Tier-1 visit-rate as post/pre - 1. Compared Alex's filtered pass against the loose baseline; confirmed all 359 prospecting (funnel_level=1) campaigns for these 51 AIDs carry objective_id=1 while the other 188 funnel_level=1 campaigns carry objective_id=4 (retargeting), so the baseline over-counted retargeting volume. Flip dates maintained manually in wave_config.csv because audience_advertiser_configurations is a CDC current-state-only snapshot; flip_date_detection.sql kept as a cross-check. DiD control set not verified locally because tpa.fangorn_advertiser_inclusion is Postgres-only.
+
+**Tables:** audience_advertiser_configurations, tpa.fangorn_advertiser_inclusion, optimized_intent_threshold_archives
+
+**Learned:**
+- Tier-1 Fangorn pooled visit-rate lift reproduces and strengthens under Alex's filters: Wave1 +20.1% (vs +14.1% loose baseline), Wave2 +23.9% (vs +12.8%).
+- The mntn_matched_cgids filter (restrict to campaign groups carrying a DS13/19/46 audience) drops ~25-45% of impressions, concentrating the panel on Fangorn-eligible volume and cleaning the lift signal.
+- For the 51 Tier-1 AIDs, all 359 funnel_level=1 prospecting campaigns have objective_id=1; the other 188 funnel_level=1 campaigns have objective_id=4 (retargeting) and should be excluded from a prospecting panel.
+- DiD-adjusted lift (Alex's headline) could not be independently verified because the Tier 2/3 control AID list lives in Postgres-only tpa.fangorn_advertiser_inclusion.
+- objective_id=1 filter is safe for these 51 AIDs (zero S2/S3 prospecting) but objective_id is unreliable as a stage indicator post-TV-Only migration; recommend generalizing to objective_id IN (1,5,6) before the Tier-2 ramp.
+
+**Reuse when:**
+- Building or extending a wave-aware tiered-rollout lift evaluation across cohorts that flip on different days
+- Constructing a Fangorn/DS46 prospecting daily panel and deciding objective_id / funnel_level / mntn_matched_cgids filters
+- Reproducing or auditing Alex Knorr's RolloutTierEvaluations notebook results
+- Detecting per-advertiser Fangorn flip dates in BQ when the Postgres inclusion table is unreachable
+
 
 # TI-921: Fangorn lift evaluation + Mode dashboard
 

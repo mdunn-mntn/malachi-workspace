@@ -5,7 +5,32 @@ status: in_progress
 date: 2026-05-06
 summary: "Add IP-grain conversion/spend features to the Feature Store for Fangorn V2"
 result: "4 PRs merged + deployed adding conv_log_derived_ip; awaiting nightly/monthly verify"
+keywords: [fangorn v2, conv_log_ip, conv_log_derived_ip, feature store, roas, cpa, goal_type_id, shap, xgboost, ip grain, usd_order_amount, ti-832, ti-931]
 ---
+
+## TL;DR
+
+**Q:** Produce a TL;DR card for TI-832 (Update Feature Store with ROAS/CPA-specific features), plus delta_facts not already in the knowledge docs, and a front_matter_fix if needed.
+
+**A:** TI-832 adds IP-grain conversion/spend features to the Feature Store so Fangorn V2 (Matt Brorby's conversion-target XGBoost, chosen over Fangorn per campaign by goal_type_id) has ROAS/CPA inputs. Scope is IP-level only; the per-pair (IP, advertiser) grain was dropped per Matt + Ryan. Phase 2 (spec) validated the feature list with an XGBoost + SHAP study on a 421,366-pair training set (1,355 positives, 0.32% base rate): conversion-history-only model test AUC 0.7485 (real standalone signal), combined model 0.8187 (+0.0097 over pre-bid-only 0.8090), lift 18.8x at top 1%. Device-class conversion features were dropped despite Matt's explicit ask — no SHAP signal at IP grain. Phase 3 shipped: 4 PRs merged + deployed 2026-05-06 — #1025 extends conv_log_ip (conversion_time_min/max, usd_order_amount), #1026 adds the new Layer-2 conv_log_derived_ip model (13 backward + 5 forward-outcome cols), #1028 wires the daily DAG dep, #1029 adds a day-15 monthly snapshot. Status is In Review, awaiting the first nightly run and first monthly snapshot to confirm green. Was blocked by TI-931 (column-drift bug, verified fixed in prod 2026-05-05).
+
+**How:** Phase 2 built an (IP, advertiser_id) training set from bid-active win_logs IPs on day F=2026-04-15 (1% IP sample), labeled "conversion in F+1..F+14", over 28 pre-bid + 21 conv-history features; trained XGBoost (scale_pos_weight approx 310) and ranked by mean-abs SHAP. Phase 3 implemented the SHAP-surviving conversion features in conv_log_ip and a new conv_log_derived_ip Layer-2 model, reusing rolling_sum_exprs/forward_sum_exprs/HLL helpers from utils_model/feature_store_core_campaign.py. USD revenue uses a USD-only currency filter (~99% coverage). Reported outcomes are the SHAP/AUC results and the merge+deploy of the 4 PRs; nightly and monthly verification remain pending, not concluded.
+
+**Tables:** conv_log_ip, conv_log_derived_ip, win_logs, conversion_log, campaign_groups, goal_types
+
+**Learned:**
+- Fangorn V2 is a parallel XGBoost classifier trained on conversions instead of visits; the bidder picks Fangorn vs Fangorn V2 per campaign based on goal_type_id (CPV vs ROAS)
+- Conversion-history features at IP grain carry real standalone predictive signal (conv-history-only test AUC 0.7485; combined model 0.8187, +0.0097 over pre-bid-only 0.8090; lift 18.8x at top 1%)
+- Device-class conversion counts have no measurable SHAP signal at IP grain (redundant with bidstream-side device features at bid time); dropped despite the explicit ask
+- The (IP, advertiser) feature-pair grain is intentionally avoided in Fangorn and V2 — features are generalized to IP-level so inference stays fast and covers all advertisers
+- conv_log_ip source audit: order_amt_usd is only 1.4% populated in the conversion_log source at the time, so USD revenue is built by filtering order_amt to USD currency (~99% coverage)
+
+**Reuse when:**
+- building or scoping IP-grain conversion/ROAS/CPA features for Fangorn V2
+- deciding grain (IP vs IP-advertiser pair) for a bidder inference feature
+- running an XGBoost + SHAP feature-selection study to justify feature-store additions
+- questions about how the bidder routes between Fangorn and Fangorn V2
+
 
 # TI-832: Update Feature Store with ROAS/CPA-specific features
 

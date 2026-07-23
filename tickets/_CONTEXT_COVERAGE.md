@@ -64,3 +64,9 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_811_advertiser_features | carded | 0 | batch 9; not-started backlog item |
 | ti_813_buk_500_advertiser_scale | carded | 1 | batch 9; BUK scaled to 500 advs, Fangorn eval |
 | ti_790_bidstream_feature_inventory | needs_review | 0 | batch 9; card fields were placeholder stubs (test/a), not summary-supported |
+| ti_832_feature_store_roas_cpa | carded | 4 | Produce a TL;DR card for TI-832 (Update Feature Store with R |
+| ti_849_fangorn_score_monitoring | carded | 0 | What did TI-849 (Fangorn score monitoring) build, and what w |
+| ti_896_audience_composition_2025_drop | carded | 1 | TI-896: Did the mix of audience types used by 2025-active ad |
+| ti_921_fangorn_lift_dashboard | carded | 1 | What is the state of TI-921 (wave-aware Fangorn lift evaluat |
+| ti_923_scout_feasibility_review | carded | 1 | Review Edgar's Scout incrementality-test feasibility metrics |
+| ti_931_summary_dag_column_drift | carded | 0 | TL;DR card for TI-931 (feature_store summary_* DAG tasks fai |

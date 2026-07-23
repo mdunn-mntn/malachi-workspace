@@ -5,7 +5,31 @@ status: done
 date: 2026-05-05
 summary: "Fix feature_store_setup_model summary_* tasks crashing after BQ cost-to-spend drop"
 result: "Dropped stale *_cost cols from Layer-1 models + shared const; PR #1024 merged, DAG green"
+keywords: [ti-931, feature_store_setup_model, column drift, cost to spend migration, sum_by_campaign_by_day, data_cost, legacy_spend, summary_outcome_metric_cols, airflow-ti pr 1024, ti-832]
 ---
+
+## TL;DR
+
+**Q:** TL;DR card for TI-931 (feature_store summary_* DAG tasks failing on dropped *_cost columns) + delta_facts + front_matter_fix if needed.
+
+**A:** TI-931 (Bug, Done 2026-05-05, 2 pts): three Layer-1 feature_store_setup_model tasks (summary_advertiser_id, summary_campaign_group_id, summary_campaign_id) had been failing in prod ~3 days because the BQ cost->spend migration dropped the *_cost column family from dw-main-silver.summarydata.sum_by_*_by_day, while the Layer-1 models did SELECT * then explicitly projected the now-missing columns. Dropped: data_cost, fee_cost, partner_cost (all three views) and legacy_spend (campaign_group only); *_spend cols (media_spend, data_spend, platform_spend) remain and authoritatively replace them. The shared SUMMARY_OUTCOME_METRIC_COLS in utils_model/feature_store_core_campaign.py also listed the dropped cols, so Layer-2 core_derived_* would have crashed on unblock. Fix removed the stale cols (not zero-defaults, since cost->spend isn't 1:1) across 4 files (-17 lines, no dags/ changes); PR airflow-ti#1024 merged, deployed as bundle v82. Cleared 9 failed summary_* + 9 cascade core_derived_* instances, all 18 re-ran green. Final passive confirmation (next scheduled 01:03 UTC run) and optional parquet spot-check were left unchecked at write time. Unblocks TI-832.
+
+**How:** Root cause identified via repo grep + schema comparison: BQ migration dropped the cost family from the three sum_by_*_by_day views; models projected missing cols. Fix = drop the stale cols from three Layer-1 .select() calls plus the shared SUMMARY_OUTCOME_METRIC_COLS constant. Verified pre-merge (repo-wide grep clean, py_compile clean, diff size) and post-merge (deploy action succeeded, bundle v82; cleared 9 summary_* + 9 core_derived_* failed instances with Run-with-latest-bundle/Downstream, all 18 re-ran green day-by-day).
+
+**Tables:** sum_by_advertiser_by_day, sum_by_campaign_group_by_day, sum_by_campaign_by_day, dw-main-silver.summarydata.sum_by_*_by_day, core_derived_*
+
+**Learned:**
+- BQ cost->spend migration dropped data_cost/fee_cost/partner_cost from all three sum_by_*_by_day views, plus legacy_spend from sum_by_campaign_group_by_day; media_spend/data_spend/platform_spend remain as the authoritative replacement
+- Layer-1 feature_store models do SELECT * from BQ then explicitly project columns, so a source column drop crashes them; the shared SUMMARY_OUTCOME_METRIC_COLS constant in utils_model/feature_store_core_campaign.py propagates the same drop to Layer-2 core_derived_* tasks
+- Fix chose removal over F.lit(0.0) defaults because cost->spend is not a 1:1 mapping and zero-defaults would silently mask the upstream change
+- These feature_store models are not yet consumed in prod (Fangorn still on a Databricks notebook) and have no PagerDuty wiring, which is why the failure went uncaught for ~3 days
+
+**Reuse when:**
+- a feature_store_setup_model summary_* or core_derived_* task fails on a missing column
+- referencing the sum_by_*_by_day cost vs spend column set
+- diagnosing airflow-ti Layer-1/Layer-2 column-drift failures
+- deciding whether to zero-default vs remove a dropped source column
+
 
 # TI-931: feature_store_setup_model summary_* tasks failing — *_cost cols dropped post-BQ migration
 
