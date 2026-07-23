@@ -112,9 +112,25 @@ for d in docs:
     if isinstance(kws, list):
         for kw in kws:
             kw_map.setdefault(kw, []).append(d)
+# Fold ticket-card keywords into routing too (tickets/ lives outside knowledge/; epic children nest one level
+# deeper — os.walk reaches both). A ticket's TL;DR card carries `keywords:` front-matter; this makes prior work
+# keyword-retrievable, not only scannable in tickets/INDEX.md.
+_troot = os.path.join(root, "tickets")
+if os.path.isdir(_troot):
+    for _dp, _dns, _fns in os.walk(_troot):
+        _dns[:] = [x for x in _dns if not x.startswith(("_", "."))]
+        if "summary.md" not in _fns:
+            continue
+        _tfm = parse_front_matter(os.path.join(_dp, "summary.md"))
+        if not _tfm or not isinstance(_tfm.get("keywords"), list) or not _tfm.get("keywords"):
+            continue
+        _tfm["_abspath"] = os.path.join(_dp, "summary.md")
+        _tfm.setdefault("title", os.path.basename(_dp))
+        for kw in _tfm["keywords"]:
+            kw_map.setdefault(kw, []).append(_tfm)
 out = [GEN, "# Routing — keyword → docs", "",
        "Need something specific? grep this file for your term, then open ONLY the doc(s) it names.",
-       "(Generated from every doc's `keywords:` front-matter. Add a keyword, rebuild, it appears here.)", ""]
+       "(Generated from every knowledge doc's AND ticket card's `keywords:` front-matter. Add a keyword, rebuild, it appears here.)", ""]
 for kw in sorted(kw_map):
     links = ", ".join(f"[{g(x,'title')}]({link(kdir, x)})"
                       for x in sorted(kw_map[kw], key=lambda x: g(x, "title")))
