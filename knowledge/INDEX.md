@@ -278,3 +278,6 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 ## Decisions
 - [0001 — Model Match (MM) component taxonomy: DS19 / DS13 / DS46](decisions/0001_mm_component_taxonomy.md) — MM = DS19 (Core) + one PP slot (DS13 = PP v1, DS46 = PP v2); counting MM as DS19 alone undercounts ~7.6%  ·  _verified 2026-07-19_
 - [0002 — funnel_level is authoritative for campaign stage, not objective_id](decisions/0002_funnel_level_authoritative_for_stage.md) — Use campaigns.funnel_level for stage; objective_id is unreliable for stage (use it only for prospecting = IN (1,5,6))  ·  _verified 2026-07-19_
+
+## reference
+- [Retrieval Eval Probes — cold-start regression suite](eval_probes.md) — Cold-start retrieval probes: a fresh chat using only START_HERE + _ROUTING + tickets/INDEX must reach each probe's targets. Every real cold-start miss becomes a new probe here.
