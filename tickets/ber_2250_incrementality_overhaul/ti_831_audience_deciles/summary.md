@@ -5,6 +5,29 @@ status: backlog
 date: 2026-04-07
 summary: "Build random decile buckets of US IPs to enable clean A/B testing for advertisers"
 result: "Clarified as random bucketing (not intent-stratified); implementation not yet started"
+keywords: [ti-831, audience deciles, a/b testing, random bucketing, us population, ber-2250, intent score, memdb holdout hash, aud-5221]
+---
+
+## TL;DR
+
+**Q:** What is TI-831 (Audience Deciles for Advertiser Experimentation) and what was decided?
+
+**A:** TI-831 builds decile-based audience segmentation to enable clean A/B testing for advertisers, as a foundational piece for the BER-2250 Incrementality Overhaul. The original ambiguity was whether the deciles should be intent-score-stratified or random. Resolved 2026-04-07: Matt Brorby (after talking to Alex Bohr) clarified TI-831 is RANDOM bucketing — take all US IPs in the DB and randomly assign into 10 groups ("US Population 1..10"); advertisers select groups as inclusions/exclusions to build A/B/C campaigns with their own segments layered on top. It is a general-purpose A/B testing tool, NOT intent-stratified. The intent-stratified incrementality work (score shuffling + ITT) is a separate workstream handled by TI-835/TI-837 under BER-2250. Ryan Kleck noted implementation is "easy-ish" — either reuse the existing IP hashing Zach/Jordan built (also used for the 10% holdout in MemDB) or make a new data source (he called a new source overkill). Status: implementation not started. Open items include choosing the hashing approach, refresh cadence (daily vs weekly for IP rotation), balance-check methodology, and a timeline estimate for Bryce Wagg.
+
+**How:** Read the summary in full; the outputs/ and queries/ directories do not exist (no query or output files present). Findings drawn from the Investigation & Findings and Open Items sections.
+
+**Tables:** external.tpa_membership_update_log__v2
+
+**Learned:**
+- TI-831 is RANDOM bucketing of all US IPs into 10 groups (general-purpose A/B testing tool), NOT intent-stratified — clarified by Matt Brorby via Alex Bohr, 2026-04-07.
+- TI-831 (deciles A/B tool) and BER-2250 intent-score-shuffling incrementality (TI-835/TI-837) are two separate workstreams.
+- Existing IP hashing built by Zach/Jordan (used for the 10% holdout in MemDB) could be reused for the decile bucketing.
+
+**Reuse when:**
+- Questions about audience deciles or US-population A/B testing groups
+- Questions on the BER-2250 workstream split (deciles vs score-shuffling)
+- Whether TI-831 is intent-stratified or random
+
 ---
 
 # TI-831: Audience Deciles for Advertiser Experimentation

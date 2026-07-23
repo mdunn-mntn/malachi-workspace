@@ -5,6 +5,32 @@ status: in_progress
 date: 2026-04-20
 summary: "Design a mid-intent-only treatment campaign to validate ghost-bidding lift methodology"
 result: "in progress — design + Kirsa experiments-team alignment pending; Kirsa sync is blocker"
+keywords: [ti-885, mid-intent, ghost bidding, ber-2250, ti-837, kirsa, cuped, lewis-rao, holdout, incrementality]
+---
+
+## TL;DR
+
+**Q:** What is TI-885 (mid-intent treatment experiment setup) and where does it stand?
+
+**A:** TI-885 designs a mid-intent-only treatment campaign (under the BER-2250 Incrementality Overhaul epic) to validate the ghost-bidding lift methodology from TI-837, against a campaign built specifically to be measurable. It is a stream split from TI-837 (Bryce, 2026-04-20): TI-837 owns methodology + pipeline, TI-885 owns the experiment. Status: in progress — design + Kirsa (experiments team) alignment pending, with the Kirsa sync as the primary blocker. The rationale: realistic CTV lift (2-8%) only becomes measurable if advertisers have enough spend to meet the MDE (TI-884 input) and treatment isolates a segment where the effect is plausible. Mid-intent is the best theoretical bet — high enough intent for meaningful conversions, low enough that many users are unexposed (leaving room for lift); max-reach is unscored/currently untestable, and high-intent showed the TI-835 "two stories" dilution. The Findings and Solution sections are unpopulated. The planned design (not executed): sync with Kirsa on her in-flight 3-cell experiment (MNTN Match vs 3P audience); meet with Kirsa + Nick to finalize design, deciding narrow (mid-intent only) vs broad (all tiers incl max-reach) based on TI-884 power and Ryan's continuous scoring timeline; pick 6-10 advertisers from TI-884's well-powered tier (candidate pool: Matt Brorby's 26 PSM-audit advertisers); keep the existing 10% holdout, split remaining 90% between mid-intent treatment and normal; 6-week test + 2-week post window; multi-event conversion tracking (visits, conversions, repeat-customer lift, downstream revenue), not a single KPI; pre-register the plan (ghost-bidding ATT by tier, CUPED on pre-period visit history, Lewis-Rao sample size); sign-off from Matt Brorby, Alex Knorr, Bryce before launch. Sprint deliverable is the design doc + alignment only (April 30 checkpoint), not a live launch. Priority P3, flagged to Bryce as arguably P1.
+
+**How:** Read summary.md in full. The ticket folder contains only summary.md (no outputs/ or queries/ directories). Grepped knowledge/*.md to confirm delta facts.
+
+**Tables:** (none)
+
+**Learned:**
+- TI-885 is a stream split from TI-837 (Bryce, 2026-04-20): TI-837 owns ghost-bidding methodology + pipeline, TI-885 owns the experiment.
+- Blocker is the Kirsa (experiments team) sync; she has an in-flight 3-cell experiment (MNTN Match vs 3P audience) to avoid duplicating.
+- Design plan (not executed): keep 10% holdout, split 90% mid-intent treatment vs normal; 6-week test + 2-week post; CUPED + Lewis-Rao sizing; multi-event tracking.
+- Max-reach inclusion decision depends on Ryan Kleck's continuous scoring timeline; mid-intent chosen as best theoretical bet, high-intent shows TI-835 two-stories dilution.
+- Findings/Solution sections unpopulated; sprint delivers design doc + alignment only per April 30 checkpoint, not launch.
+
+**Reuse when:**
+- Designing a mid-intent or intent-tier treatment experiment
+- Working BER-2250 incrementality or ghost-bidding validation
+- Selecting well-powered advertisers for a lift test
+- Coordinating with the experiments team (Kirsa)
+
 ---
 
 # TI-885: Mid-intent treatment experiment setup — coordinate with experiments team

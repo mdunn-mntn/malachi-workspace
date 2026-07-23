@@ -5,6 +5,34 @@ status: in_progress
 date: 2026-04-17
 summary: "Baseline CTV incrementality using the existing per-advertiser 10% holdout (ITT)"
 result: "CTV ads: ~0% net-new traffic lift (guid), but 2-8x lift in MNTN-attributed visits"
+keywords: [incrementality, 10% holdout, itt, guid_log, clickpass_log, attribution capture, vv redirect, hhst 10000, ghost bidding, att, holdout hash, ber-2250, ti-835, ti-837, fangorn]
+---
+
+## TL;DR
+
+**Q:** What did TI-835 find about CTV incrementality using the existing 10% holdout, and how was the analysis done?
+
+**A:** TI-835 measured baseline CTV incrementality using the existing per-advertiser 10% holdout (bucket 0-99 of 1000, hashed on {AID}:{IP}) as the counterfactual, comparing the 90% targeted vs 10% holdout on an intent-to-treat (ITT) basis across ~9-10 advertisers over a 30-day window (March-April 2026). Two non-contradictory stories emerged depending on visit table: guid_log (all pixel visits) shows holdout share ~10% = essentially 0% lift (CTV ads do NOT generate net-new site traffic; the 3 significant results are all <3%, functionally zero), while clickpass_log (MNTN VV-attributed visits) shows holdout share only 1.3-5.1% = 2-8x lift (median ~2.4x), highly significant (p<0.001 after FDR) for all 9 advertisers. Conclusion: MNTN's incrementality signal is attribution capture (the VV redirect path), not traffic generation; incremental means different things depending on which visit table is used, so the shuffling experiment (TI-837) must define its success metric explicitly. Per-tier (HI/MI/PP) analysis was NOT possible because all Fangorn-scored IPs get a flat HHST=10000 (of one day's impressions: 69.9% at 10000, 28.7% at -1 unscored, 1.4% in the MI 3333-6665 range, ~0% in HI or PP sub-ranges); aggregate holdout-vs-targeted pooling is the only viable approach until continuous scoring is deployed. A parallel Alex Knorr Databricks pre-analysis found intent coverage even worse than meeting estimates (high-intent 3.4% median vs a discussed 14%, peak 0.2%, mid 0.04%), so LATE (Wald) is only credible above ~4-5% coverage, reinforcing the pivot to ghost bidding (ATT) since ITT is structurally unable to detect incrementality at these coverage levels. Status: in_progress; still to present to Kale/Alex Bloore.
+
+**How:** Ported the Greenplum MD5 holdout bucket hash to a BQ unsigned JS UDF (mod 1000, 0-99=holdout, 100-999=targeted), validated on WGU clickpass_log. Pulled unique-visitor counts for holdout vs targeted per advertiser from both guid_log and clickpass_log (30-day window, Stage 1 campaigns funnel_level=1). Statistical testing: binomial test (H0: targeted proportion = 0.9), bootstrap 95% CIs for lift, Benjamini-Hochberg FDR correction across advertisers. Lift = (observed ratio / expected 9:1 ratio) - 1. Function Health excluded for negligible volume. Alex Knorr ran a parallel Databricks pre-analysis with an external prospecting-scores table for granular tier coverage.
+
+**Tables:** guid_log, clickpass_log, audience_segment_campaigns, audience.audiences, dw-main-bronze.external.TI_835_prospecting_scores
+
+**Learned:**
+- guid_log (all pixel visits) shows holdout share ~10% = ~0% incremental lift: CTV ads do not generate net-new site traffic.
+- clickpass_log (MNTN VV-attributed visits) shows holdout share 1.3-5.1% = 2-8x lift (median ~2.4x), p<0.001 after FDR for all 9 advertisers; the incrementality signal is attribution capture via the VV redirect, not traffic generation.
+- Per-tier HI/MI/PP incrementality analysis is impossible while all Fangorn-scored IPs get flat HHST=10000 (69.9% at 10000, 28.7% at -1, 1.4% MI range, ~0% HI/PP sub-ranges); aggregate holdout-vs-targeted pooling is the only viable approach.
+- Holdout is embedded in the audience segment expression JSON (audience_segment_campaigns, expression_type=2) as one of 4 AND clauses; hash is MD5({AID}:{IP}) mod 1000, 0-99=holdout, uses unsigned mod matching the Rust production service.
+- Incrementality holdout hashes on a prefix (ex46) while experiment groups hash on IP directly; the two are independent random assignments.
+- Alex Knorr Databricks pre-analysis: intent coverage worse than meeting estimates (high-intent 3.4% median, peak 0.2%, mid 0.04%); LATE/Wald only credible above ~4-5% coverage, so ITT structurally cannot detect incrementality -> pivot to ghost bidding (ATT).
+
+**Reuse when:**
+- measuring CTV incrementality or lift with the existing 10% holdout
+- deciding whether to use guid_log or clickpass_log as the visit metric for an incrementality analysis
+- explaining why per-intent-tier analysis is blocked (flat HHST=10000)
+- designing the BER-2250 shuffling experiment (TI-837) success metric
+- porting the holdout bucket hash to BigQuery
+
 ---
 
 # TI-835: Observational Incrementality Analysis Using Existing 10% Holdout

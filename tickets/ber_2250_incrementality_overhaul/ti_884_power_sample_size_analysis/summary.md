@@ -5,6 +5,31 @@ status: in_progress
 date: 2026-04-30
 summary: "Per-advertiser MDE / statistical power to detect incremental lift"
 result: "Visit-rate power needs ~$200k/mo, conversions ~$2M+/mo; most advertisers underpowered"
+keywords: [power analysis, mde, lewis-rao, iroas, cuped rho, sample size, spend threshold, incrementality, ti-884, visit rate, conversion rate, var_reduction 0.595]
+---
+
+## TL;DR
+
+**Q:** Produce the TL;DR card for TI-884 (power & sample-size analysis for iROAS measurement).
+
+**A:** TI-884 built an outcome-agnostic Lewis-Rao MDE/power calculator and applied it per-advertiser (top-50 April-2026 Stage-1 advertisers) to answer "at what budget does incrementality testing become statistically significant?" Answer: ~$200k/month for visit-rate experiments (5% raw MDE / 2.4% post-stack); ~$2M+/month for conversion-rate experiments (5% CVR MDE crosses at $5M+/month). Below those thresholds results are noise. Raw MDE: 33/50 well-powered on visits (<5%), only 2/50 on CVR; post-stack (CUPED+ghost-ad+stratified, SE x0.595) 48/50 well-powered on visits but CVR still ~75% underpowered. Cross-validation against Lauren's completed tests: the 3 with April data (GLD, Ownerly, Boll & Branch) reported lifts 4.7x-8.2x below the MDE, statistically indistinguishable from zero. MNTN-measured CUPED rho mean 0.357 (SE multiplier 0.934), weaker than the ~0.5 literature midpoint. Status: in_progress. Framing: methodology is solved, sample size is binding; incrementality is a budget question.
+
+**How:** Pulled top-50 advertiser inputs from cost_impression_log (April 2026, funnel_level=1, exclude AID 90): monthly spend, impressions, distinct treated IPs, biddable holdout IPs, p_visit (90d), p_cvr (90d). Built Lewis-Rao two-proportion MDE calculator (mde_binomial, mde_continuous, n_required_binomial, spend_required), self-tested against hand calc (p=0.05, N=10k, no var reduction gives MDE_rel 17.27%). Measured CUPED rho on MNTN visit-rate data (Feb-vs-Mar 2026, 3 large advertisers: WGU 0.461, Vivint 0.170, Ferguson 0.441). Applied raw and post-stack (var_reduction 0.595) to produce tiered CSVs, an Al-facing spend-to-MDE threshold curve at cohort medians (IVR 2.15%, CPM $24.84, 3.5 imps/IP), and cross-validation against Lauren's 7 completed tests (only 3 had measurable April Stage-1 data).
+
+**Tables:** cost_impression_log
+
+**Learned:**
+- Visit-rate incrementality measurement crosses 5% raw MDE at ~$200k/month Stage-1 spend; conversion-rate crosses 5% MDE only at $5M+/month (~30x lower baseline rate makes CVR ~7-10x harder than IVR at the same scale).
+- Post-stack variance reduction (CUPED+ghost-ad+stratified, SE x0.595) moves visit-rate power from 33/50 to 48/50 advertisers well-powered, but CVR stays ~75% underpowered.
+- The 3 of Lauren's completed tests with April Stage-1 data (GLD, Ownerly, Boll & Branch) reported lifts 4.7x-8.2x below the MDE at full April scale, i.e. statistically indistinguishable from zero.
+- The ti_884_mde_calculator.py self-test anchor: p=0.05, N=10k, no variance reduction yields Lewis-Rao MDE_rel 17.27%.
+
+**Reuse when:**
+- Deciding which advertisers TI-885 / a lift study can reliably measure (gate on visit-rate post-stack tier).
+- Answering a stakeholder's 'what budget makes incrementality testing significant' question.
+- Prefilling a per-advertiser power/MDE calculator or setting a var_reduction default (0.595 post-stack).
+- Validating reported Lift % against a matching MDE confidence band.
+
 ---
 
 # TI-884: Power & sample size analysis — iROAS measurement capacity by advertiser

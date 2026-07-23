@@ -119,3 +119,11 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **fact:** WGU IVR reconciliation at denominator 15.61M: all-verified-visitors (graph site_visitors) 1.922M = 12.31%; impression-in-window (visit_facts__base) 1.690M = 10.83%; visiting-AND-served-in-window (CIL intersect) 1.672M = 10.71% (matches the standalone calculator). Exact parity is unreachable from the graph layer because the in-window restriction needs impression_hour/day_number, which live only in ber_stg.visit_facts__base and are grouped away before visit_facts/all_facts.
   - source ticket: `ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill`
   - source_line: A. all verified visitors (graph `site_visitors`) | 1.922M | **12.31%** ... C. visiting-AND-served-in-window (CIL intersect) | 1.672M | **10.71%** | = our standalone 10.70% ... the in-window restriction needs `impression_hour`/`day_number`, which live only in `ber_stg.visit_facts__base`
+
+## experimentation.md
+- **fact:** TI-884 MDE calculator self-test anchor: Lewis-Rao two-proportion z-test at p=0.05, N=10k, no variance reduction yields MDE_rel 17.27%.
+  - source ticket: `ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis`
+  - source_line: Self-tested against Lewis-Rao hand calc (p=0.05, N=10k, no var reduction → MDE_rel=17.27%).
+- **fact:** Cross-validation of TI-884 MDE against Lauren's completed tests: GLD (0.67% reported lift vs 3.12% raw / 1.86% stack MDE), Ownerly (0.72% vs 5.92% / 3.53%), Boll & Branch (1.00%, paused/no traffic, 88.4% / 52.6% MDE) all reported lifts 4.7x-8.2x below the MDE, statistically indistinguishable from zero.
+  - source ticket: `ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis`
+  - source_line: the 3 measurable cases all reported lifts well below detection threshold.

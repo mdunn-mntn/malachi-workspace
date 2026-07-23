@@ -17,3 +17,10 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | audi_1111_vendor_quality/audi_1117_ds14_svs_overlap | carded | 6 | context-full batch 2 |
 | ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill | carded | 4 | context-full batch 2 |
 | ber_2250_incrementality_overhaul/ti_1039_liftlab_design_review | carded | 0 | context-full batch 2 |
+| ber_2250_incrementality_overhaul/ti_831_audience_deciles | carded | 0 | context-full batch 3; random-bucketing clarification |
+| ber_2250_incrementality_overhaul/ti_835_control_group_design | carded | 0 | context-full batch 3; guid vs clickpass two-stories |
+| ber_2250_incrementality_overhaul/ti_839_measure_results | carded | 0 | context-full batch 3; backlog stub |
+| ber_2250_incrementality_overhaul/ti_842_present_results | carded | 0 | context-full batch 3; backlog stub |
+| ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis | carded | 2 | context-full batch 3; MDE self-test + Lauren cross-val → experimentation.md |
+| ber_2250_incrementality_overhaul/ti_885_mid_intent_experiment_setup | carded | 0 | context-full batch 3; design-only, Kirsa blocker |
+| ber_2250_incrementality_overhaul/ti_886_uplift_model_implementation | carded | 0 | context-full batch 3; plan-only stub |
