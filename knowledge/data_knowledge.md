@@ -44,6 +44,22 @@ models/
 
 **Registered owners** (`owners.py`): `targeting-infrastructure`, `ber`, `RPLAT`, `bae`, `test`. Each has a Slack channel for audit/failure alerts.
 
+### SQLMesh — how to create + deploy a model (the workflow)
+**Key mental model: there is NO separate "job"/DAG to create.** A SQLMesh model IS a `.sql` file (a `MODEL(...)` block + one query) under `models/dw-main-{layer}/{schema}/`. The `cron` in the MODEL block (e.g. `cron '@daily'`) IS the schedule; SQLMesh derives the dependency DAG + run order from the model refs automatically. This is the big difference vs airflow-ti (where you hand-write a Python DAG + Ryan wires deps).
+
+**Local setup (from `docs/ONBOARDING.md`):** clone → `python3 -m venv .venv && source .venv/bin/activate` → `pip install -r requirements.txt` → `gcloud auth login` AND `gcloud auth application-default login` (ADC). BigQuery + **Cloud SQL state** access is gated — request via a ticket in the Data Platform (DP) Jira backlog. Alt to venv: Dockerized `make build && make plan` (mounts `~/.config/gcloud` for ADC). `sqlmesh` CLI startup is ~45–60s (loads ~1,700 models + connects to Cloud SQL state); `python scripts/sqlmeshd.py` keeps a warm Context (sub-second subsequent commands).
+
+**Author → deploy loop:**
+1. Feature branch; write the `.sql` model file(s). JS UDFs allowed as **pre-statements** (`CREATE TEMPORARY FUNCTION …` between the MODEL block and the query — precedent `summarydata/conversion_signal_impressions.sql`).
+2. `sqlmesh lint` / `sqlmesh format`.
+3. **`sqlmesh plan dev_<username>`** (your dev env from `config.py`) — compiles ALL models, diffs vs prod, and **backfills the new model into your dev environment** so you can query/validate it without touching prod. This also generates the snapshot CI's `verify-impact` needs. Run the FULL env plan (no `--select-model`) or CI can fail.
+4. Validate in dev (query the dev table, check counts).
+5. Push branch → PR → CI (verify-impact + lint + tests) → review → merge to main.
+6. **Prod promotion:** `sqlmesh plan prod` / `sqlmesh apply` (CI/CD or a DP process on merge) creates the physically-versioned table + the clean-name view.
+7. **Scheduler:** `sqlmesh run prod` (`make run-prod`, runs on a cron/daemon somewhere in DP infra) executes each model when its `cron` is due. First prod run = the next cron firing after promotion.
+
+**Kinds:** `FULL` = rebuilt from scratch each run (current-state classifiers, small dims). `INCREMENTAL_BY_TIME_RANGE` = event tables (see the patterns above). `VIEW` = thin reshape.
+
 ### SQLMesh Table Tags (Supported vs. Unsupported)
 SQLMesh model definitions can carry `tags` that link a table to a topic in the internal data
 documentation app. A table is considered **supported** if it appears under a topic via a tag;
