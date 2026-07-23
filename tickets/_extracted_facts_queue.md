@@ -107,6 +107,12 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **fact:** Per-source biddable in-gate share of delivered svs IPs (30d, gate ref 2026-07-01): Cybba 81.6, Klickly 78.5, Sovrn 72.7, augmentor 70.2, Predactiv 66.8, Justuno 60.0, 33A API 59.6, guid 54.8, 5x5 52.2, 33Across 50.0.
   - source ticket: `audi_1111_vendor_quality/audi_1117_ds14_svs_overlap`
   - source_line: Per-source biddable share of delivered IPs (in-gate %): Cybba 81.6, Klickly 78.5, Sovrn 72.7, augmentor 70.2, Predactiv 66.8, Justuno 60.0, 33A API 59.6, guid 54.8, 5x5 52.2, 33Across 50.0
+- **fact:** LiveRamp is a separate pipeline (separate bucket + ingestion) that aggregates 33Across, Dstillery, etc. for interest segments; svs vendor drops do NOT touch interest segments.
+  - source ticket: `audi_1111_vendor_quality`
+  - source_line: **LiveRamp is a separate pipeline** (separate bucket + ingestion; aggregates 33Across, Dstillery, etc. for interest segments) — svs vendor drops do NOT touch interest segments.
+- **fact:** Within RTC-fired imps (valuation week 2026-07-02..08, 30,604,353 imps / 4,004,751 IPv4 IPs), the free-covered 99.99% splits into 99.59% on guid-delivered Kafka real-time IPs and 0.41% hourly-batch-only reachable (svs member, no guid); no-svs-membership = 0.
+  - source ticket: `audi_1111_vendor_quality/audi_1116_rtc_free_logs`
+  - source_line: | guid-covered (Kafka real-time path could qualify) | 99.59% | ... | hourly-batch-only reachable (svs member, no guid) | 0.41% | ... | no svs membership | 0 |
 - **fact:** The exact CHAPI graph query for a 30-day advertiser metric runs against summarydata.all_facts_by_day_ramp_combined (daily, ClickHouse Distributed, no FINAL) with a half-open GMT literal predicate day >= timestamp '<30d-ago>' AND day < timestamp '<today 00:00>' (30d ending yesterday, not today()-30); graph.spend and graph.impressions are SUMmed, graph.usersreached is uniqArrayMergeState/uniqArrayMerge over uniques_arr (cross-day distinct merge, not a SUM). aid maps to WHERE advertiser_id IN (...), sum=advertiserinfo.id to GROUP BY advertiser_id.
   - source ticket: `ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill`
   - source_line: Table = `summarydata.all_facts_by_day_ramp_combined` (daily grain, ClickHouse `Distributed`; no `FINAL`). Time column `day`; predicate is **half-open literal GMT timestamps** `day >= timestamp '<30d-ago>' AND day < timestamp '<today 00:00>'` (30d ending yesterday; not `today()-30`).
