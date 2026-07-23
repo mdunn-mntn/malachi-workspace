@@ -5,7 +5,30 @@ status: in_progress
 date: 2026-07-22
 summary: "Durable campaign-grain view: what MM engine + how restricted, so 'MM' means flagship not DS-present"
 result: "Design for a durable campaign-grain classifying view exposing MM engine (flagship/Fangorn/legacy) plus restriction flags (geo, 3P AND/OR, intent gate) so 'MM' means flagship, not DS13/19/46 presence. Raw flags let analysts set their own bar. Spec in Confluence review; next: materialize as a daily SQLMesh model."
+keywords: ["mm classifier", "mm_class", "is_flagship", "is_unmodified_mm", "restriction_level", "tiers_reachable", "mmv1 mmv2 mmv3", "fangorn engine", "hhst_gated", "geo_reach_pct", "campaign classifier view", "audi_1083"]
 ---
+
+## TL;DR
+
+**Q:** Build a durable campaign-grain view that grades MM engine + restriction so "MM" means flagship, not raw DS13/19/46 presence.
+
+**A:** Designed a durable campaign-grain classifying view (mm_class engine + restriction flags) so "MM" means flagship not DS-presence; draft validated on live data, SQLMesh model authored on a local branch (not pushed).
+
+**How:** Assembled prior components (polarity-aware AST 3P parser, TI-1037 2x3 taxonomy, HHST gate, Fangorn tier table) into two orthogonal axes: Axis A mm_engine/mm_class from DS-leaf presence, Axis B restriction components (geo binary, AND-3P/AND-1P flags, hhst_gated) rolled up to restriction_level + is_unmodified_mm + is_flagship booleans. Validated end-to-end on live data, then authored as a daily FULL SQLMesh model.
+
+**Tables:** `tpa_fangorn_advertiser_inclusion`, `household_score_thresholds`, `household_score_threshold_archives`, `audience_segments`, `campaigns`, `camperbid_prod__hhst_v3__campaign_bucket_population`, `geo.location_data`
+
+**Learned:**
+- `campaign_status_id` 8/9 (Deleted / Legacy Archived) are NOT caught by the deleted boolean; add `campaign_status_id NOT IN (8,9)` so archived campaigns don't pollute rollups (campaign_status_id=3 = Live).
+- Definitive headline (active Stage 1, delivered 45d, $39.5M): MM 72.4% / unmodified MM 34.6% / flagship 6.9% of prospecting spend; of every MM-labelled dollar, under half is unmodified.
+- MM = 43.5% of campaigns by COUNT vs 72.4% by SPEND (MM campaigns spend bigger); within MM only ~20% unmodified / 80% modified, geo is the #1 modifier.
+
+**Reuse when:**
+- How do I classify whether a campaign is real MM vs DS-present
+- MM engine version per campaign (mmv1/mmv2/mmv3)
+- is_flagship / is_unmodified_mm definition
+- how restricted is an MM campaign
+- AUDI-1083 classifier view / mm_class taxonomy
 
 # AUDI-1083: MNTN Matched classifying view
 

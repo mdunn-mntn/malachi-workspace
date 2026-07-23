@@ -5,7 +5,23 @@ status: done
 date: 2026-03-04
 summary: "Pre/post campaign-performance analysis around a vertical classification change"
 result: "Delivered pre/post metrics comparison across campaigns; full results in Drive spreadsheet"
+keywords: ["pre_post", "vertical_classification", "cost_impression_log", "ui_visits", "ti_221", "ti_270", "ti_033"]
 ---
+
+## TL;DR
+
+- **Question:** Did the vertical classification change (likely tied to TI-033) improve, degrade, or leave neutral campaign performance, measured pre/post across campaigns?
+- **Answer:** Delivered a pre/post metrics comparison (impressions, visits, conversions, IVR) across campaigns; full results live in the Drive spreadsheet, not the summary.
+- **How:** Defined pre/post windows around the classification change date, pulled campaign-level metrics for both windows, and compared across campaigns/verticals; join used cost_impression_log + ui_visits.
+- **Tables:** cost_impression_log, ui_visits
+- **Learned:**
+  - cost_impression_log + ui_visits join pattern confirmed for pre/post analysis
+  - TI-270 is a related pre/post analysis for the Jaguar release (a separate feature)
+  - The vertical classification change was likely tied to TI-033
+- **Reuse when:**
+  - pre/post analysis of a vertical classification change
+  - measuring campaign performance impact of a feature/vertical release
+  - cost_impression_log ui_visits join for pre/post metrics
 
 # TI-221: Pre-Post Vertical Classification Analysis
 

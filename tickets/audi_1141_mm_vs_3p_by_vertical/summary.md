@@ -16,12 +16,12 @@ keywords: ["mm vs 3p", "sales vertical", "prospecting", "intent gate", "cpv", "i
 
 **How:** Classified S1 prospecting campaigns (objective_id=1, funnel_level=1, delivered in trailing 180d) from the latest targeted segment into MM / MM restricted / 3P / Neither via the TI-999 Pass 26 LCA tree-walk (OR-additive vs AND-narrowing) plus geo-narrowing detection; split broad MM by the HHST intent gate; rolled up to 8 sales verticals via an fpa_advertiser_verticals crosswalk; reported advertiser-weighted median (20k-impression floor) as headline with impression-pooled as cross-check.
 
-**Tables:** `audience.audience_segments`, `fpa_advertiser_verticals`, `household_score_threshold_archives`
+**Tables:** `audience_segments`, `fpa_advertiser_verticals`, `household_score_threshold_archives`
 
 **Learned:**
-- MM (all) blended IVR 0.28% still beats 3P (0.07%) ~4x IVR / ~3x CPV / ~2.3x ROAS, answering whether gated MM is a perfect-scenario average; MM (gated) IVR is 0.46%.
+- MM (gated) IVR 0.46% beats 3P IVR 0.07% ~6.6x and ~4x on CPV, in all 8 verticals; MM (all) blended IVR 0.28% still beats 3P ~4x IVR / ~3x CPV / ~2.3x ROAS.
 - 3P only looks competitive impression-pooled (3P pooled IVR 0.62%) because ~39% of 3P impressions come from one large account (advertiser 31357); advertiser-weighted median is the correct lens.
-- Vertical rollup uses an interim advertiser->fpa_advertiser_verticals type=0 parent (37 canonical) -> 8 sales-bucket crosswalk in the SQL; needs RevOps sign-off (B2B, Food & Beverage judgment calls; 3 orphans).
+- The intent gate is the single biggest lever: MM (no gate) 0.13% and MM restricted 0.18% both sit below MM (gated) 0.46%.
 
 **Reuse when:** MM vs 3P performance by vertical; is gated MM a cherry-picked / perfect-scenario average; does score-limited MM behave like 3P; cost-per-visit MM vs 3P; ROAS MM vs 3P prospecting.
 

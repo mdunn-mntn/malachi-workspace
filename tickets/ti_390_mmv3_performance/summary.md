@@ -12,9 +12,9 @@ keywords: ["mmv3", "membership model v3", "audience targeting", "ivr", "ti-390"]
 
 **Q:** Did MMv3 (Membership Model v3) improve audience targeting performance without regressions after rollout?
 
-**A:** Investigation complete; findings documented in Drive gdoc/gsheet, not locally — the local summary is a stub with no metrics recorded.
+**A:** Investigation complete, but findings live only in the Drive gdoc/gsheet; the local summary is a stub with no metrics recorded.
 
-**How:** Planned pre/post-MMv3 cohort comparison on IVR, conversion rate, and audience-quality metrics; actual results and numbers live only in the Drive gdoc and gsheet, not in the local summary.
+**How:** Planned pre/post-MMv3 cohort comparison on IVR, conversion rate, and audience-quality metrics; actual results and numbers exist only in the Drive gdoc and gsheet, not in the local summary.
 
 **Tables:** none
 
