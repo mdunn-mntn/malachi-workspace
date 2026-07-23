@@ -5,7 +5,32 @@ status: done
 date: 2026-03-24
 summary: "Audit Stage 3 verified-visit IP lineage — trace each VV back to its bid"
 result: "Audit complete — 99.97% of S3 VVs resolved via bid_ip; SQLMesh v12 model update pending"
+keywords: [ti-650, verified visit, vv, ip lineage, bid_ip, stage 3, s3, clickpass_log, impression_type, ctv, viewable display, campaign_group_id, lookback, wgu, trace_uuid, sqlmesh vv_ip_lineage]
 ---
+
+## TL;DR
+
+**Q:** Read TI-650 Stage 3 VV IP Lineage Audit summary; trace each S3 VV back to its originating bid.
+
+**A:** TI-650 audits Stage 3 verified-visit (VV) IP lineage — tracing each S3 VV back to its originating bid. The audit is complete; the SQLMesh model update (v11 to v12) is pending. Resolution uses bid_ip only (the targeting identity that entered the segment): S1 is deterministic via ad_served_id; S2 to S1 matches the S2 VV's bid_ip against S1 event_log.ip (vast_start preferred); S3 to S2 (preferred) matches the S3 VV's bid_ip against a prior S2 VV clickpass_ip in the same campaign_group_id and prior in time, then S2's bid_ip to S1 event_log; S3 to S1 is the fallback when no S2 match exists. The v4 validation run (10 advertisers, Mar 16-22 2026, 146,900 S3 VVs) resolved 99.97% at 365-day lookback (99.999% all-time; 2 genuinely unexplained — Ferguson Home 106777, and FICO 107447 on T-Mobile CGNAT). Unresolved root causes: no bid_ip anywhere after bid_logs 90d TTL purge (30 VVs, 27 Ancient Nutrition + 3 EarthLink), lookback shorter than campaign age (2), genuine mysteries (2). Trace paths differ by impression_type (CTV / Viewable Display / Non-Viewable Display), where NULL IP columns indicate the type rather than missing data. Production lookback default is 120d to cover the WGU (31357) outlier (~210d, ~30% of MNTN spend). Deliverable is a row-level trace table keyed by trace_uuid = MD5(ad_served_id).
+
+**How:** Empirical bid_ip trace across silver.logdata tables (clickpass_log, event_log, viewability_log, impression_log, win_logs, bid_logs) joined to bronze.integrationprod campaigns/advertisers/campaign_groups. Validation runbook: discovery, per-advertiser resolution rate, full trace table, 10 integrity checks, all-time unresolved investigation, campaign creation-date check. Reported results are from v4 (10 advertisers, Mar 16-22 2026), v3 (10 advertisers), and v2 (20 advertisers). The SQLMesh v12 model update remains a Next Step, not done.
+
+**Tables:** silver.logdata.clickpass_log, silver.logdata.event_log, silver.logdata.viewability_log, silver.logdata.impression_log, silver.logdata.win_logs, silver.logdata.bid_logs, bronze.integrationprod.campaigns, bronze.integrationprod.advertisers, bronze.integrationprod.campaign_groups, advertiser_configs
+
+**Learned:**
+- bid_ip is THE targeting identity for VV lineage; cross-stage matches scoped within the same campaign_group_id, prior in time
+- impression_type is inferred from which IP columns are populated: vast_start_ip NOT NULL = CTV; viewability_ip NOT NULL with vast columns NULL = Viewable Display; only impression_ip populated = Non-Viewable Display
+- v4 run: 99.97% of 146,900 S3 VVs resolved at 365d lookback, 99.999% all-time, only 2 genuinely unexplained (Ferguson Home 106777, FICO 107447 T-Mobile CGNAT)
+- Production lookback default 120d covers WGU (31357, ~210d, ~30% of MNTN spend); most advertisers hit 99% by 60-90d
+- trace_uuid = MD5(ad_served_id) gives a deterministic key (avoids the non-deterministic GENERATE_UUID-across-CTE bug)
+
+**Reuse when:**
+- tracing a verified visit back to its bid / IP lineage across funnel stages
+- auditing S3 (Multi-Touch Plus) VV resolution rates
+- questions about which IP columns are populated per impression type (CTV vs display)
+- choosing a VV attribution lookback window
+- building or updating the vv_ip_lineage SQLMesh model
 
 # TI-650: Stage 3 VV IP Lineage Audit
 

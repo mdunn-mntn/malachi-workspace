@@ -5,7 +5,30 @@ status: in_progress
 date: 2026-04-07
 summary: "Extract predictive bidstream features + augment DS13/DS19 audience pools for targeting."
 result: "in progress — pre-visit XGBoost AUC ~0.896; DS13/19 augmentation experiment pending"
+keywords: [bidstream, feature extraction, augmentor_log, xgboost, shap, feature ablation, ds13, ds19, fangorn feature store, auc, leakage, content genre, incrementality, ti-789]
 ---
+
+## TL;DR
+
+**Q:** What is TI-789 (bidstream feature extraction & audience augmentation) doing and finding?
+
+**A:** TI-789 (In Progress) has two workstreams: (1) extract predictive bidstream features from augmentor_log / bidder_auction_events, rank via XGBoost + SHAP, and integrate into the Fangorn feature store; (2) augment DS13/DS19 IP pools with bidstream signals and validate with holdout experiments (RTC applicability for DS13 to explore). Related TI-790 feature-importance work shows pre-visit features alone give AUC ~0.896 while feedback features produce AUC ~0.999 (leakage), so pre-visit and feedback features must be separated. Top pre-visit features are al_avg_segments (existing MNTN segment count), ci_pct_new, ci_pct_rtc; feature importance barely changes between 11 and 58 features (AUC stable at 0.896 +/- 0.005). Content genre ranked ~25th for raw visit prediction but is valuable for vertical classification. Kale's direction (2026-03-31 1x1): evaluate features by incremental lift via feature ablation rather than championing any single feature (keywords, income). DS13/DS19 augmentation holdout experiment still pending.
+
+**How:** From the summary's Investigation & Findings, citing related TI-790 feature-importance analysis: XGBoost with IVR as target; SHAP/gain/weight/cover importance; pre-visit vs feedback feature separation to avoid leakage. Kale 2026-03-31 1x1 notes supply the feature-ablation / incrementality framing. Work is in progress; Solution and Questions Answered sections are unfilled.
+
+**Tables:** augmentor_log, bidder_auction_events
+
+**Learned:**
+- Pre-visit features alone give AUC ~0.896; feedback features produce AUC ~0.999 (leakage), so the two must be separated.
+- Top pre-visit features: al_avg_segments, ci_pct_new, ci_pct_rtc; AUC stable at 0.896 +/- 0.005 between 11 and 58 features.
+- Content genre ranked ~25th for raw visit prediction but valuable for vertical classification.
+- Kale wants features evaluated by incremental lift via feature ablation, not by championing any single feature (keywords/income).
+
+**Reuse when:**
+- Building or ranking bidstream/Fangorn features for targeting
+- Deciding pre-visit vs feedback feature separation to avoid leakage
+- Designing DS13/DS19 audience augmentation or holdout experiments
+- Questions about which bidstream signals predict visits/spend
 
 # TI-789: Bidstream Feature Extraction & Audience Augmentation
 

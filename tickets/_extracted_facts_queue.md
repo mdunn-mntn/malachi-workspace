@@ -201,6 +201,26 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **[ti_780_campaign_ramp_up_research]** Excluding the first 4 weeks of new-campaign ramp-up in TI-748 v5 reduced the placebo false-positive rate from 30% to 24%.
   - source_line: A: Yes - excluding the first 4 weeks reduced placebo FPR from 30% to 24% in TI-748 v5.
 
+## Batch 8 (ti_650, ti_789 completion)
+
+### data_knowledge.md
+- **[ti_650_stage_3_vv_audit]** impression_type is inferred from which IP columns are populated in the trace: vast_start_ip NOT NULL = CTV; viewability_ip NOT NULL with vast columns NULL = Viewable Display; only impression_ip populated (vast + viewability NULL) = Non-Viewable Display. NULL IP columns indicate the impression type, not missing data.
+  - source_line: The `impression_type` column tells you which IP columns are populated. NULL IP columns indicate the impression type, not missing data.
+
+### experimentation.md
+- **[ti_789_bidstream_feature_extraction]** In TI-790/TI-789 modeling, feedback features produce AUC ~0.999 (leakage) versus ~0.896 for pre-visit features alone, so pre-visit and feedback features must be separated.
+  - source_line: Pre-visit features alone give AUC ~0.896; feedback features produce AUC ~0.999 (leakage)
+- **[ti_789_bidstream_feature_extraction]** ci_pct_rtc ranks among the top pre-visit features for visit prediction (alongside al_avg_segments and ci_pct_new).
+  - source_line: Top pre-visit features: `al_avg_segments` (existing MNTN segment count), `ci_pct_new`, `ci_pct_rtc`
+- **[ti_789_bidstream_feature_extraction]** Content genre ranks ~25th for raw visit prediction but is valuable for vertical classification.
+  - source_line: Content genre ranked ~25th for raw visit prediction but valuable for vertical classification
+- **[ti_789_bidstream_feature_extraction]** Feature importance barely changes between 11 and 58 features (AUC stable at 0.896 +/- 0.005).
+  - source_line: Feature importance barely changes between 11 and 58 features (AUC stable at 0.896 +/- 0.005)
+
+### data_catalog.md
+- **[ti_789_bidstream_feature_extraction]** A 2-day 10% bidstream sample is ~2.5B rows.
+  - source_line: Bidstream data: 2.5B rows per 2-day 10% sample
+
 <!-- batch 9 appended -->
 
 ## Batch 9

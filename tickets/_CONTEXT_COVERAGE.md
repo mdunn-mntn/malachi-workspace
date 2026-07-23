@@ -60,6 +60,8 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_737_fpa_advertiser_verticals | carded | 1 | batch 8; CoreDW->BQ parity PASSED |
 | ti_748_causal_impact_media_plan | carded | 1 | batch 8; Media Plan CI, config-version split |
 | ti_780_campaign_ramp_up_research | carded | 1 | batch 8; 4-week ramp-up exclusion |
+| ti_650_stage_3_vv_audit | carded | 1 | batch 8; S3 VV bid_ip lineage audit, 99.97% resolved |
+| ti_789_bidstream_feature_extraction | carded | 5 | batch 8; bidstream feature extraction, pre-visit vs feedback AUC |
 | ti_803_buk_value_analysis | carded | 0 | batch 9; BUK value epic, 184x per-advertiser finding |
 | ti_804_keyword_visit_rate_analysis | carded | 2 | batch 9; Phase 1 keyword visit-rate 184x |
 | ti_809_multiday_validation | carded | 2 | batch 9; feature-ranking day stability |
