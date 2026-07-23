@@ -182,6 +182,11 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
   - source ticket: `ti_34_identity_sync_freshness`
   - source_line: "- `tpa.membership_updates_logs`: key freshness column is `update_time`; sync should run daily."
 
+### data_knowledge.md
+- **fact:** TI-650 quantified the NTB disagreement rate at 42%.
+  - source ticket: `ti_310_ntb_investigations`
+  - source_line: "TI-650 is the quantitative follow-up (NTB disagreement rate = 42%)."
+
 <!-- batch 8 appended -->
 
 ## Batch 8
