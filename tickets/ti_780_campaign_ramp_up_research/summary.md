@@ -5,7 +5,31 @@ status: done
 date: 2026-03-27
 summary: "How long until new prospecting campaigns reach steady-state IVR?"
 result: "New campaigns take ~4 weeks to reach steady state; exclude first 4 weeks from analysis"
+keywords: [campaign ramp-up, steady state ivr, 4-week exclusion, new campaign maturity, bidder learning, ti-780, ti-748, causal impact post-period, spend tier convergence]
 ---
+
+## TL;DR
+
+**Q:** How long until new prospecting campaigns reach steady-state IVR, and what exclusion window should experiments use?
+
+**A:** New prospecting campaigns take ~4 weeks to reach steady-state IVR. Week 0 launches at 38% of steady state, climbs rapidly through weeks 1-3, and stabilizes at 89%+ by week 4 (first week where WoW change drops below 5% AND IVR reaches >85% of steady state). Steady-state IVR (weeks 8-20 avg) is 0.0108. All spend tiers converge by week 4-5; high-spend campaigns ramp slightly faster (52% at week 0 vs 43% low-spend) but the 4-week window is universal. Recommendation: exclude the first 4 weeks of any new campaign from causal-impact analysis. Applied to TI-748 v5, which reduced placebo FPR from 30% to 24%. No formal maturity benchmark existed before this (confirmed by Kirsa). Ramp-up attributed to bidder learning, frequency buildup, and delivery-footprint exploration.
+
+**How:** Pulled cohorts of new prospecting campaigns ($10K+ spend, since June 2024, N=6,917) from sum_by_campaign_by_day and tracked weekly IVR from launch to build stabilization curves; segmented by spend tier, channel (CTV/display), and vertical. Complete (status: done).
+
+**Tables:** sum_by_campaign_by_day
+
+**Learned:**
+- New prospecting campaigns reach steady-state IVR in ~4 weeks; week 4 is the inflection point (WoW <5%, >85% of steady state)
+- Standard rule: exclude the first 4 weeks of any new campaign from causal-impact / pre-post analysis
+- All spend tiers converge by week 4-5; high-spend ramps slightly faster but the 4-week window is universal
+- Applying the 4-week exclusion to TI-748 v5 reduced placebo FPR from 30% to 24%
+- No formal campaign-maturity benchmark existed before this research (confirmed by Kirsa)
+
+**Reuse when:**
+- designing any pre/post or within-advertiser experiment comparing new vs existing campaigns
+- setting a CausalImpact post-period start for a newly launched campaign
+- questions about how long a new prospecting campaign takes to mature or reach steady-state IVR
+- choosing a ramp-up exclusion window
 
 # TI-780: Campaign Ramp-Up Research — How Long Until New Campaigns Reach Steady State?
 

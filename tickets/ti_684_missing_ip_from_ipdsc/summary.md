@@ -5,7 +5,28 @@ status: in_progress
 date: 2026-03-04
 summary: "Trace why some expected IPs are absent from the IPDSC targeting pipeline"
 result: "in progress — added ipdsc__v1 catalog entry; root cause not yet determined"
+keywords: [ipdsc, ipdsc__v1, missing ips, ip data source category, ti-684, hem resolution, ip ttl, geo exclusion]
 ---
+
+## TL;DR
+
+**Q:** Why are some expected IPs missing from the IPDSC (IP Data Source Category) targeting pipeline?
+
+**A:** In progress — root cause not yet determined. The ticket investigates IPs expected to be in IPDSC (dw-main-bronze.external.ipdsc__v1) but absent, which would mean audience members are not reached. Candidate causes listed (not yet confirmed): pipeline failures (HEM → IP resolution not completing), IP TTL expiration, geo exclusions filtering IPs out, or incorrect partition-date queries. No findings, solution, or root cause concluded yet. Only documentation output so far: a full data_catalog.md entry for ipdsc__v1 (added 2026-03-03, from TI-644 work). Prior related work: TI-644 (ipdsc__v1 schema/query patterns) and TI-34 (identity sync freshness — stale syncs could cause missing IPs).
+
+**How:** Ticket summary only; investigation ongoing. Plan (not executed to conclusion): compare expected vs actual IPDSC contents, trace IPs through pipeline stages, determine root cause vs expected data lifecycle, recommend fix. Outputs folder holds two JSON exports (ti_684_export.json, ti_684_export_2.json); no findings written into the summary.
+
+**Tables:** dw-main-bronze.external.ipdsc__v1
+
+**Learned:**
+- IPDSC = IP Data Source Category, maps IPs to audience segments for targeting; missing IPs mean audience members not reached
+- TI-684 root cause not yet determined; candidate causes are pipeline failures (HEM->IP resolution), IP TTL expiration, geo exclusions, or incorrect partition-date queries
+- TI-644 established ipdsc__v1 schema and query patterns; TI-34 investigated identity sync freshness as a possible missing-IP cause
+
+**Reuse when:**
+- investigating missing IPs from IPDSC
+- tracing IP dropout through the targeting pipeline
+- ipdsc__v1 data lifecycle / TTL / freshness questions
 
 # TI-684: Missing IPs from IPDSC
 

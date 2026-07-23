@@ -5,7 +5,33 @@ status: done
 date: 2026-05-06
 summary: "Did Media Plan adopters see improved prospecting performance? Causal-impact study"
 result: "Aggregate IVR ~zero; config version (max_networks 25 to 15) predicts who benefits"
+keywords: [media plan, causal impact, max_networks, olympus, perml-412, config change, long-tail pruning, concentration, ivr, badge_state, sum_by_ctv_network_by_day, publisher allocation, ti-748, selection bias, ramp-up exclusion]
 ---
+
+## TL;DR
+
+**Q:** Did advertisers who adopted MNTN's recommended Media Plan see improved prospecting performance? (TI-748 causal impact study)
+
+**A:** Aggregate IVR effect is near zero (spend-weighted -0.23%; panel model +2.06%, n.s. p=0.85), but that masks a split driven by algorithm config version. A Feb 3, 2026 olympus config change (max_networks 25 to 15, min_allocation 1% to 0.5%, spend capacity filter added; commit 555234f, PERML-412) split the 8 analyzable advertisers: new-config concentrated plans (16 publishers) show +10-17% IVR lift, old-config plans (25-26 publishers) show -26 to -31% decline. Refined finding (Chris Addy): concentration is the mechanism, and the config change made concentration the default. Lighting NY got 16 publishers under the old config via natural budget/vertical pruning and showed the same +10.5% lift. The mechanism is long-tail pruning (removing poor performers), not selection of the best publishers and not frequency accumulation. Every advertiser was delivering across 131-183 publishers pre-adoption; plans concentrated them to 16-26. Pattern: ~90% publisher reduction (to 16) = positive IVR, ~80% reduction (to 26) = negative; threshold ~88% / 16-19 target publishers. Actionable: refresh Boll & Branch and Tempo plans (stuck on old config, never refreshed). Caveat: N=8, pattern clear and mechanism plausible but not statistically confirmable. Within-advertiser comparison (rec vs non-rec) confounded by campaign maturity. Beta selection is not random (hand-picked by PEX/CS, validated by Toph), confirmed selection bias.
+
+**How:** Two analyses: (1) per-advertiser CausalImpact with 52-week pre-period from sum_by_campaign_by_day (back to 2024-01-01), per-advertiser BIC-optimized covariates after VIF elimination (14 candidates to 3-7 per advertiser), 4-week ramp-up exclusion (TI-780 finding), multi-point placebo tests (24% FPR), sensitivity analysis; (2) panel data regression (1,255 obs, 14 advertisers, R2adj=0.679) as complementary aggregate. Recommended-only adopters identified via media_plan_publishers.badge_state='RECOMMENDED'. Pre-adoption publisher counts from sum_by_ctv_network_by_day (>=5K impressions), cross-validated against cost_impression_log. Config-change timeline confirmed by BQ query on plan creation dates and publisher counts. Key covariate: spend_change_pct (primary confound, in all models); platform-wide metrics mostly rejected by BIC as collinear/noisy.
+
+**Tables:** sum_by_campaign_by_day, sum_by_ctv_network_by_day, core.media_plan, core.media_plan_publishers, cost_impression_log, agg__daily_sum_by_campaign
+
+**Learned:**
+- Aggregate Media Plan IVR effect is near zero (spend-weighted -0.23%, panel +2.06% n.s.) because the analysis window mixes two algorithm config versions.
+- Feb 3, 2026 config change (max_networks 25 to 15, min_allocation 1% to 0.5%, spend capacity filter added; olympus commit 555234f, PERML-412) is the primary differentiator: new-config 16-pub plans +10-17% IVR, old-config 25-26 pub plans -26 to -31%.
+- Mechanism is long-tail pruning / concentration, not selection of best publishers and not frequency accumulation; Lighting NY (16 pubs under old config via natural budget/vertical pruning) shows the same +10.5% lift, proving concentration works regardless of config era.
+- Advertisers delivered across 131-183 publishers pre-adoption; ~90% reduction (to 16) = positive IVR, ~80% reduction (to 26) = negative; threshold ~88% / 16-19 publishers. Each advertiser had ~10-15x IVR variance between best and worst pre-adoption publisher.
+- The algorithm optimized for deliverability/reach, not IVR (Lighting NY: recommended Samsung TV+/Bravo/CNN rank #37-59 by actual pre-adoption IVR; true best-IVR publishers like Spectrum News have low inventory).
+- N=8 caveat: config-version pattern is clear and mechanism plausible but not statistically confirmable at this sample size.
+
+**Reuse when:**
+- evaluating a feature/algorithm rollout where an algorithm or config change may have occurred during the observation window
+- analyzing Media Plan adoption or network-allocation performance
+- needing pre-period history longer than Sep 2025 (use sum_by_campaign_by_day, back to 2024-01-01)
+- identifying recommended vs customized media plans via badge_state
+- per-advertiser CausalImpact with BIC/VIF covariate selection and ramp-up exclusion
 
 # TI-748: Causal Impact — Media Plan Feature
 

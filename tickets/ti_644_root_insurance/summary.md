@@ -5,7 +5,31 @@ status: done
 date: 2026-05-06
 summary: "Why Root matched only ~8% of MNTN conversions to their CRM test/control split"
 result: "Config correct; low match = IP/household gap, not attribution error (5M HHs = 23M HEMs)"
+keywords: [root insurance, crm, ds 4, hem, ipdsc__v1, tmul_daily, audience_upload_ips, match rate, household, ti-644]
 ---
+
+## TL;DR
+
+**Q:** Why did Root Insurance match only ~8% of MNTN-attributed conversions to their CRM test/control split?
+
+**A:** MNTN's campaign was configured correctly; the low match is likely an IP/household matching gap, not an MNTN attribution error. Root ran a prospecting CTV campaign (campaign_id 492449, advertiser_id 39542, flight Oct 17 – Dec 4 2025) using a CRM list split ~5M test / ~5M control households. MNTN reported ~7,387 converting profiles (6,521 validated by Root), but Root matched only ~300 test + ~200 control (~92% unmatched), below the ~2,500 test matches needed for valid measurement, invalidating their experiment. Findings: (1) prospecting uses DS 4 (CRM) only, geo-targeted to US minus 18 states — configured correctly; (2) Root's "5M" = households while MNTN sees ~23.3M include / ~24.4M exclude HEMs (UPPERCASE, ~23.3M net), because there are multiple emails per household plus multiple hash-case variants per email; (3) DS 4 IPs resolve via dw-main-bronze.external.ipdsc__v1 (GCS-backed parquet, partitioned by dt and data_source_id), estimated ~14.5M IPs from the ~61–63% match rate; (4) audience_upload_ips is empty for email uploads (only populated for direct IP uploads, per Victor); (5) DS 4 CRM data does not appear at row level in tpa_membership_update_log, and tmul_daily (DS 4) had expired (14-day TTL, campaign ended Dec 4 2025). ISP analysis and identity-graph household bounce remained blocked pending Zach's table confirmations; the segment_id (545007) vs audience_segment_id (594162) relationship is unresolved.
+
+**How:** Verified campaign config (DS sources, geo); counted include/exclude HEMs in audience_upload_hashed_emails filtering pre_hash_case='UPPERCASE'; confirmed ~61–63% match rates from audience_uploads; identified ipdsc__v1 as the DS 4 IP-resolution table; checked tmul_daily (expired, only DS 2/3 remain) and tpa_membership_update_log (Root segments not found at row level); confirmed audience_upload_ips empty for email uploads. Deeper ISP/identity-graph steps left blocked on Zach.
+
+**Tables:** audience_upload_hashed_emails, audience_uploads, tmul_daily, tpa_membership_update_log, ipdsc__v1, audience_upload_ips
+
+**Learned:**
+- Root's '5M' is households; MNTN stores ~23M HEMs due to multiple emails per household plus UPPERCASE/LOWERCASE/ORIGINAL hash-case variants
+- DS 4 (CRM) IPs resolve via dw-main-bronze.external.ipdsc__v1 (GCS-backed parquet, partitioned by dt and data_source_id); audience_upload_ips is empty for email uploads (only direct IP uploads)
+- DS 4 does not appear at row level in tpa_membership_update_log; tmul_daily has a 14-day TTL so DS 4 data expired after the campaign ended
+- Match rate on CRM email uploads runs ~61–63%; IPs ≈ match_rate × entry_count
+- A low CRM-to-conversion match rate can reflect the IP/household matching gap rather than an attribution error
+
+**Reuse when:**
+- Investigating a CRM/CTV audience-match or measurement-invalidation complaint from an advertiser
+- Resolving DS 4 (CRM) uploads to IPs or households
+- Explaining why an advertiser's household count differs from MNTN's HEM count
+- Estimating IP audience size from a CRM email upload
 
 # TI-644: Root Insurance — CRM Audience Match Investigation
 

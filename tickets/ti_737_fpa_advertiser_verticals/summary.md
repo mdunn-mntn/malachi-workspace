@@ -5,7 +5,30 @@ status: done
 date: 2026-03-16
 summary: "CoreDW→BQ migration parity validation of silver.fpa.advertiser_verticals"
 result: "PASSED: perfect field parity on 39,944 rows; found advertiser_name regression 2025-12-23"
+keywords: [fpa.advertiser_verticals, ti-737, coredw migration, advertiser_name regression, vertical_id, type=1 sub-vertical, orphan advertiser_ids, cdc parity]
 ---
+
+## TL;DR
+
+**Q:** Did silver.fpa.advertiser_verticals in BQ pass CoreDW→BQ migration parity validation, and are there any data anomalies?
+
+**A:** PASSED. silver.fpa.advertiser_verticals in BQ has full parity with CoreDW: all 39,944 common rows match exactly across every field (advertiser_id, advertiser_name, vertical_name, vertical_id, type, created_time, updated_time), no duplicate PKs, and it is safe to use as the CoreDW replacement. The only differences are 2 extra BQ rows (id 41033/41034, advertiser 59578) created after the CoreDW export — expected CDC lag, not a data issue. No BQ-specific anomalies. Pre-existing source-level issues appear identically in both systems: 49 orphan advertiser_ids absent from integrationprod.advertisers, and 8,020 empty advertiser_name rows. A follow-up (Section 8) traced the empty names to a regression starting 2025-12-23 that broke advertiser_name population (advertiser_name is denormalized/write-once); fix is to JOIN integrationprod.advertisers.company_name instead. Every advertiser has exactly 2 rows (type=0 parent, type=1 sub-vertical); 185 vertical_ids vs 184 names because 3 parent/child pairs share names.
+
+**How:** Profiled the BQ table (row counts, distinct values, NULLs, type distribution), checked duplicate PKs, ran a row-by-row comparison against a CoreDW JSON export (ti_737_coredw_fpa_advertiser_verticals.json), validated referential integrity to integrationprod.advertisers, and investigated the empty advertiser_name pattern with ti_737_empty_name_investigation.sql (timing evidence + cross-check against the advertisers dimension).
+
+**Tables:** silver.fpa.advertiser_verticals, bronze.integrationprod.fpa_advertiser_verticals, bronze.integrationprod.advertisers, silver.fpa.categories
+
+**Learned:**
+- Row-level parity passed: 39,944/39,944 common rows match across all fields; 2 extra BQ rows are post-export CDC lag, not anomalies.
+- advertiser_name is denormalized/write-once; a regression starting 2025-12-23 left 79-82% of new advertisers with empty names (4,366 affected). JOIN advertisers.company_name instead.
+- Every advertiser has exactly 2 rows: type=0 parent vertical + type=1 sub-vertical. 49 advertiser_ids are orphans (not in advertisers table) — pre-existing source issue in both BQ and CoreDW.
+- 185 vertical_ids vs 184 vertical_names because 3 parent/child pairs share a name: Household Goods (120/120002), Insurance (121/121001), MNTN Matched Audience (105/105000).
+
+**Reuse when:**
+- Validating a CoreDW→BQ Datastream CDC table for parity
+- Needing an advertiser's vertical (use type=1 sub-vertical, not advertisers.advertiser_vertical_id)
+- Debugging empty or stale advertiser_name in fpa_advertiser_verticals
+- Explaining the 185 vs 184 vertical_id/name discrepancy
 
 # TI-737: Validate fpa.advertiser_verticals in BQ
 

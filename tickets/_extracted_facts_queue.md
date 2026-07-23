@@ -175,3 +175,17 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **fact:** tpa.membership_updates_logs (Greenplum) tracks IP audience membership timestamps; its freshness column is update_time and the sync should run daily, so staleness is detected by comparing max(update_time) against expected daily cadence.
   - source ticket: `ti_34_identity_sync_freshness`
   - source_line: "- `tpa.membership_updates_logs`: key freshness column is `update_time`; sync should run daily."
+
+<!-- batch 8 appended -->
+
+## Batch 8
+
+### data_catalog.md
+- **[ti_737_fpa_advertiser_verticals]** The 3 fpa.advertiser_verticals parent/child pairs that share a vertical_name are: Household Goods (vertical_ids 120/120002), Insurance (121/121001), and MNTN Matched Audience (105/105000).
+  - source_line: | Household Goods | 120, 120002 | / | Insurance | 121, 121001 | / | MNTN Matched Audience | 105, 105000 |
+
+### experimentation.md
+- **[ti_748_causal_impact_media_plan]** Pre-adoption publisher reduction predicts Media Plan IVR outcome: ~90% reduction (to ~16 publishers) yields positive IVR, ~80% reduction (to ~26 publishers) yields negative; threshold approximately 88% reduction / 16-19 target publishers (N=8, pattern not statistically confirmable).
+  - source_line: **The pattern:** 90% reduction (->16 publishers) = positive IVR. 80% reduction (->26 publishers) = negative IVR. Threshold ~88% / ~16-19 target publishers. All advertisers had 10-15x IVR variance between best and worst publisher pre-adoption.
+- **[ti_780_campaign_ramp_up_research]** Excluding the first 4 weeks of new-campaign ramp-up in TI-748 v5 reduced the placebo false-positive rate from 30% to 24%.
+  - source_line: A: Yes - excluding the first 4 weeks reduced placebo FPR from 30% to 24% in TI-748 v5.

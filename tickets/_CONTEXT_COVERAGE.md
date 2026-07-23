@@ -51,3 +51,9 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_502_ip_scoring | carded | 0 | batch 7; how-we-use-scores reference doc |
 | ti_504_causal_impact_experimentation | carded | 0 | batch 7; Fangorn RCT vs CausalImpact framework |
 | ti_541_ip_scoring_pipeline | carded | 0 | batch 7; DS13 pipeline documentation |
+| ti_542_max_reach_causal_impact | carded | 0 | batch 8; Max Reach causal impact, results in notebook/PDF |
+| ti_644_root_insurance | carded | 0 | batch 8; CRM match gap, HEM vs household |
+| ti_684_missing_ip_from_ipdsc | carded | 0 | batch 8; in-progress, root cause TBD |
+| ti_737_fpa_advertiser_verticals | carded | 1 | batch 8; CoreDW->BQ parity PASSED |
+| ti_748_causal_impact_media_plan | carded | 1 | batch 8; Media Plan CI, config-version split |
+| ti_780_campaign_ramp_up_research | carded | 1 | batch 8; 4-week ramp-up exclusion |
