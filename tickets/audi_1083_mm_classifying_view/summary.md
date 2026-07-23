@@ -298,6 +298,23 @@ its cells keep structural names (user OK).
   (latest_created 2024-08-30, all pre-cutoff, PP-capped)** · non_mm 8,182. Old vertical_only_legacy 215 = 134
   mmv1 + 81 mmv3. Spec page → v10 (label rename + naming note + campaign_created). Query `queries/audi_1083_distribution.sql`.
 
+## 6d. Materialization — SQLMesh model authored (2026-07-23)
+Productionized as a SQLMesh model (BQ read-only access = no direct CREATE VIEW; airflow-ti = Spark, wrong
+tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, feature branch
+**`audi-1083-mm-classifier`** (committed locally, NOT pushed). Two models under
+`models/dw-main-silver/audience/`:
+- **`mm_campaign_classifier.sql`** — FULL, `cron '@daily'`, `gateway silver`, `grain campaign_id`,
+  owner `targeting-infrastructure`. The validated view SQL verbatim (3 JS UDFs as pre-statements, per the
+  `conversion_signal_impressions.sql` precedent). Home chosen = `audience` schema (alongside the existing
+  `campaign_segment_history.sql`).
+- **`mm_campaign_classifier_by_group.sql`** — FULL group rollup, `grain campaign_group_id` (Stage 2/3 join path).
+- **Validated:** sqlglot 30.13 bigquery parse clean (4 + 1 statements, JS triple-quote OK); SELECT logic
+  already BQ-verified via the distribution/verification runs. **NOT yet done (gated):** `sqlmesh plan dev_<user>`
+  (needs sqlmesh install + dev gateway creds: BQ dev + GCP Postgres state) → push → PR → review → first prod
+  run on next daily cron. CI runs `verify-impact` which FAILS until a dev plan generates the snapshot.
+- **Open decisions:** (1) owner `targeting-infrastructure` (alerts → #monitor-test) vs `ber` (→ #ber_sqlmesh_alerts,
+  the neighbor model's owner); (2) scope kept active Stage 1 only per user; (3) `geo_reach_pct` stays NULL (v2).
+
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
 **https://mntn.atlassian.net/wiki/spaces/TAR/pages/3712811252** — "AUDI-1083: MNTN Matched
