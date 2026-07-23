@@ -37,6 +37,7 @@ Every query runs through `.claude/scripts/bq_run.sh` (logs cost + `sql_tables` t
 | a **table's schema / grain / gotchas** | `bq/_CATALOG_INDEX.md` → the table doc; else its `data_catalog.md` section + `data_knowledge.md` gotchas |
 | **business logic / a metric definition** | `data_knowledge.md` (§ Business Logic / Advertising Concepts), `mntn_business.md`, `glossary.md` |
 | **experiment / rollout / causal method** | `experimentation.md` § Standard Analysis Protocol |
+| **pre/post · before-after a date · "did X change a KPI"** | `experimentation.md` § Standard Analysis Protocol (never naive pre/post — pair with CausalImpact); perf tables via `_ROUTING` **campaign daily rollup** / **long pre-period** → `summarydata.sum_by_campaign_by_day` (NOT `agg__daily_sum_by_campaign`, frozen to Sep 2025–Apr 2026) |
 | **a data-source `DSxx`** | `ds_catalog.md` |
 | **tune a slow/expensive query** | `bq/optimization_playbook.md`, `bq/query_cookbook.md`, the table's `## Observed cost`, and mine `bq_perf_log.jsonl` via `.claude/scripts/perf_digest.py` |
 | **verify how a reported number was produced** | `.claude/scripts/bq_verify.py <ticket \| label \| sql_sha256>` → the exact SQL fingerprint + `job_id` (recovers full SQL via `bq show -j`) + git commit + cost. Every `bq_run.sh` run is provenance-stamped. |

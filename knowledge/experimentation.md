@@ -43,6 +43,7 @@ If the methods give materially different point estimates:
 - **Floors:** Kalman filter convergence needs 30+ pre days; BIC subset stability needs 60+ pre days; covariate variance estimation needs 7+ weekend cycles
 - **Default:** 60 days for daily granularity, 12 weeks for weekly
 - **Validate:** run `ci_pre_days = 30 / 60 / 90` as a robustness check; if `rel_effect` is stable across them, the lookback is appropriate
+- **Table choice (avoid a silent truncated pre-period):** for any pre-period reaching before 2025-09, pull from `summarydata.sum_by_campaign_by_day` / `sum_by_advertiser_by_day` (history to 2024-01-01, working uniques). Do **not** use `aggregates.agg__daily_sum_by_campaign` — it is frozen to 2025-09-01…2026-04-30 with empty reach/uniques, so a long lookback silently starts partway through. (`_ROUTING` keyword **long pre-period**.)
 
 ### p-value computation (both methods)
 
