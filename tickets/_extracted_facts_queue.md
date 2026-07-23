@@ -297,3 +297,11 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
   - source_line: Stage 1 7-advertiser scan cost 18.2 TB, the same as the 1-advertiser smoke.
 - **[ber_2250_incrementality_overhaul/ti_837_implementation_plan]** Holdout IPs appear in augmentor_log at the uniform 10.0% rate, but their mntn_segments array does NOT include the segment they are a holdout of — targetable audience must be reconstructed externally before intersecting the holdout hash.
   - source_line: holdout IPs appear in augmentor_log, but their `mntn_segments` array does NOT include the segment the IP is a holdout of
+
+## context-full batch 4 append
+
+### data_catalog.md
+- **[dm_3118_rtc_monitor]** In the DM-3118 RTC monitor query, cost_impression_log is joined to ui_visits on impression_id (cil.impression_id = v.impression_id), distinct from the ad_served_id link documented elsewhere.
+  - source_line: "- Join key: `cost_impression_log.impression_id` → `ui_visits.impression_id`"
+- **[incr_75_eligible_advertisers]** In cost_impression_log and ui_conversions, the column group_id = campaign_group_id.
+  - source_line: "Note: `group_id` in `cost_impression_log`/`ui_conversions` = `campaign_group_id`."

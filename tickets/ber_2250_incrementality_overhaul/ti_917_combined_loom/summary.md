@@ -5,6 +5,29 @@ status: done
 date: 2026-05-08
 summary: "Combined Loom teaching ghost-bid lift + power/MDE + advertiser measurability rule"
 result: "Delivered 28-slide combined deck + word-for-word talk track + iROAS MDE extension"
+keywords: [ti-917, combined loom, iroas mde, mde_continuous, measurability screen, minimum spend, power analysis, ghost bidding, ti-884, ti-837, revenue sigma]
+---
+
+## TL;DR
+
+**Q:** Read TI-917 combined Loom summary in full; produce a TL;DR card and any durable delta_facts not already in the knowledge docs.
+
+**A:** TI-917 delivered a durable combined Loom for non-attendees of the 2026-05-04 ghost-bidding review, merging the TI-837 v5 ghost-bidding lift results with the TI-884 power/sample-size primer and adding an instructional close on how to determine the minimum spend a client needs to be measurable. Deliverables: a 28-main-slide (+4 appendix) standalone HTML deck (`ti_917_combined_deck_standalone.html`, 790 KB, zero-dep; githack URL), a word-for-word talk track (`ti_917_talk_track.md`, targeting 17-20 min, scored 5/5 after a critique-and-fix pass), and an iROAS/revenue MDE data extension. The extension pulled per-IP revenue σ for the TI-884 top-50 cohort (April 2026) via `ti_917_revenue_sigma_per_advertiser.sql` (~83 GB scan), fed `mde_continuous` from `ti_884_mde_calculator.py`, and emitted a per-advertiser revenue MDE tier CSV plus three Tufte charts. The measurability screening rule is a decision tree (slide 20): visits → CVR → iROAS, using `mde_binomial`/`mde_continuous` calls with the top-50 tier CSV as fallback. Status Done. Open items at time of writing: Loom/Slack post location TBD; per-advertiser CUPED ρ for top-50 (TI-884 follow-up) still open.
+
+**How:** Read the summary in full and listed the outputs/ and queries/ folders. Grepped data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md for the candidate durable facts (mde_continuous, iROAS MDE, order_amt=$0, tier breakdown, spend inversion) and found them already documented in experimentation.md §"TI-917 — iROAS / revenue MDE extension" (lines 1542-1608).
+
+**Learned:**
+- TI-917 = combined Loom merging TI-837 v5 ghost-bid lift + TI-884 power primer, plus a minimum-spend measurability rule.
+- iROAS extension: per-IP revenue σ for TI-884 top-50 (April 2026) → mde_continuous → per-advertiser revenue MDE CSV; revenue σ query ~83 GB scan.
+- Measurability screen is a visits → CVR → iROAS decision tree using mde_binomial/mde_continuous with the top-50 tier CSV as fallback.
+- All durable data/business facts from this summary are already in experimentation.md §TI-917 (lines 1542-1608), including the 36% order_amt=$0 gap and the tier breakdown.
+
+**Reuse when:**
+- Someone asks for the minimum spend a client needs to be measurable on iROAS/revenue, not just visits
+- Screening a new advertiser for incrementality measurability
+- Looking for the combined ghost-bid lift + power-analysis teaching artifact
+- Questions about the TI-917 combined deck or talk track
+
 ---
 
 # TI-917: Combined Loom — incrementality findings + power analysis primer

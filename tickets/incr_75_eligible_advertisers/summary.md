@@ -5,6 +5,43 @@ status: in_progress
 date: 2026-07-06
 summary: "Screen live advertiser base for best incrementality lift-test candidates"
 result: "Shipped workbook; Top 28/Mid 152/Low 1,090 of 1,270 eligible; tier=power×confirmed-lift"
+keywords: [incr-75, incrementality, lift test, eligible advertisers, mde, power analysis, relative mde, ivr, cvr, ghost-bid, entry-cohort, value_score, tiering, persuadables gradient, no_score, b2b classification, audi-1148, gruns, campaign_group_id, ti-884, ti-1019]
+---
+
+## TL;DR
+
+**Q:** INCR-75: which live advertisers are the best candidates for incrementality lift tests, and how are they tiered?
+
+**A:** INCR-75 screens the full live MNTN advertiser base to rank incrementality lift-test candidates. From a starting universe of 2,009 delivering advertisers, a 3-step hard funnel (clean/active TRUE named served; exclude "B2B Software & Services"; measurable IVR = >=100 visiting IPs and IVR>0) leaves 1,287 eligible. An F4 measured-lift filter then excludes the 17 advertisers with a significant-negative measured lift, giving 1,270 eligible. Final tier (2026-07-06) = a 2x2 of POWER x CONFIRMED-LIFT: Top = can_hit_ivr_5pct_8w='Yes' AND 'confirmed +' current ghost-bid lift; Mid = powered-5% OR confirmed (one, not both); Low = neither -> Top 28 / Mid 152 / Low 1,090. value_score is the pure a-priori 0-100 quality score (power + spend + brand + IVR-band + prior lift; measured lift NOT baked in) and ranks WITHIN a tier.
+
+Shipped a 7-sheet Excel workbook (outputs/incr_75_eligible_advertisers.xlsx): funnel waterfall, all-advertisers audit trail (2,009), tiered eligible list (1,287), method/caveats, spend->MDE curve, column glossary, and a current-lift sheet. MDE is RELATIVE (a 5% MDE on a 0.5% IVR = detect 0.525%, not 5.5pp). IVR targets: 5% credible / 10% realistic (tier on 5%); CVR is informational only (structurally ~7-10x harder because its baseline is ~30x lower), and the 15% CVR target is a feasibility ceiling, not an expected-effect claim.
+
+Current ghost-bid lift, computed via Matt Brorby's entry-cohort method (7-day-from-first-bid, exclude the left-censored first window day 06-22), pools to a modest positive of about +3-5% (strict single-full-day +2.8%, pragmatic +5.0% at ghost_frac 0.100). Illustrative: Zazzle (confirmed +16%, stays Top); Gruns (apriori-Top -> Mid, 'flat so far'). Durable lesson: a confirmed current ghost-lift does NOT make an advertiser testable -- power (can we run a clean 5% 8-wk study) is the binding Top gate, so measured lift stays a tier gate + display column, never folded into the score.
+
+A follow-on spike (AUDI-1148) ran the same method for Gruns campaign group 126905 ("excludes high intent"): +15.2% rel lift but not significant (z=0.63, only 19 holdout visits); the audience is ~100% no_score, so per the persuadables gradient ~0 incremental lift is the EXPECTED result, not merely underpowered. Silver entry-cohort read matched Matt's pipeline and the gold lift__ghost_bid_rollup (entity_id=126905) to the digit.
+
+**How:** Forked TI-1019's per-advertiser metrics SQL over the full universe (settled IP-grain baseline, 56-day power window; incr_75_advertiser_metrics.sql, 369 GB / 13s), added B2B (fpa_advertiser_verticals type=0 bucket = "B2B Software & Services") + funnel filters, ran the TI-884 MDE/power calculator (mde_binomial / n_required_binomial / spend_required; Lewis-Rao, z=2.80 at alpha=0.05/power=0.80, var_reduction=1.0) at both 5% and 10% IVR targets, scored/tiered, then cross-referenced actual current ghost-bid lift from Matt Brorby's silver enriched__dev_matthewbrorby.lift__ghost_bid_visits (arms ghost=holdout / submitted=treatment) using the entry-cohort method. Pipeline: incr_75_score_and_filter.py -> incr_75_fold_final.py -> incr_75_build_xlsx.py + generate_charts.py.
+
+**Tables:** fpa_advertiser_verticals, advertisers, enriched__dev_matthewbrorby.lift__ghost_bid_visits, bid_price_log, bidder_bid_events, dw-main-gold.reporting.lift__ghost_bid_rollup, dw-main-gold.reporting.lift__ghost_bid_results, cost_impression_log, ui_conversions
+
+**Learned:**
+- Eligibility funnel: 2,009 delivering advertisers -> exclude B2B (168) -> require measurable IVR >=100 visiting IPs & IVR>0 (554 removed) -> 1,287 eligible; F4 excludes 17 significant-negative measured-lift -> 1,270 eligible.
+- Final tier = POWER x CONFIRMED-LIFT 2x2: Top = can_hit_ivr_5pct_8w='Yes' AND confirmed-positive current lift; Mid = one of the two; Low = neither -> Top 28 / Mid 152 / Low 1,090. value_score is the pure a-priori 0-100 quality score and ranks within a tier, not across tiers.
+- Durable lesson: a confirmed current ghost-bid lift does NOT make an advertiser testable; power (can we run a clean 5% 8-wk study) is the binding Top gate. Keep measured lift as a tier gate + display column, never folded into the ranking score.
+- MDE at MNTN is RELATIVE: mde_rel = mde_abs / p; a 5% MDE on 0.5% IVR means detecting 0.525% (+0.025pp).
+- IVR MDE targets: 5% credible / 10% realistic (tier on 5%). CVR is informational only, structurally ~7-10x harder (baseline ~30x lower); the 15% CVR target is a feasibility ceiling not an expected-effect claim.
+- Current ghost-bid lift via Matt Brorby's entry-cohort method (exclude left-censored first window day 06-22, 7-day-from-first-bid) pools to a modest positive +3-5% (strict single-full-day +2.8%; pragmatic +5.0% at ghost_frac 0.100 exactly).
+- AUDI-1148: Gruns campaign group 126905 (excludes-high-intent audience) shows +15.2% rel lift but not significant (z=0.63, 19 holdout visits); audience is ~100% no_score, so per the persuadables gradient ~0 incremental lift is the EXPECTED result, not merely underpowered.
+- Two-instrument gotcha: a [MEASURED NOW] ghost-bid lift and a [CAN-DETECT] MDE are different instruments (bid vs served grain, ~10d vs future 8-wk window). Canonical: Meritage Homes CTV (37880) measured +8.8% at p=0.062 yet MDE 2.57% -> 'flat so far'. Judge measured lift against ZERO on its own CI, never against the MDE.
+
+**Reuse when:**
+- screening the advertiser base for incrementality / lift-test candidates
+- computing MDE / statistical power for an IVR or CVR lift test
+- reading current ghost-bid lift for an advertiser or campaign group
+- classifying B2B vs consumer advertisers via fpa_advertiser_verticals
+- deciding whether a confirmed lift means an advertiser is testable
+- pulling per-campaign-group incrementality (Gruns CGID 126905 pattern)
+
 ---
 
 # INCR-75: Find Eligible Advertisers for Incrementality Lift Tests

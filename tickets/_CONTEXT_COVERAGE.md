@@ -77,3 +77,10 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_xxx_ticket_theme_analysis | carded | 0 | batch 11; PMO ticket-theme epic grouping |
 | audi_1070_yoy_decline_caraway_avon_hexclad | carded | 0 | context-full batch 1; MM not degrading — HHST gate thrash vs over-scaling; all facts already in knowledge/*.md |
 | audi_1089_ddp_vendor_evaluations/ds33_sovrn | carded | 5 | context-full batch 1; DROP verdict; same-day redundancy, sole-IP cohort, off-switch, billing email, PMP id68 |
+| ti_917_combined_loom | carded | 0 | context-full batch 4; combined Loom (ghost-bid lift + power primer + min-spend rule); facts already in experimentation.md §TI-917 |
+| dm_3118_rtc_monitor | carded | 1 | context-full batch 4; RTC vs non-RTC CTV monitoring SQL; CIL↔ui_visits impression_id join |
+| dm_3188_comparison_rt_and_non_rt | carded | 0 | context-full batch 4; RT vs non-RT IP comparison; numbers in Drive CSV |
+| goal_attainment_customer_goal_map | carded | 0 | context-full batch 4; goal-attainment data map; Mode report 30fb4d3f8447 ~63% |
+| incr_75_eligible_advertisers | carded | 1 | context-full batch 4; lift-test candidate screen; Top28/Mid152/Low1090; group_id=campaign_group_id |
+| mm_44_ipdsc_hh_discrepancy | carded | 0 | context-full batch 4; IPDSC/MES HH discrepancy; conclusion deferred to artifacts docs |
+| tgt_4016_ecomm_classifier_thresholds | carded | 0 | context-full batch 4; ecomm classifier threshold tuning; value in notebook |
