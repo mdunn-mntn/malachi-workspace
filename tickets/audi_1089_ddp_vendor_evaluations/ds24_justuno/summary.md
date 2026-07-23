@@ -5,6 +5,26 @@ status: done
 date: 2026-07-10
 summary: "Justuno (DS24) MM site-visit vendor renewal: keep/drop + fee band"
 result: "KEEP (monitor metered bill) — 91.6% sole domains, ~$14-60K/yr value vs $0.50 CPM"
+keywords: [justuno, ds24, audi-1089, ddp, fixed_cpm, usage_reporting_data, sole classified domains, ipv6, mm site-visit, renewal]
+---
+
+## TL;DR
+
+**Q:** AUDI-1089 / Justuno (DS24) renewal evaluation — keep or drop, and at what fee band?
+
+**A:** KEEP — monitor the metered bill. Justuno (DS24) is an MM site-visit vendor billed fixed_cpm $0.50 per-use. The 30d window confirms its uniqueness prior holds: 4,605 sole classified domains, 91.6% of 86.9M (ip,domain) pairs sole, 95.0% net-new vs free internal sources (DS23/30). Domain-coverage lens values DS24 at ~$14–60K/yr (4,605 × TI-1027's $3–13/yr per net-new classified domain). Break-even at $0.50 CPM ≈ 2.3–10M billed impressions/month; the actual monthly bill is readable from coredw.usage_reporting_data (ds=24) but was not pulled in this eval. Action: pull last month's grand total — if ≤ ~$5K/mo keep outright, else renegotiate rate/scope. Sole-IP dependency bound is tiny (~$0.3K/yr) and sole-IP reach is adversely selected; the value story is domain→vertical coverage that scores IPs on shared households, not sole reach. All volumes are IPv4-only, understating DS24 ~20% (direction favors KEEP). Caveat: the fixed_cpm metering basis was not reconciled against an invoice.
+
+**How:** 30d scale/freshness window 2026-06-02→07-01; CIL valuation week 07-02→07-08; soleness on the 37d union; method validated via DS25 cross-check (69.3% vs TI-1027 69.8%). Registry from tpa.direct_data_partners (CDC-deduped). Lineage via org-wide GitHub sweep (off-switch = pause justuno_dsid24_ingestion DAG). Dependency priced in tiered lenses against the $0.50 peer CPM. Domain-value band inherits TI-1027's per-domain anchor ($3–13/yr).
+
+**Tables:** tpa.direct_data_partners · coredw.usage_reporting_data · dw-main-bronze.coredw.usage_reporting_data · lds.ext_usage_reporting_data · fpa_vendor_log · site_visit_signal
+
+**Learned:**
+- DS24 (Justuno) IPv6 share is 19.61% of the feed (111.2M of 566.7M rows, trending 16.8→21.7%/day) — the highest of all 10 DDP sources by far (next: 33Across 8.2%, Predactiv 7.9%; every other ≤0.07%); IPv4-only method measures only 80.4% of DS24's rows → true footprint ≈ measured × 1.244.
+- The TI-1027 7d uniqueness prior (4,823 unique classified domains, 84.3%) HOLDS at 30d for DS24 — real signal, not a window artifact.
+- DS24 sole-IP reach (5.24M IPs) is adversely selected: 2,400 delivered (0.046%), 92.5% unscored, only 35 IPs at HI — sole-IP VR 0.0084%; a dependency bound, not a value/performance estimate.
+
+**Reuse when:** DDP vendor renewal / keep-drop decisions · Justuno DS24 questions · MM site-visit vendor valuation and break-even fee bands · IPv6 measurement bias in vendor-feed analysis.
+
 ---
 
 # AUDI-1089 / Justuno (DS24) — Renewal Evaluation

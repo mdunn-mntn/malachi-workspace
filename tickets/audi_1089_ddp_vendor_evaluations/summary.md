@@ -5,6 +5,38 @@ status: in_progress
 date: 2026-07-20
 summary: "Per-vendor keep/drop + max defensible fee for MM site-visit data vendors (renewal season)"
 result: "In progress — per-vendor verdicts rolling in (see children); 5x5 KEEP, Klickly drop approved"
+keywords: [audi-1089, ddp, vendor evaluation, usage_reporting_data, targeted_signal, 1/n credit split, preemption, audi-1093, 33across, sovrn, predactiv, klickly, justuno, cybba, site visit signal, mm, ds13, ds19, willingness to pay, $0.50 cpm]
+---
+
+## TL;DR
+
+**Q:** AUDI-1089 — DDP vendor data evaluations: per-vendor keep/drop verdicts and max defensible fee for MNTN's MM site-visit data vendors during contract-renewal season.
+
+**A:** AUDI-1089 is a renewal pass/play spike evaluating all ~10 MM site-visit DDP vendors (is each vendor's data worth its cost?), generalizing the TI-1027 playbook to IP grain at a 30-day window and producing a repeatable quality-score runbook.
+
+Per-vendor verdicts (section 4): Klickly (DS39) PASS/drop unless ~free; Justuno (DS24) KEEP-trim; Predactiv (DS26) KEEP/renew (breadth king, 226,826 sole classified domains, hard non-MM HEM dependency); 33Across (DS28) NEGOTIATE (~4-7x over band); Sovrn (DS33) DROP (~50-200x over); Cybba (DS36) DROP; 33Across API (DS40) DROP/renegotiate. DS28+DS40 = ONE vendor (~$598K/yr combined).
+
+THE MONEY FINDING: actual metered bills are queryable in dw-main-bronze.coredw.usage_reporting_data (usage = impressions x $0.0005 = $0.50 CPM). CPM roster ~$812K/yr at June run-rate. No metered vendor covers its bill even at full-CPM revenue; MNTN keeps ~20% of the CPM.
+
+Structural conclusions: (1) Scored audiences are vendor-independent — free logs (guid DS23 + augmentor DS30) retain 99.94% HI / 99.25% PP; k=4 keeps 99.9991% HI (53 of 5.96M IPs lost). Vendor uniqueness concentrates in dark/unscored IPs that do not convert. (2) Free-log credit preemption (AUDI-1093): recoverable ~$200.4K/yr prior-day domain-grain floor, $274.6K same-date cohold, $412.4K at DS13 vertical/category grain. (3) BAE walkthrough (section 4h): actual credit = 1/N fractional split across all vendors carrying the category in targeted_signal in the 30d before the impression, free logs in N at $0 CPM; billing base = Prospecting-Funnel-1/CTV impressions ONLY on MM(DS13/19)- or CRM(DS4)-targeted serves. (4) DS13->DS46 (Fangorn) migration is sunsetting the vendor-dependent vertical-audience path.
+
+Status: in progress. Klickly PASS approved for Paulo; 5x5 (DS25) KEEP from TI-1027. Backlog: AUDI-1143 (reassign credit away from free-log-touched IPs), AUDI-1144 (meet vendor-contract owner Andy Everson), AUDI-1145 (own the DDP credit-awarding pipeline). Open: renewal schedule + per-vendor flat fees (Paulo/Maya); enriched_impressions cross-project access via PAM; winner-rule confirmation.
+
+**How:** Read summary.md in full and listed queries/ + outputs/. Grepped knowledge/*.md for every candidate durable fact to confirm delta status.
+
+**Tables:** dw-main-bronze.coredw.usage_reporting_data · dw-main-bronze.coredw.usage_reporting_audits · dw-main-bronze.external.targeted_signal · dw-main-bronze.external.targeted_signal_domain · dw-main-bronze.integrationprod.direct_data_partners · dw-main-bronze.tpa.categories · dw-main-bronze.tpa.liveramp_categories · dw-main-bronze.external.sharethis_categories · dw-main-silver.summarydata.v_campaign_group_segment_history · mntn-analytics-prod-01.analytics_curated.enriched_impressions
+
+**Learned:**
+- Per-vendor DDP verdicts: Klickly drop-unless-free, Justuno KEEP-trim, Predactiv KEEP/renew, 33Across NEGOTIATE, Sovrn/Cybba/33Across-API DROP; 5x5 KEEP (TI-1027).
+- Metered CPM roster ~$812K/yr (Jun run-rate) at $0.50 CPM; no metered vendor covers its bill; MNTN keeps ~20% of the CPM.
+- Scored audiences are vendor-independent: free logs (guid+augmentor) retain 99.94% HI / 99.25% PP; vendor uniqueness is dark/unscored IPs that don't convert.
+- Free-log preemption recoverable: ~$200.4K/yr domain-grain floor, $274.6K same-date cohold, $412.4K vertical/category grain.
+- Actual credit = 1/N fractional split across vendors in targeted_signal 30d pre-impression; free logs in N at $0; billing base = F1/CTV MM(DS13/19)- or CRM(DS4)-targeted serves only.
+- DS28+DS40 = one vendor (33Across, ~$598K/yr combined); DS13->DS46 Fangorn migration sunsets the vendor-dependent vertical-audience path.
+- All durable facts from this summary are already captured in knowledge/*.md; backlog AUDI-1143/1144/1145 filed for implementation/ownership.
+
+**Reuse when:** Evaluating a data vendor's keep/drop or willingness-to-pay · Questions about DDP billing, the $0.50 CPM meter, 1/N credit split, or targeted_signal · Free-log credit preemption / AUDI-1093 / AUDI-1143 work · Whether scored MM audiences depend on paid vendors · DDP usage-reporting pipeline ownership or contract questions (Andy Everson, BAE).
+
 ---
 
 # AUDI-1089: [SPIKE] DDP Vendor Data Evaluations — Renewal Pass/Play per Vendor

@@ -5,6 +5,28 @@ status: done
 date: 2026-07-10
 summary: "33Across DS28 vendor renewal eval: defensible value vs the $0.50/CPM usage meter"
 result: "NEGOTIATE cap-or-drop: value ~$30-100K/yr; renew only if metered cost caps ≤$100K/yr"
+keywords: [33across, ds28, ddp renewal, fixed_cpm, usage meter, sole classified domains, audi-1089, value-per-metered-unit, targeted_signal, usage_reporting_data]
+---
+
+## TL;DR
+
+**Q:** AUDI-1089: verdict for 33Across (DS28) DDP renewal evaluation?
+
+**A:** NEGOTIATE (cap-or-drop). DS28 defensible value ~$30-100K/yr, dominated by 6,849 sole classified domains. Renew only if actual metered cost lands ≤ ~$100K/yr (rate cut or meter cap); else drop. Break-even on the $0.50 CPM meter is ~5-17M credited imps/month; sole impressions run only ~1.9M/mo (~$11.6K/yr), but the implemented meter also credits shared IPs fractionally, and 33Across touches 27.2M delivered IPs (most of any source including internal), so the metered base plausibly runs orders above break-even. Billing is fixed_cpm $0.50/1,000; metering basis identified at script level (credit-split MM impressions joined to external.targeted_signal data_source_id IN (13,19) on IP, 30-day lookback, split 1/N among co-matching MM vendors, landed in coredw.usage_reporting_data, emailed monthly) but NOT yet confirmed against an invoice. Action: pull actual metered dollars, reconcile vs invoice, then keep/renegotiate/drop (off-switch: remove 28 from ENABLED_DSIDS, Sean owns). No hard dependency rescues a drop. Worst value-per-metered-unit (18x worse than Justuno on same rate); 54.7% of pairs redundant vs free internal feeds DS23/30; 41.68M-IP sole reach 97% unscored at no-signal baseline. DS40 (33Across API) is a separate feed/contract despite shared parent. Status: DONE 2026-07-10.
+
+**How:** 30d cross-vendor CIL/svs scans (svs 2026-06-02→07-01, CIL valuation week 07-02→07-08, soleness on 37d union); org-wide code sweep of SteelHouse repos for the meter script and lineage. Metering basis is script-level evidence, not invoice-confirmed; actual usage dollars not queried (out of allowed-scan scope).
+
+**Tables:** tpa.direct_data_partners · dw-main-bronze.external.targeted_signal · dw-main-bronze.coredw.usage_reporting_data · site_visit_signal · augmentor_log · guid_log
+
+**Learned:**
+- Meter runs on shared IPs (fractional 1/N credit-split among co-matching MM vendors), not just sole impressions; 33Across's fractional base is largest in roster because it touches the most delivered IPs (27.2M).
+- DS28 raw feed is 32 columns; MNTN keeps only 4 (page categories+keywords); geo, device hints, GPP consent, and a device_ids (GAID/IDFA pipe-delimited) column dropped at site_visit_signal.
+- DS28 is the least domain-efficient feed per metered unit: 2,946 sole classified domains per B 30d pairs (18x worse than Justuno on the same $0.50 rate).
+- 33Across sole-IP base of 41.68M is the largest sole-IP base of any vendor, but 97% unscored and performs at the no-signal VR baseline (0.026%).
+- Legacy AWS DAG device_id_33across_signal.py (schedule=None, manual only) explodes device_ids into data_archive.device_id_signal; no live GCP-side consumer of DS28 device IDs.
+
+**Reuse when:** evaluating a DDP vendor renewal on the $0.50 fixed_cpm meter · questions about 33Across DS28 value/meter/drop safety · how the MM DDP usage meter credits shared vs sole IPs · which pipelines consume 33Across / DS28 data.
+
 ---
 
 # AUDI-1089 / 33Across (DS28) — Renewal Evaluation

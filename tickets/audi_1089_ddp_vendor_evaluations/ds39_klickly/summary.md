@@ -5,6 +5,28 @@ status: done
 date: 2026-07-10
 summary: "Renewal pass/play evaluation of Klickly (DS39) Shopify product-view data vendor."
 result: "Drop / do not renew unless ~free — value ~$0-4K/yr; any DDP fee fails break-even."
+keywords: [klickly, ds39, ddp renewal, willingness to pay, myshopify, site_visit_signal, buk training, sole ips, flat_fee, direct_data_partners]
+---
+
+## TL;DR
+
+**Q:** AUDI-1089 Klickly (DS39) DDP renewal evaluation — keep/drop + willingness to pay.
+
+**A:** PASS (do not renew) unless effectively free. Klickly (DS39) is a live, streaming Shopify-network product-page-view feed (thinnest payload: IP + URL + timestamp only; 93.4% *.myshopify.com), with unique contribution near-zero on both value lenses. Max defensible fee ~$0.1-1.5K/yr (fee-band lens); WTP $418-859/yr at 30-50% margins with an absolute ceiling ~$4.0K/yr (dependency-ceiling lens). Any typical DDP flat fee (tens of $K/yr) fails break-even by 10-100x. Counter at a $0.50 CPM on Klickly-sole impressions (~$100/yr) only if keeping the relationship matters.
+
+**How:** Six-step renewal pass over 30d (2026-06-02→07-01) plus a CIL valuation week (07-02→07-08), double-confirmed by a dependency-ceiling lens. Registry/lineage (flat_fee, notes NULL, streaming pixel-page-view Kafka to site_visit_signal/ds=39, payload IP+URL+timestamp, 93.4% *.myshopify.com; MM path + BUK training the only non-MM consumer, off-switch vendor-side). Scale ~4.1M rows/day, 12.4M IPs / 257 domains in 30d. Uniqueness 257→176 sole→126 sole+classified. Klickly-sole IPs adversely selected (338K→666 delivered 0.2%, 91.4% unscored, 1 visit / 3,674 sole imps, VR 0.03%). Second lens: eCPM $11.54, T2 base $2,205/yr, WTP $418-859/yr, ceiling ~$4.0K/yr. Method validated vs DS25/TI-1027 (<1%).
+
+**Tables:** tpa.direct_data_partners · site_visit_signal · pixel_page_view_signal
+
+**Learned:**
+- Klickly (DS39) renewal verdict: drop/do not renew unless ~free; value on both lenses ~$0-4K/yr, any DDP fee fails break-even by 10-100x.
+- DS39 payload is thinnest possible: IP + URL + timestamp only; 93.4% *.myshopify.com product pages (Shopify-network feed); delivery is vendor-side streaming, so the off-switch is vendor-side not a DAG change.
+- BUK ALS training enrichment is the only non-MM consumer of DS39, at source_weight=0.05 and a 5% stratified sample; DSID-agnostic, no hard dependency.
+- Klickly-sole IPs (its unique reach) are adversely selected: 338K sole IPs → 666 delivered (0.2%), 91.4% unscored, 3 at HI.
+- Method validated: DS25 cross-checks match TI-1027 within <1% (69.3% vs 69.8% sole pairs).
+
+**Reuse when:** evaluating a DDP vendor renewal or willingness-to-pay · questions about Klickly / DS39 value, lineage, or data richness · who consumes site_visit_signal / DS39 downstream (MM path, BUK training).
+
 ---
 
 # AUDI-1089 / Klickly (DS39) — Renewal Pass/Play

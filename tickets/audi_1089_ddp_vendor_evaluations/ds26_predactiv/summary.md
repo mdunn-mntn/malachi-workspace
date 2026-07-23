@@ -5,6 +5,30 @@ status: done
 date: 2026-07-10
 summary: "Renewal evaluation of the Predactiv (DS26) data vendor for MNTN Matched signal"
 result: "KEEP/renew — #1 classified-domain source (226,826 sole), domain value $0.68M-$2.95M/yr"
+keywords: [predactiv, ds26, sharethis_predactiv, ds17 sharethis, hashed_email_ds_26_signals, hemsignalreader, hem_sha256, sole classified domains, flat_fee, ddp renewal, audi-1089, direct_data_partners, mntn matched]
+---
+
+## TL;DR
+
+**Q:** Renewal evaluation of the Predactiv (DS26) DDP vendor for MNTN Matched — keep/drop + fee band.
+
+**A:** KEEP/renew. Predactiv (DS26, registry sharethis_predactiv) is the single largest external source of MM-usable classified-domain signal: 226,826 sole classified domains in 30d — 2.6x 5x5 (86,084), 4.8x internal augmentor (47,463), 2.2x ALL other external vendors combined (100,987), ~69% of external sole-classified supply. Domain-lens value band $0.68M–$2.95M/yr (226,826 × $3–13/yr per net-new classified domain, TI-1027 anchor). Billing = flat_fee, but the fee amount is NOT in our data (fixed_cpm NULL, notes NULL) — must come from Paulo's renewal schedule; a typical DDP flat fee clears break-even ~5–30x. Unlike other vendors, a drop is NOT free: it breaks a severity-1 hourly DAG (hashed_email_ds_26_signals) and thins the CRM/identity HEM pool (DS26 is the only MM site-visit DDP among the five HEM sources). Pairs are its weak axis (23.1% sole) but domains are irreplaceable. Negotiation posture: activate the 26 columns already received but unused (don't pay for enrichment); lock Predactiv's renewal BEFORE/concurrent with the redundant CPM-vendor drops.
+
+**How:** 30d cross-vendor BQ scans (svs 2026-06-02→07-01; CIL valuation week 07-02→07-08; soleness on the 37d union). Domain-grain uniqueness: 851,448 domains → 482,951 sole → 226,826 sole+classified. Scale: 30/30 days, 2.22B rows in 30d, IPv6 7.9%. Tiered value lens (T1/T2 + domain lens headline). Sole-IP VR 0.0146% = dependency bound. Lineage from a SteelHouse/airflow-ti GitHub sweep 2026-07-10. Method validated via DS25 cross-check (69.3% vs 69.8%). Fee-vs-band and $0.50 metering basis unconfirmed against invoice (caveats).
+
+**Tables:** tpa.direct_data_partners · site_visit_signal · fpa_vendor_log · hashed_email_signal · coredw.usage_reporting_data
+
+**Learned:**
+- Predactiv DS26 = #1 external classified-domain source: 226,826 sole classified domains/30d, ~69% of all external sole-classified supply; domain-lens value band $0.68M-$2.95M/yr.
+- DS17 (ShareThis interests) and DS26 (Predactiv, flat-fee MM arm) are two feeds of ONE ShareThis/Predactiv vendor relationship; the monthly usage email covers DS17 NOT DS26.
+- hashed_email_ds_26_signals is a DS26-exclusive severity-1 hourly DAG that explodes hem_sha256, applies privacy caps ≤10 IPs/email and ≤100 emails/IP, writing hashed_email_signal/.../data_source_id=26/hash_type=sha256.
+- HEMSignalReader hardcodes DS26 in its 5-source HEM inventory {21, 22=Experian, 23=guid_log, 26=Predactiv, 29=Deepsync}; Predactiv is the only MM site-visit DDP among them.
+- ENABLED_DSIDS=[23,25,26,28,30,36]; DS26 ingest reads gs://mntn-data-partners/partners/predactiv/dt=YYYYMMDDHH/*.parquet, writes FULL payload to fpa_vendor_log/data_source_id=26/ then a thin ip/url/time projection to site_visit_signal.
+- DS26 registry SCD is broken: dedupe by max valid_from mntn_matched row; the orphan open row is type=crm (stale). Fix in SteelHouse/sqlmesh:seeds/tpa__direct_data_partners.csv.
+- For a classification-feeding vendor, domain count (irreplaceability) matters more than (ip,domain) pair soleness: DS26 pairs 23.1% sole but domains 56.7% sole.
+
+**Reuse when:** Renew/drop a DDP data vendor · Predactiv/DS26/ShareThis/DS17 questions · tracing hashed-email/HEM/CRM-identity resolution sources · valuing a vendor by classified-domain contribution vs sole-IP reach · AUDI-1089 wave.
+
 ---
 
 # AUDI-1089 / Predactiv (DS26, registry `sharethis_predactiv`) — Renewal Evaluation
