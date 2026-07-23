@@ -1,3 +1,36 @@
+---
+doc_type: ticket
+title: "AUDI-1091 [SPIKE]: Full augmentor_log as a free site-visit source"
+status: done
+date: 2026-07-22
+summary: "AUDI-1091 [SPIKE]: Full augmentor_log as a free site-visit source"
+result: "NO-GO (closed 2026-07-22). The URL-bearing augmentor rows are already the BANNER slice ingested into svs (DS30); the dropped VIDEO placements are 99.6% URL-less CTV, not site visits. Full ingestion yields only ~+1.2% more site-visit rows and <=+16% more IPs (upper bound), not worth ~2 sprints of Data Eng effort."
+keywords: [augmentor_log, site_visit_signal, svs, ds30, ds23, placement_type, video, banner, dsid30_augmentor_log_processing, dsid23_guid_log_processing, free site-visit source, audi-1091, vendor displacement, no-go]
+---
+
+## TL;DR
+
+**Q:** TL;DR for AUDI-1091 [SPIKE]: is the full augmentor_log a bigger free site-visit source than the DS30 subset already in site_visit_signal, and should MNTN ingest it?
+
+**A:** NO-GO (closed 2026-07-22). Alex's claim that the full augmentor_log is a much bigger free site-visit source does not materialize. In a 1-hr sample (2026-07-20 18:00-19:00 UTC, ~67 GB), VIDEO is ~75% of augmentor row volume but 99.6% URL-less (only 0.39% carry a page/referrer URL) - CTV/video impressions with no webpage, not site visits. The URL-bearing rows are almost entirely the BANNER slice, which the DS30 svs feeder already ingests fully. Ingesting the full log adds only ~+1.2% more site-visit rows (3.73M VIDEO-with-URL vs 315.2M banner rows/hr) and <=+16% more IPs as an UPPER BOUND (1.47M vs ~9.3M, before removing overlap with banner and paid-vendor IPs, so true net-new is smaller), at the cost of carrying ~4x the row volume in URL-less VIDEO rows. Verdict: net-new signal ~1% of rows and <=16% of IPs vs ~2 sprints of Data Eng ingestion plus storage/compute for mostly-unusable rows.
+
+**How:** Read the two Spark svs feeders (SteelHouse/airflow-ti/spark/fpa/dsid30_augmentor_log_processing.py and dsid23_guid_log_processing.py) to establish that DS30-in-svs = the BANNER slice of augmentor only. Then ran a 1-hour BQ sample query (audi_1091_placement_headroom.sql, ~67 GB) breaking augmentor rows by placement_type with rows/hr, approx IPs, and % carrying a page/referrer URL. First-cut only; full-day confirmation on the GCS archive via Databricks/Spark (~1.54 TB/day) still to formalize the close.
+
+**Tables:** `bronze.raw.augmentor_log`, `site_visit_signal`, `guid_log`
+
+**Learned:**
+- DS30-in-svs is only the BANNER (+BANNER_AND_VIDEO) slice of augmentor_log; the dropped VIDEO placements were the hypothesized headroom but are 99.6% URL-less CTV/video, not site visits.
+- VIDEO is ~75% of augmentor row volume but only 0.39% of VIDEO rows carry a page/referrer URL; BANNER (~25% of rows) is ~100% URL-bearing at ~9.14M IPs/hr.
+- The dsid30 feeder builds site visits from BOTH page and referrer (referrer timestamped 1s earlier), normalizes URLs by prepending http://, requires non-empty ip, and does first-touch dedup per (ip, url).
+- The dsid23 feeder reads guid_log, left-anti-joins pixel-isolation blocked advertisers, uses URL = product_referer, distinct.
+- Full-day placement mix not yet confirmed (1-hr sample; mix stated stable but formal spike deserves a day); net-new IPs and meter-displacement $ (1/N model, per AUDI-1092) still to be measured to formalize the close.
+
+**Reuse when:**
+- Evaluating whether a raw log (augmentor, guid, other) is a viable free/incremental site-visit source before proposing ingestion
+- Estimating DDP vendor/credit displacement from a free log
+- Questions about what the DS30 / DS23 site_visit_signal feeders actually keep vs drop
+- Sizing augmentor_log placement composition or scan cost
+
 # AUDI-1091 [SPIKE] Full augmentor_log as a free site-visit source
 
 **Status:** DONE — NO-GO (closed 2026-07-22) · **Parent:** AUDI-1054 · **Assignee:** Malachi

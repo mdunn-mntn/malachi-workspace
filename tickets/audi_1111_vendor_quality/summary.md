@@ -5,7 +5,29 @@ status: in_progress
 date: 2026-07-17
 summary: "Epic: set a 3P data-quality bar and true willingness-to-pay price per vendor"
 result: "No metered vendor breaks even at $0.50; RTC vendor-independent; preemption $274K/yr"
+keywords: [audi-1111, vendor quality, willingness to pay, wtp cpm, rtc, ds14, svs, free log preemption]
 ---
+
+## TL;DR
+
+**Q:** For AUDI-1111 vendor data-quality & valuation, what is the true willingness-to-pay price per 3P vendor and do the platform's real-time layers (RTC, DS14 gate) actually need the vendors?
+
+**A:** No metered vendor breaks even at the $0.50 contract on any WTP lens (L0 break-even e.g. 33Across $0.086-0.257, closest is 33A API $0.127-0.381; effective cost 1.3x-7.4x over ceiling). Free-union coverage under the flow-filter rule is 44.1% (vs 59.4% same-day). RTC is effectively vendor-independent: 99.99% of RTC-fired imps are free-covered, vendor-only 0.01%, because vendor logs arrive 2.4-8.6h stale vs free logs at 0 min. The DS14 gate is real but soft: only 36.1% of 301.5M svs IPs are in-gate; recommendation drafted to widen free-log windows before paying vendors for reach. Cross-cutting: AUDI-1113 free-log credit preemption is worth $273,671/yr and needs no vendor cooperation (billing is self-reported).
+
+**How:** Three measured, adversarially-verified analyses: (1) AUDI-1115 WTP as 3 CPM lenses per vendor (all-ingested / flow-filtered actually-used / bid-and-won) giving effective CPM and break-even ceiling; (2) AUDI-1116 RTC vendor-share plus an svs ULID ingest-latency instrument comparing free-log vs vendor arrival times; (3) AUDI-1117 DS14 availability-gate vs site_visit_signal overlap pool math on 301.5M svs IPs.
+
+**Tables:** `guid_log`, `aug_log`, `IPDSC`, `svs`, `MembershipDB`
+
+**Learned:**
+- No metered vendor breaks even at $0.50 on any lens; free-union flow-filter coverage 44.1% vs 59.4% same-day
+- RTC effectively vendor-independent: 99.99% of RTC-fired imps free-covered, vendor-only 0.01%; vendors arrive 2.4-8.6h stale vs free logs at 0 min
+- DS14 gate soft: only 36.1% of 301.5M svs IPs in-gate; widen free-log windows before paying vendors for reach
+- AUDI-1113 free-log credit preemption worth $273,671/yr, needs no vendor cooperation because billing is self-reported
+
+**Reuse when:**
+- valuing a 3P data vendor / willingness-to-pay CPM per vendor
+- assessing whether RTC or DS14 real-time layers depend on vendor logs
+- free-log credit preemption / self-reported billing questions
 
 # AUDI-1111: Vendor Data Quality & Valuation (EPIC)
 

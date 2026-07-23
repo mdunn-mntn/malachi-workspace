@@ -5,7 +5,36 @@ status: done
 date: 2026-07-10
 summary: "Renewal eval of 33Across API (DS40) metered 3P data vendor at $0.50/1k CPM"
 result: "NEGOTIATE: cap/re-paper meter to <=$10-40K/yr else DROP; no lens breaks even at usage"
+keywords: [33across api, ds40, ds28, audi-1089, usage_reporting_data, fixed_cpm, metered vendor, pixel-page-view-signal, site_visit_signal, sole domains, domain grain, pair grain, 3p vendor renewal, ddp, device_id_signal, buk enrichment]
 ---
+
+## TL;DR
+
+**Q:** AUDI-1089 renewal pass/play for 33Across API (DS40) — the metered 3P data vendor: what's the verdict and why?
+
+**A:** NEGOTIATE: cap/re-paper the usage meter to <= ~$10-40K/yr, else DROP. DS40 is a fixed_cpm $0.50/1,000 usage-METERED vendor (not flat-fee), billed on an impressions meter via coredw.usage_reporting_data. No valuation lens breaks even at plausible usage: the implied max defensible bill (~$10-40K/yr = domain lens $8.3-36.1K + sole-impression lens ~$2.5K) is 250x+ under a vendor-touched-impressions meter (~$10M/yr CPM-equivalent). The decisive open item, reconcile one month of usage_reporting_data (ds=40) vs the actual invoice, was NOT done here (out of scope, no cost invented). Why not KEEP: domain-grain uniqueness is only 2.0% sole (2,780 sole+classified domains, 30d-confirmed, not a 7d-window artifact); DS40-sole IPs are 97.6% unscored (worst of all 10 sources); sole-IP VR 0.0155% sits at/below the no-signal baseline. Why not DROP outright: real $10-40K band, a large net-new pair base (543M sole pairs, 67.3% net-new-vs-free) with unpriced shared-IP depth value, and a 39.2% tied share carrying coverage-if-down value. The 7d-vs-30d discrepancy resolved as a GRAIN split, not a window artifact: domain grain (what MM's classifier consumes) confirms the 3.2%/2.0% redundancy prior; pair grain shows genuine 45.3% sole / 67.3% net-new. DS40 sees different IPs on domains everyone already has. Renewal rides on domain grain. No hard dependency blocks a drop: only the MM site-visit path + negligible BUK enrichment (source_weight=0.05, 5% sample) consume it; identity/attribution/bidder/interests are verified non-consumers. DS28 (batch 33Across, same parent vendor) is judged separately and unaffected.
+
+**How:** Registry read of tpa.direct_data_partners (fixed_cpm 0.5, valid_from 2025-07-01, notes NULL). Org-wide lineage sweep on dsid40 variants confirmed MM site-visit path as the only real consumer plus a DISABLED backfill DAG in .airflowignore. Scale/freshness/uniqueness from a 30d window (2026-06-02 to 07-01), CIL valuation week 07-02 to 07-08, soleness on the 37d union; method cross-checked against DS25 (recency 69.3% vs TI-1027's 69.8%). Score-tier quality check on DS40-sole IPs and a tiered media/data-cost value anchor (T1 scored non-RTC sole / T2 all sole imps / T3 co-occurrence). Metered basis and actual monthly dollars were explicitly NOT pulled (flagged as the decisive open item).
+
+**Tables:** `tpa.direct_data_partners`, `coredw.usage_reporting_data`, `dw-main-bronze.coredw.usage_reporting_data`, `site_visit_signal`
+
+**Learned:**
+- Verdict: NEGOTIATE (cap meter <=~$10-40K/yr) else DROP; no lens breaks even at usage
+- DS40 is usage-METERED fixed_cpm $0.50/1,000, not flat-fee; billed on an impressions meter via coredw.usage_reporting_data
+- The 7d-vs-30d uniqueness gap is a GRAIN split not a window artifact: domain grain 2.0% sole (redundant for classification) vs pair grain 45.3% sole / 67.3% net-new (depth on shared IPs)
+- Renewal rides on domain grain because MM's value chain is domain->vertical classification; sole pairs on already-classified domains add only unpriced behavioral depth
+- DS40-sole IPs are 97.6% unscored (worst of all 10 sources), sole-IP VR 0.0155% at/below no-signal baseline; its unique reach is adversely selected/unscorable
+- DS40 is ~81% of the pixel-page-view Kafka topic (~363M rows/day); dropping it shrinks that pipeline ~5x, an un-dollarized hidden carrying cost that sweetens a drop
+- device_id_33across_signal.py (device_id_signal) is DS28-only; DS40 does not feed it, so the DS28 device-ID side-channel is unaffected by a DS40 drop
+- Decisive open item NOT done: reconcile one month of usage_reporting_data (ds=40) vs the actual invoice
+- No hard dependency blocks a drop: only MM site-visit path + negligible BUK enrichment (source_weight=0.05, 5% sample) consume DS40; identity/attribution/bidder/interests are non-consumers
+
+**Reuse when:**
+- evaluating or renewing 33Across / DS40 / DS28 as a 3P data vendor
+- deciding whether a metered CPM DDP breaks even vs its usage bill
+- questions about which pipelines consume DS40 or the pixel-page-view Kafka topic
+- distinguishing domain-grain vs pair-grain uniqueness in vendor value framing
+- reconciling coredw.usage_reporting_data against a vendor invoice
 
 # AUDI-1089 / 33Across API (DS40) — Renewal Pass/Play
 

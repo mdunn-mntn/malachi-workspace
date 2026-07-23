@@ -5,7 +5,38 @@ status: done
 date: 2026-06-25
 summary: "Add per-advertiser auto-prefill to the MDE power calculator from 30d performance"
 result: "Shipped calculator w/ advertiser picker; correct IVR baseline is CIL distinct-ip 10.70%"
+keywords: [mde calculator, ivr baseline, power analysis, graph.visits, usersreached, uniques, cost_impression_log, holdout md5, device_ip, per-ip probability, chapi, all_facts_by_day_ramp_combined, cross-channel overlap, wgu, agg__daily_sum_by_campaign staleness, ti-1019]
 ---
+
+## TL;DR
+
+**Q:** TI-1019 (MDE Calculator per-advertiser auto-prefill): what was built, the correct IVR baseline definition, and durable facts not yet in the knowledge docs.
+
+**A:** Shipped a standalone internal MDE power calculator with a per-advertiser auto-prefill picker (hosted via gist+githack). Type an advertiser name/ID and it prefills baseline rate (IVR/CVR toggle), CPM, imps/IP, and monthly budget from that advertiser's actual trailing-30d performance, plus a budget-basis toggle (typical active month = median of months over $1k over last 12mo / trailing 30d / peak month), a loaded-advertiser pane showing the 6 prefilled stats, and a CLEAR button restoring cohort defaults ($24.84 CPM, 3.5 imps/IP, 2.15% IVR / 0.054% CVR). Covers 879 currently-delivering advertisers (trailing-30d spend over $1k; top WGU $1.85M). agg__daily_sum_by_campaign was over 1 month stale (max day 2026-04-30 at run 2026-06-04), so recent metrics were sourced directly from cost_impression_log / clickpass_log / ui_conversions; the aggregate stayed fine for 12-month monthly-spend patterns. Query cost 95.5 GB, ~$0.48. Load-bearing finding is the correct IVR baseline: the MDE engine treats each advertised IP as one Bernoulli trial, so p must be a per-IP probability = distinct visiting-and-served IPs / distinct served IPs. Chris Franz's proposed UI baseline graph.visits/usersReached is wrong because graph.visits is an event count, inflating WGU's baseline 3.36x (10.70% to 35.95%). Correct WGU trailing-30d IVR = 10.70% (distinct served IPs 15.7M; distinct visiting-and-served IPs 1.68M). Holdout (MD5(advertiser_id:ip)), serving, and VV attribution all run on the resolved cost_impression_log.ip (0 of 2.36M served IPs fell in holdout buckets; Zach Schoenberger confirmed holdout=targeting / VV=attribution, both on event-log ip, neither on device_ip). graph.usersreached/uniques (32.1M, 5.92%) is the wrong denominator: it counts CTV by ip and display by guid/cookie, over-counting display ~2x (verified from the SQLMesh impression_facts model). Because MDE_rel is proportional to sqrt((1-p)/p) (decreasing in p), the naive graph.visits baseline understates the true MDE and overstates power (WGU over-optimism 2.16x; 0.68% true vs 0.31% naive at 90/10). Recommendation to BER: add users_reached_ip_arr = ARRAY_AGG(l.ip) as an array (not an HLL sketch), or source the calculator baseline from CIL. Parallel work: Chris Franz's gary-ql PR #4445 adds the same prefill server-side for the premier-ui wizard. Most deep findings are already captured in knowledge/ (impression_facts channel-conditional key, uniques_arr merge mechanics, MDE-direction math, holdout-on-resolved-ip, agg staleness); the CHAPI runtime-SQL capture method and cross-channel served-IP overlap are the new deltas.
+
+**How:** Read the summary in full plus the outputs/ and queries/ filenames. Grepped knowledge/data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md for each candidate durable fact (usersreached, uniques_arr, channel_id=8 CASE key, MDE sqrt direction, graph.visits trap, agg staleness, CHAPI query builder, cross-channel overlap, Built SQL Command) to determine which are already documented versus new. Front-matter summary and result are both populated, so no front_matter_fix.
+
+**Tables:** `agg__daily_sum_by_campaign`, `cost_impression_log`, `clickpass_log`, `ui_conversions`, `impression_facts`, `all_facts`, `visit_facts`, `summarydata.all_facts_by_day_ramp_combined`, `visit_facts__base`, `graph.usersreached`, `graph.sitevisitors`, `graph.visits`
+
+**Learned:**
+- Correct MDE/IVR baseline is a per-IP probability = distinct visiting-and-served IPs / distinct served IPs; WGU trailing-30d = 10.70% (1.68M / 15.7M), NOT graph.visits/usersReached (35.95%, 3.36x inflated by event-count numerator).
+- Holdout (MD5(advertiser_id:ip)), serving suppression, and VV attribution all key on the resolved cost_impression_log.ip; 0 of 2.36M WGU served IPs landed in holdout buckets, proving the field. Zach Schoenberger confirmed: holdout=targeting, VV=attribution, both on event-log ip, neither on device_ip.
+- graph.usersreached/uniques (32.1M) over-counts served IPs ~2x because CTV is counted by ip and display by guid/cookie; wrong denominator for a per-IP baseline (yields 5.92%).
+- MDE_rel is proportional to sqrt((1-p)/p), decreasing in p, so an inflated baseline reports a smaller, over-optimistic MDE and overstated power (WGU 2.16x too optimistic).
+- agg__daily_sum_by_campaign was >1 month stale (max day 2026-04-30 as of 2026-06-04); for trailing-30d metrics source raw event logs instead; aggregate still fine for 12mo monthly-spend patterns.
+- 879 advertisers were currently delivering (trailing-30d spend >$1k); WGU $1.85M top.
+- The exact CHAPI graph query (verified from chapi SummaryQueryBuilder.kt) runs against summarydata.all_facts_by_day_ramp_combined with half-open GMT literal predicate day >= '<30d-ago>' AND day < '<today 00:00>' (30d ending yesterday); spend/impressions SUMmed, usersreached via uniqArrayMerge (cross-day distinct, not SUM).
+- There is no CHAPI debug/explain/sql param; the literal executed SQL is captured from the INFO service log 'Built SQL Command' (DataService.kt:143) or ClickHouse system.query_log pinned on table + aid.
+- Mixed CTV+display advertisers cannot get cross-channel-deduped served-IP reach via a channel split: WGU CTV-IP 12.79M + display-IP 7.93M = 20.71M summed vs 15.61M distinct, a 5.10M (33%) cross-channel overlap. CTV-only advertisers can use a channel_id=8 filter (already IP-keyed).
+- WGU IVR reconciliation at denom 15.61M: all-verified-visitors (graph site_visitors) 1.922M = 12.31%; impression-in-window (visit_facts__base) 1.690M = 10.83%; visiting-AND-served-in-window (CIL intersect) 1.672M = 10.71% (= our standalone). Exact parity is not reachable from graph because impression_hour/day_number live only in ber_stg.visit_facts__base.
+
+**Reuse when:**
+- Prefilling or building an MDE / power calculator baseline for an advertiser
+- Defining IVR / visit rate as a per-IP probability for an incrementality experiment
+- Deciding which IP field the holdout, serving, and VV attribution use
+- Reconciling graph.usersreached / uniques against cost_impression_log served-IP counts
+- Needing the exact runtime SQL CHAPI generates for a graph/R2 metric
+- Sourcing trailing-30d per-advertiser metrics when agg__daily_sum_by_campaign is stale
 
 # TI-1019: MDE Calculator — Per-Advertiser Auto-Prefill
 

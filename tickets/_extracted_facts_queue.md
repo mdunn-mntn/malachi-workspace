@@ -33,3 +33,89 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 
 - **[audi_1089_ddp_vendor_evaluations/ds26_predactiv]** DS26 batch ingestion set is ENABLED_DSIDS=[23,25,26,28,30,36]; the ingest reads hourly drops gs://mntn-data-partners/partners/predactiv/dt=YYYYMMDDHH/*.parquet, writes the full payload to gs://mntn-data-archive-prod/fpa_vendor_log/data_source_id=26/ and a thin ip/url/time projection to site_visit_signal (user_agent/query_parameters/advertiser_id nulled).
   - source_line: "DS26 is in `ENABLED_DSIDS=[23,25,26,28,30,36]` ... reads hourly drops `gs://mntn-data-partners/partners/predactiv/dt=YYYYMMDDHH/*.parquet`, then (stage 1) writes the **FULL payload** to `gs://mntn-data-archive-prod/fpa_vendor_log/data_source_id=26/` and (stage 2) a thin projection to `site_visit_signal/data_source_id=26`."
+
+<!-- batch 2 appended -->
+
+## data_catalog.md
+
+- **fact:** The DS30 svs feeder (dsid30_augmentor_log_processing.py) builds site visits from BOTH the page and referrer columns (referrer timestamped 1s earlier), normalizes URLs by prepending http://, requires non-empty ip, and first-touch dedups per (ip, url).
+  - source ticket: `audi_1091_augmentor_full_source`
+  - source_line: Builds site visits from BOTH `page` and `referrer` (referrer timestamped 1s earlier), normalizes URLs (prepends `http://`), requires non-empty `ip`, first-touch dedup per (ip, url).
+- **fact:** The DS23 svs feeder (dsid23_guid_log_processing.py) reads guid_log, left-anti-joins pixel-isolation blocked advertisers, uses URL = product_referer, distinct.
+  - source ticket: `audi_1091_augmentor_full_source`
+  - source_line: `dsid23_guid_log_processing.py` — guid_log, left-anti-joins pixel-isolation blocked advertisers, URL = `product_referer`, distinct.
+- **fact:** The BQ gold DDP table family (dw-main-gold.reporting): ddp_all_matches_cpm[_YYYYMM] (all matched paths, per-category, segment_name + tv_cpm), ddp_mm_winners_imp[_YYYYMM] (MM slice, mm_dsids_winner), ddp_mm_winners_domains[_YYYYMM], _w_select variants; monthly since ~2025-09/10; ddp_mm_winners_imp keyed on ad_served_id.
+  - source ticket: `audi_1111_vendor_quality/audi_1115_wtp_cpm`
+  - source_line: A full gold table family exists (BQ-migrated): ddp_all_matches_cpm[_YYYYMM]... ddp_mm_winners_imp[_YYYYMM] (MM slice with mm_dsids_winner), ddp_mm_winners_domains[_YYYYMM], _w_select variants; monthly since ~2025-09/10... keyed on ad_served_id.
+
+## data_knowledge.md
+
+- **fact:** DS40 (33Across API) is ~81% of the whole pixel-page-view Kafka topic (89.5K of 110K rows in a sampled hour; ~363M rows/day); dropping it shrinks the pixel-page-view pipeline ~5x.
+  - source ticket: `audi_1089_ddp_vendor_evaluations/ds40_33across_api`
+  - source_line: 89.5K of 110K rows in a sampled hour approx 81% of the whole pixel topic is DS40 (Klickly, by contrast, ~850 rows). At ~363M rows/day ... dropping it shrinks the pixel-page-view pipeline ~5x.
+- **fact:** device_id_33across_signal.py (airflow/dags/targeting/, device-ID/IFA extraction into device_id_signal) is DS28-only (reads fpa_dsid28_log.device_ids, inserts data_source_id=28); DS40 does not feed it.
+  - source ticket: `audi_1089_ddp_vendor_evaluations/ds40_33across_api`
+  - source_line: airflow/dags/targeting/device_id_33across_signal.py (device-ID/IFA extraction into device_id_signal) is DS28-only (reads fpa_dsid28_log.device_ids, inserts data_source_id=28, schedule=None/manual). DS40 does not feed it.
+- **fact:** The DDP monthly usage email ddpmonthlyusageemail-33Across.py covers BOTH ds28 and ds40 in one email to 33across.com contacts, CC accountspayable.
+  - source ticket: `audi_1089_ddp_vendor_evaluations/ds40_33across_api`
+  - source_line: sends a monthly usage report from partnerbilling@mountain.com to 33across.com contacts ... covering BOTH ds 28 and 40 in one email
+- **fact:** AUDI-1091 verdict (2026-07-22): ingesting the full augmentor_log beyond the DS30 BANNER slice already in svs adds only ~+1.2% more site-visit rows and <=+16% more IPs (upper bound, pre-overlap) - NO-GO because the extra VIDEO volume is URL-less CTV.
+  - source ticket: `audi_1091_augmentor_full_source`
+  - source_line: Net-new site-visit signal is ~1% of rows and <=16% of IPs (upper bound, pre-overlap), versus ~2 sprints of Data Eng ingestion
+- **fact:** RTC = two pipelines: guid_log Kafka streaming (near real-time) + TI-run hourly batch over svs-minus-guid; vendors do drive RTC, so per-day analysis understates vendor timing effects
+  - source ticket: `audi_1111_vendor_quality`
+  - source_line: L54-56: RTC = two pipelines (guid_log Kafka streaming + TI-run HOURLY batch over svs-minus-guid)
+- **fact:** svs ingest latency measured with a ULID instrument: free logs stream at 0 min, vendors arrive 2.4-8.6h stale (Predactiv to ~12h), matching configured per-DS lag hours
+  - source ticket: `audi_1111_vendor_quality`
+  - source_line: L103-105: measured with the new svs ULID latency instrument: free logs stream at 0 min; vendors arrive 2.4-8.6h stale
+- **fact:** DS14 availability-gate filter lives at MembershipDB / audience-service level as a global filter, computed at bid time not in IPDSC
+  - source ticket: `audi_1111_vendor_quality`
+  - source_line: L57-58: DS14 filter lives at MembershipDB / audience-service level as a global filter
+- **fact:** Vendor billing is self-reported: MNTN runs targeted_signal compute and tells vendors what is owed, no audit; free-log credit preemption needs no vendor cooperation
+  - source ticket: `audi_1111_vendor_quality`
+  - source_line: L59-62: Billing is self-reported: we run targeted_signal compute and tell vendors what we owe — no audit
+- **fact:** L0f fractional per-won-impression media CPM is ~$10.7 (media_cpm_frac $10.74 ~= media_cpm_elig_full $10.68, CIL join 99.999%, grain-robust); break-even vendor CPM = media CPM x margin = ~$1.0-3.3 for every vendor, essentially vendor-independent because it is just MNTN's CTV media rate.
+  - source ticket: `audi_1111_vendor_quality/audi_1115_wtp_cpm`
+  - source_line: Per-credited-impression media CPM ~$10.7 is TRUSTWORTHY and grain-robust (CIL join 99.999%, no double-count; media_cpm_frac $10.74 ~ media_cpm_elig_full $10.68 = weights cancel...). So break-even vendor CPM = media CPM x margin = ~$1.0-3.3 for EVERY vendor - because it's just MNTN's CTV media rate, essentially vendor-independent.
+- **fact:** l0f is a PRICING lens for the post-preemption residual, NOT a keep/drop test: it over-credits (attributes full impression media incl. impressions we'd win anyway) and would greenlight the current deal; the marginal/drop value is the AUDI-1089 solo cohort (~$60K/mo for 33Across vs l0f's $217K/mo, 3.6x gap, entirely denominator/grain).
+  - source ticket: `audi_1111_vendor_quality/audi_1115_wtp_cpm`
+  - source_line: CRITICAL CAVEAT (steelman): l0f is a PRICING lens, NOT a keep/drop test. It attributes full impression media (fractionally) to the vendor, valuing impressions we'd win anyway... The marginal/drop value is the AUDI-1089 solo cohort (~$60K/mo for 33Across vs l0f's $217K/mo - 3.6x gap...).
+- **fact:** Free-log winners preempt ~88-97% of every vendor's won impressions (33Across 90.5%) at impression grain, higher than the 52.5% visit-day grain because impression volume concentrates on live IPs free logs almost always carry.
+  - source ticket: `audi_1111_vendor_quality/audi_1115_wtp_cpm`
+  - source_line: ~88-97% of every vendor's won impressions have a free-log winner (33Across 90.5%) - the preemption gap, impression-grain (higher than the 52.5% visit-day grain because impression volume concentrates on live IPs free logs almost always carry).
+- **fact:** Free co-hold share per vendor (deck_d1): 33Across 52.5%, 33A API 23.8%, Cybba 28.2%, Justuno 4.9%, Sovrn 0.2% - small vendors' credit is junk/unique not overlap, so preemption barely helps them.
+  - source ticket: `audi_1111_vendor_quality/audi_1115_wtp_cpm`
+  - source_line: | 33Across | 52.5% | 400.8M | ... | 33A API | 23.8% ... | Sovrn | 0.2% ... | Justuno | 4.9% ... | Cybba | 28.2% ... the other three stay far under (their co-hold is tiny - their credit is junk/unique, not overlap, so preemption barely helps them).
+- **fact:** Applying the flow-filter (free log earns credit for an IPxdomain on day D only if it delivered that pair in [D-30, D-1]) drops free-union coverage from 59.36% same-day to 44.09% prior-30d; augmentor alone 38.63%, guid alone 5.83%; vendor flow-unique vs same-day-unique moves both directions.
+  - source ticket: `audi_1111_vendor_quality/audi_1115_wtp_cpm`
+  - source_line: free-union coverage drops 59.36% (same-day credit) -> 44.09% (prior-30d credit only); augmentor alone 38.63%, guid alone 5.83%. Vendor flow-unique vs same-day-unique moves BOTH directions...
+- **fact:** DS14 (MNTN Global Data) is auto-added to every audience expression and restricts bidding to IPs recently seen in guid_log/augmentor_log at the MembershipDB/audience-service level; it explains why ~99% of biddable IPs come from the free logs.
+  - source ticket: `audi_1111_vendor_quality/audi_1117_ds14_svs_overlap`
+  - source_line: DS14 ("MNTN Global Data") is auto-added to every audience expression and restricts bidding to IPs recently seen in guid_log/augmentor_log — a global filter at MembershipDB / audience-service level (Sean, 2026-07-16 readout). It explains why ~99% of biddable IPs come from the free logs
+- **fact:** The documented DS14 gate windows are not a hard universal filter: over all impressions on 2026-07-01 lag distributions decay smoothly with no cliff at 1d/4d/7d; aug(1d) OR guid(4d) covers 85.5% of served IPs and 5.1% appear in neither free log within 11d.
+  - source ticket: `audi_1111_vendor_quality/audi_1117_ds14_svs_overlap`
+  - source_line: Lag distributions decay smoothly (no cliff at 1d/4d/7d). So DS14 is NOT a hard universal filter at the documented windows across all delivery
+- **fact:** Display delivery is a 100.00% same-day augmentor echo by construction (aug_log mirrors the display bid stream), so DS14 gate evidence must come from CTV; CTV-prospecting has a soft edge (12.2% of imps outside aug(1d)|guid(4d), 4.3% outside both logs in 11d).
+  - source ticket: `audi_1111_vendor_quality/audi_1117_ds14_svs_overlap`
+  - source_line: Display is a same-day echo, not gate evidence: 100.00% of display imps have a SAME-DAY augmentor row... The DS14 gate question is a CTV question, and there the edge is SOFT: 12.2% of CTV-prospecting imps land outside aug(1d)|guid(4d), 4.3% outside both logs entirely (11d).
+- **fact:** Of the 30d svs universe of 301.5M IPv4 IPs, only 108.8M (36.1%) are in-gate/biddable under the aug-1d|guid-4d proxy; 192.7M (63.9%) are out-of-gate.
+  - source ticket: `audi_1111_vendor_quality/audi_1117_ds14_svs_overlap`
+  - source_line: svs 30d universe: 301.5M IPv4 IPs; only 108.8M (36.1%) are in-gate (biddable under the documented aug-1d|guid-4d proxy) — the "what's in svs that's not in DS14" answer: 192.7M IPs (63.9%).
+- **fact:** Adding svs IPs to DS14 would split the 192.7M out-of-gate pool almost exactly in half: 97.0M free-stale IPs (free logs delivered them in 30d, needs no vendors) vs 95.7M vendor-only IPs.
+  - source ticket: `audi_1111_vendor_quality/audi_1117_ds14_svs_overlap`
+  - source_line: expansion_free_stale = 97.0M — out-of-gate IPs the FREE logs delivered within 30d... expansion_vendor_only = 95.7M — only vendors delivered them in 30d
+- **fact:** Per-source biddable in-gate share of delivered svs IPs (30d, gate ref 2026-07-01): Cybba 81.6, Klickly 78.5, Sovrn 72.7, augmentor 70.2, Predactiv 66.8, Justuno 60.0, 33A API 59.6, guid 54.8, 5x5 52.2, 33Across 50.0.
+  - source ticket: `audi_1111_vendor_quality/audi_1117_ds14_svs_overlap`
+  - source_line: Per-source biddable share of delivered IPs (in-gate %): Cybba 81.6, Klickly 78.5, Sovrn 72.7, augmentor 70.2, Predactiv 66.8, Justuno 60.0, 33A API 59.6, guid 54.8, 5x5 52.2, 33Across 50.0
+- **fact:** The exact CHAPI graph query for a 30-day advertiser metric runs against summarydata.all_facts_by_day_ramp_combined (daily, ClickHouse Distributed, no FINAL) with a half-open GMT literal predicate day >= timestamp '<30d-ago>' AND day < timestamp '<today 00:00>' (30d ending yesterday, not today()-30); graph.spend and graph.impressions are SUMmed, graph.usersreached is uniqArrayMergeState/uniqArrayMerge over uniques_arr (cross-day distinct merge, not a SUM). aid maps to WHERE advertiser_id IN (...), sum=advertiserinfo.id to GROUP BY advertiser_id.
+  - source ticket: `ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill`
+  - source_line: Table = `summarydata.all_facts_by_day_ramp_combined` (daily grain, ClickHouse `Distributed`; no `FINAL`). Time column `day`; predicate is **half-open literal GMT timestamps** `day >= timestamp '<30d-ago>' AND day < timestamp '<today 00:00>'` (30d ending yesterday; not `today()-30`).
+- **fact:** There is no CHAPI /apidata debug/explain/sql/dryrun param; the literal executed SQL is captured either from the INFO service log 'Built SQL Command' (DataService.kt:143, logged unconditionally per request) or from ClickHouse system.query_log pinned on the table plus advertiser_id IN (aid).
+  - source ticket: `ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill`
+  - source_line: there is **no** curl/debug param... (1) **easiest — service logs:** every request logs it unconditionally at INFO — `DataService.kt:143` `log.info("Built SQL Command: {} | Params: {}", cmd, ...)` ... (2) **ClickHouse `system.query_log`**
+- **fact:** Mixed CTV+display advertisers cannot get cross-channel-deduped served-IP reach via a channel split: WGU CTV-IP 12.79M + display-IP 7.93M = 20.71M summed vs 15.61M distinct = 5.10M (33%) cross-channel overlap (1 in 4 served IPs see both channels). CTV-only advertisers can use a channel_id=8 filter since that leg is already IP-keyed.
+  - source ticket: `ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill`
+  - source_line: WGU CTV-IP 12.79M + display-IP 7.93M = 20.71M summed vs 15.61M distinct -> **5.10M (33%) cross-channel overlap** (1 in 4 served IPs see both).
+- **fact:** WGU IVR reconciliation at denominator 15.61M: all-verified-visitors (graph site_visitors) 1.922M = 12.31%; impression-in-window (visit_facts__base) 1.690M = 10.83%; visiting-AND-served-in-window (CIL intersect) 1.672M = 10.71% (matches the standalone calculator). Exact parity is unreachable from the graph layer because the in-window restriction needs impression_hour/day_number, which live only in ber_stg.visit_facts__base and are grouped away before visit_facts/all_facts.
+  - source ticket: `ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill`
+  - source_line: A. all verified visitors (graph `site_visitors`) | 1.922M | **12.31%** ... C. visiting-AND-served-in-window (CIL intersect) | 1.672M | **10.71%** | = our standalone 10.70% ... the in-window restriction needs `impression_hour`/`day_number`, which live only in `ber_stg.visit_facts__base`

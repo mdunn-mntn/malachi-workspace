@@ -5,7 +5,36 @@ status: in_progress
 date: 2026-07-17
 summary: "Compute effective CPM and willingness-to-pay ceiling per data vendor across lenses"
 result: "No metered vendor breaks even at $0.50 under any lens; 33Across API closest"
+keywords: [audi-1115, willingness-to-pay, wtp cpm, ddp vendor, 33across, preemption, free-log co-hold, flow filter, ddp_mm_winners_imp, tv_cpm, fractional credit, break-even cpm, lens-invariant]
 ---
+
+## TL;DR
+
+**Q:** What is the true willingness-to-pay CPM per data vendor across lenses (AUDI-1115)?
+
+**A:** No metered vendor breaks even at the $0.50 rate under any lens or margin assumption; 33Across API is consistently closest, and the conclusion is lens-invariant. L0 (billing meter) break-even CPMs: 33Across $0.086-0.257, 33A API $0.127-0.381, Sovrn $0.048-0.145, Justuno $0.024-0.072, Cybba $0.023-0.068. On L2 (flow-filtered unique triples, annualized) every metered vendor's effective cost exceeds its WTP-high ceiling (33A API 1.3x over, 33Across 1.9x, Sovrn 3.4x, Justuno 6.9x, Cybba 7.4x). Two lenses shift the picture: on L0p (post-AUDI-1113-preemption meter = meter x (1 - free co-hold share)) the 33Across family alone reaches fair at the top of the band (33Across HIGH $0.542 > $0.50; 33A API HIGH exactly $0.50) - the other three stay far under because their co-hold is tiny (credit is junk/unique, not overlap). On L0f (fractional per-won-impression media credit) break-even is ~$1.0-3.3 for EVERY vendor because it is just MNTN's ~$10.7 CTV media CPM x margin, essentially vendor-independent - but l0f is flagged a PRICING lens NOT a keep/drop test (over-credits, would greenlight the current deal). Reconciled plan: preemption is THE lever (removes ~90% of billed volume; savings from volume not a rate cut); on the residual $0.50 is below break-even (~$1-3) so keep ~$0.50; vendors differ by residual VOLUME (33Across 20.2M, 33A API 9.2M, Justuno 4.1M, Sovrn 2.3M, Cybba 0.56M/mo), which ranks keep-priority; an incrementality read is mandatory before cutting below $0.50 since the residual value assumes the vendor's signal is why we won. Status in_progress; 24 remaining PENDING xlsx cells are flat-fee bill amounts (Maya). Flat-fee vendors (5x5, Predactiv, Klickly) have WTP ceilings computed but meter/bill cells pending.
+
+**How:** Four lenses per vendor. Value side always excludes free logs (q8b solo cohort = media on IPs neither free log delivered) x 52 x 10-30% internal margin band. L0 = deck_d3 credited imps x12 meter; L0p = meter x (1 - free co-hold share, deck_d1); L0f = split each won impression's media across paid co-winners, free-log winners preempt; L2 = flow-filtered unique vendor triples (free log earns coverage credit for an IPxdomain on day D only if it delivered that pair in [D-30, D-1]; same-day-only earns none), annualized x365/30. L2 scan hit BigQuery's hard 6-hour job limit as a single query, reworked into a day-bitmask formulation (days 0..59, per-pair delivery days as one INT64 bitmask, credit = mask & bits [di-30, di-1]) run as 4 IP-hash shards (MOD(ABS(FARM_FINGERPRINT(ip)),4)) merged additively; anchors reproduced deck_d1 trips_standalone exactly (universe 13,286,674,041, drift 0.00000%). L0f billing structure confirmed empirically on BAE ddp_mm_winners_imp keyed on ad_served_id.
+
+**Tables:** `ddp_mm_winners_imp`, `ddp_all_matches_cpm`, `ddp_mm_winners_domains`, `coredw.usage_reporting_data`, `augmentor_log`, `guid_log`
+
+**Learned:**
+- No metered DDP vendor breaks even at the $0.50 CPM under any of four lenses (L0/L0p/L0f/L2) or any 10-30% margin assumption; 33Across API is consistently closest; conclusion is lens-invariant.
+- L0f fractional per-won-impression media CPM is ~$10.7 (media_cpm_frac $10.74 ~= media_cpm_elig_full $10.68, CIL join 99.999%, grain-robust), so break-even vendor CPM = media CPM x margin = ~$1.0-3.3 for EVERY vendor, essentially vendor-independent (it is just MNTN's CTV media rate).
+- l0f is a PRICING lens for the post-preemption residual, NOT a keep/drop test: it fractionally attributes full impression media to the vendor incl. impressions we'd win anyway, so it over-credits and would greenlight the current deal; marginal/drop value is the AUDI-1089 solo cohort (~$60K/mo for 33Across vs l0f's $217K/mo, 3.6x gap, all denominator/grain).
+- Free-log winners preempt ~88-97% of every vendor's won impressions (33Across 90.5%) at impression grain, higher than the 52.5% visit-day grain because impression volume concentrates on live IPs free logs almost always carry.
+- Free co-hold share per vendor (deck_d1): 33Across 52.5%, 33A API 23.8%, Cybba 28.2%, Justuno 4.9%, Sovrn 0.2% - small vendors' credit is junk/unique not overlap, so preemption barely helps them.
+- Applying the meeting flow-filter (free log earns credit for an IPxdomain on day D only if delivered in [D-30, D-1]) drops free-union coverage from 59.36% same-day to 44.09% prior-30d (augmentor alone 38.63%, guid alone 5.83%); vendor flow-unique vs same-day-unique moves both directions.
+- ddp_mm_winners_imp credit splits across matched DATA PATHS not just MM winners: proof imp f05c2bac matched DS17 (ShareThis 3P, tv_cpm $0.95) AND DS19 (MM, 33Across, tv_cpm $0.50) giving impression_cnt=0.5 on the MM row; cross-path fractional splitting is alive in June (~10% of DS19 rows), so the AUDI-1092 'May+ integer single-credit' reading is incomplete.
+- No simple aggregation of ddp_mm_winners_imp reproduces the coredw.usage_reporting_data June meter (equal-split, DS19-only-split, union-dedupe all vary by vendor from -23% to +42%); exact allocation lives in BAE/Sherwin compute; verdicts robust to +-40% meter ambiguity.
+- BQ gold table family dw-main-gold.reporting.ddp_* (ddp_all_matches_cpm, ddp_mm_winners_imp, ddp_mm_winners_domains, _w_select variants) is monthly-partitioned since ~2025-09/10; ddp_mm_winners_imp keyed on ad_served_id.
+
+**Reuse when:**
+- pricing or willingness-to-pay analysis for a DDP / 3P data vendor
+- questions about whether to keep, drop, or renegotiate a data vendor at $0.50 CPM
+- reconciling ddp_mm_winners_imp billing table against usage_reporting_data meters
+- measuring free-log preemption impact on vendor billed volume
+- flow-filtered vendor coverage / unique-triple denominator questions
 
 # AUDI-1115: True willingness-to-pay CPM per vendor — 3 lenses
 

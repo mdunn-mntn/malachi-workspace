@@ -5,7 +5,24 @@ status: in_progress
 date: 2026-06-17
 summary: "Expert review of 6 LiftLab incrementality test designs before customer offers firm up."
 result: "in progress — review framework/scorecard built; awaiting 6 designs + 6/23 review"
+keywords: [ti-1039, liftlab, incrementality, test design review, edgar von trotha, mde, lewis-rao, power analysis, geo holdout, ber-2250]
 ---
+
+## TL;DR
+
+**Q:** Read TI-1039 LiftLab design review summary; produce TL;DR card + delta_facts.
+
+**A:** TI-1039 is a Tier-1 expert review of 6 LiftLab incrementality test designs for prospective customers, requested by Edgar von Trotha before offers firm up (review meeting Tue 2026-06-23). Status: in progress. The deliverable built so far is a test-design review framework + per-design scorecard (10 review levers) at artifacts/ti_1039_design_review_framework.md. The 6 actual designs had not yet been received, so no design has been pre-scored. Three things to land at the meeting: (1) power/MDE first (refuse MDE > ~15%; below 5M impressions directional-only, no point estimate without a +-~50pp interval per Lewis-Rao), (2) audience strategy is the biggest controllable swing (high-intent/retargeting underperform, broad prospecting wins), (3) protect the customer relationship (>=6-wk test + 2-wk post, exclude first ~4 weeks of ramp per TI-780, no early reads, frame nulls as retest inputs). LiftLab's methodology is treated as defensible (TI-856) - the review is about design parameters, not trust. No new queries or schema work; outputs/ and queries/ folders are empty.
+
+**How:** No queries run. Grounding pulled from existing workspace knowledge: iROAS playbook / Lewis-Rao power section, Edgar's 6 lessons from his 50-test review, the customer tracker (55 tests, LiftLab 9), TI-856 methodology map, TI-780 ramp window. Deliverable is a written framework + scorecard, not an analysis output.
+
+**Learned:**
+- TI-1039 = review of 6 LiftLab incrementality designs pre-offer; review framework/scorecard built, 6 designs not yet received or pre-scored as of the summary.
+
+**Reuse when:**
+- Reviewing a third-party vendor lift-test design
+- LiftLab beta customer studies
+- Power/MDE and audience-strategy checks before an incrementality test
 
 # TI-1039: Review LiftLab incrementality test designs for 6 prospective customers
 

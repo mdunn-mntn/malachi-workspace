@@ -5,7 +5,34 @@ status: in_progress
 date: 2026-07-17
 summary: "Whether vendor delivery timing lets RTC firings depend on paid vendor feeds"
 result: "RTC vendor-independent — vendors 2.4-8.6h stale, only 0.01% of RTC volume vendor-only"
+keywords: [rtc, real-time conquest, vendor-independent, ulid, ingest latency, site_visit_signal, svs, guid_log, augmentor_log, fpa_site_visit_batch_serverless, 33across, 5x5, predactiv, audi-1116, hourly batch]
 ---
+
+## TL;DR
+
+**Q:** Does vendor delivery timing let RTC firings depend on paid vendor feeds? (AUDI-1116)
+
+**A:** No, RTC is effectively vendor-independent. RTC runs on two pipelines: (1) guid_log Kafka streaming (~real-time, Zach S.) and (2) a TI-run HOURLY batch over svs-minus-guid, so vendors CAN in principle drive RTC firings via the batch path, but measured dependence is negligible. Using a ULID ingest-latency instrument (svs uid first 10 Crockford-base32 chars = ms mint timestamp; mint minus time = delivery lag), the free logs (guid_log, augmentor_log) are the only real-time sources (0.0 min median), while every vendor delivers hours late: 33Across ~8.6h flat, 5x5 ~5.5h, most others ~2.9h, Predactiv bimodal (per-hour medians 2.6-12.1h). These match the CONFIGURED per-DS lag hours in the fpa_site_visit_batch_serverless DAG (5x5=5h, aug/guid=1h, 33across=8h), so the staleness is structural, not incidental. For RTC-fired impressions in valuation week 2026-07-02..08 (30,604,353 imps on 4,004,751 IPv4 IPs): free_covered = 99.99%, vendor_only = 0.01% (3,040 imps / 2,184 IPs); 99.59% is on guid-delivered (real-time Kafka) IPs. Dropping all 8 vendors risks ~0.01% of realized RTC volume. Caveats (verify-pass): vendor_only 0.01% is a coverage-based (not strictly causal) bound; the ULID lag is a lower bound on RTC-visible staleness; free_covered proves in-window delivery, not pre-impression causal qualification. Solution section still pending; status In Progress.
+
+**How:** ULID latency probe: decode svs uid first 10 chars as ms mint timestamp, subtract event time for delivery lag; per-source medians on 2026-07-01 via audi_1116_hourly_arrival.sql. RTC vendor-dependence via audi_1116_rtc_vendor_share.sql: RTC-fired imps (valuation week) intersected with 37d svs membership masks, split into guid_realtime/hourly_batch_only/no_svs and free_covered/vendor_only. IPv4-only.
+
+**Tables:** `site_visit_signal (svs)`, `guid_log`, `augmentor_log`, `fpa_site_visit_batch_serverless`
+
+**Learned:**
+- RTC = two pipelines: guid_log Kafka streaming (real-time) + TI-run hourly batch over svs-minus-guid; vendors can drive RTC only via the batch path
+- svs uid is a ULID -> free ingest-latency instrument: first 10 Crockford-base32 chars = ms mint timestamp, mint minus time = delivery lag
+- Free logs (guid_log, augmentor_log) mint at event capture = 0.0 min lag (streaming); vendors 2.4-8.6h stale typically, Predactiv up to ~12.1h evenings
+- Measured vendor lags match CONFIGURED per-DS lag hours in fpa_site_visit_batch_serverless (5x5=5h, aug/guid=1h, 33across=8h); staleness is structural/deliberate
+- RTC vendor-independence: 99.99% of RTC-fired imps free_covered, vendor_only 0.01% (3,040 imps/2,184 IPs); 99.59% on guid-delivered real-time IPs
+- 5x5 event timestamps are 2-hour-bucketed before ~14:00 (only even hh partitions exist morning); rows complete, binned coarsely
+- vendor_only 0.01% is a coverage-based (not strictly causal) bound; ULID lag is a lower bound on RTC-visible staleness
+
+**Reuse when:**
+- Evaluating whether dropping a paid 3P vendor affects RTC / conquest volume
+- Questions about RTC feed architecture or real-time vs batch qualification
+- Measuring svs ingestion / delivery latency by source
+- Vendor freshness SLA or renewal discussions
+- AUDI-1111 vendor-quality epic work
 
 # AUDI-1116: RTC × free logs — feed, timing, hourly-grain check
 
