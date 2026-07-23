@@ -32,6 +32,54 @@ three. Layering a second 3P provider has steeply diminishing incremental reach.
 ShareThis adds the most incremental reach beyond LiveRamp — 32.4M ShareThis-only
 IPs... Only 7.4M IPs are in all three".
 
+### 3. MM (gated) vs 3P — CPV / IVR / ROAS by vertical
+**Source:** `audi_1141_mm_vs_3p_by_vertical`
+**Fact:** AUDI-1141: median CPV MM-gated $9.13 vs 3P $37.18 (~4x); MM-all $12.52,
+MM-no-gate $21.84, MM-restricted $19.02 (advertiser-weighted median, 180d). Median
+IVR MM-gated 0.46% vs 3P 0.07% (~6.6x); median ROAS MM-gated 0.92 vs 3P 0.40.
+**Source line:** `| MM (gated) | ... | 0.46% | $9.13 | 0.92 | ... | 3P | 438 | 1,134 | 0.07% | $37.18 | 0.40 |`
+
+### 4. Two-lens MM framing — MM(all) vs MM(gated)
+**Source:** `audi_1141_mm_vs_3p_by_vertical`
+**Fact:** AUDI-1141 two-lens framing: MM (all) blends every MM campaign = realistic
+average (IVR 0.28%, n 2,560 adv); MM (gated) = best-configured subset (IVR 0.46%,
+n 1,262 adv); MM (all) still beats 3P ~4x IVR / ~3x CPV / ~2.3x ROAS.
+**Source line:** "MM (all) blends every MM campaign = the realistic average; MM
+(gated) is the best-configured subset. Both beat 3P clearly ... MM (all) still beats
+3P ~4x IVR / ~3x CPV / ~2.3x ROAS."
+
+### 5. The MM "gate" = score threshold >0, not the scoring model
+**Source:** `audi_1141_mm_vs_3p_by_vertical`
+**Fact:** AUDI-1141: an MM campaign only bids on model-scored high-intent IPs when
+score threshold >0; advertisers run it at 0 for Max Reach, short flights lowering it
+for deliverability, or an exhausted over-narrowed HI pool, which bypasses the model
+and bids broadly like a 3P segment. The gate is the threshold setting, not the
+scoring model.
+**Source line:** "an MM campaign only bids on model-scored high-intent IPs when the
+score threshold is >0. Some advertisers run it at 0 (Max Reach; many short flights
+that lower it for deliverability; or an over-narrowed HI pool exhausted quickly)"
+
+### 6. 8 MNTN sales verticals + rollup crosswalk
+**Source:** `audi_1141_mm_vs_3p_by_vertical`
+**Fact:** AUDI-1141: 8 MNTN sales verticals = ProServ, Education, Retail/Ecom,
+Gaming/Entertainment, Telco & Tech, Restaurants/Dining, CPG & Health, Auto Travel &
+Hospitality; vertical rollup via advertiser->fpa_advertiser_verticals type=0 parent
+(37 canonical parents) -> 8 buckets crosswalk (interim, needs RevOps sign-off; 3
+orphans -> Other/Unmapped).
+**Source line:** "8 sales verticals: ProServ, Education, Retail/Ecom,
+Gaming/Entertainment, Telco & Tech, Restaurants/Dining, CPG & Health, Auto Travel &
+Hospitality."
+
+### 7. ROAS is directional only — use median, never mean
+**Source:** `audi_1141_mm_vs_3p_by_vertical`
+**Fact:** AUDI-1141: ROAS is directional only (prospecting/last-touch, revenue
+concentrates in excluded retargeting, some cells carry pixel artifacts e.g. one
+ProServ advertiser >800x); use median never mean. Median ROAS MM-gated 0.92 vs 3P
+0.40.
+**Source line:** "ROAS is directional only: prospecting/last-touch, revenue
+concentrates in retargeting (excluded), and some cells carry pixel artifacts (one
+ProServ advertiser shows >800x). Use median, never mean."
+
 ---
 
 ## → knowledge/data_catalog.md

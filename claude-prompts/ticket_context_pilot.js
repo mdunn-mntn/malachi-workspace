@@ -70,7 +70,18 @@ const cards = (await parallel(TICKETS.map(t => () =>
     `Produce the TL;DR card for this ticket. Then produce delta_facts: durable data/business facts stated in ` +
     `this summary that are NOT already captured in knowledge/_ROUTING.md, knowledge/data_catalog.md, or ` +
     `knowledge/data_knowledge.md (grep them to check). For every fact, quote the source line — invent nothing. ` +
-    `If lint flagged this ticket (missing/empty front-matter), fill front_matter_fix.`,
+    `If lint flagged this ticket (missing/empty front-matter), fill front_matter_fix.\n\n` +
+    `STRICT FIDELITY — adversarial reviewers will reject any card that adds information not literally in the summary:\n` +
+    `  1. TABLE NAMES: copy them EXACTLY as the summary writes them. If the summary says bare 'cost_impression_log', ` +
+    `write 'cost_impression_log' — do NOT add a dataset/project qualifier (no 'silver.logdata.', 'dw-main-silver.', ` +
+    `'archives.', 'external.tpa.') unless that exact qualifier appears in the summary. Do not infer canonical paths.\n` +
+    `  2. HEDGES: preserve the source's certainty. If the summary says 'likely tied to TI-033', the card must keep ` +
+    `'likely' — do not upgrade a hedge to a fact.\n` +
+    `  3. PLAN vs DONE: 'How' and 'Answer' describe only what the summary's Findings/Results actually report. Do NOT ` +
+    `promote steps from a 'Plan of Action' into what was done, and do NOT state an outcome the summary never concludes.\n` +
+    `  4. PROVENANCE: do not cite other docs/line numbers (e.g. 'defined in data_knowledge.md:867') unless the summary ` +
+    `itself does. Cover every part of the question the answer claims to address (e.g. if asked size+staleness+spend, ` +
+    `don't drop staleness).`,
     { schema: CARD, phase: 'Extract', label: `extract:${t}`, agentType: 'general-purpose' }
   ).then(r => r && ({ t, ...r }))
 ))).filter(Boolean)

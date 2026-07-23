@@ -5,7 +5,24 @@ status: done
 date: 2026-03-03
 summary: "Verify MMv3 audience-membership model change improved targeting without regressions"
 result: "Investigation complete; findings documented in Drive gdoc and gsheet"
+keywords: ["mmv3", "membership model v3", "audience targeting", "ivr", "ti-390"]
 ---
+
+## TL;DR
+
+**Q:** Did MMv3 (Membership Model v3) improve audience targeting performance without regressions after rollout?
+
+**A:** Investigation complete; findings documented in Drive gdoc/gsheet, not locally — the local summary is a stub with no metrics recorded.
+
+**How:** Planned pre/post-MMv3 cohort comparison on IVR, conversion rate, and audience-quality metrics; actual results and numbers live only in the Drive gdoc and gsheet, not in the local summary.
+
+**Tables:** none
+
+**Learned:**
+- TI-390 findings are Drive-only (TI-390 MMv3 Performance Investigation gdoc + gsheet); no local files and no metrics in summary.md.
+- Summary describes MMv3 as a model update to the IP audience membership system that changed how IPs are scored and assigned to audience segments.
+
+**Reuse when:** MMv3 performance investigation; did MMv3 improve targeting; Membership Model v3 pre/post cohort comparison
 
 # TI-390: Investigate MMv3 Performance
 
