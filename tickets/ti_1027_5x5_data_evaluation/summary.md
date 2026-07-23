@@ -5,6 +5,33 @@ status: in_progress
 date: 2026-07-09
 summary: "Renew/drop/renegotiate eval of 5x5 (DS25) MNTN Matched site-visit data vendor"
 result: "KEEP — 5x5 outsized ~3.4x its scale, #2 unique MM-domain contributor; fee pending billing"
+keywords: [5x5, ds25, site_visit_signal, mntn matched, direct_data_partners, flat_fee, ddp, vendor evaluation, willingness to pay, website_crawl_verticals, domain overlap, leverage ratio, predactiv, 33across, vertical classification, ti-1027]
+---
+
+## TL;DR
+
+**Q:** Renew/drop/renegotiate evaluation of the 5x5 (DS25) MNTN Matched site-visit data vendor: quantify its value and impact on Fangorn/MNTN Matched relative to its scale.
+
+**A:** KEEP (renew). 5x5 (DS25) is a flat-fee DDP feeding site_visit_signal into MNTN Matched via domain-to-vertical coverage, not reach. Value is unique DOMAINS: 68.5% of its domains are provided by no other vendor; 47,069 of them classify to a vertical (~12% of the MM-usable classified-domain universe, B2B-weighted 25-34%). It is outsized ~3.4-3.85x its 3.6% data scale and is the #2 unique MM-domain contributor (behind Predactiv, also flat-fee). Reach is NOT the value: 73.8% of its IPs are already seen internally (DS23/30). The "domain-only, no extended URL" claim is CONFIRMED (only 3.8% of 5x5 URLs carry a path vs 67-100% for other vendors) but moot for MM because the vertical classifier strips every URL to domain. Delivered IP score-tier quality is ~uniform across high-volume vendors (5x5 39.4% High-Intent, highest among high-volume). MM is estimated worth tens of $M/yr, so 5x5's slice clears a typical DDP flat fee (tens-to-low-hundreds of $K/yr) with margin; it would take a low-$M/yr fee to fail break-even. Recommendation KEEP; final sign-off pending the flat-fee amount from billing (Sherwin), never obtained. If the fee is surprisingly large, fall back to renegotiate (demand URL paths). WTP: floor ~$40K/yr, fair ~$150-600K/yr, walk-away ~$6.3M/yr (monthly fair ~$15-50K/mo). Status 2026-07-09: all 8 external MM DDPs still enabled; 5x5 still delivering ~9 days past end-of-June contract end, unclear if renewal signed. The redundant $0.50-CPM DDPs (33Across API 3.2% unique, Sovrn 1.6%, Cybba 5.7%) are the real cost-review targets (AUDI-1051 backlog).
+
+**How:** Confirmed 5x5 lineage from SteelHouse/airflow-ti (raw gs://mntn-data-partners/partners/5x5/ip_to_url parquet, positional _COL_0/1/2 = ip/url/epoch, ~2-hr batches; dsid25_5x5_processing.py; DS25 in ENABLED_DSIDS=[23,25,26,28,30,36]; Stage1 fpa_vendor_log; Stage2 unified site_visit_signal separable by data_source_id; consumer distinct_site_visit_signal_domains.py excludes DS23, strips url to domain; feature store then MNTN Matched). Queried GCS parquet via BQ temp external tables (site_visit_signal ~250 GiB/day, raw 5x5 ~1.48 GiB/day; zzz_temp.site_visit_signal is manual, not auto-populated). Verified cost structure in tpa.direct_data_partners (is_current=true): DS25 billing_type=flat_fee, fixed_cpm=null, used_in_mntn_match=true; peer MM-DDP rate $0.50 CPM. Phase 1 SCALE: per-vendor rows/IPs/domains for 2026-06-15 (2.57B rows; 5x5=93M rows, 20.8M IPs, 93K domains, 3.8% URLs w/ path). Phase 3 CONTRIBUTION: 7-day domain-overlap (997,963 domain universe; 5x5-unique 138,496=13.88%) and 1-day IP overlap (5x5-only IPs 4.1M=19.8%). Phase 2x3 QUALITY: joined website_crawl_verticals (1,415,814 classified domains) giving 47,069 unique classified domains. Score-tier check joined 5x5 IPs to delivered household_score in cost_impression_log (the cheap realized-score source; full scoring universe household_scoring.prospecting_intent_daily is 19.4 TB/day, not scanned). 30-day recency: 69.8% of 5x5 pairs sole, 95.4% sole-or-freshest. Domain via NET.REG_DOMAIN(url). Findings map to the Findings/Results sections; the flat-fee amount and causal ablation remain not done.
+
+**Tables:** site_visit_signal, fpa_vendor_log, tpa.direct_data_partners, website_crawl_verticals, cost_impression_log, household_scoring.prospecting_intent_daily, zzz_temp.site_visit_signal, agg__daily_sum_by_campaign
+
+**Learned:**
+- 5x5 (DS25) value to MNTN Matched is domain-to-vertical coverage (unique domains), NOT reach or URL-level; 73.8% of its IPs already seen internally and only 3.8% of its URLs carry a path (domain-only confirmed, but moot because the vertical classifier strips to domain).
+- 5x5 is outsized ~3.4-3.85x its 3.6% data scale, #2 unique MM-domain contributor (68.5% unique) behind Predactiv (both flat-fee); the per-use $0.50-CPM DDPs (33Across API 3.2%, Sovrn 1.6%, Cybba 5.7% unique) are largely redundant and the real cost-review targets.
+- IP household-score tier mix is ~uniform across high-volume vendors (household score is a property of the household, not the vendor) — vendor differentiation is unique domains, not IP quality.
+- Recommendation KEEP is not fully closed: the flat-fee $ amount was never obtained from billing (BAE-2358 billing-usage-reporting ticket was Canceled 2025-01-15), and as of 2026-07-09 5x5 was still delivering ~9 days past the end-of-June contract end with no recorded renewal decision.
+- household_scoring.prospecting_intent_daily (the full all-IP scoring universe) is ~19.4 TB/day to scan; cost_impression_log's delivered household_score is the cheap realized-score substitute.
+
+**Reuse when:**
+- evaluating any 3P/DDP data vendor for renew/drop/renegotiate or willingness-to-pay
+- questions about 5x5 / DS25 or which vendors feed site_visit_signal and MNTN Matched
+- assessing vendor uniqueness/redundancy or the $0.50-CPM DDP cost-review (AUDI-1051)
+- estimating the value of MNTN Matched / Fangorn or a vendor's attributable slice
+- needing per-vendor scale, domain overlap, or IP score-tier methodology over site_visit_signal
+
 ---
 
 # TI-1027: [SPIKE] 5x5 Data Evaluation

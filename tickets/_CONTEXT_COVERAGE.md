@@ -30,3 +30,9 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | goal_attainment_customer_goal_map | carded | 0 | context-full batch 4; added front-matter; Mode report data map |
 | mm_44_ipdsc_hh_discrepancy | carded | 0 | context-full batch 4; stub, findings in artifacts |
 | tgt_4016_ecomm_classifier_thresholds | carded | 0 | context-full batch 4; threshold in notebook |
+| tgt_4103_common_crawl_coverage | carded | 0 | context-full batch 5; stub, results in notebook |
+| ti_033_vertical_classification_changes | carded | 0 | context-full batch 5; results in Drive/gitignored |
+| ti_1003_experiment_archive | carded | 0 | context-full batch 5; experiment archive Phase 1 |
+| ti_1016_memdb_bidder_cache_optimization | carded | 2 | context-full batch 5; cache-shrink killed, segmentless-score lever |
+| ti_1027_5x5_data_evaluation | carded | 1 | context-full batch 5; 5x5 DDP KEEP eval |
+| ti_1033_experiment_archive_deploy | carded | 0 | context-full batch 5; archive host/ship/polish |

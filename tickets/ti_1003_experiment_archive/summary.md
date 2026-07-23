@@ -5,6 +5,31 @@ status: done
 date: 2026-06-15
 summary: "Manifest-driven internal static site: portfolio scorecard of TI's measured impact"
 result: "Phase 1 built + verified — 8 experiments seeded; repo/Pages deploy split to TI-1033"
+keywords: [ti-1003, ti-1033, experiment archive, portfolio scorecard, manifest-driven static site, jinja2, ti-experiment-archive, github pages, fangorn, buk, 184x, mullet pdf, ti-542, max reach, incrementality]
+---
+
+## TL;DR
+
+**Q:** What is TI-1003 (TI Experiment Archive) and what was delivered?
+
+**A:** TI-1003 built Phase 1 of a manifest-driven internal static site: a portfolio scorecard of TI's measured business impact, with a KPI-centric landing plus one scannable page per experiment (intention + bold impact number + inline chart + Jira link). Status: Done (Phase 1 built and verified locally); remaining host/deploy + polish split into TI-1033. Architecture: one YAML manifest per experiment -> build.py (Python + Jinja2) -> static multi-page HTML, reusing the RevealJS deck CSS/palette. Site source lives standalone at /Users/malachi/Developer/work/mntn/ti-experiment-archive/ (its own git repo, 2 commits), to become SteelHouse/ti-experiment-archive once created. 8 experiments were seeded (scorecard order by sort_rank) and adversarially re-verified against each source summary.md: ti-961 Fangorn Rollout (+27% IVR DiD, live), ti-835 CTV Incrementality Holdout (~0% net-new, 2-8x attributed; ongoing/two-story), ti-804 BUK Keyword Value (184x visit-rate lift), ti-884 Incrementality Power Limits ($200k/mo spend threshold), ti-748 Media Plan Config (+10-17% new cfg, -26 to -31% old), ti-999 3P Segment Sizing ($103M/yr on 3P; $55M stale), ti-504 Fangorn Intent RCT (+41% IVR in 2 of 5 advertisers), ti-542 Max Reach Lift (Mixed / heterogeneous by segment). A post-review redesign replaced the reused technical matplotlib PNGs with built-in inline bar/diverging charts computed by build.py, showed every KPI each experiment moved with the top 1-2 highlighted, and grouped landing experiments by canonical metric key. Data-integrity catch: extraction agents fabricated per-cluster numbers for TI-542, whose summary.md has no numbers and whose only artifact is a joke placeholder PDF (ti_542_mullet_performance_report.pdf, literal mullet haircuts); caught by grepping the source and reverted to an honest "Mixed / no aggregate distilled." Remaining blockers before deploy (Section 8): confirm SteelHouse is GitHub Enterprise Cloud with Pages access-control, repo ownership/CODEOWNERS, and whether revenue-$ + advertiser names are OK behind org-SSO. Phase 2 (deferred): weekly live-refresh GitHub Action (headless RolloutTierEvaluations.py) + confidence-discounted $ scorecard.
+
+**How:** Read tickets/ti_1003_experiment_archive/summary.md in full; outputs/ and queries/ dirs are absent (empty ticket). Grepped knowledge/ (data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md) for the ticket's candidate facts (184x, mullet, TI-542, Max Reach) to check for deltas. All numbers reported are as stated in the summary's Section 5 seeded-experiments table.
+
+**Learned:**
+- TI-1003 delivered Phase 1 of the TI Experiment Archive: a manifest-driven (one YAML/experiment) Python+Jinja2 static site, source at /Users/malachi/Developer/work/mntn/ti-experiment-archive/, to become SteelHouse/ti-experiment-archive.
+- Status is Done for Phase 1 (built + verified locally); repo creation, GitHub Pages deploy, and polish were split into TI-1033 (3 SP).
+- 8 experiments seeded with headlines: ti-961 (+27% IVR DiD, live), ti-835 (~0% net-new / 2-8x attributed), ti-804 (184x visit-rate lift), ti-884 ($200k/mo spend threshold), ti-748 (+10-17% new cfg / -26 to -31% old), ti-999 ($103M/yr on 3P; $55M stale), ti-504 (+41% IVR in 2 of 5 advertisers), ti-542 (Mixed).
+- Data-integrity catch: extraction agents fabricated TI-542 per-cluster numbers from a joke placeholder PDF (ti_542_mullet_performance_report.pdf); already documented in knowledge/experimentation.md:111.
+- Deploy is gated on 3 unconfirmed items: SteelHouse GitHub Enterprise Cloud Pages access-control, repo ownership/CODEOWNERS, and legal/IT sign-off on revenue-$ + advertiser names behind org-SSO.
+
+**Reuse when:**
+- asked about the TI Experiment Archive, TI-1003, or TI-1033
+- asked where TI's portfolio of experiment results / impact scorecard lives
+- asked for the headline impact number of a specific TI experiment (961, 835, 804, 884, 748, 999, 504, 542)
+- building or extending the manifest-driven static site (build.py / YAML manifests)
+- asked why TI-542 Max Reach has no results / about the mullet PDF
+
 ---
 
 # TI-1003: TI Experiment Archive

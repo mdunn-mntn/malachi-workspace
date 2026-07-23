@@ -142,3 +142,16 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 - **fact:** Active MNTN Select advertisers run entirely prospecting/awareness campaigns with zero retargeting; no single Select advertiser has the volume to be individually powered for visit-rate lift, so pooling is required.
   - source ticket: `ber_2250_incrementality_overhaul/ti_933_select_lift_analysis`
   - source_line: zero retargeting campaigns across all 38 - confirms Kale's framing that Select is purely awareness/prospecting
+
+## data_knowledge.md
+- **fact:** A bid is gated by three inputs: (1) score (GCS to consumer), (2) segments (MembershipDB), (3) HHST threshold; to safely drop data you need no-threshold AND no-score, OR no-segments.
+  - source ticket: `ti_1016_memdb_bidder_cache_optimization`
+  - source_line: Three inputs gate a bid: (1) score (GCS→consumer), (2) segments (MembershipDB), (3) HHST threshold. To safely drop data you need: no threshold AND no score, OR no segments. The clean, safe cut is no-segments → don't write intent score.
+- **fact:** The membership consumer's intent-score write path does not currently check whether an IP has any segments before writing the score (an IP with no segments still gets a score written); Abbas and Ryan agreed it probably should.
+  - source ticket: `ti_1016_memdb_bidder_cache_optimization`
+  - source_line: The membership consumer's intent-score write path does not currently check whether the IP has any segments before writing the score. Abbas + Ryan both agreed it "probably should" — an IP with no segments effectively doesn't exist for bidding, so writing a score for it is wasted storage/writes.
+
+## data_catalog.md (batch 5)
+- **fact:** The full all-IP MM scoring universe household_scoring.prospecting_intent_daily is ~19.4 TB/day to scan; use delivered household_score in cost_impression_log as the cheap realized-score substitute.
+  - source ticket: `ti_1027_5x5_data_evaluation`
+  - source_line: Joined each vendor's site-visit IPs to delivered MM household_score (cost_impression_log, 7d; the cheap realized-score source — full scoring universe household_scoring.prospecting_intent_daily is 19.4 TB/day, not scanned).

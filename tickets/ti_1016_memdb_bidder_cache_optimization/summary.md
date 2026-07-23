@@ -5,6 +5,32 @@ status: in_progress
 date: 2026-06-09
 summary: "Investigate whether MemDB→Bidder caches bidder-inert 3P-OR-include IPs wastefully"
 result: "Cache-shrink idea killed (key=IP); new lever: skip score writes for segmentless IPs"
+keywords: [ti-1016, memdb, membership consumer, aerospike, bidder cache, 3p-or-include, mountain match, intent score, segments, hhst, max reach, zach schoenberger, abbas, ryan, eric]
+---
+
+## TL;DR
+
+**Q:** TL;DR card for TI-1016 (MemDB to Bidder cache optimization), plus delta facts not already in the knowledge docs.
+
+**A:** TI-1016 investigated whether the MemDB to Bidder pipeline wastefully caches bidder-inert 3P-OR-include IPs (MM adds LiveRamp interest segments via OR-include, inflating a ~1M-scored-IP audience to 20-30M cached IPs without changing the bid-eligible pool). Result: the original cache-shrink idea is largely KILLED by the Aerospike key structure (primary key = IP address); a sharper optimization replaced it. Because 3P segments are just entries in an IP's segments field, removing a segment does not drop the key, and the bidder only stores IPs actually in use (not the full LiveRamp universe), so the 1M-vs-20-30M framing does not translate into fewer keys; net footprint saving is small (confirms Zach's "segments are smaller than you think"). The membership consumer already deletes any IP whose segment list goes empty. The actionable replacement: don't write intent scores for IPs that have no active segments -- the membership-consumer intent-score write path does not currently check whether an IP has any segments before writing the score, and Abbas + Ryan both agreed it "probably should" (implemented as a conditional write; Max Reach is preserved because it only suppresses IPs with no segments at all, not unscored-but-segmented IPs). Three inputs gate a bid: (1) score (GCS to consumer), (2) segments (MembershipDB), (3) HHST threshold; the clean safe cut is no-segments then don't write intent score. Status: in_progress. Next: empirically size how many scoreless-no-segment IPs are being written, and confirm conditional-write feasibility with Eric (now owns the membership consumer; Abbas moved to perf-pacing, Alkaif secondary), and align with the Victor + Abbas "what we can filter out" follow-up. The full bidder system-design + caching architecture was captured from the Abbas/Ryan 2026-06-09 walkthrough into data_knowledge.md and data_catalog.md per section 7.
+
+**How:** Read summary.md in full (front-matter + sections 1-8). Bidder architecture is drawn from two synced meetings referenced in the summary: Zach 2026-06-02 (section 4.1) and Abbas + Ryan 2026-06-09 (section 4.2). Solution (section 5) and Questions Answered (section 6) state the kill of the cache-shrink hypothesis and the replacement optimization. Grepped knowledge/data_catalog.md, data_knowledge.md, experimentation.md, mntn_business.md to confirm which facts are already documented (section 7 confirms bidder architecture was captured 2026-06-09; verified present at data_knowledge.md L2237-2278 and data_catalog.md L2783-2785).
+
+**Tables:** rtb.household-profile, Aerospike, ScyllaDB, MembershipDB, MemDB
+
+**Learned:**
+- Original MM 3P-OR-include cache-shrink hypothesis is largely killed: Aerospike primary key = IP address, so removing a segment from an IP does not drop the key; footprint saving is marginal.
+- Replacement optimization: don't write intent scores for IPs with no active segments; the membership-consumer intent-score write path does not currently check for segments before writing.
+- Three inputs gate a bid: score (GCS to consumer), segments (MembershipDB), HHST threshold; safe drop = no-segments then don't write intent score, preserving Max Reach.
+- Full bidder caching architecture (Aerospike/Redis/ScyllaDB, membership consumer, spend pipeline) already documented in data_knowledge.md (L2237-2278) and data_catalog.md (L2783-2785) per section 7.
+
+**Reuse when:**
+- question about MemDB, membership consumer, or bidder cache internals
+- question about whether 3P-OR-include expands the MM bid-eligible pool
+- question about Aerospike household-profile key structure or where intent scores / segments live
+- question about optimizing bidder storage / suppressing scoreless IPs
+- onboarding on the score + segments + HHST bidding gate
+
 ---
 
 # TI-1016: MemDB → Bidder cache — investigate bidder-inert IP storage
