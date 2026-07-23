@@ -70,3 +70,7 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_921_fangorn_lift_dashboard | carded | 1 | What is the state of TI-921 (wave-aware Fangorn lift evaluat |
 | ti_923_scout_feasibility_review | carded | 1 | Review Edgar's Scout incrementality-test feasibility metrics |
 | ti_931_summary_dag_column_drift | carded | 0 | TL;DR card for TI-931 (feature_store summary_* DAG tasks fai |
+| ti_adhoc_advertiser_scoring_filter | carded | 2 | batch 11; returning-advertiser sizing for Victor's score-filter |
+| ti_kafka_secret_sweep | carded | 3 | batch 11; Kafka SOPS->Vault/ESO sweep, targeting cutover pending |
+| ti_xxx_power_analysis_workshop | carded | 0 | batch 11; power/MDE workshop deck + calculator |
+| ti_xxx_ticket_theme_analysis | carded | 0 | batch 11; PMO ticket-theme epic grouping |

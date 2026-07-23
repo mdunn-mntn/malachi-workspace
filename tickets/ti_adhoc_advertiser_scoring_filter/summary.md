@@ -5,7 +5,31 @@ status: done
 date: 2026-06-03
 summary: "Sizing advertisers who go dark then resume spend — risk for Victor's daily score-filter"
 result: "Return/day-1-lag risk tiny; 79% of spend in flights >=15d; next-day catch-up covers it"
+keywords: [score-filter, returning advertiser, dormancy, day-1 lag, flight length, campaign_group.update_time, sum_by_advertiser_by_day, cold-start scoring, victor savitskiy]
 ---
+
+## TL;DR
+
+**Q:** How many advertisers spend substantial money, go dark for a long stretch, then resume meaningful spend — sizing the risk for Victor's daily score-filter proposal (plus short-flight / day-1-lag reality checks)?
+
+**A:** The return / day-1-lag risk is small and structurally bounded, so it doesn't kill Victor's daily score-filter proposal — it justifies the next-day catch-up check. Over 730 days (2024-06-04→2026-06-03) from sum_by_advertiser_by_day: advertisers with a gap >=60d and post-gap spend >=$10k = 363 advertisers / $35.9M post-gap (~7% of the active cohort, ~0.5 returns/day). Gap >=180d + >=$100k = 19 advertisers / $3.6M; gap >=365d + >=$100k = 0 (true year-long hibernation ~0). Big-spender returners (post-gap >=$1M) sit almost entirely in <90-day gaps (41 of them), likely planned dark periods between flights. By spend tier, $1M+ spenders never disappear long — all 75 have max gap <=174d, so 180d retention covers 100% of $1M+; the $10k–$100k mid tier has the worst tail (p95=273d, p99=401d); <$10k has a 365d+ tail but only ~$62k at stake over 2 years. Short-flight / blitz checks: max single-day spend for any advertiser in 2 years was $153k (an established advertiser, not a blitz); true 1-day blitzes = 74 in 2 years / $56k combined; first-ever spend-day events = 5,466 over 2 years (~7.5/day, max $42k, p99 $2.7k) — Victor's rule 3 (new advertisers <7d) covers them. No Super Bowl one-day campaigns exist in MNTN. Campaign-length frame: 79% of MNTN's $477M flight spend runs in flights >=15 days, where worst-case day-1 lag hits <=4% of the campaign; the flights where day-1 lag matters most (1–3 days, 32–100% exposure) are only 4.3% of total spend; across the whole population only 6.9% of flight spend lands on a flight day-1. The residual structural risk — an advertiser resuming spend without touching campaign_groups at all — is close to impossible because bidding requires an active campaign group, and flipping a cg off->on triggers Victor's rule 2 (campaign_group.update_time) the same day.
+
+**How:** For each advertiser over the last 730 days of sum_by_advertiser_by_day, found the longest run of inactive days (no media_spend) between two active days; bucketed advertisers by gap length and post-gap spend. Added a tiered max-gap percentile view by spend tier, a flight-grain and advertiser-day-grain short-flight/blitz view (including a "true 1-day blitz = no spend +/-7d" and "first-ever spend day" cohort), and a campaign-length-vs-day1-share view. Day-1 lag reframed as degraded targeting for a fraction of the flight equal to 1/flight_length.
+
+**Tables:** sum_by_advertiser_by_day
+
+**Learned:**
+- Gap >=60d + post-gap spend >=$10k = 363 advertisers / $35.9M post-gap (~7% of active cohort, ~0.5 returns/day); gap >=180d + >=$100k = 19 advertisers / $3.6M; gap >=365d + >=$100k = 0.
+- $1M+ spenders never disappear long: all 75 have max gap <=174d, so 180d retention covers 100% of them; $10k–$100k mid tier has the worst tail (p95=273d, p99=401d); <$10k has a 365d+ tail worth only ~$62k over 2 years.
+- Max single-day advertiser spend in 2 years was $153k (established advertiser, not a blitz); true 1-day blitzes = 74 in 2 years / $56k combined; first-ever spend-day events = 5,466 over 2 years (~7.5/day, max $42k, p99 $2.7k). No Super Bowl one-day campaigns exist in MNTN.
+- 79% of MNTN's $477M (last 2 years) flight spend runs in flights >=15 days, where worst-case day-1 lag affects <=4% of the campaign; flights 1–3 days (32–100% day-1 exposure) are only 4.3% of total spend; only 6.9% of flight spend lands on a flight day-1 overall.
+- Victor's proposed score-filter generates scores when a campaign group is live OR was updated <24h ago (rule 2 keys off campaign_group.update_time), plus a rule 3 for new advertisers <7d and a next-day reconciliation check bounding worst-case latency to 1 day; a returning advertiser must flip a campaign group off->on to resume bidding, triggering rule 2 the same day.
+
+**Reuse when:**
+- sizing dormant/returning-advertiser risk for a scoring or freshness filter
+- evaluating day-1 targeting-lag exposure by flight length or spend tier
+- questions about MNTN flight-length spend distribution or single-day spend blitzes
+- advertiser max-gap / retention percentiles by spend tier
 
 # Returning-advertiser sizing for Victor's score-filter proposal
 

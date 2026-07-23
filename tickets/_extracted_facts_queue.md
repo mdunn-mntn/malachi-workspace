@@ -243,3 +243,19 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
   - source_line: Fangorn V2 is a parallel XGBoost classifier (Matt Brorby) trained on **conversions instead of visits** — the bidder picks Fangorn vs Fangorn V2 per campaign based on `goal_type_id` (CPV vs ROAS, etc.).
 - **[ti_896_audience_composition_2025_drop]** Peak Performance had a scoring bug present at its early-October-2025 launch that was fixed end of October; the adoption ramp continued past the fix, so the composition signal is post-fix (not a random-scoring artifact).
   - source_line: Peak Performance scoring bug ruled out ... Scoring bug existed at PP launch (early Oct 2025), fixed end of Oct. Adoption ramp continued well past the fix
+
+## Batch 11 append
+
+### data_knowledge.md
+- **[ti_kafka_secret_sweep]** The shared Kafka library opm does not hold Kafka credentials; each service's Kafka credentials live in its own ArgoCD config in SteelHouse/mntn-argocd apps-v3/.
+  - source_line: Kafka credentials live in each service's ArgoCD config (the shared Kafka lib `opm` does **not** hold them).
+- **[ti_kafka_secret_sweep]** The select squad uses RabbitMQ rather than Kafka and has no Kafka services.
+  - source_line: **No Kafka:** creative-suite, data-platform, data-engineering, select (select=RabbitMQ).
+- **[ti_kafka_secret_sweep]** kafka-prod-rw is the blessed targeting Kafka secret, ESO-synced from Vault teams/team-engineering-engineering/kafka-prod-rw into both qa-targeting and prod-targeting, exposing keys KEY/SECRET.
+  - source_line: `kafka-prod-rw` is the blessed targeting Kafka secret (it's ESO-synced into both qa-targeting and prod-targeting).
+- **[ti_adhoc_advertiser_scoring_filter]** Victor's proposed daily score-filter generates scores when a campaign group is live OR was updated <24h ago (rule 2 keys off campaign_group.update_time), has a rule 3 covering new advertisers <7d, and a next-day reconciliation check that bounds worst-case scoring latency to 1 day; bidding requires an active campaign group so a returning advertiser flipping a cg off->on triggers rule 2 the same day.
+  - source_line: Victor's rules generate scores when a campaign group is live OR was updated <24h ago. Any returning advertiser who flips a campaign group from off->on will trigger rule 2 (campaign_group.update_time) the same day... The next-day reconciliation check Victor described bounds worst-case latency to 1 day.
+
+### mntn_business.md
+- **[ti_adhoc_advertiser_scoring_filter]** Over 730 days, 79% of MNTN's $477.9M total flight spend runs in flights >=15 days; only 6.9% of flight spend lands on a flight's day-1, and flights of 1-3 days (highest day-1 exposure) are only 4.3% of total spend.
+  - source_line: 79% of MNTN's spend runs in flights >=15 days... Across the whole population, only 6.9% of flight spend lands on a flight day-1... The flights where day-1 lag matters most (1-3 days, 32-100% exposure) are only 4.3% of total spend.

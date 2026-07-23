@@ -5,7 +5,29 @@ status: in_progress
 date: 2026-06-11
 summary: "Audit Kafka services in mntn-argocd; migrate secrets off SOPS-in-git to Vault/ESO"
 result: "39 Kafka services / 9 squads inventoried; 38 need migration; targeting cutover half-done"
+keywords: [kafka, sops, argocd, mntn-argocd, external secrets operator, eso, vault, kafka-prod-rw, sasl.jaas.config, confluent-cloud-secret, secret migration, targeting, membership-etl, membership-updates-aggregator]
 ---
+
+## TL;DR
+
+**Q:** Produce the TL;DR card for the Kafka Secret Sweep — what was built and its status.
+
+**A:** Kafka Secret Sweep of SteelHouse/mntn-argocd apps-v3/: inventoried ~39 Kafka services across 9 squads; 1 fully migrated (attribution mobile-event-consumer, the ESO reference), 38 need work. Every Kafka-connecting service must move its credential off the old SOPS-in-git pattern (apps-v3/secrets/, chart managed-secrets, static/unrotated) onto Vault + External Secrets Operator (apps-v3/external-secrets/, chart external-secrets, DevOps-owned/auto-rotated) or Workload Identity, and consume the rotated value. Targeting is the primary deliverable and is CUTOVER_PENDING (half-done): 8 targeting services still read SOPS confluent-cloud-secret while Vault-backed ExternalSecrets kafka-dev-rw/kafka-prod-rw (keys KEY/SECRET) already exist but are unreferenced. The blessed targeting pattern (per Jordan Piepkow) is membership-etl consuming ESO kafka-prod-rw injected as separate SASL_USERNAME/PASSWORD env vars. membership-updates-aggregator is the one JVM/Java Kafka consumer needing a single sasl.jaas.config JAAS string, so it cannot copy the librdkafka block verbatim; two options: (A) app builds JAAS inline from KEY/SECRET env vars (image rebuild), or (B) ESO templates a sasl_jaas_config key (values-only); summary leans A. Plaintext leak: Confluent API key FYFR7DKPP2DLXQW5 exposed in values-qa comments of targeting/membership-updates-aggregator and attribution/mtag-aggregator (shared key, coordinate rotation). Cross-team rows are agent-derived (16-agent parallel sweep) and need per-squad + DevOps verification; targeting rows verified by hand. No SOPS values decrypted. Status: investigation complete, targeting cutover pending a DevOps clarification; no Jira ticket created yet.
+
+**How:** Read summary.md in full and listed outputs/ (kafka_audit_report.md, kafka_audit_raw.json, secrets_directory_identification.csv); no queries/ folder exists. Grepped knowledge docs for SOPS/ArgoCD/ESO/Vault/Kafka/RabbitMQ/opm/kafka-prod-rw to check delta facts and confirmed front-matter summary+result are both present and non-empty.
+
+**Learned:**
+- Secret-management model in mntn-argocd has three tiers: OLD = SOPS in git (apps-v3/secrets/, chart managed-secrets, static/not auto-rotated), NEW = Vault + External Secrets Operator (apps-v3/external-secrets/, chart external-secrets, DevOps-owned/auto-rotated), BEST = Workload Identity (no secret).
+- Kafka credentials live in each service's ArgoCD config, not in the shared Kafka lib opm; per SOP 052-secrets-management-strategy.md, rank is eliminate > Vault/ESO > SOPS-fallback.
+- librdkafka apps (e.g. membership-etl) take sasl.username/sasl.password natively (KEY/SECRET map 1:1), but JVM/Java Kafka apps (e.g. membership-updates-aggregator) need a single sasl.jaas.config JAAS string, so the ESO env-var pattern cannot be copied verbatim.
+- select squad uses RabbitMQ, not Kafka (no Kafka services); creative-suite, data-platform, data-engineering also have no Kafka.
+- Bidder's 17 Kafka services all share one secret confluent-credentials, so a single ESO fixes all of them.
+
+**Reuse when:**
+- Migrating a service credential off SOPS-in-git to Vault/ESO in mntn-argocd
+- Questions about the Kafka secret cutover status for targeting or other squads
+- Reshaping SASL credentials for JVM (JAAS string) vs librdkafka (username/password) Kafka clients
+- Rotating the leaked Confluent API key FYFR7DKPP2DLXQW5
 
 # Kafka Secret Sweep — ArgoCD (mntn-argocd) — Working Summary
 

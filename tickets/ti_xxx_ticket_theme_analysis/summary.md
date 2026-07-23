@@ -5,7 +5,29 @@ status: done
 date: 2026-06-24
 summary: "Cluster last quarter's tickets into recurring customer-question themes for epic planning"
 result: "8 themes / 4 recurring customer questions; 3 new epics proposed; published to Confluence"
+keywords: [ticket theme analysis, epic grouping, customer pain points, pmo, incrementality, advertiser decision support, confluence 3668312118, bryce wagg]
 ---
+
+## TL;DR
+
+**Q:** What are last quarter's recurring AUDI ticket themes, and how should tickets be grouped into epics?
+
+**A:** Ad-hoc PMO request (Bryce Wagg, cc Alyson Lefkowitz; no Jira number, ti_xxx_ placeholder folder) to cluster last quarter's AUDI tickets into recurring customer-question themes for retrospective epic grouping. A multi-agent workflow read 57 ticket folders (56 with summary.md; ti_argocd_secrets_audit is an empty stub), synthesized via three lenses, then mapped themes against the live 86-epic TI backlog. Result: 8 candidate epics / 4 recurring customer questions; 3 new epics proposed; published to Confluence. Headline: customers keep asking "is this real?" and almost every answer is a hand-built one-off; 43/57 (75%) of tickets directly answer a customer question. Four recurring questions by ticket count: incrementality "did you cause it?" (16), trust "can I trust your numbers?" (13), audience/vendor worth (8), performance drop (6), plus 14 foundational enablers. Biggest epic gap = Advertiser Decision Support & Diagnostics (home for TI-1044/TI-1045). Three recommended NEW epics: A. Advertiser Decision Support & Diagnostics; B. Rollout & Incrementality Evaluation Tooling (reusable DiD+CausalImpact+power-gating harness); C. Data-Quality & Identity Monitoring (generalize TI-253). Published to Confluence page 3668312118 (TAR space, v2, simplified per Bryce). Open: PMO decides whether to create the 3 epics.
+
+**How:** Background multi-agent ticket-theme-analysis workflow: read phase (one agent per folder produced a structured record incl. tooling gap, KPIs, theme guess; 57/57), synthesize phase (three independent lenses over 57 records: pain points, tooling gaps, analysis-type taxonomy), merge phase (8 themes + recurring questions). Pulled live 86-epic TI backlog via /rest/api/3/search/jql, mapped themes to existing epics vs gaps. Stats: 61 agents, ~3.1M tokens, ~6 min. Raw: outputs/theme_analysis_raw.json; epic list outputs/ti_epics_2026_06_24.tsv; map artifacts/ti_ticket_theme_epic_map.md.
+
+**Learned:**
+- Meta/PMO analysis: 57 AUDI ticket folders (56 with summary.md; ti_argocd_secrets_audit empty stub) cluster into 8 themes and 4 recurring customer questions.
+- 43/57 (75%) of tickets directly answer a customer question; foundational enablers = 14.
+- Biggest epic gap is Advertiser Decision Support & Diagnostics, the natural home for ad-hoc TI-1044/TI-1045.
+- Three proposed new epics: Advertiser Decision Support & Diagnostics, Rollout & Incrementality Evaluation Tooling, Data-Quality & Identity Monitoring.
+- Reusable next-quarter method: multi-agent read/synthesize/merge over ticket summaries mapped against the live epic backlog.
+
+**Reuse when:**
+- Planning or retrospective epic grouping of tickets
+- Summarizing recurring customer questions / analysis themes for AUDI
+- Deciding the epic home for an ad-hoc advertiser analysis like TI-1044/TI-1045
+- Re-running a ticket-corpus theme analysis next quarter
 
 # Ticket Theme Analysis — summary
 
