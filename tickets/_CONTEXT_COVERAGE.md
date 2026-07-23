@@ -75,7 +75,7 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | ti_896_audience_composition_2025_drop | carded | 1 | TI-896: Did the mix of audience types used by 2025-active ad |
 | ti_921_fangorn_lift_dashboard | carded | 1 | What is the state of TI-921 (wave-aware Fangorn lift evaluat |
 | ti_923_scout_feasibility_review | carded | 1 | Review Edgar's Scout incrementality-test feasibility metrics |
-| ti_931_summary_dag_column_drift | carded | 0 | TL;DR card for TI-931 (feature_store summary_* DAG tasks fai |
+| ti_931_summary_dag_column_drift | carded | 1 | TL;DR card for TI-931 (feature_store summary_* DAG tasks fai |
 | ti_adhoc_advertiser_scoring_filter | carded | 2 | batch 11; returning-advertiser sizing for Victor's score-filter |
 | ti_kafka_secret_sweep | carded | 3 | batch 11; Kafka SOPS->Vault/ESO sweep, targeting cutover pending |
 | ti_xxx_power_analysis_workshop | carded | 0 | batch 11; power/MDE workshop deck + calculator |
@@ -89,3 +89,5 @@ One row per ticket processed by the context pass. state=carded (TL;DR written) o
 | incr_75_eligible_advertisers | carded | 1 | context-full batch 4; lift-test candidate screen; Top28/Mid152/Low1090; group_id=campaign_group_id |
 | mm_44_ipdsc_hh_discrepancy | carded | 0 | context-full batch 4; IPDSC/MES HH discrepancy; conclusion deferred to artifacts docs |
 | tgt_4016_ecomm_classifier_thresholds | carded | 0 | context-full batch 4; ecomm classifier threshold tuning; value in notebook |
+| ti_956_interest_segment_scoring_schedule | carded | 3 | scheduled LiveRamp DS35 segment scoring; airflow-ti Dataproc/Iceberg; wheel-fix pending re-trigger |
+| ti_961_fangorn_causal_impact | carded | 2 | CausalImpact on Fangorn rollout; ~+27% Tier-2 lift; Tier 5 control, Tier 99 excluded |

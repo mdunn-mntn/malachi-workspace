@@ -354,3 +354,21 @@ each and merges into the named home doc. Do NOT auto-merge into knowledge/.
 ### mntn_business.md
 - **[ti_1053_elevenlabs_3p_segments]** ElevenLabs (AID 51660) is MNTN's #2 stale-3P advertiser (per TI-999).
   - source_line: "ElevenLabs is MNTN's #2 stale-3P advertiser (TI-999)."
+
+## context-full batch 10 (resume) append
+
+### data_knowledge.md
+- **[ti_931_summary_dag_column_drift]** The feature_store_setup_model DAG models are not yet consumed in prod (Fangorn still uses a Databricks notebook) and PagerDuty is not wired on this DAG, which is why 3 days of summary_* failures went uncaught.
+  - source_line: not caught earlier because none of these models are consumed in prod yet (Fangorn still uses a Databricks notebook; PagerDuty not wired on this DAG).
+- **[ti_956_interest_segment_scoring_schedule]** spark.dataproc.driverPipPackages expects PyPI package specifiers, not GCS file URLs — a gs:// wheel URL is silently ignored (causes ModuleNotFoundError); use spark.submit.pyFiles for a GCS-hosted wheel instead.
+  - source_line: Driver logs confirmed spark.dataproc.driverPipPackages was silently ignored — that property expects PyPI package specifiers, not GCS file URLs.
+- **[ti_956_interest_segment_scoring_schedule]** Fangorn's Dataproc jobs run on a custom image family 'dataproc-custom-image' named fangorn-dataproc-runtime in project mntn-targeting-prj-prod (last built 2026-05-29), used to bake shared Python deps into compute.
+  - source_line: Fangorn already uses fangorn-dataproc-runtime (image family dataproc-custom-image, project mntn-targeting-prj-prod, last built 2026-05-29).
+- **[ti_961_fangorn_causal_impact]** In tpa.fangorn_advertiser_inclusion, Tier 5 is the permanent Fangorn holdout (never-flipped) and uses a sentinel inclusion date of 2099-01-01; it is the methodologically cleanest control for Fangorn causal analysis.
+  - source_line: | **5** | **353** | **2099-01-01 (sentinel)** | **Permanent holdout — never-flipped. Use as CONTROL.** |
+- **[ti_961_fangorn_causal_impact]** Tier 99 in tpa.fangorn_advertiser_inclusion is auto-enrollment (Express product / auto-verticals), not part of the structured rollout; its inclusion-date field stores a record-creation timestamp (not a flip date), so inclusion-date semantics differ across tiers and Tier 99 must be excluded from causal analysis.
+  - source_line: Structured tiers (1-5) use the field as a planned flip date; Tier 99 uses it as record-creation timestamp. Inclusion-date alone can't reliably distinguish treated from control — explicit tier filtering is required.
+
+### data_catalog.md
+- **[ti_956_interest_segment_scoring_schedule]** The full identity-graph universe dw-main-bronze.tpa.graph_ips_aa_100pct_ip has ~245M distinct ip (147M households); a 30d distinct bid_ip scan of impression_log yields ~66.4M IPs (~130 GB scan).
+  - source_line: | dw-main-bronze.tpa.graph_ips_aa_100pct_ip distinct ip (no date) | 245M | ~20 GB scan | Full identity-graph universe (147M households)

@@ -5,6 +5,35 @@ status: done
 date: 2026-06-10
 summary: "Add CausalImpact validation to the Fangorn tiered-rollout lift analysis."
 result: "CI pipeline + methodology corrected; ~+27% Tier-2 lift, awaiting post-period for power."
+keywords: [fangorn, causalimpact, difference-in-difference, tiered rollout, tier 5 holdout, tier 99 auto-enrollment, cuped, target leakage, freq_seasonal, fangorn_advertiser_inclusion, visit rate, impression_facts clustering]
+---
+
+## TL;DR
+
+**Q:** TI-961: Is there enough data yet to run CausalImpact as internal validation of Alex's Fangorn tiered-rollout lift, and build that CI pipeline?
+
+**A:** Not yet statistically, but directionally yes, and the CI pipeline was built. CausalImpact was bolted onto Alex Knorr's RolloutTierEvaluations.py Databricks notebook (new section between the Headline KPIs and Executive Summary blocks: lean-delta pull, run_ci_for_tier fit/render, per-tier diagnostic plots) as internal validation only; Alex presents DiD + pre-post externally because CI is too hard to explain for go-to-market. On the cleanest cohort (Tier 2, N=47, ~21d post) the methods converge at ~+27% visit-rate lift (CI +26.6% p=0.255; DiD +27.2% p=0.200), but no CI or DiD p-value clears 0.10 on IVR, so 3-4 more weeks of post-period are needed; ~2026-07-14 is the recommended date to trust for a cross-tier IVR write-up. CVR/ROAS stay noisy (short post-period; long CTV attribution windows); Tier 2 DiD CVR is already p=0.002 and is the CVR headline. Three methodology bugs from Alex Knorr's review were fixed: (1) target leakage, removed metric_lag1/lag7 (lags of treated y) from CI candidates; (2) naive seasonality, replaced is_weekend dummy with freq_seasonal period=7 harmonics=2; (3) wrong hand-rolled CrI/p-value (source of a +681% Tier 1 IVR upper bound), replaced with N=2000 simulation. Control corrected to Tier 5 permanent holdout (not the earlier Tier-4 future-flip, rescheduled to 2026-06-04); Tier 99 auto-enrollment excluded. CUPED was attempted and pulled, incompatible with the non-randomized Tier-2-vs-Tier-5 comparison. BQ cost cut ~10x via lean-delta pull (1008 GB to 103 GB) because impression_facts/visit_facts are partitioned by hour but not clustered on advertiser. A local smoke test validated plumbing only; its cohorts/control differ from Alex's inclusion-table cohorts so its numbers are not comparable to the +27% DiD headline.
+
+**How:** Bolted a CausalImpact section onto Alex Knorr's RolloutTierEvaluations.py: added ci_pre_days (60d) and exclude_dates/exclude_tiers widgets, a lean-delta BQ pull (imps+vv only, only pre-days not already loaded) aggregated to tier x day IVR and CVR, run_ci_for_tier() fitting a statsmodels UCM (local level + freq_seasonal period=7 harmonics=2 + metric-specific control covariates, VIF drop + BIC best-subset), simulation-based inference (N=2000), and per-tier diagnostic plots. Cohort/tier map from Postgres tpa.fangorn_advertiser_inclusion via Databricks. A local smoke test ran the lean 60-day panel through the same pipeline to validate math and data shape.
+
+**Tables:** tpa.fangorn_advertiser_inclusion, impression_facts, visit_facts, audience_advertiser_configurations
+
+**Learned:**
+- CI + DiD converge at ~+27% visit-rate lift on Tier 2 (N=47, ~21d post): CI +26.6% p=0.255, DiD +27.2% p=0.200; no IVR p-value clears 0.10 yet.
+- Three CausalImpact bugs fixed per Alex Knorr's review: (1) removed metric_lag1/lag7 (lags of treated y) as target leakage, (2) replaced is_weekend with freq_seasonal period=7 harmonics=2, (3) replaced hand-rolled CrI/p-value (which produced a +681% Tier 1 IVR upper bound) with N=2000 simulation.
+- Correct control is Tier 5, the permanent Fangorn holdout with sentinel inclusion date 2099-01-01 (never-flipped); the earlier Tier-4 future-flip control was invalidated when Tier 4 was rescheduled to flip 2026-06-04.
+- Tier 99 in tpa.fangorn_advertiser_inclusion is auto-enrollment (Express product / auto-verticals), not part of the structured rollout, and must be excluded from analysis; its inclusion-date field is a record-creation timestamp, not a flip date, so inclusion-date semantics differ across tiers.
+- CUPED is mathematically incompatible with non-randomized cohorts (Tier 2 vs Tier 5): the unbiasedness condition E[pre_T - pre_C]=0 is violated by design; verified 33.8% spurious lift synthetically. Only applicable under stratified random assignment.
+- BQ cost for the CI pre-window pull dropped ~10x (1008 GB naive to 103 GB) using a lean-delta query, because impression_facts/visit_facts are partitioned by hour but not clustered on advertiser, so an advertiser-list filter does not prune bytes.
+- CVR/ROAS remain too noisy for CI at tier-day grain due to short post-period and long CTV attribution windows; Tier 2 DiD CVR (p=0.002) is the current CVR headline, and ~2026-07-14 is the recommended date to trust a cross-tier IVR read.
+
+**Reuse when:**
+- Evaluating a tiered feature rollout (Fangorn, BUK, BER-2250) with DiD + CausalImpact
+- Choosing a control group for a Fangorn causal analysis (use Tier 5 holdout, exclude Tier 99)
+- Deciding whether CUPED can be applied to a quasi-experiment vs a randomized design
+- Optimizing BQ cost on impression_facts/visit_facts queries
+- Setting up CausalImpact covariates and avoiding target leakage from treated-y lags
+
 ---
 
 # TI-961: Causal Impact for Fangorn

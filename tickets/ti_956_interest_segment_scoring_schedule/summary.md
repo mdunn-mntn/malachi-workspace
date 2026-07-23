@@ -5,6 +5,40 @@ status: in_progress
 date: 2026-06-09
 summary: "Run LiveRamp interest-segment quality scoring weekly, output to GCS and BigQuery"
 result: "in progress — airflow-ti model + DAG merged; first Dataproc run pending wheel-fix deploy"
+keywords: [ti-956, segment quality scoring, liveramp, ds35, ipdsc__v1, horvitz-thompson, targetability, airflow-ti, dataproc, iceberg, driverpippackages, pyfiles, targeting-infra-ml, household_scoring]
+---
+
+## TL;DR
+
+**Q:** TI-956: what is the scheduled interest-segment scoring job, its architecture/inputs, and current status?
+
+**A:** TI-956 runs Alex's LiveRamp interest-segment quality scoring (targeting-infra-ml PR #57) on a recurring schedule so consumers (Macie / admin UI) get fresh 0-100 per-segment scores without asking Alex to rerun the notebook. Scope: ~252,075 LiveRamp segments; goal is one quality score per dscid.
+
+Method: Bernoulli-sampled IPDSC edges at p=0.0001 with Horvitz-Thompson weights, then 9 z-scored axes (activity 20, stability 9, share 5, uniqueness 25, sample 9, staleness 2, specificity 30, targetability 20 [NEW], performance 12 [NEW/optional]) combined into z_combo -> quality_score = 100*sigmoid(z_combo_std/1.5). Inputs: panel from bronze.external.ipdsc__v1 filtered to LiveRamp (data_source_id=35); seg_meta_df from bronze.tpa.categories (DS35); targetable_ips_df (recommend impression_log 30d distinct bid_ip); optional performance_df + campaign_segment_targets.
+
+Architecture (revised after Victor 1:1, 2026-06-05): airflow-ti model class subclassing IcebergBigqueryDwMainBronzeModel -> Dataproc Serverless PySpark batch -> Iceberg table on GCS, BigQuery-Metastore-cataloged. Output: dw-main-bronze.household_scoring.segment_quality_daily, weekly Sunday 06:00 UTC. Cross-repo dep resolved via GCS-hosted wheel (targeting_infra_ml wheel) rather than Artifact Registry (TI-1023 backlog).
+
+Status: in progress. Model class + DAG merged to airflow-ti (PRs #1064/#1065/#1068/#1073); pyproject/wheel built + uploaded; Astronomer deploy shipped. First Dataproc trigger FAILED (ModuleNotFoundError: 'utils' — spark.dataproc.driverPipPackages silently ignored the GCS wheel URL); fix pivoted to spark.submit.pyFiles (branch TI-956-fix-wheel-install, merged). First real Dataproc run + smoke validation still pending re-trigger. Open: cluster sizing on first run, cadence (weekly vs biweekly), performance layer in v1 (leaning skip), output schema confirmation with Macie.
+
+**How:** Read the full summary.md and listed queries/ (only ti_956_operative_3p_campaign_segments.sql present); grepped the four knowledge docs for candidate durable facts.
+
+**Tables:** bronze.external.ipdsc__v1, dw-main-bronze.tpa.categories, dw-main-silver.logdata.impression_log, dw-main-bronze.tpa.graph_ips_aa_100pct_ip, dw-main-silver.aggregates.agg__daily_sum_by_campaign, dw-main-silver.summarydata.sum_by_campaign_by_day, dw-main-bronze.household_scoring.segment_quality_daily, audience.audience_segments
+
+**Learned:**
+- Scoring uses 9 z-scored axes; targetability (weight 20) and performance (weight 12, optional) are NEW in the canonical Update version vs the 7-component Archive; final map switched from percentile rank to sigmoid of standardized z_combo
+- IPDSC pipeline samples edges at p=0.0001 with Horvitz-Thompson weights (pi_ipday=1-(1-p)^m_hat) to make full IP x dscid explode affordable
+- targetable_ips_df must be STRICTER than ipdsc__v1 itself or pct_targetable_30d=1.0 for every segment and the axis is useless; recommended impression_log 30d distinct bid_ip (66.4M IPs), not the full identity graph (245M IPs)
+- Architecture landed as an airflow-ti model class (IcebergBigqueryDwMainBronzeModel) writing Iceberg to GCS, BQ-Metastore-cataloged; closest template is models/machine_learning/fangorn_14day_lookback.py
+- spark.dataproc.driverPipPackages expects PyPI package specifiers, not GCS wheel URLs — it silently ignores a gs:// URL; use spark.submit.pyFiles for a GCS-hosted wheel
+- Model + DAG are separate merges in airflow-ti; DAG scheduled weekly Sunday 06:00 UTC via ModelPysparkBatchOperator
+
+**Reuse when:**
+- scheduling or productionizing Alex's segment_quality_utils / interest-segment scoring
+- picking a targetable_ips_df universe for scoring
+- deploying a PySpark job to airflow-ti / Dataproc with a cross-repo Python dependency
+- questions about LiveRamp DS35 segment quality scoring for admin UI / Macie
+- quantifying the 3P-inclusion overflow prize (~$50M/yr) that segment scoring informs
+
 ---
 
 # TI-956: Scheduled Interest Segment Scoring Job
