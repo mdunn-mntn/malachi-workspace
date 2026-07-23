@@ -72,9 +72,9 @@ const cards = (await parallel(TICKETS.map(t => () =>
     `knowledge/data_knowledge.md (grep them to check). For every fact, quote the source line — invent nothing. ` +
     `If lint flagged this ticket (missing/empty front-matter), fill front_matter_fix.\n\n` +
     `STRICT FIDELITY — adversarial reviewers will reject any card that adds information not literally in the summary:\n` +
-    `  1. TABLE NAMES: copy them EXACTLY as the summary writes them. If the summary says bare 'cost_impression_log', ` +
-    `write 'cost_impression_log' — do NOT add a dataset/project qualifier (no 'silver.logdata.', 'dw-main-silver.', ` +
-    `'archives.', 'external.tpa.') unless that exact qualifier appears in the summary. Do not infer canonical paths.\n` +
+    `  1. TABLE NAMES: use the SAME name the summary uses. Write bare names bare ('cost_impression_log', not ` +
+    `'silver.logdata.cost_impression_log') — do NOT add a dataset/project qualifier the summary doesn't use, and ` +
+    `never list a table the summary never names. (Qualified routing lives in the catalog, not the card.)\n` +
     `  2. HEDGES: preserve the source's certainty. If the summary says 'likely tied to TI-033', the card must keep ` +
     `'likely' — do not upgrade a hedge to a fact.\n` +
     `  3. PLAN vs DONE: 'How' and 'Answer' describe only what the summary's Findings/Results actually report. Do NOT ` +
@@ -92,7 +92,12 @@ const verified = (await parallel(cards.map(c => () =>
   parallel([1, 2].map(i => () =>
     agent(
       `Assume this TL;DR card for ${c.t} is WRONG. Verify every field ONLY against tickets/${c.t}/summary.md ` +
-      `(read it fresh; do not trust the card). Flag any claim the summary does not support. Card:\n` +
+      `(read it fresh; do not trust the card). Flag any claim the summary does not support.\n` +
+      `BLOCKING vs NON-BLOCKING — set card_ok=false ONLY for a BLOCKING problem: a stated fact/number/outcome the ` +
+      `summary does not support, a hedge upgraded to certainty ('likely X' -> 'X'), a planned step reported as done, ` +
+      `an inflated scope, or a table the summary never names at all. Do NOT fail a card merely because the Tables ` +
+      `field adds or drops a dataset/project qualifier on a table the summary DOES name — that is normalization of a ` +
+      `routing field, not fabrication; note it in evidence but keep the claim supported.\nCard:\n` +
       JSON.stringify({ question:c.question, answer:c.answer, how:c.how, tables:c.tables, learned:c.learned, delta_facts:c.delta_facts }),
       { schema: VERDICT, phase: 'Verify', label: `verify${i}:${c.t}`, agentType: 'reviewer-adversarial' }
     )

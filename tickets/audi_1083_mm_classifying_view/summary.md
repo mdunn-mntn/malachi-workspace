@@ -4,7 +4,7 @@ title: "AUDI-1083: MNTN Matched classifying view — grade MM vs raw DS presence
 status: in_progress
 date: 2026-07-22
 summary: "Durable campaign-grain view: what MM engine + how restricted, so 'MM' means flagship not DS-present"
-result: ""
+result: "Design for a durable campaign-grain classifying view exposing MM engine (flagship/Fangorn/legacy) plus restriction flags (geo, 3P AND/OR, intent gate) so 'MM' means flagship, not DS13/19/46 presence. Raw flags let analysts set their own bar. Spec in Confluence review; next: materialize as a daily SQLMesh model."
 ---
 
 # AUDI-1083: MNTN Matched classifying view
