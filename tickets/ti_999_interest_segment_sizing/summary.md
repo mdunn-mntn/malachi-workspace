@@ -5,7 +5,33 @@ status: in_progress
 date: 2026-06-16
 summary: "Size 3P interest-segment usage, staleness, and spend exposure across MNTN campaigns"
 result: "34.6% of prospecting spend uses 3P (~$103M/yr); no-3P converts 2.1x better; validating"
+keywords: ["interest segment", "3p sizing", "liveramp", "sharethis", "dstillery", "ti-999", "ti-956", "or-additive", "mm ceiling", "segment quality", "per-segment cvr", "stale 3p", "prospecting spend"]
 ---
+
+## TL;DR
+
+**Q: What is the size, staleness, and spend exposure of MNTN's 3P interest-segment portfolio, and does it justify the TI-956 per-segment scoring build?**
+
+**A:** 34.6% of prospecting spend (~$103M/yr) uses 3P interest segments; no-3P prospecting converts 2.1x better and buyers pick segments blindly — sizing justifies the TI-956 per-segment scoring build.
+
+**How:** 30d campaign-bucket rollups from silver.audience.audience_segments (JSON expression parsed via a JS-UDF LCA tree-walk for OR/AND polarity) joined to sum_by_campaign_by_day spend and cost_impression_log delivered household_score distributions; 16 findings across ~33 passes, cross-checked per-advertiser (FICO/Global X ceiling test) and per-dscid CVR quintiles.
+
+**Tables:** silver.audience.audience_segments, silver.summarydata.sum_by_campaign_by_day, logdata.cost_impression_log, bronze.tpa.categories, bronze.integrationprod.data_sources, external.tpa.ipdsc__v1, bronze.integrationprod.campaigns
+
+**What we learned:**
+- Operational bought-3P set is only 3 DSes with material IPDSC volume: DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp IP; most named 3P providers (Sovrn, Bombora, Captify, Oracle, etc.) have zero IPDSC rows.
+- Bidder inclusion clauses are OR-additive (expand, add unscored IPs) and exclusion clauses are AND-NOT (narrow); household_score shapes CPM/preference within pacing but does NOT gate eligibility — MM-ceiling exhaustion triggers overflow onto unscored 3P IPs.
+- Only ~17.7% of MM+3P-OR-include campaigns actually overflow into 3P (ceiling-bound); ~76% run below MM ceiling so the 3P clause is dead weight ('theater') at current spend.
+- Per-dscid LiveRamp CVR spread is ~350x top-vs-bottom quintile while spend is essentially flat across quintiles — buyers have no per-segment quality signal.
+- The prospecting-only exclusion of DS4/8/47 was over-broad: it dropped MM-prospecting campaigns referencing CRM only in NEGATIVE (suppression) clauses; a polarity-aware filter should exclude only positive 1P clauses.
+
+**Reuse when:**
+- sizing 3P / LiveRamp / interest-segment spend exposure
+- justifying TI-956 per-segment segment-quality scoring
+- how the bidder treats OR-include vs AND-include 3P clauses
+- MM-ceiling overflow into unscored 3P delivery
+- which 3P data sources actually carry IPDSC volume
+- per-segment CVR / quality spread across LiveRamp dscids
 
 # TI-999: Interest-segment portfolio sizing — usage, freshness, spend exposure
 

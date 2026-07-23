@@ -71,7 +71,7 @@ const cards = (await parallel(TICKETS.map(t => () =>
     `this summary that are NOT already captured in knowledge/_ROUTING.md, knowledge/data_catalog.md, or ` +
     `knowledge/data_knowledge.md (grep them to check). For every fact, quote the source line — invent nothing. ` +
     `If lint flagged this ticket (missing/empty front-matter), fill front_matter_fix.`,
-    { schema: CARD, phase: 'Extract', label: `extract:${t}` }
+    { schema: CARD, phase: 'Extract', label: `extract:${t}`, agentType: 'general-purpose' }
   ).then(r => r && ({ t, ...r }))
 ))).filter(Boolean)
 
@@ -83,7 +83,7 @@ const verified = (await parallel(cards.map(c => () =>
       `Assume this TL;DR card for ${c.t} is WRONG. Verify every field ONLY against tickets/${c.t}/summary.md ` +
       `(read it fresh; do not trust the card). Flag any claim the summary does not support. Card:\n` +
       JSON.stringify({ question:c.question, answer:c.answer, how:c.how, tables:c.tables, learned:c.learned, delta_facts:c.delta_facts }),
-      { schema: VERDICT, phase: 'Verify', label: `verify${i}:${c.t}` }
+      { schema: VERDICT, phase: 'Verify', label: `verify${i}:${c.t}`, agentType: 'reviewer-adversarial' }
     )
   )).then(vs => {
     const ok = vs.filter(Boolean)
@@ -103,7 +103,7 @@ await parallel(verified.filter(v => v.passed).map(v => () =>
     `\`keywords: [${v.keywords.map(k=>`"${k}"`).join(', ')}]\` line into the front-matter. ` +
     (v.front_matter_fix ? `Apply front_matter_fix: ${JSON.stringify(v.front_matter_fix)}. ` : '') +
     `Card fields:\n${JSON.stringify({question:v.question,answer:v.answer,how:v.how,tables:v.tables,learned:v.learned,reuse_when:v.reuse_when})}`,
-    { phase: 'Land', label: `card:${v.t}` }
+    { phase: 'Land', label: `card:${v.t}`, agentType: 'general-purpose' }
   )
 ))
 // Shared-doc facts are NOT auto-merged (high blast radius). Stage them for human review, then commit everything.
@@ -114,7 +114,7 @@ await agent(
   `python3 .claude/scripts/lint_tickets.py --check, and git add + commit + push with message ` +
   `"pilot: TL;DR cards + keyword routing for 5 tickets; stage delta facts for review". ` +
   `Verified facts: ${JSON.stringify(verified.filter(v=>v.passed).map(v=>({t:v.t, facts:v.delta_facts})))}`,
-  { phase: 'Land', label: 'stage+commit' }
+  { phase: 'Land', label: 'stage+commit', agentType: 'general-purpose' }
 )
 
 // ---------- PHASE 4: Eval (the acceptance gate) ----------
@@ -126,7 +126,7 @@ const evalResult = await agent(
   `you would open. Then judge pass/fail: does routing now surface (1) the MM-definition ticket, (2) the ` +
   `pre/post method, (3) the correct perf tables, and (4) the "agg__daily_sum_by_campaign only from Sep 2025" ` +
   `gotcha? Report every gap.`,
-  { schema: EVAL, phase: 'Eval', label: 'retrieval-eval' }
+  { schema: EVAL, phase: 'Eval', label: 'retrieval-eval', agentType: 'general-purpose' }
 )
 
 return {
