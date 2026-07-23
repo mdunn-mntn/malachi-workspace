@@ -5,7 +5,7 @@ status: in_progress
 date: 2026-05-15
 summary: "Build a workshop deck and live MDE calculator teaching statistical power at MNTN"
 result: "Built and published deck + calculator; awaiting dry run and Jira ticket creation"
-keywords: [power analysis, mde calculator, lewis-rao, statistical power, cuped, post-stack variance reduction, workshop deck, revealjs, ti-884, incremental lift, screening rule]
+keywords: [power analysis, mde calculator, lewis-rao, statistical power, cuped, post-stack variance reduction, workshop deck, revealjs, ti-884, incremental lift, screening rule, beasley-springer-moro]
 ---
 
 ## TL;DR

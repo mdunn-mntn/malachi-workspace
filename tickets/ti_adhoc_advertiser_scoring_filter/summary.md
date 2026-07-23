@@ -5,7 +5,7 @@ status: done
 date: 2026-06-03
 summary: "Sizing advertisers who go dark then resume spend — risk for Victor's daily score-filter"
 result: "Return/day-1-lag risk tiny; 79% of spend in flights >=15d; next-day catch-up covers it"
-keywords: [score-filter, returning advertiser, dormancy, day-1 lag, flight length, campaign_group.update_time, sum_by_advertiser_by_day, cold-start scoring, victor savitskiy]
+keywords: [score-filter, returning advertiser, dormancy, day-1 lag, flight length, campaign_group.update_time, sum_by_advertiser_by_day, cold-start scoring, victor savitskiy, blitz, max gap]
 ---
 
 ## TL;DR
