@@ -56,8 +56,12 @@ const DEFAULT = [
   "ti_xxx_power_analysis_workshop","ti_xxx_ticket_theme_analysis",
 ]
 // The full list is injected via args.tickets at launch; DEFAULT is a resumable fallback subset.
-const TICKETS = (args && Array.isArray(args.tickets) && args.tickets.length) ? args.tickets : DEFAULT
-const BATCH = (args && args.batch) || 8
+// args may arrive as a real object OR a JSON string (the harness sometimes stringifies it) — normalize both.
+let ARGS = args
+if (typeof ARGS === 'string') { try { ARGS = JSON.parse(ARGS) } catch (e) { ARGS = {} } }
+if (!ARGS || typeof ARGS !== 'object') ARGS = {}
+const TICKETS = (Array.isArray(ARGS.tickets) && ARGS.tickets.length) ? ARGS.tickets : DEFAULT
+const BATCH = ARGS.batch || 8
 
 function chunk(a, n) { const out = []; for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n)); return out }
 
@@ -124,10 +128,13 @@ for (const [bi, group] of chunk(TICKETS, BATCH).entries()) {
       `(grep to check); quote the source line, invent nothing; empty array if none. If front-matter summary/result is ` +
       `missing or empty, fill front_matter_fix.\n\n` + FIDELITY,
       { schema: CARD, phase: 'Extract', label: `extract:${t}`, agentType: 'general-purpose' }
-    ).then(r => r && ({ t, ...r })),
+    ).then(r => r ? ({ t, ...r }) : ({ t, _extract_error: 'extractor returned nothing' }))
+     .catch(e => ({ t, _extract_error: String((e && e.message) || e) })),   // retry-cap etc. -> tracked, never a silent drop
 
     async (c, t) => {
-      if (!c) return { t, ok: false, status: 'extract_failed', discrepancies: [{ field: '-', problem: 'extractor returned nothing' }] }
+     try {
+      if (!c) return { t, ok: false, status: 'extract_failed', discrepancies: [{ field: '-', problem: 'stage returned nothing' }] }
+      if (c._extract_error) return { t, ok: false, status: 'extract_error', discrepancies: [{ field: 'extract', problem: c._extract_error }] }
       let verd = await verifyPair(t, c, 1)
       if (!verd.pass) {
         // FIX THE FAILURE AND RE-RUN THIS TICKET: correct only the flagged claims against source
@@ -145,6 +152,9 @@ for (const [bi, group] of chunk(TICKETS, BATCH).entries()) {
         }
       }
       return { t, card: c, ok: verd.pass, discrepancies: verd.discrepancies }
+     } catch (e) {
+      return { t, ok: false, status: 'converge_error', discrepancies: [{ field: 'pipeline', problem: String((e && e.message) || e) }] }
+     }
     }
   )
 
