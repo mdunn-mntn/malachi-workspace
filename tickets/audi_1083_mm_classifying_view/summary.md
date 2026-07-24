@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1083: MNTN Matched classifying view — grade MM vs raw DS presence"
-status: in_progress
+status: done
 date: 2026-07-22
 summary: "Durable campaign-grain view: what MM engine + how restricted, so 'MM' means flagship not DS-present"
-result: "Design for a durable campaign-grain classifying view exposing MM engine (flagship/Fangorn/legacy) plus restriction flags (geo, 3P AND/OR, intent gate) so 'MM' means flagship, not DS13/19/46 presence. Raw flags let analysts set their own bar. Spec in Confluence review; next: materialize as a daily SQLMesh model."
+result: "Shipped LIVE in prod (2026-07-24): dw-main-silver.audience.mm_campaign_classifier (+ _by_group), a daily campaign-grain classifier exposing mm_class (mmv1/mmv2/mmv3 + Fangorn cells), tiers_reachable, restriction_level, is_unmodified_mm, is_flagship. LEFT JOIN on campaign_id/campaign_group_id to grade MM engine + restriction instead of DS13/19/46 presence. 14,512 active Stage 1 campaigns classified (MM 43.5%, flagship 10.8%). SQLMesh PR SteelHouse/sqlmesh#1245 merged."
 keywords: ["mm classifier", "mm_class", "is_flagship", "is_unmodified_mm", "restriction_level", "tiers_reachable", "mmv1 mmv2 mmv3", "fangorn engine", "hhst_gated", "geo_reach_pct", "campaign classifier view", "audi_1083"]
 question: "Can one durable view classify + grade every MM campaign by engine + restriction, not DS-presence?"
 framing_state: locked
@@ -35,7 +35,7 @@ framing_state: locked
 # AUDI-1083: MNTN Matched classifying view
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1083
-**Status:** In Progress (design)
+**Status:** Done (2026-07-24) — live in prod, resolution Done
 **Date Started:** 2026-07-22
 **Assignee:** Malachi
 
