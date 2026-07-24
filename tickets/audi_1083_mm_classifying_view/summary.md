@@ -351,10 +351,11 @@ tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, featur
   `mntn-coredw-prod` has Cloud Identity API disabled → `gcloud auth application-default set-quota-project dw-main-bronze`
   (Cloud Identity IS enabled there). `sqlmesh plan dev_malachi --no-prompts --auto-apply` then backfilled both models:
   `audience__dev_malachi.mm_campaign_classifier` (14.5k rows, 14s) + `..._by_group` (13.6k, 4s). Validated: dev-table
-  distribution matches (mmv2 all-HI, mmv3 split HI/PP, flagship counts) on live data. **Branch still LOCAL (not pushed).**
-- **NEXT: push branch → open PR (Ryan Kleck offered to approve) → merge → first prod run = next daily cron.** Ran the
-  required pre-PR `sqlmesh plan` gate. NB the plan showed a benign Requirements diff (google-auth 2.56.2→2.41.1,
-  protobuf 6→7) from local venv pins; watch CI verify-impact in case it flags it.
+  distribution matches (mmv2 all-HI, mmv3 split HI/PP, flagship counts) on live data.
+- **PUSHED + PR OPEN 2026-07-24: https://github.com/SteelHouse/sqlmesh/pull/1245** (branch `audi-1083-mm-classifier`).
+  Request Ryan Kleck's review → CI (verify-impact) → merge → first prod run = next daily cron. Ran the required pre-PR
+  `sqlmesh plan` gate. NB the plan showed a benign Requirements diff (google-auth 2.56.2→2.41.1, protobuf 6→7) from
+  local venv pins; watch CI verify-impact in case it flags it.
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
