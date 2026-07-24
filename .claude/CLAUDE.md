@@ -37,10 +37,13 @@ trigger over all of the above: `.claude/scripts/workflow_audit.sh` aggregates ev
 patterns) into one signal rollup, and the `/workflow-audit` skill reasons over it to emit a ranked,
 **propose-only** action list under `claude-prompts/workflow_audits/audit_<date>.md` (Tier 1 Safe / Tier 2
 Judgment / Tier 3 Standards). It has no delete/edit authority — it commits only its own report; the human
-triages it. Runs weekly as a native `/schedule` **cloud routine** (fresh checkout, routine's own auth —
-no local API key, since MNTN policy bars keys in local env; that's why it is not a Pi cron). Perf log is
-git-tracked so perf-drift runs in the cloud; the request log is local-only so request-mining defers to a
-local `/workflow-audit requests` run.
+triages it. **Scheduled split (compliant, key-free):** a **weekly Pi cron** (`~/run_workflow_audit.sh` on
+pi5, Mon 08:00 PT; source of truth = `.claude/scripts/pi_run_workflow_audit.sh`) runs ONLY the key-free
+deterministic aggregator and commits a dated `claude-prompts/workflow_audits/signals_<date>.md` — there is
+**no `ANTHROPIC_API_KEY` on the Pi** (that is the pattern MNTN decommissioned with the Slack bot, 2026-06-10).
+The reasoning/report half runs on the **Mac** via `/workflow-audit`, which reads the fresh signals and writes
+`audit_<date>.md`. Perf log is git-tracked so perf-drift is captured on the Pi; the request log is
+gitignored/local-only so request-mining runs only on the Mac (`/workflow-audit requests`).
 
 **Agents (`.claude/agents/`), one job each:** cataloger (skeleton→enriched), reviewer-adversarial ×2
 (fresh context, "assume it's wrong"), fixer, synthesizer, perf-analyst, curator (`/capture`). The

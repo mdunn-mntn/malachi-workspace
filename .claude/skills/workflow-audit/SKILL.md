@@ -133,11 +133,19 @@ replies "do Tier 1" / "apply items 1–3", *then* execute those specific approve
 
 ---
 
-## Notes for the scheduled cloud routine
+## How this is scheduled (the compliant, key-free split)
 
-- Runs on a fresh checkout with the routine's own Claude auth — **no local API key** (the reason this is
-  a cloud routine and not a Pi cron: MNTN security policy bars API keys in local env).
-- Git-tracked inputs (structure, tickets, coverage, **perf log**) work fully. The **request log is
-  gitignored** → §6 is skipped in the cloud; the report says so and defers it to a local run.
-- The routine only ever pushes the report commit. It requests no approvals and applies no fixes — the
-  human triages the committed report at the next local session.
+The audit is split across two machines so no Claude credential ever lives on always-on infra:
+
+- **Pi cron — deterministic half (weekly, Mon 08:00 PT).** `~/run_workflow_audit.sh` on pi5 (source of
+  truth: `.claude/scripts/pi_run_workflow_audit.sh`) runs ONLY `workflow_audit.sh` — pure Python + git,
+  **no API key, no model** — and commits a dated `signals_<date>.md`. This guarantees the signals are
+  captured every week even when the Mac is asleep. **Never add an `ANTHROPIC_API_KEY` to the Pi** — that
+  is the pattern MNTN security decommissioned (Slack bot, 2026-06-10).
+- **Mac — reasoning half (this skill).** At your next session, `/workflow-audit` runs under your existing
+  Claude Code auth: it re-runs the aggregator (fresh signals, now including the local-only request log),
+  reasons over it, and writes the ranked propose-only `audit_<date>.md`.
+
+Because the Pi runs on a fresh checkout, its signal file marks §6 request-mining SKIPPED (the request log
+is gitignored/local-only). The full request-mining only appears when the skill runs on the Mac. The Pi
+never reasons, never proposes, never applies — it only captures and commits raw signals.
