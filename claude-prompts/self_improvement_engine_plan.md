@@ -25,9 +25,15 @@ system-retro (the workflow reviewing itself).** All five run off one spine: the 
 The single hardest design constraint (stated honestly in `workflows/ARCHITECTURE.md` §1): **a shell
 hook can detect, log, print, and block — it cannot invoke a model.** So "self-improving without
 prompting" splits cleanly: **instrumentation + scoring is automatic** (hooks + scripts), **the
-intelligence is triggered on cadence** (agents), and the cadence trigger is realized by the **Pi-5 cron
-that already runs the Slack bot at midnight** — invoking headless Claude, not pretending a hook runs an
-agent. Nothing here claims magic. It claims a spine and a schedule.
+intelligence is triggered on cadence** (agents). Nothing here claims magic. It claims a spine and a schedule.
+
+> **Update 2026-07-24:** the original cadence driver below assumed *"the Pi-5 cron that already runs the
+> Slack bot at midnight, invoking headless Claude."* That premise is void — the Slack bot was
+> decommissioned 2026-06-10 (MNTN security bars API keys / model credentials in local env). The
+> System-retro loop shipped instead as a **key-free split**: a weekly Pi cron runs only the deterministic
+> aggregator (no model), and the reasoning half runs on the Mac via `/workflow-audit`. Any other loop that
+> needs a model must run on the Mac (existing Claude Code auth) or a sanctioned cloud — **never a keyed Pi.**
+> See `.claude/skills/workflow-audit/SKILL.md`.
 
 ---
 
@@ -327,10 +333,14 @@ an agent only where judgement is required.**
 **Reused verbatim:** `reviewer-adversarial` (now also guards the Gardener's deletions), `cataloger`,
 `fixer`, `synthesizer`, `curator`, `perf-analyst`. No agent is rebuilt — four are added.
 
-**The cadence driver (makes the loops autonomous, honestly):** a `run_maintenance.sh` on the **Pi-5 cron
-that already runs the Slack bot at midnight** invokes headless Claude to run the weekly loops (Gardener,
-Retrieval, Request-miner) and the monthly loop (System-retro). This is the real answer to "runs itself":
-**not a hook pretending to be a model, but the machine that's already on a schedule, calling one.**
+**The cadence driver (makes the loops autonomous, honestly):** ~~a `run_maintenance.sh` on the Pi-5 cron
+that already runs the Slack bot at midnight invokes headless Claude to run the weekly loops.~~ **Superseded
+2026-07-24** — no model may run on the Pi (Slack bot decommissioned; MNTN bars credentials in local env).
+Shipped instead as the key-free split: the Pi cron runs only the deterministic aggregator
+(`workflow_audit.sh`, no model) and commits weekly signals; the model-driven half (System-retro reasoning,
+and any future Gardener/Retrieval/Request-miner loop) runs on the **Mac** under existing Claude Code auth,
+or a sanctioned cloud. The machine that's already on a schedule still fires the cadence — it just captures
+signals instead of calling a model.
 
 ---
 
