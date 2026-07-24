@@ -354,10 +354,13 @@ tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, featur
   distribution matches (mmv2 all-HI, mmv3 split HI/PP, flagship counts) on live data.
 - **PUSHED + PR OPEN 2026-07-24: https://github.com/SteelHouse/sqlmesh/pull/1245** (branch `audi-1083-mm-classifier`).
   Request Ryan Kleck's review → CI → merge → first prod run = next daily cron. Ran the required pre-PR `sqlmesh plan` gate.
-- **CI FIX (2026-07-24):** first run failed the "Check SQL Formatting" job (`sqlmesh format --check`) — both models needed
-  reformatting. Ran `sqlmesh format` (rewrites JS UDFs `r"""…"""`→single-quote, lowercases keywords, relocates comments;
-  logic verified identical), committed, pushed (commit eecf7e8). `format --check` now exits 0. The "Node.js 20 deprecated"
-  annotations are unrelated repo-wide CI infra. Also PR description tightened to pass the Terse Standard (`--kind pr`).
+- **CI GREEN 2026-07-24 (two fixes):** (1) "Check SQL Formatting" (`sqlmesh format --check`) failed → ran `sqlmesh format`
+  (cosmetic: JS UDFs `r"""…"""`→single-quote, lowercase keywords, relocate comments; logic identical), pushed eecf7e8.
+  (2) `verify-impact` then failed ("Missing deployable impact snapshot … not applied in any environment for this tree")
+  because formatting changed the model fingerprint AFTER my earlier plan → re-ran `sqlmesh plan dev_malachi --auto-apply`
+  on the formatted code (snapshot now in state) + `gh run rerun --failed` (no new commit). **All checks pass** (sqlmesh-checks
+  4m53s, dataform, TruffleHog, setup-env). LESSON (now in data_knowledge): format BEFORE plan. PR desc also tightened to
+  pass Terse Standard `--kind pr`. NEXT: Ryan review → merge → first prod run = next daily cron. Node.js-20 annotations = repo CI infra, ignore.
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):

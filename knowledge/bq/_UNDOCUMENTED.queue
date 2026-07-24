@@ -9,3 +9,4 @@ integrationprod.core_campaign_statuses
 integrationprod.core_goal_types
 integrationprod.dso_household_score_thresholds
 reporting.ddp_mm_winners_imp_202606
+reporting.lift__ghost_bid_results
