@@ -134,6 +134,27 @@ echo "(scripts present: $(ls "$SCRIPTS" 2>/dev/null | wc -l | tr -d ' '))"
 echo '```'
 echo
 
+# ── 9. Signal-file backlog → prune candidates ──────────────────────────────────
+# The Pi commits one signals_<date>.md every week; once a reasoned audit_<date>.md exists the raw
+# signals file is superseded. Keep the newest KEEP, flag older ones as prune candidates (Tier 1 Safe).
+echo "## 9. Signal-file backlog (weekly signals_*.md → prune candidates)"
+echo '```'
+KEEP=8
+sigs=$(ls -1 "$OUTDIR"/signals_20*.md 2>/dev/null | sort)
+n=$(printf '%s\n' "$sigs" | grep -c .)
+echo "signals_*.md on disk: $n (policy: keep newest $KEEP; reasoned audit_*.md reports are kept regardless)"
+if [ "$n" -gt "$KEEP" ]; then
+  prune=$((n - KEEP))
+  old=$(printf '%s\n' "$sigs" | head -n "$prune" | sed "s#^$ROOT/##")
+  echo "PRUNE CANDIDATES ($prune oldest, superseded by reasoned reports):"
+  printf '%s\n' "$old" | sed 's/^/  /'
+  echo "ready command: git rm $(printf '%s' "$old" | tr '\n' ' ')"
+else
+  echo "under retention cap ($n/$KEEP) — no pruning needed."
+fi
+echo '```'
+echo
+
 echo "---"
 echo "_End of deterministic signals. The /workflow-audit skill turns these into a prioritized, propose-only action list._"
 } | tee "$SIGNALS"

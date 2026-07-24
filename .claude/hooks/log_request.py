@@ -31,8 +31,26 @@ STOP = {
     "so", "if", "then", "them", "they", "there", "here", "into", "out", "up", "down", "not", "no", "yes",
     "all", "any", "some", "more", "most", "just", "now", "one", "two", "let", "lets", "keep", "going",
     "like", "about", "over", "than", "also", "have", "has", "had", "was",
+    "sure", "see", "look", "really", "actually", "thing", "things", "way", "able", "maybe", "okay",
 }
+# Harness/scratchpad boilerplate + contraction fragments — never a real request noun. Belt-and-suspenders
+# for anything that survives the injected-content strip below.
+NOISE = {
+    "tmp", "private", "scratchpad", "toolu", "notification", "notifications", "malachi", "claude",
+    "assistant", "reminder", "reminders", "background", "stdout", "stderr",
+    "don", "doesn", "didn", "isn", "wasn", "aren", "won", "couldn", "wouldn", "shouldn", "hasn", "haven",
+    "http", "https", "www",
+}
+# Injected harness content is NOT a user request — if the prompt is a re-invocation (a completed
+# background task, a tool-use notification, or a bare system reminder), skip logging it entirely.
+SKIP_MARKERS = (
+    "task-notification", "toolu_", "<system-reminder", "<local-command", "<command-name",
+    "stdout of the background", "has completed", "background task",
+)
 TOKEN = re.compile(r"[a-z0-9_]{3,}")
+ANGLE = re.compile(r"<[^>]*>", re.S)     # strip any injected tag / markup
+PATHISH = re.compile(r"\S*/\S*")          # strip file paths + urls (anything with a slash)
+HEXID = re.compile(r"^[0-9a-f]{12,}$")    # random / hash / tool ids
 
 
 def main():
@@ -42,16 +60,23 @@ def main():
         if not prompt:
             return 0
         low = prompt.lower()
-        toks = TOKEN.findall(low)
+        # drop harness re-invocations (background-task notifications, tool-use pings, bare reminders)
+        if any(m in low for m in SKIP_MARKERS):
+            return 0
+        # strip injected markup + file paths before tokenizing the actual request text
+        cleaned = PATHISH.sub(" ", ANGLE.sub(" ", low))
+        toks = TOKEN.findall(cleaned)
         verb = toks[0] if toks and toks[0] in VERBS else ""
         nouns, seen = [], set()
         for t in toks:
-            if t in STOP or t == verb or t in seen:
+            if t in STOP or t in NOISE or t == verb or t in seen or t.startswith("toolu") or HEXID.match(t):
                 continue
             seen.add(t)
             nouns.append(t)
             if len(nouns) >= 10:
                 break
+        if not verb and not nouns:  # nothing meaningful survived — don't log an empty record
+            return 0
         rec = {
             "ts": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
             "verb": verb,

@@ -63,6 +63,7 @@ Only surface items that change what someone does. Drop clean/green sections to a
 | §6 Requests | a verb+noun shape recurs ≥ the threshold | propose ONE named `/skill` with a one-line spec — human decides |
 | §7 Git hygiene | uncommitted work is sitting, or untracked non-ignored files | flag what's uncommitted; propose commit or gitignore |
 | §8 Standards drift | a skill/script isn't referenced in CLAUDE.md | propose the CLAUDE.md line to add |
+| §9 Signal backlog | `signals_*.md` count exceeds the retention cap (default keep 8) | **Tier 1 Safe:** `git rm` the oldest — the aggregator prints the ready command. Keep every reasoned `audit_*.md` (those are the durable record; only the raw weekly `signals_*.md` get pruned once superseded) |
 
 **Ranking:** order the final list by leverage, not by section. A framing-gate violation or a stale
 source-of-truth doc outranks 30 empty scaffold dirs. Group into three tiers, matching the existing
