@@ -31,7 +31,16 @@ after any `knowledge/` change). `perf_digest.py` mines the perf log. **Self-impr
 no delete authority):** `health_scorecard.py` prints days-since-`/capture` + orphan-doc + dup-title
 signals into the SessionStart block; `request_digest.py` mines `knowledge/.request_log.jsonl` (the
 gitignored, keyword-only prompt log) for recurring work shapes and PROPOSES a `/skill` — a human decides,
-nothing is auto-created or auto-deleted.
+nothing is auto-created or auto-deleted. **The System-retro loop (`/workflow-audit`)** is the cadence
+trigger over all of the above: `.claude/scripts/workflow_audit.sh` aggregates every read-only check
+(structure conformance, ticket/framing adherence, KB health, coverage debt, perf drift, request
+patterns) into one signal rollup, and the `/workflow-audit` skill reasons over it to emit a ranked,
+**propose-only** action list under `claude-prompts/workflow_audits/audit_<date>.md` (Tier 1 Safe / Tier 2
+Judgment / Tier 3 Standards). It has no delete/edit authority — it commits only its own report; the human
+triages it. Runs weekly as a native `/schedule` **cloud routine** (fresh checkout, routine's own auth —
+no local API key, since MNTN policy bars keys in local env; that's why it is not a Pi cron). Perf log is
+git-tracked so perf-drift runs in the cloud; the request log is local-only so request-mining defers to a
+local `/workflow-audit requests` run.
 
 **Agents (`.claude/agents/`), one job each:** cataloger (skeleton→enriched), reviewer-adversarial ×2
 (fresh context, "assume it's wrong"), fixer, synthesizer, perf-analyst, curator (`/capture`). The

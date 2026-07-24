@@ -84,3 +84,7 @@ todoist-mcp-transfer/
 
 # Licensed MNTN brand kit (paid Neue Haas fonts, logos) — local only, never committed
 documentation/mntn_assets/
+
+# workflow-audit working file (regenerated each run; reasoned report is committed)
+claude-prompts/workflow_audits/signals_latest.md
+claude-prompts/workflow_audits/.structure_findings.json
