@@ -6,6 +6,8 @@ date: 2026-07-22
 summary: "Durable campaign-grain view: what MM engine + how restricted, so 'MM' means flagship not DS-present"
 result: "Design for a durable campaign-grain classifying view exposing MM engine (flagship/Fangorn/legacy) plus restriction flags (geo, 3P AND/OR, intent gate) so 'MM' means flagship, not DS13/19/46 presence. Raw flags let analysts set their own bar. Spec in Confluence review; next: materialize as a daily SQLMesh model."
 keywords: ["mm classifier", "mm_class", "is_flagship", "is_unmodified_mm", "restriction_level", "tiers_reachable", "mmv1 mmv2 mmv3", "fangorn engine", "hhst_gated", "geo_reach_pct", "campaign classifier view", "audi_1083"]
+question: "Can one durable view classify + grade every MM campaign by engine + restriction, not DS-presence?"
+framing_state: locked
 ---
 
 ## TL;DR
@@ -38,6 +40,14 @@ keywords: ["mm classifier", "mm_class", "is_flagship", "is_unmodified_mm", "rest
 **Assignee:** Malachi
 
 ---
+
+## 0. Framing
+The agreed question, why it matters, and how we plan to answer it. Locked 2026-07-24 via /frame.
+- **Question (the unknown):** Can one durable campaign-grain view identify and grade every MM campaign by scoring engine (flagship/Fangorn vs legacy) and degree of targetable-pool restriction, replacing DS13/19/46-presence filtering that misclassifies >74% of modified MM campaigns?
+- **Goal (why / the decision):** One authoritative answer to "is this a flagship MM campaign, and how modified?", so every downstream stops rolling its own DS-presence filter. Consumers: reusable analyst infra (agreed w/ Alyson), MM-vs-3P and Fangorn rollout measurement, MM-adoption/engine-mix exec reporting, and incrementality (BER-2250) cohorting. Velocity-multiplier feeding the #1 incrementality priority.
+- **Objective (done-when):** A daily campaign-grain SQLMesh view (mm_engine/mm_class plus restriction flags rolled to restriction_level, is_flagship, is_unmodified_mm) merged and running in prod, refreshing daily, with classifications matching a hand-checked validation set. Not closed while the model sits authored on a branch.
+- **Approach (how):** Assemble existing parts (polarity-aware AST 3P parser, TI-1037 2x3 MM taxonomy, HHST gate, `tpa_fangorn_advertiser_inclusion` tier table) into two orthogonal axes: Axis A (mm_engine/mm_class from DS-leaf presence), Axis B (geo, AND-3P, AND-1P, hhst_gated rolled to restriction_level). Daily FULL SQLMesh model, validated on live prospecting, then merged and deployed via the airflow-ti path (Ryan wires deps; never push main directly). Thresholds and naming already adopted (2026-07-23); the remaining unknown is prod deploy plus daily-refresh validation.
+- **What would change the answer:** If per-campaign restriction/retained-% can't be computed reliably, or the tier thresholds don't separate flagship from modified on live data, the grade axis is noise. Ship only the broad-MM (DS-presence) boolean and drop flagship/tier grading.
 
 ## 1. Introduction
 "MM" cannot be identified by DS13/19/46 presence alone: >74% of MM campaigns are modified
