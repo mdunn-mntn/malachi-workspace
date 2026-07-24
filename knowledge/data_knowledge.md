@@ -56,7 +56,7 @@ models/
 4. Validate in dev (query the dev table, check counts).
 5. Push branch → PR → CI (verify-impact + lint + tests) → review → merge to main.
 6. **Prod promotion:** `sqlmesh plan prod` / `sqlmesh apply` (CI/CD or a DP process on merge) creates the physically-versioned table + the clean-name view.
-7. **Scheduler:** `sqlmesh run prod` (`make run-prod`, runs on a cron/daemon somewhere in DP infra) executes each model when its `cron` is due. First prod run = the next cron firing after promotion.
+7. **Scheduler:** `sqlmesh run prod` (`make run-prod`, runs on a cron/daemon in DP infra) executes each model when its `cron` is due (subsequent daily refreshes). **NB for a FULL model the INITIAL backfill happens at/near MERGE, not a day later** — verified AUDI-1083 2026-07-24: within minutes of merging #1245 the clean-name VIEW `dw-main-silver.audience.mm_campaign_classifier` existed and its physical table was fully backfilled (14,512 rows queryable). So a merged FULL model is live almost immediately; the `@daily` cron just re-refreshes it.
 
 **Kinds:** `FULL` = rebuilt from scratch each run (current-state classifiers, small dims). `INCREMENTAL_BY_TIME_RANGE` = event tables (see the patterns above). `VIEW` = thin reshape.
 
