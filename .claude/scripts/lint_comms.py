@@ -15,6 +15,9 @@ Caps (chars / words / bullets):
   completion   800 / 120 / 8    ticket-completion comment (needs room for findings)
   description  400 / 60  / 4    Jira ticket description body
   xlsx         200-per-line, 12 lines max    read-me / notes cell
+  pr           900 / 130 / 10   PR description (lead line then What / Why / Validation)
+  pr_comment   500 / 75  / 5    PR review comment or reply
+  commit       500 / 75  / 6    commit message; subject (first line) also capped at 72 chars
 
 Usage:
   lint_comms.py --kind comment --file draft.txt
@@ -31,9 +34,13 @@ CAPS = {
     "description":    {"chars": 400, "words": 60,  "bullets": 4},
     "xlsx":           {"chars": 200, "words": 30,  "lines": 12},  # terse notes cell; chars = per-line cap
     "xlsx_explainer": {"chars": 320, "words": 55,  "lines": 7},   # narrative Read-me sheet; chars = per-section cap, lines = sections
+    "pr":             {"chars": 900, "words": 130, "bullets": 10}, # PR description: lead line (what+why) → What / Why / Validation
+    "pr_comment":     {"chars": 500, "words": 75,  "bullets": 5},  # PR review comment / reply (same bar as a Jira comment)
+    "commit":         {"chars": 500, "words": 75,  "bullets": 6},  # commit message (subject + terse body); subject also capped below
 }
 LINE_KINDS = {"xlsx", "xlsx_explainer"}  # measured per line/section, not as one blob
-TITLE_CAP = 120  # Jira summary/title (hard Jira limit is 255; our guidance is far tighter)
+TITLE_CAP = 120           # Jira summary/title (hard Jira limit is 255; our guidance is far tighter)
+COMMIT_SUBJECT_CAP = 72   # commit subject line (first line) — git convention, hard cap
 
 HEDGES = [
     "i think", "i believe", "i feel", "in my opinion", "imo", "seems", "appears",
@@ -90,6 +97,9 @@ def lint_text(text, kind):
         if bullets > cap["bullets"]:
             violations.append(f"{bullets} bullets (cap {cap['bullets']})")
         stats = f"{chars} chars / {words} words / {bullets} bullets  (cap {cap['chars']}/{cap['words']}/{cap['bullets']})"
+
+    if kind == "commit" and lines and len(lines[0]) > COMMIT_SUBJECT_CAP:
+        violations.append(f"commit subject {len(lines[0])} chars (cap {COMMIT_SUBJECT_CAP}) — tighten the first line")
 
     for d, name in DASHES.items():
         if d in text:
