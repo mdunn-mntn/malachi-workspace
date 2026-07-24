@@ -9,6 +9,20 @@ result: "In progress — CTV adds ~0% total traffic but 2-8x attributed visits; 
 
 # BER-2250: Incrementality Overhaul
 
+> **Status Update — 2026-07-24 (current state; the April/May sections below are historical).**
+> Ghost-bid logging shipped 2026-05-27 (forward-only); lift is now productionized as gold
+> `dw-main-gold.reporting.lift__ghost_bid_{results,rollup}` (time-boxed, AUDI-1148). **Measurement
+> ownership moved to the INCR project / First Ascent team — Matt Brorby owns the lift pipeline, Ryan
+> Kleck the bidder/holdout.** Our lane is *consuming* that measurement for targeting, not rebuilding it.
+> **Refreshed the persuadables gradient on the fresh window (clean-gated, IVW):** Mid +9.2% ·
+> MaxReach +6.6% · PP +1.8% · High +1.7% · no_score +0.2% (~dead) — mid-intent carries the lift,
+> reproducing Matt's 2026-06-25 register on a wider window. Caught a Simpson trap en route (naive
+> count-pool gave no_score +29%). **Raw-visit rank and incremental-lift rank are ~inverted** → posted
+> to **AUDI-789** (our RTC/Fangorn scoring ticket) as the go-forward vehicle: a visit/spend-optimized
+> scorer de-optimizes incrementality unless lift is added as a target/guardrail. SQL:
+> `queries/ber_2250_persuadables_gradient_refresh.sql`. Capture: `experimentation.md` §"Fresh-window
+> refresh + the naive-pool Simpson trap".
+
 **Jira:** https://mntn.atlassian.net/browse/BER-2250
 **Status:** In Progress
 **Date Started:** 2026-04-06
