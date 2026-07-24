@@ -20,4 +20,17 @@ if [[ -n "$due" ]]; then
   echo "[capture-due] $due" >&2
   echo "  → run /capture (or the curator agent) to route new facts to their home docs, then .claude/scripts/build_index.sh." >&2
 fi
+
+# framing-due nudge: an OPTED-IN ticket (has framing_state) left in an illegal framing state.
+# Fires on VIOLATIONs only — legacy cards (no framing_state) are a migration backlog surfaced by
+# lint on demand, not a per-Stop nag. lint_tickets is the single source of truth for what's illegal.
+LT="$ROOT/.claude/scripts/lint_tickets.py"
+if [[ -f "$LT" ]]; then
+  fr="$(python3 "$LT" --check 2>&1 | grep '^VIOLATION' | grep -i 'framing' | head -3)"
+  if [[ -n "$fr" ]]; then
+    echo "[framing-due] ticket(s) not in a valid §0 Framing state:" >&2
+    echo "$fr" | sed -E 's/^VIOLATION /  · /' >&2
+    echo "  → run /frame <TI-XXX> to lock the Question/Goal/Objective/Approach (or set framing_state: 'skip: <reason>')." >&2
+  fi
+fi
 exit 0

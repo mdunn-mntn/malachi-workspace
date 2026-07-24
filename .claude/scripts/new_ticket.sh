@@ -84,6 +84,8 @@ status: $STATUS
 date: $TODAY
 summary: "$SUMMARY"
 result: "$RESULT"
+question: ""
+framing_state: draft
 ---
 
 # $TITLE
@@ -116,5 +118,7 @@ if [[ "$RUN_INDEX" == "1" ]]; then
 fi
 
 echo
-echo "Next: fill §1–3 of summary.md, then commit:"
+echo "Next: run  /frame $TICKET_ID  to lock §0 Framing (Question/Goal/Objective/Approach) BEFORE work starts."
+echo "      status:in_progress is gated until framing_state is locked (or 'skip: <reason>' for a trivial ticket)."
+echo "      Then fill §1–3 of summary.md and commit:"
 echo "  git add tickets/${PARENT:+$PARENT/}$FOLDER tickets/INDEX.md && git commit -m \"$TICKET_ID: scaffold ticket\""

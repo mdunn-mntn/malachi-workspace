@@ -108,6 +108,23 @@ Full guide in `self_review/summary.md`.
 
 **When working on any ticket**, always read `tickets/ti_xxx_name/summary.md` first to orient to the current state, open items, and file structure. This is the ticket card — it tells you what's been done, what's pending, and where everything lives.
 
+### Framing gate — agree the question BEFORE the work (start-of-ticket bookend to /capture)
+
+A ticket does not go `status: in_progress` on a question nobody pinned down. `## 0. Framing` in `summary.md` holds five lines that must be agreed first:
+
+| Field | Role | Locks when it… |
+|---|---|---|
+| **Question** | the unknown | is falsifiable (a stranger could tell if it's answered) |
+| **Goal** | why / the decision | names a decision that changes on the answer + north-star tie |
+| **Objective** | what / done-when | is binary (a deliverable + the bar that closes it) |
+| **Approach** | how | someone else could start executing from it |
+| **What would change the answer** | kill criteria | states the smallest result that flips the conclusion |
+
+- **`/frame <TI-XXX>`** runs the Socratic interview (pulls Jira + `strategic_north_star.md`), writes §0, and sets front-matter `question:` + `framing_state: locked`. It **pauses for you** — the point is to force the thinking.
+- **The gate:** `lint_tickets.py` blocks `status: in_progress|done` while `framing_state: draft`. `/frame` opens the ticket; `/capture` closes it.
+- **Skip hatch:** a trivial ticket (one-line bug fix, housekeeping — the ones CLAUDE.md says need only `summary.md`) sets `framing_state: "skip: <one-line why>"` instead of framing. Reason required.
+- **Legacy cards** (no `framing_state`) only WARN, never block — adoption is opt-in per ticket. Run `/frame` on a legacy ticket when you next touch it.
+
 ## Experiment Analysis Protocol — apply to every tiered rollout / experiment evaluation
 
 **Trigger:** any task that asks "did this change move a KPI?" — feature flips, tiered rollouts, A/B tests, audience-platform experiments, scoring-algorithm changes, holdout studies, vendor lift tests, BUK rollouts, BER-2250 work.

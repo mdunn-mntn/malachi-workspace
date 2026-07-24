@@ -11,7 +11,16 @@ Checks (per card):
   · status in {backlog, in_progress, blocked, done}
   · status: done  =>  result is real (not empty / '—' / a {template} stub)
 
-Usage: lint_tickets.py [--check]   # default; non-zero exit on any violation (hook/CI friendly)
+Framing gate (the start-of-ticket mirror of the result-when-done rule):
+  · framing_state (when present) must be draft | locked | skip: <reason>
+  · framing_state: skip  =>  a non-placeholder reason follows the colon
+  · status in {in_progress, done}  =>  framing_state is locked or skip (draft is a VIOLATION —
+    a ticket can't be "in progress" on an un-agreed question; run /frame, or skip a trivial one)
+  · framing_state: locked  =>  the `question` field is real (the head of §0 Framing was filled)
+  · a legacy card (no framing_state at all) that is in_progress/done only WARNS — never blocks —
+    so adoption is opt-in per ticket, not a retroactive break of the existing corpus.
+
+Usage: lint_tickets.py [--check]   # default; non-zero exit on any VIOLATION (hook/CI friendly). WARNs never fail.
 """
 import argparse, os, re, sys
 
@@ -39,11 +48,15 @@ def front_matter(path):
     return fm
 
 
+FRAMING_STATES = {"draft", "locked", "skip"}
+
+
 def check(path, rel):
+    """Return (violations, warnings) — both lists of message strings."""
     fm = front_matter(path)
-    v = []
+    v, w = [], []
     if fm is None:
-        return [f"{rel}: no YAML front-matter (add the ticket card block — see folder_definitions.md)"]
+        return [f"{rel}: no YAML front-matter (add the ticket card block — see folder_definitions.md)"], w
     dt = fm.get("doc_type")
     if dt not in ("ticket", "epic"):
         v.append(f"{rel}: doc_type={dt!r} (must be ticket|epic)")
@@ -58,7 +71,28 @@ def check(path, rel):
         r = fm.get("result", "")
         if not r or PLACEHOLDER.match(r):
             v.append(f"{rel}: status=done but result is empty/placeholder — a done ticket must show its answer")
-    return v
+
+    # --- Framing gate ---
+    fs_raw = fm.get("framing_state")
+    if fs_raw is None:
+        # legacy card — never block; nudge only when it's actually being worked
+        if st in ("in_progress", "done"):
+            w.append(f"{rel}: no framing_state (legacy card) — run /frame to add §0 Framing (Question/Goal/Objective/Approach)")
+    else:
+        state, _, reason = fs_raw.partition(":")
+        state, reason = state.strip(), reason.strip()
+        if state not in FRAMING_STATES:
+            v.append(f"{rel}: framing_state={fs_raw!r} (must be draft | locked | 'skip: <reason>')")
+        else:
+            if state == "skip" and (not reason or PLACEHOLDER.match(reason)):
+                v.append(f"{rel}: framing_state=skip needs a reason — 'skip: <one-line why this ticket needs no framing>'")
+            if st in ("in_progress", "done") and state == "draft":
+                v.append(f"{rel}: status={st} but framing_state=draft — run /frame to lock §0, or set framing_state: 'skip: <reason>' for a trivial ticket")
+            if state == "locked":
+                q = fm.get("question", "")
+                if not q or PLACEHOLDER.match(q):
+                    v.append(f"{rel}: framing_state=locked but question missing/placeholder — a locked frame must state its question")
+    return v, w
 
 
 def cards():
@@ -83,12 +117,16 @@ def main():
     ap.add_argument("--check", action="store_true")
     ap.parse_args()
     all_cards = cards()
-    violations = []
+    violations, warnings = [], []
     for path, rel in all_cards:
-        violations += check(path, rel)
+        v, w = check(path, rel)
+        violations += v
+        warnings += w
+    for msg in warnings:
+        print(f"WARN {msg}", file=sys.stderr)
     for msg in violations:
         print(f"VIOLATION {msg}", file=sys.stderr)
-    print(f"lint_tickets --check: {len(all_cards)} cards, {len(violations)} violation(s).")
+    print(f"lint_tickets --check: {len(all_cards)} cards, {len(violations)} violation(s), {len(warnings)} warning(s).")
     return 1 if violations else 0
 
 
