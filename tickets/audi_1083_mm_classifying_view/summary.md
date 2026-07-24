@@ -345,10 +345,16 @@ tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, featur
   already BQ-verified via the distribution/verification runs.
 - **DECISIONS (user, 2026-07-23):** owner = **`targeting-infrastructure`** (true AUDI ownership; NB alerts
   route to #monitor-test — revisit if real paging wanted); scope = active Stage 1 only; `geo_reach_pct` NULL (v2).
-- **STATUS: LEFT LOCAL — branch not pushed, no PR (user's call).** To resume: `sqlmesh plan dev_<user>`
-  (needs sqlmesh install + dev creds: BQ dev + GCP Postgres state `dw-main-bronze:us-central1:data-platform-state`)
-  → push → PR → review → first prod run = next daily cron. CI `verify-impact` FAILS until a dev plan snapshot
-  exists. Audience models are BER-shepherded in practice, so a BER reviewer likely runs the plan + merges.
+- **PLAN RAN + VALIDATED IN DEV (2026-07-24).** Env setup: `python3 -m venv .venv && pip install -r requirements.txt`
+  (sqlmesh 0.0.1.dev4506), `export SSL_CERT_FILE=$(python -m certifi)`. `sqlmesh info` → warehouse + state both
+  connect. **Gotcha fixed:** `sqlmesh plan` crashed in the repo prod-access guard because ADC quota project
+  `mntn-coredw-prod` has Cloud Identity API disabled → `gcloud auth application-default set-quota-project dw-main-bronze`
+  (Cloud Identity IS enabled there). `sqlmesh plan dev_malachi --no-prompts --auto-apply` then backfilled both models:
+  `audience__dev_malachi.mm_campaign_classifier` (14.5k rows, 14s) + `..._by_group` (13.6k, 4s). Validated: dev-table
+  distribution matches (mmv2 all-HI, mmv3 split HI/PP, flagship counts) on live data. **Branch still LOCAL (not pushed).**
+- **NEXT: push branch → open PR (Ryan Kleck offered to approve) → merge → first prod run = next daily cron.** Ran the
+  required pre-PR `sqlmesh plan` gate. NB the plan showed a benign Requirements diff (google-auth 2.56.2→2.41.1,
+  protobuf 6→7) from local venv pins; watch CI verify-impact in case it flags it.
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
