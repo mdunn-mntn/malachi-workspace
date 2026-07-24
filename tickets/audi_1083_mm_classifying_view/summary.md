@@ -360,7 +360,12 @@ tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, featur
   because formatting changed the model fingerprint AFTER my earlier plan → re-ran `sqlmesh plan dev_malachi --auto-apply`
   on the formatted code (snapshot now in state) + `gh run rerun --failed` (no new commit). **All checks pass** (sqlmesh-checks
   4m53s, dataform, TruffleHog, setup-env). LESSON (now in data_knowledge): format BEFORE plan. PR desc also tightened to
-  pass Terse Standard `--kind pr`. NEXT: Ryan review → merge → first prod run = next daily cron. Node.js-20 annotations = repo CI infra, ignore.
+  pass Terse Standard `--kind pr`. Node.js-20 annotations = repo CI infra, ignore.
+- **MERGED + LIVE IN PROD 2026-07-24.** On merge the clean-name VIEWs were created and the FULL models backfilled:
+  `dw-main-silver.audience.mm_campaign_classifier` (14,512 rows) + `..._by_group` are queryable now, refresh daily.
+  Prod distribution matches dev exactly (mmv2 3,615 / flagship_fangorn 1,562 / mmv3 642 / fangorn_vertical_only 354 /
+  mmv1 141 / non_mm 8,198). **Done-when bar (live in prod + matches hand-check) MET.** Remaining follow-up: confirm exact
+  mmv3 cutoff date with AP (constant `2024-09-01` approx); owner alerts route to #monitor-test (revisit if paging wanted).
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
