@@ -51,7 +51,7 @@ models/
 
 **Author → deploy loop:**
 1. Feature branch; write the `.sql` model file(s). JS UDFs allowed as **pre-statements** (`CREATE TEMPORARY FUNCTION …` between the MODEL block and the query — precedent `summarydata/conversion_signal_impressions.sql`).
-2. `sqlmesh lint` / `sqlmesh format`.
+2. **`sqlmesh format`** then `sqlmesh lint`. **CI enforces `sqlmesh format --check` (job "Check SQL Formatting" in `sqlmesh-checks`) and FAILS if any model isn't canonically formatted — run `sqlmesh format` and commit the reformatted files BEFORE pushing** (hit 2026-07-24 on AUDI-1083 #1245: format rewrites JS UDFs from `r"""…"""` to single-quote `'…\n…'`, lowercases keywords, relocates comments — cosmetic only, logic identical). Ignore the "Node.js 20 is deprecated" warnings on the checks — repo-wide CI infra, not your PR.
 3. **`sqlmesh plan dev_<username>`** (your dev env from `config.py`) — compiles ALL models, diffs vs prod, and **backfills the new model into your dev environment** so you can query/validate it without touching prod. This also generates the snapshot CI's `verify-impact` needs. Run the FULL env plan (no `--select-model`) or CI can fail. **The plan is the required pre-PR gate (Ryan Kleck, 2026-07-24: "you gotta do a sqlmesh plan locally on your branch at least"); the backfill itself is OPTIONAL** — the plan alone generates the snapshot, so skipping backfill is fine if you just need CI green.
 4. Validate in dev (query the dev table, check counts).
 5. Push branch → PR → CI (verify-impact + lint + tests) → review → merge to main.

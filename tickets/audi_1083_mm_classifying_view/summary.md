@@ -353,9 +353,11 @@ tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, featur
   `audience__dev_malachi.mm_campaign_classifier` (14.5k rows, 14s) + `..._by_group` (13.6k, 4s). Validated: dev-table
   distribution matches (mmv2 all-HI, mmv3 split HI/PP, flagship counts) on live data.
 - **PUSHED + PR OPEN 2026-07-24: https://github.com/SteelHouse/sqlmesh/pull/1245** (branch `audi-1083-mm-classifier`).
-  Request Ryan Kleck's review → CI (verify-impact) → merge → first prod run = next daily cron. Ran the required pre-PR
-  `sqlmesh plan` gate. NB the plan showed a benign Requirements diff (google-auth 2.56.2→2.41.1, protobuf 6→7) from
-  local venv pins; watch CI verify-impact in case it flags it.
+  Request Ryan Kleck's review → CI → merge → first prod run = next daily cron. Ran the required pre-PR `sqlmesh plan` gate.
+- **CI FIX (2026-07-24):** first run failed the "Check SQL Formatting" job (`sqlmesh format --check`) — both models needed
+  reformatting. Ran `sqlmesh format` (rewrites JS UDFs `r"""…"""`→single-quote, lowercases keywords, relocates comments;
+  logic verified identical), committed, pushed (commit eecf7e8). `format --check` now exits 0. The "Node.js 20 deprecated"
+  annotations are unrelated repo-wide CI infra. Also PR description tightened to pass the Terse Standard (`--kind pr`).
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):
