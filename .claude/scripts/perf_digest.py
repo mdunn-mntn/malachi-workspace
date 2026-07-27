@@ -130,7 +130,11 @@ def phase_accuracy(rows, top):
     for r in rows:
         key = (r.get("ticket", ""), r.get("label", ""))
         ph = r.get("phase")
-        if ph in ("sample", "full") and isinstance(r.get("gb_billed"), (int, float)):
+        gb = r.get("gb_billed")
+        # only REAL scans predict cost: skip cache hits (0-byte) and zero/non-numeric bytes.
+        # otherwise a cached 0-byte re-run overwrites the true full scan (last-write-wins) and
+        # the ratio reads 0.0 — the most-recent real run per phase should win instead.
+        if ph in ("sample", "full") and isinstance(gb, (int, float)) and gb > 0 and not r.get("cache_hit"):
             by_key[key][ph] = r
     out = ["## Sample→full accuracy (did the sample predict the full run?)", "",
            "| ticket | label | sample gb | full gb | full/sample |", "|---|---|--:|--:|--:|"]
