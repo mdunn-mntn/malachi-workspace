@@ -1532,6 +1532,7 @@ target vertical (DS13) or keyword-category (DS19). Implications:
   2. **Stale names:** 7% of populated names differ from current `advertisers.company_name` (customers renamed after FPA row was created).
   - **Always JOIN to `advertisers.company_name`** for the current name — never use `fpa_advertiser_verticals.advertiser_name`.
 - **Shortcut for vertical/bucket lookups:** `tpa.dim_vertical` in coredb (created by Ryan Kleck) — PK is `vertical_id`, pre-joined with bucket info (`bucket_id`, `bucket_name`, `vertical_bucket_name`, `verticals_in_bucket`). Use this instead of self-joining `advertiser_verticals` type=0 + type=1 when you just need the vertical→bucket mapping.
+- **Correcting a mis-tagged advertiser vertical (verified 2026-07-27, AUDI):** operational source of truth is **CoreDB**; the vertical is written by **an API call to the Shopper Graph service**, NOT by editing BQ (BQ `fpa_advertiser_verticals` is a read-only Datastream CDC mirror — do not patch it). Owner who makes the change: **Alyson Lefkowitz**. Both rows flip together (type=0 parent + type=1 sub); the scorer keys on the type=1 sub id, so a wrong sub is functional not cosmetic. BQ mirror lags the source change (CDC batch) — re-query to confirm. Worked example: AID 69864 "Lake Erie Heritage Foundation" fixed from B2B (104 / 104012 "B2B - Sales & Marketing") → Travel (135 / 135006 "Travel Destination Promotion").
 
 ---
 
@@ -3087,6 +3088,7 @@ is resolved via the identity graph and stored in ipdsc__v1 instead.
 - Returns both MM V2 keywords and BUK keywords per advertiser in a single response
 - BUK payload includes parent keyword groups with child keyword IDs and model version hash
 - Currently: every DAG retrain overwrites ALL advertiser keywords (not idempotent — planned fix)
+- **Also the write path for advertiser vertical assignment** (verified 2026-07-27): an API call to Shopper Graph sets the advertiser's vertical in CoreDB (SoT) → CDC to `fpa_advertiser_verticals`. This is how a mis-tagged vertical is corrected (see §Vertical Classification). Alyson Lefkowitz owns the change.
 
 ### Fangorn Tier 1 Production Launch (2026-04-30, DAGs completed early 2026-05-01)
 **Per-advertiser switch:** `bronze.integrationprod.audience_advertiser_configurations.vertical_data_source = 46`. When set, the Audience Service swaps DS13 → DS46 in segment breakdown expressions at query time. Persisted base expression unchanged → UI audience sizes do NOT change.
