@@ -152,6 +152,11 @@ SQLMesh model date parameters (`@start_dt`, `@end_dt`) are already TIMESTAMP typ
 
 **The TIMESTAMP-not-DATE rule is for the LOG tables' `time` column (which IS TIMESTAMP). The `*_facts` family partition column is DATETIME, not TIMESTAMP.** Verified 2026-07-27 via `bq show --schema`: `hour` is **DATETIME** on `all_facts`, `visit_facts`, `impression_facts`, `spend_facts`, `conversion_facts` (data_catalog.md schema cells corrected same day — they wrongly said TIMESTAMP). Filter `hour` with a bare DATETIME literal (`hour >= '2026-05-20'`) or `DATETIME('...')`; do NOT wrap in `TIMESTAMP()` (DATETIME/TIMESTAMP don't implicitly coerce → type error).
 
+### all_facts visit columns — two footguns (verified 2026-07-27)
+`all_facts` is a `UNION ALL` of impression/visit/spend/conversion/**site** facts. Two traps when rolling up per campaign:
+1. **A site-only row per advertiser carries `campaign_id` = NULL and holds TOTAL site-pixel visits (including organic), with spend/impressions = 0.** SUMming `raw_visits` grouped above campaign grain conflates this organic total with ad delivery → **visit rate > 100%** (seen: ElevenLabs 161M "visits" on 4.9M impressions = 3313% VR; the 161M is organic site traffic). **Filter `campaign_id IS NOT NULL`** for any per-campaign rollup.
+2. **`raw_visits` is NOT attributed at campaign grain — it is 0 on every campaign row.** Ad-attributed visits live in **`last_touch_visits_day0..day13`** (sum for total last-touch visits, the reporting standard); `first_touch_visits` is empty in practice. Use last-touch for a campaign VR; it yields sane rates (~0.03–2.1% across top advertisers). Spend, impressions, clicks, `view_conversions`+`click_conversions`, and `view_order_value`+`click_order_value` ARE reliable at campaign grain. NB some advertisers show conversions/revenue but 0 last-touch visits (pixel/attribution config, e.g. Buckle 30807) — don't assume 0 visits = no traffic.
+
 ### IP Search Optimization — Cross-Stage/Cross-Table Queries
 
 Searching for a single IP across full table history (event_log, impression_log, viewability_log) is extremely expensive because these tables are partitioned by time, not IP. There is no IP index.
