@@ -366,6 +366,14 @@ tool). Repo `SteelHouse/sqlmesh`, cloned `~/Developer/work/mntn/sqlmesh`, featur
   Prod distribution matches dev exactly (mmv2 3,615 / flagship_fangorn 1,562 / mmv3 642 / fangorn_vertical_only 354 /
   mmv1 141 / non_mm 8,198). **Done-when bar (live in prod + matches hand-check) MET.** Remaining follow-up: confirm exact
   mmv3 cutoff date with AP (constant `2024-09-01` approx); owner alerts route to #monitor-test (revisit if paging wanted).
+- **POST-DEPLOY VERIFICATION (2026-07-27, "did the SQLMesh job work?").** Confirmed live + daily refresh running: physical
+  `dw-main-silver.sqlmesh__audience.audience__mm_campaign_classifier__2449582902` re-materialized 2026-07-27 00:42 PT (~17h
+  prior), **14,516 rows** (up from the 07/24 deploy-day version's 14,512 — so it's picking up new campaigns on schedule, not
+  frozen at launch). Live `mm_class` dist: non_mm 8,195 / mmv2 3,615 / mm_flagship_fangorn 1,567 / mmv3 644 /
+  fangorn_vertical_only 353 / mmv1 142 → MM 43.5%, flagship 10.8%, matching baseline. `_by_group` physical = 13,607 rows.
+  **Freshness gotcha (now in data_knowledge):** the clean-name views read 0 rows / 0 bytes / stale in `audience.__TABLES__`
+  (they're virtual-layer views, not materialized) — a false "job failed" signal; freshness lives on the physical
+  `sqlmesh__audience.__TABLES__` timestamp. Verdict: job healthy, nothing to fix.
 
 ## 6b. Team feedback artifact (2026-07-22)
 Shareable spec page published to Confluence (TAR space, child of the MM Taxonomy page):

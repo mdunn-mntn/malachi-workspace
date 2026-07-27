@@ -101,6 +101,22 @@ The numeric hash suffix (e.g. `__4185451957`) is the SQLMesh model version. The 
 always points to the current production version. Do NOT query hashed tables directly — always
 use the clean alias in `logdata.*`.
 
+**Freshness / "did the job run?" checks — use the PHYSICAL table, not the clean view.** The clean-name
+object (`<dataset>.<table>`) is a virtual-layer VIEW, so `bq show` and `<dataset>.__TABLES__` report it
+as **0 rows / 0 bytes** with a `last_modified` that only tracks the view definition — a false "the job
+produced an empty table / hasn't run" signal. To verify a FULL/materialized model actually refreshed,
+query the physical table's timestamp:
+```sql
+SELECT table_id, TIMESTAMP_MILLIS(last_modified_time) AS last_modified, row_count
+FROM `dw-main-silver.sqlmesh__<dataset>.__TABLES__`
+WHERE table_id LIKE '%<table>%' ORDER BY last_modified DESC
+```
+Physical name = `<dataset>__<table>__<fingerprint>`; the fingerprint changes on each redeploy, so `LIKE`
+and take the newest row. Row-count and value-distribution sanity checks run fine against the clean view —
+only *freshness* needs the physical table. Verified 2026-07-27 on `audience.mm_campaign_classifier`
+(AUDI-1083): clean view read 0 rows / 25h-stale, while the physical `audience__mm_campaign_classifier__…`
+showed 14,516 rows refreshed 17h prior — daily FULL refresh confirmed running (07/24 → 07/27 versions).
+
 ### Partition Filter Best Practice — Silver Log Tables
 
 **Critical:** Silver layer views (`logdata.*`, `summarydata.*`) are UNION ALL views of two underlying tables:

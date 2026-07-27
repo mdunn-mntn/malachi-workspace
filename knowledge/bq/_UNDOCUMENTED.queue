@@ -1,3 +1,4 @@
+.TABLES
 audience.mm_campaign_classifier
 enriched.lift__ghost_bid_visits
 external.targeted_signal

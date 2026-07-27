@@ -20,6 +20,8 @@ Last updated: 2026-03-12 | Phase 2 complete + Phase 3 additions + silver.fpa (TI
 ## SQLMesh Naming Convention
 All tables in `logdata`, `summarydata`, and `aggregates` are VIEWs → `sqlmesh__*` versioned tables.
 Format: `<dataset>__<table_name>__<version_hash>`. Always query the clean alias. See data_knowledge.md.
+Freshness gotcha: `<dataset>.__TABLES__` shows these clean views as 0 rows / 0 bytes (not materialized) —
+to check "did the job run?" query the physical `sqlmesh__<dataset>.__TABLES__` timestamp, not the alias.
 
 ## Datastream Replication Pattern
 Most `bronze.integrationprod` tables include a `datastream_metadata RECORD` with:
