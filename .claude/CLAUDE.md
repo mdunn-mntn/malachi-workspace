@@ -97,6 +97,7 @@ workspace/
 | `self_review/self_review_2.md` | **Active self-review** — update after every ticket (gitignored) |
 | `self_review/self_review_1.html` | Submitted review #1 (archived, do not modify) |
 | `documentation/docs/presentation_playbook.md` | **Presentation standards** — read before creating any presentation. Power Line, structure, storytelling, persuasion, delivery, checklists |
+| `documentation/docs/bluf_comms.md` | **BLUF (Bottom Line Up Front)** — lead every human-facing comm with the bottom line, then support. One-pager with pattern, 5-second check, before/after. Same rule as Power Line (deck) / Answer line (Jira). |
 | `documentation/docs/revealjs_guide.md` | **RevealJS layout guide** — config, font sizes, cutoff prevention rules, standalone build process. Read before building any RevealJS deck. |
 | `documentation/docs/causal_impact_did_math_reference.md` | **CausalImpact + DiD math reference** — UCM state-space equations, Kalman filter, MLE, forecasting, VIF/BIC selection, cluster bootstrap, SE/CI/p derivations, worked Tier 2 example. Shareable with the team. |
 | `documentation/docs/did_vs_causalimpact_method_selection.md` | **DiD vs CausalImpact — when to use each** — decision guide with coffee-shop analogy, strength/weakness tables, decision matrix, methods-convergence framing. Companion to the math reference (math = HOW; this = WHEN). Shareable. |
