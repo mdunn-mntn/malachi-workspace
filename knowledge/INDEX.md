@@ -272,6 +272,12 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 - [summarydata_archive.offline_conversions](bq/summarydata_archive/offline_conversions.md) — FROZEN CoreDW-migration snapshot of offline/CRM-uploaded conversions matched to ad exposure; the history branch of the live summarydata.offline_conversions UNION view. 2.96M rows, min time 2023-04-13, FROZEN at 2026-03-05. NON-CANONICAL — query the live view for current data.  ·  _enriched_  ·  _verified 2026-07-20_
 - [tpa.liveramp_categories_advertiser_mapping](bq/tpa/liveramp_categories_advertiser_mapping.md) — Maps LiveRamp (DS35/DS11) 3P audience category IDs to the MNTN advertisers that use them; ~1,917 rows, mostly one custom/private category per advertiser.  ·  _enriched_  ·  _verified 2026-07-20_
 
+## Query cookbook
+- [Query cookbook](bq/query_cookbook.md) — copy-paste query templates in cheapest-known form + before/after tuning wins + the fast-first approximation toolkit  ·  _verified 2026-07-27_
+
+## Optimization playbook
+- [Optimization playbook](bq/optimization_playbook.md) — the fast-first->scale workflow + the cross-cutting BQ speed rules + how to attribute which join took longest  ·  _verified 2026-07-27_
+
 ## Glossary
 - [Glossary — MNTN terms, acronyms & concepts → where the authority lives](glossary.md) — business term / acronym / concept → one-line definition + pointer to the authoritative doc or data_knowledge.md section. Load this instead of grepping 465 KB of prose.  ·  _verified 2026-07-19_
 

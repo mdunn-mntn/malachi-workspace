@@ -1,0 +1,181 @@
+---
+doc_type: bq_cookbook
+title: Query cookbook
+summary: "copy-paste query templates in cheapest-known form + before/after tuning wins + the fast-first approximation toolkit"
+keywords: [query cookbook, commonly used queries, fast first, sample first, approximate, APPROX_COUNT_DISTINCT, HLL_COUNT, TABLESAMPLE, FARM_FINGERPRINT, deterministic sample, visit rate, flip date detection, cohort, DiD, distinct IP sizing, keyword rank, tune query, cheapest table, materialization candidate]
+last_verified: 2026-07-27
+source: data_catalog.md + data_knowledge.md + ticket queries (TI-921/804/961/933/650/1026/1053, AUDI-1089)
+tags: [optimization, cost, cookbook]
+---
+
+# Query cookbook
+
+Copy-paste query templates for the shapes we run over and over, each in its cheapest-known form, plus
+the before/after tuning wins and the fast-first approximation toolkit. Companion to
+[optimization_playbook.md](optimization_playbook.md) (the *rules*; this is the *recipes*).
+
+**Why speed, not cost.** MNTN runs on a reserved us-central1 slot pool. The standing directive is "stop
+considering cost." The real constraint is wall-time and slot contention: one big scan at a time, a hard
+6-hour interactive wall, big queries queue behind each other (see playbook § Observed rules). Fast-first
+means: get a directionally-correct answer in seconds/rows so you never burn a 6-hour slot on a query
+whose *shape* was wrong, then scale to exact only when the decision needs it.
+
+**Run everything through the wrapper.** `bash .claude/scripts/bq_run.sh --ticket TI-XXX --label "..."`
+logs cost/slots/wall/cache/tables to `knowledge/bq_perf_log.jsonl` and injects `--location=us-central1`.
+Use `--phase sample` on the probe and `--phase full` on the scale-up with the *same* `--label`, so
+`perf_digest.py --mode phase-accuracy` can pair them and tell you whether the sample predicted the full.
+
+---
+
+## §A — Commonly-used query library
+
+Each entry names its cheapest source table and the partition filter it must carry. Parametrize the
+`<...>` placeholders. These are the recurring shapes across the ticket `queries/` dirs.
+
+### A1. Cohort + flip-date detection (from CDC archive)
+When you need the day an advertiser's config changed (e.g. `vertical_data_source` flipped to 46), a
+snapshot table only gives the *current* value. Use the Datastream `_archive` history and
+`datastream_metadata.source_timestamp` (the true source-of-change; do not use `update_time`, frequently
+NULL). `source_timestamp` is **epoch-milliseconds INT** — wrap it in `TIMESTAMP_MILLIS()`; `DATE()` on the
+raw INT errors. Canonical: `tickets/ti_921_fangorn_lift_dashboard/queries/ti_921_flip_date_detection.sql`
++ the documented flip-date pattern in `data_knowledge.md`.
+
+```sql
+WITH flip_history AS (
+  SELECT advertiser_id,
+         MIN(TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)) AS first_ts,
+         DATE(MIN(TIMESTAMP_MILLIS(datastream_metadata.source_timestamp)),
+              'America/Los_Angeles')                                 AS first_date
+  FROM `dw-main-bronze.integrationprod.audience_advertiser_configurations_archive`
+  WHERE vertical_data_source = 46         -- the changed value you are dating
+  GROUP BY advertiser_id
+)
+SELECT advertiser_id, first_date AS detected_flip_date
+FROM flip_history ORDER BY first_date NULLS LAST;
+```
+Notes: the archive table may not exist in every environment (`bq ls dw-main-bronze:integrationprod | grep archive`); fall back to the manual source-of-truth CSV. `version` is non-monotonic, so order by `create_time`/`source_timestamp`, never `version`.
+
+### A2. Visit rate (the headline KPI)
+Visit rate = distinct visiting IPs / distinct reached IPs. The visitor count comes from `ui_visits`
+(partition column `time`, filter with a literal TIMESTAMP range). **Use `ip` for analysis**, not
+`impression_ip` (`impression_ip` is the bid-time IP carried from the impression, a non-CTV fallback).
+
+```sql
+SELECT advertiser_id,
+       COUNT(DISTINCT ip) AS visitors        -- ip, not impression_ip / ip_raw (see data_knowledge.md)
+FROM `dw-main-silver.summarydata.ui_visits`
+WHERE time >= TIMESTAMP('<start>') AND time < TIMESTAMP('<end_exclusive>')
+  AND advertiser_id IN (<ids>)
+GROUP BY advertiser_id;
+```
+This is the numerator. The rate is `SAFE_DIVIDE(visitors, reached)`, where `reached` = distinct reached
+IPs from the impression/CIL side over the same window (a separate scan, not this table). `ip` vs `ip_raw`
+and `ui_visits` vs `visits` differ by grain — confirm which before trusting a number (see `data_knowledge.md`).
+
+### A3. Pre/post + DiD with cluster-bootstrap inference
+Do not hand-roll this. The canonical implementation is `_did_bootstrap()` (resample advertisers with
+replacement, N=1000, report point / 95% CI / two-sided p) and `run_ci_for_tier()` (CausalImpact with
+VIF→BIC covariate selection) in `tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py`.
+Never report a naive pre/post for an advertiser KPI. Full method: `knowledge/experimentation.md` § Standard Analysis Protocol. See [[reference_causal_impact_pattern]].
+
+### A4. DISTINCT-IP audience sizing (`ipdsc__v1`, 3P/keyword segments)
+The expensive one. Partition is the hive `(dt, data_source_id)`. Two hard rules:
+**(1)** filter `dt` with a **literal**, never a subquery; **(2)** prefer `APPROX_COUNT_DISTINCT` on any
+full-partition scan. Canonical: `tickets/ti_804_.../ti_804_keyword_rank_vs_visit_rate.sql` (keyword/DS19
+side); ipdsc DS35 3P sizing = TI-1053 / TI-1026. (AUDI-1089 sizes 3P over a different substrate, GCS
+`site_visit_signal` parquet, not `ipdsc__v1`.)
+
+```sql
+-- probe the latest load-day first, then inline the literal:
+--   SELECT DISTINCT dt FROM `dw-main-bronze.external.ipdsc__v1`
+--   WHERE dt >= '<recent>' ORDER BY dt DESC LIMIT 1;
+SELECT APPROX_COUNT_DISTINCT(ip) AS approx_ips
+FROM `dw-main-bronze.external.ipdsc__v1`, UNNEST(data_source_category_ids.list) AS dscid
+WHERE dt = '<literal_load_day>'          -- LITERAL prunes to one partition (~70-105M rows/DS)
+  AND data_source_id = <ds>
+  AND dscid.element IN (<category_ids>);
+```
+3P (DS35) is **bursty**: a category delivers millions of IPs on ~2-4 load-days/month and 0 otherwise, so a single-day or single-week reach number is window-luck-dependent (a 7-day window swung 3M→19M by shifting one day). For 3P size, either measure over ≥30 days *and* report last-delivery `dt`, or query one known load-day per category. Authoritative platform-UI sizes live in the access-gated `dw-main-bronze.external_ddm.data_source_category_sizes` when granted (TI-1053).
+
+### A5. Keyword-rank vs metric, on a deterministic advertiser sample
+When you want the shape of a relationship (not the exact population number), sample advertisers
+deterministically with `FARM_FINGERPRINT` MOD/ORDER-BY so the sample is stable across runs and cheap.
+Canonical: `tickets/ti_804_keyword_visit_rate_analysis/queries/ti_804_keyword_rank_vs_visit_rate.sql`.
+
+```sql
+WITH sample_advs AS (
+  SELECT DISTINCT advertiser_id
+  FROM `dw-main-silver.logdata.buk_predictions_<YYYYMMDD>`
+  ORDER BY FARM_FINGERPRINT(CAST(advertiser_id AS STRING))
+  LIMIT 50                                -- stable 50-advertiser probe
+)
+-- ... join predictions -> ipdsc keywords -> ui_visits, then bucket by rank and
+--     SAFE_DIVIDE(visitors, ips) for a pooled rate; APPROX_QUANTILES(...,4)[OFFSET(2)] for the median.
+```
+
+### A6. Campaign daily trend (pick the cheapest source by pre-period length)
+- **Short/recent daily totals:** `dw-main-silver.aggregates.agg__daily_sum_by_campaign` is the cheapest
+  precomputed daily rollup. But it is **frozen Sep 2025-Apr 2026** and its `uniques`/reach family is ~0.
+- **Long pre-periods / working reach:** `dw-main-silver.summarydata.sum_by_campaign_by_day` (history to
+  2024-01-01, working HLL `uniques`). Use it for any CausalImpact pre-window reaching before Sep 2025.
+- **Sub-day / geo / device grain:** the individual `visit_facts` / `conversion_facts` / `spend_facts`.
+Reach columns (`uniques`, `new_users_reached`, `existing_users_reached`, `site_visitors`) are BYTES
+HLL++ sketches: `HLL_COUNT.MERGE(uniques)`, never `SUM`.
+
+### A7. Spend + impressions for a campaign group
+`dw-main-silver.summarydata.all_facts`, filter on `hour` (**DATETIME**, timezone-naive — do NOT wrap in
+`TIMESTAMP()`; bare string literals coerce to DATETIME), keyed on `advertiser_id` + `campaign_group_id`.
+```sql
+SELECT CAST(hour AS DATE) AS day,
+       SUM(media_spend + data_spend + platform_spend)        AS spend,
+       SUM(display_impressions + ctv_impressions)            AS win_impressions
+FROM `dw-main-silver.summarydata.all_facts`
+WHERE hour >= '<start>' AND hour < '<end_exclusive>'
+  AND advertiser_id = <aid> AND campaign_group_id = <cgid>
+GROUP BY 1 ORDER BY 1;
+```
+
+---
+
+## §B — Before → after tuning wins
+
+Real, measured wins from the perf log and ticket work. The `perf-analyst` agent appends new entries here.
+
+| Fix | Before | After | Source |
+|---|---|---|---|
+| Filter `dt` with a **literal**, not `WHERE dt=(SELECT MAX(dt)...)` | 164.9B rows / 85,043 slot-s / 280s for a 1-day COUNT | one partition (~70-105M rows) | ipdsc, TI-1026 |
+| Partition-filter with `TIMESTAMP()` not `DATE()` on silver log views | `DATE(time)` scans all partitions, 9+ min | near-instant (pushdown to `time`-partitioned raw) | 2026-03-06 |
+| Column projection, not `SELECT *` | `SELECT *` on `sum_by_campaign_by_day` 94.3 MB/day | 6-col ~635 KB/day (~152×) | table doc dry-run |
+| Scope an IP search: single-day + `TIMESTAMP` + one table (cost brackets, not one rewrite) | full-history event_log scan 14,677 GB / 35 min | single-day TIMESTAMP funnel trace 1,136 GB / 39s | TI-650 |
+| Don't double-aggregate (per-adv AND pooled in one query) | 4-way join runs twice, shuffles billions, hit 6h wall / silent timeout | drop the pooled CTE, reconstruct `pooled = SUM(per_adv)` in Python | TI-933 |
+| `APPROX_COUNT_DISTINCT`/short window, not exact `COUNT(DISTINCT ip)` over 30d | ~30.5 TB billed sizing ~24 DS35 categories | short 3-7d window or APPROX, single load-day | TI-1053 |
+| Query the three log tables individually, not one UNION ALL | one job processes all three, no early exit | three jobs, skip tables early, better slot allocation | TI-650 |
+
+---
+
+## §C — Fast-first recipe catalog (the approximation toolkit)
+
+Reach for these to get a directional answer in seconds/rows before committing to the exact scan. Match
+the tool to the question.
+
+| Question | Reach for | Instead of | Notes |
+|---|---|---|---|
+| How many distinct IPs / domains / households? | `APPROX_COUNT_DISTINCT(x)` | `COUNT(DISTINCT x)` | ~1% error; the default for cardinality on any full-partition scan. AUDI-1089 uses it for IP/domain counts. |
+| Distinct households reached, or set overlap? | `HLL_COUNT.MERGE(uniques)` + inclusion-exclusion `A∩B = reach(A)+reach(B)−reach(A∪B)` | raw-IP DISTINCT scan | reach cols are BYTES HLL++ sketches; conditional merge `HLL_COUNT.MERGE(IF(grp IN (a,b), uniques, NULL))` builds any subset union in one pass. `sum_by_campaign_by_day.uniques` works; `agg__daily_sum_by_campaign.uniques` is ~0/unreliable. |
+| Median / percentiles? | `APPROX_QUANTILES(x, 4)[OFFSET(2)]` (median) | exact percentile | used in TI-804 rank buckets. |
+| Top-N values? | `APPROX_TOP_COUNT(x, n)` | GROUP BY + ORDER BY LIMIT | approximate top-N in one pass. |
+| Which advertisers/IPs, but only need the shape? | deterministic sample: `ORDER BY FARM_FINGERPRINT(CAST(id AS STRING)) LIMIT n`, or `WHERE MOD(ABS(FARM_FINGERPRINT(CAST(id AS STRING))), 100) < k` for a k% slice | full population | stable across runs, cheap, reproducible. TI-804 samples 50 advertisers. **`ABS` is required** for the MOD form — `FARM_FINGERPRINT` is signed, so `MOD(...)` alone spans −99..99 and a `< k` filter is biased. `TABLESAMPLE SYSTEM (n PERCENT)` is the alternative and the only cost lever on a genuinely **unpartitioned** table (confirm with `bq show` — the base `bidder_bid_events` IS hour-partitioned; a `_test`/`_optimized` variant is the unpartitioned case). |
+| How big is this scan before I commit? | 1-day-window probe (`--phase sample`) | a dry-run on a federated table | BQ dry-run under-estimates federated/external tables ~30× (610 GB estimate → 18.1 TB actual). Sample a small window; the sample beats the estimate. |
+| 3P (DS35) segment size? | single known load-day, or ≥30-day window + report last-delivery `dt` | any single-day/single-week number | DS35 is bursty (delivers ~2-4 days/month); short windows are window-luck-dependent. |
+| Just confirm rows exist / a count? | `GROUP BY ... COUNT(*)` aggregation | returning raw rows | same bytes scanned, far less output shuffle. |
+
+**Materialization note (read-only path).** We have read-only creds: no `CREATE TABLE` / DDL. So repeat
+intermediates cannot be persisted as scratch tables. Available materialization: same-session `WITH` CTEs,
+session-scoped `CREATE TEMP FUNCTION` (UDFs, not object creation), and BQ's automatic 24h query cache
+(`cache_hit` in the perf log). `perf_digest.py --mode repeats` surfaces identical-SQL repeat runs as
+"materialization candidates" — since we can't persist them, route a genuinely heavy repeat to Databricks
+(no 6h wall, GCS-native reads) or fold it into one CTE query. See [[reference_databricks]].
+
+**The fast-first loop (also in the playbook):** (1) shape probe on a small window / TABLESAMPLE /
+`--phase sample`; (2) approximate with `APPROX_*` / `HLL_COUNT`; (3) confirm the sample predicted the
+full via `perf_digest.py --mode phase-accuracy`; (4) scale to exact only when the decision needs it.

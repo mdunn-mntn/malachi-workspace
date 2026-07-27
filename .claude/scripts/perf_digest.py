@@ -106,18 +106,19 @@ def repeats(rows, top):
     # identical SQL run more than once with at least one cache miss = a materialization candidate
     agg = collections.defaultdict(list)
     for r in rows:
-        agg[r.get("sql_sha1", "")].append(r)
+        # the wrapper logs sql_sha256 (older/legacy records have no sha and fall under "" -> dropped by the `if h` guard below)
+        agg[r.get("sql_sha256", "")].append(r)
     cands = [(h, rs) for h, rs in agg.items()
              if h and len(rs) > 1 and any(not x.get("cache_hit") for x in rs)]
     cands.sort(key=lambda kv: -(len(kv[1]) * (pctl([x.get("gb_billed") for x in kv[1]], 50) or 0)))
     out = ["## Repeated queries (materialization candidates)", "",
-           "| runs | cache-miss | gb_billed p50 | tables | sample label | sha1 |",
+           "| runs | cache-miss | gb_billed p50 | tables | sample label | sha256 |",
            "|--:|--:|--:|---|---|---|"]
     for h, rs in cands[:top]:
         miss = sum(1 for x in rs if not x.get("cache_hit"))
         out.append(f"| {len(rs)} | {miss} | {pctl([x.get('gb_billed') for x in rs],50)} | "
                    f"{', '.join('`'+t+'`' for t in (rs[0].get('sql_tables') or [])) or '—'} | "
-                   f"{(rs[0].get('label') or '—')[:40]} | {h} |")
+                   f"{(rs[0].get('label') or '—')[:40]} | {h[:12]} |")
     if not cands:
         out.append("| _(none)_ | | | | | |")
     return "\n".join(out)
