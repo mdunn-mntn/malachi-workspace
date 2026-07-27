@@ -2,7 +2,7 @@
 doc_type: bq_cookbook
 title: Query cookbook
 summary: "copy-paste query templates in cheapest-known form + before/after tuning wins + the fast-first approximation toolkit"
-keywords: [query cookbook, commonly used queries, fast first, sample first, approximate, APPROX_COUNT_DISTINCT, HLL_COUNT, TABLESAMPLE, FARM_FINGERPRINT, deterministic sample, visit rate, flip date detection, cohort, DiD, distinct IP sizing, keyword rank, tune query, cheapest table, materialization candidate]
+keywords: [query cookbook, commonly used queries, fast first, sample first, approximate, APPROX_COUNT_DISTINCT, HLL_COUNT, TABLESAMPLE, FARM_FINGERPRINT, deterministic sample, visit rate, flip date detection, cohort, DiD, distinct IP sizing, keyword rank, tune query, cheapest table, materialization candidate, campaign performance, all_facts rollup, advertiser performance, spend impressions conversions]
 last_verified: 2026-07-27
 source: data_catalog.md + data_knowledge.md + ticket queries (TI-921/804/961/933/650/1026/1053, AUDI-1089)
 tags: [optimization, cost, cookbook]
@@ -134,6 +134,55 @@ WHERE hour >= '<start>' AND hour < '<end_exclusive>'
   AND advertiser_id = <aid> AND campaign_group_id = <cgid>
 GROUP BY 1 ORDER BY 1;
 ```
+
+### A8. Full performance rollup — top-N advertisers, all their campaigns
+`all_facts` is the one live table with spend + impressions + clicks + conversions + revenue + visits
+together (`agg__daily_sum_by_campaign` is frozen). It is a 150+ column VIEW, so **project only what you
+need**. Two hard traps (verified 2026-07-27, both cost me a wrong number before I caught them — see
+`data_knowledge.md` § "all_facts visit columns"):
+- **`campaign_id IS NOT NULL`** — `all_facts` UNION-includes a site-only row per advertiser with
+  `campaign_id` = NULL holding TOTAL site-pixel visits (incl. organic). Without this filter a rollup
+  reports visit rates > 100% (an org's organic traffic dwarfs its ad impressions).
+- **Attributed visits = `last_touch_visits_day0..13`**, NOT `raw_visits` (which is 0 on every campaign
+  row). `first_touch_visits` is empty in practice. (For the client "industry_standard" number, add the
+  `competing_last_touch_*` columns; plain last-touch is close enough for an internal perf snapshot.)
+
+Spend is in **dollars** (BIGNUMERIC, TI-1044 — no `/1e6`). `hour` is DATETIME (bare literals, no `TIMESTAMP()`).
+
+```sql
+WITH win AS (
+  SELECT advertiser_id, campaign_id, campaign_group_id,
+         SUM(media_spend + data_spend + platform_spend)         AS spend,
+         SUM(display_impressions + ctv_impressions)             AS impressions,
+         SUM(views) AS views, SUM(clicks) AS clicks,
+         SUM(last_touch_visits_day0 + last_touch_visits_day1 + last_touch_visits_day2
+           + last_touch_visits_day3 + last_touch_visits_day4 + last_touch_visits_day5
+           + last_touch_visits_day6 + last_touch_visits_day7 + last_touch_visits_day8
+           + last_touch_visits_day9 + last_touch_visits_day10 + last_touch_visits_day11
+           + last_touch_visits_day12 + last_touch_visits_day13)  AS lt_visits,
+         SUM(view_conversions + click_conversions)              AS conversions,
+         SUM(view_order_value + click_order_value)              AS revenue
+  FROM `dw-main-silver.summarydata.all_facts`
+  WHERE hour >= '<start>' AND hour < '<end_exclusive>'
+    AND advertiser_id != 31357            -- exclude WGU (fake $1/lead revenue)
+    AND campaign_id IS NOT NULL           -- drop the site-only organic-visits row
+  GROUP BY advertiser_id, campaign_id, campaign_group_id
+),
+adv_rank AS (  -- top-N advertisers by spend over the window
+  SELECT advertiser_id, SUM(spend) AS adv_spend
+  FROM win GROUP BY advertiser_id ORDER BY adv_spend DESC LIMIT 5
+)
+SELECT a.company_name, w.*,
+       ROUND(100*SAFE_DIVIDE(w.lt_visits, w.impressions),3) AS vr_pct,
+       ROUND(SAFE_DIVIDE(w.revenue, w.spend),2)             AS roas
+FROM win w JOIN adv_rank r USING (advertiser_id)
+LEFT JOIN `dw-main-bronze.integrationprod.advertisers` a   -- company_name (advertiser_name is unreliable)
+  ON w.advertiser_id = a.advertiser_id AND a.deleted = FALSE AND a.is_test = FALSE
+ORDER BY r.adv_spend DESC, w.spend DESC;
+```
+Cost/shape (perf log): ~74 GB / ~3s wall over 7 days (all_facts is DAY-partitioned on `hour`, ~6 GB/day; a
+1-day `--phase sample` probe predicts it). Caveat seen in the wild: some advertisers show conversions/revenue
+but 0 last-touch visits (pixel/attribution config), and ROAS blends view- + click-through order value.
 
 ---
 
