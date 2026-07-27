@@ -1446,6 +1446,35 @@ BigQuery Connector internal cache tables — do not query directly.
 
 ---
 
+## Identity Graph — MNTN ID / household resolution (ID-327, epic AUDI-1049)
+
+The `idg` identity graph (Experian backbone + first/third-party edges, shared-IP disambiguation
+built in — ~80% of IPs map cleanly to one household) is published to the DW as two objects. This
+is the **source of truth for IP → MNTN ID (household) mapping**; do not build IP→household bridges
+by hand. Used by the Fangorn-on-MNTN-ID feature store (AUDI-1049/1055/1056/1100).
+
+### bronze.raw.identity_graph_history
+- **Type:** TABLE (physical) — daily **as-of history** of the graph.
+- **Use for:** Point-in-time joins (training, backfill). Join per-IP daily aggregates as-of on
+  `as_of_date` within the `start_time`/`end_time` interval.
+- **Key columns:** `id`, `id_type`, `household_id`, `is_shared`, `confidence_score`,
+  `start_time`, `end_time`, `as_of_date`, `graph_version`.
+- **Join key:** filter **`id_type = 30` (IPV4)** → direct IP→household mapping. Same table carries
+  GUID and other ID types (per AUDI-1057 decision, IFA/guids attached as `(id, id_type)` via AUDI-1055).
+- **Shared IPs:** `is_shared = TRUE` → weight/threshold on `confidence_score`; out-of-graph IPs go to a
+  fallback bucket (excluded from MVP training AND serving per 15-Jul decision).
+- **Retention:** RFD states **60-day**; the AUDI-1057 decision log claims graph TTL "90+ days,
+  sufficient for training." **Unresolved contradiction** — AUDI-1101 exists to confirm mapping-history
+  depth vs the ~14-day-label backtest window. Verify before assuming backfill depth.
+- **Dropped columns:** history table omits `IDStability` and household geo (present in underlying graph).
+
+### silver.public.identity_graph
+- **Type:** VIEW pinned to the **latest** graph version.
+- **Use for:** current-graph translation (HHDSC, TPA export) — NOT point-in-time. Use the `_history`
+  table for any training/backtest join.
+
+---
+
 # bronze.raw
 
 **Project:** dw-main-bronze | **Dataset:** raw
