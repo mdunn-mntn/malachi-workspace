@@ -942,7 +942,7 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| hour | TIMESTAMP | Partition key |
+| hour | DATETIME | Partition key |
 | advertiser_id | INTEGER | |
 | campaign_group_id | INTEGER | |
 | campaign_id | INTEGER | |
@@ -988,7 +988,7 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| hour | TIMESTAMP | |
+| hour | DATETIME | |
 | advertiser_id | INTEGER | |
 | campaign_group_id | INTEGER | |
 | campaign_id | INTEGER | |
@@ -1016,7 +1016,7 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| hour | TIMESTAMP | |
+| hour | DATETIME | |
 | advertiser_id | INTEGER | |
 | campaign_group_id | INTEGER | |
 | campaign_id | INTEGER | |
@@ -1072,7 +1072,7 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| hour | TIMESTAMP | |
+| hour | DATETIME | |
 | advertiser_id | INTEGER | |
 | conversion_source_id | INTEGER | |
 | conversion_type | STRING | |
