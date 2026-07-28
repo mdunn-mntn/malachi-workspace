@@ -240,11 +240,12 @@ wb.table(
 
 wb.table(
     "All by product", detail_df,
-    finding="Full per-advertiser readout: 43 Select and 66 non-Select advertiser rows, clean-gated",
-    method="One row per advertiser x product. Clean gate = valid holdout coverage, se>0. "
-           "Abs lift = pp gap (treated minus holdout rate); Rel lift = % over baseline. "
-           "Sorted by product then relative lift. z is bid-grain N-inflated - read relative magnitude, "
-           "treat significance as a floor.",
+    finding="Full per-advertiser readout: 43 Select and 66 non-Select advertiser rows",
+    method="One row per advertiser x product. Includes only campaign groups with a usable holdout "
+           "(real holdout group, enough of it to compute a rate, not flagged low-coverage) - the rest have no "
+           "baseline to measure against. Abs lift = pp gap (treated minus holdout rate); Rel lift = % over baseline "
+           "(blank if the holdout had zero visits - no baseline to divide by). Sorted by product then relative lift. "
+           "z is bid-grain N-inflated - read relative magnitude, treat significance as a floor.",
     formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
              "Rel lift": FMT.PCT1, "z": FMT.NUM1, "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
     heat={"Rel lift": "high"},
@@ -271,20 +272,25 @@ wb.glossary(
             "This is the fair cross-product comparison because it normalizes for each product's baseline rate. "
             "Baselines are small (~1-3%), which is why relative lifts look large. Negative values (e.g. -14%) = treated visited "
             "less than holdout = no incremental effect, usually would-visit-anyway noise, not 'ads hurt'."),
+        ("Blank Rel lift but Sig = Yes?", "If the holdout group recorded zero visits, the relative % is undefined (can't divide "
+            "by a zero baseline) so it shows blank - but the absolute (pp) lift is still measurable and can clear significance. "
+            "Treat these cautiously: a result built on a zero-visit holdout is fragile."),
         ("Bid-grain ITT", "The unit is a bid, not a served user. Treatment bids win only ~10% of auctions, so the "
             "absolute pp numbers are diluted. Relative lift is the comparable metric; do not read the pp as a served-user rate."),
         ("Pooling (IVW)", "Campaign groups are combined by inverse-variance weights (weight = 1/SE^2), not a raw "
             "visit count pool - a count pool produces Simpson's-paradox artifacts across heterogeneous campaigns."),
         ("Sig 95%", "The 95% confidence interval excludes zero. At bid-grain N, z is inflated, so treat significance "
             "as a floor and rank on relative magnitude."),
-        ("Clean gate", "Rows require a valid holdout and non-degenerate SE (low-coverage campaign groups dropped). "
-            "Upstream the pipeline anchors each IP to its entry cohort and drops the left-censored first window day."),
+        ("Which rows are included", "Only campaign groups with a usable holdout: a real holdout group, enough of it to "
+            "compute a visit rate, and not flagged low-coverage. Groups without a usable holdout are dropped - there is no "
+            "baseline to compare against. Upstream the pipeline also anchors each IP to its entry cohort and drops the "
+            "left-censored first window day."),
         ("Window", "Data covers 2026-06-22 to 2026-07-27. Each user's visit is counted over a 7-day window from its "
             "first bid, so the most recent ~7 days are not fully mature and fill in over time. No data exists before 6/22 (no backfill)."),
         ("Coverage caveat", "These views are the Beeswax bidder leg. The MNTN Rust-bidder leg is not folded in yet, "
             "which is why Select coverage is a subset of all live Select advertisers."),
         ("", ""),
-        ("Cohort", f"93 AIDs requested. Clean-gated lift data: {len(both_ids)} run both products, "
+        ("Cohort", f"93 AIDs requested. With usable-holdout lift data: {len(both_ids)} run both products, "
             f"{len(sel_only)} Select-only, {len(ns_only)} non-Select-only."),
     ],
 )
@@ -336,7 +342,7 @@ wb.notes(
         ("Date range", "2026-06-22 to 2026-07-27. First day dropped upstream as left-censored. 7-day per-user visit window means "
             "the trailing ~7 days are still maturing. No pre-6/22 data (ghost-bid lift pipeline has no backfill)."),
         ("Coverage", "Beeswax bidder leg only; MNTN Rust-bidder leg not yet folded in. 43 of 93 requested advertisers have Select "
-            "lift data, 66 have non-Select; 35 have both after the clean gate. Low-coverage campaign groups are excluded."),
+            "lift data, 66 have non-Select; 35 have both once campaign groups without a usable holdout are excluded."),
         ("Do not over-read", "Individual low-volume campaigns have wide intervals; a single small Select campaign is not a verdict. "
             "The pooled and paired advertiser-level reads are the defensible outputs."),
     ],
