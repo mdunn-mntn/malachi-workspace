@@ -63,9 +63,10 @@ If no match, this is a NEW alert → continue to Step 2.
 
 ## Step 3 — Classify the verdict (runbook §1 taxonomy)
 
-`benign_expected` · `late_data` · `transient_infra` · `real_upstream_failure` · `dag_bug`.
+`benign_expected` · `late_data` · `transient_infra` · `resource_contention` · `real_upstream_failure` · `dag_bug`.
 Pick from the evidence, not a guess. If you can't reach ground truth, say so and mark the incident
-**OBSERVED** (not RESOLVED) with your working hypothesis (that's what INC-002 is).
+**OBSERVED** (not RESOLVED) with your working hypothesis; flip to RESOLVED only once the cause is verified.
+(INC-002 was OBSERVED as `transient_infra` until the owner root-caused it as `resource_contention` — RESOLVED.)
 
 ---
 
@@ -76,6 +77,7 @@ Pick from the evidence, not a guess. If you can't reach ground truth, say so and
 | `benign_expected` | Ack. Reply in the alert thread "expected, <reason>". No re-run. |
 | `late_data` | Clear the failed task → it passes on the object that's now present. |
 | `transient_infra` | Re-run the task once. Recurs → check quota/region capacity, then route to owner. |
+| `resource_contention` | Do NOT blind-re-run. Confirm no concurrent job holds the resource, let it FINISH, then re-trigger. Recurs → durable fix to `improvements_backlog.md`. |
 | `real_upstream_failure` | Re-run the producer (mind the **batch-id trap**), or route to the feed/vendor owner. |
 | `dag_bug` | Route to the owning team with evidence. **Do NOT edit the DAG.** |
 
