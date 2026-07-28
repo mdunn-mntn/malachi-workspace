@@ -55,28 +55,29 @@ Same cap+1 classifier applied to control households. **Realized in-experiment fr
 
 ## 6. Inference method
 
-- **Primary (binary total-visit incidence): two-proportion z-test, non-inferiority form** (§2 bar), **reported on the RELATIVE scale** (coverage-robust; §7 + design §5.4). N per arm per §7.
-- **Secondary (cost/household, visits/dollar, total-visits/household count): nonparametric bootstrap resampling HOUSEHOLDS**, ≥5,000 resamples; point / 95% CI / two-sided p.
-- **Advertiser = stratification/blocking + CUPED covariate** (pre-period visit rate; 20-50% SE reduction), **NOT** the resample cluster.
+- **Primary (mean total visits/hh — a COUNT): non-inferiority via HOUSEHOLD BOOTSTRAP** — resample households with replacement (≥5,000), report **point / one-sided lower 95% bound / p** on the RELATIVE contrast `(μ_T − μ_C)/μ_C` (§2 bar; coverage-robust, §7 + design §5.4). N per arm per §7 (count mean-difference sizing). The two-proportion z-test is NOT the primary here.
+- **Secondary — binary total-visit incidence: two-proportion z-test, NI form** (the only place that test is used), same relative scale — robustness read beside the primary count, never the go/no-go bar.
+- **Other secondary (cost/household, visits/dollar): nonparametric bootstrap resampling HOUSEHOLDS**, ≥5,000 resamples; point / 95% CI / two-sided p.
+- **Advertiser = stratification/blocking + CUPED covariate**, **NOT** the resample cluster. **CUPED on the COUNT** — regression-adjust the post-period total-visit count on the pre-period total-visit **count** (continuous covariate), carried through the household bootstrap; NOT CUPED on a binary indicator. 20-50% SE reduction.
 - **Diagnostic:** MNTN-attributed VV/household contrast, reported beside the total-visit contrast; the gap = the in-experiment last-touch attribution bias.
 - Optional CausalImpact on arm-level daily total-visit series = convergence check only.
 
 ## 7. Power / sample size
 
-- **Sized on the BINDING freq≥8 eligible stratum**, base rate = **SERVED total-visit incidence `p0_total`** (all 3 arms serve → the base is the served ~1.55% platform-avg, raised on the freq≥8 tail — NOT the ~1.0% attributed rate, NOT the 0.886% never-served holdout rate).
-- **Two-proportion, 80% power, α=0.05 two-sided, MDE = 5% relative (default).** `N ≈ (1.96+0.8416)²·[p0(1−p0)+p1(1−p1)]/(p1−p0)²`.
-- **Reporting scale = RELATIVE** (coverage-robust under multiplicative cross-device miss); the NI margin is relative, so the test is coverage-invariant. Absolute pp = companion only (see design §5.4).
+- **Sized on the BINDING freq≥9 eligible stratum, on the COUNT** — anchor = the **mean total visits/hh `μ_C`** and its **household variance `σ_C²`** over the ≥30-60d window (a count, not a rate; all 3 arms serve → the served level, raised on the freq≥9 tail — NOT the ~1.0% attributed, NOT the 0.886% never-served holdout).
+- **Mean-difference, 80% power, α=0.05 two-sided, δ = 5% relative of `μ_C`.** `N ≈ (1.96+0.8416)²·(σ_C²+σ_T²)/δ²`, `δ = 0.05·μ_C`. (The two-proportion binomial grid in design §6 sizes the DEMOTED incidence secondary and bounds the count N loosely — reference only.)
+- **Reporting scale = RELATIVE** (coverage-robust under multiplicative cross-device miss); the NI margin is relative, so the test is coverage-invariant. Absolute = companion only (see design §5.4).
 
-> **PROVISIONAL VALUES (confirm at Checkpoint β with Step 3's total-visit-by-frequency curve; then lock at sign-off):**
-> Prospecting: `p0_total ≈ 3%` *(provisional freq≥8 anchor; ≥1.5% served floor, likely higher at ≥30d window)*, `MDE_rel = 5%`, **N/arm ≈ 198K** *(116K if p0=5%; 402K if p0=1.5%)*
-> Retargeting: `p0_total ≈ 20-35%` *(returning visitors)*, `MDE_rel = 5%`, **N/arm ≈ 12-25K** *(over-powered; binding constraint = incrementality size, not N)*
-> Total-visit source table: **`dw-main-silver.enriched.lift__ghost_bid_visits`** (fallback: direct `logdata.guid_log` join) · join key: **`(advertiser_id, ip)`** (ip CIDR-stripped, visit in `[first_bid_time, +window)`)
+> **PROVISIONAL VALUES (confirm at Checkpoint β with Step 3's total-visit-by-frequency curve — which yields `μ_C` and `σ_C`; then lock at sign-off):**
+> Prospecting: incidence-proxy anchor ≈ 3% *(provisional freq≥9; ≥1.5% served floor, higher at ≥30d window)*, `δ = 5% relative`, **reference N/arm ≈ 198K** *(116K if 5%; 402K if 1.5%)* — superseded by the count `μ_C`/`σ_C` N once measured.
+> Retargeting: anchor ≈ 20-35% *(returning visitors — anchored on ATTRIBUTED rates, a PROXY; total ≥ attributed → true higher → even more over-powered)*, `δ = 5% relative`, **reference N/arm ≈ 12-25K** *(over-powered; binding constraint = incrementality size, not N)*
+> Total-visit source: a **custom `dw-main-silver.logdata.guid_log` join** on `(advertiser_id, ip)` over `[first_impression, +30-60d]` carrying RCT arm membership (the ≥30d RCT-arm estimand; to be BUILT). `enriched.lift__ghost_bid_visits` = platform 7d sanity/reference only (7d window, ghost/submitted arms — cannot deliver the RCT-arm estimand). Join key: **`(advertiser_id, ip)`** (ip CIDR-stripped).
 
-*(Reference anchors: at the old attributed 1.0% base, 5%-rel → ~606-637K/arm. SERVED total-visit base rate is higher → N lower at fixed MDE, but the true relative effect is smaller → a smaller MDE may be chosen, raising N. The confirmed `p0_total` + chosen MDE decide N — see design §6 grid. Fill (~0.4-0.7 wk) is off the critical path; the ~10-12wk calendar is set by exposure + maturation.)*
+*(Reference anchors: at the old attributed 1.0% base, 5%-rel → ~606-637K/arm. Higher count level → N lower at fixed relative δ, but the true relative effect is smaller → N may rise; the confirmed `μ_C`/`σ_C` decide N — see design §6. **Fill (≤ ~1 wk) is off the critical path**; the ~10-12wk calendar is set by exposure + maturation, so a final N is not required to lock the design.)*
 
 ## 8. Calendar and when the decision is read
 
-- **Arm-fill ~1.2-1.5 wk** (binding freq≥8) → **exposure 4 wk** → **visit maturation 6-8 wk** (≈45-60d past last impression, governed via the total-visit event timestamp, NOT `visit_day`). **~10-12 wk total.**
+- **Arm-fill ≤ ~1 wk** (binding freq≥9; the ~1.62M is a 7d STOCK not weekly inflow → fill is a lower bound, off the critical path) → **exposure 4 wk** → **visit maturation 6-8 wk** (≈45-60d past last impression, governed via the total-visit event timestamp, NOT `visit_day`). **~10-12 wk total.**
 - **Go/no-go read at tail maturity (~wk 11-13). Interim reads are directional-only** and do not gate the decision.
 
 ## 9. Guardrails (committed)
