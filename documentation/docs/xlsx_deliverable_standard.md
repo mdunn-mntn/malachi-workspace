@@ -204,6 +204,12 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-28 · v11** — Heat scales are now a proper SEQUENTIAL single-hue ramp (Mountain Blue,
+  light to dark) instead of a red-yellow-green rainbow. The old scale anchored on the column's min/max, so
+  it painted the *lowest positive* value red (e.g. a +104% lift looked "bad"); a magnitude column gets one
+  hue per the data-viz rule (never a rainbow). Darker = better on that metric (per-column; 'low'/cost
+  columns invert). Blue pairs cleanly with the Mountain Green accents (adjacent cyan hues). Discrete RAG
+  pass/fail fills are unchanged. Swap the `HEAT` dict to a green ramp if a deliverable should read green.
 - **2026-07-28 · v10** — Top breathing room on content/reference sheets. The row-1 title was jammed
   against the top edge; it's now bottom-aligned in a taller row (`_sheet_title` helper) so there's clean
   whitespace above it. Decision: brand identity (band/logo/eyebrow) stays on the COVER only; content and

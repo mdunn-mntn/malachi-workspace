@@ -121,6 +121,16 @@ FMT = _Fmt()
 # a dark anchor for the cover, bright greens/blues for content, muted greys for the appendix.
 # NOTE: apply with a leading "FF" (opaque) — a bare 6-hex string makes openpyxl store alpha 00
 # (transparent), which renders as NO tab color in Google Sheets. See _new_sheet().
+# HEAT — the SEQUENTIAL magnitude ramp for table heat scales (dataviz rule: one hue, light->dark;
+# never a red-yellow-green rainbow). Mountain Blue family: calm, analytical, on-brand, and it pairs
+# cleanly with the Mountain Green accents (adjacent cyan hues). Dark text stays readable on DARK.
+# Swap to a green ramp ("EAF7F3","7FD9C6","1AC9AA") if a deliverable should read green instead.
+HEAT = {
+    "LIGHT": "EAF6FA",   # near-white blue tint (smallest values)
+    "MID":   "7FCEDD",   # mid Mountain Blue
+    "DARK":  "0AABC5",   # Mountain Blue (largest / "best" values)
+}
+
 TAB = {
     "cover":    "191E28",  # Slate INK — dark anchor / "start here"
     "headline": "1AC9AA",  # Mountain Green — the hero content tab
@@ -411,10 +421,16 @@ class MntnWorkbook:
                 rule = ColorScaleRule(start_type="min", start_color=BRAND["PAPER"],
                                       end_type="max", end_color=BRAND["PRIMARY"])
             else:
-                lo, hi = (BRAND["NEG"], BRAND["POS"]) if direction == "high" else (BRAND["POS"], BRAND["NEG"])
-                rule = ColorScaleRule(start_type="min", start_color=lo,
-                                      mid_type="percentile", mid_value=50, mid_color="FFF4C2",
-                                      end_type="max", end_color=hi)
+                # SEQUENTIAL single-hue ramp (Mountain Blue), light->saturated. Magnitude gets one hue,
+                # never a red-yellow-green rainbow (that painted the lowest positive value red). 'high':
+                # bigger = darker; 'low' (cost): smaller = darker. So darker always reads "better".
+                if direction == "high":
+                    s, m, e = HEAT["LIGHT"], HEAT["MID"], HEAT["DARK"]
+                else:
+                    s, m, e = HEAT["DARK"], HEAT["MID"], HEAT["LIGHT"]
+                rule = ColorScaleRule(start_type="min", start_color=s,
+                                      mid_type="percentile", mid_value=50, mid_color=m,
+                                      end_type="max", end_color=e)
             ws.conditional_formatting.add(rng, rule)
 
         ws.freeze_panes = f"{freeze}{start+1}"
