@@ -103,4 +103,8 @@ Added: `data_catalog.md` §lift — rollup `level`/`entity_id` grain, the `entit
 
 ## 6. Deliverable format iterations
 
-The xlsx went through several format-clarity passes driven by review feedback, all folded back into the shared builder `lib/mntn_xlsx.py` (so every future workbook inherits them): abs lift shown as `pp` vs relative as `%` (v6 of the builder wasn't this — added the distinction); "clean-gated" jargon replaced with plain "usable holdout"; a Read-me note for blank-rel-but-significant (zero-holdout-visit) rows; subtitles wrap to the table width (v7); one-line method subtitle + a Mountain Green accent rule + a codified alignment standard fixing the cover Contents header (v8). See `documentation/docs/xlsx_deliverable_standard.md` changelog v7/v8.
+The xlsx went through several format-clarity passes driven by review feedback, all folded back into the shared builder `lib/mntn_xlsx.py` (so every future workbook inherits them): abs lift shown as `pp` vs relative as `%`; "clean-gated" jargon replaced with plain "usable holdout"; a Read-me note for blank-rel-but-significant rows; subtitle wrap to table width (v7); one-line subtitle + accent rule + alignment standard (v8); restrained reference-tab structure (v9); top breathing room (v10); sequential green heat + semantic red/amber/green signal coloring for lift columns (v11); Read-me terseness build-guard (v12). See `documentation/docs/xlsx_deliverable_standard.md` changelog v7–v12.
+
+## 7. Delivery
+
+Delivered to Kirsa 2026-07-28; she's sharing to the Select-analysis tiger team. RT exclusion confirmed to her (all rows objective_id=1 prospecting; ghost-bid holdout is prospecting-only). She is actively editing the live Drive copy (filtering, adding averages) — do NOT regenerate over `My Drive/Tickets/AUDI-1172/`; deliver any further change as a new copy. Clean rebuildable source = the committed builder + local artifact.
