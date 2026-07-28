@@ -107,4 +107,4 @@ The xlsx went through several format-clarity passes driven by review feedback, a
 
 ## 7. Delivery
 
-Delivered to Kirsa 2026-07-28; she's sharing to the Select-analysis tiger team. RT exclusion confirmed to her (all rows objective_id=1 prospecting; ghost-bid holdout is prospecting-only). She is actively editing the live Drive copy (filtering, adding averages) — do NOT regenerate over `My Drive/Tickets/AUDI-1172/`; deliver any further change as a new copy. Clean rebuildable source = the committed builder + local artifact.
+Delivered to Kirsa 2026-07-28; she's sharing to the Select-analysis tiger team. RT exclusion confirmed to her (all rows objective_id=1 prospecting; ghost-bid holdout is prospecting-only). Overwriting the live Drive copy on rebuild is fine (Malachi confirmed) — regenerate over `My Drive/Tickets/AUDI-1172/` as needed; make a separate copy only if asked. Clean rebuildable source = the committed builder + local artifact.
