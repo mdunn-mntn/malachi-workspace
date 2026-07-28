@@ -152,3 +152,7 @@ GROUP BY d ORDER BY d;
 ```sql
 SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__last_tv_touch_visits__3655239346`
 ```
+
+## Observed facts
+- **CIL attribution join key = `impression_id` (the `.steelhouse` composite, e.g. `1783542586487865.3413280614.142.steelhouse`), NOT `ad_served_id`.** `ad_served_id` is a different UUID (`fc632b4c-...`); it differs from `impression_id` on **100%** of rows and would return ~0 matches against `cost_impression_log.impression_id`. Join `cost_impression_log.impression_id = last_tv_touch_visits.impression_id` (1:1; CIL PK unique; ~99.99% of prospecting visits match a CIL impression). Every visit event maps to exactly one impression_id (no multi-count). Verified `hhst_efficiency_sizing` 2026-07-28.
+- **Attribution tail runs LONG: 21.6% of visits land >14 days after the attributed impression, 15.6% >20d, p90 = 28d, p99 = 74d (median 5d).** A +14d visit window truncates ~15-22% of a cohort's visits (understates IVR, inflates CPV) and can be band-differential — size the visit window **≥30-45d past the last impression day** for stable IVR/CPV. Verified `hhst_efficiency_sizing` 2026-07-28.
