@@ -81,7 +81,9 @@ Pick from the evidence, not a guess. If you can't reach ground truth, say so and
 
 **Prod-safety gate (non-negotiable):** widening a timeout, soft-failing a sensor, or editing a DAG is a
 code change owned by the producing team. Diagnose → clear/re-run or route. If a durable code fix is
-warranted, **spawn a ticket** for it (record the key in the INC) — don't do it here.
+warranted, **log it to `improvements_backlog.md`** (one row, `Status: idea`, `Ref: on-call INC-NNN`) — do
+NOT open a Jira ticket by reflex (keeps the board clean); promote to Jira only when it's prioritized. Don't
+do the code fix here.
 
 ---
 
@@ -101,7 +103,8 @@ This is the point of the skill. An incident isn't done until it's logged on ever
    `.claude/scripts/lint_comms.py --kind comment` if it's a Jira/Slack write.
 6. **Commit + push** (`on-call: INC-NNN <dag> — <verdict>`).
 
-If the incident spawned a durable-fix ticket, note the key in both §3 and the JSONL `ticket` field.
+If the incident surfaced a durable fix, add a row to `improvements_backlog.md` (not Jira, unless
+prioritized). If it did become a Jira ticket, note the key in §3 and the JSONL `ticket` field.
 
 ---
 

@@ -104,6 +104,7 @@ workspace/
 | Path | Purpose |
 |------|---------|
 | `README.md` | Workspace structure, philosophy, and how-to — read at session start, update when workspace conventions change |
+| `improvements_backlog.md` | **Improvement / durable-fix / tech-debt tracker** — log ideas here (one row) instead of opening Jira tickets that clutter the board; promote a row to Jira only when prioritized. Fed by on-call durable-fixes (`/oncall`) and any "we should improve X" |
 | `knowledge/strategic_north_star.md` | **Q2 OKR leverage filter** — read at session start, evaluate every task against it, flag low-leverage work |
 | `knowledge/data_catalog.md` | Table schemas and join keys — read at session start, update immediately when new schema learned |
 | `knowledge/data_knowledge.md` | Business logic and gotchas — read at session start, update immediately when new knowledge found |

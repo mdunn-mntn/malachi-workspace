@@ -193,7 +193,8 @@ crash) or arrives late (`force_export:true` manual run).
 
 **If this pages too often:** the durable fix is to make `ipdsc_monitor`'s DS51 precondition tolerate
 skips (e.g. `soft_fail=True` on optional partners' preconditions) so it stops paging on expected skips.
-That's a `airflow-ti` code change owned by the TPA_EXPORT / AUDI team — propose it as a ticket, don't hot-patch.
+That's a `airflow-ti` code change owned by the TPA_EXPORT / AUDI team — propose it, don't hot-patch.
+Tracked as **IMP-001** in `improvements_backlog.md`.
 
 ---
 
@@ -234,8 +235,8 @@ was running) and fixed it by **letting the challenger finish, then manually re-t
    (template lives in `targeting-infra`, not `airflow-ti`). Spawn a ticket; do NOT hot-patch.
 
 **Durable-fix note:** the ~94% Dataproc ceiling makes champion/challenger collisions a standing risk. If
-this pages repeatedly, raise a ticket for run-staggering or a higher Dataproc quota rather than
-hand-re-triggering each time.
+this pages repeatedly, the durable fix is run-staggering or a higher Dataproc quota rather than
+hand-re-triggering each time. Tracked as **IMP-002** in `improvements_backlog.md`.
 
 ---
 
