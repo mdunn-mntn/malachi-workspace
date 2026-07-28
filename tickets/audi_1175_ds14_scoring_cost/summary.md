@@ -66,6 +66,20 @@ Three parallel code investigations (airflow-ti, sqlmesh, membership-db) + one BQ
 
 DS14 8d set = 259M IPs; 1d = 149M. At the strict 1-day window (original thesis) DS13 waste = 56%. Addressable count uses ALL DS14 categories; the standard `cats:[1]` gate is a subset, so true waste is >= these figures (conservative).
 
+### Consumer audit — is the gate safe? (2026-07-28)
+
+Swept airflow-ti, sqlmesh, olympus, membership-db, mode-assets, airflow-camperbid, DDM/Redshift, targeting-infra-ml. **Verdict: safe for every serving/bidding path, but NOT safe to apply globally without scoping** — one live control-plane consumer reads the full scored universe.
+
+**SAFE-TO-GATE (serving-bound, already addressable):** camperbid `intent_score` DAG (scores→Aerospike), `intent_score_household_map`, membership-db, `tpa_mntn_id_export`, the LIVE holdout-membership model (`tpa_membership_updates_log_insegments.sql`), Mode reporting (reads delivered CIL scores, not the raw set), Olympus (catalog-only, no query consumer).
+
+**SEPARATE PIPELINE (unaffected):** Fangorn training/inference read a monthly **1%-sampled feature store** (`run_target_engineering.py` / `run_inference.py`), NOT `prospecting_intent`. Caveat: do NOT gate feature-store generation itself (needs full-population negatives).
+
+**MUST-KEEP-FULL / VERIFY — the blocker:** the DDM/Redshift **automated HHST threshold recommender** (`ETL-DCO-Automated-Threshold-Adjustment.py` → `ddm.hhst_bucket_collections` → `hhst_generate_recommendation` → writes `dso.update_campaign_household_score_presets`). A LIVE closed loop that SETS the production HHST gate. It reads the FULL scored `prospecting_intent`/`advertiser_intent` as `ip_population` per score bucket; sibling sizing procs (`cache_hhst_population_filters`/`win_conditions`/`augmentor_volume`) use it as the `pct_available/pct_visible` denominator. Two sensitivities under an 8-day gate: (a) guardrails (`scored_population<100→6666`, `>1M & remaining=0→6666`) would trip the high-intent-default path for small-addressable campaigns (under-delivery risk); (b) winnable uses a 30-day win lookback vs DS14's ~8-day, dropping IPs winnable in the 8–30-day window and biasing recommended thresholds low. Scoped to `ddm.test_hhst_campaigns` (pilot) so blast radius is bounded. **Owner: Devon Rogers.**
+
+**UNKNOWN (confirm with owners, not resolvable from code):** AUD-5221 population deciles (no implementation in any repo; if it splits the full US IP population it needs the full set — Alex/Zach) and any LiftLab/DS52 full-scored-universe incrementality export (none found; DS52 is an IPDSC *input* only, Liftlab is outbound Orca sync — #dev-incremental-lift owner).
+
+**Design implication:** the prize survives, but AUDI-1176 must EITHER (1) gate only the serving-bound output while keeping a cheap full-universe population COUNT for the HHST recommender + sizing (aggregate over full, expensive per-IP scoring only on addressable), OR (2) validate with Devon that the guardrail + 8-vs-30-day effects are immaterial. Clear AUD-5221 + LiftLab with their owners before any global input-gate.
+
 ## 5. Solution / Recommendation (draft)
 
 **Lever (→ AUDI-1176):** intersect the 31-day DS13/DS19 scoring input with the current DS14 (8d) set before `vertical_high/mid` + `populate_data_source`. Est. daily scoring-compute cut ~39% (verticals) / ~69% (MM Core). Zero biddable-coverage loss: any IP that becomes addressable is scored that day from still-retained DS13 history; intra-day-new IPs handled by RTC.
@@ -101,7 +115,7 @@ Confidence: LOW / order-of-magnitude. Executor sizes/tiers/ceilings are exact fr
 ## 8. Open Items / Follow-ups
 
 - **$ figure — DONE (order-of-magnitude):** gate optimization saves ~$1.3k/mo (DS13) to ~$11k/mo (~$130k/yr, if DS19 cut is applied to `prospecting_keywords` where the volume lands). Whole scoring DAG ≈ $39k/mo. Firm up to a point estimate via GCP Billing BQ export / `gcloud dataproc batches describe` (DCU-seconds per batch).
-- **Consumer audit** — enumerate readers of the scored universe beyond the bidder (deciles AUD-5221, LiftLab exports, lookalike seeds, Fangorn training). Totals/sizing already DS14-gated.
+- **Consumer audit — DONE (see §4).** Safe for all serving paths + Fangorn (separate feature store). Blocker = DDM HHST recommender (Devon Rogers) reads full scored set to SET the HHST gate. 2 unknowns to clear with owners: AUD-5221 deciles (Alex/Zach), LiftLab full-scored export (#dev-incremental-lift).
 - **Owner validation** — confirm no-loss with Ryan Kleck / Sean Yang / Zach Schoenberger before AUDI-1176.
 - **Exact intersection** — optional exact DISTINCT+JOIN to confirm the HLL estimate.
 - **`cats:[1]` refinement** — recompute addressable set restricted to category 1 (unnest `data_source_category_ids`) for the true gate.

@@ -47,3 +47,5 @@ Daily scoring recomputes the full 31-day universe. 39% (DS13) / 69% (DS19) of sc
 
 - Precise insertion point (input pre-filter vs output intersection) TBD in design.
 - Fangorn 14-day path (`fangorn_14day_lookback.ipdsc_inclusion_flag`) may already be partially gated — confirm.
+- **Hard constraint (AUDI-1175 consumer audit):** the LIVE DDM/Redshift automated HHST threshold recommender (`ETL-DCO-Automated-Threshold-Adjustment.py` → `hhst_generate_recommendation`, owner **Devon Rogers**) reads the FULL scored `prospecting_intent`/`advertiser_intent` as its population denominator to SET the production HHST gate. Do NOT let a naive input-gate starve it. Options: gate only the serving-bound output, OR preserve a cheap full-universe population COUNT for the recommender + sizing procs while scoring per-IP only on the addressable set. Watch the recommender's small-population guardrails (`<100→6666`) and its 30-day winnable vs 8-day DS14 mismatch.
+- **Confirm before global gate:** AUD-5221 deciles (Alex/Zach — no code found) and any LiftLab full-scored export (#dev-incremental-lift — none found).
