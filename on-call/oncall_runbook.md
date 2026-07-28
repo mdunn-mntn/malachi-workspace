@@ -84,6 +84,31 @@ gcloud storage ls "gs://mntn-data-partners/partners/bombora/segments/20260725/" 
 `tpa_ipdsc_export` run with params `{"dt":"<YYYY-MM-DD>","force_export":true}`. Do NOT task-clear the
 original run (params can't change on an existing run; `force_export` stays false → no-op).
 
+**⚠ A re-run does NOT clear an absent-source day — verified.** Bombora source ↔ DS51 partition is a
+clean 1:1 all month (offset 1: `ipdsc dt=D` needs source `D−1`). Re-running the monitor just restarts an
+18h wait for a file that isn't coming; re-running the producer skips again (no source to build). The only
+re-run that ever helps is the **late-arrival** path (`force_export:true`) AND only if the source file
+actually shows up. Absent-source days do NOT backfill (e.g. 07-24 source still missing 4 days later).
+
+**History proves self-heal (no manual action needed):**
+
+| ipdsc dt | source (D−1) | source present | DS51 partition | note |
+|---|---|---|---|---|
+| 07-24 | 07-23 | ✓ | ✓ 49 files | |
+| 07-25 | 07-24 | ✗ | ✗ skipped | **same failure — self-healed next day, no rerun** |
+| 07-26 | 07-25 | ✓ | ✓ 49 files | recovered automatically |
+| 07-27 | 07-26 | ✗ | ✗ skipped | INC-001 alert |
+
+DS51 just has no data on skip days (dt=07-19, 07-25, 07-27, …); the next delivery day self-recovers. This
+matches the "we leave it failed and it picks up the following day" prior practice — that is correct.
+
+**Reconciliation (2026-07-28, Brian McAdams, Sr MLE said "needs to be re-run"):** for an absent-source day
+there is nothing for a re-run to act on (evidence above). Do NOT restart the monitor on a source-absent
+day. The one legitimate action is upstream: **the Bombora feed is degrading** — daily through ~07-09, now
+every other day, missed 07-24/26/27 (DS51 empty ~half of recent days). If it needs chasing, that's the
+Bombora vendor/feed, not a DAG re-run. Only re-run when the D−1 source is actually present (real builder
+crash) or arrives late (`force_export:true` manual run).
+
 **If this pages too often:** the durable fix is to make `ipdsc_monitor`'s DS51 precondition tolerate
 skips (e.g. `soft_fail=True` on optional partners' preconditions) so it stops paging on expected skips.
 That's a `airflow-ti` code change owned by the TPA_EXPORT / AUDI team — propose it, don't hot-patch.
