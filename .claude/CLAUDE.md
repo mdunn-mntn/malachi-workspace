@@ -2,6 +2,17 @@
 
 See global `~/.claude/CLAUDE.md` for the full operating rules (always-on behaviors, naming conventions, commit protocol, empirical analysis protocol, BQ safety rules). This file adds project-specific paths and structure.
 
+## On-Call Protocol
+
+**Any on-call alert (Airflow failure, pipeline break, pager): read `on-call/oncall_runbook.md` FIRST.**
+It holds the general triage protocol, a Known-Alert Catalog (signature → verdict → fix), a per-incident
+log, and producer→consumer system maps. If the alert matches a catalog row, follow its protocol directly.
+
+**After resolving ANY alert, update the runbook** — append the incident to §3 and a one-line signature to
+§2. This is a living doc: every incident makes the next one faster. Raw alert logs go in `on-call/`.
+**Never hot-patch prod** to silence an alert (see `airflow_prod_safety`) — diagnose, then clear/re-run or
+route to the owning team.
+
 ## Self-Documenting System (adopted from the AI Workflow Kit)
 
 This workspace runs a two-layer self-documenting system. Design: `workflows/ARCHITECTURE.md`. Operator

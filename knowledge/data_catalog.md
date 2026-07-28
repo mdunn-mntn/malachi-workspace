@@ -2362,6 +2362,18 @@ External tables backed by GCS (Parquet/ORC files). Not managed by SQLMesh.
 - **Use for:** IP → audience category_id resolution. The source of truth for which IPs were in a given
   CRM audience segment on a given date. Critical for CRM campaign debugging and audience size analysis.
 
+**Producer / freshness / on-call.** Partitions are written by the `tpa_ipdsc_export` DAG (`airflow-ti`,
+team TPA_EXPORT, schedule `35 2 * * *` UTC): one `ipdsc_ds_<id>` builder per source, plus registry-driven
+`ipdsc_<partner>` builders for 3P audience partners (`dags/ipdsc_third_party_audience_builders.json`).
+`dt=D`'s partition lands ~04:58 UTC on **D+1**. A separate `ipdsc_monitor` DAG (`5 0 * * *`) polls each
+`data_source_id=<id>/_SUCCESS` with an **18h hard-fail GCSObjectExistenceSensor**. **DS51 (Bombora) is an
+`optional: true` partner** (`source_date_offset_days: 1`, source `gs://mntn-data-partners/partners/bombora/segments/<D-1>/`):
+on days Bombora doesn't deliver source files, the producer silently skips it (partition absent, export ships
+`{"data_source_id":51,"cats":[]}`) and `ipdsc_monitor`'s `precondition_bombora` sensor pages an 18h
+timeout — **this alert is EXPECTED/benign on Bombora-skip days** (Bombora's feed is intermittent). Mandatory
+sources (DS4, DS17, …) are never tolerated — a missing mandatory partition hard-fails `tpa_export`. Full
+on-call protocol + diagnosis commands: `on-call/oncall_runbook.md` (INC-001).
+
 | Column | Type | Notes |
 |--------|------|-------|
 | ip | STRING | IP address |
