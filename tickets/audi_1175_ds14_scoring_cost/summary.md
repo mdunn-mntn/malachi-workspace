@@ -88,6 +88,25 @@ Swept airflow-ti, sqlmesh, olympus, membership-db, mode-assets, airflow-camperbi
 
 Confirm system authority with Devon; clear AUD-5221 + LiftLab with their owners regardless.
 
+### Shadow query 1 — Max-Reach inflation (run 2026-07-28, `queries/audi_1175_maxreach_inflation.sql`)
+
+1-hour prospecting sample of `bid_price_log` (Beeswax, `objective_id IN (1,5,6)`):
+
+| Arm (recommender denominator) | rows | distinct IPs |
+|---|---:|---:|
+| has_price (valid score, real bid) | 29.5M | 3.15M |
+| intent-score failure → Max Reach (`invalidCampaignIntentScore` 1.77B, `missingIntentScore` 532M, `invalidAdvertiserIntentScore` 7.6M) | ~2.31B | 5–6M+ (overlap) |
+| household-score failure (`invalidHouseholdScore`/`invalidAdvertiserHouseholdScoreFailure`) | ~0 (not in top 40) | ~0 |
+| pacing/floor/geo/ghost (NOT in denominator) | ~740M | — |
+
+**Finding: Max-Reach is already the dominant bucket by construction (~99% of the v4 denominator rows are already unscored → `hh_score=0`), gate or no gate.** Our gate can't push a currently-priced IP into Max Reach: the IPs we'd stop scoring are non-DS14, which fail the availability AND and never reach the score check. The priced arm (3.15M IPs/hr) is preserved because we keep scoring all DS14-addressable IPs. Residual = the scoring-snapshot vs 8-day-serving-window alignment gap (gate on the 8-day DS14 union; let RTC cover intra-run new IPs). **Net: the gate adds ~nothing to Max-Reach inflation.**
+
+Note: the two HHST implementations use DIFFERENT failure sets. Redshift/DDM retains only household-score failures (`invalidHouseholdScore`/`invalidAdvertiserHouseholdScoreFailure`) — **~0 here → its denominator is mostly has_price (robust)**. v4 retains the intent-score failures (which dominate). Confirm with Devon which is authoritative.
+
+### AUD-5221 — RESOLVED (Jira text, 2026-07-28)
+
+AUD-5221 is a **Closed** Epic under BER-2250, owned by Malachi. Per its text it deciles the **intent-score distribution** (even/odd control/treatment for the Intent-Score-Shuffling experiment), NOT a US-population census → it operates on the scored/addressable set → **gate-safe**. Discrepancy to reconcile: `strategic_north_star.md` frames AUD-5221 as a "US Population 1-10 random split" (TTD-style, full universe); the built/closed ticket is score-distribution deciles. If a true random US-population split is later built, it's a net-new full-universe pipeline and this gate assumption is revisited then.
+
 ## 5. Solution / Recommendation (draft)
 
 **Lever (→ AUDI-1176):** intersect the 31-day DS13/DS19 scoring input with the current DS14 (8d) set before `vertical_high/mid` + `populate_data_source`. Est. daily scoring-compute cut ~39% (verticals) / ~69% (MM Core). Zero biddable-coverage loss: any IP that becomes addressable is scored that day from still-retained DS13 history; intra-day-new IPs handled by RTC.
@@ -123,7 +142,7 @@ Confidence: LOW / order-of-magnitude. Executor sizes/tiers/ceilings are exact fr
 ## 8. Open Items / Follow-ups
 
 - **$ figure — DONE (order-of-magnitude):** gate optimization saves ~$1.3k/mo (DS13) to ~$11k/mo (~$130k/yr, if DS19 cut is applied to `prospecting_keywords` where the volume lands). Whole scoring DAG ≈ $39k/mo. Firm up to a point estimate via GCP Billing BQ export / `gcloud dataproc batches describe` (DCU-seconds per batch).
-- **Consumer audit — DONE (see §4).** Safe for all serving paths + Fangorn (separate feature store). Primary HHST recommender (camperbid v4) is auction-scoped → gate-safe; only a small DDM DCO pilot (Devon Rogers, `test_hhst_campaigns`) reads the full scored set → prize most likely survives. 2 unknowns to clear with owners: AUD-5221 deciles (Alex/Zach), LiftLab full-scored export (#dev-incremental-lift). De-risk with 2 shadow queries (starvation + Max-Reach inflation).
+- **Consumer audit — DONE (see §4).** Safe for all serving paths + Fangorn. Primary HHST recommender (camperbid v4) auction-scoped → gate-safe; DDM DCO pilot (Devon) small-scope → prize most likely survives. **AUD-5221 RESOLVED** (score-distribution deciles, gate-safe). **Max-Reach shadow query DONE** (baseline ~99% unscored, gate adds ~nothing). Remaining: Devon confirms HHST authority + run the starvation shadow query; LiftLab confirm (#dev-incremental-lift, low risk).
 - **Owner validation** — confirm no-loss with Ryan Kleck / Sean Yang / Zach Schoenberger before AUDI-1176.
 - **Exact intersection** — optional exact DISTINCT+JOIN to confirm the HLL estimate.
 - **`cats:[1]` refinement** — recompute addressable set restricted to category 1 (unnest `data_source_category_ids`) for the true gate.
