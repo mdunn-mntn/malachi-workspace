@@ -222,15 +222,31 @@ class MntnWorkbook:
             setattr(ws.page_margins, side, 0.4)
         return ws
 
-    def _titleblock(self, ws, finding, method, first_col_span=6):
-        """Finding-led title (states the finding) + grey italic methodology line."""
+    def _titleblock(self, ws, finding, method, ncols=1):
+        """Finding-led title (states the finding) + grey italic methodology line.
+
+        The subtitle is merged across the table columns and wrapped, so it never runs off to the
+        right past the table below it. Its row height is fitted later in table() once column widths
+        are known (Excel/Sheets won't auto-fit a merged cell). Applies to every table sheet."""
         c = ws.cell(row=1, column=1, value=_demdash(finding))
         c.font = _font(15, bold=True, color=BRAND["PRIMARY"])
         if method:
             m = ws.cell(row=2, column=1, value=_demdash(method))
             m.font = _font(10, italic=True, color=BRAND["GREY"])
+            m.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+            if ncols > 1:
+                ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncols)
         # accent tick under the title
         ws.cell(row=3, column=1, value=None)
+
+    def _fit_subtitle_height(self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5):
+        """Set a merged, wrapped subtitle row's height to fit its text at the table width.
+        total_width_chars = summed width of the merged columns; Excel won't auto-fit merged cells."""
+        if not text:
+            return
+        cpl = max(int(total_width_chars * 0.92), 24)   # ~chars per line across the merged span
+        lines = max(1, -(-len(_demdash(text)) // cpl))
+        ws.row_dimensions[row].height = max(16.0, min(lines, maxlines) * per_line + pad)
 
     def _footnote(self, ws, text, row, ncols):
         if not text:
@@ -322,9 +338,9 @@ class MntnWorkbook:
         heat = heat or {}
         rag = rag or {}
         ws = self._new_sheet(name, "headline" if kind == "headline" else kind)
-        self._titleblock(ws, finding, method)
-        start = 4
         ncols = len(df.columns)
+        self._titleblock(ws, finding, method, ncols)
+        start = 4
 
         # header row (slate fill, white text, Mountain Green underline)
         for j, col in enumerate(df.columns, 1):
@@ -379,6 +395,8 @@ class MntnWorkbook:
         ws.auto_filter.ref = f"A{start}:{last_col}{start+n}"
         colw = self._autosize(ws, df, widths=widths, first_col=first_col_width)
         self._fit_row_heights(ws, df, start, colw)
+        # subtitle (row 2) is merged across the table; size its height to the wrapped text at table width
+        self._fit_subtitle_height(ws, 2, method, sum(colw.get(c, 12) for c in df.columns))
         self._footnote(ws, f"Source: {self.ticket}."
                        + (f"  Period: {self.period}." if self.period else "")
                        + (f"  Generated {self.generated}." if self.generated else ""),
@@ -394,7 +412,10 @@ class MntnWorkbook:
         ws = self._new_sheet(name, "glossary")
         ws.cell(row=1, column=1, value=self.title).font = _font(15, bold=True, color=BRAND["PRIMARY"])
         sub = f"{self.ticket}." + (f"  {_demdash(intro)}" if intro else "")
-        ws.cell(row=2, column=1, value=sub).font = _font(10, italic=True, color=BRAND["GREY"])
+        subc = ws.cell(row=2, column=1, value=sub)
+        subc.font = _font(10, italic=True, color=BRAND["GREY"])
+        subc.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        ws.merge_cells("A2:B2")
         r = 4
         def_rows = []
         for k, v in rows:
@@ -406,9 +427,11 @@ class MntnWorkbook:
             vc.font = _font(10)
             def_rows.append((r, v))
             r += 1
-        ws.column_dimensions["A"].width = max((len(str(k)) for k, _ in rows), default=24) + 3
+        a_width = max((len(str(k)) for k, _ in rows), default=24) + 3
+        ws.column_dimensions["A"].width = a_width
         ws.column_dimensions["B"].width = body_width
         self._wrap_rows(ws, "B", def_rows, body_width)
+        self._fit_subtitle_height(ws, 2, sub, a_width + body_width)
         if toc:
             self._toc.append((ws.title, toc, "glossary"))
         return ws
@@ -418,13 +441,16 @@ class MntnWorkbook:
         ws = self._new_sheet(name, "sql")
         ws.cell(row=1, column=1, value="Queries used (for validation)").font = _font(15, bold=True, color=BRAND["PRIMARY"])
         if note:
-            ws.cell(row=2, column=1, value=_demdash(note)).font = _font(10, italic=True, color=BRAND["GREY"])
+            nc = ws.cell(row=2, column=1, value=_demdash(note))
+            nc.font = _font(10, italic=True, color=BRAND["GREY"])
+            nc.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
         r = 4
         for line in sql_text.split("\n"):  # SQL body left verbatim (never sanitized)
             c = ws.cell(row=r, column=1, value=line)
             c.font = _font(9, name=FONT_MONO, color=BRAND["INK"])
             r += 1
         ws.column_dimensions["A"].width = width
+        self._fit_subtitle_height(ws, 2, note, width)
         if toc:
             self._toc.append((ws.title, toc, "sql"))
         return ws
@@ -435,7 +461,9 @@ class MntnWorkbook:
         ws = self._new_sheet(name, "notes")
         ws.cell(row=1, column=1, value=name).font = _font(15, bold=True, color=BRAND["PRIMARY"])
         if intro:
-            ws.cell(row=2, column=1, value=_demdash(intro)).font = _font(10, italic=True, color=BRAND["GREY"])
+            ic = ws.cell(row=2, column=1, value=_demdash(intro))
+            ic.font = _font(10, italic=True, color=BRAND["GREY"])
+            ic.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
         r = 4
         body_rows = []
         for head, body in blocks:
@@ -450,6 +478,7 @@ class MntnWorkbook:
             r += 2
         ws.column_dimensions["A"].width = body_width
         self._wrap_rows(ws, "A", body_rows, body_width)
+        self._fit_subtitle_height(ws, 2, intro, body_width)
         if toc:
             self._toc.append((ws.title, toc, "notes"))
         return ws

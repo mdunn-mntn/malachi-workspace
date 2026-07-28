@@ -46,7 +46,7 @@ Every query runs through `.claude/scripts/bq_run.sh` (logs cost + `sql_tables` t
 | **where a file belongs** | `folder_definitions.md` (ticket structure authority) |
 
 ## The system (how this workspace documents itself)
-- **Deterministic layer** (`.claude/`): the `bq_run.sh` wrapper + 5 hooks + `build_index.sh` +
+- **Deterministic layer** (`.claude/`): the `bq_run.sh` wrapper + 8 hooks + `build_index.sh` +
   `lint_coverage.py` + `lint_tickets.py` keep the indexes true and flag doc-debt automatically;
   `health_scorecard.py` (SessionStart) and `request_digest.py` add self-improvement signals. See `.claude/README.md`.
 - **Agents** (`.claude/agents/`): cataloger (skeleton→enriched), reviewer-adversarial ×2, fixer,
