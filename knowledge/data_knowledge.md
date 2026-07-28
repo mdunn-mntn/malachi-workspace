@@ -1684,7 +1684,7 @@ Every impression's `cost_impression_log.model_params` carries **three score fiel
 - DS17 ShareThis (~65M rows/day, 1,850 active categories — taxonomy 100% >2yr stale)
 - DS18 Dstillery (~32M rows/day, 3,303 active categories — taxonomy 100% >2yr stale)
 
-Most other named 3P providers (Sovrn, Cybba, Bombora, Captify, 33Across, Klickly, Oracle, Experian, OnAudience, Liftlab) are registered but deliver zero IPDSC volume today.
+Most other named 3P providers (Sovrn, Cybba, Captify, 33Across, Klickly, Oracle, Experian, OnAudience, Liftlab) are registered but deliver zero IPDSC volume today. **Bombora (DS51) is NOT zero-volume (corrected 2026-07-28, on-call INC-001):** it writes real DS51 IPDSC partitions (~49 part-files, ~20 MB each) but only **intermittently** — it's an `optional: true` partner, so on days it doesn't drop source files (`gs://mntn-data-partners/partners/bombora/segments/<D-1>/`) no DS51 partition is written and `tpa_export` ships `{"data_source_id":51,"cats":[]}`. Feed observed degrading daily→every-other-day in late July 2026 (delivered dt=07-20..24,26; missed 07-19,25,27). Absent-partition monitor alert on skip days is expected/benign; see `on-call/oncall_runbook.md` INC-001.
 
 **7. CRM (DS4) is per-advertiser, NOT a shared catalog.** Each advertiser's CRM upload is private to their campaigns. Do NOT compare universe-level CRM IP counts (227M, summed across all advertisers' uploads) to the LiveRamp/ShareThis/Dstillery shared catalog — apples-to-oranges.
 

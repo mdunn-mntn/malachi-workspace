@@ -236,8 +236,11 @@ class MntnWorkbook:
             m.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
             if ncols > 1:
                 ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncols)
-        # accent tick under the title
-        ws.cell(row=3, column=1, value=None)
+        # thin Mountain Green accent rule (row 3) closing the header block off from the table below.
+        # Keep the subtitle to ONE short method line; definitions/caveats live on the Read me tab.
+        for cc in range(1, max(ncols, 1) + 1):
+            ws.cell(row=3, column=cc).fill = _fill(BRAND["ACCENT"])
+        ws.row_dimensions[3].height = 5
 
     def _fit_subtitle_height(self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5):
         """Set a merged, wrapped subtitle row's height to fit its text at the table width.

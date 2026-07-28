@@ -212,10 +212,8 @@ wb = MntnWorkbook(
 wb.table(
     "Headline", head_df,
     finding="Select prospecting drives ~5x the relative visit lift of non-Select (+22% vs +4%)",
-    method="Pooled across 35 advertisers running both. Inverse-variance-weighted over campaign groups. "
-           "Read: '%' = a rate or a relative lift; 'pp' = an absolute percentage-point gap. "
-           "Abs lift = treated minus holdout visit rate (pp). Rel lift = abs lift / holdout rate (% over baseline). "
-           "Ghost-bid ITT (bid-grain, diluted by win rate) - compare products on Rel lift, not to a served-user number.",
+    method="Pooled across 35 advertisers running both, inverse-variance-weighted; ghost-bid holdout, prospecting. "
+           "See Read me for definitions.",
     formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
              "Rel lift": FMT.PCT1, "CI low": PP3, "CI high": PP3,
              "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
@@ -227,9 +225,8 @@ wb.table(
 wb.table(
     "By advertiser (both)", both_df,
     finding="Select out-lifts non-Select in 27 of 35 advertisers running both (median edge +46pp of relative lift)",
-    method="One row per advertiser running both products, ranked by Select bid volume (largest, most reliable on top). "
-           "rel lift = % over the holdout baseline; abs pp = the raw percentage-point gap. "
-           "edge = Select rel lift minus non-Sel rel lift (green = Select wins). Blank rel where a holdout had zero visits.",
+    method="One row per advertiser running both, ranked by Select bid volume. "
+           "Edge = Select minus non-Select relative lift. See Read me for definitions.",
     formats={"Select rel lift": FMT.PCT1, "non-Sel rel lift": FMT.PCT1, "Select edge": FMT.PCT1,
              "Select abs pp": PP2, "non-Sel abs pp": PP2,
              "Select bids": FMT.INT, "non-Sel bids": FMT.INT},
@@ -241,11 +238,8 @@ wb.table(
 wb.table(
     "All by product", detail_df,
     finding="Full per-advertiser readout: 43 Select and 66 non-Select advertiser rows",
-    method="One row per advertiser x product. Includes only campaign groups with a usable holdout "
-           "(real holdout group, enough of it to compute a rate, not flagged low-coverage) - the rest have no "
-           "baseline to measure against. Abs lift = pp gap (treated minus holdout rate); Rel lift = % over baseline "
-           "(blank if the holdout had zero visits - no baseline to divide by). Sorted by product then relative lift. "
-           "z is bid-grain N-inflated - read relative magnitude, treat significance as a floor.",
+    method="One row per advertiser x product, usable-holdout groups only, sorted by product then relative lift. "
+           "See Read me for definitions.",
     formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
              "Rel lift": FMT.PCT1, "z": FMT.NUM1, "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
     heat={"Rel lift": "high"},

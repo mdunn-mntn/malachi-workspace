@@ -195,6 +195,7 @@ Paulo announced a reorg merging big pieces of the **reporting world** under **Ka
 - **Alex Bloore** — VP Engineering. Covering product leadership for targeting during GPM search (alongside Mike Dolt and Kale). Approved Mike's Q2 roadmap ("Mike, you killed it").
 - **Mike Dolt** — Acting as himself + Ellison + RTPM for Q2 roadmap/product. Covering product leadership for targeting during GPM search (alongside Alex Bloore and Kale). Presented Q2 Targeting Roadmap (2026-04-17).
 - **Alek Piasecki** — Data platform: owns BQ slot reservations, query-cost routing, and billing monitoring. Watches per-project on-demand spend and flags anomalies (caught the AUDI-1089 US-multi-region routing leak, 2026-07-16). Escalation contact for reservation queueing/throttling issues.
+- **On-call pipeline owners (2026-07-28, on-call INC-001/002):** the `ipdsc` / `tpa_ipdsc_export` chain (per-DS ingest + 3P audience builders, `airflow-ti`) is owned by the **TPA_EXPORT** team — **Jordan Piepkow** (Staff SWE) authored the optional-partner skip logic; **Sean Yang** and **Brian McAdams** (Sr MLE) are on-thread owners. **Fangorn inference / Dataproc** provisioning: Brian McAdams + ML/infra (Vertex pipeline template lives in `targeting-infra`, not `airflow-ti`).
 
 ### Empirical Incrementality Lift (Alyson Lefkowitz to Malachi, 2026-06-01)
 
