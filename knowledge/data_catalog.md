@@ -1476,6 +1476,21 @@ by hand. Used by the Fangorn-on-MNTN-ID feature store (AUDI-1049/1055/1056/1100)
 - **Use for:** current-graph translation (HHDSC, TPA export) — NOT point-in-time. Use the `_history`
   table for any training/backtest join.
 
+### household_graph_parquet (deep as-of snapshot, GCS parquet)
+- **Type:** GCS parquet — the graph team's full graph output; the **deep-history** source behind the
+  ~60-day BQ `identity_graph_history` (use this when the backtest window exceeds BQ retention). **~600 GB.**
+- **Partitions:** `as_of_date` **AND** `as_of_date_revision_number` (usually `0`; occasionally `1` when the
+  graph is rewritten/revised). A `graph_version` column exists **but is NOT part of the partitioning**.
+- **As-of join pattern (partition elimination):** for a lookback day D (e.g. one day of `guid_log`), take
+  `max(as_of_date) < D`, then within it `max(as_of_date_revision_number)`, then look up — so you join against
+  the graph *as it was*, not the current graph. A partition never changes once written (the 07-20 graph stays
+  the 07-20 graph). **TTL unconfirmed** (AUDI-1049 action item — must be retained for historical training).
+- **Cost note:** materializing a daily subset snapshot (AUDI-1166 L1 mirror) is a **~7-min job**; joining the
+  full 600 GB parquet every run is the alternative Sean is cost-testing. Source: Ryan Kleck design sync 2026-07-28.
+- **Resolution rule:** a row with multiple ids (IPv4/IPv6/GUID/HEM) → join per-id, take **max
+  `confidence_score`**, one household per row (matches the id-service `resolveHouseholdId` endpoint). See
+  `data_knowledge.md` § "MNTN ID (household) re-keying of the feature store".
+
 ---
 
 # bronze.raw

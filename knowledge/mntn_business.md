@@ -552,6 +552,37 @@ The MNTN identity graph covers approximately:
 - ~1.85 billion device IFAs
 
 **Data providers:** Experian, Deepsync, Augmentor log, GUID log
+
+- ### MNTN ID Initiative (ID-327) — household re-keying across the platform (2026-07)
+
+Company-wide effort to swap the platform's primary identity key from **IPv4 → "MNTN ID," a
+household-resolution UUID** (= household_id = "mountain_id", all the same thing). MNTN ID is threaded
+through **every** system — targeting, bidding, frequency-capping, attribution, reporting — running **in
+parallel with the IP flow** until a full cutover at **Run (Q1 2027)**; IP becomes the fallback. One
+advertiser = one ID type (IP or household, never mixed). Umbrella: Jira `ID-327`. Phasing: Crawl (Aug,
+reporting baseline) → Walk (Sept 4, enhanced targeting) → Speedwalk (Oct 16) → Jog (Nov 15, EX-team
+MNTN-ID-vs-IP experiment) → Run (Q1 2027).
+
+**Why:** IP is imprecise (one IP = 1 household or hundreds) → over-counts reach, mis-caps frequency,
+degrades attribution, and trains audience models on noisy signal. Proof points already in prod: **EX-46**
+(household CRM exclusions, DS47) = **−24% cost-per-new-customer, +30% conversion lift** (NTB *CPA* improved,
+NTB *rate* flat — distinct metrics); **World Cup HHID pilot** — impression→VV models 31/33 live, ~12% of raw
+VVs / 19% of conversions on HHID (Jun 1-15).
+
+**Team ownership map:**
+- **Identity** (owns the graph + Identity Service): **Jack Barbey** (TL/EM, endpoint spec), Elena Donnelly
+  (PRD), Luis Chelala (TPM), **Ryan Kleck** (bridges Identity↔audience_intent, ID-358), Nivas (ID-359 IPDSC).
+- **AUDI** (targeting leg — Fangorn feature store + scoring, epic AUDI-1049): **Matt Brorby** (epic + modeling
+  + uplift RFD), **Sean Yang** (feature-store build lead), Brian McAdams (Vertex train/scoring + FinOps),
+  Alex Knorr (thresholds), Malachi (FS build + validation), Alyson Lefkowitz (dept lead / RFD decider).
+- **Audience Platform** (serving/membership): Jaime Mutale (audience-services RFD), Daniel Hartnett
+  (MembershipDB AP-5385), **Zach Schoenberger** (SoT resolver + MID membership DB), Mike Dolt (infra budget).
+- **Bidder** (dual auction + cache blend, f-cap reset, BID-3356); **Pacing** (Swapnil Patil, HHST deprecation
+  PER-6688); **Measurement** (Nate Gardner; VV→Conversion + offline HHID match still to scope).
+
+**Governing docs (TAR Confluence):** MNTN ID PRD (ID-327); RFDs — Feature-Store Data Path/IPDSC (Opt 1,
+Sean), Fangorn-Like Incrementality Uplift Model (Opt 2 draft, Matt), Audience-Services (Opt 1, Jaime),
+AP-5385 MembershipDB (Daniel). Full context: `tickets/audi_1049_fangorn_on_mntn_id/`.
 - ### Campaign Strategy (Marketing Objective) Feature — Legacy Audience Behavior
 
 When the Campaign Strategy feature (stored as `objective_id` on `campaign_groups`, previously called Marketing Objective) was introduced (~2025), customers were prompted to select a strategy (Retargeting or Prospecting). Adoption was voluntary — customers who declined to update were not forced, and no drop-dead date was enforced.
