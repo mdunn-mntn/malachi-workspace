@@ -204,6 +204,12 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-28 · v9** — Reference tabs get restrained structure (they read flat/busy before). Read me /
+  Queries / Method now carry the same Mountain Green accent rule as the data tabs; Read me and Method
+  section headers get a light green band; the Queries tab greys its comment lines (readable subtitle-grey
+  italic) and sits the code on a subtle code-panel fill, so code reads clean and comments recede (drop the
+  ASCII `====` bars in builder text). Design rule: appendix/reference tabs = light structure + one brand
+  accent + comment/code coloring, NEVER the data tabs' heat/RAG.
 - **2026-07-28 · v8** — Header block cleaned up for visual appeal. (1) The subtitle is now ONE short
   method line; all metric definitions/caveats live on the Read me tab, not repeated on every sheet.
   (2) A thin Mountain Green accent rule (row 3) closes the header block off from the table. (3) Alignment

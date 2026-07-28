@@ -243,11 +243,17 @@ class MntnWorkbook:
             m.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
             if ncols > 1:
                 ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncols)
-        # thin Mountain Green accent rule (row 3) closing the header block off from the table below.
+        # thin Mountain Green accent rule (row 3) closing the header block off from the content below.
         # Keep the subtitle to ONE short method line; definitions/caveats live on the Read me tab.
+        self._accent_rule(ws, ncols)
+
+    def _accent_rule(self, ws, ncols, row=3, height=5):
+        """A thin Mountain Green rule spanning the content width — the shared header-to-body separator
+        used on every sheet (data tables AND the Read me / Queries / Method reference tabs), so they
+        all read as one system."""
         for cc in range(1, max(ncols, 1) + 1):
-            ws.cell(row=3, column=cc).fill = _fill(BRAND["ACCENT"])
-        ws.row_dimensions[3].height = 5
+            ws.cell(row=row, column=cc).fill = _fill(BRAND["ACCENT"])
+        ws.row_dimensions[row].height = height
 
     def _fit_subtitle_height(self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5):
         """Set a merged, wrapped subtitle row's height to fit its text at the table width.
@@ -426,15 +432,23 @@ class MntnWorkbook:
         subc.font = _font(10, italic=True, color=BRAND["GREY"])
         subc.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
         ws.merge_cells("A2:B2")
+        self._accent_rule(ws, 2)
         r = 4
         def_rows = []
         for k, v in rows:
+            is_section = bool(k) and not v          # (heading, '') -> a section band (visual grouper)
             kc = ws.cell(row=r, column=1, value=(_demdash(k) or None))
-            kc.font = _font(10, bold=True, color=BRAND["PRIMARY"] if v else BRAND["INK"])
-            kc.alignment = _LEFT
             vc = ws.cell(row=r, column=2, value=(_demdash(v) or None))
-            vc.alignment = _LEFT
-            vc.font = _font(10)
+            if is_section:
+                for cc in (1, 2):                   # light Mountain-Green band across both columns
+                    ws.cell(row=r, column=cc).fill = _fill(BRAND["BAND"])
+                kc.font = _font(10, bold=True, color=BRAND["PRIMARY"])
+                kc.alignment = _LEFT_MID_FLAT
+            else:
+                kc.font = _font(10, bold=True, color=BRAND["PRIMARY"] if v else BRAND["INK"])
+                kc.alignment = _LEFT
+                vc.font = _font(10)
+                vc.alignment = _LEFT
             def_rows.append((r, v))
             r += 1
         a_width = max((len(str(k)) for k, _ in rows), default=24) + 3
@@ -454,10 +468,16 @@ class MntnWorkbook:
             nc = ws.cell(row=2, column=1, value=_demdash(note))
             nc.font = _font(10, italic=True, color=BRAND["GREY"])
             nc.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        self._accent_rule(ws, 1)
         r = 4
         for line in sql_text.split("\n"):  # SQL body left verbatim (never sanitized)
             c = ws.cell(row=r, column=1, value=line)
-            c.font = _font(9, name=FONT_MONO, color=BRAND["INK"])
+            # comments recede (muted italic), code stays dark; whole block on a light code-panel fill
+            is_comment = line.lstrip().startswith("--")
+            c.font = _font(9, name=FONT_MONO, italic=is_comment,
+                           color=BRAND["GREY"] if is_comment else BRAND["INK"])
+            c.fill = _fill(BRAND["PAPER"])
+            c.alignment = _LEFT_MID_FLAT
             r += 1
         ws.column_dimensions["A"].width = width
         self._fit_subtitle_height(ws, 2, note, width)
@@ -474,12 +494,15 @@ class MntnWorkbook:
             ic = ws.cell(row=2, column=1, value=_demdash(intro))
             ic.font = _font(10, italic=True, color=BRAND["GREY"])
             ic.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        self._accent_rule(ws, 1)
         r = 4
         body_rows = []
         for head, body in blocks:
             if head:
                 hc = ws.cell(row=r, column=1, value=_demdash(head))
                 hc.font = _font(11, bold=True, color=BRAND["PRIMARY"])
+                hc.fill = _fill(BRAND["BAND"])          # light green band = section header
+                hc.alignment = _LEFT_MID_FLAT
                 r += 1
             bc = ws.cell(row=r, column=1, value=_demdash(body))
             bc.font = _font(10)

@@ -251,6 +251,7 @@ wb.glossary(
     "Read me",
     intro="How the Select vs non-Select incrementality numbers were produced and how to read them.",
     rows=[
+        ("Reading the numbers", ""),
         ("Reading % vs pp", "Throughout this workbook: '%' means a rate (Treated VR, Holdout VR) or a RELATIVE lift "
             "(Rel lift = percent over baseline); 'pp' means an ABSOLUTE percentage-point gap (Abs lift). They are different - "
             "e.g. Zazzle Select: Abs lift 2.76pp, Rel lift 95% (the 2.76pp gap is 95% of the ~2.9% holdout baseline)."),
@@ -271,6 +272,7 @@ wb.glossary(
             "Treat these cautiously: a result built on a zero-visit holdout is fragile."),
         ("Bid-grain ITT", "The unit is a bid, not a served user. Treatment bids win only ~10% of auctions, so the "
             "absolute pp numbers are diluted. Relative lift is the comparable metric; do not read the pp as a served-user rate."),
+        ("Method", ""),
         ("Pooling (IVW)", "Campaign groups are combined by inverse-variance weights (weight = 1/SE^2), not a raw "
             "visit count pool - a count pool produces Simpson's-paradox artifacts across heterogeneous campaigns."),
         ("Sig 95%", "The 95% confidence interval excludes zero. At bid-grain N, z is inflated, so treat significance "
@@ -279,11 +281,11 @@ wb.glossary(
             "compute a visit rate, and not flagged low-coverage. Groups without a usable holdout are dropped - there is no "
             "baseline to compare against. Upstream the pipeline also anchors each IP to its entry cohort and drops the "
             "left-censored first window day."),
+        ("Coverage & window", ""),
         ("Window", "Data covers 2026-06-22 to 2026-07-27. Each user's visit is counted over a 7-day window from its "
             "first bid, so the most recent ~7 days are not fully mature and fill in over time. No data exists before 6/22 (no backfill)."),
         ("Coverage caveat", "These views are the Beeswax bidder leg. The MNTN Rust-bidder leg is not folded in yet, "
             "which is why Select coverage is a subset of all live Select advertisers."),
-        ("", ""),
         ("Cohort", f"93 AIDs requested. With usable-holdout lift data: {len(both_ids)} run both products, "
             f"{len(sel_only)} Select-only, {len(ns_only)} non-Select-only."),
     ],
@@ -308,14 +310,9 @@ FROM cg GROUP BY 1, 2 ORDER BY 1, n_cg DESC;
 -- Only objective_id = 1 present -> the cohort is 100% prospecting, as expected."""
 
 QUERY_TAB = (
-    "-- ===============================================================\n"
-    "-- ONE query drives every number in this workbook. It returns one\n"
-    "-- row per advertiser x product; the pooled Select-vs-non-Select,\n"
-    "-- the 27/35 paired test, all CIs, z-scores and rel/abs lift are\n"
-    "-- computed in Python from this single result set (see the .py in\n"
-    "-- artifacts/). No other BigQuery reads feed the numbers.\n"
-    "-- ===============================================================\n\n"
-    "-- MAIN QUERY -----------------------------------------------------\n"
+    "-- MAIN QUERY - drives every number in this workbook. Returns one row per advertiser x product;\n"
+    "-- the pooled comparison, the 27/35 paired test, CIs, z-scores and rel/abs lift are all computed\n"
+    "-- in Python from this single result set (see the .py in artifacts/).\n\n"
     + SQL.strip() + "\n\n\n" + SCOPING_SQL + "\n"
 )
 
