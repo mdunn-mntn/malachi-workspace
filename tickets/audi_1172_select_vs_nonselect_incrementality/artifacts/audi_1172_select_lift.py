@@ -253,24 +253,18 @@ wb.glossary(
     intro="How the Select vs non-Select incrementality numbers were produced and how to read them.",
     rows=[
         ("Reading the numbers", ""),
-        ("Reading % vs pp", "Throughout this workbook: '%' means a rate (Treated VR, Holdout VR) or a RELATIVE lift "
-            "(Rel lift = percent over baseline); 'pp' means an ABSOLUTE percentage-point gap (Abs lift). They are different - "
-            "e.g. Zazzle Select: Abs lift 2.76pp, Rel lift 95% (the 2.76pp gap is 95% of the ~2.9% holdout baseline)."),
-        ("What this measures", "Incremental visit lift from MNTN's ghost-bid holdout: ~10% of prospecting IPs are "
-            "held out (evaluated 'as if served' but not served). Treated visit rate minus holdout visit rate = "
-            "the incremental effect of serving. No holdout = no causal read."),
+        ("Reading % vs pp", "'%' = a rate (Treated/Holdout VR) or a RELATIVE lift (% over baseline); 'pp' = an ABSOLUTE "
+            "percentage-point gap. Different: a 2.76pp gap on a 2.9% baseline is a 95% relative lift."),
+        ("What this measures", "Incremental visit lift from MNTN's ghost-bid holdout: ~10% of prospecting IPs are held out "
+            "(evaluated 'as if served', not served). Treated minus holdout visit rate = the incremental effect. No holdout = no causal read."),
         ("Select vs non-Select", "Product on the campaign group. Select = product_id 2; non-Select = PTV (product_id 1). "
             "All rows here are prospecting (objective_id 1) - the ghost-bid holdout only exists on the prospecting pool."),
         ("Abs lift (pp)", "Treated visit rate minus holdout visit rate, in percentage points. The absolute incremental effect. "
             "Small here because it is bid-grain (see below), so it is not the headline comparison."),
-        ("Rel lift (%)", "Abs lift divided by the holdout visit rate = the percent increase over the no-ad baseline. "
-            "A value of 95% means the treated visit rate is 95% higher than holdout (nearly double), NOT that 95% of people visited. "
-            "This is the fair cross-product comparison because it normalizes for each product's baseline rate. "
-            "Baselines are small (~1-3%), which is why relative lifts look large. Negative values (e.g. -14%) = treated visited "
-            "less than holdout = no incremental effect, usually would-visit-anyway noise, not 'ads hurt'."),
-        ("Blank Rel lift but Sig = Yes?", "If the holdout group recorded zero visits, the relative % is undefined (can't divide "
-            "by a zero baseline) so it shows blank - but the absolute (pp) lift is still measurable and can clear significance. "
-            "Treat these cautiously: a result built on a zero-visit holdout is fragile."),
+        ("Rel lift (%)", "Abs lift / holdout rate = % over the no-ad baseline. 95% = treated visited 95% more than holdout, "
+            "NOT 95% of people. The fair cross-product comparison (normalizes baselines). Negatives are usually noise, not harm."),
+        ("Blank Rel lift but Sig = Yes?", "Holdout recorded zero visits -> relative % is undefined (can't divide by zero) so it's "
+            "blank, but the absolute (pp) lift still computes and can clear significance. A zero-visit-holdout result is fragile."),
         ("Bid-grain ITT", "The unit is a bid, not a served user. Treatment bids win only ~10% of auctions, so the "
             "absolute pp numbers are diluted. Relative lift is the comparable metric; do not read the pp as a served-user rate."),
         ("Method", ""),
@@ -278,10 +272,9 @@ wb.glossary(
             "visit count pool - a count pool produces Simpson's-paradox artifacts across heterogeneous campaigns."),
         ("Sig 95%", "The 95% confidence interval excludes zero. At bid-grain N, z is inflated, so treat significance "
             "as a floor and rank on relative magnitude."),
-        ("Which rows are included", "Only campaign groups with a usable holdout: a real holdout group, enough of it to "
-            "compute a visit rate, and not flagged low-coverage. Groups without a usable holdout are dropped - there is no "
-            "baseline to compare against. Upstream the pipeline also anchors each IP to its entry cohort and drops the "
-            "left-censored first window day."),
+        ("Which rows are included", "Only campaign groups with a usable holdout (real, big enough to compute a rate, not "
+            "low-coverage); the rest are dropped - no baseline. Upstream anchors each IP to its entry cohort and drops the "
+            "left-censored first day."),
         ("Coverage & window", ""),
         ("Window", "Data covers 2026-06-22 to 2026-07-27. Each user's visit is counted over a 7-day window from its "
             "first bid, so the most recent ~7 days are not fully mature and fill in over time. No data exists before 6/22 (no backfill)."),

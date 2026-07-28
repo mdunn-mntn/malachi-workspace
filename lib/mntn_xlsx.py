@@ -500,9 +500,23 @@ class MntnWorkbook:
         return ws
 
     # -- public: glossary / read-me -----------------------------------------
-    def glossary(self, name, rows, intro="", toc="How to read this workbook", body_width=104):
+    def glossary(self, name, rows, intro="", toc="How to read this workbook", body_width=104,
+                 max_def_chars=220, max_entries=14):
         """Two-column term/definition sheet (term bold in A, definition wrapped in B).
-        A row of ('', '') renders a blank spacer; a row of ('Header', '') renders a bold sub-head."""
+        A row of ('', '') renders a blank spacer; a row of ('Header', '') renders a section band.
+
+        Terseness guard: a glossary entry is a term + 1-2 tight sentences (<= max_def_chars, ~3 lines),
+        not a paragraph, and a Read me stays <= max_entries. Overflows print a BUILD-time warning so a
+        glossary can't silently sprawl into prose (move why/how reasoning to the Method/notes tab). Warn,
+        don't truncate; raise the caps explicitly per-call if a deliverable genuinely needs it."""
+        ents = [(k, v) for k, v in rows if k and v]
+        over = [(k, len(v)) for k, v in ents if len(v) > max_def_chars]
+        if over or len(ents) > max_entries:
+            import sys
+            parts = ([f"{len(ents)} entries > {max_entries}"] if len(ents) > max_entries else []) \
+                + [f"'{k}' {n}ch > {max_def_chars}" for k, n in over]
+            print(f"[mntn_xlsx] Read me '{name}' over terseness caps: " + "; ".join(parts)
+                  + " - trim to 1-2 sentences; move why/how to the Method tab.", file=sys.stderr)
         ws = self._new_sheet(name, "glossary")
         self._sheet_title(ws, self.title)
         sub = f"{self.ticket}." + (f"  {_demdash(intro)}" if intro else "")

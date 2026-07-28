@@ -204,6 +204,13 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-28 · v12** — Read me / glossary terseness guard. A glossary entry is a term + 1-2 tight
+  sentences, not a paragraph. `glossary()` now warns at BUILD time (stderr) when any definition exceeds
+  `max_def_chars` (default 220, ~3 lines) or the sheet exceeds `max_entries` (default 14), so a Read me
+  can't silently sprawl into prose — move why/how reasoning to the Method tab. Warns, never truncates;
+  raise the caps per-call if a deliverable genuinely needs it. Trimmed the AUDI-1172 Read me (Rel lift was
+  516ch). Glossary cap sits alongside the existing notes-cell (≤12 lines · ≤200 chars/line) and narrative
+  explainer (≤6 sections · ≤320 chars/section) caps.
 - **2026-07-28 · v11** — Heat/scaling colors reworked. (a) The magnitude `heat=` ramp is a SEQUENTIAL
   single-hue Mountain **Green** ramp light→dark (a brief Mountain Blue trial was rejected — green is the
   table color). (b) NEW `signal=` mode for signed EFFECT/LIFT columns — semantic, not a plain gradient:
