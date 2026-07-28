@@ -40,7 +40,7 @@ The more incidents we log, the faster the next one closes. If an alert matches a
 
 | Alert signature | Root cause | Verdict | Protocol |
 |---|---|---|---|
-| `ipdsc_monitor / precondition_<partner>` GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
+| `ipdsc_monitor / precondition_<partner>` GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days, owner-confirmed (verify source absence first) | INC-001 |
 
 ---
 
@@ -48,6 +48,20 @@ The more incidents we log, the faster the next one closes. If an alert matches a
 
 ### INC-001 — `ipdsc_monitor` `precondition_bombora` sensor timeout (DS51 Bombora)
 **Date:** 2026-07-28 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [ipdsc_monitor/precondition_bombora] at 2026-07-26 17:05 PT` · `AirflowSensorTimeout: run duration 64836s exceeds timeout 64800.0` (18h).
+
+**STATUS: RESOLVED — confirmed benign by owners (no action).** Sean Yang (+ Jordan, per Sean) and Brian
+McAdams (Sr MLE) confirmed in #alerts-tpa-pipeline that a missing Bombora drop is skipped by design and is
+fine. Standing practice: **let it slide, drop a note in the #alerts-tpa-pipeline thread** so the next
+on-call doesn't re-investigate. Escalate only if Bombora misses go chronic (feed → vendor, not a re-run).
+
+**Provenance (traced 2026-07-28 — the Bombora drop IS the external top of what we own):** No MNTN code
+we control fetches Bombora. In airflow-ti nothing writes `partners/bombora/` (only wait/read); our S3→GCS
+transfer DAG `storage_transfer.py` does NOT include Bombora; grepping all 8 local MNTN repos found zero
+Bombora references outside airflow-ti's read path. The one MNTN transform (`ipdsc_bombora` builder) is
+*downstream* of the drop and correctly skips when source is absent. Delivery is automated (good drops land
+~20:1x UTC daily, e.g. 07-25 file created 07-26 20:16Z). The only hop I couldn't inspect is whether that
+automation is Bombora pushing straight to GCS vs a managed GCP Storage Transfer job in `mntn-prj-prod-00`
+(Transfer API disabled on my project) — but owners treat it as a vendor drop, so external.
 
 **Verdict: BENIGN / EXPECTED.** Bombora (DS51) is an `optional: true` partner. It didn't deliver its
 source files, so the producer skipped it and no `data_source_id=51` partition was written; the separate
