@@ -138,11 +138,18 @@ _NOBORDER = Border()
 # header cells get a thick Mountain Green underline — ties the slate header to the brand
 _HEADER_BORDER = Border(left=_THIN, right=_THIN, top=_THIN,
                         bottom=Side(style="thick", color=BRAND["ACCENT"]))
+# ALIGNMENT STANDARD (apply consistently — never leave a cell on Excel's implicit general/bottom default):
+#   - numbers / short codes / Yes-No flags  -> center + vcenter        (_CEN_FLAT)
+#   - single-line text / labels / links / headers -> left + vcenter    (_LEFT_MID_FLAT)
+#   - multi-line wrapped prose (glossary defs, notes, footnotes, wrapped table cells) -> left + TOP (_LEFT / _LEFT_MID)
+#     (top so a tall wrapped row starts its text at the top, not floating in the middle)
+# A header cell matches its column's body horizontally and is ALWAYS vertically centered.
 _CEN = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _CEN_FLAT = Alignment(horizontal="center", vertical="center")
 _CEN_WRAP = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _LEFT = Alignment(horizontal="left", vertical="top", wrap_text=True)
 _LEFT_MID = Alignment(horizontal="left", vertical="center", wrap_text=True)
+_LEFT_MID_FLAT = Alignment(horizontal="left", vertical="center")  # single-line left cells (headers, meta, links)
 _RIGHT = Alignment(horizontal="right", vertical="center")
 
 
@@ -544,9 +551,12 @@ class MntnWorkbook:
             meta.insert(2, ("Generated", self.generated))
         r = 9
         for label, val in meta:
-            ws.cell(row=r, column=1, value=label).font = _font(9, bold=True, color=BRAND["MUTE"])
+            lc = ws.cell(row=r, column=1, value=label)
+            lc.font = _font(9, bold=True, color=BRAND["MUTE"])
+            lc.alignment = _LEFT_MID_FLAT
             c = ws.cell(row=r, column=2, value=val)
             c.font = _font(11, bold=True, color=BRAND["PRIMARY"])
+            c.alignment = _LEFT_MID_FLAT
             r += 1
 
         # key takeaways (Rule of Three)
@@ -567,13 +577,17 @@ class MntnWorkbook:
         r += 1
         ws.cell(row=r, column=1, value="Contents").font = _font(13, bold=True, color=BRAND["INK"])
         r += 1
-        ws.cell(row=r, column=1, value="Tab").font = _font(9, bold=True, color=BRAND["WHITE"])
-        ws.cell(row=r, column=1).fill = _fill(BRAND["PRIMARY"])
+        # both header cells LEFT + vertically CENTER, matching the left-aligned links/descriptions below
+        # (alignment standard: header cells match their column's body horizontally, always vcenter).
+        th = ws.cell(row=r, column=1, value="Tab")
+        th.font = _font(9, bold=True, color=BRAND["WHITE"])
+        th.fill = _fill(BRAND["PRIMARY"])
+        th.alignment = _LEFT_MID_FLAT
         ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
         hc = ws.cell(row=r, column=2, value="What's on it")
         hc.font = _font(9, bold=True, color=BRAND["WHITE"])
         hc.fill = _fill(BRAND["PRIMARY"])
-        ws.cell(row=r, column=1).alignment = _CEN_FLAT
+        hc.alignment = _LEFT_MID_FLAT
         r += 1
         for sheet_name, desc, role in self._toc:
             link = ws.cell(row=r, column=1, value=sheet_name)

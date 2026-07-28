@@ -204,6 +204,13 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-28 · v8** — Header block cleaned up for visual appeal. (1) The subtitle is now ONE short
+  method line; all metric definitions/caveats live on the Read me tab, not repeated on every sheet.
+  (2) A thin Mountain Green accent rule (row 3) closes the header block off from the table. (3) Alignment
+  standard codified and applied: single-line text/labels/links/headers = left + vertical-center; numbers/
+  flags = center; multi-line wrapped prose = left + top; never leave a cell on Excel's implicit bottom
+  default. Fixed the cover Contents header (`Tab` vs `What's on it` had mismatched vertical alignment) and
+  the meta strip.
 - **2026-07-28 · v7** — Sheet subtitles wrap to the table width. The grey-italic method line under each
   title used to run off to the right on wide-text sheets; it now merges across the table columns
   (`A2:<lastcol>2`) with `wrap_text`, and `_fit_subtitle_height()` sets the row height to the wrapped text
