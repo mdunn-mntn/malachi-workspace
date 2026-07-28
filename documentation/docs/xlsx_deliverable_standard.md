@@ -204,6 +204,10 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-28 · v10** — Top breathing room on content/reference sheets. The row-1 title was jammed
+  against the top edge; it's now bottom-aligned in a taller row (`_sheet_title` helper) so there's clean
+  whitespace above it. Decision: brand identity (band/logo/eyebrow) stays on the COVER only; content and
+  reference tabs get quiet top air with no repeated branding (repeating it on every tab would clutter).
 - **2026-07-28 · v9** — Reference tabs get restrained structure (they read flat/busy before). Read me /
   Queries / Method now carry the same Mountain Green accent rule as the data tabs; Read me and Method
   section headers get a light green band; the Queries tab greys its comment lines (readable subtitle-grey

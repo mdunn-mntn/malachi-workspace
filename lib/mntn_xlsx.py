@@ -235,8 +235,7 @@ class MntnWorkbook:
         The subtitle is merged across the table columns and wrapped, so it never runs off to the
         right past the table below it. Its row height is fitted later in table() once column widths
         are known (Excel/Sheets won't auto-fit a merged cell). Applies to every table sheet."""
-        c = ws.cell(row=1, column=1, value=_demdash(finding))
-        c.font = _font(15, bold=True, color=BRAND["PRIMARY"])
+        self._sheet_title(ws, finding)
         if method:
             m = ws.cell(row=2, column=1, value=_demdash(method))
             m.font = _font(10, italic=True, color=BRAND["GREY"])
@@ -254,6 +253,17 @@ class MntnWorkbook:
         for cc in range(1, max(ncols, 1) + 1):
             ws.cell(row=row, column=cc).fill = _fill(BRAND["ACCENT"])
         ws.row_dimensions[row].height = height
+
+    def _sheet_title(self, ws, text):
+        """Write the row-1 sheet title with top breathing room: a taller row with the title
+        BOTTOM-aligned, so there is whitespace above it and the title no longer jams into the top
+        edge (the cover keeps the brand band; content/reference tabs just get clean top air).
+        Used on every non-cover sheet so the top spacing is uniform."""
+        c = ws.cell(row=1, column=1, value=_demdash(text))
+        c.font = _font(15, bold=True, color=BRAND["PRIMARY"])
+        c.alignment = Alignment(horizontal="left", vertical="bottom")
+        ws.row_dimensions[1].height = 34   # ~2.2x default -> the air sits above the bottom-aligned title
+        return c
 
     def _fit_subtitle_height(self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5):
         """Set a merged, wrapped subtitle row's height to fit its text at the table width.
@@ -426,7 +436,7 @@ class MntnWorkbook:
         """Two-column term/definition sheet (term bold in A, definition wrapped in B).
         A row of ('', '') renders a blank spacer; a row of ('Header', '') renders a bold sub-head."""
         ws = self._new_sheet(name, "glossary")
-        ws.cell(row=1, column=1, value=self.title).font = _font(15, bold=True, color=BRAND["PRIMARY"])
+        self._sheet_title(ws, self.title)
         sub = f"{self.ticket}." + (f"  {_demdash(intro)}" if intro else "")
         subc = ws.cell(row=2, column=1, value=sub)
         subc.font = _font(10, italic=True, color=BRAND["GREY"])
@@ -463,7 +473,7 @@ class MntnWorkbook:
     # -- public: SQL / queries ----------------------------------------------
     def sql(self, name, sql_text, note="", toc="The SQL behind the numbers", width=120):
         ws = self._new_sheet(name, "sql")
-        ws.cell(row=1, column=1, value="Queries used (for validation)").font = _font(15, bold=True, color=BRAND["PRIMARY"])
+        self._sheet_title(ws, "Queries used (for validation)")
         if note:
             nc = ws.cell(row=2, column=1, value=_demdash(note))
             nc.font = _font(10, italic=True, color=BRAND["GREY"])
@@ -489,7 +499,7 @@ class MntnWorkbook:
     def notes(self, name, blocks, intro="", toc="Method & caveats", body_width=110):
         """blocks = list of (heading, body). heading '' -> continuation paragraph."""
         ws = self._new_sheet(name, "notes")
-        ws.cell(row=1, column=1, value=name).font = _font(15, bold=True, color=BRAND["PRIMARY"])
+        self._sheet_title(ws, name)
         if intro:
             ic = ws.cell(row=2, column=1, value=_demdash(intro))
             ic.font = _font(10, italic=True, color=BRAND["GREY"])
