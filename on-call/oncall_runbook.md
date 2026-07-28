@@ -1,15 +1,72 @@
+---
+doc_type: runbook
+title: On-Call Runbook — Master
+summary: "Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here."
+last_verified: 2026-07-28
+keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, INC-001, INC-002]
+tags: [on-call, airflow, incident-response]
+---
+
 # On-Call Runbook — Master
 
 **Read this FIRST on any on-call alert. Append an incident entry after every resolution.**
 The more incidents we log, the faster the next one closes. If an alert matches a row in
 §2 Known-Alert Catalog, jump straight to its protocol.
 
+- **Entry point:** run **`/oncall`** (or `/oncall <alert-log-file>`) — it triages, matches the catalog,
+  and **enforces the write-back** (§3 + §2 + the JSONL log) so nothing leaks. This runbook is what
+  `/oncall` reads and writes.
 - **Home:** `on-call/` (raw alert logs live here too, named as downloaded).
-- **Update rule:** after resolving ANY alert, add/append to §2 (one-line signature) and §3 (full
-  incident). Never delete rows — a "benign, expected" verdict is as valuable as a fix.
+- **Indexed:** this file carries `doc_type: runbook` front-matter, so `.claude/scripts/build_index.sh`
+  folds its `keywords:` into `knowledge/_ROUTING.md` and lists it in `knowledge/runbooks/INDEX.md`.
+  Grep `_ROUTING.md` for an alert symptom (`sensor timeout`, `dataproc`, `bombora`) and it points here.
+  **After editing §2/§3 keywords, rebuild:** `.claude/scripts/build_index.sh`.
+- **Update rule (3 surfaces, every resolution):**
+  1. **§3 Incident log** — full incident (the human narrative + diagnosis + decision tree).
+  2. **§2 Known-Alert Catalog** — one-line signature row (so the next match is instant).
+  3. **`on-call/incident_log.jsonl`** — one machine-readable record (the queryable index; see §5).
+
+  Never delete rows — a "benign, expected" verdict is as valuable as a fix.
 - **Prod safety (non-negotiable):** never modify prod DAGs or push to `main` in `airflow-ti` /
   `sqlmesh` to "fix" an alert. Diagnose → clear/re-run or route to the owner. Widening a timeout or
   soft-failing a sensor is a code change owned by the producing team, not an on-call action.
+
+---
+
+## 0. Is this on-call? — classify FIRST, then pick the surface to write to
+
+On-call work and ticket work look similar (both "something's wrong, investigate") but they are
+**different workflows with different homes.** Decide before you start — the write-back surface differs.
+
+**It's ON-CALL (→ this runbook + an INC entry) when the trigger is an operational alert:**
+- An Airflow/Astronomer task **FAILURE** or **retry-exhausted** email/Slack (`🔴 [prod] Airflow <Team>
+  FAILURE [dag/task] at <ts>`), a **PagerDuty** page, a sensor **timeout**, a pipeline that **broke**.
+- The job is to **restore/clear/route** and **explain the alert**, not to answer an open question.
+- Output = a resolved alert + an incident record that makes the next identical alert instant.
+
+**It's a TICKET (→ `tickets/`, `/frame`, `summary.md`) when the trigger is a question or a change:**
+- "Did X move a KPI?", "size/evaluate Y", "build Z", "why does the system do W?" — analysis, design,
+  or a deliverable. No pager fired; nobody is waiting on a pipeline.
+- The job is to **answer a falsifiable question** and produce a deliverable.
+
+**Decision rule:** _Did an alert/pager fire and is a pipeline currently degraded?_
+→ **yes = on-call**, use `/oncall`, write to this runbook.
+→ **no = ticket**, use `/frame`, write to `tickets/`.
+
+**Where each artifact goes:**
+
+| Artifact | On-call | Ticket |
+|---|---|---|
+| Entry-point skill | `/oncall` | `/frame` → work → `/capture` |
+| Working record | §3 incident (`INC-NNN`) | `tickets/<key>/summary.md` |
+| Fast-match index | §2 catalog row + JSONL | `tickets/INDEX.md` + `_ROUTING.md` keywords |
+| Raw evidence | `on-call/<downloaded log>` | `tickets/<key>/outputs/` |
+| Durable code fix | **route to owning team** (never hot-patch) | the ticket / a PR |
+
+**The crossover:** an alert that reveals a real, recurring defect (not a one-off) **spawns a ticket for
+the durable fix** — but the incident still gets logged here first. Example: INC-001's durable fix
+(`soft_fail=True` on optional-partner preconditions) is an `airflow-ti` change → propose it as a ticket,
+don't hot-patch. The INC entry records "routed to ticket TI-XXX"; it doesn't do the code change.
 
 ---
 
@@ -23,7 +80,7 @@ The more incidents we log, the faster the next one closes. If an alert matches a
    `gcloud storage ls -l "gs://<bucket>/<path>/"` (reauth with `gcloud auth login` if you get
    `Reauthentication required`; do it as ONE call — parallel gsutil calls trip the reauth quota).
 4. **Classify** (see verdict taxonomy below).
-5. **Act** per class. **Log** the incident in §2 + §3.
+5. **Act** per class. **Log** the incident on all 3 surfaces (§3 + §2 + JSONL).
 
 **Verdict taxonomy**
 
@@ -31,6 +88,7 @@ The more incidents we log, the faster the next one closes. If an alert matches a
 |---|---|---|
 | **Benign / expected** | Alert is a known side-effect of intended behavior (e.g. optional-partner skip). Main pipeline succeeded. | Ack. Reply in thread "expected, <reason>". No re-run. Log it. |
 | **Late data** | The awaited object exists *now*, arrived after the sensor's window. | Clear the failed task → it passes immediately. Not an outage. |
+| **Transient infra** | A downstream cloud resource failed to provision/transiently errored (e.g. Dataproc cluster create, quota/stockout, 5xx). Config + inputs are fine. | Re-run the task once. If it recurs, check quota/region capacity, then route to the owning team. |
 | **Real upstream failure** | Object genuinely absent AND was required; or producer task threw a real error. | Find + re-run the producer task (mind batch-id traps), or route to the feed/vendor owner. |
 | **DAG/logic bug** | Wrong path, bad param, code regression. | Route to the owning team with the evidence. Do NOT hot-patch prod. |
 
@@ -38,9 +96,12 @@ The more incidents we log, the faster the next one closes. If an alert matches a
 
 ## 2. Known-Alert Catalog (signature → verdict → protocol)
 
-| Alert signature | Root cause | Verdict | Protocol |
-|---|---|---|---|
-| `ipdsc_monitor / precondition_<partner>` GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days, owner-confirmed (verify source absence first) | INC-001 |
+Grep the **DAG/task key** to match fast. If your alert's key is here, jump to its protocol.
+
+| DAG / task key | Alert signature | Root cause | Verdict | Protocol |
+|---|---|---|---|---|
+| `ipdsc_monitor / precondition_<partner>` | GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) `AirflowSensorTimeout` | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
+| `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Vertex/Dataproc **cluster create** failed inside `fangorn_inference_dataproc_pipeline` — transient infra / quota / capacity, not config | **Transient infra** (re-run once; recurring → quota/owner) | INC-002 |
 
 ---
 
@@ -49,10 +110,17 @@ The more incidents we log, the faster the next one closes. If an alert matches a
 ### INC-001 — `ipdsc_monitor` `precondition_bombora` sensor timeout (DS51 Bombora)
 **Date:** 2026-07-28 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [ipdsc_monitor/precondition_bombora] at 2026-07-26 17:05 PT` · `AirflowSensorTimeout: run duration 64836s exceeds timeout 64800.0` (18h).
 
-**STATUS: RESOLVED — confirmed benign by owners (no action).** Sean Yang (+ Jordan, per Sean) and Brian
-McAdams (Sr MLE) confirmed in #alerts-tpa-pipeline that a missing Bombora drop is skipped by design and is
-fine. Standing practice: **let it slide, drop a note in the #alerts-tpa-pipeline thread** so the next
-on-call doesn't re-investigate. Escalate only if Bombora misses go chronic (feed → vendor, not a re-run).
+**STATUS: RESOLVED — confirmed benign by owners (no action).** Sean Yang, Brian McAdams (Sr MLE), and
+Jordan Piepkow (Staff SWE, author of the skip step) confirmed in #alerts-tpa-pipeline that a missing
+Bombora drop "is not an error" — it's skipped by design. Standing practice: **let it slide, drop a note in
+the #alerts-tpa-pipeline thread** so the next on-call doesn't re-investigate. Escalate only if Bombora
+misses go chronic (feed → vendor, not a re-run).
+
+**Open design question (Jordan, 2026-07-28): remove the sensor, or not?** Recommendation = don't remove;
+make it not *page*. Set `soft_fail=_partner.optional` on the registry-driven preconditions in
+`ipdsc_monitor` (mirrors `wait_{name}_src` in `tpa_ipdsc_export`): absent partition → SKIPPED not FAILED →
+no alert, while drop days stay monitored (removing the sensor would also drop that QA coverage). Optionally
+`mode="reschedule"` so it doesn't hold a worker slot for 18h. One-line change, owned by TPA_EXPORT team.
 
 **Provenance (traced 2026-07-28 — the Bombora drop IS the external top of what we own):** No MNTN code
 we control fetches Bombora. In airflow-ti nothing writes `partners/bombora/` (only wait/read); our S3→GCS
@@ -125,7 +193,46 @@ crash) or arrives late (`force_export:true` manual run).
 
 **If this pages too often:** the durable fix is to make `ipdsc_monitor`'s DS51 precondition tolerate
 skips (e.g. `soft_fail=True` on optional partners' preconditions) so it stops paging on expected skips.
-That's a `airflow-ti` code change owned by the TPA_EXPORT / AUDI team — propose it, don't hot-patch.
+That's a `airflow-ti` code change owned by the TPA_EXPORT / AUDI team — propose it as a ticket, don't hot-patch.
+
+---
+
+### INC-002 — `fangorn_inference_pipeline_run` `inference_pipeline` — Dataproc cluster-create failure
+**Date:** 2026-07-27 · **Alert:** PagerDuty page, `fangorn_inference_pipeline_run/inference_pipeline`,
+run `scheduled__2026-07-26T18:00:00+00:00`, `try_number=2` (final retry, `max_tries=1` → exhausted → paged).
+**Error (log tail):**
+```
+RuntimeError: Job failed with:
+code: 9
+message: "The DAG failed because some tasks failed. The failed tasks are: [create-dataproc-cluster].;
+Job (project_id = mntn-targeting-prj-prod, job_id = 951702149350293504) is failed due to the above error."
+```
+Vertex AI pipeline `fangorn_inference_dataproc_pipeline` (template
+`gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_inference_dataproc_pipeline.json`,
+project `mntn-targeting-prj-prod`, region `us-central1`).
+
+**STATUS: OBSERVED — not fully root-caused (needs GCP Dataproc job inspection / owner).** Triaged from the
+log only; I do not have verified access to the Dataproc/Vertex job to confirm the sub-cause.
+
+**Verdict: TRANSIENT INFRA (working hypothesis).** The failing step is `create-dataproc-cluster` — the
+pipeline could not *provision* its compute, not a data or config error (the pipeline submitted cleanly:
+template resolved, params rendered, run URL emitted). gRPC `code: 9` = FAILED_PRECONDITION. For a Dataproc
+cluster-create that classically means **regional capacity/stockout, a quota ceiling, or a transient
+control-plane 5xx** in `us-central1`. The inference pipeline is a daily scheduled run; a one-day cluster
+provisioning miss self-recovers on the next scheduled run if the cause was capacity.
+
+**Action next time (decision tree):**
+1. **Re-run the `inference_pipeline` task once.** If it's transient capacity, the retry provisions and passes.
+2. **Still failing** → inspect the Dataproc job: open the Vertex Pipeline Run URL from the log
+   (`console.cloud.google.com/vertex-ai/locations/us-central1/pipelines/runs/fangorn-inference-dataproc-pipeline-<ts>`),
+   drill into `create-dataproc-cluster` for the real GCP error string (quota / stockout / bad machine type / network).
+3. **Quota or capacity** → request/adjust quota or retry in a different zone; that's a GCP-infra action, not a DAG edit.
+4. **Config/template regression** (bad machine type, network, service account) → route to the Fangorn/ML
+   owning team (Vertex pipeline template lives in `targeting-infra`, not `airflow-ti`). Do NOT hot-patch.
+
+**Open (for the next on-call to close):** confirm whether the 07-27 run self-healed on the 07-28 schedule,
+and capture the exact sub-cause from the Dataproc job once inspected — then flip STATUS to RESOLVED with the
+verified cause. If Dataproc cluster-create failures recur, this is a standing infra issue → spawn a ticket.
 
 ---
 
@@ -145,3 +252,35 @@ run_geo ──▶ tpa_export ──▶ external table bucket           precondit
   hard-fails `tpa_export`. Only optional partners (currently just Bombora/DS51) skip silently.
 - `ds17` sources ShareThis at `gs://mntn-data-partners/partners/sharethis/segments/date=<D-1>/`.
 - Full DS id → vendor map + ipdsc query tips: `knowledge/data_catalog.md` (`bronze.external.ipdsc__v1`, DS-id legend).
+
+**Fangorn inference chain (ML pipeline, `airflow-ti` → Vertex/Dataproc)**
+```
+fangorn_inference_pipeline_run  [Astronomer, PythonOperator: inference_pipeline]
+        │  submits Vertex AI pipeline
+        ▼
+fangorn_inference_dataproc_pipeline  (template in gs://targeting-infra-vertex-pipelines-prod/fangorn/)
+        │  step: create-dataproc-cluster  ← INC-002 failed HERE (code 9, cluster provisioning)
+        ▼
+inference on Dataproc ──▶ Fangorn scores  (project mntn-targeting-prj-prod, region us-central1)
+```
+- Alerts route via PagerDuty (`pagerduty_events` connection), not just Slack.
+- The Vertex pipeline template + Dataproc config live in **`targeting-infra`** (not `airflow-ti`); a
+  config regression is routed there. `airflow-ti` only *submits* the pipeline.
+- Fangorn context: see `[[fangorn_tier_assignment]]`, `[[fangorn_two_model_passes]]`, `[[fangorn_detection]]` in memory.
+
+---
+
+## 5. Structured incident log (`on-call/incident_log.jsonl`)
+
+Append-only JSONL, one record per incident — the machine-readable index over §3 (mirrors the perf/request
+logs). Lets you answer "how often does `precondition_bombora` page?" or "which DAG pages most?" without
+reading the prose. **Write one record every time you add an INC to §3.**
+
+Record shape (one line per incident):
+```json
+{"inc":"INC-001","date":"2026-07-28","dag":"ipdsc_monitor","task":"precondition_bombora","team":"TPA_EXPORT","signature":"AirflowSensorTimeout 18h optional-partner skip","verdict":"benign_expected","action":"ack_no_rerun","resolved":true,"ticket":null,"ref":"§3 INC-001"}
+```
+Fields: `inc` · `date` (YYYY-MM-DD) · `dag` · `task` · `team` · `signature` (short) · `verdict`
+(`benign_expected|late_data|transient_infra|real_upstream_failure|dag_bug`) · `action`
+(`ack_no_rerun|clear_task|rerun|force_export|routed_owner|spawned_ticket`) · `resolved` (bool) ·
+`ticket` (TI/AUDI key if a durable fix was spun out, else null) · `ref` (`§3 INC-NNN`).
