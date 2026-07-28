@@ -72,6 +72,20 @@ DS14 8d set = 259M IPs; 1d = 149M. At the strict 1-day window (original thesis) 
 
 **Not the lever:** cutting raw-visit / DS13 retention. 30d = the model's scoring lookback, not slack.
 
+### Cost estimate (Dataproc Serverless; order-of-magnitude, 2026-07-28)
+
+Pipeline runs on **Dataproc Serverless** (DCU-billed, autoscaled per job), not provisioned clusters. Whole `audience_intent` scoring DAG + `populate_data_source` ≈ **$1,300/day ≈ $39k/mo** (point estimate; band ~$13k-$59k/mo). Cost concentrates in `prospecting_keywords` ($396/day, 34% — the DS19 keyword job over ~33.8B rows), `prospecting_join` + `advertiser_join` (~22% each). The vertical high/mid jobs are only ~$100/day combined.
+
+**The prize is where the DS19 volume lands.** DS19 MM Core is consumed by `prospecting_keywords`, NOT the vertical jobs. Mapping input-cut levers to the jobs they drive:
+
+| Lever | Job(s) | Savings |
+|---|---|---|
+| DS13 −39% | vertical high/mid + ½ populate | ~$1.3k/mo |
+| **DS19 −69%** | **`prospecting_keywords` + ½ populate** | **~$9.6k/mo** (the real prize) |
+| Both | — | **~$11k/mo (~$130k/yr)** |
+
+Confidence: LOW / order-of-magnitude. Executor sizes/tiers/ceilings are exact from source; runtime + avg concurrent executors are assumed (jobs rarely sit at ceiling). Assumes the 69% distinct-IP cut shrinks `prospecting_keywords`' exploded keyword×IP rows ~linearly. **Firm up to a point estimate** via the GCP Billing BQ export (Dataproc Serverless SKUs, grouped by batch labels `team=ti`, `application=tpa-export`) or `gcloud dataproc batches describe` (`runtimeInfo.approximateUsage.milliDcuSeconds` per `aud-int-*` batch).
+
 ## 6. Questions Answered
 
 - **Q:** Is DS14 a pre-MM recency filter? **A:** No. Born Aug 2025, prod Dec 2025 (AUDI-369), post-MM.
@@ -86,7 +100,7 @@ DS14 8d set = 259M IPs; 1d = 149M. At the strict 1-day window (original thesis) 
 
 ## 8. Open Items / Follow-ups
 
-- **$ figure** — Dataproc cost of the `audience_intent` scoring stage (estimate in progress; no GCP billing export in catalog, so config-based). Firm up with a Dataproc job-history / billing export if available.
+- **$ figure — DONE (order-of-magnitude):** gate optimization saves ~$1.3k/mo (DS13) to ~$11k/mo (~$130k/yr, if DS19 cut is applied to `prospecting_keywords` where the volume lands). Whole scoring DAG ≈ $39k/mo. Firm up to a point estimate via GCP Billing BQ export / `gcloud dataproc batches describe` (DCU-seconds per batch).
 - **Consumer audit** — enumerate readers of the scored universe beyond the bidder (deciles AUD-5221, LiftLab exports, lookalike seeds, Fangorn training). Totals/sizing already DS14-gated.
 - **Owner validation** — confirm no-loss with Ryan Kleck / Sean Yang / Zach Schoenberger before AUDI-1176.
 - **Exact intersection** — optional exact DISTINCT+JOIN to confirm the HLL estimate.

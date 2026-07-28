@@ -1998,7 +1998,7 @@ loss**: any IP that becomes addressable is scored that day from still-retained D
 universe, not input retention. **Risk to clear first:** enumerate non-bidding consumers of the full scored universe (totals/
 sizing already DS14-gated; check lookalike seeds, LiftLab exports, AUD-5221 deciles, Fangorn training) and gate only the
 serving-bound path if a modeling path needs the full universe. Validate the no-loss argument with the bidder owners (Ryan
-Kleck / Sean Yang / Zach Schoenberger). $ figure pending the audience_intent DAG's Dataproc cost.
+Kleck / Sean Yang / Zach Schoenberger). **$ (order-of-magnitude, Dataproc Serverless):** whole `audience_intent` scoring DAG ≈ $39k/mo; the gate saves ~$1.3k/mo (DS13 verticals) to ~$11k/mo (~$130k/yr) if the DS19 cut is applied to `prospecting_keywords` (34% of DAG cost) where the MM Core volume lands. Tracked in AUDI-1175/1176.
 
 ### Where the UI audience-size number lives (TI-1026, Nick Martin/Matt Brorby/Jordan Piepkow 2026-06-15)
 
