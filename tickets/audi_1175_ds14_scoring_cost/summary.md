@@ -4,7 +4,7 @@ title: "AUDI-1175: Quantify $ cost of scoring non-addressable MM/vertical IPs (D
 status: backlog
 date: 2026-07-28
 summary: "Cost the MM/vertical IPs DS14's 8-day gate makes non-biddable; go/no-go on gating scoring"
-result: ""
+result: "Gate is safe across all consumers (HHST auction-scoped); worth ~$2-11k/mo; impl = AUDI-1176"
 question: "How much compute $ is spent scoring MM/vertical IPs DS14 makes non-biddable, and can we gate it with no coverage loss?"
 framing_state: locked
 ---

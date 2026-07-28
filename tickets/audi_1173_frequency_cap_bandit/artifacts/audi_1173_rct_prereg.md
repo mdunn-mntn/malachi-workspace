@@ -86,17 +86,17 @@ Shared-IP purge BEFORE randomization (external-validity bound quantified) · **s
 
 ## 10. Prerequisites (must be true before enrollment)
 
-1. **New `@SteelHouse/rtb` bidder feature** shipped: per-household bucket→arm→cap in `do_fcap` (arms B/C are not config-only — confirmed in code). Hash bit-match verified jointly.
-2. `PENDING-A` resolved (source + join key). `PENDING-B/C` (freq≥8 `p0_total` + N) **confirmed at Checkpoint β** from Step 3's total-visit-by-frequency curve — provisional until then.
-3. Eligible-stratum build + shared-IP purge + site-wide-pixel universe validated.
+1. **New `@SteelHouse/rtb` bidder feature** shipped: per-household bucket→arm→cap in `do_fcap` (arms B/C are not config-only — confirmed in code). Hash bit-match verified jointly on the **16-hex TI-837 form** (`CAST(advertiser_id AS STRING)` preimage, 16 hex chars, mod-1000).
+2. `PENDING-A` source **BUILT**: custom `logdata.guid_log` join on `(advertiser_id, ip)` over `[first_impression, +30-60d]` carrying RCT arm membership (`lift__ghost_bid_visits` = 7d reference only). `PENDING-B/C` (freq≥9 count **mean + variance** + N) **confirmed at Checkpoint β** from Step 3's total-visit-by-frequency curve — provisional until then (N off the critical path).
+3. Eligible-stratum build (predicted ≥ cap+1) + shared-IP purge + site-wide-pixel universe validated.
 
 ## 11. Primary outcome — exact definition
 
-**Total advertiser site visits by the household (IP)** over the window, from the site pixel / total-traffic signal, **independent of MNTN last-touch attribution**. Binary primary = `≥1 total site visit` (yes/no). **Source (resolved):** primary **`dw-main-silver.enriched.lift__ghost_bid_visits`** (binary `visited` per arm × ip, guid_log-based); observational fallback = direct **`dw-main-silver.logdata.guid_log`** join. **Join key = `(advertiser_id, ip)`** (ip CIDR-stripped, visit in `[first_bid_time, +window)`). Attribution-independent (holdout arm empirically 0.886% visit rate at 0.0% won-rate). Attributed VV (`ui_visits`) is **secondary/diagnostic only**.
+**Primary = mean total advertiser site visits per household (IP) — a COUNT** — over the window, from the site pixel / total-traffic signal, **independent of MNTN last-touch attribution**. Binary incidence `≥1 total site visit` (yes/no) is a **secondary/diagnostic**, not the primary. **Source (RCT-grade, to be BUILT):** a **custom `dw-main-silver.logdata.guid_log` join** on `(advertiser_id, ip)` counting each household's total visits over a **post-anchored `[first_impression, +30-60d]` window carrying RCT arm membership** — the only source that yields the ≥30d, arm-A/B/C estimand. **`dw-main-silver.enriched.lift__ghost_bid_visits` is a platform sanity/reference ONLY** (7-day window on ghost/submitted arms — not the RCT's A/B/C, so it cannot deliver the estimand). **Join key = `(advertiser_id, ip)`** (ip CIDR-stripped). Attribution-independent (ghost/holdout reference empirically 0.886% 7d visit rate at 0.0% won-rate). Attributed VV (`ui_visits`) is **secondary/diagnostic only**.
 
 ## 12. What would falsify / flip the conclusion
 
-- Lower 95% bound of the visit contrast dips below `−δ` → cap fails NI → NO-GO on that cell.
+- Lower 95% bound of the **relative mean-count** visit contrast `(μ_T − μ_C)/μ_C` dips below `−δ` (δ = 5% relative) → cap fails NI → NO-GO on that cell.
 - Cost/household not significantly reduced → NO-GO even if visits non-inferior.
 - Cap-8 passes but cap-3 fails → incremental floor between 3 and 8/wk.
 - Attributed-VV and total-visit contrasts converge → the D8 attribution-bias concern is empirically small (report both).
