@@ -216,11 +216,10 @@ The "Incrementality" initiative (BER-2250 umbrella) contains two separate workst
 **1. Incrementality Experiment (BER-2250 discovery)**
 Does MNTN's current intent targeting generate incremental lift? Uses score shuffling and ITT (Intent-to-Treat) methodology as described in the experiment brief. This is discovery work that must come first.
 
-**2. Population Split / "Deciles" (AUD-5221)**
-Enables customer-facing A/B testing by splitting the entire US IP universe into 10 randomly assigned groups (US Population 1–10). Advertisers can select even/odd groups to create clean A/B campaign splits with any variable (e.g., creative) tested across them. This is the same mechanism used by The Trade Desk.
-- Groups must be kept current as IPs rotate in/out (cadence TBD: daily or weekly)
-- Implemented via a new data source; existing MemDB hash mechanism may be reusable
-- Owned by TI team (confirmed); timeline TBD pending design decision on random vs. intent-stratified deciles
+**2. Audience Deciles (AUD-5221)** — CLOSED. Delivered as **intent-score-distribution deciles**, NOT a random US-population split (corrected 2026-07-28 against the Jira ticket text; owner Malachi).
+Splits audiences into deciles based on the **intent-score distribution** (even deciles 0/2/4/6/8 = control, odd 1/3/5/7/9 = treatment) so the Intent-Score-Shuffling experiment has statistically comparable groups. It operates on the scored/addressable set. The "random vs. intent-stratified" design question resolved to **intent-stratified**.
+- Earlier framing (this note, April 2026) described a TTD-style random split of the entire US IP universe into US Population 1–10. That is NOT what AUD-5221 shipped; a true random population split, if ever built, would be a separate net-new full-universe pipeline.
+- Groups must be kept current as IPs rotate in/out; existing MemDB hash mechanism may be reusable. Owned by TI/AUDI.
 
 These are tracked separately in Jira but both fall under the Incrementality OKR.
 - ### Fangorn Experiment Results — Current Lift by Intent Tier (as of April 2026)
