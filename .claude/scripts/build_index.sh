@@ -74,6 +74,19 @@ if os.path.isdir(ocdir):
         fm["_abspath"] = path
         docs.append(fm)
 
+# Also fold selected ROOT-level docs (workspace-root *.md that carry doc_type front-matter, e.g.
+# improvements_backlog.md) into the index. They live at the repo ROOT — not knowledge/ — so their existing
+# references (CLAUDE.md Key Paths, memory) stay stable, but their keywords should also be grep-retrievable
+# via _ROUTING.md. Non-recursive + doc_type-gated, so README.md / CLAUDE.md (no front-matter) are skipped.
+for fn in sorted(os.listdir(root)):
+    if not fn.endswith(".md") or fn.startswith("_") or fn == "INDEX.md":  continue
+    path = os.path.join(root, fn)
+    if not os.path.isfile(path):  continue
+    fm = parse_front_matter(path)
+    if not fm or "doc_type" not in fm:  continue
+    fm["_abspath"] = path
+    docs.append(fm)
+
 
 def link(from_dir, doc):
     return os.path.relpath(doc["_abspath"], start=from_dir)
