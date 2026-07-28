@@ -3,7 +3,7 @@ doc_type: runbook
 title: On-Call Runbook — Master
 summary: "Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here."
 last_verified: 2026-07-28
-keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, INC-001, INC-002]
+keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, INC-001, INC-002]
 tags: [on-call, airflow, incident-response]
 ---
 
@@ -101,7 +101,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | DAG / task key | Alert signature | Root cause | Verdict | Protocol |
 |---|---|---|---|---|
 | `ipdsc_monitor / precondition_<partner>` | GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) `AirflowSensorTimeout` | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
-| `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Vertex/Dataproc **cluster create** failed inside `fangorn_inference_dataproc_pipeline` — transient infra / quota / capacity, not config | **Transient infra** (re-run once; recurring → quota/owner) | INC-002 |
+| `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even in QA / a challenger run — starves `create-dataproc-cluster` → code 9. Resource contention, NOT stockout or config. | **Resource contention** — confirm no other Dataproc job is running, let the concurrent/challenger job FINISH, then manually re-trigger the champion. Blind re-run fails while a job still runs. | INC-002 |
 
 ---
 
@@ -211,28 +211,31 @@ Vertex AI pipeline `fangorn_inference_dataproc_pipeline` (template
 `gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_inference_dataproc_pipeline.json`,
 project `mntn-targeting-prj-prod`, region `us-central1`).
 
-**STATUS: OBSERVED — not fully root-caused (needs GCP Dataproc job inspection / owner).** Triaged from the
-log only; I do not have verified access to the Dataproc/Vertex job to confirm the sub-cause.
+**STATUS: RESOLVED — owner root-caused + fixed (Brian McAdams, 2026-07-28, #alerts-tpa-pipeline).**
 
-**Verdict: TRANSIENT INFRA (working hypothesis).** The failing step is `create-dataproc-cluster` — the
-pipeline could not *provision* its compute, not a data or config error (the pipeline submitted cleanly:
-template resolved, params rendered, run URL emitted). gRPC `code: 9` = FAILED_PRECONDITION. For a Dataproc
-cluster-create that classically means **regional capacity/stockout, a quota ceiling, or a transient
-control-plane 5xx** in `us-central1`. The inference pipeline is a daily scheduled run; a one-day cluster
-provisioning miss self-recovers on the next scheduled run if the cause was capacity.
+**Verdict: RESOURCE CONTENTION (Dataproc saturation) — NOT stockout / quota / config.** The Fangorn
+inference pipeline — and any Fangorn-like inference pipeline — caps out MNTN's Dataproc usage at **~94%**.
+So if ANY other Dataproc job is running concurrently (even a **QA / challenger** run), `create-dataproc-cluster`
+can't get capacity to provision and fails with gRPC `code: 9` (FAILED_PRECONDITION). The blocker is another
+job holding the compute — not a regional stockout and not a template regression (the pipeline submitted
+cleanly: template resolved, params rendered, run URL emitted). Brian caused this run's failure (a challenger
+was running) and fixed it by **letting the challenger finish, then manually re-triggering the champion**.
 
 **Action next time (decision tree):**
-1. **Re-run the `inference_pipeline` task once.** If it's transient capacity, the retry provisions and passes.
-2. **Still failing** → inspect the Dataproc job: open the Vertex Pipeline Run URL from the log
-   (`console.cloud.google.com/vertex-ai/locations/us-central1/pipelines/runs/fangorn-inference-dataproc-pipeline-<ts>`),
-   drill into `create-dataproc-cluster` for the real GCP error string (quota / stockout / bad machine type / network).
-3. **Quota or capacity** → request/adjust quota or retry in a different zone; that's a GCP-infra action, not a DAG edit.
-4. **Config/template regression** (bad machine type, network, service account) → route to the Fangorn/ML
-   owning team (Vertex pipeline template lives in `targeting-infra`, not `airflow-ti`). Do NOT hot-patch.
+1. **Do NOT blind-re-run.** First check whether another Dataproc job is running (a challenger pipeline, a QA
+   job, another Fangorn-like inference run) in project `mntn-targeting-prj-prod` / region `us-central1`.
+2. **Another job running** → **wait for it to finish**, THEN manually re-trigger the champion
+   `inference_pipeline`. Re-running while the other job holds Dataproc just re-fails with code 9.
+3. **Nothing else running yet it still fails** → inspect the Dataproc job via the Vertex Run URL from the
+   log (`console.cloud.google.com/vertex-ai/locations/us-central1/pipelines/runs/fangorn-inference-dataproc-pipeline-<ts>`),
+   drill into `create-dataproc-cluster` for the real GCP error (now genuine quota/stockout/config is in play).
+4. **Recurring collisions** (champion + challenger routinely overlap) → durable fix is scheduling/quota
+   (stagger runs, raise the Dataproc ceiling, or a concurrency guard), owned by the Fangorn/ML + infra team
+   (template lives in `targeting-infra`, not `airflow-ti`). Spawn a ticket; do NOT hot-patch.
 
-**Open (for the next on-call to close):** confirm whether the 07-27 run self-healed on the 07-28 schedule,
-and capture the exact sub-cause from the Dataproc job once inspected — then flip STATUS to RESOLVED with the
-verified cause. If Dataproc cluster-create failures recur, this is a standing infra issue → spawn a ticket.
+**Durable-fix note:** the ~94% Dataproc ceiling makes champion/challenger collisions a standing risk. If
+this pages repeatedly, raise a ticket for run-staggering or a higher Dataproc quota rather than
+hand-re-triggering each time.
 
 ---
 
@@ -259,11 +262,14 @@ fangorn_inference_pipeline_run  [Astronomer, PythonOperator: inference_pipeline]
         │  submits Vertex AI pipeline
         ▼
 fangorn_inference_dataproc_pipeline  (template in gs://targeting-infra-vertex-pipelines-prod/fangorn/)
-        │  step: create-dataproc-cluster  ← INC-002 failed HERE (code 9, cluster provisioning)
+        │  step: create-dataproc-cluster  ← INC-002 failed HERE (code 9 = Dataproc saturated by a concurrent job)
         ▼
 inference on Dataproc ──▶ Fangorn scores  (project mntn-targeting-prj-prod, region us-central1)
 ```
 - Alerts route via PagerDuty (`pagerduty_events` connection), not just Slack.
+- **Dataproc ~94% cap:** a Fangorn(-like) inference run saturates Dataproc; a concurrent Dataproc job (even
+  QA / a challenger) starves `create-dataproc-cluster` → code 9. Fix = let the other job finish, then
+  re-trigger the champion. Never two Fangorn-like inference runs on Dataproc at once. (INC-002)
 - The Vertex pipeline template + Dataproc config live in **`targeting-infra`** (not `airflow-ti`); a
   config regression is routed there. `airflow-ti` only *submits* the pipeline.
 - Fangorn context: see `[[fangorn_tier_assignment]]`, `[[fangorn_two_model_passes]]`, `[[fangorn_detection]]` in memory.

@@ -60,6 +60,20 @@ for dirpath, _dirs, files in os.walk(kdir):
         fm["_abspath"] = path
         docs.append(fm)
 
+# Also fold on-call docs (the master runbook + any future incident docs) into the index. They live in
+# on-call/ — NOT knowledge/ — so every existing reference (CLAUDE.md, memory, "read this FIRST") stays
+# stable, but they carry doc_type: runbook front-matter and should be keyword-retrievable via _ROUTING.md
+# and listed in runbooks/INDEX.md exactly like any other runbook.
+ocdir = os.path.join(root, "on-call")
+if os.path.isdir(ocdir):
+    for fn in sorted(os.listdir(ocdir)):
+        if not fn.endswith(".md") or fn.startswith("_") or fn == "INDEX.md":  continue
+        path = os.path.join(ocdir, fn)
+        fm = parse_front_matter(path)
+        if not fm or "doc_type" not in fm:  continue
+        fm["_abspath"] = path
+        docs.append(fm)
+
 
 def link(from_dir, doc):
     return os.path.relpath(doc["_abspath"], start=from_dir)

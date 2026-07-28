@@ -11,7 +11,7 @@ chmod +x .claude/hooks/*.sh scripts/*.sh
 Hooks auto-load from `.claude/settings.json` whenever Claude Code is opened at the repo root.
 Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the scripts.)
 
-## Hooks (7, all defensive: any parse failure or non-match exits 0 — a hook never wedges a session)
+## Hooks (8, all defensive: any parse failure or non-match exits 0 — a hook never wedges a session)
 
 | event | script | what it does | can it block? |
 |-------|--------|--------------|---------------|
@@ -22,6 +22,7 @@ Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the 
 | `SessionStart` | `session_start_routing.sh` | prints the retrieval map + coverage rollup + doc-debt count + perf-log size + the `health_scorecard.py` line so a fresh chat orients without full ingestion | no |
 | `Stop` | `capture_reminder.sh` | advisory: if the queue is non-empty or a knowledge doc changed since the last index build, reminds you to `/capture` + `build_index.sh` | no (advisory) |
 | `Stop` | `comms_cap_reminder.sh` | advisory: soft nudge on the Terse Comms Standard caps before anything ships to Jira / an .xlsx read-me | no (advisory) |
+| `Stop` | `oncall_triage_reminder.sh` | advisory: if a raw alert log sits in `on-call/` newer than `incident_log.jsonl` (an alert landed but was never logged), nudge to run `/oncall` — the safety net for the "append every incident" rule | no (advisory) |
 
 **Terse Comms Standard** (global `CLAUDE.md §9`): outward-facing prose (Jira comments, ticket descriptions, .xlsx read-me/notes) leads with the answer and obeys hard char/word caps. `scripts/lint_comms.py` is the checker (kinds: `comment|completion|description|xlsx`); `comms_lint_precheck.sh` is its real teeth — it lints the actual payload of a Jira curl before it posts. The `bq_*` guards protect *inputs*; the `comms_*` guards protect *outputs*.
 

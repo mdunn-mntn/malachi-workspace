@@ -4,14 +4,26 @@ See global `~/.claude/CLAUDE.md` for the full operating rules (always-on behavio
 
 ## On-Call Protocol
 
-**Any on-call alert (Airflow failure, pipeline break, pager): read `on-call/oncall_runbook.md` FIRST.**
-It holds the general triage protocol, a Known-Alert Catalog (signature → verdict → fix), a per-incident
-log, and producer→consumer system maps. If the alert matches a catalog row, follow its protocol directly.
+**Any on-call alert (Airflow failure, pipeline break, pager): run `/oncall` — or read `on-call/oncall_runbook.md` FIRST.**
+The runbook holds §0 the **on-call-vs-ticket classifier** (which surface to write to), §1 the general
+triage protocol, §2 a Known-Alert Catalog (DAG/task key → signature → verdict → protocol), §3 a
+per-incident log, §4 producer→consumer system maps, and §5 the structured `incident_log.jsonl`. If the
+alert matches a §2 catalog row, follow its linked INC decision tree directly.
 
-**After resolving ANY alert, update the runbook** — append the incident to §3 and a one-line signature to
-§2. This is a living doc: every incident makes the next one faster. Raw alert logs go in `on-call/`.
-**Never hot-patch prod** to silence an alert (see `airflow_prod_safety`) — diagnose, then clear/re-run or
-route to the owning team.
+**Distinguish on-call from a ticket first (runbook §0):** _an alert/pager fired and a pipeline is
+degraded_ → on-call, use `/oncall`, write to the runbook. _A question or a change with no pager_ →
+ticket, use `/frame`, write to `tickets/`. An alert that exposes a recurring defect **spawns a ticket**
+for the durable fix, but the incident is logged in the runbook first.
+
+**The runbook is indexed like anything else:** it carries `doc_type: runbook` front-matter, so
+`build_index.sh` (now crawls `on-call/`) folds its keywords into `knowledge/_ROUTING.md` and lists it in
+`knowledge/runbooks/INDEX.md`. Grep `_ROUTING.md` for an alert symptom to reach it.
+
+**After resolving ANY alert, write back to all 3 surfaces** — §3 incident, §2 one-line signature, and one
+JSONL record in `on-call/incident_log.jsonl`. `/oncall` enforces this; the `oncall_triage_reminder.sh`
+Stop hook nudges if a raw alert log sits in `on-call/` newer than the incident log (un-triaged debt).
+Every incident makes the next one faster. Raw alert logs go in `on-call/`. **Never hot-patch prod** to
+silence an alert (see `airflow_prod_safety`) — diagnose, then clear/re-run or route to the owning team.
 
 ## Self-Documenting System (adopted from the AI Workflow Kit)
 

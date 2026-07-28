@@ -5,6 +5,7 @@ Prior work, newest first. `result` = the blessed one-line answer (skip re-readin
 
 | date | ticket | summary | status | result | doc |
 |------|--------|---------|--------|--------|-----|
+| 2026-07-28 | AUDI-1172: MNTN Select vs non-Select prospecting incrementality (ghost-bid) | Select vs non-Select ghost-bid visit lift for Kirsa's 93 AIDs, advertisers running both, from lift__ghost_bid_rollup | done | Select prospecting drives ~5x the relative visit lift of non-Select: +22.0% vs +4.3% pooled (both sig); Select wins in 27/35 advertisers | [doc](audi_1172_select_vs_nonselect_incrementality/summary.md) |
 | 2026-07-27 | AUDI-1049: Fangorn on MNTN ID — parallel feature store + model | Household-grain (MNTN ID) Fangorn: parallel MNTN-ID-keyed feature store + retrained model. Sept-4 MVP. | backlog | not started | [doc](audi_1049_fangorn_on_mntn_id/summary.md) |
 | 2026-07-27 | ↳ AUDI-1100: Household Feature Engineering (Fangorn on MNTN ID) | Tune aggregation (sum/mean/recency) + cross-IP enrichment on top of 1134's v1 IP-parity household store | backlog | not started | [doc](audi_1049_fangorn_on_mntn_id/audi_1100_household_feature_engineering/summary.md) |
 | 2026-07-27 | ↳ AUDI-1134: Build MNTN-ID household feature store (Option 1 pipeline) | Build the household-grain feature store pipeline (L1 graph mirror -> resolution -> L2/L3 -> orchestration) at v1 IP-parity aggregation | backlog | not started | [doc](audi_1049_fangorn_on_mntn_id/audi_1134_feature_store_build/summary.md) |
@@ -99,3 +100,4 @@ Prior work, newest first. `result` = the blessed one-line answer (skip re-readin
 | 2026-03-03 | TI-390: Investigate MMv3 Performance | Verify MMv3 audience-membership model change improved targeting without regressions | done | Investigation complete; findings documented in Drive gdoc and gsheet | [doc](ti_390_mmv3_performance/summary.md) |
 | 2026-03-03 | TI-391: Pre/Post Analysis of Audience Intent Scoring Changes | Measure whether the updated Audience Intent Scoring model improved campaign performance | done | Complete — pre/post analysis done; findings documented in Drive gdoc/gsheet | [doc](ti_391_audience_intent_scoring/summary.md) |
 | 2026-03-03 | TI-502: IP Scoring — How We Use Scores | Document how MNTN uses IP scores across the bidding and targeting pipeline | done | Reference doc created; scores live in cost_impression_log.model_params + membership DB | [doc](ti_502_ip_scoring/summary.md) |
+| — | audi_1173_frequency_cap_bandit | AUDI-1173 — Adaptive frequency-cap bandit | — | — | [doc](audi_1173_frequency_cap_bandit/summary.md) |

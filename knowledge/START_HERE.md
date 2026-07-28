@@ -41,6 +41,7 @@ Every query runs through `.claude/scripts/bq_run.sh` (logs cost + `sql_tables` t
 | **a data-source `DSxx`** | `ds_catalog.md` |
 | **tune a slow/expensive query** | `bq/optimization_playbook.md`, `bq/query_cookbook.md`, the table's `## Observed cost`, and mine `bq_perf_log.jsonl` via `.claude/scripts/perf_digest.py` |
 | **verify how a reported number was produced** | `.claude/scripts/bq_verify.py <ticket \| label \| sql_sha256>` → the exact SQL fingerprint + `job_id` (recovers full SQL via `bq show -j`) + git commit + cost. Every `bq_run.sh` run is provenance-stamped. |
+| **an Airflow / pager / pipeline alert (on-call)** | `on-call/oncall_runbook.md` — §0 classify (alert vs ticket) → §2 catalog → §3 incidents — or run **`/oncall`**. Grep `_ROUTING.md` for the symptom (`sensor timeout`, `dataproc`, the DAG name). |
 | **prior work on a topic** | `tickets/INDEX.md` → the ticket's `summary.md` |
 | **where a file belongs** | `folder_definitions.md` (ticket structure authority) |
 
