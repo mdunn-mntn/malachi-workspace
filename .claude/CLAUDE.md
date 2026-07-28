@@ -74,6 +74,8 @@ gitignored/local-only so request-mining runs only on the Mac (`/workflow-audit r
 corpus crawl runs this loop (implementer → 2 reviewers → fixer) per unit — see
 `workflows/agent_pass_runbook.md` + `INGEST_GUIDE.md`.
 
+**Background/async work must be actively monitored (never passive-wait).** When you dispatch `Agent(run_in_background:true)`, a `Workflow`, or background `Bash`, arm a stall-detector `Monitor` (poll ~5 min; alert only when the task's transcript/output mtimes are idle > ~15 min) — a HUNG task sends NO completion notification, so waiting on the notification alone can stall silently (this cost ~2h in the AUDI-1173 orchestration, 2026-07-28). Prefer the `Workflow` tool for multi-unit fan-out (one tracked task, `/workflows` progress) over many loose background agents. Treat as hung + re-dispatch the unfinished unit when `TaskOutput(block:false)` → "No task found" with no notification, or transcript/output/perf-log mtimes are stale > ~15 min. Stall = idle / no forward progress, not impatience (don't preempt a long-but-actively-progressing BQ job). Detail: memory `background_work_liveness`.
+
 ## Workspace Structure
 
 ```
