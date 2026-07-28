@@ -1,6 +1,6 @@
 # RFD — AUDI-1173: Approve a frequency-cap RCT as MNTN's first-bandit validation gate
 
-*Status: DRAFT for review. Decision doc / Request-for-Decision. Confluence-ready. Sources: `audi_1173_rct_design.md`, `audi_1173_rct_prereg.md` (locked), `audi_1173_refined_sizing.md`, `audi_1173_leakage_brief.md`, `audi_1173_ownership_feasibility_memo.md`, `audi_1173_scope.md`. Every caveat in those docs survives here.*
+*Status: DRAFT for review. Decision doc / Request-for-Decision. Confluence-ready. Sources: `audi_1173_rct_design.md`, `audi_1173_rct_prereg.md` (DRAFT-PENDING-LOCK), `audi_1173_refined_sizing.md`, `audi_1173_leakage_brief.md`, `audi_1173_ownership_feasibility_memo.md`, `audi_1173_scope.md`.*
 
 ---
 
@@ -18,7 +18,7 @@ We evaluated two candidate first bandits. They differ on the one thing that matt
 |---|---|---|
 | Knob | impression cap per rolling window | per-campaign `household_score` threshold |
 | Causal reward measurable in BQ? | No observationally, **YES via a cheap household-randomized RCT** | **No** — graduated per-band lift is blocked in BQ (no holdout stream carries a 0-10000 score) |
-| Proof path | runnable now on existing MD5 holdout bucketing | needs a GCS + Databricks build (the BER-2250 path) |
+| Proof path | a cheap household-randomized RCT (needs a small bidder feature + a purpose-built visit source) | needs a GCS + Databricks build (the BER-2250 path) |
 
 Frequency wins because we can demonstrate value fast, and the lift-measurement muscle it builds (randomized household holdouts to incremental visits) is exactly what the HHST bandit needs later. Sequence: frequency first, HHST second.
 
@@ -33,22 +33,22 @@ Frequency wins because we can demonstrate value fast, and the lift-measurement m
 
 **Neither metric proves a cap would recover value.** The data is consistent with a cap recovering most of the over-cap spend, or almost none of it. Only a household-randomized cap RCT can measure the causal marginal value. This is the argument for the experiment, not a result from it.
 
-The pool is real and bounded: **~42% of combined / ~35% of prospecting 30d-delivered spend sits at freq greater-than-or-equal-to 8**, and **~$3.9M/30d combined (shared-IP-purged) is gross-addressable above an 8-per-30d cap** (~$3.4M of it prospecting). This is the gross pool a cap would stop buying. **It is not a saving.** With fixed campaign budgets, capped spend is redirectable, not saved. What fraction is truly non-incremental is unknown until the RCT runs, and could be small, especially in retargeting where visits were returning anyway.
+The pool is real and bounded: **~32% of combined / ~30% of prospecting 30d-delivered spend (shared-IP-purged) sits at freq greater-than-or-equal-to 8**, and **~$3.9M/30d combined (shared-IP-purged) is gross-addressable above an 8-per-30d cap** (~$3.4M of it prospecting). This is the gross pool a cap would stop buying. **It is not a saving.** With fixed campaign budgets, capped spend is redirectable, not saved. What fraction is truly non-incremental is unknown until the RCT runs, and could be small, especially in retargeting where visits were returning anyway.
 
 ---
 
 ## The RCT
 
-**3-arm, household-randomized, non-inferiority on visits + superiority on cost. ~10-12 weeks. Runnable on the existing incrementality plane.**
+**3-arm, household-randomized, non-inferiority on visits + superiority on cost. ~10-12 week run, after a bidder feature + a purpose-built visit source ship.**
 
 - **Arms (equal thirds of non-holdout traffic).** A = control / BAU cap (buckets 100-399); B = cap 8 per rolling week (400-699); C = cap 3 per rolling week (700-999). Default-cap campaigns only. Platform 10% holdout (0-99) excluded by construction.
 - **Unit = household `(advertiser_id, ip)`**, randomization unit = analysis unit. Hash = the TI-837-validated MD5 form, computed bit-identically on the bidder and BQ sides so the arms stay disjoint from the platform holdout.
 - **Eligibility is ex ante** (pre-period predicted-to-exceed-cap, `predicted >= cap+1`), never realized in-experiment frequency (that is a collider the cap causes). Analyzed ITT on the eligible stratum, per arm.
-- **Primary metric = mean TOTAL site visits per household, a COUNT** (attribution-independent, from the site pixel via a custom `guid_log` join over `[first_impression, +30-60d]` carrying arm membership). Attribution-independent because the higher-frequency control arm wins the last-touch tiebreak more often, which would bias attributed VV against capping. Total visits removes that.
+- **Primary metric = mean TOTAL site visit-days per household, a COUNT** (attribution-independent; `guid_log` is a page-view log, so page-views are deduped to visit-days per advertiser×ip×day; via a custom `guid_log` join over `[first_impression, +30-60d]` carrying arm membership, `first_impression` from the impression log). Attribution-independent because the higher-frequency control arm wins the last-touch tiebreak more often, which would bias attributed VV against capping. Total visits removes that.
 - **Go/no-go bar:** GO requires BOTH (1) visits **non-inferior** on the relative count contrast, lower 95% bound above `-δ`, **δ = 5% relative** (household bootstrap), AND (2) **cost per household strictly reduced**. Decided per stratum (prospecting vs retargeting) and per arm (cap-8 vs cap-3).
 - **Inference:** household bootstrap (not advertiser-clustered — household is the randomization unit); CUPED on the pre-period count for variance reduction.
-- **Reuses the existing ghost-bid / `guid_log` incrementality plane** (same total-visit measurement infra; ghost/holdout reference reads 0.886% 7d visit rate at 0.0% won-rate).
-- **Calendar ~10-12 wk** is set by exposure (4 wk) + visit maturation (6-8 wk). Arm-fill is off the critical path (freq greater-than-or-equal-to 9 stratum fills in about 1 week), so a final N does not gate the design.
+- **Builds on the existing ghost-bid / `guid_log` incrementality approach**, but the RCT-grade primary source (a custom visit-day `guid_log` join carrying arm membership, ≥30-60d window) must be **built** — the production `lift__ghost_bid_visits` is 7d-bounded and ghost/submitted-armed. `guid_log` physical is 366 TB; the join must be partition-pruned + cohort-restricted (or run on Databricks), never full-scanned.
+- **Calendar ~10-12 wk is the RUN length only** (exposure 4 wk + visit maturation 6-8 wk); it excludes bidder-feature dev + the visit-source build, which precede enrollment. Arm-fill is off the critical path (freq greater-than-or-equal-to 9 stratum fills in about 1 week), so a final N does not gate the design.
 
 **Hard prerequisite — a new bidder feature (arms are NOT config-only).** Confirmed in code: the cached `CampaignModel` has no per-household cap field, so the DB-to-cache path cannot assign per-bucket caps. Arms B/C need a small localized change in `crates/bins/rtb-bidder-service/src/campaign/fcap.rs::do_fcap` (compute the household bucket, map bucket to arm to cap, pass the arm's cap into `check_freq_cap_threshold`). The RCT cannot start until it ships.
 
@@ -74,6 +74,12 @@ The pool is real and bounded: **~42% of combined / ~35% of prospecting 30d-deliv
 4. **Arm H (cap-aware partial suppression) is Phase 2**, a second new bidder feature reusing the ghost path. Its metric-side blocker is removed (total visits are defined for never-served households via the site pixel); it still needs the feature.
 
 ---
+
+## Known limitations
+
+- **Total-traffic metric is insensitive (TI-835).** `guid_log` total site visits barely move with MNTN ads (~0% measured lift platform-wide, the north-star problem). For this RCT that is by design: we test **non-inferiority** (a cap is safe if total visits do not drop), not superiority. Attributed VV is kept as a diagnostic companion. A null / tight-CI readout is the expected safe-cap outcome; power comes from large N, not a large effect.
+- **Cross-device coverage ~85-90%.** A CTV impression's visit can land on a different-IP device and miss the `(advertiser_id, ip)` join. The miss is ~arm-symmetric, so the **relative** contrast is coverage-invariant (absolute pp is attenuated) — this is why the primary is reported on the relative scale.
+- **Site-wide-pixel advertisers only.** Total visits need an all-page pixel; conversion-page-only advertisers are excluded, narrowing the universe (quantified as an external-validity bound at enrollment).
 
 ## The ask
 
