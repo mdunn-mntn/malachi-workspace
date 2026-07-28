@@ -205,7 +205,7 @@ wb = MntnWorkbook(
     title="MNTN Select vs Non-Select Incrementality",
     ticket=TICKET,
     subtitle="Ghost-bid holdout visit lift, prospecting, advertisers running both products",
-    period="2026-06-22 to 2026-07-27 (7-day per-user window)",
+    period="2026-06-22 to 2026-07-27; visits within 7d of each IP's first bid",
     generated=GEN,
 )
 
@@ -276,8 +276,8 @@ wb.glossary(
             "low-coverage); the rest are dropped - no baseline. Upstream anchors each IP to its entry cohort and drops the "
             "left-censored first day."),
         ("Coverage & window", ""),
-        ("Window", "Data covers 2026-06-22 to 2026-07-27. Each user's visit is counted over a 7-day window from its "
-            "first bid, so the most recent ~7 days are not fully mature and fill in over time. No data exists before 6/22 (no backfill)."),
+        ("Window", "Data covers 2026-06-22 to 2026-07-27. Each IP's visits count within 7 days of its first bid (a fixed "
+            "per-IP window, not the full period), so the most recent ~7 days aren't fully mature. No data before 6/22 (no backfill)."),
         ("Coverage caveat", "These views are the Beeswax bidder leg. The MNTN Rust-bidder leg is not folded in yet, "
             "which is why Select coverage is a subset of all live Select advertisers."),
         ("Cohort", f"93 AIDs requested. With usable-holdout lift data: {len(both_ids)} run both products, "
@@ -324,8 +324,10 @@ wb.notes(
             "absolute pp lift is diluted by win rate roughly equally across products. Relative lift normalizes this and is the fair comparison."),
         ("Prospecting only", "Every row is objective_id 1. The ghost-bid holdout is a prospecting mechanism (held-out IPs never "
             "win, so they never leave the prospecting pool). Retargeting is out of scope by construction."),
-        ("Date range", "2026-06-22 to 2026-07-27. First day dropped upstream as left-censored. 7-day per-user visit window means "
-            "the trailing ~7 days are still maturing. No pre-6/22 data (ghost-bid lift pipeline has no backfill)."),
+        ("Date range + the 7-day window", "2026-06-22 to 2026-07-27; first day dropped upstream (left-censored). Each IP's "
+            "visits are counted over a FIXED 7-day window from its own first bid - not the full calendar period - so early and "
+            "late entrants are measured on equal footing (removes an entry-time bias). Tradeoff: visits >7 days after an IP's first "
+            "bid aren't attributed, and the trailing ~7 days are still maturing (right-censored). 'IP' ~ a household. No pre-6/22 data (no backfill)."),
         ("Coverage", "Beeswax bidder leg only; MNTN Rust-bidder leg not yet folded in. 43 of 93 requested advertisers have Select "
             "lift data, 66 have non-Select; 35 have both once campaign groups without a usable holdout are excluded."),
         ("Do not over-read", "Individual low-volume campaigns have wide intervals; a single small Select campaign is not a verdict. "
