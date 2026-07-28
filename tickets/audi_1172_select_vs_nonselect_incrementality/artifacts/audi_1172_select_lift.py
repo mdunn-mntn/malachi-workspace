@@ -217,7 +217,7 @@ wb.table(
     formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
              "Rel lift": FMT.PCT1, "CI low": PP3, "CI high": PP3,
              "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
-    heat={"Rel lift": "high", "Abs lift": "high"},
+    signal={"Rel lift": {"sig": "Sig 95%"}, "Abs lift": {"sig": "Sig 95%"}},
     kind="headline",
     toc="The headline: pooled Select vs non-Select visit lift for advertisers running both.",
 )
@@ -230,7 +230,8 @@ wb.table(
     formats={"Select rel lift": FMT.PCT1, "non-Sel rel lift": FMT.PCT1, "Select edge": FMT.PCT1,
              "Select abs pp": PP2, "non-Sel abs pp": PP2,
              "Select bids": FMT.INT, "non-Sel bids": FMT.INT},
-    heat={"Select rel lift": "high", "non-Sel rel lift": "high", "Select edge": "high"},
+    signal={"Select rel lift": {"sig": "Select sig"}, "non-Sel rel lift": {"sig": "non-Sel sig"},
+            "Select edge": {}},
     kind="data", first_col_width=30,
     toc="Per-advertiser Select vs non-Select, side by side, ranked by Select's edge.",
 )
@@ -242,7 +243,7 @@ wb.table(
            "See Read me for definitions.",
     formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
              "Rel lift": FMT.PCT1, "z": FMT.NUM1, "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
-    heat={"Rel lift": "high"},
+    signal={"Rel lift": {"sig": "Sig 95%"}},
     kind="detail", first_col_width=30,
     toc="Every advertiser x product row behind the pooled and paired numbers.",
 )

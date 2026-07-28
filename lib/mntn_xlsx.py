@@ -121,14 +121,15 @@ FMT = _Fmt()
 # a dark anchor for the cover, bright greens/blues for content, muted greys for the appendix.
 # NOTE: apply with a leading "FF" (opaque) — a bare 6-hex string makes openpyxl store alpha 00
 # (transparent), which renders as NO tab color in Google Sheets. See _new_sheet().
-# HEAT — the SEQUENTIAL magnitude ramp for table heat scales (dataviz rule: one hue, light->dark;
-# never a red-yellow-green rainbow). Mountain Blue family: calm, analytical, on-brand, and it pairs
-# cleanly with the Mountain Green accents (adjacent cyan hues). Dark text stays readable on DARK.
-# Swap to a green ramp ("EAF7F3","7FD9C6","1AC9AA") if a deliverable should read green instead.
+# HEAT — the SEQUENTIAL magnitude ramp, Mountain Green light->saturated (dataviz rule: one hue,
+# light->dark; never a rainbow). Use `heat=` for pure-magnitude columns (counts, rates with no sign).
+# For EFFECT/LIFT columns (signed, with a significance flag) use `signal=` instead — it paints
+# red = significant negative, amber = not significant, and this same green ramp scaled by magnitude
+# for significant positives. The green portion of both modes shares LIGHT->DARK below.
 HEAT = {
-    "LIGHT": "EAF6FA",   # near-white blue tint (smallest values)
-    "MID":   "7FCEDD",   # mid Mountain Blue
-    "DARK":  "0AABC5",   # Mountain Blue (largest / "best" values)
+    "LIGHT": "E4F7F2",   # near-white Mountain Green tint (smallest values)
+    "MID":   "8CE0CE",   # mid Mountain Green
+    "DARK":  "1AC9AA",   # Mountain Green (largest / "best" values)
 }
 
 TAB = {
@@ -169,6 +170,16 @@ def _font(size=10, bold=False, italic=False, color="000000", name=FONT_BODY):
 
 def _fill(hex_):
     return PatternFill("solid", fgColor=hex_)
+
+
+def _lerp_hex(a, b, t):
+    """Linear-interpolate two 6-hex colors (t in [0,1]) -> a 6-hex string. Used to scale the
+    green magnitude ramp per cell in signal() coloring."""
+    a, b = a.lstrip("#"), b.lstrip("#")
+    ar, ag, ab = int(a[0:2], 16), int(a[2:4], 16), int(a[4:6], 16)
+    br, bg, bb = int(b[0:2], 16), int(b[2:4], 16), int(b[4:6], 16)
+    r, g, bl = (round(x + (y - x) * t) for x, y in ((ar, br), (ag, bg), (ab, bb)))
+    return f"{r:02X}{g:02X}{bl:02X}"
 
 
 _DASH_RE = re.compile(r"\s*[—–]\s*")
@@ -359,20 +370,26 @@ class MntnWorkbook:
 
     # -- public: table sheet -------------------------------------------------
     def table(self, name, df, finding, method="", formats=None, heat=None, rag=None,
-              band=True, kind="data", toc="", widths=None, first_col_width=None, freeze="A"):
+              signal=None, band=True, kind="data", toc="", widths=None, first_col_width=None, freeze="A"):
         """Add a styled table sheet.
 
         finding  : sheet title that STATES THE FINDING (not the metric).
         method   : one grey line of methodology under the title.
         formats  : {column_name: number_format}. Store %/$ as decimals; pass FMT.PCT2 etc.
-        heat     : {column_name: 'high'|'low'|'neutral'} -> per-column color scale
-                   ('high' = green is good/large, 'low' = green is small/good e.g. cost).
+        heat     : {column_name: 'high'|'low'|'neutral'} -> sequential single-hue (green) magnitude
+                   ramp. Use for PURE-MAGNITUDE columns (counts, rates, no sign). 'low' inverts (cost).
+        signal   : {column_name: {'sig': <sig_column>}} -> SEMANTIC effect/lift coloring:
+                   red = significant negative, amber = not significant, green (scaled by magnitude)
+                   = significant positive. Use for signed EFFECT/LIFT columns. Omit 'sig' to skip the
+                   amber rule (then just negative=red, positive=green-scaled). Don't also pass heat on
+                   the same column.
         rag      : {column_name: fn(value)->'POS'|'NEG'|'WARN'|None} -> traffic-light cell fills.
         kind     : 'headline' | 'data' | 'detail' (drives tab color).
         """
         formats = formats or {}
         heat = heat or {}
         rag = rag or {}
+        signal = signal or {}
         ws = self._new_sheet(name, "headline" if kind == "headline" else kind)
         ncols = len(df.columns)
         self._titleblock(ws, finding, method, ncols)
@@ -432,6 +449,38 @@ class MntnWorkbook:
                                       mid_type="percentile", mid_value=50, mid_color=m,
                                       end_type="max", end_color=e)
             ws.conditional_formatting.add(rng, rule)
+
+        # semantic effect/lift coloring: amber = not significant, red = significant negative,
+        # green (deeper = more lift) = significant positive. Per-cell fills (needs the value + sign +
+        # significance flag, which a single ColorScaleRule can't express).
+        def _is_sig(x):
+            return x.strip().lower() in ("yes", "true", "y", "1") if isinstance(x, str) else bool(x)
+        for col, spec in signal.items():
+            if col not in df.columns:
+                continue
+            jcol = list(df.columns).index(col) + 1
+            vals = pd.to_numeric(df[col], errors="coerce")
+            sigcol = spec.get("sig")
+            has_sig = bool(sigcol) and sigcol in df.columns
+            flags = [(_is_sig(df[sigcol].iloc[i]) if has_sig else True) for i in range(len(df))]
+            pos = sorted(vals.iloc[i] for i in range(len(df))
+                         if pd.notna(vals.iloc[i]) and vals.iloc[i] > 0 and flags[i])
+            npos = len(pos)
+            for i in range(len(df)):
+                v = vals.iloc[i]
+                if pd.isna(v):
+                    continue
+                c = ws.cell(row=start + 1 + i, column=jcol)
+                if has_sig and not flags[i]:               # inconclusive
+                    c.fill = _fill(BRAND["WARN"]); c.font = _font(10, bold=True, color=BRAND["INK"])
+                elif v < 0:                                 # significant negative
+                    c.fill = _fill(BRAND["NEG"]); c.font = _font(10, bold=True, color=BRAND["WHITE"])
+                else:                                       # significant positive -> green by RANK
+                    # rank-based (not linear): even gradient, so a skewed tail can't wash the rest pale
+                    # or flatten the top. Bigger lift = deeper green, evenly stepped.
+                    t = (sum(1 for p in pos if p < v) / (npos - 1)) if npos > 1 else 1.0
+                    c.fill = _fill(_lerp_hex(HEAT["LIGHT"], HEAT["DARK"], t))
+                    c.font = _font(10, bold=True, color=BRAND["INK"])
 
         ws.freeze_panes = f"{freeze}{start+1}"
         ws.auto_filter.ref = f"A{start}:{last_col}{start+n}"

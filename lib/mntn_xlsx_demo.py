@@ -129,7 +129,7 @@ wb.glossary(
         ("IVR advantage", "MM visit rate divided by 3P visit rate, shown as a multiple (e.g. 4.1x)."),
         ("", ""),
         ("Weighting", "Headline numbers are advertiser-weighted medians so one large account can't set the result."),
-        ("Colour", "Darker blue = better on that metric; the scale is a per-column magnitude ramp (one hue, light to dark). Navy headers, banded rows for readability."),
+        ("Colour", "Darker green = larger on that metric (per-column magnitude ramp). On effect/lift columns a semantic scheme applies instead: red = significant negative, amber = not significant, green deepening with more lift. Navy headers, banded rows for readability."),
         ("", ""),
         ("This file", "FORMAT SAMPLE with synthetic data — it exists to show the standard MNTN .xlsx look, not to report real numbers."),
     ],
