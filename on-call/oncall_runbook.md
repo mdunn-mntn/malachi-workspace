@@ -254,8 +254,17 @@ Vertex pipeline `fangorn_daily_feature_drift_pipeline` (template
 `gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_daily_feature_drift_pipeline.json`,
 project `mntn-targeting-prj-prod`, region `us-central1`).
 
-**STATUS: OBSERVED / RE-OPENED — the merged DAG fix (PR #1158) does NOT fix this; the fix is owner-side in
-`targeting-infra-ml` (template redeploy), not yet shipped.** Routed back to Brian McAdams (Sr MLE). resolved=false.
+**STATUS: OBSERVED / RE-OPENED — routed + owner-accepted; awaiting template redeploy.** The merged DAG fix
+(PR #1158) does NOT fix this; the fix is owner-side in `targeting-infra-ml` (rename the KFP param
+`run_date`→`reference_date`, recompile, redeploy the template). **Brian McAdams confirmed (2026-07-28) he
+will update it.** resolved=false until verified green.
+
+**Close-out for next on-call (after Brian's redeploy):**
+1. Confirm the template now declares `reference_date` (diagnosis command 2 below — expect `reference_date`
+   to replace `run_date` in the param list).
+2. Then clear + re-run `daily_drift_pipeline` with "Run with latest bundled version" (the current bundle
+   already has PR #1158 — no new bundle needed), or let the next `0 18 * * *` UTC run self-verify.
+3. Green → flip STATUS to RESOLVED, set `resolved:true` + `resolved_by:"Brian McAdams"` in the JSONL row.
 
 **Re-run proof (2026-07-28 23:16Z, attempt 3):** re-ran WITH "Run with latest bundled version" — the bundle
 loaded was `2026-07-28T21:55:33Z`, i.e. AFTER PR #1158 merged (21:54:58Z), so the DAG fix WAS active — and

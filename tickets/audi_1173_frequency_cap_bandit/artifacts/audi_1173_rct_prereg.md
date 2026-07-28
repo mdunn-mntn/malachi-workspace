@@ -2,15 +2,15 @@
 
 *This is the falsifiable, frozen commitment. Freeze BEFORE any downstream consumption of the total-visit data or any peek at outcomes. Full design + rationale: `audi_1173_rct_design.md`. Any change after freeze goes in the Amendments log (§13) with a timestamp and reason — never a silent edit.*
 
-- **Freeze status:** DRAFT-PENDING-LOCK. `PENDING-A` (total-visit source + join key) **resolved**; `PENDING-B/C` (freq≥8 base rate + N) filled **PROVISIONALLY** (p0≈3%, N/arm≈198K). Locks once the freq≥8 base rate is **confirmed at Checkpoint β** (Step 3's total-visit-by-frequency curve) and the author signs off.
-- **Frozen-before clause:** enrollment must not begin, and no outcome data may be inspected, until this file is committed with §5/§6 numeric and the author's sign-off.
+- **Freeze status:** DRAFT-PENDING-LOCK. **Owner-decided (recorded, not the open items):** PRIMARY = mean total site visits per household (a COUNT); margin **δ = 5% relative** of the control mean. `PENDING-A` (total-visit source): APPROACH decided — a **custom `guid_log` join** on `(advertiser_id, ip)` over `[first_impression, +30-60d]` carrying RCT arm membership, **to be BUILT** (`enriched.lift__ghost_bid_visits` = platform 7d sanity/reference only). `PENDING-B/C` (freq≥9 count **mean + variance** + N) filled **PROVISIONALLY** (incidence-proxy ≈3%, reference N/arm≈198K). Locks once the freq≥9 count mean/variance are **confirmed at Checkpoint β** (Step 3's total-visit-by-frequency curve) and the author signs off. **N is off the critical path** (fill ≪ exposure + maturation), so the design is decision-ready without a final N.
+- **Frozen-before clause:** enrollment must not begin, and no outcome data may be inspected, until this file is committed with §5/§6 numeric (count mean/variance anchor) and the author's sign-off.
 - **Author sign-off:** `____________`  **Date locked:** `____________`
 
 ---
 
 ## 1. One primary estimand
 
-**ITT contrast, on the ex-ante eligible stratum, of a tighter default frequency cap vs BAU:** the difference in **total (attribution-independent) site-visit incidence per household** — `P(household made ≥1 total site visit)` — between a tighter-cap arm and control, over the exposure + maturation window.
+**ITT contrast, on the ex-ante eligible stratum, of a tighter default frequency cap vs BAU:** the difference in **mean total (attribution-independent) site visits per household — a COUNT** — between a tighter-cap arm and control, over the exposure + maturation window. (Binary incidence `P(≥1 total site visit)` is a secondary/diagnostic, not the primary — sizing on incidence is biased toward GO; the objective "preserve total visits" is a statement about the count.)
 
 - Unit of randomization = unit of analysis = **household `(advertiser_id, ip)`**.
 - Eligibility is **ex ante** (pre-period predicted-to-exceed-cap), never realized in-experiment frequency.
@@ -20,16 +20,18 @@
 
 **Reframed as non-inferiority (visits) + superiority (cost). GO requires BOTH:**
 
-1. **Visits non-inferior:** one-sided **lower 95% bound** of the **RELATIVE** contrast `(p_T,total − p_C,total)/p_C,total` **> −δ**, with **δ = 5% relative** of the control total-visit incidence. Relative is the coverage-robust scale (design §5.4); absolute pp reported alongside as a coverage-attenuated companion. A **fixed** absolute-pp margin is prohibited (not coverage-invariant).
+1. **Visits (the COUNT) non-inferior:** one-sided **lower 95% bound** (household bootstrap) of the **RELATIVE** contrast of the **mean total visits/hh** `(μ_T,total − μ_C,total)/μ_C,total` **> −δ**, with **δ = 5% relative** of the control mean. Relative is the coverage-robust scale (design §5.4); absolute visits/hh reported alongside as a coverage-attenuated companion. A **fixed** absolute margin is prohibited (not coverage-invariant).
 2. **Cost superior:** cost/household reduction, one-sided **lower 95% bound > 0** (tighter cap strictly cheaper).
 
 **GO** = ship the cap / green-light the bandit on that stratum. **NO-GO** = visits fail NI OR cost not reduced. Decided per stratum × per arm (4 cells: {prospecting, retargeting} × {cap-8, cap-3}).
 
-*(δ = 5% relative is the frozen default; author may lock 3% (stricter) or 10% (looser) at sign-off — record the chosen value here: **δ = ___% relative**. The relative SCALE is fixed by the coverage model, not an author choice; only the VALUE is.)*
+*(**δ = 5% relative — RECORDED (owner decision).** The relative SCALE is fixed by the coverage model; the VALUE is now decided at 5% relative, no longer an open 3%/10% choice. This margin is locked; formal sign-off still awaits the Checkpoint-β count mean/variance anchor.)*
 
 ## 3. Arms (3)
 
-| Arm | Cap | Buckets `MD5(advertiser:ip) mod 1000` |
+Buckets from the **TI-837-validated** hash `MOD(ABS(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CONCAT(CAST(advertiser_id AS STRING), ':', ip))), 1, 16)) AS INT64)), 1000)`:
+
+| Arm | Cap | Bucket range |
 |---|---|---|
 | **A — Control** | BAU default cap | **100-399** |
 | **B — Cap 8/wk** | 8 imp / rolling wk, default-cap campaigns only | **400-699** |
@@ -39,17 +41,17 @@ Platform holdout **0-99** is **excluded** from the RCT (disjoint by same-hash co
 
 ## 4. Randomization
 
-- **Hash = `MD5(advertiser_id:ip) mod 1000`**, computed **bit-identically** on the bidder side and the BQ analysis side (the joint spec pins the `advertiser_id:ip` string encoding + mod-1000 reduction). Deterministic, sticky, disjoint.
+- **Hash (TI-837 production-equivalent) = `MOD(ABS(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CONCAT(CAST(advertiser_id AS STRING), ':', ip))), 1, 16)) AS INT64)), 1000)`** — **16 hex chars** (not 15), `CAST(advertiser_id AS STRING)` in the preimage. Computed **bit-identically** on the bidder side and the BQ analysis side: the bidder must compute the IDENTICAL preimage (`CAST(advertiser_id AS STRING)` colon-joined to `ip`, no trailing space) and the IDENTICAL 16-hex reduction. This exact form is what makes arms 100-399/400-699/700-999 **genuinely disjoint** from the platform 0-99 holdout and bit-match the bidder. Deterministic, sticky, disjoint.
 - **Assignment = ITT** by bucket, regardless of whether the cap binds.
 
 ## 5. Eligible stratum (ex ante — pre-treatment stratifier)
 
-From a **2-4 wk pre-period**, per household's baseline **delivered** weekly frequency from the advertiser (`cost_impression_log`):
+From a **2-4 wk pre-period**, per household's baseline **delivered** weekly frequency from the advertiser (`cost_impression_log`). Eligibility rule (both arms): **predicted ≥ cap + 1** (the cap actually suppresses at least one impression):
 
-- **Arm B eligible stratum:** predicted **≥ 8 imp/wk** (≈2.2% of prospecting hh, ~1.62M/wk). B-vs-A analyzed here.
-- **Arm C eligible stratum:** predicted **≥ 4 imp/wk** (≈12.5% of prospecting hh, ~9.06M/wk). C-vs-A analyzed here.
+- **Arm B eligible stratum:** predicted **≥ 9 imp/wk** (cap-8 binds — suppresses the 9th+). Fill proxy = the freq≥8 **7-day STOCK** ~1.62M (a stock, NOT a weekly inflow; over-counts the ≥9 eligible → fill built from it is a lower bound). B-vs-A analyzed here.
+- **Arm C eligible stratum:** predicted **≥ 4 imp/wk** (cap-3 binds — suppresses the 4th+; ≈12.5% of prospecting hh, freq≥4 stock; same 7d-stock caveat). C-vs-A analyzed here.
 
-Same classifier applied to control households. **Realized in-experiment frequency is never a filter** (collider).
+Same cap+1 classifier applied to control households. **Realized in-experiment frequency is never a filter** (collider).
 
 ## 6. Inference method
 
