@@ -134,6 +134,10 @@ print("\nwrote CSVs + SQL to", TDIR)
 # BUILD .xlsx
 # ======================================================================
 YESNO = lambda b: "Yes" if bool(b) else "—"
+# absolute visit lift is in PERCENTAGE POINTS, not a rate -> show "pp" so it never reads as a % rate.
+# rule for the whole workbook: "%" = a rate or a RELATIVE lift; "pp" = an ABSOLUTE point difference.
+PP3 = '0.000"pp"'
+PP2 = '0.00"pp"'
 
 # --- Sheet: pooled headline (both cohort) ---
 ph = pooled[pooled["Cohort"] == "Advertisers running BOTH"].copy()
@@ -143,10 +147,10 @@ head_df = pd.DataFrame({
     "Campaign groups": ph["n_cg"].values,
     "Treated VR":     ph["treated_vr"].values,
     "Holdout VR":     ph["holdout_vr"].values,
-    "Visit lift":     (ph["visit_lift_pp"]/100.0).values,     # decimal (pp)
-    "Rel lift":       ph["rel_lift"].values,
-    "CI low":         (ph["ci_low_pp"]/100.0).values,
-    "CI high":        (ph["ci_high_pp"]/100.0).values,
+    "Abs lift":       ph["visit_lift_pp"].values,            # percentage points
+    "Rel lift":       ph["rel_lift"].values,                 # relative (%)
+    "CI low":         ph["ci_low_pp"].values,                # pp
+    "CI high":        ph["ci_high_pp"].values,               # pp
     "Sig 95%":        [YESNO(b) for b in ph["sig95"].values],
     "Treated bids":   ph["n_treatment"].values,
     "Holdout bids":   ph["n_holdout"].values,
@@ -156,17 +160,17 @@ head_df = pd.DataFrame({
 pv = piv.copy()
 pv["adv"] = pv["company_name"].fillna(pv["advertiser_id"].astype(str))
 both_df = pd.DataFrame({
-    "Advertiser":      pv["adv"].values,
-    "AID":             pv["advertiser_id"].values,
-    "Select rel":      pv["rel_lift__Select"].values,
-    "non-Select rel":  pv["rel_lift__non_Select"].values,
-    "Select edge":     (pv["rel_lift__Select"] - pv["rel_lift__non_Select"]).values,   # decimal pp of rel
-    "Select lift":     pv["visit_lift_pp__Select"].values / 100.0,
-    "non-Sel lift":    pv["visit_lift_pp__non_Select"].values / 100.0,
-    "Select sig":      [YESNO(b) for b in pv["sig95__Select"].values],
-    "non-Sel sig":     [YESNO(b) for b in pv["sig95__non_Select"].values],
-    "Select bids":     pv["n_treatment__Select"].values.astype("int64"),
-    "non-Sel bids":    pv["n_treatment__non_Select"].values.astype("int64"),
+    "Advertiser":       pv["adv"].values,
+    "AID":              pv["advertiser_id"].values,
+    "Select rel lift":  pv["rel_lift__Select"].values,           # % over baseline
+    "non-Sel rel lift": pv["rel_lift__non_Select"].values,       # % over baseline
+    "Select edge":      (pv["rel_lift__Select"] - pv["rel_lift__non_Select"]).values,  # % difference of rel lifts
+    "Select abs pp":    pv["visit_lift_pp__Select"].values,      # percentage points
+    "non-Sel abs pp":   pv["visit_lift_pp__non_Select"].values,  # percentage points
+    "Select sig":       [YESNO(b) for b in pv["sig95__Select"].values],
+    "non-Sel sig":      [YESNO(b) for b in pv["sig95__non_Select"].values],
+    "Select bids":      pv["n_treatment__Select"].values.astype("int64"),
+    "non-Sel bids":     pv["n_treatment__non_Select"].values.astype("int64"),
 }).sort_values("Select bids", ascending=False)
 
 # --- Sheet: all advertisers by product (detail) ---
@@ -180,8 +184,8 @@ detail_df = pd.DataFrame({
     "Camp groups":  det["n_cg"].values,
     "Treated VR":   det["treated_vr"].values,
     "Holdout VR":   det["holdout_vr"].values,
-    "Visit lift":   det["ivw_abs_itt"].values,       # decimal (pp)
-    "Rel lift":     det["rel_lift"].values,
+    "Abs lift":     det["visit_lift_pp"].values,       # percentage points
+    "Rel lift":     det["rel_lift"].values,            # relative (%)
     "z":            det["z"].values,
     "Sig 95%":      [YESNO(b) for b in det["sig95"].values],
     "Treated bids": det["n_treatment"].values,
@@ -200,12 +204,13 @@ wb.table(
     "Headline", head_df,
     finding="Select prospecting drives ~5x the relative visit lift of non-Select (+22% vs +4%)",
     method="Pooled across 35 advertisers running both. Inverse-variance-weighted over campaign groups. "
-           "Visit lift = treated minus holdout visit rate (percentage points). Rel lift = lift / holdout rate. "
-           "Ghost-bid ITT (bid-grain, diluted by win rate) - compare products relatively, not to a served-user number.",
-    formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Visit lift": FMT.PCT3,
-             "Rel lift": FMT.PCT1, "CI low": FMT.PCT3, "CI high": FMT.PCT3,
+           "Read: '%' = a rate or a relative lift; 'pp' = an absolute percentage-point gap. "
+           "Abs lift = treated minus holdout visit rate (pp). Rel lift = abs lift / holdout rate (% over baseline). "
+           "Ghost-bid ITT (bid-grain, diluted by win rate) - compare products on Rel lift, not to a served-user number.",
+    formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
+             "Rel lift": FMT.PCT1, "CI low": PP3, "CI high": PP3,
              "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
-    heat={"Rel lift": "high", "Visit lift": "high"},
+    heat={"Rel lift": "high", "Abs lift": "high"},
     kind="headline",
     toc="The headline: pooled Select vs non-Select visit lift for advertisers running both.",
 )
@@ -214,11 +219,12 @@ wb.table(
     "By advertiser (both)", both_df,
     finding="Select out-lifts non-Select in 27 of 35 advertisers running both (median edge +46pp of relative lift)",
     method="One row per advertiser running both products, ranked by Select bid volume (largest, most reliable on top). "
-           "'edge' = Select rel lift minus non-Select rel lift; green = Select wins. Blank rel where a holdout had zero visits.",
-    formats={"Select rel": FMT.PCT1, "non-Select rel": FMT.PCT1, "Select edge": FMT.PCT1,
-             "Select lift": FMT.PCT3, "non-Sel lift": FMT.PCT3,
+           "rel lift = % over the holdout baseline; abs pp = the raw percentage-point gap. "
+           "edge = Select rel lift minus non-Sel rel lift (green = Select wins). Blank rel where a holdout had zero visits.",
+    formats={"Select rel lift": FMT.PCT1, "non-Sel rel lift": FMT.PCT1, "Select edge": FMT.PCT1,
+             "Select abs pp": PP2, "non-Sel abs pp": PP2,
              "Select bids": FMT.INT, "non-Sel bids": FMT.INT},
-    heat={"Select rel": "high", "non-Select rel": "high", "Select edge": "high"},
+    heat={"Select rel lift": "high", "non-Sel rel lift": "high", "Select edge": "high"},
     kind="data", first_col_width=30,
     toc="Per-advertiser Select vs non-Select, side by side, ranked by Select's edge.",
 )
@@ -227,9 +233,10 @@ wb.table(
     "All by product", detail_df,
     finding="Full per-advertiser readout: 43 Select and 66 non-Select advertiser rows, clean-gated",
     method="One row per advertiser x product. Clean gate = valid holdout coverage, se>0. "
+           "Abs lift = pp gap (treated minus holdout rate); Rel lift = % over baseline. "
            "Sorted by product then relative lift. z is bid-grain N-inflated - read relative magnitude, "
            "treat significance as a floor.",
-    formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Visit lift": FMT.PCT3,
+    formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
              "Rel lift": FMT.PCT1, "z": FMT.NUM1, "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
     heat={"Rel lift": "high"},
     kind="detail", first_col_width=30,
@@ -240,14 +247,21 @@ wb.glossary(
     "Read me",
     intro="How the Select vs non-Select incrementality numbers were produced and how to read them.",
     rows=[
+        ("Reading % vs pp", "Throughout this workbook: '%' means a rate (Treated VR, Holdout VR) or a RELATIVE lift "
+            "(Rel lift = percent over baseline); 'pp' means an ABSOLUTE percentage-point gap (Abs lift). They are different - "
+            "e.g. Zazzle Select: Abs lift 2.76pp, Rel lift 95% (the 2.76pp gap is 95% of the ~2.9% holdout baseline)."),
         ("What this measures", "Incremental visit lift from MNTN's ghost-bid holdout: ~10% of prospecting IPs are "
             "held out (evaluated 'as if served' but not served). Treated visit rate minus holdout visit rate = "
             "the incremental effect of serving. No holdout = no causal read."),
         ("Select vs non-Select", "Product on the campaign group. Select = product_id 2; non-Select = PTV (product_id 1). "
             "All rows here are prospecting (objective_id 1) - the ghost-bid holdout only exists on the prospecting pool."),
-        ("Visit lift (pp)", "Treated visit rate minus holdout visit rate, in percentage points. The absolute incremental effect."),
-        ("Rel lift", "Visit lift divided by the holdout visit rate. The percent increase over the no-ad baseline. "
-            "This is the fair cross-product comparison because it normalizes for each product's baseline rate."),
+        ("Abs lift (pp)", "Treated visit rate minus holdout visit rate, in percentage points. The absolute incremental effect. "
+            "Small here because it is bid-grain (see below), so it is not the headline comparison."),
+        ("Rel lift (%)", "Abs lift divided by the holdout visit rate = the percent increase over the no-ad baseline. "
+            "A value of 95% means the treated visit rate is 95% higher than holdout (nearly double), NOT that 95% of people visited. "
+            "This is the fair cross-product comparison because it normalizes for each product's baseline rate. "
+            "Baselines are small (~1-3%), which is why relative lifts look large. Negative values (e.g. -14%) = treated visited "
+            "less than holdout = no incremental effect, usually would-visit-anyway noise, not 'ads hurt'."),
         ("Bid-grain ITT", "The unit is a bid, not a served user. Treatment bids win only ~10% of auctions, so the "
             "absolute pp numbers are diluted. Relative lift is the comparable metric; do not read the pp as a served-user rate."),
         ("Pooling (IVW)", "Campaign groups are combined by inverse-variance weights (weight = 1/SE^2), not a raw "
