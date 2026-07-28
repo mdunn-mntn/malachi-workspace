@@ -478,7 +478,10 @@ class MntnWorkbook:
                 else:                                       # significant positive -> green by RANK
                     # rank-based (not linear): even gradient, so a skewed tail can't wash the rest pale
                     # or flatten the top. Bigger lift = deeper green, evenly stepped.
-                    t = (sum(1 for p in pos if p < v) / (npos - 1)) if npos > 1 else 1.0
+                    rank = (sum(1 for p in pos if p < v) / (npos - 1)) if npos > 1 else 1.0
+                    # floor at 0.30 so the palest cell still reads clearly green — HEAT["LIGHT"] equals
+                    # the zebra BAND, so a rank-0 cell at t=0 would vanish into a banded row.
+                    t = 0.30 + 0.70 * rank
                     c.fill = _fill(_lerp_hex(HEAT["LIGHT"], HEAT["DARK"], t))
                     c.font = _font(10, bold=True, color=BRAND["INK"])
 
