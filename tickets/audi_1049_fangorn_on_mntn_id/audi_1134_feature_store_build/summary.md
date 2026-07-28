@@ -33,9 +33,20 @@ second household-keyed output next to the IP one. **v1 = mechanical IP-parity ag
 *tuning* (sum/mean/recency) and cross-IP *enrichment* are the follow-up (**AUDI-1100**). Source of truth for
 the IP→MNTN ID mapping: `knowledge/data_catalog.md` → "Identity Graph".
 
-**Decomposition (sprint planning today):** per Bryce, the five components below become **new Tasks under
-epic AUDI-1049** (not subtasks of 1134). Sean creates them at planning after team review. This card holds the
-build-level frame; each new Task inherits it. 1134 itself resolves to the umbrella / one of the five at planning.
+**Decomposition — DONE (2026-07-28).** The five components below are now live Tasks under epic AUDI-1049.
+This card is the **umbrella build-frame** (the locked framing above covers all five); each component has its
+own folder + `summary.md` inheriting this frame:
+
+| # | Component | Ticket | Folder |
+|---|---|---|---|
+| 1 | L1 identity-graph mirror | **AUDI-1166** | `../audi_1166_l1_graph_mirror/` |
+| 2 | `household_resolution` module | **AUDI-1167** | `../audi_1167_household_resolution/` |
+| 3 | L2 household derived models | **AUDI-1168** | `../audi_1168_l2_derived/` |
+| 4 | L3 household pivot | **AUDI-1169** | `../audi_1169_l3_pivot/` |
+| 5 | Orchestration / backfill / shadow | **AUDI-1170** | `../audi_1170_orchestration_shadow/` |
+
+Aggregation *tuning* + cross-IP *enrichment* on top = **AUDI-1100** (`../audi_1100_household_feature_engineering/`).
+Do NOT open a 1134 PR — work happens in the five component tickets.
 
 ## 2. The Problem
 The household model (AUDI-1103) cannot train until the ~896-feature signal exists at MNTN-ID grain. Re-graining

@@ -1,0 +1,8 @@
+12:21:38	 From Ryan Kleck : # resolve (swap in a real identity). id_type: 20=HEM SHA-256, 30=IPv4, 41=MNTN GUID
+curl -sS -X POST "https://id-service.nonprod.in.mountain.com/v1/resolve_household_id" \
+  -H "Content-Type: application/json" \
+  -d '{"identities":[{"id":"168.92.121.48","id_type":30}]}' | jq .
+12:29:06	 From Alex Knorr : https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_1_source/guid_log_ip_advertiser_id.py
+12:30:21	 From Alex Knorr : https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_2_derived/guid_log_derived_ip_vertical_id.py
+12:31:23	 From Brian McAdams : https://mntn.atlassian.net/wiki/spaces/TAR/pages/3592978656/Targeting+Infrastructure+Data+Inventory
+12:41:18	 From Ryan Kleck : mntn_id

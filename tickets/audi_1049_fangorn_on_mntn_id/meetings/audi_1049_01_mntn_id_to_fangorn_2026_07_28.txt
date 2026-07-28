@@ -1,0 +1,841 @@
+[00:00] Thank you.
+[00:02] Yeah. So, there's a...
+[00:06] I feel like Sean and Matt were the ones with the biggest pressing questions.
+[00:12] But I did want you to go over the stuff you'd PMed me, Alex, or not Alex, Ryan.
+[00:18] Specifically, like the transformations that we were talking about.
+[00:23] With IPv4 and IPv6.
+[00:28] Yeah.
+[00:29] Man, let me see my...
+[00:37] Yeah.
+[00:37] Yeah, basically, I mean, I think there's a couple ways to do it with Feature Store.
+[00:43] Oh, nice.
+[00:44] Here's Sean.
+[00:46] Yeah, so Sean.
+[00:47] Yeah, we're talking about, like, so we're talking about Feature Store specifically.
+[00:51] Yeah.
+[00:52] Yeah.
+[00:53] Or really, like, or okay.
+[00:56] This might be like any time you have to look back a certain amount of days in a data set.
+[01:03] Because converting an IPv4 or IPv6 or whatever to a household ID right now is easy.
+[01:13] You just look it up and then convert it.
+[01:19] But then when you go back 30 days, that's where the trickiness is.
+[01:25] and I don't know how you guys want to handle that.
+[01:29] I don't know what the best way to handle that is per se,
+[01:31] but what I was thinking is the way the feature store is written,
+[01:35] you know, it stores the IP every day in layer one,
+[01:43] and then in layer two, you go back 30 days, you know,
+[01:47] and you can aggregate it for each IP.
+[01:50] so instead I was thinking
+[01:53] there's two ways
+[01:55] you could do it
+[01:57] the easiest way
+[01:59] there's really three ways but
+[02:01] the
+[02:02] one way would be
+[02:04] not smart is to just convert it
+[02:08] to
+[02:08] convert it after
+[02:11] all the after like layer
+[02:13] three even convert the IP
+[02:15] into a household ID but you're going to miss
+[02:17] IPv6 and stuff like that
+[02:19] you know um this the second best way would be to convert it in layer one to
+[02:30] um mountain id you know so you have like an ipv4 or ipv6
+[02:39] oh man let me get a let me get are you guys know like what augmenter log looks like
+[02:47] kind of right or man let me let me pull up something let me pull up bog winter logs that
+[02:57] might help let me see if i have yeah i don't know if you guys talk about this but like our vision
+[03:06] right now is to create a snapshot table for the graph like every day just to materialize it and
+[03:14] like, um, like on a, as of like, I think the graph uses as of date, right?
+[03:20] Like basically a partition.
+[03:21] So we, every day we of the graph as is of that day and persisted in our own bucket or
+[03:30] somewhere in, you know, um, a GCS path.
+[03:34] Then in layer one feature store, we keep it as the IP keyed and we only do that join at
+[03:41] layer 2 and 3
+[03:43] with that
+[03:45] historical snapshot
+[03:47] graph. I'm not
+[03:49] sure if that's possible even.
+[03:52] Yeah, that's what
+[03:53] I think that's
+[03:55] the second best option.
+[03:58] What about with
+[03:59] IPv6 though?
+[04:00] Are we
+[04:02] doing IPv6 in this rollout?
+[04:07] I'm not sure.
+[04:09] Maybe baby step it.
+[04:11] or like no i thought we were only doing ipv4 but uh yeah we can what's different with ipv6 it's uh
+[04:22] in in in the graph like how should we handle it differently it's just a different data type right
+[04:28] id yeah yeah different id type so you join on id type equals 31 or something or
+[04:35] we can union it yeah we can union ipv4 with ipv6 and key to id mountain id
+[04:45] one thing that we're gonna have to figure out and maybe we somebody else has this figured out
+[04:49] this is sort of what matt was getting at was the like the membership um like threshold like
+[04:59] how sure are we this id matches this household oh the confidence score yeah the confidence score
+[05:07] thank you yeah um yeah sorry we uh isn't does um is there a confidence score per so in that
+[05:19] in the big three silver table that uh sean linked are those ids are they ips or they
+[05:27] hashed IPs or what are they?
+[05:30] They're
+[05:31] IPs.
+[05:34] Yeah, they're IP.
+[05:35] Well, okay. That table is
+[05:37] one row per
+[05:39] ID
+[05:40] and
+[05:41] the primary key, you can think of it as
+[05:45] ID type and ID.
+[05:47] Yeah.
+[05:48] Yeah.
+[05:49] Yeah.
+[05:51] So you
+[05:52] so, you know,
+[05:55] let me see if I can
+[05:56] uh man i'm trying to pull up just like aug winter logger bid price log how come i can't that that
+[06:08] uh encrypted is it the graph the graph um is hashed or no no yeah no it's not cool um
+[06:20] Sorry, I'm trying to pull up.
+[06:29] Here, let me share my screen.
+[06:32] I think this might be okay.
+[06:33] Yeah, let me share my screen.
+[06:36] And then, yeah, because, yeah, so our data, you know, is going to be, the graph data, you know, is going to be like ID, ID type.
+[06:46] And then the household ID back.
+[06:48] and so it could be um i think ipv4 is 30 i can't remember or yeah it's it is 30 or uh are you ip
+[06:56] or yeah this is 1.1 30 house of lady a then you know then i don't know what a good example of ipv6
+[07:07] is let's just say this is ipv6 what i don't know um bbb you know so you know something like that
+[07:16] And then you could have an IPv6.
+[07:20] And there's a confidence score too, right?
+[07:23] Like 0.6.
+[07:28] Let's do this example.
+[07:30] Make this slightly different.
+[07:34] Or whatever.
+[07:37] So you want a 0.7.
+[07:43] 0.8 or whatever.
+[07:46] Yeah, so this is like some of the rows that would go in there.
+[07:53] So what I was thinking is like in – this is augmenter log,
+[07:57] or this is bid price log, I guess.
+[07:59] This might be something you consume in Feature Store.
+[08:02] So you have – so for one row, you have IP and IPv4.
+[08:08] I think they have – okay, you have a UUID maybe.
+[08:13] This you might find in the graph.
+[08:16] you might have IPv6 in here.
+[08:23] Let me see.
+[08:31] Okay, no, but I know Augment and Loggie do.
+[08:34] So, you know,
+[08:37] so what you're going to have to do is,
+[08:40] what I think you're going to have to do is, like,
+[08:42] if there's multiple identifiers on one row,
+[08:46] you're going to have to send in this, you're going to have to join this
+[08:50] and let's just take UUID as an example
+[08:54] whatever. You're going to have to
+[08:58] look up those two things and they might have
+[09:02] or let's add to this
+[09:05] I don't know what this would be, 45. This is going to go to
+[09:10] household CCCC with confidence 0.9.
+[09:13] and this is going to go
+[09:16] this is dirty
+[09:19] this is
+[09:22] DDDD different
+[09:23] with lower confidence
+[09:25] so you know
+[09:27] so you'd have to take this one
+[09:30] row
+[09:30] and look up both of these
+[09:34] and then you're going to say
+[09:35] oh that's CCCC because that's higher
+[09:38] confidence
+[09:38] right
+[09:40] so does that that make that make that make sense right
+[09:47] i guess uh what is that ws995e6 that's a uid uid what was that what is that uuid
+[10:02] I don't know but I'm just pretending
+[10:06] it's a GUID or something
+[10:09] I can't find
+[10:10] where's the Augmenter log
+[10:11] maybe that's this Augmenter log
+[10:14] there
+[10:16] is that an ID
+[10:19] that we give it or it's coming
+[10:21] from the source
+[10:22] it's from this Augmenter log right
+[10:24] yeah let's just pretend
+[10:26] let me grab Augmenter log
+[10:27] okay
+[10:28] here's an IP
+[10:31] in here somewhere is a IP v six, I'm pretty sure.
+[10:37] Oh, IP v six, I saw the column bits. Blank. Yeah, blank. Okay, but let's say that's okay.
+[10:47] and IP v6 is not all like that. Well, but you know, you're gonna have to handle these
+[11:03] things too. So here's IP. Okay, so here's an IP. Let's grab that. So this is one row
+[11:10] and log mirror log. And then where's I pb six? F must be empty. Yeah. Oh, my gosh. But
+[11:23] I don't think it's that complicated what I'm trying to say. I mean, I guess this is this
+[11:31] This is the important part, I guess.
+[11:37] Okay, so here's a row with an IP.
+[11:43] And IPv6, where are you?
+[11:47] Okay, here's IPv6.
+[11:50] Or whatever.
+[11:51] I'm not going to copy the whole thing, but whatever.
+[11:55] Or yeah, so this is one row.
+[11:57] when you go join it to
+[12:02] the graph, you know,
+[12:07] you could get two different households is what I'm saying.
+[12:12] So this is EEE with 0.7 or 0.6, whatever.
+[12:16] And let's say this is
+[12:18] FFFF with 0.9
+[12:28] Sorry, my dog.
+[12:32] So, you know, so
+[12:33] if you
+[12:35] Sorry, so when you look this up, the right
+[12:40] answer is FFFF, you know.
+[12:47] Right.
+[12:47] so you can either convert it right away
+[12:50] or
+[12:51] like in the layer
+[12:54] one you know like take
+[12:56] each row
+[12:57] but you're gonna have to like do two joins
+[13:00] you know or
+[13:00] two joins you know to the table
+[13:03] does that make sense you have to join on this
+[13:08] and
+[13:11] this
+[13:12] and then decide
+[13:16] which one, you know.
+[13:19] Does that make sense?
+[13:21] So we only take,
+[13:22] so if both
+[13:23] IPv4 and IPv6 find a match
+[13:26] to a household, we only take
+[13:28] the higher confidence score?
+[13:30] We only take one role? Yeah.
+[13:32] I think that's
+[13:34] what you'd want to do.
+[13:36] Oh. Because we're more confident
+[13:38] about one than the other.
+[13:42] Or, I mean,
+[13:43] what other options
+[13:45] which you do just let it i mean and we're just brainstorming like let it duplicate let it uh
+[13:53] there are different households right like so the
+[14:00] because we thought it's a many too many relationship like we will have multiple
+[14:07] or should we clean it up in future store to make sure it's only one household per record
+[14:14] yeah that's
+[14:15] that's what I would do because you're going to run
+[14:18] this is just one row you know
+[14:20] you're going to have things like
+[14:22] and this is just augmenter log
+[14:24] you're going to have things like visits
+[14:26] and stuff
+[14:28] where
+[14:29] I mean I don't know
+[14:32] and Matt's here yeah where
+[14:34] Matt we're talking about where
+[14:36] you know this is one row in augmenter log
+[14:39] and it has an IPv4 and an IPv6
+[14:41] okay
+[14:42] and here's an example
+[14:45] and this is what you'll find in the
+[14:48] graph table where it's
+[14:50] you know
+[14:52] the IPv4
+[14:54] a graph table is like one row per
+[14:58] ID and ID type
+[14:59] that's the primary key of it
+[15:01] so like this
+[15:03] if you look up the IPv4
+[15:05] you'll get and there's a confidence
+[15:08] score too
+[15:08] you know so if you look up the IPv4
+[15:13] you might get EEEE with
+[15:15] 0.6 confidence
+[15:17] and then you look up
+[15:18] IPv6 and you get like a different
+[15:21] household ID with
+[15:22] confidence
+[15:24] so I'm
+[15:26] thinking you just
+[15:28] so you take this row where there's an IPv4
+[15:31] and an IPv6
+[15:33] here that I was showing
+[15:35] whatever
+[15:35] you join it twice
+[15:38] you know you're joining on IPv4
+[15:40] and IPv6 and get
+[15:43] the one with the highest confidence which would be
+[15:45] FFFF
+[15:46] that's what I would think you'd want to do
+[15:48] yeah
+[15:49] or you know the other
+[15:52] option is
+[15:53] you get both
+[15:56] but then when you're talking about like visits
+[15:58] you're going to start
+[15:59] double counting visits you know like
+[16:02] this one row was a visit
+[16:04] then you're going to start
+[16:07] like assigning
+[16:08] I don't know maybe that's I don't know
+[16:12] this is part
+[16:14] you already discussed it
+[16:16] in the beginning but
+[16:17] what is the
+[16:19] when an auction comes
+[16:22] in and
+[16:24] bidder has to resolve
+[16:26] the IP into a household ID
+[16:28] what does that look like because I feel
+[16:30] we should do that
+[16:32] uh we haven't started doing that yet yeah so that's where i kind of feel like
+[16:37] her says on the auction side this is the household we probably want to do the same
+[16:43] thing when we produce the scores otherwise it's like you say this is the household coming
+[16:48] in for the auction and then we give you the score for a household but we
+[16:52] match the household in a different way so they aren't actually related yeah we just give you
+[16:58] a score that actually doesn't relate
+[17:00] to the household in the way that you think it does.
+[17:02] So that's why I want to make sure that
+[17:04] that mapping
+[17:06] or the auctions coming in
+[17:10] from the bidder match what
+[17:12] we would do for producing scores.
+[17:16] Yeah, I guess in talking with
+[17:18] the bidder team, we want to figure out
+[17:20] what's their criteria.
+[17:24] Auction coming in, do we
+[17:26] require there to be a match or are they going to be like, oh yeah, all these
+[17:30] auctions now we're dropping them because we can't map them to a household ID. Like 20%
+[17:35] of them don't map or something.
+[17:38] We would have to work closely with the better team to make sure that our strategy for
+[17:42] resolving this in feature store kind of matches
+[17:47] what they think. As far as what you were saying, Ryan, they don't
+[17:50] have a strategy for that yet or you just don't know what it is?
+[17:53] Yeah, they don't have one.
+[17:57] Right now our ID service, you pass it either an IPv4 or a GUID.
+[18:02] They're not going to do an IPv6.
+[18:04] Are they relying on the identity team to resolve that for them?
+[18:13] That's a good question.
+[18:14] Let me take this to Jack.
+[18:17] because right now the endpoint only takes one ID
+[18:22] and we convert it to a household ID with a confidence score.
+[18:30] That's what I was curious about and asking about
+[18:32] was just that service.
+[18:34] How does it work now?
+[18:35] Even passing it just the one.
+[18:37] Because I guess we can kind of have something in place,
+[18:40] but even just knowing how the IP goes through the service
+[18:46] as just a single ID it comes out as a household ID
+[18:49] yeah let me show you
+[18:51] I can give you a curl command
+[18:53] here I think
+[18:56] oh god
+[18:58] oh my gosh
+[19:01] and then if Zach had any previous comment
+[19:03] about
+[19:04] like I assume
+[19:07] the service can't always
+[19:09] return a household ID
+[19:10] it doesn't yeah
+[19:13] so then like what's the
+[19:15] interpretation or what's the recommendation?
+[19:22] Okay, here, I think this...
+[19:26] Okay, yeah, this...
+[19:28] I'll put this curl in our
+[19:31] chat here.
+[19:37] Yeah, so this would be
+[19:40] an IPv4 lookup, right?
+[19:43] And it says hitting this resolve household ID endpoint.
+[19:49] But I could see, like, if we need, or I could see this adding a new endpoint, this, like, resolve best household ID or something.
+[20:00] give it like multiple ID types.
+[20:03] Yeah.
+[20:04] But for now you just pass it one ID type with one ID.
+[20:10] I think actually, you know, I need to double check this.
+[20:13] I just started taking this over. So I do need to double check.
+[20:16] Okay.
+[20:17] But this is, this is how it returned.
+[20:23] I'm very curious. When do you start to look into that?
+[20:26] Like, what is that internal logic that it's running through?
+[20:31] So then we would know to replicate the same thing
+[20:34] in the joins and the logic there.
+[20:38] Yeah, let me actually see.
+[20:39] It just does max confidence as well.
+[20:43] Right, which is fine for the interim solution, right?
+[20:48] But what we should do is figure
+[20:56] out if it's on the bidding side or the identity side to resolve
+[21:02] that for bidding, and then just work together on how we logic
+[21:07] that out. Result like going back and forth between a targetable
+[21:12] IP and a mountain ID so that when we build Bangor for
+[21:18] mountain ID, it actually at the same resolution level.
+[21:23] Right. Yeah. Well, that is something we I didn't even think about before jumping on this call. So that's certainly something that's going to have to happen.
+[21:34] I'll have to look at this and see
+[21:39] what that code's doing
+[21:41] but
+[21:42] well so the other thing is though
+[21:48] or okay so
+[21:50] so the other thing is you're going to have to go back in time
+[21:52] though too
+[21:53] so that's where
+[21:55] you know you could
+[21:58] okay let's say you could convert
+[22:00] this you know we have the logic
+[22:02] to convert this to one household, this row.
+[22:07] I don't know how you guys want to handle it going back in time.
+[22:10] And I think the best solution for that is to store, like, in this example.
+[22:17] Let me get this whole IP.
+[22:19] It's to store this as a struct, you know, or whatever.
+[22:29] or a tough one.
+[22:32] Yeah.
+[22:33] We're going to just try to export it
+[22:36] either daily or hourly,
+[22:40] however often we kind of need it to,
+[22:42] to save a historical time stamp.
+[22:47] Yeah.
+[22:48] But then how are you going to key it,
+[22:51] I guess, is the question.
+[22:52] Yeah.
+[22:53] Yeah.
+[22:54] The other question I had was,
+[22:57] do the household ID
+[23:00] and I had this question with Sean
+[23:02] I think I know the answer
+[23:04] household IDs don't
+[23:06] change
+[23:07] as far as the
+[23:09] actual household that they represent
+[23:12] so like if you were to update the graph
+[23:14] the key itself
+[23:16] the household key itself
+[23:17] didn't update that
+[23:19] update
+[23:21] yeah I had the same question
+[23:24] from Alex's
+[23:26] analysis, I think this is the
+[23:28] answer.
+[23:30] The 85,
+[23:32] if you look back in a 30-day window,
+[23:35] 85% of the household
+[23:36] IDs stay
+[23:39] constant.
+[23:41] Okay.
+[23:42] Yeah, okay.
+[23:45] So it'd be like 15%
+[23:46] churn.
+[23:47] I don't
+[23:49] mind if the mapping between household
+[23:51] IDs and IPs change over time.
+[23:53] It's more just the household
+[23:55] IDs themselves
+[23:57] because it's kind of just like a loose
+[23:59] logical membership.
+[24:01] Like, there's potential
+[24:03] for them to be,
+[24:05] oh, this household ID
+[24:07] now represents the neighbor's house instead of
+[24:09] the, you know.
+[24:11] Yeah, or like in this
+[24:13] example, like let's say these are all the
+[24:15] household IDs and then the next week
+[24:17] we don't even have any AAA.
+[24:19] It starts at like GGGG.
+[24:21] Right. Or that would be
+[24:23] bad but no that doesn't happen from what they tell me okay um so so i guess that's so so really
+[24:33] the question is i really i think what you guys are gonna is whether you want the primary key
+[24:40] you know the features of the layer one feature store to be the ids that you look up later or
+[24:48] or you know the household ID
+[24:51] which would just be one thing
+[24:55] and I know this would be more compute
+[25:00] obviously this is easier
+[25:03] but I do think if you store it like this
+[25:08] it gives you more flexibility
+[25:09] so then layer one you store everything like this
+[25:14] layer 2
+[25:16] you look up the household ID
+[25:19] yeah I think that's probably a cleaner
+[25:21] so currently feature store
+[25:23] layer 1 is only IPv4
+[25:25] does it have IPv6
+[25:27] no
+[25:28] it's only IPv4
+[25:30] so we need to rebuild layer 1
+[25:33] then to include
+[25:35] IPv6 in this case
+[25:37] that's more work
+[25:39] to scope that into our
+[25:41] let Bryce know about that
+[25:43] So how many layer one tables are actually being used in the model training?
+[25:50] Because yesterday Alex mentioned we only use one layer two table and two layer three table for Fangorn.
+[25:58] Because right now we only want to focus on the tables that gets into the models and not worry about everything.
+[26:06] So do you know, like, does that layer two table uses how many layer one tables?
+[26:15] Or if you're asking, yeah, is Fangorn using Feature Store or is it still using that?
+[26:21] The Challenger model is using Feature Store.
+[26:24] So the comparative, the model in waiting is using Feature Store.
+[26:32] Yeah.
+[26:32] Currently retrading and
+[26:35] inference. There is like an inference
+[26:37] back when I'm running on TG Source.
+[26:39] It's the
+[26:40] problem.
+[26:43] Alex, do you know the answer
+[26:45] for the bottom-up keywords
+[26:47] stuff?
+[26:49] Like
+[26:50] which layers are being used for that?
+[26:54] Yeah, which...
+[26:56] It's using
+[26:57] layer 2.
+[26:59] Unimportant for this version,
+[27:01] I think. But I think
+[27:02] everything so i think this is the flow i linked it so like this layer one good log ip advertiser id
+[27:09] is the only one excluding augmenter log that that fangorn is based on so this is like per day per ip
+[27:19] per advertiser id visits and then layer two aggregates this up to the day ip vertical
+[27:30] and then the snapshot is like the 30 day aggregate and then the layer three is just a pivot to make
+[27:39] it a long table so instead instead of a vertical column layer three makes it you know a column per
+[27:46] vertical and creates all the like a white white table yeah sorry wide yeah yeah so it's all it's
+[27:52] like there's only one i think at each stage that is needed then the the multiple pieces are within
+[28:02] layer two like if you go back to the top here ryan oh sorry i didn't um within layer two
+[28:11] this one
+[28:15] this is this one
+[28:17] good log derived IP yeah yeah
+[28:20] okay so then there's like
+[28:22] a snapshot yeah right there
+[28:24] line
+[28:25] like 66
+[28:27] snapshot yeah okay
+[28:34] then it's if it's the first day
+[28:36] of the month I think it it's this
+[28:38] monthly version otherwise
+[28:40] it does the daily so then
+[28:41] this
+[28:43] single feature store
+[28:46] layer is referenced
+[28:48] in the monthly
+[28:49] DAG and in the like daily
+[28:52] snap feature store DAG
+[28:53] so there's three
+[28:55] models for feature store to work
+[28:58] with and then they have kind of
+[29:00] you know module components
+[29:02] depending on the aggregations
+[29:04] within it does that make sense Sean
+[29:05] yeah
+[29:08] I put this
+[29:08] I put this, let me share this real quick.
+[29:13] We have like this, it's a little old data inventory thing.
+[29:20] You mind if I share my screen real quick out?
+[29:23] Go for it, yeah, go for it.
+[29:24] It's just, so this is what feeds bottom up keywords
+[29:27] through feature store.
+[29:31] So this is just feature store layer two in the tables,
+[29:33] the associated tables at the bottom of keywords.
+[29:38] And then we have the Fangorn current.
+[29:47] This is the future version of Fangorn, which is the current Challenger model.
+[29:52] So basically just everything up to feature store layer three.
+[29:58] These are just the feeding tables.
+[29:59] So this is what goes in to the Challenger Fangorn right now.
+[30:06] Okay. And you're not using Augmentor log?
+[30:10] Okay, just go with that.
+[30:11] No, Augmentor log is not being included.
+[30:13] It's a feature state thing, but it's not currently being adjusted.
+[30:18] Well, that makes it easier, so hurry up.
+[30:22] Yeah, so if we're not using Augmentor log, then...
+[30:25] Well, Augmentor log is currently being adjusted into feature storage.
+[30:28] It's not being utilized by the ML model,
+[30:30] so we could leave it out for the Mountain ID version.
+[30:33] Okay.
+[30:35] Yeah.
+[30:36] So, I guess, Sean, you'd have to edit those three files. The feature one. Sorry, the layer
+[30:45] one.
+[30:46] Yep.
+[30:47] Then you decide, I guess, you decide if you want to key it on household ID there.
+[30:53] Yep.
+[30:54] Or let's look what's in GUID log real quick.
+[30:59] GUID log has IPv6?
+[31:01] Let's take a look here.
+[31:04] Let me show my screen again.
+[31:06] If it doesn't have IPv6
+[31:09] and we're not touching augmented
+[31:10] well, it has GUID though.
+[31:12] I know we have GUID in our graph.
+[31:15] Oh.
+[31:17] You know what I mean?
+[31:18] I see.
+[31:20] So you'd have to
+[31:22] group by GUID, IP
+[31:25] if you want to do it this way.
+[31:28] What else?
+[31:28] you have like hashed emails too right
+[31:32] yeah they have hashed emails
+[31:36] do we need to join on that too
+[31:39] is there hashed email in here
+[31:42] oh probably not in good luck
+[31:44] yeah no nevermind
+[31:46] we might have GA stuff
+[31:51] I guess email here
+[31:54] phone you know so you'd have to see if
+[31:56] oh yeah exactly
+[31:58] So that's the thing. You'd have to know
+[32:01] or what I might do is think of a key structure
+[32:06] or look at all the keys in the
+[32:10] graph and then have a set struct where like, okay, we're
+[32:14] going to have IPv4, IPv6
+[32:18] and if it's null, it's null. Or then
+[32:21] GUID, hashed email,
+[32:25] hashed phone you know all the things whatever else
+[32:29] whatever else is in the graph
+[32:32] and then convert so this row would convert
+[32:38] into you know the key would look like you know
+[32:41] like
+[32:43] I think you know what I'm saying like this there is no IPv6
+[32:50] or I can't maybe there was one
+[32:53] I don't know.
+[32:55] Maybe there was an IPv6, but maybe not.
+[32:58] GUID.
+[33:01] You know, something like that.
+[33:02] Hash emailers, not one.
+[33:04] Yeah, so just like that.
+[33:07] So in layer one, this would be the key.
+[33:10] Then you'd have all your...
+[33:14] You know, so you'd group by the key here
+[33:17] instead of IP or something.
+[33:20] And then you'd just leave the rest of these.
+[33:23] right and then in layer 2
+[33:27] you'd have that funky key
+[33:30] and you'd add
+[33:33] so you'd read it in and then that's where you'd add that join
+[33:37] to the graph using like as of
+[33:42] date you know so you wouldn't be able to
+[33:44] this is where it'll get tricky if you do it that way
+[33:50] well either way I guess if you do it
+[33:54] if you do it in layer one you're going to have to
+[33:56] use as updates you'll be able
+[33:58] you'll want to be able to rerun it you know
+[34:00] without using like the most current
+[34:04] version of the graph
+[34:06] okay so that's your
+[34:14] recommended approach so we
+[34:16] have a snapshot table
+[34:18] for graph which persisted like historical snapshots then we build this new layer one
+[34:27] table with this funky key like as a struct in in layer one then the join happens in layer two
+[34:35] with the with the snapshot graph version right yeah what do you propose okay yeah that's what
+[34:44] I guess I don't know why you need to have the graph.
+[34:50] Or shouldn't the graph already have, like when you go to that.
+[34:57] Yeah, if you just use that parquet that you guys output, that's a big one.
+[35:03] That's like a 600 GB or something.
+[35:05] Like, I don't know.
+[35:07] Is that feasible to join it every time?
+[35:12] Let me leave.
+[35:13] Oops.
+[35:14] If you use as of date, though,
+[35:17] let me show you that, because it's kind of confusing how they did this.
+[35:20] I don't know why they did it this way, necessarily, but household graph part K.
+[35:25] It's partitioned by as of date.
+[35:28] Yeah.
+[35:29] So everything...
+[35:33] And that thing doesn't change, right?
+[35:36] Let's say the 720 graph is always going to be that.
+[35:42] Yeah.
+[35:43] Okay, it's persisted.
+[35:45] Okay.
+[35:45] And then in, or, sorry, I should take that back.
+[35:51] This is partitioned by two things, as of date,
+[35:53] and then when I click inside of here, as of date revision number.
+[35:57] Most of them are zero, but sometimes I guess they write out a graph
+[36:01] and they're like, oh, crap, I want to revise it.
+[36:04] And so there was one example where this had an as of date revision number one.
+[36:10] but it's possible there's a zero and a one.
+[36:15] Does that make sense?
+[36:16] So you'd have to give.
+[36:18] And then inside of here, there's that graph version column,
+[36:24] but it's not part of the partitions.
+[36:27] Don't ask me why they did this.
+[36:29] Okay.
+[36:30] Or way you might know better.
+[36:32] But, you know, so what I would do is, like, get the as of date.
+[36:37] or you're doing one day of GUID log
+[36:41] let's say on June 2nd
+[36:45] get the max as of date that's less than June 2nd
+[36:49] so that'd be like June 1st
+[36:51] inside of there get the max as of date revision number
+[36:55] so that'd be either 0, 1, whatever
+[36:58] so that way you're using partition elimination
+[37:03] and then
+[37:06] do your lookup however you want.
+[37:10] And what's the
+[37:11] TTL for this
+[37:12] table?
+[37:15] That's a good question.
+[37:17] Because we might
+[37:18] want to
+[37:21] train historical.
+[37:22] I don't know.
+[37:25] I'll make sure
+[37:26] where's my
+[37:28] action items?
+[37:30] I'll make sure
+[37:32] we don't dump it yeah that's fine yeah i i tried that snapshot uh model layer one it's only like
+[37:39] seven minute job so just to grab yeah i mean it's it's it's a pretty subtle job if we want to keep
+[37:46] our own version or yeah i'll try mapping with the graph directly if that's like a lot of compute
+[37:53] since it's a large table then we'll just add this materialized step just to like get a subset of
+[38:02] what we need and persisted in our own feature store.
+[38:07] I guess either way. Yeah, that's not a major block.
+[38:10] I guess the biggest challenge unknown now is that join.
+[38:15] Okay. And I'll get back
+[38:18] to you. Let me study that ID service a little bit
+[38:21] and I'll get back to you.
+[38:26] I guess maybe, yeah, if somebody just thinks about it, maybe we just
+[38:30] quantify or maybe quantify like what would happen i mean is it a big deal if we just convert this to
+[38:37] mountain id i don't know so mountain id and household id is the same or no yeah that's the
+[38:47] same the same okay are you yeah well because you know you're you're you're doing some
+[38:53] translation at the end right like those two tickets that i mentioned earlier today like
+[38:59] are you using what's what's the column name you give it like i just want to be consistent with
+[39:02] what you guys mountain id mountain underscore id or what what's yeah mountain underscore id
+[39:10] okay and you call the what mountain id psc or what's the we give it a different name or like
+[39:18] for ipdsc and audience intent do you give it a i guess i guess we use household id of the service
+[39:26] that's so annoying
+[39:28] yeah you might
+[39:30] maybe you should do household ID
+[39:32] HH household ID
+[39:34] shoot
+[39:36] I want to make sure the naming conventions
+[39:38] are consistent across teams
+[39:41] so we don't
+[39:42] let me ask
+[39:43] let me ask my team should we have
+[39:46] users use
+[39:49] mountain ID or
+[39:50] HH ID or household
+[39:52] ID okay let me ask my team
+[39:55] And then, yeah, so what we're outputting now, let me just show you.
+[40:00] I'm yeah I'm just I'm really doing the simplest thing possible taking
+[40:14] I'm taking intense score map actually or intense score or this is the intense score map job you
+[40:22] know and then putting it to intense score household so inside of here's Avro
+[40:29] So let me show you that data.
+[40:32] Then I might have to run after that.
+[40:43] Oh, now it's down.
+[40:49] Actually, we're not serverless, whatever.
+[40:50] or maybe not
+[40:59] but yeah it's just
+[41:03] instead of
+[41:04] IP it's just mountain ID
+[41:07] and there's like two columns
+[41:09] for the scores
+[41:10] well whatever
+[41:15] and then Nevis is doing
+[41:17] IP DSC and it's just
+[41:19] instead of IP, you know, it's mountain ID.
+[41:23] And then the way we're aggregating it,
+[41:26] if two IPs belong to one mountain ID,
+[41:29] your household ID, whatever.
+[41:33] So if Nevis is already building a parallel IP DSC,
+[41:39] what we call HHDSC, right?
+[41:41] Or yeah, a key to mountain ID,
+[41:44] we can, because other than DS46,
+[41:49] like everything else, it's just a direct translation,
+[41:54] like direct mapping.
+[41:56] It sounds like our team's job is just to focus on Fangorn, right?
+[42:01] To get it done properly from the beginning, right?
+[42:05] We translate as early as possible,
+[42:08] go through the whole pipeline,
+[42:10] get the model trained on this new household ID-based tables
+[42:14] or data sets.
+[42:15] But for everything else, like for other data sources,
+[42:18] there's not much changes right like well what's the what's the change on let's say
+[42:23] 13 and 19 it's just a mapping yeah or yeah like well i mean ideally you'd want to
+[42:34] take 13 and do the same kind of like stuff as feature store maybe
+[42:39] but
+[42:41] yeah I don't know
+[42:43] 13 currently doesn't use
+[42:46] feature store right like it's just a
+[42:48] rule based
+[42:49] no it's yeah it's just
+[42:51] create IP verticals
+[42:54] let's see
+[42:56] but I mean
+[43:00] yeah I mean I guess the first stuff
+[43:02] is Fanghorn but
+[43:03] Fanghorn
+[43:04] but the targeting side you know the audience expression uses ds13 and all that yeah
+[43:17] so oh yeah oh yeah that's right yeah so it's more i mean you get the fanghorn stuff ready
+[43:25] and then they're gonna be like well why aren't we serving certain households because
+[43:29] because DS13
+[43:32] isn't converted either.
+[43:33] So we need to only convert
+[43:35] DS13, 19,
+[43:37] and 46, right? Sounds like those three
+[43:39] falls under our team.
+[43:42] Everything else is
+[43:43] pretty much handled
+[43:45] as a direct conversion.
+[43:49] Okay,
+[43:50] sorry. I think all these data
+[43:51] sources fall under your team,
+[43:53] unfortunately. I can help you,
+[43:55] though.
+[43:56] but so like for right now just for a smoke test
+[44:00] we're just taking the output
+[44:03] and converting it to a household ID in the most getaway possible
+[44:07] okay but you'll want to apply the same principle
+[44:12] whatever you apply to Fangorn you'll want to apply that to DS13 I assume
+[44:15] and
+[44:19] all these data sources really
+[44:22] wow yeah um and that's the september 4th is due like that's the scope for september 4th or that's
+[44:32] uh because i don't think we're able to do that and sprint yeah i don't know
+[44:40] i would ask allison what she thinks yeah i thought our scope is to focus on
+[44:45] Fangorn, right? Matt, correct me
+[44:48] if I'm wrong. I think Fangorn
+[44:50] by September 4th, we have an end-to-end
+[44:52] maybe from feature store all the
+[44:54] way to
+[44:56] output, IPDSC output
+[44:58] just for 46.
+[45:00] Or maybe 13 and 19
+[45:02] as a bonus, right?
+[45:04] If we can get to those. That's like a mountain
+[45:06] match related data
+[45:08] sets. Mountain match, yeah, yeah, yeah.
+[45:10] I think that'd be a good call,
+[45:12] yeah.
+[45:15] Yeah, that's a little different than what we just discussed.
+[45:18] So yeah, we want to align with that.
+[45:20] Listen on that.
+[45:22] Because it was kind of like, under my assumption,
+[45:25] was just we're basically producing DS46.
+[45:29] Yeah.
+[45:30] Yeah, that's my thought.
+[45:32] That's not the household score.
+[45:34] That's not the...
+[45:35] Now household score is going to get a little funny.
+[45:38] It'll actually mean the prospecting score.
+[45:42] Yeah, because if you leave...
+[45:43] well
+[45:44] let me
+[45:47] I think the
+[45:51] point at
+[45:54] which
+[45:54] uh
+[45:56] it was just
+[45:59] unclear the point at which we stop
+[46:01] I guess
+[46:02] uh just
+[46:05] want to pause here for a second
+[46:07] I know Ryan needs to go so
+[46:09] um just yeah I
+[46:11] I put an hour on here just to see how long we'd make it.
+[46:14] Obviously we needed that the full hour, but we'll,
+[46:16] we'll probably have to like put a pin in for their questions.
+[46:20] And then Ryan, go ahead.
+[46:22] Yeah. Sorry.
+[46:23] No, no, you're all good. You, you told that out at the beginning.
+[46:26] So I think we covered quite a bit here, but.
+[46:30] Okay. Yeah.
+[46:34] You know, here, sorry. Okay. Yeah. Just one thing. Yes.
+[46:40] So this is what DS13, this is, yeah, this is DS13, what it does.
+[46:46] So somewhere in here is a group by IPA, I assume.
+[46:57] Well, yeah, okay.
+[46:59] All right.
+[47:00] Yeah, well, I think if you get Banghorn ready, though,
+[47:03] the rest could follow mine, too.
+[47:06] Yeah.
+[47:07] Yeah.
+[47:08] Anyway, all right, guys.
+[47:09] thank you Ryan
+[47:10] I'll get back to you on those three
+[47:13] questions I wrote down like
+[47:15] what does the bidder team do what's the TTL
+[47:17] and then the naming so
+[47:19] awesome
+[47:20] thank you Ryan
+[47:22] thank you so much
+[47:23] later

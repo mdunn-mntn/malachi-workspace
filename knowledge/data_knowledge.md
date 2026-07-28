@@ -3230,6 +3230,42 @@ When building IP-level feature vectors to predict visits (IVR), features split i
 
 **The (IP, advertiser) feature-pair grain is intentionally avoided in Fangorn and Fangorn V2 (Matt/Ryan, TI-832)** — features are generalized to IP-level so inference stays fast and a single score serves ALL advertisers without per-request data munging.
 
+### MNTN ID (household) re-keying of the feature store — AUDI-1049 (design sync 2026-07-28)
+The "Fangorn on MNTN ID" initiative re-keys the feature store IP→household. Durable facts from Ryan Kleck's
+design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
+- **Fangorn's actual feature-store lineage is narrow:** L1 = **`guid_log` (IP, advertiser_id)** per day/IP/adv
+  visits (the ONLY L1 source Fangorn uses, excluding augmentor); L2 aggregates to **day/IP/vertical + a 30-day
+  snapshot** (**monthly version on the 1st of month, else daily**); L3 pivots wide (column per vertical). Only
+  ~1 L2 + related L3 feed the model. **`augmentor_log` is built into the feature store but NOT consumed by the
+  Fangorn ML model** — safe to exclude from the MNTN-ID version. The **Challenger model** (the "model in
+  waiting") already runs on Feature Store; production inference still on the old source → the MNTN-ID Fangorn
+  IS the Challenger path. **FS Layer 1 is IPv4-only today** (no IPv6) — adding IPv6 requires an L1 rebuild.
+- **Identity graph tables:** `dw-main-bronze.raw.identity_graph_history` (daily as-of history; ~60d retention)
+  and `dw-main-silver.public.identity_graph` (view, latest version) are **one row per (`id_type`, `id`)** —
+  `id_type=30` = IPv4 (IPv6 is a different id_type; GUID/hashed-email/hashed-phone also present), with
+  `household_id` + `confidence_score`, `is_shared`. The bulk snapshot for historical joins is
+  **`household_graph_parquet`** (~600 GB), **partitioned by `as_of_date` + `as_of_date_revision_number`**
+  (revision usually 0, sometimes 1 on a revise) with a non-partition `graph_version` column. **As-of join
+  pattern for a lookback day D:** `max(as_of_date) < D` → within it `max(as_of_date_revision_number)` → then
+  look up (gives partition elimination). TTL unconfirmed (must be retained for historical training depth).
+- **Resolution rule = MAX CONFIDENCE.** A single event row can carry multiple ids (IPv4/IPv6/GUID/HEM) that
+  each map to a *different* household; resolve by joining per-id and taking the **highest `confidence_score`**,
+  one household per row (never fan out → would double-count visits). This mirrors the **id-service
+  `resolveHouseholdId` endpoint**, which "just does max confidence," takes ONE id (IPv4 or GUID, **not IPv6**),
+  and does not always return a household (misses). **MNTN ID = household_id = "mountain_id"** (same thing;
+  column-name standardization pending). Load-bearing: the **feature-store scoring resolution must MATCH the
+  bidder's auction-time IP→household resolution**, or a household's score won't correspond to the household the
+  bidder resolved (bidder had no resolution strategy yet as of 2026-07-28).
+- **HHID stability (Alex's analysis):** ~**85% of household_ids stay constant over a 30-day window** (~15%
+  churn); the household_id key is **not** semantically reassigned to a different physical house (only the
+  IP→household mapping moves). Makes household_id-keying viable; keyset-in-L1 / resolve-at-L2 is the hedge
+  against graph-algorithm churn.
+- **Recommended pipeline shape (Ryan):** materialize a **daily graph snapshot** (partitioned by `as_of_date`;
+  ~7-min job), keep **L1 IP-keyed as a STRUCT keyset** of all identifiers (not converted to household in L1),
+  and **do the graph as-of join at L2/L3** — insulates L1 from graph-model changes (no L1 backfill on a graph
+  swap). DS13/DS19/DS46 (MM/audience data sources) also fall under AUDI to re-key; DS13 today is rule-based
+  (group-by-IP verticals), not feature-store.
+
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP
 2. `ci_pct_new` (cost_impression_log) — % impressions where IP is "new"
