@@ -1859,3 +1859,11 @@ Before pooling advertisers for a YoY / cohort / DiD visit-rate or conversion ana
   counts show clean 1/N fractions (.5, .33, .25...) imply split-credit; all-integer months imply
   winner-takes-all. The Jan→May 2026 DDP meter switch was found purely from residues — check
   residues BEFORE building cost models on metered data.
+- **Last-touch attribution mechanically confounds any "value vs frequency/exposure" curve.** Last-TV-touch
+  (and last-touch) credit exactly ONE impression per visit, so a household's attributed visits are ~bounded
+  by its intrinsic visit count `k`, roughly independent of ad count `n`. Attributed-visits-per-impression
+  therefore falls toward ~1/n BY CONSTRUCTION even with zero true diminishing returns (a constant-value null
+  would be flat). NEVER read a declining attributed-visits/impression (or rising CPV) curve as causal
+  saturation. For frequency/exposure questions use HOUSEHOLD-grain total visits + cost-per-household, and get
+  the causal answer from a household-randomized RCT (cap arms vs suppression holdout), not the observational
+  curve. (freq_cap_sizing 2026-07-28, [[reference_frequency_capping]].)

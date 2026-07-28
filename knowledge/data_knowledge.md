@@ -4439,3 +4439,12 @@ MAINTAIN GOOD/BAD / IMPROVED / GOAL FAILURE / DEACTIVATED).
 - **3-day rolling window = live status,** not whole-flight "did they ultimately meet the goal."
 - **industry_standard attribution for all** (adds competing_*), not each advertiser's `reporting_style`.
 - 4 goal types scored, but they cover **94.5%** of cgs-with-a-goal; only Efficiency/reach (id 9) is dropped.
+
+## IP Frequency Capping (fcap) — system mechanics (codebase, 2026-07)
+
+**Where/stored:** `bidder.frequency_caps` / `dso.frequency_caps` = `(cap, duration_secs)` pairs, `object_type` ∈ {campaign, campaign_group}; synced to the bidder cache; enforced in `do_fcap` (SteelHouse/rtb-campaign-service) BEFORE the bid; Redis counters `rtb:frequency:{ip}:campaign_group_id=<cg>:campaign_id=<c>`.
+- **Scope = campaign AND campaign_group, keyed on IPv4** (household; MNTN-ID only when `uses_mntn_id`). **No advertiser dimension in the counter and no rollup key** → no cross-advertiser cap; frequency LEAKS across an advertiser's campaign_groups (each counts the IP independently). Measured 4.8% of prospecting households / 13% of impressions served by 2+ groups (7d).
+- **Window = true rolling/sliding** (`now - ts <= duration`, re-evaluated per request; no calendar reset). A universal 1-imp/30min default policy is appended to all campaigns (per-campaign counter, not shared). Configurable 5min-300d; observed 30min-24hr.
+- **Fails OPEN on Redis error** (caps silently stop enforcing) → **delivered frequency > configured**; always measure delivered. Watch `fcap_impressions_fetch{outcome="redis_err"}`.
+- **Client caps:** `has_custom_frequency_caps` flag; any adaptive-cap system touches only the DEFAULT cap, never an advertiser's explicit choice.
+- Generations: in-bidder `fcap` crate (2-scope) migrating away from standalone `ads-fcap-service` (4-tier primary/secondary/universal/dsp; 7 identity types; IP lookback deliberately shorter than device-ID because IPs churn). See [[reference_frequency_capping]].
