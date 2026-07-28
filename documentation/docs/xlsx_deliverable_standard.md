@@ -204,6 +204,11 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-28 · v7** — Sheet subtitles wrap to the table width. The grey-italic method line under each
+  title used to run off to the right on wide-text sheets; it now merges across the table columns
+  (`A2:<lastcol>2`) with `wrap_text`, and `_fit_subtitle_height()` sets the row height to the wrapped text
+  (Sheets/Excel won't auto-fit a merged cell — same root cause as the v3 row-height fix). The `Read me` /
+  `Queries` / `Method` intros wrap to their own column width. Default on every sheet.
 - **2026-07-22 · v6** — Color-coded tab strip now actually renders. Two fixes: (1) tab colors were stored
   with alpha `00` (transparent) because a bare 6-hex string makes openpyxl prepend `00` — now applied as
   `FF`+hex (opaque), so they show in Google Sheets. (2) The `TAB` palette was mostly slate/grey; it's now
