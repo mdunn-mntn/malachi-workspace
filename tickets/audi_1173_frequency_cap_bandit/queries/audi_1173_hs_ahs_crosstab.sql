@@ -4,8 +4,13 @@
 --   advertiser_household_score:             RTC (=10000, retargeting/conquest) vs non-RTC
 -- Household-level HS = MAX(household_score) over its impressions; RTC = MAX(advertiser_household_score=10000)
 --   (retargeting rows carry HS=-1 & AHS=10000 -> land in unscored x RTC, the warm-revisitor cell, by construction).
--- Same window / joins / purge rule / exclusions as Q1 (audi_1173_delivered_freq_curve.sql).
--- Headline metrics per cell: households, spend, TOTAL visits, hh_visit_rate, cost-per-household. Raw AND purged.
+-- Same window / joins / exclusions as Q1 (audi_1173_delivered_freq_curve.sql). Uses ATTRIBUTED visits (ui_visits) — a secondary, confounded cut.
+-- RAW-ONLY (2026-07-28): the raw cells are VALIDATED — summing all HS x AHS cells within each freq bucket
+--   reproduces the Q1 combined-scope raw totals EXACTLY (n_households, impressions, spend, AND visits to the unit),
+--   proving the visit join has NO fan-out. The shared-IP PURGE is dropped from this secondary cut: the prior
+--   purged run diverged from the VALIDATED main-curve purge (Q1) and ~900GB of prior debugging did not reconcile
+--   it; the purge is a headline-curve (reach-inflation) concern, not an HS x AHS concern. Re-run of this cut is
+--   raw-only. Headline metrics per cell: households, spend, attributed visits, hh_visit_rate, cost-per-household.
 WITH camp AS (
   SELECT campaign_id, objective_id
   FROM `dw-main-bronze.integrationprod.public_campaigns`
@@ -70,10 +75,8 @@ classed AS (
   FROM hh
 ),
 emitted AS (
-  SELECT hs_band, ahs_class, freq_bucket, p.purge, freq, spend, visits, visited
-  FROM classed, UNNEST([STRUCT('1_raw' AS purge, TRUE AS keep),
-                        STRUCT('2_purged',       NOT shared_ip)]) AS p
-  WHERE p.keep
+  SELECT hs_band, ahs_class, freq_bucket, '1_raw' AS purge, freq, spend, visits, visited
+  FROM classed                                    -- raw-only (see header): purge dropped for this secondary cut
 )
 SELECT purge, hs_band, ahs_class, freq_bucket,
   COUNT(*)                                   AS n_households,

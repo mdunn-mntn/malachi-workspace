@@ -103,7 +103,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 |---|---|---|---|---|
 | `ipdsc_monitor / precondition_<partner>` | GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) `AirflowSensorTimeout` | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
 | `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even in QA / a challenger run — starves `create-dataproc-cluster` → code 9. Resource contention, NOT stockout or config. | **Resource contention** — confirm no other Dataproc job is running, let the concurrent/challenger job FINISH, then manually re-trigger the champion. Blind re-run fails while a job still runs. | INC-002 |
-| `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the compiled drift template `fangorn_daily_feature_drift_pipeline.json` declares `run_date` (not `reference_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch (drift template is the odd one out vs the DAG's 3 other Fangorn pipelines). | **DAG bug** (param/config) — route to owner (Brian/ML). Fix = standardize the drift template on `reference_date` + drop the DAG's redundant `run_date` (PR #1158). Do NOT blind-re-run (reproduces it); re-run only AFTER the bundle + template version updates, with "Run with latest bundled version" checked. | INC-003 |
+| `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the drift template declares `run_date` (its KFP source `fangorn_daily_feature_drift_pipeline.py:393` uses `run_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch. | **DAG bug** — route to owner (Brian/ML). **PR #1158 (airflow-ti) does NOT fix it** (confirmed: re-run on the fixed bundle re-failed identically); the operator-injected `reference_date` is the failing param. Real fix = rename the KFP pipeline param `run_date`→`reference_date` in **`targeting-infra-ml`** + recompile/redeploy the template. Do NOT blind-re-run until that ships. | INC-003 |
 
 ---
 
@@ -254,8 +254,24 @@ Vertex pipeline `fangorn_daily_feature_drift_pipeline` (template
 `gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_daily_feature_drift_pipeline.json`,
 project `mntn-targeting-prj-prod`, region `us-central1`).
 
-**STATUS: RESOLVED (diagnosis + owner fix merged) — re-run PENDING bundle/template version propagation.**
-Owner Brian McAdams (Sr MLE) merged **PR #1158** (2026-07-28 21:54Z, `dags/machine_learning/fangorn_inference_pipeline_run.py`, −1 line). Recovery per Brian in #alerts-tpa-pipeline: **wait ~30 min for the Astronomer bundle version to update, then re-run WITH "Run with latest bundled version" checked** (see `[[feedback_astronomer_clear_with_latest_bundle]]`). Next on-call: verify the re-run (or the next 18:00 UTC scheduled run) goes green.
+**STATUS: OBSERVED / RE-OPENED — the merged DAG fix (PR #1158) does NOT fix this; the fix is owner-side in
+`targeting-infra-ml` (template redeploy), not yet shipped.** Routed back to Brian McAdams (Sr MLE). resolved=false.
+
+**Re-run proof (2026-07-28 23:16Z, attempt 3):** re-ran WITH "Run with latest bundled version" — the bundle
+loaded was `2026-07-28T21:55:33Z`, i.e. AFTER PR #1158 merged (21:54:58Z), so the DAG fix WAS active — and
+it failed with the **identical** `ValueError: … parameter reference_date … not found`. This proves the
+DAG-side change is insufficient (see mechanism below). Do NOT keep re-running; every retry reproduces it
+until the drift template is redeployed.
+
+**The actual fix (owner = Brian, `targeting-infra-ml`):** the top-level KFP pipeline
+`fangorn_daily_feature_drift_pipeline(...)` declares its date param as **`run_date: str = "2026-07-25"`**
+(`vertex/fangorn/pipelines/fangorn_daily_feature_drift_pipeline.py:393`, threaded to
+`submit_daily_drift_job`'s `run_date`). The airflow-ti operator ALWAYS injects `reference_date`. Rename the
+pipeline param `run_date` → `reference_date`, recompile, and redeploy
+`gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_daily_feature_drift_pipeline.json` — then the
+operator-injected `reference_date` is accepted and PR #1158 (dropping the DAG's redundant `run_date`) is
+correct/complete. PR #1158 alone is a **no-op** for the failing param. (The drift task was NEW —
+`43f11915 "Add daily roll-up"`, 2026-07-27 — so it was broken from inception, never green.)
 
 **Verdict: DAG BUG (param-contract mismatch) — NOT resource contention.** Same DAG as INC-002 but a
 different task (`daily_drift_pipeline`, the last task in the chain) and an unrelated cause.
@@ -274,11 +290,11 @@ PR #1158 removes.
 `reference_date` and succeed, so their templates declare `reference_date`. The proper fix therefore
 standardizes the drift template on `reference_date` (a **targeting-infra** recompile) AND drops the DAG's
 `run_date` workaround (PR #1158, `airflow-ti`).
-**⚠ DAG-only bundle update is NOT sufficient by itself:** because the current GCS template still declares
-`run_date`, the operator-injected `reference_date` is still rejected until the drift template is
-redeployed with `reference_date`. That template redeploy is the "version" being waited on. If the re-run
-still ValueErrors on `reference_date` after ~30 min, the template hasn't propagated yet — check its params
-(command 2 below) before re-running again.
+**⚠ DAG-only bundle update is CONFIRMED insufficient** (attempt 3 on the fixed bundle failed identically —
+see STATUS above). The compiled template's param name comes straight from the KFP pipeline source:
+the deployed JSON declares `run_date` because `fangorn_daily_feature_drift_pipeline.py:393` declares
+`run_date: str`. Until that source is renamed to `reference_date` and the template recompiled/redeployed
+(owner-side, `targeting-infra-ml`), the operator-injected `reference_date` is rejected every run.
 
 **Diagnosis run (copy-paste for next time):**
 ```bash
