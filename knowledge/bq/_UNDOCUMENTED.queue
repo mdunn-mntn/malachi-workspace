@@ -1,8 +1,10 @@
 .TABLES
 audience.mm_campaign_classifier
 enriched.lift__ghost_bid_visits
+external.ipdsc__v1
 external.targeted_signal
 geo.location_data
+integrationprod.advertiser_frequency_caps
 integrationprod.archives_campaign_group_archives
 integrationprod.archives_household_score_threshold_archives
 integrationprod.core_attribution_models

@@ -3,7 +3,7 @@ doc_type: runbook
 title: On-Call Runbook — Master
 summary: "Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here."
 last_verified: 2026-07-28
-keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, INC-001, INC-002]
+keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, INC-001, INC-002, INC-003]
 tags: [on-call, airflow, incident-response]
 ---
 
@@ -103,6 +103,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 |---|---|---|---|---|
 | `ipdsc_monitor / precondition_<partner>` | GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) `AirflowSensorTimeout` | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
 | `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even in QA / a challenger run — starves `create-dataproc-cluster` → code 9. Resource contention, NOT stockout or config. | **Resource contention** — confirm no other Dataproc job is running, let the concurrent/challenger job FINISH, then manually re-trigger the champion. Blind re-run fails while a job still runs. | INC-002 |
+| `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the compiled drift template `fangorn_daily_feature_drift_pipeline.json` declares `run_date` (not `reference_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch (drift template is the odd one out vs the DAG's 3 other Fangorn pipelines). | **DAG bug** (param/config) — route to owner (Brian/ML). Fix = standardize the drift template on `reference_date` + drop the DAG's redundant `run_date` (PR #1158). Do NOT blind-re-run (reproduces it); re-run only AFTER the bundle + template version updates, with "Run with latest bundled version" checked. | INC-003 |
 
 ---
 
@@ -241,6 +242,76 @@ hand-re-triggering each time. Tracked as **IMP-002** in `improvements_backlog.md
 
 ---
 
+### INC-003 — `fangorn_inference_pipeline_run` `daily_drift_pipeline` — Vertex param `reference_date` not in template
+**Date:** 2026-07-28 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [fangorn_inference_pipeline_run/daily_drift_pipeline] at 2026-07-27 11:00 PT`, run `scheduled__2026-07-27T18:00:00+00:00`, `try_number=2` (`max_tries=1` → exhausted → PagerDuty).
+**Error (log tail):**
+```
+ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions.
+  .../google/cloud/aiplatform/utils/pipeline_utils.py, line 241 in _get_vertex_value
+  .../include/vertex/operators.py, line 145 in _run_pipeline
+```
+Vertex pipeline `fangorn_daily_feature_drift_pipeline` (template
+`gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_daily_feature_drift_pipeline.json`,
+project `mntn-targeting-prj-prod`, region `us-central1`).
+
+**STATUS: RESOLVED (diagnosis + owner fix merged) — re-run PENDING bundle/template version propagation.**
+Owner Brian McAdams (Sr MLE) merged **PR #1158** (2026-07-28 21:54Z, `dags/machine_learning/fangorn_inference_pipeline_run.py`, −1 line). Recovery per Brian in #alerts-tpa-pipeline: **wait ~30 min for the Astronomer bundle version to update, then re-run WITH "Run with latest bundled version" checked** (see `[[feedback_astronomer_clear_with_latest_bundle]]`). Next on-call: verify the re-run (or the next 18:00 UTC scheduled run) goes green.
+
+**Verdict: DAG BUG (param-contract mismatch) — NOT resource contention.** Same DAG as INC-002 but a
+different task (`daily_drift_pipeline`, the last task in the chain) and an unrelated cause.
+`TiVertexPipelineOperator._run_pipeline` (`include/vertex/operators.py`) ALWAYS builds
+`parameter_values = {google_cloud_project, google_cloud_region, bucket_name, branch, reference_date, **additional_params}`,
+so it injects `reference_date` for every pipeline it submits. `PipelineJob.__init__` validates each key
+against the compiled template's `inputDefinitions` (`_get_vertex_value`); the drift template doesn't
+declare `reference_date` → hard ValueError before submission. The task ALSO passed a redundant
+`parameter_values={"run_date": run_date}` (same value as `reference_date`) — the "extra passed data"
+PR #1158 removes.
+
+**Empirical ground truth (confirmed 2026-07-28):** the deployed drift template declares params
+`[branch, bucket_name, google_cloud_project, google_cloud_region, run_date, service_account]` — it uses
+**`run_date`, NOT `reference_date`.** It is the odd one out: the DAG's other Fangorn pipelines
+(`inference_pipeline` → `fangorn_inference_dataproc_pipeline`, `challenger_inference_pipeline`) also pass
+`reference_date` and succeed, so their templates declare `reference_date`. The proper fix therefore
+standardizes the drift template on `reference_date` (a **targeting-infra** recompile) AND drops the DAG's
+`run_date` workaround (PR #1158, `airflow-ti`).
+**⚠ DAG-only bundle update is NOT sufficient by itself:** because the current GCS template still declares
+`run_date`, the operator-injected `reference_date` is still rejected until the drift template is
+redeployed with `reference_date`. That template redeploy is the "version" being waited on. If the re-run
+still ValueErrors on `reference_date` after ~30 min, the template hasn't propagated yet — check its params
+(command 2 below) before re-running again.
+
+**Diagnosis run (copy-paste for next time):**
+```bash
+# 1. Which param does the failing task send that the template rejects? (log tail)
+#    -> "ValueError: The pipeline parameter <X> is not found in the pipeline job input definitions."  (here X=reference_date)
+# 2. Ground truth: what params does the compiled Vertex template actually declare?
+gcloud storage cat "gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_daily_feature_drift_pipeline.json" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(sorted(d['root']['inputDefinitions']['parameters'].keys()))"
+#    -> ['branch','bucket_name','google_cloud_project','google_cloud_region','run_date','service_account']  (no reference_date)
+# 3. What does the operator send? include/vertex/operators.py _run_pipeline always adds "reference_date": reference_date  + **additional_params
+```
+
+**Decision tree next time (Vertex `ValueError: parameter <X> not found in input definitions`):**
+1. This is a DAG/template param-contract mismatch, NOT infra — do NOT blind-re-run against the same
+   bundle+template (it reproduces the exact error).
+2. Diff operator-sent params vs template-declared params (commands above): the submitter is sending a key
+   the compiled template doesn't declare.
+3. Fix is owner-side (align the DAG param, or recompile the template). Route to the Fangorn/ML owner —
+   template lives in **targeting-infra**, the DAG in **airflow-ti**. Do NOT hot-patch prod.
+4. After the owner's fix is merged AND the bundle + template version propagate (~30 min): clear+re-run WITH
+   "Run with latest bundled version" checked, or let the next scheduled run pick it up. Verify green.
+
+**Severity: LOW.** `daily_drift_pipeline` is Fangorn feature-DRIFT monitoring, downstream of
+`inference_pipeline`/`challenger_inference_pipeline` (`trigger_rule="all_done"`, last in the chain); it does
+not score or serve. Impact = a one-day gap in drift telemetry, no scoring/serving impact.
+
+**Durable-fix note:** the operator silently injects `reference_date` into every pipeline it submits, so any
+template whose date-param name drifts from the operator convention fails only at task-exec (runtime), not at
+DAG-parse. Tracked as **IMP-003** in `improvements_backlog.md` (standardize Fangorn template param names on
+`reference_date`, or validate the operator↔template param contract earlier).
+
+---
+
 ## 4. System reference (producer → consumer maps as we learn them)
 
 **IPDSC / TPA export chain (team TPA_EXPORT, `airflow-ti`)**
@@ -274,6 +345,13 @@ inference on Dataproc ──▶ Fangorn scores  (project mntn-targeting-prj-prod
   re-trigger the champion. Never two Fangorn-like inference runs on Dataproc at once. (INC-002)
 - The Vertex pipeline template + Dataproc config live in **`targeting-infra`** (not `airflow-ti`); a
   config regression is routed there. `airflow-ti` only *submits* the pipeline.
+- **DAG shape** (`dags/machine_learning/fangorn_inference_pipeline_run.py`, team TPA_EXPORT, `0 18 * * *`,
+  severity 0, PagerDuty on failure): `wait_for_features >> inference_pipeline >> challenger_inference_pipeline >> daily_drift_pipeline`.
+  All three pipeline tasks use `TiVertexPipelineOperator`, which ALWAYS injects `reference_date` into the
+  Vertex `parameter_values`. Each submitted template (`fangorn_inference_dataproc_pipeline`,
+  `fangorn_challenger_inference_pipeline`, `fangorn_daily_feature_drift_pipeline`) MUST declare
+  `reference_date` in its `inputDefinitions` or the task hard-fails at exec with
+  `ValueError: … parameter reference_date not found …` (INC-003 — drift template declared `run_date`).
 - Fangorn context: see `[[fangorn_tier_assignment]]`, `[[fangorn_two_model_passes]]`, `[[fangorn_detection]]` in memory.
 
 ---
