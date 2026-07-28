@@ -1947,7 +1947,11 @@ evaluates the **per-campaign `audience.audience_segments.expression`** (translat
 form), which AND-layers platform automation on top. Every MNTN campaign's segment expression adds:
 - **DS14 cat [1] "MNTN Global Data", `op:"any"` — a ~7-DAY AUGMENTOR-LOG ACTIVITY FILTER.** The IP must have appeared
   in the bidstream (`logdata.v_augmentor_log`, ip/time; ~613 GB/day, ~10-day TTL) in the last ~7 days to be eligible.
-  **DS14 is NOT materialized in IPDSC** (zero ipdsc rows) — computed at bid time. **Distinct from the 30-day RTC/site-
+  **DS14 IS materialized in IPDSC** (table `ipdsc__v1`, partition `data_source_id=14`; ~149M distinct IPs on dt=2026-07-27).
+  CORRECTED 2026-07-28 (DS14-opt spike): the earlier "not materialized / computed at bid time" reading was wrong. DS14 is
+  built into IPDSC daily by `populate_data_source.py`, and its **effective serving window is an 8-day TTL, not the 1-4d build
+  window** (membership-db `data_source_ttls['14']=8`, per-IP epoch decay, not archive overwrite; see the DS14-opt block below).
+  **Distinct from the 30-day RTC/site-
   visit scoring lookback** — DS14 is an *eligibility/recency* gate, scoring is *quality*. Both apply.
 - **DS34 (Pageview) + DS21 (Conversion), cat = advertiser_id** — the advertiser's own pixels = past-visitor/converter
   retargeting clauses (prospecting hygiene exclusions).
@@ -1959,6 +1963,42 @@ omits DS14, holdout, and retargeting clauses. (2) Any audience-size/funnel analy
 the user-selection size; the true targetable set is `∩ DS14-active(7d) ∩ not-past-visitor ∩ holdout-bucket`. (3) The
 DS14 filter is the platform's formal "availability" gate — it's why a campaign's deliverable ≈ its recently-active pool.
 To inspect: pull `audience_segments.expression`, `jq '.categories.where'` (root `op:"and"`), look for `data_source_id:14`.
+
+### DS14 addressability vs scoring universe — cost-optimization finding (2026-07-28, DS14-opt spike)
+
+Question: does MNTN score/store more IPs than it can ever bid on? **Verdict: yes, materially.** Four facts:
+
+1. **Origin.** DS14 born 2025-08-13 (Sean Yang prototype), productionized 2025-12-11 under **AUDI-369** ("multi-source union
+   support"). POST-MM (DS13/DS19 predate it). Built from day one as a positive addressability set, NOT a pre-MM recency
+   filter. Sources: `augmentor_log` (1d) ∪ `bidder_auction_events` (1d) ∪ `guid_log` (4d); `category_id`=1 (first-party) or
+   `exchange_id` (auction-only) or 1000 (`.0` quarantine, a producer-side sink read by nothing downstream).
+2. **Effective window = 8 days, not 1-4.** membership-db applies a per-data-source TTL `data_source_ttls['14']=8` via per-IP
+   epoch **decay** (not archive overwrite). An IP stays matchable 8 days past its last build inclusion. (30 days if DS14 is
+   Portal-registered with an audience type; 8 is the code-intended data-source path.) The 1-4d build only sets epoch freshness.
+3. **DS14 IS materialized in IPDSC** (`ipdsc__v1`, `data_source_id=14`). Corrects the prior "zero ipdsc rows" note.
+4. **Scoring is UNGATED by DS14.** `spark/audience_intent/vertical_high.py` / `vertical_mid.py` score every (ip, vertical_id)
+   over a **31-day DS13 IPDSC window** with no recency/DS14 intersection; `vertical_mid` BUCKET 2 deliberately scores IPs with
+   NO recent pageview/recency. DS14 is a separate DAG, ANDed only at bid time. So the full 31-day universe is scored and
+   emitted; only the ~8-day addressable slice is ever biddable.
+
+**Sizing (HLL distinct-IP on `ipdsc__v1`, ~1.5% err; scored = 31d [2026-06-27..07-27], addressable = DS14 8d [07-20..27]):**
+
+| Source | Scored (31d) | Addressable ∩ (8d) | Not addressable | % waste |
+|---|---:|---:|---:|---:|
+| DS19 (MM Core) | 499.4M | 156.6M | 342.8M | **69%** |
+| DS13 (verticals / PP-v1) | 269.8M | 164.7M | 105.1M | **39%** |
+
+DS14 8d set = 259M IPs; 1d = 149M. At the strict 1-day window (thesis assumption) DS13 waste = 56%. Addressable count uses
+ALL DS14 categories; the standard `cats:[1]` gate is a subset, so true waste is **≥** these figures (conservative).
+
+**Actionable lever:** intersect the 31-day DS13/DS19 scoring input with the current DS14 (8d) set before `vertical_high/mid` +
+`populate_data_source`. Est. daily Spark/Dataproc compute reduction ~39% (verticals) / ~69% (MM Core). **Zero biddable-coverage
+loss**: any IP that becomes addressable is scored that day from still-retained DS13 history; intra-day-new IPs handled by RTC.
+**Do NOT cut raw-visit / DS13 retention** (30d = the model's scoring lookback, not slack). The lever is the scoring OUTPUT
+universe, not input retention. **Risk to clear first:** enumerate non-bidding consumers of the full scored universe (totals/
+sizing already DS14-gated; check lookalike seeds, LiftLab exports, AUD-5221 deciles, Fangorn training) and gate only the
+serving-bound path if a modeling path needs the full universe. Validate the no-loss argument with the bidder owners (Ryan
+Kleck / Sean Yang / Zach Schoenberger). $ figure pending the audience_intent DAG's Dataproc cost.
 
 ### Where the UI audience-size number lives (TI-1026, Nick Martin/Matt Brorby/Jordan Piepkow 2026-06-15)
 
