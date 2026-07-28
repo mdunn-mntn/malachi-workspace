@@ -26,8 +26,17 @@ AIDS = [
  37085,48875,34472,39834,56494,37316,62689,32153,33467,59460,32040,66784,37880,40002,44054,
  40563,39225,44339,44419]
 
+def _wrap_aids(aids, per=10, indent="    "):
+    """Render the AID list wrapped ~per-line so the SQL tab never cuts off horizontally."""
+    rows = [", ".join(str(a) for a in aids[i:i+per]) for i in range(0, len(aids), per)]
+    return "\n".join(indent + r + ("," if i < len(rows)-1 else "") for i, r in enumerate(rows))
+
+AIDS_SQL = _wrap_aids(AIDS)
+
 SQL = f"""
-WITH aids AS (SELECT advertiser_id FROM UNNEST({AIDS}) AS advertiser_id),
+WITH aids AS (SELECT advertiser_id FROM UNNEST([
+{AIDS_SQL}
+  ]) AS advertiser_id),
 cg AS (
   SELECT r.advertiser_id,
          r.entity_id AS campaign_group_id,
@@ -280,8 +289,38 @@ wb.glossary(
     ],
 )
 
-wb.sql("Query", SQL, note="BigQuery: gold reporting.lift__ghost_bid_rollup joined to campaign_groups for product_id, "
-                          "aggregated to advertiser x product by inverse-variance weights.")
+SCOPING_SQL = """-- SCOPING QUERY (validation only - does NOT feed any number in this workbook).
+-- Purpose: confirm every campaign group in scope is prospecting (objective_id = 1) and see the
+-- Select vs non-Select split. Ghost-bid holdout only exists on the prospecting pool, so this
+-- verifies no retargeting/other funnel rows slipped in.
+WITH aids AS (SELECT advertiser_id FROM UNNEST([ /* the same 93 AIDs as the main query */ ]) AS advertiser_id),
+cg AS (
+  SELECT r.advertiser_id, pcg.product_id, pcg.objective_id, r.n_treatment, r.n_holdout
+  FROM `dw-main-gold.reporting.lift__ghost_bid_rollup` r
+  JOIN `dw-main-silver.public.campaign_groups` pcg ON r.entity_id = pcg.campaign_group_id
+  WHERE r.level = 'campaign_group' AND r.advertiser_id IN (SELECT advertiser_id FROM aids)
+)
+SELECT CASE WHEN product_id = 2 THEN 'Select' ELSE 'non-Select(PTV)' END AS product,
+       objective_id, COUNT(DISTINCT advertiser_id) AS n_adv, COUNT(*) AS n_cg,
+       SUM(n_treatment) AS tot_treatment, SUM(n_holdout) AS tot_holdout
+FROM cg GROUP BY 1, 2 ORDER BY 1, n_cg DESC;
+-- Result 2026-07-28: Select obj=1 -> 43 adv / 111 cg;  non-Select obj=1 -> 66 adv / 175 cg.
+-- Only objective_id = 1 present -> the cohort is 100% prospecting, as expected."""
+
+QUERY_TAB = (
+    "-- ===============================================================\n"
+    "-- ONE query drives every number in this workbook. It returns one\n"
+    "-- row per advertiser x product; the pooled Select-vs-non-Select,\n"
+    "-- the 27/35 paired test, all CIs, z-scores and rel/abs lift are\n"
+    "-- computed in Python from this single result set (see the .py in\n"
+    "-- artifacts/). No other BigQuery reads feed the numbers.\n"
+    "-- ===============================================================\n\n"
+    "-- MAIN QUERY -----------------------------------------------------\n"
+    + SQL.strip() + "\n\n\n" + SCOPING_SQL + "\n"
+)
+
+wb.sql("Query", QUERY_TAB, note="Every figure comes from the main query below; the scoping query is validation only. "
+                                "Source: reporting.lift__ghost_bid_rollup x campaign_groups.product_id.")
 
 wb.notes(
     "Method & caveats",
