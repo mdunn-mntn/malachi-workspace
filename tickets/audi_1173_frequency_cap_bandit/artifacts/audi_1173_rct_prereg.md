@@ -2,7 +2,7 @@
 
 *This is the falsifiable, frozen commitment. Freeze BEFORE any downstream consumption of the total-visit data or any peek at outcomes. Full design + rationale: `audi_1173_rct_design.md`. Any change after freeze goes in the Amendments log (§13) with a timestamp and reason — never a silent edit.*
 
-- **Freeze status:** DRAFT-PENDING-LOCK — locks once `PENDING-A/B/C` (total-visit source + base rate + N) are filled and the author signs off.
+- **Freeze status:** DRAFT-PENDING-LOCK. `PENDING-A` (total-visit source + join key) **resolved**; `PENDING-B/C` (freq≥8 base rate + N) filled **PROVISIONALLY** (p0≈3%, N/arm≈198K). Locks once the freq≥8 base rate is **confirmed at Checkpoint β** (Step 3's total-visit-by-frequency curve) and the author signs off.
 - **Frozen-before clause:** enrollment must not begin, and no outcome data may be inspected, until this file is committed with §5/§6 numeric and the author's sign-off.
 - **Author sign-off:** `____________`  **Date locked:** `____________`
 
@@ -20,12 +20,12 @@
 
 **Reframed as non-inferiority (visits) + superiority (cost). GO requires BOTH:**
 
-1. **Visits non-inferior:** one-sided **lower 95% bound** of `(p_T,total − p_C,total)` **> −δ**, with **δ = 5% relative** of the control total-visit incidence `p_C,total`.
+1. **Visits non-inferior:** one-sided **lower 95% bound** of the **RELATIVE** contrast `(p_T,total − p_C,total)/p_C,total` **> −δ**, with **δ = 5% relative** of the control total-visit incidence. Relative is the coverage-robust scale (design §5.4); absolute pp reported alongside as a coverage-attenuated companion. A **fixed** absolute-pp margin is prohibited (not coverage-invariant).
 2. **Cost superior:** cost/household reduction, one-sided **lower 95% bound > 0** (tighter cap strictly cheaper).
 
 **GO** = ship the cap / green-light the bandit on that stratum. **NO-GO** = visits fail NI OR cost not reduced. Decided per stratum × per arm (4 cells: {prospecting, retargeting} × {cap-8, cap-3}).
 
-*(δ = 5% relative is the frozen default; author may lock 3% (stricter) or 10% (looser) at sign-off — record the chosen value here: **δ = ___% relative**.)*
+*(δ = 5% relative is the frozen default; author may lock 3% (stricter) or 10% (looser) at sign-off — record the chosen value here: **δ = ___% relative**. The relative SCALE is fixed by the coverage model, not an author choice; only the VALUE is.)*
 
 ## 3. Arms (3)
 
@@ -53,7 +53,7 @@ Same classifier applied to control households. **Realized in-experiment frequenc
 
 ## 6. Inference method
 
-- **Primary (binary total-visit incidence): two-proportion z-test, non-inferiority form** (§2 bar). N per arm per §7.
+- **Primary (binary total-visit incidence): two-proportion z-test, non-inferiority form** (§2 bar), **reported on the RELATIVE scale** (coverage-robust; §7 + design §5.4). N per arm per §7.
 - **Secondary (cost/household, visits/dollar, total-visits/household count): nonparametric bootstrap resampling HOUSEHOLDS**, ≥5,000 resamples; point / 95% CI / two-sided p.
 - **Advertiser = stratification/blocking + CUPED covariate** (pre-period visit rate; 20-50% SE reduction), **NOT** the resample cluster.
 - **Diagnostic:** MNTN-attributed VV/household contrast, reported beside the total-visit contrast; the gap = the in-experiment last-touch attribution bias.
@@ -61,15 +61,16 @@ Same classifier applied to control households. **Realized in-experiment frequenc
 
 ## 7. Power / sample size
 
-- **Sized on the BINDING freq≥8 eligible stratum**, base rate = **total-visit incidence `p0_total` (NOT the ~1.0% attributed rate)**.
+- **Sized on the BINDING freq≥8 eligible stratum**, base rate = **SERVED total-visit incidence `p0_total`** (all 3 arms serve → the base is the served ~1.55% platform-avg, raised on the freq≥8 tail — NOT the ~1.0% attributed rate, NOT the 0.886% never-served holdout rate).
 - **Two-proportion, 80% power, α=0.05 two-sided, MDE = 5% relative (default).** `N ≈ (1.96+0.8416)²·[p0(1−p0)+p1(1−p1)]/(p1−p0)²`.
+- **Reporting scale = RELATIVE** (coverage-robust under multiplicative cross-device miss); the NI margin is relative, so the test is coverage-invariant. Absolute pp = companion only (see design §5.4).
 
-> **LOCKED VALUES (fill at freeze):**
-> Prospecting: `p0_total = ___%`, `MDE_rel = ___`, **N/arm = ______**
-> Retargeting: `p0_total = ___%`, `MDE_rel = ___`, **N/arm = ______**
-> Total-visit source table: `________________` · join key: `________`
+> **PROVISIONAL VALUES (confirm at Checkpoint β with Step 3's total-visit-by-frequency curve; then lock at sign-off):**
+> Prospecting: `p0_total ≈ 3%` *(provisional freq≥8 anchor; ≥1.5% served floor, likely higher at ≥30d window)*, `MDE_rel = 5%`, **N/arm ≈ 198K** *(116K if p0=5%; 402K if p0=1.5%)*
+> Retargeting: `p0_total ≈ 20-35%` *(returning visitors)*, `MDE_rel = 5%`, **N/arm ≈ 12-25K** *(over-powered; binding constraint = incrementality size, not N)*
+> Total-visit source table: **`dw-main-silver.enriched.lift__ghost_bid_visits`** (fallback: direct `logdata.guid_log` join) · join key: **`(advertiser_id, ip)`** (ip CIDR-stripped, visit in `[first_bid_time, +window)`)
 
-*(Reference anchors: at the old attributed 1.0% base, 5%-rel → 637K/arm. Total-visit base rate is higher → N lower at fixed MDE, but the true relative effect is smaller → a smaller MDE may be chosen, raising N. The confirmed `p0_total` + chosen MDE decide N — see design §6 grid.)*
+*(Reference anchors: at the old attributed 1.0% base, 5%-rel → ~606-637K/arm. SERVED total-visit base rate is higher → N lower at fixed MDE, but the true relative effect is smaller → a smaller MDE may be chosen, raising N. The confirmed `p0_total` + chosen MDE decide N — see design §6 grid. Fill (~0.4-0.7 wk) is off the critical path; the ~10-12wk calendar is set by exposure + maturation.)*
 
 ## 8. Calendar and when the decision is read
 
@@ -83,12 +84,12 @@ Shared-IP purge BEFORE randomization (external-validity bound quantified) · **s
 ## 10. Prerequisites (must be true before enrollment)
 
 1. **New `@SteelHouse/rtb` bidder feature** shipped: per-household bucket→arm→cap in `do_fcap` (arms B/C are not config-only — confirmed in code). Hash bit-match verified jointly.
-2. `PENDING-A/B/C` resolved (total-visit source + `p0_total` + N).
+2. `PENDING-A` resolved (source + join key). `PENDING-B/C` (freq≥8 `p0_total` + N) **confirmed at Checkpoint β** from Step 3's total-visit-by-frequency curve — provisional until then.
 3. Eligible-stratum build + shared-IP purge + site-wide-pixel universe validated.
 
 ## 11. Primary outcome — exact definition
 
-**Total advertiser site visits by the household (IP)** over the window, from the site pixel / total-traffic signal, **independent of MNTN last-touch attribution**. Binary primary = `≥1 total site visit` (yes/no). Source table + join key: **`PENDING-A`** (candidates: `clickpass`/`guid_log` total-traffic, or INCR `enriched.lift__ghost_bid_visits`). Attributed VV (`ui_visits`) is **secondary/diagnostic only**.
+**Total advertiser site visits by the household (IP)** over the window, from the site pixel / total-traffic signal, **independent of MNTN last-touch attribution**. Binary primary = `≥1 total site visit` (yes/no). **Source (resolved):** primary **`dw-main-silver.enriched.lift__ghost_bid_visits`** (binary `visited` per arm × ip, guid_log-based); observational fallback = direct **`dw-main-silver.logdata.guid_log`** join. **Join key = `(advertiser_id, ip)`** (ip CIDR-stripped, visit in `[first_bid_time, +window)`). Attribution-independent (holdout arm empirically 0.886% visit rate at 0.0% won-rate). Attributed VV (`ui_visits`) is **secondary/diagnostic only**.
 
 ## 12. What would falsify / flip the conclusion
 

@@ -103,6 +103,29 @@ Confirm system authority with Devon; clear AUD-5221 + LiftLab with their owners 
 
 Note: the two HHST implementations use DIFFERENT failure sets. Redshift/DDM retains only household-score failures (`invalidHouseholdScore`/`invalidAdvertiserHouseholdScoreFailure`) — **~0 here → its denominator is mostly has_price (robust)**. v4 retains the intent-score failures (which dominate). Confirm with Devon which is authoritative.
 
+### HHST write path + applied-threshold distribution (empirical, 2026-07-28, `queries/audi_1175_hhst_writer_and_thresholds.sql`)
+
+Compass located the tables but was denied row access to `dw-main-bronze`; I ran the queries it couldn't via the CDC mirrors (I have access; the `camperbid_prod__hhst_v4__*` GCS externals are still blocked for me too — `gs://camperbid-prod` list denied, same wall).
+
+**Two write paths, cleanly separated:**
+- `dso.configuration_service_campaign_presets.household_score_threshold_preset` = **manual ops overrides only** — ~26 campaigns, every `reason` human (`PER-####` Jira, "WC Setup", "SF Program", "TOF MANAGE", "Special Help"). The automated recommender does NOT write here. Gate-irrelevant.
+- `dso.household_score_thresholds` (CDC: `dso_household_score_thresholds`) = **the applied threshold**, one row/campaign, written by a **live** automated writer (newest update = today; ~2,082 campaigns updated in the last day).
+
+**Applied-threshold distribution (32,550 campaigns):**
+
+| Band | threshold | campaigns | % |
+|---|---|---:|---:|
+| Max Reach (ungated) | 0 | 21,144 | 65.0% |
+| Max Reach band | 1–3332 | 1,410 | 4.3% |
+| Mid | 3333–6665 | 2,308 | 7.1% |
+| Guardrail default | 6666 | 2,285 | 7.0% |
+| Peak | 6667–8000 | 618 | 1.9% |
+| High | ≥8001 | 4,103 | 12.6% |
+
+**Starvation baseline (answers the metric the GCS-blocked v4 table would have given): ~69% of campaigns are ALREADY at Max Reach (threshold ≤ 3332), 65% exactly at 0 (ungated).** Max Reach is the system's dominant steady state, not a failure mode. The gate can't worsen the 69% already ungated; the gated ~31% hold high thresholds because they have ample addressable population, which the gate preserves (we keep scoring all DS14-addressable IPs). **Starvation risk: low.**
+
+**Authority — now moot for the go/no-go.** A live automated writer maintains `dso_household_score_thresholds`. Whichever system it is (v4 = confirmed prod code, auction-scoped, no DS14 join anywhere in `airflow-camperbid`; DDM = a `prospecting_intent`-reading pilot whose household-score-failure denominator is ~0 per the Max-Reach query), **the gate is safe under all three writers** (auction-scoped, or pilot-small, or manual). Exact DDM pilot status still needs a live Redshift check (no access) or Devon — but it no longer gates the decision.
+
 ### AUD-5221 — RESOLVED (Jira text, 2026-07-28)
 
 AUD-5221 is a **Closed** Epic under BER-2250, owned by Malachi. Per its text it deciles the **intent-score distribution** (even/odd control/treatment for the Intent-Score-Shuffling experiment), NOT a US-population census → it operates on the scored/addressable set → **gate-safe**. Discrepancy to reconcile: `strategic_north_star.md` frames AUD-5221 as a "US Population 1-10 random split" (TTD-style, full universe); the built/closed ticket is score-distribution deciles. If a true random US-population split is later built, it's a net-new full-universe pipeline and this gate assumption is revisited then.
@@ -142,7 +165,7 @@ Confidence: LOW / order-of-magnitude. Executor sizes/tiers/ceilings are exact fr
 ## 8. Open Items / Follow-ups
 
 - **$ figure — DONE (order-of-magnitude):** gate optimization saves ~$1.3k/mo (DS13) to ~$11k/mo (~$130k/yr, if DS19 cut is applied to `prospecting_keywords` where the volume lands). Whole scoring DAG ≈ $39k/mo. Firm up to a point estimate via GCP Billing BQ export / `gcloud dataproc batches describe` (DCU-seconds per batch).
-- **Consumer audit — DONE (see §4).** Safe for all serving paths + Fangorn. Primary HHST recommender (camperbid v4) auction-scoped → gate-safe; DDM DCO pilot (Devon) small-scope → prize most likely survives. **AUD-5221 RESOLVED** (score-distribution deciles, gate-safe). **Max-Reach shadow query DONE** (baseline ~99% unscored, gate adds ~nothing). Remaining: Devon confirms HHST authority + run the starvation shadow query; LiftLab confirm (#dev-incremental-lift, low risk).
+- **Consumer audit — DONE (see §4).** Safe for all serving paths + Fangorn. Primary HHST recommender (camperbid v4) auction-scoped → gate-safe; DDM DCO pilot (Devon) small-scope → prize most likely survives. **AUD-5221 RESOLVED** (score-distribution deciles, gate-safe). **Max-Reach shadow query DONE** (baseline ~99% unscored, gate adds ~nothing). **LiftLab confirmed safe** (Compass: served-only MAPI export, no scored-universe path). **Starvation baseline DONE** (69% of campaigns already Max Reach; risk low). **Presets = manual overrides only.** Remaining: DDM pilot exact prod status (Redshift/Devon — no longer gates the decision); AUDI-1176 build-time delivery-parity shadow run.
 - **Owner validation** — confirm no-loss with Ryan Kleck / Sean Yang / Zach Schoenberger before AUDI-1176.
 - **Exact intersection** — optional exact DISTINCT+JOIN to confirm the HLL estimate.
 - **`cats:[1]` refinement** — recompute addressable set restricted to category 1 (unnest `data_source_category_ids`) for the true gate.
