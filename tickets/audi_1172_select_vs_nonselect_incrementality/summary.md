@@ -86,6 +86,10 @@ Select treated bids 23.1M / holdout 2.0M; non-Select treated 63.7M / holdout 6.6
 | non-Select-only | 31 |
 | No clean-gated data (all low-coverage) | 19 |
 
+### 3.4 Negative lift readings (e.g. 59460 Choose New Jersey, non-Select −13.8%)
+
+A per-advertiser negative is noise, not harm, unless a bias flag trips. Pulled `reporting.lift__ghost_bid_results` (`stratum_type='overall'`) for 59460: non-Select side had **every bias flag clean** — `ghost_frac_inflated=false`, `arm_imbalance_suspect=false`, `has_valid_holdout=true`, `holdout_won_rate=0`, `meets_min_n/compliance=true`, `ip_compliance=0.42`. So the −13.8% (nominal z −2.8) is noise around ~0: bid-grain z is N-inflated (bids within an IP correlated) and ~42% compliance dilutes the ITT. Teaching point: the Select side of the same advertiser is the one flagged `arm_imbalance_suspect=true`, yet reads +262% — **the flags mark imbalance RISK, not direction.** Captured as a methodology lesson in `experimentation.md` §"Ghost-bid lift".
+
 ## 4. Caveats
 
 - **Bid-grain ITT.** The unit is a bid, treatment bids win ~10% of auctions, so absolute pp is win-rate-diluted roughly equally across products. Relative lift is the fair comparison; do not read the pp as a served-user rate.
@@ -95,4 +99,8 @@ Select treated bids 23.1M / holdout 2.0M; non-Select treated 63.7M / holdout 6.6
 
 ## 5. Data documentation updates
 
-None net-new; relies on the existing `data_catalog.md` §"lift__ghost_bid_*" and `experimentation.md` §"Ghost-bid lift". Coverage/window facts (6/22 floor, Beeswax-only, product-split cardinality) are consistent with those docs.
+Added: `data_catalog.md` §lift — rollup `level`/`entity_id` grain, the `entity_id→campaign_groups.campaign_group_id` join (PK column is `campaign_group_id`, not `id`), product_id Select/PTV split, Select coverage sparsity (Beeswax-only), 6/22 floor. `experimentation.md` §Ghost-bid lift — the negative-lift diagnostic (read the results-table flags; flags mark risk not direction; 59460 example).
+
+## 6. Deliverable format iterations
+
+The xlsx went through several format-clarity passes driven by review feedback, all folded back into the shared builder `lib/mntn_xlsx.py` (so every future workbook inherits them): abs lift shown as `pp` vs relative as `%` (v6 of the builder wasn't this — added the distinction); "clean-gated" jargon replaced with plain "usable holdout"; a Read-me note for blank-rel-but-significant (zero-holdout-visit) rows; subtitles wrap to the table width (v7); one-line method subtitle + a Mountain Green accent rule + a codified alignment standard fixing the cover Contents header (v8). See `documentation/docs/xlsx_deliverable_standard.md` changelog v7/v8.
