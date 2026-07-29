@@ -1,6 +1,6 @@
 # RFD — AUDI-1173: Approve a frequency-cap RCT as MNTN's first-bandit validation gate
 
-*Status: DRAFT for review. Decision doc / Request-for-Decision. Confluence-ready. Sources: `audi_1173_rct_design.md`, `audi_1173_rct_prereg.md` (DRAFT-PENDING-LOCK), `audi_1173_refined_sizing.md`, `audi_1173_leakage_brief.md`, `audi_1173_ownership_feasibility_memo.md`, `audi_1173_scope.md`.*
+*Status: DRAFT for review. Decision doc / Request-for-Decision. Confluence-ready. Execution companion (the full ordered work-list): `audi_1173_implementation_plan.md`. Sources: `audi_1173_rct_design.md`, `audi_1173_rct_prereg.md` (DRAFT-PENDING-LOCK), `audi_1173_refined_sizing.md`, `audi_1173_leakage_brief.md`, `audi_1173_ownership_feasibility_memo.md`, `audi_1173_scope.md`.*
 
 ---
 
@@ -63,6 +63,22 @@ The pool is real and bounded: **~32% of combined / ~30% of prospecting 30d-deliv
 **The magnitude is withdrawn, not quoted.** The prior $0.41M-$0.66M/7d headline is retracted (rejected excess-counting method, shared-IP confound in the household key, and a 7-day purge that trips for only ~0.34% of households, a near-no-op). Do not cite a dollar figure.
 
 **Frame it as a capability to build and measure, actionable independent of the RCT.** The fix is one advertiser-level rollup counter on the **default cap only** (never touch `has_custom_frequency_caps`). Whether collapsing fragmented counters to one advertiser counter *helps* (recovers value via reallocated reach) or *hurts* (starves distinct-creative delivery) is a policy question the RCT settles. Per-group caps may be deliberate.
+
+---
+
+## Expected impact — what's the prize
+
+**The RCT sizes the prize; we do not claim it up front — that discipline is the point.**
+
+- **Gross-addressable pool:** ~$3.9M/30d combined (shared-IP-purged) sits above an 8/wk cap (~$3.4M of it prospecting) — spend on already-saturated households a cap would stop buying.
+- **Recoverable = the non-incremental fraction, unknown until the RCT runs.** Likely small in retargeting (visits were returning anyway), larger in the cold prospecting tail. *Illustrative only, not a claim:* if 25-50% of the ~$3.4M/30d prospecting over-cap spend is non-incremental, ~$0.85-1.7M/30d is redirectable to incremental reach across the covered advertisers.
+- **Expected outcome:** total visits non-inferior (stable) while cost per household drops — a clean efficiency gain on the capped tail, then a bandit that continuously tunes the cap. If cap-3 fails non-inferiority but cap-8 passes, the incremental floor sits between 3 and 8/wk (still actionable).
+
+**What it affects:**
+
+- **Advertiser efficiency → retention (the real win).** Under fixed campaign budgets, capping the over-served tail redirects those impressions to fresh reach: same spend, more incremental visits per dollar = incremental ROAS.
+- **MNTN revenue ~neutral short-term.** CPM pricing + fixed budgets → total spend unchanged, impressions redistributed, not removed. A cap does not cut MNTN revenue. Flag: attributed IVR / performance metrics will shift on the capped tail — a reporting artifact of the honest metric change, not a real regression.
+- **Strategic infrastructure.** Stands up the reusable randomized-holdout lift plane the HHST bandit (Phase 2) and the Q2 incrementality OKR both need. First production MAB → a durable capability, not a one-off.
 
 ---
 
