@@ -56,6 +56,14 @@ counts; Sean leans resolve-to-1; Ryan: **test both ways**. Throw out shared IPs;
 confidence; the graph resolves the ID-combo (IP+device_id disambiguates ISP rotations). Same call as the collapse
 function — lands in AUDI-1168/1100, gates AUDI-1105 analytics. Loop in Matt.
 
+**Locked 2026-07-29 PM (dev-mntn-id / #dev-audi-mntn-id):** (1) Naming = **`household_id`** (Jack; = mountain_id
+= MNTN ID). (2) Sept-4 = **daily IPv4 conversion** (Jack), other id types bonus. (3) **Resolution in Layer 2**
+for IPv4-only → L1 tables optional. (4) Membership: **Matt/Brian lean resolve-to-1-household-first** (single
+max-confidence HHID); multi-HHID alt = store all ids as columns in `site_visit_signal`, drop confidence <0.5,
+let visits duplicate. (5) **Coverage OK iff the bidder never targets an unscored HHID** (Brian). (6) **DS13 =
+`site_visit_signal` = guid_log ∪ DDP ∪ augmentor_log**; re-key DS13 in the `tpa_ipdsc_export` job (Ryan) —
+DS13/19/46 share the same re-key problem, all under AUDI.
+
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on

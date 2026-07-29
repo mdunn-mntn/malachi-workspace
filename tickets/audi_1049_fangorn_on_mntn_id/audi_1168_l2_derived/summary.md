@@ -73,3 +73,7 @@ _(document household L2 model naming + aggregation semantics)_
   HHID (max confidence, like id-service — no overlap)** or to **multiple HHIDs (duplicates visits/conversions →
   the "LiveRamp segments" analytics-unusable failure mode)**? **Test both ways** (Ryan). Throw out shared IPs.
   This is the sharpened collapse-function call (§6.3); it also gates AUDI-1105's analytics usability.
+- **Locked 2026-07-29 PM (epic §7f):** resolution happens **in Layer 2** for IPv4-only (Sean/Ryan) → L1 tables
+  optional; **Matt/Brian lean resolve-to-1-household-first** (single max-confidence HHID, no duplication). Naming
+  standard = **`household_id`** (Jack). Coverage: unscored (no-IPv4) HHIDs are fine **iff the bidder never
+  targets them.**

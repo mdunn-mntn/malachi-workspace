@@ -341,6 +341,27 @@ in **AUDI-1168 (L2 aggregation)** and **AUDI-1100 (feature-eng)**, and its analy
 the household resolution**; the **graph resolves the ID-combo for you** (handles IP rotation — IP `1.1.1.1` +
 `device_id=aaa` = ryan, but `1.1.1.1` + `device_id=bbb` after an ISP rotation = a different household).
 
+## 7f. Decisions locked / updated (Slack dev-mntn-id + #dev-audi-mntn-id, 2026-07-29 PM)
+- **NAMING (Jack Barbey): use `household_id`** going forward (= mountain_id = MNTN ID, same thing;
+  `household_id` is more literal). Resolves the §7b naming question — standardize on `household_id`.
+- **Sept-4 scope CONFIRMED (Jack Barbey, Identity lead): "daily IPv4 conversion is the best starting point";
+  other ID types are bonus, not strictly necessary.** Locks the IPv4-only v1.
+- **Resolution happens in LAYER 2 (Sean, agreed Ryan):** "if only IPv4, we can do the resolution in Layer 2."
+  **L1 tables are now optional/deferred** for v1 (Sean may still build some L1 tables, optional). Confirms §7d.
+- **Membership direction — Matt/Brian lean RESOLVE-TO-1-HOUSEHOLD-FIRST (§7e):** after a convo with Matt, the
+  modeling team's intuition is "**trying to resolve an identifier to a specific household first is best**" (i.e.
+  the single-HHID / max-confidence path, no visit duplication). Still worth testing both, but the working lean
+  is single-household. Ryan's alternative if you DO go multi-household: **store all IDs as COLUMNS in
+  `site_visit_signal`** (not the struct), **return multiple household_ids but drop those < 0.5 confidence and
+  let visits duplicate** — keeping each id stored so you can iterate on the resolution logic later.
+- **DS13/DS19 lineage (Ryan/Sean) — NEW:** **DS13 is built from `site_visit_signal` = `guid_log` UNION DDP
+  (and `augmentor_log` is in it now too).** So re-keying DS13 to household means re-keying site_visit_signal.
+  Ryan's suggestion: **resolve DS13 in the `tpa_ipdsc_export` job** (→ the household `tpa_hhdsc_export`,
+  AUDI-1156/1157, Sean's). This is why DS13/19/46 "fall under AUDI" (§7c) — they share the same re-key problem.
+- **Coverage constraint (Brian, makes IPv4-only acceptable):** there will be **HHIDs with no IPv4 resolution →
+  no intent score** — that's fine **"as long as the bidder never tries to reach a HHID that doesn't have an
+  intent score."** This formalizes the §7d coverage-gap tradeoff into a hard requirement on the serving side.
+
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
 persuadables audience).** Fangorn ranks propensity (ROC-AUC 0.96) but the High band (~78% of volume) returns

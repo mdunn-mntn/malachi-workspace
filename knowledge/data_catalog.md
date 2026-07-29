@@ -3013,7 +3013,7 @@ Four raw tables exist for household ID enrichment across event types:
 - `dw-main-bronze.raw.guid_hh_log`
 - `dw-main-bronze.raw.conversion_hh_log`
 
-**Column naming inconsistency (as of 2026-05-22):** `ads_clickpass_hh_log` uses `household_id`, `household_version`, etc. (full names), while `click_hh_log` and `guid_hh_log` use shortened names: `hh_id`, `hh_version`, etc. Standardization to the full `household_id` naming convention has been requested.
+**Column naming inconsistency (as of 2026-05-22):** `ads_clickpass_hh_log` uses `household_id`, `household_version`, etc. (full names), while `click_hh_log` and `guid_hh_log` use shortened names: `hh_id`, `hh_version`, etc. Standardization to the full `household_id` naming convention has been requested. **CONFIRMED 2026-07-29 (Jack Barbey):** the standard going forward is **`household_id`** (= "mountain_id" = MNTN ID — all the same thing; use `household_id`, it's more literal). Use it for the MNTN-ID re-key work (AUDI-1049).
 
 **Known data gap:** `conversion_hh_log` currently only contains `hh_resolution_id` — the columns `hh_id`, `hh_confidence_score`, and `hh_ver` are present in the raw Kafka events (confirmed in conversion log source) but are not being ingested into the table. A DPLAT ticket (DPLAT-1100) has been filed to resolve this. The attribution team currently pulls directly from raw Kafka events as a workaround.
 

@@ -3327,6 +3327,18 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   This is the same call as the multi-IP→household collapse function above, now with the double-counting +
   analytics-usability dimensions — an AUDI feature-quality decision (AUDI-1168 aggregation / AUDI-1100 / gates
   AUDI-1105).
+- **Decisions locked 2026-07-29 PM:** (1) **Naming = `household_id`** (Jack Barbey; = mountain_id = MNTN ID).
+  (2) **Sept-4 = daily IPv4 conversion** (Jack), other id types bonus. (3) **Resolution happens in Layer 2**
+  (Sean/Ryan) for IPv4-only → **L1 tables optional/deferred.** (4) Membership: **Matt/Brian lean
+  resolve-to-1-household-first** (single max-confidence HHID, no visit duplication); the multi-HHID alt =
+  store all ids as **columns in `site_visit_signal`**, return multiple HHIDs, **drop confidence < 0.5**, let
+  visits duplicate. (5) **Coverage is fine if the bidder never targets an unscored HHID** (Brian) — hard
+  serving-side requirement, makes IPv4-only acceptable.
+- **DS13/DS19 lineage — `site_visit_signal` (SVS):** DS13 is built from **`site_visit_signal` = `guid_log`
+  UNION DDP** (and **`augmentor_log`** is in SVS now too — see the `dsid*_*_processing.py` svs feeders in
+  `airflow-ti`). Re-keying DS13/DS19 to household = re-keying SVS; Ryan's suggestion is to resolve DS13 in the
+  **`tpa_ipdsc_export`** job (→ household `tpa_hhdsc_export`, AUDI-1156/1157). This is why DS13/19/46 fall under
+  AUDI to re-key — same graph-translation problem as Fangorn.
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP
