@@ -391,9 +391,11 @@ writes a monitoring parquet). Its downstream siblings (`household_score_distribu
 `trigger_intent_score_household`) all went green in the same run → no scoring/serving impact, just a missed
 monitoring email for 07-28.
 
-**Durable fix → IMP-004:** add a `GCSObjectExistenceSensor` on `ipdsc_geo/dt={{ds}}/_SUCCESS` before
-`fangorn_score_monitor` (mirrors INC-001's `precondition_*` pattern), or widen its retry window to cover the
-producer's ~3.5h arrival variance. Owner = targeting/Ryan. Don't hot-patch.
+**Durable fix → IMP-004 → PR #1160 (open, routed to Ryan).** Adds a `GCSObjectExistenceSensor`
+`wait_for_ipdsc_geo` on `ipdsc_geo/dt={{ ds }}/_SUCCESS` gating `fangorn_score_monitor` (mirrors the DAG's
+existing `wait_for_ipdsc_13/19` preconditions; `soft_fail` so a truly-absent day skips instead of paging).
+Wired `scoring() >> wait_for_ipdsc_geo >> fangorn_score_monitor` so only the monitor waits on geo, not the
+scoring path. Suggestion PR only (not merged) — Ryan owns the DAG.
 
 **Logs:** `on-call/incidents/INC-004/`.
 
