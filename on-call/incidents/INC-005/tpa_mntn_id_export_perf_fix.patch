@@ -1,0 +1,177 @@
+From 068b015e577b7ce13294504587f7877e3bcfbb0a Mon Sep 17 00:00:00 2001
+From: Malachi Dunn <malachi@mountain.com>
+Date: Wed, 29 Jul 2026 12:53:07 -0700
+Subject: [PATCH 1/2] fix(tpa_mntn_id_export): cache result + repartition to
+ stop the 3h TTL kill
+
+INC-005: the batch hit its 3h Dataproc TTL because the final .write.json()
+rebuilt a ~1.9TB mntn_id groupBy/window shuffle 7-9 times (mntn_df was never
+cached) and spark.sql.shuffle.partitions=1000 made each partition ~1.9GB, too
+big to hold in memory, so tasks kept writing overflow to disk and crawled.
+Verified from the try-3 Spark event log (150 executors, 0 lost, no OOM).
+
+- Persist the filtered mntn_df (DISK_ONLY) and materialize once before the write,
+  so write-stage retries stop rebuilding the whole join/groupBy/window lineage.
+- Set spark.sql.shuffle.partitions=8000 (~240MB/partition) so it fits in memory.
+- Raise TTL 10800->14400 as margin for the first prod runs; revert once proven.
+---
+ models/tpa_export/tpa_mntn_id_export.py | 24 +++++++++++++++++++++++-
+ 1 file changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/models/tpa_export/tpa_mntn_id_export.py b/models/tpa_export/tpa_mntn_id_export.py
+index 29e6cce..c6d641e 100644
+--- a/models/tpa_export/tpa_mntn_id_export.py
++++ b/models/tpa_export/tpa_mntn_id_export.py
+@@ -17,6 +17,7 @@ from typing import Optional
+ from urllib.parse import urlparse
+ 
+ from google.cloud import storage
++from pyspark import StorageLevel
+ from pyspark.errors import AnalysisException
+ from pyspark.sql import DataFrame
+ from pyspark.sql import SparkSession
+@@ -66,8 +67,17 @@ OUTPUT_ROOT_DEV = "gs://sh-dw-external-tables-dev"
+         "spark.sql.adaptive.coalescePartitions.enabled": "true",
+         "spark.sql.adaptive.skewJoin.enabled": "true",
+         "spark.sql.jsonGenerator.ignoreNullFields": "false",
++        # The mntn_id groupBy/window shuffle is ~1.9TB; at the platform default of
++        # 1000 partitions each partition is ~1.9GB, too big to hold in a task's
++        # memory, so tasks kept writing overflow to local disk (~14TB) and ran slow
++        # (INC-005). ~8000 partitions -> ~240MB each, which fits in memory. AQE
++        # coalescing merges the small shuffles back down, so this only bites the big one.
++        "spark.sql.shuffle.partitions": "8000",
+     },
+-    timeout=10_800,
++    # 4h TTL as margin for the first prod runs on the fix below; the cache + repartition
++    # changes should bring runtime well under the old ~78m baseline, so this can revert
++    # to 10_800 once proven (INC-005).
++    timeout=14_400,
+     labels={
+         "team": "targeting",
+         "application": "tpa_export",
+@@ -543,6 +553,17 @@ class TpaMntnIdExport(FileStorageBaseModel):
+         mntn_df = self._mntn_id_dataframe(joined, graph_path)
+         allow = self._load_audience_allowlist(int(campaign_group_id))
+         mntn_df = self._apply_audience_filter(mntn_df, allow)
++
++        # Materialize the filtered household result ONCE before the write. Without
++        # this, the ~1.9TB mntn_id groupBy/window shuffle upstream is rebuilt from
++        # scratch on every write-stage retry (INC-005: 7-9 full rebuilds, tens of TB
++        # pushed through disk, then killed at the 3h TTL). DISK_ONLY because the set
++        # is large and we only need to read it back, not hold it in memory (executors
++        # have 375g local disk).
++        mntn_df = mntn_df.persist(StorageLevel.DISK_ONLY)
++        household_count = mntn_df.count()
++        logger.info("Persisted filtered mntn_id result: %s households", household_count)
++
+         final_df = self._final_dataframe(mntn_df)
+ 
+         monitor.log_execution_plan(final_df)
+@@ -552,6 +573,7 @@ class TpaMntnIdExport(FileStorageBaseModel):
+             "completed",
+             output_path=f"{self._output_root()}/{output_prefix}",
+         )
++        mntn_df.unpersist()
+ 
+ 
+ if __name__ == "__main__":
+-- 
+2.50.1 (Apple Git-155)
+
+
+From 8f3e9dd55782b6c28020808fec1ce387541fed08 Mon Sep 17 00:00:00 2001
+From: Malachi Dunn <malachi@mountain.com>
+Date: Wed, 29 Jul 2026 12:53:37 -0700
+Subject: [PATCH 2/2] perf(tpa_mntn_id_export): collapse 14 broadcast
+ crossJoins into one driver-side intersect
+
+Follow-up to the INC-005 core fix; independently reviewable and revertable. The
+audience filter looped 14x doing crossJoin(broadcast(collect_set)) per data
+source, stacking 14 Exchanges onto the fat mntn_id result. The allowlist is one
+campaign group's categories (small), so collect it to the driver once and
+intersect against per-ds literal arrays in a single select. Same output schema
+and same total_cats>0 filter, no extra shuffle.
+---
+ models/tpa_export/tpa_mntn_id_export.py | 62 ++++++++++++++++++-------
+ 1 file changed, 44 insertions(+), 18 deletions(-)
+
+diff --git a/models/tpa_export/tpa_mntn_id_export.py b/models/tpa_export/tpa_mntn_id_export.py
+index c6d641e..bc75699 100644
+--- a/models/tpa_export/tpa_mntn_id_export.py
++++ b/models/tpa_export/tpa_mntn_id_export.py
+@@ -407,28 +407,54 @@ class TpaMntnIdExport(FileStorageBaseModel):
+     def _apply_audience_filter(
+         self, result: DataFrame, allow: DataFrame
+     ) -> DataFrame:
+-        """Intersect each ds's cats with the allowlist via broadcast collect_set."""
++        """Intersect each ds's cats with the campaign-group allowlist.
++
++        The allowlist is small (one campaign group's categories), so collect it to
++        the driver once and intersect against per-ds literal arrays in a single
++        projection. The previous version did 14 sequential ``crossJoin(broadcast)``
++        (one per data source), stacking 14 Exchanges onto the fat mntn_id result and
++        deepening its lineage, which made the rebuild in INC-005 more expensive.
++        """
+         logger.info("Begin '_apply_audience_filter'")
+-        remaining_sizes = []
+         empty_arr = F.array().cast("array<bigint>")
+ 
+-        for ds in self.data_source_ids:
+-            allow_one = allow.where(F.col("data_source_id") == F.lit(ds)).agg(
+-                F.collect_set(F.col("data_source_category_id")).alias("_allowed")
++        allow_map: dict[int, list[int]] = {
++            int(row["data_source_id"]): [int(c) for c in (row["cats"] or [])]
++            for row in (
++                allow.groupBy("data_source_id")
++                .agg(F.collect_set("data_source_category_id").alias("cats"))
++                .collect()
+             )
+-            result = result.crossJoin(F.broadcast(allow_one))
+-            result = result.withColumn(
+-                f"ds_{ds}_cats",
+-                F.array_intersect(
+-                    coalesce(F.col(f"ds_{ds}_cats"), empty_arr),
+-                    coalesce(F.col("_allowed"), empty_arr),
+-                ),
+-            ).drop("_allowed")
+-            remaining_sizes.append(F.size(coalesce(F.col(f"ds_{ds}_cats"), empty_arr)))
+-
+-        total_cats = remaining_sizes[0]
+-        for size_col in remaining_sizes[1:]:
+-            total_cats = total_cats + size_col
++        }
++        logger.info(
++            "Audience allowlist: %s categories across %s data sources",
++            sum(len(v) for v in allow_map.values()),
++            len(allow_map),
++        )
++
++        cat_col_names = {f"ds_{ds}_cats" for ds in self.data_source_ids}
++        keep_cols = [c for c in result.columns if c not in cat_col_names]
++
++        intersected = []
++        for ds in self.data_source_ids:
++            allowed = allow_map.get(ds, [])
++            if allowed:
++                allowed_lit = F.array(*[F.lit(int(c)) for c in allowed]).cast(
++                    "array<bigint>"
++                )
++                col = F.array_intersect(
++                    coalesce(F.col(f"ds_{ds}_cats"), empty_arr), allowed_lit
++                )
++            else:
++                col = empty_arr
++            intersected.append(col.alias(f"ds_{ds}_cats"))
++
++        result = result.select(*[F.col(c) for c in keep_cols], *intersected)
++
++        total_cats = None
++        for ds in self.data_source_ids:
++            size_col = F.size(coalesce(F.col(f"ds_{ds}_cats"), empty_arr))
++            total_cats = size_col if total_cats is None else total_cats + size_col
+         result = result.where(total_cats > 0)
+         logger.info("End '_apply_audience_filter'")
+         return result
+-- 
+2.50.1 (Apple Git-155)
+

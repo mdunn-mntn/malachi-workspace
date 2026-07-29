@@ -1,0 +1,10 @@
+Stops tpa_mntn_id_export hitting its 3h Dataproc TTL. The try-3 Spark event log shows the final write rebuilt a ~1.9TB mntn_id shuffle 7-9x (result never cached), and shuffle.partitions=1000 made each partition ~1.9GB, too big for memory, so tasks kept writing overflow to disk. 150 executors, 0 lost, no OOM, so it's a rebuild problem, not infra (INC-005).
+
+What
+* Persist the filtered mntn_df (DISK_ONLY), materialize once before the write, so retries stop rebuilding the mntn_id lineage.
+* shuffle.partitions 1000 -> 8000 (~240MB/partition) to fit in memory.
+* TTL 10800 -> 14400 as rollout margin; revert once proven.
+* 2nd commit (optional): collapse 14 broadcast crossJoins into one driver-side intersect. Same schema and filter.
+
+Validation
+Compiles. Dev run needed to confirm the shuffle runs once and mntn_id_data/<date>/ lands under TTL.
