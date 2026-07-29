@@ -35,6 +35,24 @@ Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the 
 - `scripts/lint_memory.py [--check | --fix]` — linter + idempotent migrator for `knowledge/memory/*.md`: `--fix` adds the unified front-matter (`doc_type: memory`, `keywords`, `domain`, `lifecycle`, `last_verified`) additively (never restructures the native `name`/`description`/`metadata`); `--check` reports files missing `doc_type`/`keywords` and unresolved wikilinks.
 - `scripts/request_digest.py [--min N]` — mines `.request_log.jsonl` for recurring verb+noun shapes and **proposes** a `/skill` for anything that recurs ≥ N times. Proposal only — a human decides; skills are never auto-created (and knowledge is never auto-deleted).
 
+**Verification scripts (the enforcement surface):**
+- `scripts/verify.sh [--staged | --fix]` — the "doctor": runs every deterministic check (the 3 front-matter linters + index-freshness + the hook self-test). `--staged` = the commit-gate subset (staged-scoped). `--fix` = auto-repair (rebuild + stage indexes). Exit 1 on any hard failure.
+- `scripts/hooks_selftest.sh` — exercises all 9 harness hooks with synthetic inputs; asserts exit code + output. Run inside `verify.sh` (full) and `workflow_audit.sh §11`.
+- `scripts/build_kit_manifest.sh` — regenerates `documentation/ai_workflow_kit/COMPONENTS.md` from the actual files (the drift-proof component inventory). Idempotent.
+- `scripts/install_git_hooks.sh` — one-time: `git config core.hooksPath .githooks` (activate the commit gate).
+
+## Commit gate (flake8-style, self-contained, zero-dependency)
+The gate lives in committed `.githooks/` and is activated once per clone with
+`.claude/scripts/install_git_hooks.sh` (sets `core.hooksPath`). Two git hooks — distinct from the Claude
+harness hooks above:
+- **`pre-commit`** → `verify.sh --staged`: blocks a commit only when a file THIS commit stages is
+  malformed (front-matter linter), or a staged doc's regenerated index isn't re-staged. **Staged-scoped**,
+  so pre-existing debt elsewhere never blocks unrelated work. Fix with `verify.sh --fix`, then re-stage.
+- **`commit-msg`** → `lint_comms.py --kind commit`: subject ≤72 chars, body ≤500 chars / 6 bullets, no em-dash.
+- **Bypass** (emergencies only): `git commit --no-verify`.
+- **Whole-repo** compliance is checked weekly, not per-commit: `workflow_audit.sh §11` runs `verify.sh`
+  across the whole repo (key-free, so the Pi cron captures it), reported by `/workflow-audit`.
+
 ## Auto-memory (unified in git, one-time setup)
 Cross-session memory files live in `knowledge/memory/` (in git), indexed by `build_index.sh` into
 `_ROUTING.md` + `_MEMORY_INDEX.md` + `_MEMORY_LIFECYCLE.md` exactly like any knowledge doc. `MEMORY.md`
