@@ -131,7 +131,7 @@ bash "$B/.claude/scripts/build_kit_manifest.sh"
 # 7. Self-verify: sanitization sweep (ZERO private tokens) ----------------------
 say "== sanitization sweep =="
 LEAK=0
-if grep -rIn -E 'malachi|mdunn|192\.168\.|mountain\.com|dw-main|pi5[@]' "$B" ; then LEAK=1; fi
+if grep -rInE -e 'malachi' -e 'mdunn' -e 'dunn' -e '192\.168\.' -e 'mountain\.com' -e 'dw-main' -e 'pi5@' -e 'audience intelligence' --ignore-case "$B" ; then LEAK=1; fi
 if grep -rIni 'mntn' "$B" ; then LEAK=1; fi
 if [ "$LEAK" -ne 0 ]; then say "FAIL: private tokens leaked (above). Fix sanitize_map.txt and re-run."; exit 1; fi
 say "  clean: no private tokens found"

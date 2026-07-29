@@ -326,15 +326,24 @@ FROM cg GROUP BY 1, 2 ORDER BY 1, n_cg DESC;
 -- Result 2026-07-28: Select obj=1 -> 43 adv / 111 cg;  non-Select obj=1 -> 66 adv / 175 cg.
 -- Only objective_id = 1 present -> the cohort is 100% prospecting, as expected."""
 
+import re
+# CPIV/CPIA query behind the Cost per incremental tab; collapse its 93-AID list like the scoping query.
+CPIV_SQL = open(f"{TDIR}/queries/audi_1172_cpiv_vv_correct.sql").read().strip()
+CPIV_SQL = re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([ /* the same 93 AIDs as the main query */ ])", CPIV_SQL, flags=re.S)
+
 QUERY_TAB = (
-    "-- MAIN QUERY - drives every number in this workbook. Returns one row per advertiser x product;\n"
-    "-- the pooled comparison, the 27/35 paired test, CIs, z-scores and rel/abs lift are all computed\n"
-    "-- in Python from this single result set (see the .py in artifacts/).\n\n"
-    + SQL.strip() + "\n\n\n" + SCOPING_SQL + "\n"
+    "-- MAIN QUERY (LIFT) - drives the Headline / By advertiser / All by product tabs. One row per\n"
+    "-- advertiser x product; the pooled comparison, 27/35 paired test, CIs, z-scores and rel/abs lift\n"
+    "-- are all computed in Python from this single result set (see the .py in artifacts/).\n\n"
+    + SQL.strip() + "\n\n\n"
+    "-- COST QUERY (CPIV/CPIA) - drives the Cost per incremental tab. Reporting Verified Visits +\n"
+    "-- conversions (clicks+views+competing) x the ghost-bid relative lift; spend from all_facts, obj=1.\n\n"
+    + CPIV_SQL + "\n\n\n" + SCOPING_SQL + "\n"
 )
 
-wb.sql("Query", QUERY_TAB, note="Every figure comes from the main query below; the scoping query is validation only. "
-                                "Source: reporting.lift__ghost_bid_rollup x campaign_groups.product_id.")
+wb.sql("Query", QUERY_TAB, note="The lift query drives the Headline/advertiser/product tabs; the cost query drives "
+                                "Cost per incremental; the scoping query is validation only. Sources: "
+                                "reporting.lift__ghost_bid_rollup x campaign_groups; summarydata.all_facts.")
 
 wb.notes(
     "Method & caveats",

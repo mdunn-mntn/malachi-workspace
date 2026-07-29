@@ -9,7 +9,11 @@
 # --- absolute workspace path (must run before the org-word rules that would rewrite /mntn/) ---
 /Users/malachi/Developer/work/mntn/workspace	<WORKSPACE_PATH>
 
-# --- identity / auth ---
+# --- identity / auth (person + team; longest/most-specific first) ---
+Malachi Dunn · Audience Intelligence	<OWNER>
+Malachi Dunn	<OWNER>
+Audience Intelligence	<TEAM>
+Malachi	<user>
 malachi@mountain.com	<WORK_EMAIL>
 https://mntn.atlassian.net	<JIRA_BASE_URL>
 mntn.atlassian.net	<JIRA_HOST>

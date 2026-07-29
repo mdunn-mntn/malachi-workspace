@@ -284,7 +284,10 @@ class MntnWorkbook:
         column widths are known. Used on every non-cover sheet so the top spacing is uniform."""
         c = ws.cell(row=1, column=1, value=_demdash(text))
         c.font = _font(15, bold=True, color=BRAND["PRIMARY"])
-        c.alignment = Alignment(horizontal="left", vertical="bottom", wrap_text=True)
+        # wrap ONLY when merged across a table (ncols>1). On a single-column tab (glossary/notes/sql,
+        # ncols=1) the cell is unmerged, so wrap would squeeze the title into column A — leave it
+        # unwrapped there so it spills across to the right like a normal full-width title.
+        c.alignment = Alignment(horizontal="left", vertical="bottom", wrap_text=(ncols > 1))
         if ncols > 1:
             ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncols)
         ws.row_dimensions[1].height = 34   # ~2.2x default -> the air sits above the bottom-aligned title
