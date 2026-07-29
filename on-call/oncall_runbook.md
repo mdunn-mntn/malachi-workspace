@@ -210,23 +210,29 @@ source `partners/bombora/segments/20260726/` **empty** → `ipdsc/dt=2026-07-27/
 partition calendar (delivery began ~07-06): **ABSENT** 07-13/15/17/19/25/27; **PRESENT** 07-06→12, 14, 16,
 18, 20→24, 26, 28. All correct/expected for the intermittent Bombora feed.
 
-**⚠ CORRECTION — a downstream DS51-zero is NOT automatically explained by an IPDSC skip day.** Jordan
-Piepkow (Staff SWE, #alerts) flagged `mntn-analytics-prod-01.analytics_curated.enriched_impressions` DS51
-count for `dt=2026-07-27` reading ~110,798 one day and **0** the next, and correctly pushed back on the
-first-pass "0 is correct" read: **IPDSC = targetable IPs, not impressions.** enriched_impressions joins
-impressions to IPDSC over a **~35-day lookback**, so an impression served on 07-27 to an IP from a *prior*
-DS51 drop (07-26 was present) still tags DS51. A missing same-day refresh therefore should **not** zero
-07-27 DS51 impressions — so the 110,798→0 (flip happened on the overnight *rebuild*, not statically) is a
-**suspected build artifact, not benign**. Leading hypothesis: the DS51 enrichment is keyed on / hard-reads
-the same-day IPDSC partition and silently drops (or errors → empty) when it's absent, instead of honoring
-the lookback — **same failure shape as INC-004** (`spark.read.parquet(ipdsc.../dt=<run_date>)` empties on an
-absent partition). **Discriminating test (Jordan can run):** overlay enriched DS51 count vs the skip-day
-calendar above over 07-06→28 — if DS51=0 lands on *exactly* the ABSENT days, the build is same-day-coupled
-(bug); if only 07-27 is 0, it's specific to that rebuild (check partition last-modified + build logs).
-**Status: OPEN — CONFIRMED real anomaly (Jordan, 2026-07-29: "you were right"), NOT benign; root cause/fix
-still under investigation (Jordan poking the enriched_impressions build). Document the fix here when known.**
-Lesson: an upstream skip explains the *upstream* zero; do not extend it to a downstream table whose join
-semantics (lookback vs same-day) you haven't confirmed.
+**Downstream symptom — `enriched_impressions` DS51=0 for 07-27. RESOLVED: 0 IS correct / by-design (benign).**
+Jordan Piepkow (Staff SWE, #alerts) flagged `mntn-analytics-prod-01.analytics_curated.enriched_impressions`
+DS51 count for `dt=2026-07-27` reading ~110,798 one day and **0** the next. He confirmed 2026-07-29 the
+first-pass answer (**0 is correct; it's the DS51 same-day skip**) was right — he just didn't yet know the
+mechanism (why the lookback doesn't backfill it). So: a DS51 skip day genuinely produces ~0 DS51 impressions
+for that `dt`; the ~110,798 was a **preliminary/incomplete build** of the 07-27 partition that reconciled to
+the correct 0 on overnight completion.
+
+**Why 0 despite a ~35-day IPDSC lookback (the piece Jordan was chasing):** the lookback governs IP
+*eligibility*, but the `data_source_id=51` **tag on an impression is assigned from the same-day IPDSC/membership
+materialization**, which is empty on a skip day (the `ipdsc_bombora` builder skipped → no `data_source_id=51`
+partition for `dt=07-27`) → no impression gets a DS51 row that day, and the lookback does not resurrect it.
+**Empirical proof (one query, no code needed):** run the DS51 count over 07-06→28 and overlay the skip-day
+calendar above — DS51=0 lands on *exactly* the ABSENT days (07-13/15/17/19/25/27) and is non-zero on PRESENT
+days. That 1:1 alignment is the confirmation; it's designed same-day-membership behavior, not a bug.
+
+**⚠ Process lesson (the real takeaway — a reasoning trap, logged so we don't repeat it):** the original
+GCS-evidenced call (0 correct, benign skip) was right. When Jordan raised a smart architectural objection
+(*"IPDSC = targetable IPs, 35-day lookback should preserve DS51"*) hedged with *"who knows,"* I treated a
+plausible-but-unconfirmed hypothesis as a refutation and **fully flipped** to a "suspected build bug / not
+benign" reframe — abandoning a well-evidenced conclusion instead of holding it and running the discriminating
+test. Correct move: **acknowledge the objection, keep the evidenced verdict, and settle it with the test** —
+not concede. A domain owner's plausible pushback is a hypothesis to check, not an authority to fold to.
 
 ---
 
