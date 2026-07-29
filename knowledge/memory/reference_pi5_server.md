@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: 6b830d36-17fc-4962-b8c0-c9c838b6e689
 doc_type: memory
-keywords: [pi5 server, raspberry pi, pihole5, ssh key, slack knowledge bot, workflow audit cron, deploy key, unbound, decommissioned bot, tailscale]
+keywords: [pi5 server, raspberry pi, pihole5, ssh key, slack knowledge bot, workflow audit cron, deploy key, unbound, decommissioned bot, tailscale, commit gate on pi, run_workflow_audit --no-verify, redeploy runner]
 domain: [infra]
 lifecycle: active
 last_verified: 2026-07-24
@@ -53,3 +53,11 @@ last_verified: 2026-07-24
 
 ## Credentials file
 Full credentials at `/Users/malachi/Downloads/credentials.txt`
+
+## Commit gate on the Pi (2026-07-29)
+The Pi's `~/workspace` clone has the commit gate active (`core.hooksPath=.githooks`). The weekly cron
+runner `~/run_workflow_audit.sh` commits with **`--no-verify`** so the gate can never wedge the unattended
+run (its dated signals commit message exceeds the 72-char subject cap by design). Source of truth for the
+runner is `.claude/scripts/pi_run_workflow_audit.sh`; it is deployed OUTSIDE the repo, so after editing
+that source, redeploy with `cp ~/workspace/.claude/scripts/pi_run_workflow_audit.sh ~/run_workflow_audit.sh`
+(a `git pull` alone does not update the deployed copy). See [[reference_commit_gate]].

@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: 9c582365-7ebc-49fa-9d1e-6d93ac47841b
 doc_type: memory
-keywords: [workflow audit loop, workflow-audit, system retro, aggregator, propose-only, Pi cron, signals, health_scorecard, request_digest, lint_tickets]
+keywords: [workflow audit loop, workflow-audit, system retro, aggregator, propose-only, Pi cron, signals, health_scorecard, request_digest, lint_tickets, kit compliance, verify.sh whole-repo, memory health section, section 11]
 domain: [workflow, infra]
 lifecycle: active
 last_verified: 2026-07-24
@@ -45,3 +45,10 @@ challenge whether the standards themselves are stale).
   polluted records; top nouns now real (`capture`, `ticket`, `xlsx`). Request-mining un-blinded.
 - Signal-file pruning ADDED. Aggregator §9 flags `signals_*.md` beyond keep-8 with a ready `git rm`;
   skill proposes it Tier 1 Safe. Reasoned `audit_*.md` reports always kept.
+
+**§10 Memory health + §11 Kit compliance (added 2026-07-29).** §10 runs `health_scorecard.py --memory` +
+`lint_memory --check` (lifecycle rollup, overlap clusters, unresolved wikilinks, UNINDEXED native-writes,
+MEMORY.md budget). §11 runs `verify.sh` **whole-repo** (the 3 front-matter linters + index-freshness + the
+9-hook self-test) so the same checks the commit gate enforces per-commit are surfaced repo-wide weekly. The
+gate ([[reference_commit_gate]]) is per-commit enforcement; §11 is the whole-repo review (propose-only:
+Tier 1 `verify.sh --fix` for a stale index, Tier 2 for a real violation).
