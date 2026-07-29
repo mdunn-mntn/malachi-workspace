@@ -87,6 +87,13 @@ for fn in sorted(os.listdir(root)):
     fm["_abspath"] = path
     docs.append(fm)
 
+# Memory docs (knowledge/memory/*.md) carry `name`, not `title` — give them a title so they render in
+# _ROUTING.md and the memory indexes. (build_index flattens the nested `metadata:` block, so `type` is
+# already present for both the flat and nested memory schemas.)
+for d in docs:
+    if d.get("doc_type") == "memory" and not d.get("title"):
+        d["title"] = d.get("name", os.path.splitext(os.path.basename(d["_abspath"]))[0])
+
 
 def link(from_dir, doc):
     return os.path.relpath(doc["_abspath"], start=from_dir)
@@ -115,6 +122,8 @@ titles = {"routing": "Start here", "bq_table": "BigQuery tables", "bq_cookbook":
           "runbook": "Runbooks"}
 by_type = {}
 for d in docs:
+    if d["doc_type"] == "memory":   # memory has its own _MEMORY_INDEX.md; keep INDEX.md about knowledge docs
+        continue
     by_type.setdefault(d["doc_type"], []).append(d)
 out = [GEN, "# Knowledge Index", "",
        "Every knowledge doc, grouped by type. Open the specific doc you need — not the whole tree.",
@@ -165,6 +174,55 @@ for kw in sorted(kw_map):
 if not kw_map:
     out.append("_(no keywords yet — add `keywords:` front-matter to docs and rebuild.)_")
 write(os.path.join(kdir, "_ROUTING.md"), "\n".join(out) + "\n")
+
+# ---- memory indexes: _MEMORY_INDEX.md (browse by domain) + _MEMORY_LIFECYCLE.md (rollup + work-queue) ----
+# Memory files (doc_type: memory, under knowledge/memory/) already fold into _ROUTING.md via keywords above
+# — that is the primary retrieval path. These two indexes are the browse-by-domain full list and the
+# lifecycle work-queue. MEMORY.md itself carries NO doc_type → it's the native-loaded hot tier, never
+# generated here. Both files are idempotent (no 'today' reference — the day-relative stale threshold lives
+# in health_scorecard.py, not in committed output).
+mems = [d for d in docs if d["doc_type"] == "memory"]
+LIFE_RANK = {"active": 0, "superseded": 1, "archived": 2}
+active = [d for d in mems if g(d, "lifecycle", "active") == "active"]
+inactive = [d for d in mems if g(d, "lifecycle", "active") != "active"]
+
+mdom = {}
+for d in active:
+    doms = d.get("domain")
+    doms = doms if isinstance(doms, list) and doms else ["(unassigned)"]
+    for dm in doms:
+        mdom.setdefault(dm, []).append(d)
+out = [GEN, "# Memory Index — cross-session facts by domain", "",
+       "The full memory list, browse-by-domain. To retrieve: grep `_ROUTING.md` for your term → open the",
+       "one `memory/<file>.md` it names. Detail lives in each file; the always-loaded hot tier is `memory/MEMORY.md`.", ""]
+for dm in sorted(mdom):
+    out.append(f"### {dm}")
+    for d in sorted(mdom[dm], key=lambda x: g(x, "title")):
+        out.append(f"- [{g(d,'title')}]({link(kdir, d)}) — {g(d,'description')}  ·  "
+                   f"_{g(d,'type','reference')} · verified {g(d,'last_verified','—')}_")
+    out.append("")
+if inactive:
+    out.append("## Archived / superseded (out of the always-loaded set; still grep-reachable)")
+    for d in sorted(inactive, key=lambda x: (LIFE_RANK.get(g(x, "lifecycle"), 9), g(x, "title"))):
+        out.append(f"- [{g(d,'title')}]({link(kdir, d)}) — _{g(d,'lifecycle')}_ — {g(d,'description')}")
+    out.append("")
+write(os.path.join(kdir, "_MEMORY_INDEX.md"), "\n".join(out).rstrip() + "\n")
+
+lc_counts = {"active": 0, "superseded": 0, "archived": 0}
+for d in mems:
+    lc = g(d, "lifecycle", "active"); lc_counts[lc] = lc_counts.get(lc, 0) + 1
+out = [GEN, "# Memory Lifecycle", "",
+       f"Rollup: **active {lc_counts['active']} · superseded {lc_counts['superseded']} · "
+       f"archived {lc_counts['archived']}**", "",
+       "Active memories, oldest-verified first — the refresh/dedup work-queue. "
+       "(`health_scorecard.py --memory` applies the day-relative stale threshold + overlap clusters.)", "",
+       "| memory | type | last_verified | doc |",
+       "|--------|------|---------------|-----|"]
+for d in sorted(active, key=lambda x: (g(x, "last_verified") or "0000", g(x, "title"))):
+    out.append(f"| {g(d,'title')} | {g(d,'type','reference')} | {g(d,'last_verified','—')} | [doc]({link(kdir, d)}) |")
+if not active:
+    out.append("| _(none)_ | | | |")
+write(os.path.join(kdir, "_MEMORY_LIFECYCLE.md"), "\n".join(out) + "\n")
 
 # ---- BQ catalog index ----
 bqdir = os.path.join(kdir, "bq")
@@ -331,6 +389,6 @@ if os.path.isdir(tdir):
     write(os.path.join(tdir, "INDEX.md"), "\n".join(out) + "\n")
 
 n_children = sum(len(e.get("_children", [])) for e in entries)
-print(f"indexed {len(docs)} knowledge docs ({len(tables)} tables), "
+print(f"indexed {len(docs)} knowledge docs ({len(tables)} tables, {len(mems)} memory), "
       f"{len(entries)} top-level tickets/epics (+{n_children} children)")
 PY

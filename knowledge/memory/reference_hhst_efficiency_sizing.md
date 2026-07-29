@@ -1,0 +1,26 @@
+---
+name: reference_hhst_efficiency_sizing
+description: "PROD HHST setter = camperbid v3/v4 (auction population) -> idso HouseholdScoreThresholdRepository UPSERT; ddm.hhst_generate_recommendation is only the fenced test_hhst_campaigns pilot. Budget-fill objective, no value term; score-band curve shows HI ~5x cheaper CPV but correlational — graduated lift blocked in BQ"
+metadata: 
+  node_type: memory
+  type: reference
+  originSessionId: fab2a586-a823-46e7-9b54-e170fad643d1
+doc_type: memory
+keywords: [hhst_efficiency_sizing, hhst, efficiency, sizing, prod, setter, camperbid, auction]
+domain: [reference]
+lifecycle: active
+last_verified: 2026-07-28
+---
+**PROD HHST writer chain (code-verified 2026-07-28, AUDI-1175):** the ~2,082 PTV (product_id=1) funnel-1 prospecting campaigns/day in `dso.household_score_thresholds` are set by a 3-hop chain — (1) COMPUTE: `SteelHouse/airflow-camperbid spark_scripts/intent_score_threshold_v3/pipeline.py` (non-Fangorn cohort) + `intent_score_threshold_v4/pipeline.py` (Fangorn cohort; scope = MMv2 + funnel_level=1 + objective_id=1, **Select product_id=2 EXCLUDED via `.join(..., how="left_anti")` L325**) → `camperbid.hhst_v{3,4}__prod__campaign_threshold`; (2) SYNC: v4 `sql/sync_optimized_intent_thresholds.sql` UNION-ALLs both cohorts → CoreDB `performance.optimized_intent_thresholds`; (3) APPLY (sole physical writer of the applied table): `SteelHouse/idso dco/.../postgres/HouseholdScoreThresholdRepository.kt` UPSERT (`ON CONFLICT (campaign_id) DO UPDATE`), value = `coalesce(cscp preset, cscgp preset, oit.threshold)` (`CampaignRepository.kt`), hourly idso-cron. **Bucket POPULATION is AUCTION-scoped** — `COUNT(DISTINCT ip)` over `raw.bid_price_log ∪ raw.bidder_bid_events` (has_price OR threshold_failure_reasons); **no `prospecting_intent`/scored-universe read** → the DS14 scoring gate (AUDI-1176) does NOT couple to the prod HHST population. **Gate-SAFE.**
+
+**`ddm.hhst_generate_recommendation` is NOT the prod setter — it is the fenced `ddm.test_hhst_campaigns` pilot only** (DDM/Redshift; one of ~5 DDM routines that read full scored `ext_tpa.prospecting_intent`/`advertiser_intent` — `hhst_bucket_collections`, `cache_hhst_population_filters`, `cache_hhst_win_conditions`, `cache_hhst_augmentor_volume`, `cache_hhst_augmentor_test_volume` — all of which write only `ddm.*` cache/bucket tables, never `dso.household_score_thresholds`). Its logic (pure budget-fill pacing: `cost_per`=spend/unique-IP-wins 72h, `wins_needed` for remaining budget, pick HIGHEST threshold whose winnable population covers it; cap 6666 floor 1; NO visit/conversion/lift term) broadly characterizes the prod objective too (both budget-fill, no value term). Prior memory misidentified this pilot as THE setter — corrected. Controller/pacing lever named in [[reference_hhst_pacing_lever]].
+
+**Efficiency sizing (2026-07-28, ticket-less; DIRECTION verified by 2 adversarial passes, MAGNITUDE not RFD-grade).** Cohort = `silver.audience.mm_campaign_classifier` (has_mm AND objective_id=1) = 6,288 campaigns / 2,275 advertisers / **$19.06M/30d** (87.6% currently gated); spend reconciles to `sum_by_campaign_by_day` within 0.02%. Score-band response curve (CIL `household_score`, **genuine-RTC-excluded via model_params**, WGU 31357 excluded, joined to `ui_visits` last_tv_touch on `impression_id`): HI (≥6666) pooled CPV ~$4.45 / IVR 0.61% vs sub-HI ~$21 / IVR 0.08–0.13% ⇒ **HI ~4.7–5x cheaper per observed visit, monotonic on advertiser-weighted CPV**. **~40% of non-RTC prospecting delivery (~$1.37M/wk → ~$5.9M/30d) is sub-HI.** Gate relaxes below HI ~27% of spend-time (Q2, distinct from the 40% delivered share).
+
+CAVEATS (load-bearing, all verified by review):
+- **CORRELATIONAL, not causal** — HI IPs would visit anyway; served-vs-holdout ITT lift ≈0%. Graduated per-band LIFT is **BLOCKED in pure BQ**: no holdout stream carries a graduated 0–10000 score (`tmul_holdout_segments.score`=10000/NULL only; ghost `bidder_bid_events.household_score`≈0 and its view is broken since 2026-07-17). Needs `gs://household-scoring-prod/...` + advertiser vertical∩keyword re-derivation on Databricks (reassigned BER-2250 path).
+- **Counterfactual infeasible** — the bot relaxes precisely because HI supply at price is exhausted; sub-HI visits can't be re-bought at HI CPV. The "excess $" is an opportunity-cost ceiling, not recoverable waste.
+- **Magnitude soft:** +14d visit tail truncates ~15–22% of visits (last-tv p90=28d, p99=74d); advertiser-weighted metric collapsed at 7d (median IVR=0 every band; CPV-median survivor-selected). Re-run ≥30–45d visit tail + ≥28d impression window before quoting a magnitude. "Unscored" band is contaminated by retargeting revisitors (HS=-1, AHS=10000) that depress its CPV ⇒ gap is conservative.
+- **Do NOT multiply the non-RTC sub-HI share × the RTC-inclusive $19.06M** (mixed universes). RTC ≈13% of cohort spend and is ~all-HI by construction.
+
+Motivates a lift-aware HHST-threshold bandit RFD: efficiency ORDERING is real+verified; sizing it precisely and proving recoverability both require the Databricks lift layer (= Phase 0). Queries: scratchpad q1–q6; `bq_perf_log` ticket `hhst_efficiency_sizing`. RTC≠AHS gotcha + join-key gotcha captured in the CIL / last_tv_touch_visits table docs. Related [[reference_rtc_hhst_gating]] [[mm_vs_3p_scorecard]] [[incrementality_experiment]].
