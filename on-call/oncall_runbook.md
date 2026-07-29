@@ -362,6 +362,11 @@ Instance on `fangorn_score_monitor`** → it re-reads the now-present partition 
 fresh Dataproc batch_id (timestamped) so there's **no batch-id trap**. No producer re-run and no code change
 — the producer completed, just late.
 
+**Confirmed green (2026-07-29):** cleared+re-ran (try 4), batch SUCCEEDED 11:38:11Z, output
+`fangorn_score_monitor/dt=2026-07-28/_SUCCESS` written 11:37:15Z. **Runtime ~66 min against a 90-min TTL
+(`ttl: 5400s`) — only ~24 min headroom** (reads the 20K-file `prospecting_intent` partition + the ~5.2GB
+`ipdsc_geo` join). A heavier-data day could hit the TTL and hard-fail. Tracked as IMP-005.
+
 **Root cause = a producer/consumer RACE, not a bug.** `ipdsc_geo/dt=D` (tpa_export `run_geo`,
 `gs://mntn-data-archive-prod/ipdsc_geo/`) lands on D+1 with a **~3.5h-variable arrival**: 07-25→04:56Z,
 07-26→06:26Z, 07-27→05:00Z, **07-28→08:17Z (late)**. `audience_intent` (`8 0 * * *`) runs
