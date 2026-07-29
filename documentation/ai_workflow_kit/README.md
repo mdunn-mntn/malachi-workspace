@@ -75,12 +75,14 @@ merges are always a human motion. See `COMPONENTS.md` for the live list.
 ## Adopt it (setup)
 
 **One command (recommended).** `bash .claude/scripts/package_kit.sh [OUT_DIR]` emits a sanitized,
-generic-seeded `ai-workflow-kit/` bundle (+ `.tar.gz`): it copies the machinery, swaps every private
-value for a `<PLACEHOLDER>` via `sanitize_map.txt`, overlays the generic seeds in `templates/`,
-regenerates indexes + this inventory, and refuses to emit unless the sanitization sweep and an in-bundle
-`verify.sh` both pass. On the target machine: unpack, then `bash bootstrap.sh` (preflight → chmod →
-install the commit gate → rebuild the memory reverse-symlink for the new checkout path → build indexes →
-verify), and fill the placeholders `PORTING.md` lists. See memory `reference_workflow_kit_porting`.
+**domain-blind**, generic-seeded `ai-workflow-kit/` bundle (+ `.tar.gz`) — built for cross-job transfer.
+It copies the machinery, applies two ordered maps (`sanitize_map.txt` strips literal secrets;
+`domain_scrub_map.txt` strips job/domain context — table/pipeline/incident names + the taxonomy), overlays
+the generic seeds in `templates/`, regenerates indexes + this inventory, and **refuses to emit unless BOTH
+gates pass**: a secrets sweep AND a domain-blind sweep (plus an in-bundle `verify.sh`). On the target
+machine: unpack, then `bash bootstrap.sh` (repo layer) or `bash bootstrap.sh --with-global` (also installs
+your personal `~/.claude/` framework, backing up existing files, token never copied), and fill the
+placeholders `PORTING.md` lists. See memory `reference_workflow_kit_porting`.
 
 **By hand (equivalent steps, if you prefer):**
 1. Copy `.claude/` (hooks, scripts, skills, agents, `settings.json`), `.githooks/`, and a `knowledge/`
