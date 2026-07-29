@@ -63,4 +63,8 @@ _(add Identity Graph table schema + as-of semantics to `data_catalog.md`)_
   (IPv4/IPv6/GUID/HEM, null if absent), NOT converted to household in L1 — the graph join happens at L2. The
   graph snapshot source is **`household_graph_parquet`** (partitioned `as_of_date` + `as_of_date_revision_number`).
 - **Scope narrowing:** Fangorn's L1 = **`guid_log` (IP, advertiser_id)** only; **`augmentor_log` is NOT used by
-  the ML model → leave it out.** L1 is currently **IPv4-only** — adding IPv6 = L1 rebuild (flag to Bryce).
+  the ML model → leave it out.**
+- **Identifier scope (Slack 2026-07-29, corrects the IPv6 note):** `guid_log` has **no IPv6** → IPv6 is moot for
+  the guid_log-only v1 (only matters if augmentor_log is added). But `guid_log` carries **`guid` = graph
+  `id_type=42`**, not scoped into the current IPv4-only design. **Open for Sept-4: bake GUID into the L1 keyset
+  as a 2nd identifier?** Initial version covers only households with an IPv4 (non-IPv4 households punted).

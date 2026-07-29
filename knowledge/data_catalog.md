@@ -1471,8 +1471,11 @@ by hand. Used by the Fangorn-on-MNTN-ID feature store (AUDI-1049/1055/1056/1100)
   `as_of_date` within the `start_time`/`end_time` interval.
 - **Key columns:** `id`, `id_type`, `household_id`, `is_shared`, `confidence_score`,
   `start_time`, `end_time`, `as_of_date`, `graph_version`.
-- **Join key:** filter **`id_type = 30` (IPV4)** → direct IP→household mapping. Same table carries
-  GUID and other ID types (per AUDI-1057 decision, IFA/guids attached as `(id, id_type)` via AUDI-1055).
+- **Join key:** filter **`id_type = 30` (IPV4)** → direct IP→household mapping. Same table carries other id
+  types keyed as `(id, id_type)`: **`id_type = 42` = GUID** (confirmed Sean Yang 2026-07-29; `guid_log`
+  carries `guid`), IPv6 is its own id_type, plus hashed-email/hashed-phone. **`guid_log` has NO IPv6** → IPv6
+  only matters once `augmentor_log` enters training (excluded from the Fangorn v1). Open (Sept-4): whether to
+  add GUID (42) as a 2nd resolution identifier alongside IPv4 (30).
 - **Shared IPs:** `is_shared = TRUE` → weight/threshold on `confidence_score`; out-of-graph IPs go to a
   fallback bucket (excluded from MVP training AND serving per 15-Jul decision).
 - **Retention:** RFD states **60-day**; the AUDI-1057 decision log claims graph TTL "90+ days,
@@ -1499,6 +1502,17 @@ by hand. Used by the Fangorn-on-MNTN-ID feature store (AUDI-1049/1055/1056/1100)
 - **Resolution rule:** a row with multiple ids (IPv4/IPv6/GUID/HEM) → join per-id, take **max
   `confidence_score`**, one household per row (matches the id-service `resolveHouseholdId` endpoint). See
   `data_knowledge.md` § "MNTN ID (household) re-keying of the feature store".
+
+### silver.identity.graph_translation_signal (graph-vendor crediting log)
+- **Type:** TABLE (dev version being built by Weiang Li / ID team, 2026-07-29). The **crediting log** for graph
+  usage under MNTN ID — modeled on today's `hashed_email_signal` table.
+- **Use for:** record **every event where an ID is translated into a household_id** in the feature store, so
+  graph vendors (whose licensed data is in the graph) can be credited. **Required even when the FS sources only
+  internal logs (guid/augmentor)** — the crediting is for the graph, not the source log.
+- **Producer:** AUDI feature-store code (AUDI-1167 resolution path). The ID team is shipping a **pyspark graph
+  interface** (current-graph selection + translation logging) ~early Aug that Sean Yang drops into the FS code.
+- **Related:** DDP-vendor crediting (non-graph vendors, e.g. DS13/19 usage) may also change under MNTN ID —
+  separate, ~mid-October, see `data_knowledge.md` DDP billing + `reference_ddp_billing_logic`.
 
 ---
 

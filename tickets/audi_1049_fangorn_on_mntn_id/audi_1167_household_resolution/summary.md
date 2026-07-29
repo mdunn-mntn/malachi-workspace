@@ -66,3 +66,12 @@ _(document the resolution semantics + shared-IP cutoff + fan-out guard)_
   correspond to the household the bidder resolved — **biggest open risk, bidder has no strategy yet** (→ Jack).
 - As-of join pattern against the snapshot graph: `max(as_of_date) < day` → `max(as_of_date_revision_number)`
   for partition elimination. HHID ~85% stable over 30d (~15% churn; key not semantically reassigned).
+- **NEW REQUIREMENT — graph-translation-signal logging (Slack 2026-07-29, Jack Barbey/Luis):** log **every
+  ID→household translation event** here and pipe to **`dw-main-silver.identity.graph_translation_signal`**
+  (Weiang Li dev table; modeled on `hashed_email_signal`) for **graph-vendor crediting** — required even though
+  the FS sources only internal logs (the graph contains licensed-vendor data). ID team ships a **pyspark graph
+  interface** (current-graph selection + translation logging) ~end of next week; **Sean drops it into the FS
+  code**; Weiang → Sean to spec the event schema. Resolution is where translation happens → this logging lands
+  in the `resolve_households()` path.
+- **GUID (id_type=42)** may be a 2nd resolution identifier (guid_log carries guid); IPv6 moot for v1 (no IPv6
+  in guid_log). See epic §7c.

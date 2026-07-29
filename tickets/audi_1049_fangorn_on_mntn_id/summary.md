@@ -256,6 +256,37 @@ household_id). Note: if left as-is, `household_score` will actually mean the **p
 **Ryan's 3 action items:** (1) study id-service resolution + bidder/IPv6 ownership (→ Jack); (2) confirm
 `household_graph_parquet` TTL (don't dump — need historical training depth); (3) standardize the id column name.
 
+## 7c. Slack updates — post-sync scope + crediting (2026-07-28/29)
+Threads: #dev / idg-tgt-workspace (Matt Brorby, Sean Yang, Brian McAdams, Jack Barbey, Luis Chelala, Alyson,
+Weiang Li). Decisions still forming — flag as such.
+
+**Sept-4 scope is narrowing to "simplest end-to-end" (Matt's push against scope creep, team aligning):** a
+working end-to-end Fangorn pipeline re-keyed to MNTN ID, using **the simplest logic Ryan uses for his smoke
+tests**. **PUNT to later:** DS13/DS19/DS46 replication to MNTN ID (Ryan said these are on AUDI for Fangorn to
+*fully* work), the **bidder-resolution alignment** (our IP→HHID logic must match the bidder's or scores are
+unreliable — IP_1→HHID_1 vs HHID_2), full **IPv6**, and **non-IPv4 households**. Initial version covers only
+households that have an **IPv4**.
+
+**Identifier scope — GUID (id_type=42), not IPv6 (Sean):** `guid_log` has **no IPv6 data** at all, so IPv6 is
+only relevant once `augmentor_log` is added to training (excluded from v1). But `guid_log` carries **`guid`,
+which IS an identifier in the graph — `id_type=42`** — and the current FS design scoped only IPv4. **Open for
+Sept-4: whether to bake GUID into L1 as a 2nd identifier.** (This corrects §7b's "IPv6 = L1 rebuild" framing —
+for the guid_log-only scope, IPv6 is moot; GUID is the real question.)
+
+**NEW REQUIREMENT — graph-translation-signal logging (graph-vendor crediting), lands on the FS work (Jack
+Barbey/Luis Chelala):** AUDI must **log every event where an ID is translated into a household_id** in the
+feature store and pipe it to **`dw-main-silver.identity.graph_translation_signal`** (dev version by Weiang Li;
+modeled on today's `hashed_email_signal` table). **Required even though the FS sources only internal logs
+(guid/augmentor)** — the graph itself contains licensed-vendor data, so graph vendors must be credited. The
+**ID team is building a little pyspark interface to the graph** (handles current-graph selection + translation
+logging) — target ~end of next week (~Aug 8); **Sean drops it into the FS code.** Weiang Li → Sean to spec the
+event data. This is a resolution-step concern → touches AUDI-1167 (where translation happens).
+
+**DDP crediting under MNTN ID (Alyson/Jack, open):** **Fangorn uses NO DDP data → no DDP crediting for
+Fangorn.** But **DS13/DS19 DO use DDP** → DDP-vendor crediting still needs to change under MNTN ID for those;
+Alyson to bring the team's thoughts. Needed by **~mid-October** for real-campaign testing. Ties to
+`reference_ddp_billing_logic`.
+
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
 persuadables audience).** Fangorn ranks propensity (ROC-AUC 0.96) but the High band (~78% of volume) returns

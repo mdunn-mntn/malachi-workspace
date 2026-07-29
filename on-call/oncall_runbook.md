@@ -374,6 +374,14 @@ fresh Dataproc batch_id (timestamped) so there's **no batch-id trap**. No produc
 `ipdsc_geo`, so when the producer slips past ~07:45Z the monitor exhausts retries and pages. Same
 tpa_export/ipdsc chain as INC-001. Monitor code + DAG both unchanged (07-02 / 07-24) — not a regression.
 
+**Upstream cause corroborated (mission control, 2026-07-29):** Zach reported the **DS data flow was behind
+for many data sources** last night (self-correcting the next day); Scotty separately reported a data-pipeline
+delay that left mission-control system-signals un-updated for the prior day. That systemic DS-flow delay is
+why `ipdsc_geo/dt=2026-07-28` (built at the tail of the ipdsc chain) landed ~3h late. So the "why was it
+late" is a system-wide DS-flow lag, not an isolated builder bug. (Possibly-related same-night item: the
+`aud22` Geo Includes/Excludes audit fired on multiple CGs — likely stale/partial geo data, not a true
+violation; verify against today's data once the flow catches up.)
+
 **Diagnosis path (copy-paste — the Airflow log is NOT enough):**
 ```bash
 # 1. Airflow log only says "Dataproc Agent reports job failure" — get the REAL error from the batch driver output:
