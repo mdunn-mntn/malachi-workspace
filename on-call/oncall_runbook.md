@@ -223,7 +223,8 @@ the lookback — **same failure shape as INC-004** (`spark.read.parquet(ipdsc...
 absent partition). **Discriminating test (Jordan can run):** overlay enriched DS51 count vs the skip-day
 calendar above over 07-06→28 — if DS51=0 lands on *exactly* the ABSENT days, the build is same-day-coupled
 (bug); if only 07-27 is 0, it's specific to that rebuild (check partition last-modified + build logs).
-**Status: OPEN, owned by Jordan / enriched_impressions build; root cause TBD — document here when known.**
+**Status: OPEN — CONFIRMED real anomaly (Jordan, 2026-07-29: "you were right"), NOT benign; root cause/fix
+still under investigation (Jordan poking the enriched_impressions build). Document the fix here when known.**
 Lesson: an upstream skip explains the *upstream* zero; do not extend it to a downstream table whose join
 semantics (lookback vs same-day) you haven't confirmed.
 
