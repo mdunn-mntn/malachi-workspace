@@ -4,8 +4,8 @@ description: Decks: Tufte+RevealJS standards, share via share_deck.sh githack (a
 metadata:
   type: reference
 doc_type: memory
-keywords: [deck_standards, deck, standards, decks, tufte, revealjs, share, share_deck.sh]
-domain: [reference]
+keywords: [deck standards, tufte, revealjs, share_deck.sh, githack, htmlpeek, pagedrop, no matplotlib titles, author name malachi dunn, no named attributions, chart color meaning]
+domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-10
 ---

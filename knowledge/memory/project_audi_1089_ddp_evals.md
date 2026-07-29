@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [audi_1089_ddp_evals, audi, 1089, ddp, evals, billing, review, workbook]
-domain: [project]
+keywords: [audi_1089, ddp evals, vendor renewal, billing review workbook, preemption, 33across, klickly, 5x5 predactiv, free logs credit, 1/N credit, bae, flat fee]
+domain: [project, pricing]
 lifecycle: active
 last_verified: 2026-07-22
 ---

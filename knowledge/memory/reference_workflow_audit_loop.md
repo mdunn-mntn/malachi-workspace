@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 9c582365-7ebc-49fa-9d1e-6d93ac47841b
 doc_type: memory
-keywords: [workflow_audit_loop, workflow, audit, loop, system, retro, skill, aggregator]
-domain: [reference]
+keywords: [workflow audit loop, workflow-audit, system retro, aggregator, propose-only, Pi cron, signals, health_scorecard, request_digest, lint_tickets]
+domain: [workflow, infra]
 lifecycle: active
 last_verified: 2026-07-24
 ---

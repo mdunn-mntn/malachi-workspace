@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [fangorn_audience_overlay, fangorn, audience, overlay, switch, uses, feature, updates]
-domain: [reference]
+keywords: [fangorn audience overlay, audience_segments, DS46, DS13, DS19, audiences template, Ryan Kleck, MM undercount, peak performance]
+domain: [audience-scoring]
 lifecycle: active
 last_verified: 2026-07-08
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: f5c6f1a9-8f60-4386-af98-8983f7eebe17
 doc_type: memory
-keywords: [ddp_valuation_framework, ddp, valuation, framework, reusable, data, vendor, worth]
-domain: [reference]
+keywords: [ddp valuation, willingness to pay, 3p data vendor worth, TI-1027, 5x5, site_visit_signal, leave-one-out, dependency ceiling, volume vs value, IP domain uniqueness]
+domain: [pricing, business]
 lifecycle: active
 last_verified: 2026-07-12
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 7c5afb02-06fb-4890-830b-8e042ffcc60f
 doc_type: memory
-keywords: [wgu_pixel_case, wgu, pixel, case, 31357, revenue, real, lead]
-domain: [reference]
+keywords: [WGU, 31357, pixel, revenue never real, AID 10942, shoamt, conversion pixel, app_submitted, CPA goal, pentest, order_amt]
+domain: [data-catalog, business]
 lifecycle: active
 last_verified: 2026-07-08
 ---

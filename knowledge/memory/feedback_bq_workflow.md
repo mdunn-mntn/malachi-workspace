@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: cc00f377-b575-43ed-84cf-3e31ce190e7a
 doc_type: memory
-keywords: [bq_workflow, workflow, bq_run.sh, perf, logging, status, polling, background]
-domain: [workflow]
+keywords: [bq_run.sh, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook]
+domain: [bigquery, workflow]
 lifecycle: active
 last_verified: 2026-07-28
 ---

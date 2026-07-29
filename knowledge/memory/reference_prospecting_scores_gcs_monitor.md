@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [prospecting_scores_gcs_monitor, prospecting, scores, gcs, monitor, daily, email, mntn]
-domain: [reference]
+keywords: [prospecting scores, gcs monitor, fangorn, household_score, funnel level, hhst band mapping, high intent, max reach, score distribution, targeting-infrastructure email]
+domain: [audience-scoring, infra]
 lifecycle: active
 last_verified: 2026-06-01
 ---

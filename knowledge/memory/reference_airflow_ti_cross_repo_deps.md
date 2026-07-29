@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [airflow_ti_cross_repo_deps, airflow, cross, repo, deps, python, models, lazy]
-domain: [reference]
+keywords: [airflow-ti cross repo deps, lazy import model, spark.submit.pyFiles, driverPipPackages ignored, ModuleNotFoundError, targeting-infra-ml, ti_956 deployment, pyfiles zip]
+domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-06-08
 ---

@@ -4,8 +4,8 @@ description: User wants tickets/docs/comments structured for fast scanning — m
 type: feedback
 originSessionId: 1ddedb6a-ff08-4281-8285-aab919ee6906
 doc_type: memory
-keywords: [terse_tickets, terse, tickets, user, wants, docs, comments, structured]
-domain: [workflow]
+keywords: [terse tickets, terse comms standard, lint_comms, char caps, jira comment, ticket description, PR description, commit message, bullets]
+domain: [workflow, jira-process]
 lifecycle: active
 last_verified: 2026-07-24
 ---

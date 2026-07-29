@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [ddp_billing_logic, ddp, billing, logic, regime, 2026, usage, table]
-domain: [reference]
+keywords: [ddp billing, targeted_signal, usage_reporting_data, 1/N fractional split, free log preemption, 33across, augmentor, ddp_mm_winners_imp, DS13, DS19, tv_cpm, AUDI-1089, AUDI-1092, AUDI-1093, enriched_impressions, sherwin ocampo, mntn id crediting]
+domain: [pricing, business]
 lifecycle: active
 last_verified: 2026-07-29
 ---

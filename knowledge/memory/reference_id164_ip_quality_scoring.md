@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 11120755-d5de-4ee7-83cd-aef7c4761482
 doc_type: memory
-keywords: [id164_ip_quality_scoring, id164, quality, scoring, identity, toxic, shared, confidence]
-domain: [reference]
+keywords: [id164, ip quality scoring, toxic hub, shared ip, confidence score, identity team, jack barbey, ipHouseholdOwnership, household per ip]
+domain: [identity, audience-scoring]
 lifecycle: active
 last_verified: 2026-07-09
 ---

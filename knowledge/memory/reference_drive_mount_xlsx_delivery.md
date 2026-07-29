@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [drive_mount_xlsx_delivery, drive, mount, xlsx, delivery, deliver, files, writing]
-domain: [reference]
+keywords: [drive mount, xlsx delivery, google drive local mount, My Drive Tickets, openpyxl formatting, gsheet pointer, overwrite live file, column widths, AUDI-1141]
+domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-28
 ---

@@ -4,8 +4,8 @@ description: For pre/post and CausalImpact result visuals, only chart total aggr
 type: feedback
 originSessionId: bb7e5bd3-33da-47b0-90cf-096e60626802
 doc_type: memory
-keywords: [causal_impact_viz_simplicity, causal, impact, viz, simplicity, post, causalimpact, result]
-domain: [workflow]
+keywords: [causalimpact, pre post viz, aggregate chart, per-advertiser table, fangorn notebook, TI-921, lift visualization, IVR CVR CPA]
+domain: [experimentation, workflow]
 lifecycle: active
 last_verified: 2026-05-08
 ---

@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 90ae114b-824a-4a09-8ae2-53026431ded6
 doc_type: memory
-keywords: [dataproc_cost_awareness, dataproc, cost, awareness, consider, serverless, costs, before]
-domain: [workflow]
+keywords: [dataproc, serverless cost, backfill, zach schoenberger, ti-810, executors, gcp billing, dcu, cud credits, model_run]
+domain: [infra, workflow]
 lifecycle: active
 last_verified: 2026-07-29
 ---

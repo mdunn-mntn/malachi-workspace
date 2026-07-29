@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 45f5f508-2584-4aba-8aa8-efdac5abeb02
 doc_type: memory
-keywords: [self_optimizing_context, self, optimizing, context, ticket, system, cards, keywords]
-domain: [project]
+keywords: [self_optimizing_context, ticket cards, tl;dr card, _ROUTING, build_index.sh, retrieval eval, keywords front-matter, health_scorecard, ticket_context_full.js]
+domain: [project, workflow]
 lifecycle: active
 last_verified: 2026-07-23
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 11120755-d5de-4ee7-83cd-aef7c4761482
 doc_type: memory
-keywords: [client_pricing_model, client, pricing, model, billing, config, driven, campaign]
-domain: [reference]
+keywords: [client pricing model, pricing_model_type, fixed_cpm, custom_margin, has_cpm, advertiser_attributes, take rates, cil spend_calcs, blended margin, sqlmesh]
+domain: [pricing, business]
 lifecycle: active
 last_verified: 2026-07-13
 ---

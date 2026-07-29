@@ -3,8 +3,8 @@ name: Engineering Levels & Skills Rubric
 description: Official MNTN engineering rubric PDF — per-level criteria (Associate→Principal) for Speed/Craft/Adaptability. Use when writing self-review rationales.
 type: reference
 doc_type: memory
-keywords: [eng_rubric, eng, rubric, official, mntn, engineering, level, criteria]
-domain: [reference]
+keywords: [eng rubric, engineering levels, speed craft adaptability, promotion criteria, self review rationale, associate senior staff principal, mntn rubric]
+domain: [leadership, jira-process]
 lifecycle: active
 last_verified: 2026-04-06
 ---

@@ -4,8 +4,8 @@ description: MNTN engineering leadership chain relevant to Malachi's work — Ka
 type: reference
 originSessionId: 1ddedb6a-ff08-4281-8285-aab919ee6906
 doc_type: memory
-keywords: [mntn_leadership, mntn, leadership, engineering, chain, relevant, malachi, work]
-domain: [reference]
+keywords: [mntn leadership, kale mcnaney, paulo black, richard girges, alex bloor, chris rogus, engineering chain, reorg, pixel signals, measurement]
+domain: [leadership, routing-people]
 lifecycle: active
 last_verified: 2026-06-23
 ---

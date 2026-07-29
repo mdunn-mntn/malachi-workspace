@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [segment_quality_framework_ds_agnostic, segment, quality, framework, agnostic, alex, knorr, scoring]
-domain: [reference]
+keywords: [segment quality, alex knorr, ThirdPartySegmentQuality, targeting-infra-ml, ds19 keywords, ds35 liveramp, ipdsc, buk, ti-956, data source agnostic]
+domain: [audience-scoring, repos]
 lifecycle: active
 last_verified: 2026-06-05
 ---

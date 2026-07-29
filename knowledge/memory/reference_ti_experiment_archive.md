@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 18b76576-d68f-42c8-949a-d2e5e56d1262
 doc_type: memory
-keywords: [ti_experiment_archive, experiment, archive, manifest, driven, internal, site, cataloging]
-domain: [reference]
+keywords: [ti experiment archive, manifest yaml, experiment site, TI-1003, TI-1033, TI-542 max reach, KPI catalog, IVR CVR]
+domain: [experimentation, repos, project]
 lifecycle: active
 last_verified: 2026-06-17
 ---

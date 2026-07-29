@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [ti_999_strategic_goal, 999, strategic, goal, propose, interest, segment, changes]
-domain: [project]
+keywords: [ti_999_strategic_goal, 3p segment curation, interest segment ranking, DS17 sharethis, DS18 dstillery, DS35 liveramp, 3p-only baseline, ti_956 scoring, segment quality]
+domain: [project, audience-scoring]
 lifecycle: active
 last_verified: 2026-05-29
 ---

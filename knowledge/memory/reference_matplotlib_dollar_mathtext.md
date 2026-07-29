@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [matplotlib_dollar_mathtext, matplotlib, dollar, mathtext, text, signs, renders, italic]
-domain: [reference]
+keywords: [matplotlib, dollar sign, mathtext, italic latex, escape dollar, chart labels, cpm chart, helvetica arrow glyph]
+domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-17
 ---

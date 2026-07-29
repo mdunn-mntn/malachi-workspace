@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 2f8d4ec8-78d6-419a-9c3f-4da329f3c216
 doc_type: memory
-keywords: [audi_1173_freq_cap_bandit, audi, 1173, freq, cap, bandit, frequency, finalized]
-domain: [project]
+keywords: [audi_1173, frequency cap bandit, rct design, total-visit count, household bootstrap, non-inferiority margin, md5 bucket, fcap leakage, rtb bidder feature, guid_log, rfd]
+domain: [project, experimentation, bidding]
 lifecycle: active
 last_verified: 2026-07-28
 ---

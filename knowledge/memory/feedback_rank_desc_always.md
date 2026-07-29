@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [rank_desc_always, rank, desc, every, table, chart, ranks, rows]
+keywords: [rank_desc_always, descending, most on top, tables and charts, sort by primary metric, whitespace, AUDI-1089, column widths]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-10

@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [no_emdash_no_namedrop, emdash, namedrop, deliverables, summaries, dashes, name, dropping]
+keywords: [no_emdash_no_namedrop, em-dash, en-dash, name-dropping, plain factual writing, mntn_xlsx.py demdash, attribute to tickets, house style, author credit line]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-22

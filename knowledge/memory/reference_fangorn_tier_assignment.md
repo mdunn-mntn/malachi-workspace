@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: e28957cb-95c7-4eeb-a32b-fd1c38ef16fb
 doc_type: memory
-keywords: [fangorn_tier_assignment, fangorn, tier, assignment, authoritative, rollout, tiers, tpa.fangorn_advertiser_inclusion]
-domain: [reference]
+keywords: [fangorn tier assignment, tpa_fangorn_advertiser_inclusion, fangorn_rollout_tier_num, tier 2 random, tier 5 holdout, tier 99 express, control_tiers, cluster bootstrap DiD, AUDI-1083]
+domain: [experimentation, audience-scoring]
 lifecycle: active
 last_verified: 2026-07-22
 ---

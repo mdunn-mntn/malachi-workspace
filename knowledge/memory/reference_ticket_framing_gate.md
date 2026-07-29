@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 239279d1-3bb6-4090-8fb4-d66b45c0f8e5
 doc_type: memory
-keywords: [ticket_framing_gate, ticket, framing, gate, frame, skill, agree, question]
-domain: [reference]
+keywords: [ticket framing gate, /frame, framing_state, lint_tickets, question goal objective approach, §0 framing, capture bookend, in_progress gate]
+domain: [workflow, jira-process]
 lifecycle: active
 last_verified: 2026-07-24
 ---

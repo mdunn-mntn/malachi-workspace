@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 6b830d36-17fc-4962-b8c0-c9c838b6e689
 doc_type: memory
-keywords: [pi5_server, pi5, server, access, credentials, services, running, slack]
-domain: [reference]
+keywords: [pi5 server, raspberry pi, pihole5, ssh key, slack knowledge bot, workflow audit cron, deploy key, unbound, decommissioned bot, tailscale]
+domain: [infra]
 lifecycle: active
 last_verified: 2026-07-24
 ---

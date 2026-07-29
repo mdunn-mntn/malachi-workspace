@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: f5c6f1a9-8f60-4386-af98-8983f7eebe17
 doc_type: memory
-keywords: [team_name, team, name, squad, audience, intelligence, audi, renamed]
-domain: [reference]
+keywords: [team name, audience intelligence, AUDI, targeting infrastructure, jira project key, TI to AUDI, Kale McNaney, ticket naming]
+domain: [routing-people, jira-process, leadership]
 lifecycle: active
 last_verified: 2026-06-30
 ---

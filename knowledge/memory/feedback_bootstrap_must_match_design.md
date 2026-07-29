@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: e28957cb-95c7-4eeb-a32b-fd1c38ef16fb
 doc_type: memory
-keywords: [bootstrap_must_match_design, bootstrap, must, match, design, family, procedures, algorithm]
-domain: [workflow]
+keywords: [bootstrap, cluster bootstrap, stratified bootstrap, block bootstrap, sampling design, confidence interval, TI-961, causal impact]
+domain: [experimentation]
 lifecycle: active
 last_verified: 2026-06-03
 ---

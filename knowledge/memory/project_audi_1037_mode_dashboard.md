@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 84b2cb82-cfd8-4180-9827-1f0a7ea16899
 doc_type: memory
-keywords: [audi_1037_mode_dashboard, audi, 1037, mode, dashboard, client, perf, diagnostic]
-domain: [project]
+keywords: [audi-1037, mode dashboard, perf_report, client performance diagnostic, nick, allison, deploy_mode.sh, pixel monitor, yoy diagnostic, funnel stage filter]
+domain: [project, routing-people]
 lifecycle: active
 last_verified: 2026-07-16
 ---

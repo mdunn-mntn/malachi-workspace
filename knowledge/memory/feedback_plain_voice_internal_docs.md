@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: 604faaf9-ab5f-4b71-bb07-1a88aa0b430e
 doc_type: memory
-keywords: [plain_voice_internal_docs, plain, voice, internal, docs, confluence, spec, must]
+keywords: [plain_voice_internal_docs, plain voice, AI report tells, Confluence spec, em-dash, callout banner, AUDI-1083, internal docs]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-22

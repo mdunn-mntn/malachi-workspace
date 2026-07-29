@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 3a1edddf-cf1f-4f1b-9ca1-c29edff7fa13
 doc_type: memory
-keywords: [transcribe_shortcut, transcribe, shortcut, user, says, audio, file, auto]
-domain: [workflow]
+keywords: [transcribe, zoom recording, transcribe.sh, meetings folder, m4a, transcribed_recordings, audio file, skill]
+domain: [workflow, infra]
 lifecycle: active
 last_verified: 2026-07-06
 ---

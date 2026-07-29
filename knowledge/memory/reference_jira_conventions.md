@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira_conventions, jira, conventions, wiki, markup, curl, rest, writes]
-domain: [reference]
+keywords: [jira conventions, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee]
+domain: [jira-process]
 lifecycle: active
 last_verified: 2026-07-28
 ---

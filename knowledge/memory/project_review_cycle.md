@@ -3,8 +3,8 @@ name: Review cycle cadence
 description: Self-review cycle is TBD (annual or semi-annual). Files numbered sequentially. Active is self_review_2.md, #1 is archived as HTML.
 type: project
 doc_type: memory
-keywords: [review_cycle, review, cycle, self, annual, semi, files, numbered]
-domain: [project]
+keywords: [review cycle, self review, self_review_2, cadence, annual, kale, review files]
+domain: [leadership, jira-process]
 lifecycle: active
 last_verified: 2026-03-18
 ---

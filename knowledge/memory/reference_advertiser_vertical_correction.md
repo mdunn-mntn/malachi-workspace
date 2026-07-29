@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 758d4fa9-d9c5-4441-891f-0424674f4b12
 doc_type: memory
-keywords: [advertiser_vertical_correction, advertiser, vertical, correction, tagged, shopper, graph, coredb]
-domain: [reference]
+keywords: [advertiser vertical correction, shopper graph, coredb, fpa_advertiser_verticals, alyson lefkowitz, mis-tagged vertical, fangorn scorer vertical_id, AID 69864]
+domain: [audience-scoring, routing-people, data-catalog]
 lifecycle: active
 last_verified: 2026-07-27
 ---

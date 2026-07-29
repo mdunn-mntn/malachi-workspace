@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [mm_3p_intersection_mechanics, intersection, mechanics, include, added, campaign, hhst, narrows]
-domain: [reference]
+keywords: [mm 3p intersection, 3p include narrows mm, hhst, AND OR semantics, DS13, DS19, TI-956, TI-999, segment curation, ryan kleck]
+domain: [audience-scoring, bidding]
 lifecycle: active
 last_verified: 2026-06-01
 ---

@@ -3,7 +3,7 @@ name: feedback_attribution
 description: Never misattribute Malachi's ideas to others. In meeting transcripts, Malachi is the primary speaker — his suggestions are his own.
 type: feedback
 doc_type: memory
-keywords: [attribution, misattribute, malachi, ideas, others, meeting, transcripts, primary]
+keywords: [attribution, misattribute ideas, Malachi primary speaker, meeting transcript, credit, who said what, weighted aggregate lift]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-04-03

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [ti_956_per_pattern_application, 956, pattern, application, design, segment, scoring, ranking]
-domain: [reference]
+keywords: [TI-956, per-segment scoring, campaign pattern, MM+3P AND OR, HHST bidder-inert, segment ranking, theater impressions, 3P-only, exclude include]
+domain: [audience-scoring, bidding, project]
 lifecycle: active
 last_verified: 2026-06-01
 ---

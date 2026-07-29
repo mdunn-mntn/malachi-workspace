@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 06681997-5cb8-4f58-ba1a-517bc7ce83ae
 doc_type: memory
-keywords: [stable_hi_not_stable_roas, stable, roas, share, monthly, prospecting, swings, widely]
-domain: [reference]
+keywords: [stable hi not stable roas, roas swings, high-intent share, AUDI-1070, diminishing returns spend envelope, AOV flat, conversions per dollar, Avon, HexClad, prospecting roas]
+domain: [audience-scoring, incrementality, business]
 lifecycle: active
 last_verified: 2026-07-01
 ---

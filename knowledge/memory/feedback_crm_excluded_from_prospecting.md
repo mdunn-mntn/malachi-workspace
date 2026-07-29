@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 790f6279-052b-404e-8970-f70d7eb62991
 doc_type: memory
-keywords: [crm_excluded_from_prospecting, crm, excluded, prospecting, analyses, exclude, campaigns, positive]
-domain: [workflow]
+keywords: [crm, prospecting, DS4, DS8, DS47, polarity, positive clause, suppression, TI-999, ast parse]
+domain: [audience-scoring, bidding]
 lifecycle: active
 last_verified: 2026-05-28
 ---

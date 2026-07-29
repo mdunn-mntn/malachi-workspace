@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: d9227a5c-c9fc-4a1c-9193-e0db375cb6e5
 doc_type: memory
-keywords: [goal_attainment_report, goal, attainment, report, live, campaign, groups, hitting]
-domain: [reference]
+keywords: [goal attainment, hitting goal percentage, Mode report, v_daily_goal_by_campaign_group, v_campaign_feature_date, bae gold views, sum_by_campaign_by_day, ROAS CostPerVisit CPCV, 63% hitting goal, goal_type_id]
+domain: [data-catalog, business, audience-scoring]
 lifecycle: active
 last_verified: 2026-07-21
 ---

@@ -4,8 +4,8 @@ description: When clearing a failed task instance after merging a code fix, ALWA
 type: feedback
 originSessionId: a9ed5a72-6c04-4040-b0b7-be132df0762a
 doc_type: memory
-keywords: [astronomer_clear_with_latest_bundle, astronomer, clear, latest, bundle, clearing, failed, task]
-domain: [workflow]
+keywords: [astronomer clear task, run with latest bundle version, airflow UI, clear task instance, upstream_failed cascade, deploy_prod.yaml, heal window, TI-931]
+domain: [workflow, infra]
 lifecycle: active
 last_verified: 2026-05-05
 ---

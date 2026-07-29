@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [airflow_prod_safety, airflow, prod, safety, victor, 2026, manually, trigger]
-domain: [workflow]
+keywords: [airflow prod safety, airflow-ti, model_run.py, Victor Savitskiy, dataproc, astro UI trigger, Fangorn scoring, feature branch, TI-956]
+domain: [workflow, repos]
 lifecycle: active
 last_verified: 2026-06-08
 ---

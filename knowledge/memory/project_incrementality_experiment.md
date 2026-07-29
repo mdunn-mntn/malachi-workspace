@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 9c582365-7ebc-49fa-9d1e-6d93ac47841b
 doc_type: memory
-keywords: [incrementality_experiment, incrementality, experiment, 2026]
-domain: [project]
+keywords: [incrementality, ber-2250, ghost-bid lift, persuadables gradient, liftlab, kochava, guid_log, clickpass_log, ti-835, incremental roas, matt brorby]
+domain: [incrementality, experimentation, project]
 lifecycle: active
 last_verified: 2026-07-24
 ---

@@ -4,8 +4,8 @@ description: Todoist: on-request only (never always-on), Eat That Frog ABCDE, fl
 metadata:
   type: feedback
 doc_type: memory
-keywords: [todoist, request, frog, abcde, flat, layer, structure, mntn]
-domain: [workflow]
+keywords: [todoist, eat that frog, ABCDE, on-request only, MindWyre, MNTN section, subtasks, weekly review, plan my day]
+domain: [jira-process, workflow]
 lifecycle: active
 last_verified: 2026-07-09
 ---

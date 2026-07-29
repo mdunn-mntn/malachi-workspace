@@ -4,8 +4,8 @@ description: For audience-platform, audience expression, holdout enforcement, an
 type: reference
 originSessionId: 1ddedb6a-ff08-4281-8285-aab919ee6906
 doc_type: memory
-keywords: [audience_platform_authority, audience, platform, authority, expression, holdout, enforcement, retargeting]
-domain: [reference]
+keywords: [audience platform authority, Zach Schoenberger, holdout enforcement, audience expression, retargeting vs prospecting, CRM lists, Jordan Piepkow, SegmentExpressionService]
+domain: [routing-people, audience-scoring]
 lifecycle: active
 last_verified: 2026-04-30
 ---

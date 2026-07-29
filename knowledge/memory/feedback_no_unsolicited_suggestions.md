@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 11ede3de-0ba9-4e9a-8849-688f05b49869
 doc_type: memory
-keywords: [no_unsolicited_suggestions, unsolicited, suggestions, append, prescriptive, recommendations, next, steps]
-domain: [workflow]
+keywords: [no_unsolicited_suggestions, unsolicited recommendations, next steps, prescriptive, deliverables, report facts and stop, AUDI-1148, holdout advice]
+domain: [workflow, jira-process]
 lifecycle: active
 last_verified: 2026-07-22
 ---

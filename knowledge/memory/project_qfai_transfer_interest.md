@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 54557611-656e-4aef-9231-a931ab21ea99
 doc_type: memory
-keywords: [qfai_transfer_interest, qfai, transfer, interest, malachi, interested, moving, quickframe]
-domain: [project]
+keywords: [qfai, quickframe ai, transfer, richard girges, anne whitman, creative-suite, emily sgroi, ber-2250, swe move]
+domain: [project, routing-people]
 lifecycle: active
 last_verified: 2026-07-14
 ---

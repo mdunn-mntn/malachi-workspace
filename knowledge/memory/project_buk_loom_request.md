@@ -3,8 +3,8 @@ name: buk_loom_presentation
 description: Kale wants a ~5min Loom of TI-813 BUK results to share with Paulo and Richard. High-level only — what we did, results, next steps. DPLs going away, Looms replacing them for async feedback.
 type: project
 doc_type: memory
-keywords: [buk_loom_request, buk, loom, request, kale, wants, 5min, results]
-domain: [project]
+keywords: [buk loom, behavior keywords, ti-813, kale, paulo black, richard girges, revealjs deck, dpl, async feedback]
+domain: [project, leadership]
 lifecycle: active
 last_verified: 2026-04-03
 ---

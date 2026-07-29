@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: eee87269-027a-4bd9-9df4-5666d4c3fde9
 doc_type: memory
-keywords: [bidder_serving_stores, bidder, serving, stores, store, architecture, aerospike, household]
-domain: [reference]
+keywords: [bidder serving stores, Aerospike, household-profile, GCS scores, ScyllaDB, Redis, rtb namespace, holdout_cids, MembershipDB, Eric membership consumer]
+domain: [bidding, infra]
 lifecycle: active
 last_verified: 2026-06-09
 ---

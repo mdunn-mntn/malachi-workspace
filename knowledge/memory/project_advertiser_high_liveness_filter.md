@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: e524c303-522f-4ac1-90e4-5a36c61816cc
 doc_type: memory
-keywords: [advertiser_high_liveness_filter, advertiser, high, liveness, filter, victor, savitskiy, owns]
-domain: [project]
+keywords: [advertiser_high liveness filter, victor savitskiy, airflow-ti, advertiser_high.py, scoring fanout, advertiser_verticals, ryan kleck, zach schoenberger, cold start, campaign start_date]
+domain: [audience-scoring, project]
 lifecycle: active
 last_verified: 2026-05-27
 ---

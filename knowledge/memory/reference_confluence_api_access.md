@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: eee87269-027a-4bd9-9df4-5666d4c3fde9
 doc_type: memory
-keywords: [confluence_api_access, confluence, api, access, rest, works, read, write]
-domain: [reference]
+keywords: [confluence api, jira_api_token, rest api, cql search, tar space, ti projects, page id, storage format, markdown to xhtml, webfetch auth]
+domain: [jira-process, routing-people]
 lifecycle: active
 last_verified: 2026-07-29
 ---

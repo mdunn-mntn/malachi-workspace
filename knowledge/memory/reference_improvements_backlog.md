@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 98511e71-bad1-4bb7-9ed1-393b4675a39b
 doc_type: memory
-keywords: [improvements_backlog, improvements, backlog, improvement, durable, tech, debt, ideas]
-domain: [reference]
+keywords: [improvements_backlog, tech debt, durable fix, improvement ideas, IMP-001, not jira, backlog file, oncall durable fix]
+domain: [workflow, jira-process]
 lifecycle: active
 last_verified: 2026-07-28
 ---

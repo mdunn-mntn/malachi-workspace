@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 8a2ab59e-21b9-4781-a3a4-ffadf51e287a
 doc_type: memory
-keywords: [causal_impact_dashboard, causal, impact, dashboard, standardized, config, driven, mode]
-domain: [reference]
+keywords: [causal impact dashboard, mode dashboard, beta rollout, causal_experiment, bsts, did, 3-point, experiments config table, ci_pre_days, statsmodels ucm]
+domain: [experimentation, project]
 lifecycle: active
 last_verified: 2026-07-23
 ---

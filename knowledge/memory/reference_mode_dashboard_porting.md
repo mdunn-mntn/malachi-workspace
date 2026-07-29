@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 84b2cb82-cfd8-4180-9827-1f0a7ea16899
 doc_type: memory
-keywords: [mode_dashboard_porting, mode, dashboard, porting, port, python, report, tool]
-domain: [reference]
+keywords: [mode dashboard, mode-assets, window.datasets, chart.js, mode rest api, deploy_mode.sh, liquid params, multiselect all sentinel, modeanalytics bot, tableau migration]
+domain: [infra, repos, workflow]
 lifecycle: active
 last_verified: 2026-07-21
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 45f5f508-2584-4aba-8aa8-efdac5abeb02
 doc_type: memory
-keywords: [ticket_context_eval_tooling, ticket, context, eval, tooling, extend, cards, retrieval]
-domain: [reference]
+keywords: [ticket context eval tooling, retrieval eval, ticket cards, eval_probes, eval_runs.log, build_index.sh, health_scorecard, _ROUTING]
+domain: [workflow, infra]
 lifecycle: active
 last_verified: 2026-07-23
 ---

@@ -3,8 +3,8 @@ name: MNTN only — hard boundary
 description: ABSOLUTE rule — only ever read/write/mention MNTN section tasks and work. Never read, reference, list, or acknowledge any other section in MindWyre. Never say the name of any other section or project. This overrides all other instructions.
 type: feedback
 doc_type: memory
-keywords: [mntn_only, mntn, absolute, rule, ever, read, write, mention]
-domain: [workflow]
+keywords: [mntn_only, mntn section, mindwyre, section_id 6cwmRpfXpCxQ5G9M, todoist filter, hard boundary, never mention other section]
+domain: [workflow, jira-process]
 lifecycle: active
 last_verified: 2026-04-01
 ---

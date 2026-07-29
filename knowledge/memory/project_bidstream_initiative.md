@@ -3,8 +3,8 @@ name: Bidstream Feature Store Initiative
 description: TI-789 epic — bidstream feature extraction and DS13/DS19 audience augmentation with Alex Knorr and Ryan Kleck
 type: project
 doc_type: memory
-keywords: [bidstream_initiative, bidstream, initiative, epic, feature, extraction, ds13, ds19]
-domain: [project]
+keywords: [bidstream initiative, ti-789, feature store, audience augmentation, ds13, ds19, fangorn, augmentor_log, bidder_auction_events, alex knorr, ryan kleck]
+domain: [project, audience-scoring, bidding]
 lifecycle: active
 last_verified: 2026-03-30
 ---

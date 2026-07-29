@@ -4,8 +4,8 @@ description: When building any tiered-rollout / experiment lift analysis, follow
 type: reference
 originSessionId: 950de123-5da5-4a85-a3bb-813893617d2f
 doc_type: memory
-keywords: [causal_impact_pattern, causal, impact, pattern, building, tiered, rollout, experiment]
-domain: [reference]
+keywords: [causal impact pattern, cluster bootstrap, did, causalimpact, vif bic, tiered rollout, RolloutTierEvaluations, ti-961, fangorn inclusion, visit rate kpi]
+domain: [experimentation]
 lifecycle: active
 last_verified: 2026-05-28
 ---

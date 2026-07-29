@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: b2e26231-0715-4211-9711-2f60a8021621
 doc_type: memory
-keywords: [ghost_bid_lift_register, ghost, bid, lift, register, matt, brorby, bias]
-domain: [reference]
+keywords: [ghost bid lift, bias register, Matt Brorby, ghost_frac, persuadables gradient, lift__ghost_bid_visits, lift__ghost_bid_rollup, entry-cohort anchor, inverse-variance weights, AUDI-1148, BER-2250, mid-intent]
+domain: [incrementality, experimentation, bidding]
 lifecycle: active
 last_verified: 2026-07-24
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: b2e26231-0715-4211-9711-2f60a8021621
 doc_type: memory
-keywords: [backend_reporting_ber_team, backend, reporting, ber, team, squad, owns, summarydata]
-domain: [reference]
+keywords: [backend reporting, BER team, summarydata, all_facts, CHAPI, ClickHouse, graph.usersreached, Lizz Joslen, airflow-reporting]
+domain: [routing-people, repos, data-catalog]
 lifecycle: active
 last_verified: 2026-06-24
 ---

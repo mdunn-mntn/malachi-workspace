@@ -4,8 +4,8 @@ description: Geo axes: MNTN US-only so GEO-BROAD-incl is default not an axis; co
 metadata:
   type: feedback
 doc_type: memory
-keywords: [geo_axes, geo, axes, mntn, broad, incl, default, axis]
-domain: [workflow]
+keywords: [geo_axes, geo-broad-incl, geo-narrow-incl, geo-narrow-excl, location_type_id, us-only targeting, permutation matrix, ti-999, location_id 237, audience mix axis]
+domain: [audience-scoring, bigquery, workflow]
 lifecycle: active
 last_verified: 2026-07-09
 ---

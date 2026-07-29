@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 06681997-5cb8-4f58-ba1a-517bc7ce83ae
 doc_type: memory
-keywords: [hhst_pacing_lever, hhst, pacing, lever, intent, gate, thrashed, daily]
-domain: [reference]
+keywords: [hhst pacing lever, household score threshold, gate thrash, ddm.hhst_generate_recommendation, household_score_threshold_archives, RTC realtime conquest, HexClad AUDI-1070, silver.core.flights, gate flip delivery, Tofer short flight]
+domain: [bidding, audience-scoring, project]
 lifecycle: active
 last_verified: 2026-07-28
 ---

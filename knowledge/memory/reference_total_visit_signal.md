@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2f8d4ec8-78d6-419a-9c3f-4da329f3c216
 doc_type: memory
-keywords: [total_visit_signal, total, visit, signal, attribution, independent, guid_log, page]
-domain: [reference]
+keywords: [total visit signal, guid_log, clickpass_log, attribution-independent, ghost bid, lift__ghost_bid_visits, frequency experiment, AUDI-1173, non-inferiority, ui_visits, TI-835]
+domain: [experimentation, incrementality, data-catalog]
 lifecycle: active
 last_verified: 2026-07-28
 ---

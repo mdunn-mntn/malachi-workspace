@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 1293bb5f-2247-43b7-b203-60b292e433ad
 doc_type: memory
-keywords: [bq_location_reservation, location, reservation, jobs, must, central1, slot, dataset]
-domain: [reference]
+keywords: [bq location reservation, us-central1, slot reservation, background-jobs, external_table_definition, on-demand billing, bq_run.sh location, Alek Piasecki, US multi-region]
+domain: [bigquery, infra]
 lifecycle: active
 last_verified: 2026-07-16
 ---

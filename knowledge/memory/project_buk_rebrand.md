@@ -4,8 +4,8 @@ description: BUK (Bottoms-Up Keywords) renamed to Behavior Keywords for all exec
 type: project
 originSessionId: 20225215-ae6f-4fad-a328-fabdd040b56f
 doc_type: memory
-keywords: [buk_rebrand, buk, rebrand, bottoms, keywords, renamed, behavior, exec]
-domain: [project]
+keywords: [buk rebrand, behavior keywords, bottoms-up keywords, mike dolt, exec-facing, ti-887, keyword branding]
+domain: [project, business]
 lifecycle: active
 last_verified: 2026-04-20
 ---

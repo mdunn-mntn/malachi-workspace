@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [audit_ref_check_before_delete, audit, ref, check, before, delete, auditing, restructuring]
+keywords: [ref check before delete, workspace audit, reference check, git ls-files, grep basename, archive over delete, false positive delete, RolloutTierEvaluations.py, gitignored data]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-20

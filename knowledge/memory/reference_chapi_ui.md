@@ -4,8 +4,8 @@ description: Client UI reconciliation: CHAPI→ClickHouse source, 3-knob BQ≠UI
 metadata:
   type: reference
 doc_type: memory
-keywords: [chapi_ui, chapi, client, reconciliation, clickhouse, source, knob, bridge]
-domain: [reference]
+keywords: [chapi, clickhouse, client ui reconciliation, industry_standard, competing_, last-touch, objective_id, all_facts, clickpass_log, spend match, audi-1070, first-touch]
+domain: [data-catalog, business, routing-people]
 lifecycle: active
 last_verified: 2026-07-09
 ---

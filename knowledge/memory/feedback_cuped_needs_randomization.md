@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: e28957cb-95c7-4eeb-a32b-fd1c38ef16fb
 doc_type: memory
-keywords: [cuped_needs_randomization, cuped, needs, randomization, variance, reduction, requires, randomized]
-domain: [workflow]
+keywords: [cuped, variance reduction, randomization, ti-961, wave3 selection bias, did, cluster bootstrap, parallel trends, theta]
+domain: [experimentation]
 lifecycle: active
 last_verified: 2026-06-10
 ---

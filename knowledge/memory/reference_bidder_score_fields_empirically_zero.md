@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [bidder_score_fields_empirically_zero, bidder, score, fields, empirically, zero, 10000, fangorn]
-domain: [reference]
+keywords: [bidder_bid_events, household_score, advertiser_household_score, conquest_score, HHST, score fields zero, Fangorn score, MM score, prospecting scores monitor]
+domain: [bidding, audience-scoring, bigquery]
 lifecycle: active
 last_verified: 2026-06-01
 ---

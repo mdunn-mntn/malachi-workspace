@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 06681997-5cb8-4f58-ba1a-517bc7ce83ae
 doc_type: memory
-keywords: [intent_tier_pacing, intent, tier, pacing, malachi, proposal, audi, 1070]
-domain: [project]
+keywords: [intent tier pacing, audi-1070, hi pool, pacing, high intent, hexclad, caraway, prospecting saturation, hhst pacing, reach per dollar]
+domain: [project, audience-scoring, bidding]
 lifecycle: active
 last_verified: 2026-07-01
 ---

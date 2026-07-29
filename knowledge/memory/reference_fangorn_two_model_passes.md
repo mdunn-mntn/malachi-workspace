@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 96d997b2-5483-4746-a3f2-c30aeb590522
 doc_type: memory
-keywords: [fangorn_two_model_passes, fangorn, model, passes, runs, scores, bands, each]
-domain: [reference]
+keywords: [fangorn two model passes, HI model, PP model, raw score, band mapping, DS46, keyword layer DS19, TI-1037, TI-897]
+domain: [audience-scoring]
 lifecycle: active
 last_verified: 2026-07-08
 ---

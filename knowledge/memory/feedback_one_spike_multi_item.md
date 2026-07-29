@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 11120755-d5de-4ee7-83cd-aef7c4761482
 doc_type: memory
-keywords: [one_spike_multi_item, spike, multi, item, bryce, investigations, ticket, outcome]
-domain: [workflow]
+keywords: [one_spike_multi_item, spike ticket, multi-item investigation, Bryce Wagg, PMO, per-item checklist, AUDI-1089, subfolder per item]
+domain: [jira-process, workflow]
 lifecycle: active
 last_verified: 2026-07-09
 ---

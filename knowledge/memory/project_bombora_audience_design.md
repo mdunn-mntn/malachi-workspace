@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 3719ebf2-0049-4928-8900-ecbc72154b47
 doc_type: memory
-keywords: [bombora_audience_design, bombora, audience, design, paulo, asked, audi, white]
-domain: [project]
+keywords: [bombora, audience design, elevenlabs, company surge, b2b intent, abm, liveramp, ds51, john pankowski, paulo]
+domain: [project, audience-scoring, incrementality]
 lifecycle: active
 last_verified: 2026-06-29
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 41b39540-28b4-4a8c-9009-852ce5566580
 doc_type: memory
-keywords: [ghost_bid_columns, ghost, bid, columns, query, bidder_bid_events.threshold_failure_reasons, dashed, camelcase]
-domain: [reference]
+keywords: [ghost bid, bidder_bid_events, threshold_failure_reasons, ghostBid camelcase, bid_dropped_reason, bidder_auction_events, Ryan Kleck, BER-2250, TI-886, MNTN bidder]
+domain: [bidding, incrementality, data-catalog]
 lifecycle: active
 last_verified: 2026-06-02
 ---

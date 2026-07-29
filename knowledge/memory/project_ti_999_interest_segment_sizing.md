@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 790f6279-052b-404e-8970-f70d7eb62991
 doc_type: memory
-keywords: [ti_999_interest_segment_sizing, 999, interest, segment, sizing, portfolio, sibling, scoring]
-domain: [project]
+keywords: [ti_999_interest_segment_sizing, interest segment sizing, 3P interest, prospecting spend, stale segments, DS17 ShareThis, DS18 Dstillery, DS35 LiveRamp, Zach, Alex]
+domain: [project, audience-scoring, incrementality]
 lifecycle: active
 last_verified: 2026-05-28
 ---

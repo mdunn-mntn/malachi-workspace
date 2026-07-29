@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 3b55570d-c509-4bdc-a8b6-68fa3f480871
 doc_type: memory
-keywords: [xlsx_master_format, xlsx, master, format, mntn, build, every, shareable]
-domain: [reference]
+keywords: [xlsx master format, MntnWorkbook, mntn_xlsx.py, xlsx deliverable, brand palette, Inter font, save_drive, heat, signal, glossary terseness, Mountain Green]
+domain: [workflow, business]
 lifecycle: active
 last_verified: 2026-07-28
 ---

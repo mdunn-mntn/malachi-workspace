@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 11ede3de-0ba9-4e9a-8849-688f05b49869
 doc_type: memory
-keywords: [mntn_campaign_stages, mntn, campaign, stages, prospecting, multi, touch, plus]
-domain: [reference]
+keywords: [campaign stages, prospecting, multi-touch, funnel_level, objective_id, stage 1 2 3, verified visit, ti-650, channel_id]
+domain: [business, data-catalog]
 lifecycle: active
 last_verified: 2026-07-22
 ---

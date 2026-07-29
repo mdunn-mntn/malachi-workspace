@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: cc00f377-b575-43ed-84cf-3e31ce190e7a
 doc_type: memory
-keywords: [fast_first_bq, fast, first, discipline, probe, small, sample, approx]
-domain: [workflow]
+keywords: [fast_first_bq, sample probe, approx_count_distinct, tablesample, bq_run.sh, slot contention, wall-time, dry-run underestimate, optimization_playbook, query_cookbook]
+domain: [bigquery, workflow]
 lifecycle: active
 last_verified: 2026-07-27
 ---

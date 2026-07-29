@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: 2f8d4ec8-78d6-419a-9c3f-4da329f3c216
 doc_type: memory
-keywords: [background_work_liveness, background, work, liveness, passively, wait, async, stall]
+keywords: [background work liveness, stall detector, Monitor poll, hung task no notification, TaskOutput no task found, Workflow fan-out, AUDI-1173, mtime stale]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-28

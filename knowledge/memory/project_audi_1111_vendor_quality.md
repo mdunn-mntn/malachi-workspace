@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [audi_1111_vendor_quality, audi, 1111, vendor, quality, epic, data, valuation]
-domain: [project]
+keywords: [audi_1111, vendor data quality, valuation epic, willingness to pay, preemption, ddp_mm_winners_imp, rtc vendor-independent, ds14, cpm layer, 33across, won impression billing]
+domain: [project, pricing]
 lifecycle: active
 last_verified: 2026-07-22
 ---

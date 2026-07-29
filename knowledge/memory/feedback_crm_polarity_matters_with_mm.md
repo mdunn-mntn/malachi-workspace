@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [crm_polarity_matters_with_mm, crm, polarity, matters, include, exclude, combined, positive]
-domain: [workflow]
+keywords: [crm polarity, DS4, DS8, DS47, MM scoring, include vs exclude, hygiene, eligibility intersection, TI-999, prospecting]
+domain: [audience-scoring, bidding]
 lifecycle: active
 last_verified: 2026-05-29
 ---

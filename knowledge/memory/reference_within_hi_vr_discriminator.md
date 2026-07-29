@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 06681997-5cb8-4f58-ba1a-517bc7ce83ae
 doc_type: memory
-keywords: [within_hi_vr_discriminator, within, discriminator, visit, rate, between, prospecting, decline]
-domain: [reference]
+keywords: [within-HI visit rate, prospecting decline, gate removal, over-scaling, HHST gate, AUDI-1070, household_score, Caraway, Bouqs, Kindred, HI-share]
+domain: [audience-scoring, bidding]
 lifecycle: active
 last_verified: 2026-07-02
 ---

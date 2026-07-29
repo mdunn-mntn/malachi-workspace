@@ -4,8 +4,8 @@ description: Always pair pre/post comparisons with a counterfactual (CausalImpac
 type: feedback
 originSessionId: 950de123-5da5-4a85-a3bb-813893617d2f
 doc_type: memory
-keywords: [no_naive_pre_post, naive, pre, post, pair, comparisons, counterfactual, causalimpact]
-domain: [workflow]
+keywords: [no_naive_pre_post, naive pre/post, counterfactual, causalimpact, vif bic, synthetic control, advertiser kpi lift, spend confound, augmentor_log, ti-849 fangorn]
+domain: [experimentation, incrementality, workflow]
 lifecycle: active
 last_verified: 2026-05-01
 ---

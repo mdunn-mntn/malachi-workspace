@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 3b55570d-c509-4bdc-a8b6-68fa3f480871
 doc_type: memory
-keywords: [mntn_brand_assets, mntn, brand, assets, official, palette, fonts, neue]
-domain: [reference]
+keywords: [brand assets, mntn palette, hex colors, neue haas, inter font, logo kit, brand.mountain.com, deliverable, xlsx]
+domain: [business, workflow]
 lifecycle: active
 last_verified: 2026-07-21
 ---

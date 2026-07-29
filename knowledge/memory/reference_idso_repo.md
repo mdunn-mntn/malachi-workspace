@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 30b091df-9f96-4b81-bccc-78447e75e9ec
 doc_type: memory
-keywords: [idso_repo, idso, repo, steelhouse, mntn, campaign, threshold, optimize]
-domain: [reference]
+keywords: [idso, dco, household_score_thresholds, hhst, camperbid, optimized_intent_thresholds, threshold optimize apply, steelhouse idso, ddm pilot, bidder gates]
+domain: [repos, bidding, audience-scoring]
 lifecycle: active
 last_verified: 2026-07-28
 ---

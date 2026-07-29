@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 11120755-d5de-4ee7-83cd-aef7c4761482
 doc_type: memory
-keywords: [take_rates_sensitive, take, rates, sensitive, client, billing, margins, private]
-domain: [workflow]
+keywords: [take rates, margins, media_spend, data_spend, platform_spend, billing, confidential, AUDI-1089, willingness to pay, ray]
+domain: [pricing, workflow]
 lifecycle: active
 last_verified: 2026-07-15
 ---

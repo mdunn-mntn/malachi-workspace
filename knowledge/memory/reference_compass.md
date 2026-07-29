@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 6b830d36-17fc-4962-b8c0-c9c838b6e689
 doc_type: memory
-keywords: [compass, access, atlas, code, endpoint, query, coverage, gaps]
-domain: [reference]
+keywords: [compass, atlas code mcp, backstage, infra investigator, agent-gateway, contextforge, harvey yau, dev-basecamp, quickframe coverage gap, a2a]
+domain: [infra, routing-people]
 lifecycle: active
 last_verified: 2026-06-10
 ---

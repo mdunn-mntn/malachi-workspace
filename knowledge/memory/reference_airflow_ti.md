@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 60b2f7af-ea4c-4042-bcd9-027f6c6ad945
 doc_type: memory
-keywords: [airflow_ti, airflow, feature, store, pipeline, repo, architecture, deployment]
-domain: [reference]
+keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths]
+domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-07-22
 ---

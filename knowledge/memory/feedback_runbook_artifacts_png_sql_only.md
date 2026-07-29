@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [runbook_artifacts_png_sql_only, runbook, artifacts, png, sql, similar, pipeline, steps]
+keywords: [runbook artifacts, sql png only, AUDI-1089, DDP runbook, no wide csv, VALIDATION_GUIDE, header sweep, named query scripts]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-16

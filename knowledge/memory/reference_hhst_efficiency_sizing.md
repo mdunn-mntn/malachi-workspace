@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: fab2a586-a823-46e7-9b54-e170fad643d1
 doc_type: memory
-keywords: [hhst_efficiency_sizing, hhst, efficiency, sizing, prod, setter, camperbid, auction]
-domain: [reference]
+keywords: [hhst efficiency, household_score_thresholds, camperbid v3 v4, idso HouseholdScoreThresholdRepository, optimized_intent_thresholds, AUDI-1175, AUDI-1176, HI 5x cheaper CPV, budget-fill objective, score-band curve, gate-safe, DS14 scoring]
+domain: [bidding, audience-scoring, incrementality]
 lifecycle: active
 last_verified: 2026-07-28
 ---

@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: e28957cb-95c7-4eeb-a32b-fd1c38ef16fb
 doc_type: memory
-keywords: [no_y_lags_in_causalimpact, lags, causalimpact, include, treated, outcome, exog, covariates]
-domain: [workflow]
+keywords: [no_y_lags_in_causalimpact, causalimpact, lags of y, target leakage, synthetic control, UnobservedComponents, freq_seasonal, TI-961, run_ci_for_tier, counterfactual]
+domain: [experimentation, incrementality]
 lifecycle: active
 last_verified: 2026-06-03
 ---

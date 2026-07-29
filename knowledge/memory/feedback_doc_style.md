@@ -3,7 +3,7 @@ name: Document style preference
 description: Presentation-style docs — single table, tells a story, gets to the point. No sprawling multi-doc artifacts.
 type: feedback
 doc_type: memory
-keywords: [doc_style, doc, style, presentation, docs, single, table, tells]
+keywords: [doc style, single table, presentation doc, findings doc, ti_790, story, one doc]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-04-01

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 06681997-5cb8-4f58-ba1a-517bc7ce83ae
 doc_type: memory
-keywords: [fangorn_detection, fangorn, detection, empirical, bucketed, detector, continuous, 8001]
-domain: [reference]
+keywords: [fangorn detection, household_score, cost_impression_log, 8001-9999 band, bucketed vs continuous, HexClad, rolling migration, model_params, AUDI-1070]
+domain: [audience-scoring, bigquery]
 lifecycle: active
 last_verified: 2026-07-08
 ---

@@ -4,8 +4,8 @@ description: Which Slack channels to ask in based on the topic — UI vs reporti
 type: reference
 originSessionId: 8c1b4f2e-277c-4422-8d1b-abc2a76e9d06
 doc_type: memory
-keywords: [slack_channel_routing, slack, channel, routing, channels, based, topic, reporting]
-domain: [reference]
+keywords: [slack channel routing, chapter-ui, chapter-data-engineering, data-platform, dev-mode-support, reporting helpdesk, mode admin, ray]
+domain: [routing-people]
 lifecycle: active
 last_verified: 2026-07-16
 ---

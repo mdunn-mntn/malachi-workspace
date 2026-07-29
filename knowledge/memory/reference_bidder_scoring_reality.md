@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 790f6279-052b-404e-8970-f70d7eb62991
 doc_type: memory
-keywords: [bidder_scoring_reality, bidder, scoring, reality, mntn, semantics, three, score]
-domain: [reference]
+keywords: [bidder scoring reality, household_score, advertiser_household_score, realtime_conquest_score, clause polarity, MM ceiling, cost_impression_log model_params, TI-999 Finding 15, unscored delivery, TI-956]
+domain: [bidding, audience-scoring]
 lifecycle: active
 last_verified: 2026-05-28
 ---

@@ -3,8 +3,8 @@ name: TI team pivoting to incrementality focus
 description: Kale announced strategic narrowing of Fangorn/TI work toward incrementality prediction, away from pure intent/ROAS exploitation. Plan forthcoming.
 type: project
 doc_type: memory
-keywords: [incrementality_pivot, incrementality, pivot, kale, announced, strategic, narrowing, fangorn]
-domain: [project]
+keywords: [incrementality pivot, incrementality, kale, fangorn, intent targeting, roas, strategic narrowing, ti team]
+domain: [project, incrementality]
 lifecycle: active
 last_verified: 2026-03-31
 ---

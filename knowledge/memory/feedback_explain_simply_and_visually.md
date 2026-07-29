@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [explain_simply_and_visually, explain, simply, visually, concept, gets, deep, subtle]
+keywords: [explain simply, analogy, visuals, plain language, coffee-shop analogy, help me understand, not smart, landing understanding]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-17

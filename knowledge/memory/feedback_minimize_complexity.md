@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [minimize_complexity, minimize, complexity, keep, analyses, deliverables, simple, possible]
+keywords: [minimize_complexity, simple deliverable, no invented terms, fewer columns, one value frame, audi-1148, platform evidence tab, lean deliverable, xlsx notes]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-22

@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 2f8d4ec8-78d6-419a-9c3f-4da329f3c216
 doc_type: memory
-keywords: [sprint_ready_plan, sprint, ready, plan, self, contained, implementation, bluf]
-domain: [workflow]
+keywords: [sprint-ready plan, implementation plan, RFD, BLUF, AUDI-1176, AUDI-1173, adversarial review, backlog to sprint, expected improvement]
+domain: [workflow, jira-process, project]
 lifecycle: active
 last_verified: 2026-07-29
 ---

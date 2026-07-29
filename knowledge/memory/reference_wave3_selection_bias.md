@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: e28957cb-95c7-4eeb-a32b-fd1c38ef16fb
 doc_type: memory
-keywords: [wave3_selection_bias, wave3, selection, bias, fangorn, wave, tier, permanent]
-domain: [reference]
+keywords: [wave3 selection bias, fangorn, tier 5, permanent holdout, TI-961, DiD, parallel trends, non-random control, CausalImpact, Angi, CVR]
+domain: [experimentation, audience-scoring]
 lifecycle: active
 last_verified: 2026-06-10
 ---

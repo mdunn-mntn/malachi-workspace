@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 1e31df63-2e33-4ee1-ad1b-7fc2395f8bb7
 doc_type: memory
-keywords: [fangorn_on_mntn_id, fangorn, mntn, audi, 1049, epic, feature, store]
-domain: [project]
+keywords: [fangorn on mntn id, audi-1049, household re-key, feature store, household_id, audi-1166, audi-1105, sean yang, airflow-ti, graph_translation_signal]
+domain: [project, identity, audience-scoring]
 lifecycle: active
 last_verified: 2026-07-29
 ---

@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [xlsx_default_output, xlsx, default, output, analysis, workbook, deck, save]
+keywords: [xlsx default output, workbook, google drive mount, mntn_xlsx, MntnWorkbook, deliverable, openpyxl, deck exception, save_drive, tickets folder]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-21

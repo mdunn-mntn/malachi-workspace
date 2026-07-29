@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [audi_1089_template_workbook, audi, 1089, template, workbook, vendor, eval, format]
-domain: [reference]
+keywords: [audi_1089 template workbook, ddp vendor eval, fill_template.py, xlsx format locked, solo sheet, decisions sheet, notes numbers sheets, one question per row, vendor column order]
+domain: [pricing, project]
 lifecycle: active
 last_verified: 2026-07-16
 ---

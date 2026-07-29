@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: cc00f377-b575-43ed-84cf-3e31ce190e7a
 doc_type: memory
-keywords: [bq_optimization_discipline, optimization, discipline, query, anchor, docs, live, 2026]
-domain: [project]
+keywords: [bq optimization, query_cookbook, optimization_playbook, perf_digest, fast-first bq, perf-analyst, bq_run.sh, build_index.sh, slow query tuning]
+domain: [bigquery, workflow, project]
 lifecycle: active
 last_verified: 2026-07-27
 ---

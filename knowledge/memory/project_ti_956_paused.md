@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 2a20d28f-2a8c-4757-a5e4-36e63bd41f18
 doc_type: memory
-keywords: [ti_956_paused, 956, paused, interest, segment, quality, scoring, schedule]
-domain: [project]
+keywords: [ti_956_paused, interest-segment scoring, segment_quality_scoring_weekly, airflow-ti, PR #1073, paused, command center, DS35, astro ui]
+domain: [project, audience-scoring, repos]
 lifecycle: active
 last_verified: 2026-06-10
 ---

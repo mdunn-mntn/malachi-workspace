@@ -3,8 +3,8 @@ name: Self-review updates must be proactive
 description: Update self_review_2.md after every ticket/significant task — don't batch at end of session
 type: feedback
 doc_type: memory
-keywords: [self_review_habit, self, review, habit, update, self_review_2.md, after, every]
-domain: [workflow]
+keywords: [self-review habit, self_review_2.md, proactive update, after every ticket, gitignored, speed craft adaptability]
+domain: [workflow, leadership]
 lifecycle: active
 last_verified: 2026-03-26
 ---

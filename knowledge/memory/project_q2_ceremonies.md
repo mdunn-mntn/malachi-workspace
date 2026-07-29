@@ -3,8 +3,8 @@ name: Q2 2026 AUD/TI ceremony changes
 description: New Q2 ceremonies — weekly backlog grooming (Bryce+Mike), weekly project syncs, tactical standups. Announced by Bryce Wagg 2026-04-07.
 type: project
 doc_type: memory
-keywords: [q2_ceremonies, ceremonies, weekly, backlog, grooming, bryce, mike, project]
-domain: [project]
+keywords: [q2 ceremonies, backlog grooming, bryce wagg, mike, standups, project syncs, sprint, planning]
+domain: [jira-process, project]
 lifecycle: active
 last_verified: 2026-04-07
 ---

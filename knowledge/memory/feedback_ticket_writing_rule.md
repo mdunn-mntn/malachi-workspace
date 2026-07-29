@@ -4,8 +4,8 @@ description: For any Jira ticket (summary + description), Jira comment, Todoist 
 type: feedback
 originSessionId: 1ddedb6a-ff08-4281-8285-aab919ee6906
 doc_type: memory
-keywords: [ticket_writing_rule, ticket, writing, rule, jira, summary, description, comment]
-domain: [workflow]
+keywords: [ticket writing rule, objective task results, clarity brevity, PR what where why how, jira comment, summary description, fewest words]
+domain: [workflow, jira-process]
 lifecycle: active
 last_verified: 2026-05-05
 ---

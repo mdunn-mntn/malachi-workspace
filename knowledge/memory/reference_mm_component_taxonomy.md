@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: a16447af-e118-4162-9ce4-bcd81ee4ffdb
 doc_type: memory
-keywords: [mm_component_taxonomy, component, taxonomy, settled, matt, brorby, 2026, ds19]
-domain: [reference]
+keywords: [mm taxonomy, ds19, ds13, ds46, peak performance, fangorn, mmv2, mmv3, hhst gate, matt brorby, audi-1083]
+domain: [audience-scoring]
 lifecycle: active
 last_verified: 2026-07-23
 ---

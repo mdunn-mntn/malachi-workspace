@@ -4,7 +4,7 @@ description: For internal data deliverables, drop Power Line / three-act / Ciald
 type: feedback
 originSessionId: 2b74ee90-7d8a-4c55-8c97-656eb7238aa5
 doc_type: memory
-keywords: [facts_not_presentation, facts, presentation, internal, data, deliverables, drop, power]
+keywords: [facts not presentation, internal deliverable, power line, three-act, cialdini, technical deck, plain prose, caveats]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-16

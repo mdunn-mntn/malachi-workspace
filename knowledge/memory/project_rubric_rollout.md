@@ -3,8 +3,8 @@ name: Engineering Rubric Rollout Timeline
 description: Rubric review cycle timing — next official review in ~1 year (April 2027), two feedback checkpoints before then. Managers translate old expectations to new rubric within ~1 month.
 type: project
 doc_type: memory
-keywords: [rubric_rollout, rubric, rollout, review, cycle, timing, next, official]
-domain: [project]
+keywords: [rubric rollout, engineering rubric, rogus, alyson, review checkpoint, levels and skills, april 2027, self review]
+domain: [leadership, jira-process]
 lifecycle: active
 last_verified: 2026-04-06
 ---

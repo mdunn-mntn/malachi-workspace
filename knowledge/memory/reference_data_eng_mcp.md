@@ -3,8 +3,8 @@ name: Data Engineering MCP/AI Service
 description: Internal Data Engineering AI service at data-eng-ai.in.mountain.com — discovered via Scotty in Slack, Harvey Yau involved
 type: reference
 doc_type: memory
-keywords: [data_eng_mcp, data, eng, mcp, internal, engineering, service, ai.in.mountain.com]
-domain: [reference]
+keywords: [data engineering mcp, data-eng-ai.in.mountain.com, harvey yau, scotty, internal ai service, de team tooling]
+domain: [infra, routing-people]
 lifecycle: active
 last_verified: 2026-04-07
 ---

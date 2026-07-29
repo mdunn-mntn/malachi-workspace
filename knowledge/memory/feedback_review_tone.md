@@ -3,8 +3,8 @@ name: Self-review tone preference
 description: Opening paragraphs should be direct and rubric-forward, not philosophical. Task descriptions should be specific and confident without over-explaining. No "mission statement" language.
 type: feedback
 doc_type: memory
-keywords: [review_tone, review, tone, opening, paragraphs, should, direct, rubric]
-domain: [workflow]
+keywords: [review tone, self-review, openings, rubric-forward, task descriptions, improvement areas, review #1 gold standard]
+domain: [workflow, leadership]
 lifecycle: active
 last_verified: 2026-03-18
 ---

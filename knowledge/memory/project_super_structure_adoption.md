@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [super_structure_adoption, super, structure, adoption, thin, kernel, roadmap, plan]
-domain: [project]
+keywords: [super_structure_adoption, thin kernel, work_structure kernel, lint_tickets.py, bq_velocity, audit_structure.py, new_ticket.sh, anti-goals, health_scorecard, self_improvement]
+domain: [project, workflow]
 lifecycle: active
 last_verified: 2026-07-20
 ---

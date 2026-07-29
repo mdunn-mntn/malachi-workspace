@@ -4,8 +4,8 @@ description: For conversion_log / pixel-firing / order_amt issues, route to Ashl
 type: reference
 originSessionId: 271d838c-9e48-4dcd-93ef-32e17a33ed1a
 doc_type: memory
-keywords: [pixel_ops_routing, pixel, ops, routing, conversion_log, firing, order_amt, issues]
-domain: [reference]
+keywords: [pixel ops routing, ashley pineda varela, conversion_log, order_amt, pixel signals, dako, jessica deleon, kevin cipriani, imani clark, pixel qa]
+domain: [routing-people, data-catalog]
 lifecycle: active
 last_verified: 2026-07-08
 ---

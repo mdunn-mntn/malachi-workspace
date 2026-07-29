@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: 45f5f508-2584-4aba-8aa8-efdac5abeb02
 doc_type: memory
-keywords: [adversarial_workflow_authoring, adversarial, workflow, authoring, lessons, multi, agent, verify]
+keywords: [adversarial workflow authoring, multi-agent verify, blocking gate, fixer loop, JSON.parse args, silent drops, try catch stages, token waste]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-23

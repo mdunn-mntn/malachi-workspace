@@ -3,8 +3,8 @@ name: rubric_strategy
 description: Self-review strategy — optimize for all 4s at current level, understand promotion vs raise tradeoffs
 type: feedback
 doc_type: memory
-keywords: [rubric_strategy, rubric, strategy, self, review, optimize, current, level]
-domain: [workflow]
+keywords: [rubric strategy, self-review, all 4s, promotion tradeoff, speed craft adaptability, compensation, current level]
+domain: [workflow, leadership]
 lifecycle: active
 last_verified: 2026-04-08
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: ab62c6c6-93ab-41d7-aee9-578a3fb85ad7
 doc_type: memory
-keywords: [select_vs_nonselect_incrementality, select, nonselect, incrementality, audi, 1172, prospecting, more]
-domain: [reference]
+keywords: [select vs nonselect, incrementality, audi-1172, ghost bid, visit lift, product_id, lift__ghost_bid_rollup, ptv, prospecting, kirsa]
+domain: [incrementality, experimentation]
 lifecycle: active
 last_verified: 2026-07-28
 ---

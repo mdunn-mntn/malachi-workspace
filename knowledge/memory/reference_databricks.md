@@ -4,8 +4,8 @@ description: Databricks: push >4h-risk queries there (memory-optimized); more sm
 metadata:
   type: reference
 doc_type: memory
-keywords: [databricks, push, risk, queries, there, memory, optimized, more]
-domain: [reference]
+keywords: [databricks, spark shuffle, executor cores, node sizing, augmentor_log, prospecting_intent, gcs parquet archive, bq 6-hour wall, memory-optimized cluster, victor benchmark]
+domain: [bigquery, infra]
 lifecycle: active
 last_verified: 2026-07-09
 ---

@@ -3,8 +3,8 @@ name: Paulo's direction — why Malachi is on the payroll
 description: VP-level direction on Malachi's role, value, and growth path at MNTN. Informs self-review framing and task prioritization.
 type: feedback
 doc_type: memory
-keywords: [paulo_direction, paulo, direction, level, malachi, role, value, growth]
-domain: [workflow]
+keywords: [paulo_direction, Paulo, explain system behavior, go-to person, Alyson, targeting mastery, self-review framing, VP direction]
+domain: [leadership, workflow]
 lifecycle: active
 last_verified: 2026-03-18
 ---

@@ -3,8 +3,8 @@ name: Use source tables for IP tracing
 description: When tracing IPs through the pipeline, always get each IP from its source table (bid_logs for bid_ip, win_logs for win_ip, etc.) — never use proxy tables like CIL as shortcuts
 type: feedback
 doc_type: memory
-keywords: [source_table_ips, source, table, ips, tracing, through, pipeline, each]
-domain: [workflow]
+keywords: [source table ips, bid_logs, win_logs, impression_log, event_log, clickpass_log, CIL proxy, IP tracing, MES pipeline, auction_id]
+domain: [bigquery, identity, data-catalog]
 lifecycle: active
 last_verified: 2026-03-13
 ---

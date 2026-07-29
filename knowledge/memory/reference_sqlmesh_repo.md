@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 604faaf9-ab5f-4b71-bb07-1a88aa0b430e
 doc_type: memory
-keywords: [sqlmesh_repo, sqlmesh, repo, steelhouse, data, warehouse, silver, gold]
-domain: [reference]
+keywords: [sqlmesh, SteelHouse/sqlmesh, silver gold models, sqlmesh plan, sqlmesh format, cloud identity quota project, verify-impact, physical table freshness, ryan kleck, audi-1083]
+domain: [repos, bigquery]
 lifecycle: active
 last_verified: 2026-07-27
 ---

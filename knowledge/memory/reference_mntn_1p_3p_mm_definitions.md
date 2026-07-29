@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 790f6279-052b-404e-8970-f70d7eb62991
 doc_type: memory
-keywords: [mntn_1p_3p_mm_definitions, mntn, definitions, core, them, scored, victor, savitskiy]
-domain: [reference]
+keywords: [1p 3p mm definitions, mountain match, scoring, victor savitskiy, ds4, ds17, ds35, household_score, and intersection, ti-956]
+domain: [audience-scoring, identity]
 lifecycle: active
 last_verified: 2026-05-28
 ---

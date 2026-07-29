@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [olympus_repo, olympus, repo, media, plan, algorithm, source, lives]
-domain: [reference]
+keywords: [olympus, media plan algorithm, chris addy, steelhouse/olympus, scoring pipeline, softmax allocation, spendability_score, deliverability guardrail]
+domain: [repos, audience-scoring]
 lifecycle: active
 last_verified: 2026-07-20
 ---

@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [mm_vs_3p_scorecard, scorecard, audi, 1141, vertical, classifier, gate, split]
-domain: [reference]
+keywords: [mm vs 3p, audi-1141, scorecard, ivr, cvr, cpv, roas, hhst gate, wgu, or vs and classifier, vertical]
+domain: [audience-scoring, business]
 lifecycle: active
 last_verified: 2026-07-21
 ---

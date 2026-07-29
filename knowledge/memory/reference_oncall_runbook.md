@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 98511e71-bad1-4bb7-9ed1-393b4675a39b
 doc_type: memory
-keywords: [oncall_runbook, oncall, runbook, call, read, oncall_runbook.md, first, classifier]
-domain: [reference]
+keywords: [oncall runbook, /oncall, known-alert catalog, incident_log.jsonl, INC-001 bombora, INC-002 fangorn dataproc, alert triage, build_index, sensor timeout, write-back]
+domain: [infra, workflow, routing-people]
 lifecycle: active
 last_verified: 2026-07-28
 ---

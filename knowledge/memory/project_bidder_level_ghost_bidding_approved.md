@@ -4,8 +4,8 @@ description: After the Monday 2026-05-04 shareout review of TI-837 v5 + TI-884 p
 type: project
 originSessionId: 1ddedb6a-ff08-4281-8285-aab919ee6906
 doc_type: memory
-keywords: [bidder_level_ghost_bidding_approved, bidder, level, ghost, bidding, approved, after, monday]
-domain: [project]
+keywords: [ghost bidding, bidder-level, ber-2250, ti-837, ti-884, incrementality, ghost bid logging, t-learner ti-886, ascent team, iroas lift]
+domain: [project, incrementality, bidding]
 lifecycle: active
 last_verified: 2026-06-01
 ---

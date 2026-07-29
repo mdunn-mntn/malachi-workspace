@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 90ae114b-824a-4a09-8ae2-53026431ded6
 doc_type: memory
-keywords: [audi_1175_ds14_scoring_cost, audi, 1175, ds14, scoring, cost, optimization, backlog]
-domain: [project]
+keywords: [audi_1175, ds14, scoring cost optimization, audience_intent, dataproc, ipdsc, prospecting_keywords, hhst threshold, idso bos, dataproc billing, audi_1176]
+domain: [project, audience-scoring, bigquery]
 lifecycle: active
 last_verified: 2026-07-29
 ---

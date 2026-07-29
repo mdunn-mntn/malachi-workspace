@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: e0fb9085-36f5-4751-8093-7f26e9fd4f18
 doc_type: memory
-keywords: [mm_adoption_ds19_swing, adoption, ds19, swing, advertisers, mountain, matched, swings]
-domain: [reference]
+keywords: [mm adoption, ds19, mountain matched, advertiser adoption, audience_segments, prospecting, ds13, fangorn, ti-999]
+domain: [audience-scoring, business]
 lifecycle: active
 last_verified: 2026-06-16
 ---

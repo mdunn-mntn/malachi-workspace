@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: 8e039962-960d-4cf7-a1a6-47ff4e95c3a5
 doc_type: memory
-keywords: [terse_chat_replies, terse, chat, replies, must, lead, answer, filler]
+keywords: [terse chat, chat replies, lead with answer, cut filler, preamble, BLUF, response style]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-24

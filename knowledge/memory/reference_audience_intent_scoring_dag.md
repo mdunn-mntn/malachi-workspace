@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: 604faaf9-ab5f-4b71-bb07-1a88aa0b430e
 doc_type: memory
-keywords: [audience_intent_scoring_dag, audience, intent, scoring, dag, authoritative, prospecting, model]
-domain: [reference]
+keywords: [audience_intent dag, prospecting intent scoring, HI 10K, DS13 vertical, DS19 keywords, ryan kleck, PP 8K, MI unscored, advertiser_intent, vertical keyword intersection]
+domain: [audience-scoring, bidding]
 lifecycle: active
 last_verified: 2026-07-22
 ---

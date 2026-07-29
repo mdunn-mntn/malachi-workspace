@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: b2e26231-0715-4211-9711-2f60a8021621
 doc_type: memory
-keywords: [graph_usersreached_mixed_key, graph, usersreached, mixed, key, graph.usersreached, all_facts.uniques, channel]
-domain: [reference]
+keywords: [usersreached, all_facts.uniques, graph.usersreached, HLL mixed key, IP vs cookie reach, cost_impression_log, sitevisitors, uniques_arr ClickHouse, served IP count, MDE power baseline]
+domain: [data-catalog, identity, incrementality]
 lifecycle: active
 last_verified: 2026-06-25
 ---

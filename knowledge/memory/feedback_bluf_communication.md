@@ -6,8 +6,8 @@ metadata:
   type: feedback
   originSessionId: 6c7e04f6-ed46-442e-aab9-4d64059b0716
 doc_type: memory
-keywords: [bluf_communication, bluf, communication, bottom, line, front, lead, every]
-domain: [workflow]
+keywords: [bluf, bottom line up front, communication, lead with conclusion, answer line, terse comms, presentation, meeting summary]
+domain: [workflow, leadership]
 lifecycle: active
 last_verified: 2026-07-27
 ---

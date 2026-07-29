@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: 604faaf9-ab5f-4b71-bb07-1a88aa0b430e
 doc_type: memory
-keywords: [audi_1083_mm_classifier, audi, 1083, classifier, done, live, 2026, main]
-domain: [project]
+keywords: [audi-1083, mm classifier, mm_campaign_classifier, sqlmesh, mm_class mmv1 mmv2 mmv3, is_flagship, DS19 DS13 DS46, restriction_level, targeting-infrastructure, funnel_level 1]
+domain: [audience-scoring, project]
 lifecycle: active
 last_verified: 2026-07-27
 ---

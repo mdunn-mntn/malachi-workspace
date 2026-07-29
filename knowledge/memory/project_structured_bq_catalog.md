@@ -6,8 +6,8 @@ metadata:
   type: project
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [structured_bq_catalog, structured, catalog, workspace, self, documenting, table, knowledge]
-domain: [project]
+keywords: [structured_bq_catalog, per-table catalog, knowledge/bq, 263 tables, coverage_state, bq_introspect.sh, schema_synced, START_HERE.md, PR #1, build_index.sh]
+domain: [project, bigquery, data-catalog]
 lifecycle: active
 last_verified: 2026-07-20
 ---

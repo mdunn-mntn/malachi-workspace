@@ -6,8 +6,8 @@ metadata:
   type: reference
   originSessionId: fab2a586-a823-46e7-9b54-e170fad643d1
 doc_type: memory
-keywords: [frequency_capping, frequency, capping, mntn, fcap, campaign, campaign_group, counter]
-domain: [reference]
+keywords: [frequency capping, fcap, frequency_caps, campaign_group, advertiser_frequency_caps empty, do_fcap, rtb-campaign-service, freq-cap bandit, leakage, SteelHouse rtb, AUDI-1173, Redis counter]
+domain: [bidding, identity, experimentation]
 lifecycle: active
 last_verified: 2026-07-28
 ---

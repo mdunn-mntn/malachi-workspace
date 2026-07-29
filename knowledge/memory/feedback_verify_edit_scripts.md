@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [verify_edit_scripts, verify, edit, scripts, gate, shipped, claims, evidence]
+keywords: [verify edit scripts, git diff, shipped claim, assert abort, batch edit, bash -n, py_compile, syntax check, commit verification, bq_run.sh]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-20
