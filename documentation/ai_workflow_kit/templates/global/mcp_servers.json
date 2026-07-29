@@ -1,0 +1,10 @@
+{
+  "_note": "MCP servers registered at the USER level (~/.claude.json → mcpServers). bootstrap.sh does NOT auto-write this into ~/.claude.json (that file also holds session state). Merge this block in by hand, fill <TODOIST_API_TOKEN> with your own token, and re-point/rebuild the vendored server path. NEVER commit a real token. The jira/github/bigquery servers live in the repo's .mcp.json, not here.",
+  "mcpServers": {
+    "todoist": {
+      "command": "node",
+      "args": ["<PATH_TO_TODOIST_MCP_BUILD>/build/index.js"],
+      "env": { "TODOIST_API_TOKEN": "<TODOIST_API_TOKEN>" }
+    }
+  }
+}

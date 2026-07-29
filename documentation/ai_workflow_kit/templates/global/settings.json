@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bq query *)",
+      "Bash(bq ls *)",
+      "Bash(bq ls)",
+      "Bash(bq show *)",
+      "Bash(bq head *)",
+      "Bash(gcloud config get*)",
+      "Bash(gcloud auth list*)"
+    ]
+  },
+  "effortLevel": "xhigh",
+  "model": "opus[1m]"
+}

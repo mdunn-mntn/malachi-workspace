@@ -91,3 +91,7 @@ documentation/mntn_assets/
 # workflow-audit working file (regenerated each run; reasoned report is committed)
 claude-prompts/workflow_audits/signals_latest.md
 claude-prompts/workflow_audits/.structure_findings.json
+
+# AI Workflow Kit global-layer templates (source, not generated artifacts)
+!documentation/ai_workflow_kit/templates/global/settings.json
+!documentation/ai_workflow_kit/templates/global/mcp_servers.json
