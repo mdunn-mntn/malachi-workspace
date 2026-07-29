@@ -64,6 +64,7 @@ Only surface items that change what someone does. Drop clean/green sections to a
 | §7 Git hygiene | uncommitted work is sitting, or untracked non-ignored files | flag what's uncommitted; propose commit or gitignore |
 | §8 Standards drift | a skill/script isn't referenced in CLAUDE.md | propose the CLAUDE.md line to add |
 | §9 Signal backlog | `signals_*.md` count exceeds the retention cap (default keep 8) | **Tier 1 Safe:** `git rm` the oldest — the aggregator prints the ready command. Keep every reasoned `audit_*.md` (those are the durable record; only the raw weekly `signals_*.md` get pruned once superseded) |
+| §10 Memory health | overlap-clusters, stale-active, unresolved wikilinks, or `MEMORY.md OVER` budget | **Tier 2 Judgment:** propose merging each named cluster (into one canonical file, via `/capture` — it holds the sole delete authority) and repairing/dropping each unresolved `[[link]]`. **Tier 1 Safe:** flip terminal `project_*` memories to `lifecycle: archived` + drop their `MEMORY.md` line (reversible, non-destructive). **Tier 3 Standards:** if `MEMORY.md` is OVER the hot-tier cap, propose trimming it back to behavioral/always-on facts. **Never auto-merge or auto-delete** — memory deletion stays a human `/capture` motion |
 
 **Ranking:** order the final list by leverage, not by section. A framing-gate violation or a stale
 source-of-truth doc outranks 30 empty scaffold dirs. Group into three tiers, matching the existing

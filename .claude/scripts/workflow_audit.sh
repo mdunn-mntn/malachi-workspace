@@ -155,6 +155,17 @@ fi
 echo '```'
 echo
 
+# ── 10. Memory health (knowledge/memory/*.md — the unified auto-memory layer) ──
+# Key-free + git-tracked, so the Pi cron captures it weekly like every other signal. Lifecycle rollup,
+# refresh queue, near-duplicate merge candidates, unresolved wikilinks, MEMORY.md hot-tier budget.
+echo "## 10. Memory health (health_scorecard.py --memory)"
+echo '```'
+if have "$SCRIPTS/health_scorecard.py"; then
+  run $PY "$SCRIPTS/health_scorecard.py" --memory
+else echo "health_scorecard.py not found"; fi
+echo '```'
+echo
+
 echo "---"
 echo "_End of deterministic signals. The /workflow-audit skill turns these into a prioritized, propose-only action list._"
 } | tee "$SIGNALS"

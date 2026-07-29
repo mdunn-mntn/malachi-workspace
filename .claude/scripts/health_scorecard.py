@@ -13,13 +13,16 @@ prints nothing and exits 0, so a bad git state can't break SessionStart.
 
 Usage: health_scorecard.py [--verbose]
 """
-import os, re, subprocess, sys, time
+import datetime, os, re, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 KDIR = os.path.join(ROOT, "knowledge")
+MEM_DIR = os.path.join(KDIR, "memory")
 STALE_DAYS = 120
 EVAL_STALE_DAYS = 14   # retrieval regression suite should run at least biweekly
+MEM_STALE_DAYS = 90    # an active memory unverified this long is a refresh candidate
+MEM_TOKEN_CAP = 1300   # MEMORY.md hot-tier budget (~5,200 bytes at ~4 chars/token)
 DAY = 86400
 
 
@@ -60,6 +63,8 @@ def _is_curated(rel):
     base = os.path.basename(rel)
     if base == "INDEX.md" or base.startswith("_"):
         return False
+    if rel.startswith("knowledge/memory/"):   # memory has its own signals (memory_*), not the generic orphan/dup ones
+        return False
     return rel.endswith(".md") and rel.startswith("knowledge/")
 
 
@@ -91,7 +96,8 @@ def orphans():
 def dup_titles():
     """H1 titles shared by 2+ curated knowledge docs (a merge/duplication smell)."""
     titles = {}
-    for dp, _, files in os.walk(KDIR):
+    for dp, dirs, files in os.walk(KDIR):
+        dirs[:] = [d for d in dirs if d != "memory"]   # memory files handled by the memory_* signals
         for f in files:
             if not f.endswith(".md") or f == "INDEX.md" or f.startswith("_"):
                 continue
@@ -107,15 +113,154 @@ def dup_titles():
     return {t: ps for t, ps in titles.items() if len(ps) > 1}
 
 
+# ── memory signals (knowledge/memory/*.md — the unified auto-memory layer) ─────────────────────────
+# READ-ONLY, same as the rest of this file. These are the memory analogs of orphans/dup-titles/coverage:
+# lifecycle rollup, refresh queue, near-duplicate merge candidates, unresolved wikilinks, hot-tier budget.
+def _norm(s):
+    return s.strip().lower().replace("-", "_")
+
+
+def _date_epoch(iso):
+    y, m, d = map(int, iso[:10].split("-"))
+    return time.mktime(datetime.date(y, m, d).timetuple())
+
+
+def _mem_files():
+    if not os.path.isdir(MEM_DIR):
+        return []
+    return [os.path.join(MEM_DIR, f) for f in sorted(os.listdir(MEM_DIR))
+            if f.endswith(".md") and f != "MEMORY.md" and not f.startswith("_")]
+
+
+def _mem_fm(path):
+    """Top-level memory front-matter (+ nested metadata.type fallback): type/lifecycle/last_verified/name/keywords/domain."""
+    fm = {"keywords": [], "domain": []}
+    try:
+        lines = open(path, encoding="utf-8").read().split("\n")
+    except Exception:
+        return fm
+    if not lines or lines[0].strip() != "---":
+        return fm
+    for l in lines[1:]:
+        if l.strip() == "---":
+            break
+        if l[:1] in (" ", "\t") or ":" not in l:
+            m = re.match(r"^\s+type:\s*(.+)$", l)      # nested metadata.type fallback
+            if m and "type" not in fm:
+                fm["type"] = m.group(1).strip().strip('"').strip("'")
+            continue
+        k, v = l.split(":", 1)
+        k, v = k.strip(), v.strip()
+        if v.startswith("[") and v.endswith("]"):
+            fm[k] = [x.strip().strip('"').strip("'") for x in v[1:-1].split(",") if x.strip()]
+        else:
+            fm[k] = v.strip('"').strip("'")
+    return fm
+
+
+def memory_lifecycle():
+    """(counts by lifecycle, [(file, age_days), …] active memories past MEM_STALE_DAYS since last_verified)."""
+    counts, stale, now = {"active": 0, "superseded": 0, "archived": 0}, [], time.time()
+    for p in _mem_files():
+        fm = _mem_fm(p)
+        lc = fm.get("lifecycle", "active")
+        counts[lc] = counts.get(lc, 0) + 1
+        if lc == "active":
+            lv = fm.get("last_verified", "") or ""
+            if re.match(r"\d{4}-\d{2}-\d{2}", lv):
+                age = (now - _date_epoch(lv)) / DAY
+                if age > MEM_STALE_DAYS:
+                    stale.append((os.path.basename(p), int(age)))
+    stale.sort(key=lambda x: -x[1])
+    return counts, stale
+
+
+def memory_overlap_clusters(min_files=3):
+    """Active memory files sharing a significant filename-stem token — near-duplicate merge candidates."""
+    generic = {"feedback", "reference", "project", "user", "audi", "ti", "ber", "dm",
+               "not", "mntn", "workflow", "audience"}   # type prefixes, ticket prefixes, cross-cutting stopwords
+    tok = {}
+    for p in _mem_files():
+        if _mem_fm(p).get("lifecycle", "active") != "active":
+            continue
+        stem = os.path.splitext(os.path.basename(p))[0]
+        for t in {x for x in stem.split("_") if len(x) > 2 and x not in generic and not x.isdigit()}:
+            tok.setdefault(t, []).append(stem)
+    return {t: sorted(v) for t, v in sorted(tok.items()) if len(v) >= min_files}
+
+
+def memory_wikilinks():
+    """[(file, unresolved_target), …] — [[links]] that resolve to no name/stem (kebab↔underscore-normalized)."""
+    files = _mem_files()
+    names = set()
+    for p in files:
+        names.add(_norm(os.path.splitext(os.path.basename(p))[0]))
+        nm = _mem_fm(p).get("name")
+        if nm:
+            names.add(_norm(nm))
+    out = []
+    for p in files:
+        try:
+            txt = open(p, encoding="utf-8").read()
+        except Exception:
+            continue
+        for m in re.findall(r"\[\[([^\]]+)\]\]", txt):
+            if _norm(m) not in names:
+                out.append((os.path.basename(p), m))
+    return out
+
+
+def memory_budget():
+    """(bytes, approx_tokens) of the always-loaded MEMORY.md hot tier."""
+    mm = os.path.join(MEM_DIR, "MEMORY.md")
+    if not os.path.exists(mm):
+        return 0, 0
+    b = os.path.getsize(mm)
+    return b, b // 4
+
+
 def main():
     verbose = "--verbose" in sys.argv
+    mem_only = "--memory" in sys.argv
     try:
         dc = days_since_capture()
         de = days_since_eval()
         orph = orphans()
         dups = dup_titles()
+        mcounts, mstale = memory_lifecycle()
+        mclusters = memory_overlap_clusters()
+        munres = memory_wikilinks()
+        _mbytes, mtok = memory_budget()
     except Exception:
         return 0  # never break the caller
+
+    over = " OVER" if mtok > MEM_TOKEN_CAP else ""
+    mem_line = (f"Memory  : {sum(mcounts.values())} files · {len(mstale)} stale(>{MEM_STALE_DAYS}d) · "
+                f"{len(mclusters)} overlap-cluster(s) · {len(munres)} unresolved link(s) · "
+                f"MEMORY.md ~{mtok/1000:.1f}k/{MEM_TOKEN_CAP/1000:.1f}k{over}")
+
+    def _mem_detail():
+        print(f"\nMemory lifecycle: active {mcounts['active']} · superseded {mcounts['superseded']} "
+              f"· archived {mcounts['archived']}")
+        if mstale:
+            print(f"Stale active memories (>{MEM_STALE_DAYS}d since last_verified):")
+            for n, d in mstale[:15]:
+                print(f"  {d:>4}d  {n}")
+        if mclusters:
+            print("Overlap clusters (shared stem token, ≥3 active — merge candidates, propose-only):")
+            for t, fs in mclusters.items():
+                print(f"  {t}: {', '.join(fs)}")
+        if munres:
+            print("Unresolved [[wikilinks]] (repair or drop):")
+            for fn, tgt in munres[:20]:
+                print(f"  {fn}: [[{tgt}]]")
+        if not (mstale or mclusters or munres):
+            print("(no stale memories, overlap clusters, or broken links)")
+
+    if mem_only:                       # `--memory`: memory section only (for the audit's §10)
+        print(mem_line)
+        _mem_detail()
+        return 0
 
     cap = "no /capture commits" if dc is None else f"last /capture {dc}d ago"
     if de is None:
@@ -125,6 +270,7 @@ def main():
     else:
         ev = f"retrieval-eval {de}d ago"
     print(f"Health  : {cap} · {len(orph)} stale doc(s) (>{STALE_DAYS}d) · {len(dups)} dup-title · {ev}")
+    print(mem_line)
 
     if verbose:
         if orph:
@@ -137,6 +283,7 @@ def main():
                 print(f"  '{t}': {', '.join(ps)}")
         if not orph and not dups:
             print("(no orphans or duplicate titles — knowledge base is tidy)")
+        _mem_detail()
     return 0
 
 
