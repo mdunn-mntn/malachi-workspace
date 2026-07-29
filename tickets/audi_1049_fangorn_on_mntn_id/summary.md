@@ -367,6 +367,32 @@ the household resolution**; the **graph resolves the ID-combo for you** (handles
   no score AND threshold=0 it bids anyway** (threshold≤0 = no gate). So unscored HHIDs are NOT auto-skipped —
   they get bid on whenever the gate is open (0). Watch this for the coverage gap.
 
+- **Does IPv4-only even differ from Nivas's existing convert-at-end (ID-359)? YES, two ways (thread
+  2026-07-29) — and the comparison is Malachi's to run.** The question was raised: if we only do IPv4, isn't
+  this the same as what Nivas already does (convert IP→household at the end)? Two real differences: (1) the
+  **feature store does the HISTORICAL as-of graph lookup** — a 30-day-old IP resolves to the household it mapped
+  to *then*, whereas convert-at-end uses the *current* graph; (2) **IPv4→HHID is multiple:multiple, NOT 1:1** —
+  multiple IPv4s collapse into one household, and an IPv4 can map to several households (pick max-confidence) —
+  so the **household feature distribution genuinely differs from the IP version** (Brian: *if* it were forced
+  1:1 there'd be zero change / pure relabel; Sean: it's not 1:1, so the distribution shifts). **Ryan: "code it
+  up, run it, and we can compare."** That empirical **household-aggregated-features vs IP-version** comparison
+  is squarely Malachi's (AUDI-1105 validation / the AUDI-1168 aggregation study) — and it's the concrete first
+  thing to run to size whether re-keying moves the model at all.
+- **Brian's 4-case aggregation framework (1:06 PM) — a clean decomposition of what changes vs IP-L2.** Prior to
+  L2, features are aggregated to IPv4 (L1). Strictly-IPv4 cases:
+  1. **1:1 (IPv4 ↔ one HHID exclusively):** resolves to exactly the IP-L2 features for that HHID (pure relabel, no change).
+  2. **1 HHID ← 2 IPv4:** pick one IPv4 by `max(confidence_score)` → HHID gets that IPv4's features.
+  3. **1 IPv4 → 2 HHID:** pick the HHID by `max(confidence_score)` → that HHID gets the IPv4's features (no double-count).
+  4. **HHID with no IPv4:** no score (coverage gap).
+  Brian's conclusion: **aggregation only changes from IP-L2 if (a) we let a HHID inherit features from MULTIPLE
+  IPv4s, or (b) an IPv4 is ORPHANED** (membership too low to map anywhere). **My read (correct but incomplete
+  in 2 ways):** (i) case-2-**additive** — combining a household's multiple IPv4s — is *precisely where the
+  household-keying VALUE is*; Brian's pick-one default makes case 2 ≈ IP-level, so the model barely moves. The
+  real question isn't "does it change" but "do we combine multi-IP households" (that's the lever to test). (ii)
+  His snapshot framework omits the **as-of/historical** axis — a 30-day-old IP's household membership *then* vs
+  *now* is a third source of change independent of the 4 cases. So: not the wrong frame, but add the temporal
+  axis and treat case-2-additive as the point, not an edge case.
+
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
 persuadables audience).** Fangorn ranks propensity (ROC-AUC 0.96) but the High band (~78% of volume) returns

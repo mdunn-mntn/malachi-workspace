@@ -67,6 +67,15 @@ drops IPv6 (`.filter("ip NOT LIKE '%:%'")`); IPv4-only = convert right before `t
 nuance (Ryan): bidder unchanged — if HHST threshold set it looks up the score, if no score AND threshold=0 it
 bids anyway (unscored HHIDs NOT auto-skipped; watch when gate=0).
 
+**Does IPv4-only re-keying even change the features? (2026-07-29 analysis — Malachi's first empirical step,
+AUDI-1105/1168.)** IPv4-only convert-at-L2 resembles Nivas's convert-at-end (ID-359) but differs via (a) the
+**historical as-of graph lookup** and (b) **IPv4→HHID being multiple:multiple, not 1:1** (pick max-confidence).
+Brian's 4 cases: 1:1=no change; 1 HHID←2 IPv4=pick-one-IPv4; 1 IPv4→2 HHID=pick-one-HHID (no double-count);
+no-IPv4 HHID=no score. **Aggregation diverges from IP-L2 only via (i) a HHID inheriting MULTIPLE IPv4s' features
+— where the household VALUE is — or (ii) orphaned IPs.** Pick-one keeps it ~IP-level. Run the
+household-vs-IP feature-distribution comparison early (Ryan: "code it and compare") to size whether the MID model
+is worth it.
+
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on

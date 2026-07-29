@@ -3348,6 +3348,17 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   IPv6 you'd go upstream and add them back at `ip_vertical_associations`; **for IPv4-only, just convert
   IP→household right before `tpa_ipdsc_export`** (no upstream change needed). Mirrors the Fangorn "resolve at
   L2, leave upstream alone" pattern.
+- **Does IPv4-only re-keying even change the features vs the existing IP version? (2026-07-29 analysis.)** The
+  question was raised: IPv4-only convert-at-L2 looks like Nivas's existing convert-at-end (ID-359). It does
+  differ, for two reasons: (a) the feature store does the **historical as-of graph lookup** (a 30-day-old IP
+  resolves to the household it had *then*, not now); (b) **IPv4→HHID is multiple:multiple, not 1:1** (multiple
+  IPv4s per household; an IPv4 → several households, pick max-confidence). Brian's 4-case decomposition: 1:1 =
+  no change; 1 HHID ← 2 IPv4 = pick-one-IPv4 by max-confidence; 1 IPv4 → 2 HHID = pick-one-HHID by
+  max-confidence (no double-count); no-IPv4 HHID = no score. **The household aggregation only diverges from
+  IP-L2 via (i) letting a HHID inherit features from MULTIPLE IPv4s, or (ii) orphaned IPv4s (membership too low
+  to map).** Load-bearing point: **case (i) — combining a household's multiple IPv4s — is where the
+  household-keying VALUE lives**; pick-one keeps it ~IP-level. The empirical **household-aggregated vs IP
+  features** comparison (Ryan: "code it and compare") is the first thing to run — AUDI-1105 / AUDI-1168.
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

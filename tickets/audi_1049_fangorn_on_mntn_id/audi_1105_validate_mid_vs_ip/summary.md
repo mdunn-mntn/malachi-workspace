@@ -64,3 +64,10 @@ _(document the offline validation protocol for MID-vs-IP grain-mismatch comparis
 ## 8. Open Items / Follow-ups
 - Gated by AUDI-1103 (train) + AUDI-1102 (label). Online experiment = AUDI-1108 (design w/ Exp team).
 - Apply `knowledge/experimentation.md` Standard Analysis Protocol (DiD + CausalImpact, cluster-bootstrap).
+- **First empirical step (Ryan: "code it and compare", epic §7f) — does re-keying even move the features?**
+  Compare **household-aggregated features vs the IP version** BEFORE training. IPv4→HHID is multiple:multiple
+  (not 1:1), so the household distribution diverges from IP only via (a) HHIDs inheriting **multiple IPv4s'**
+  features (the real value) or (b) **orphaned IPv4s**, plus the **as-of historical** resolution. Quantify how
+  much the L3 feature distribution + per-vertical audience sizes shift household-vs-IP; if ~nil (pick-one,
+  ~1:1), re-keying won't move the model and that's the finding. This scopes whether the whole MID model is
+  worth it — run it early.

@@ -170,6 +170,18 @@ fi
 echo '```'
 echo
 
+# ── 11. Kit compliance — the hard-gate checks, run whole-repo (verify.sh) ──
+# Same checks the commit gate enforces per-commit, run across the WHOLE repo here so drift anywhere is
+# surfaced weekly: the 3 front-matter linters + index-freshness + the 9-hook self-test. Key-free, so the
+# Pi cron captures it. Reports only (the audit never blocks); the gate is what enforces per-commit.
+echo "## 11. Kit compliance (verify.sh — format linters + index freshness + hook self-test)"
+echo '```'
+if have "$SCRIPTS/verify.sh"; then
+  run bash "$SCRIPTS/verify.sh"
+else echo "verify.sh not found"; fi
+echo '```'
+echo
+
 echo "---"
 echo "_End of deterministic signals. The /workflow-audit skill turns these into a prioritized, propose-only action list._"
 } | tee "$SIGNALS"
