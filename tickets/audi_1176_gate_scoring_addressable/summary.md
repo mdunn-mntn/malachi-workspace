@@ -3,7 +3,7 @@ doc_type: ticket
 title: "AUDI-1176: Gate audience_intent scoring input to DS14-addressable IP set"
 status: backlog
 date: 2026-07-28
-summary: "Intersect 31d DS13/DS19 scoring input with DS14 (8d) before scoring; cut ~39-69% compute"
+summary: "Gate scoring input to DS14 (8d) IPs; ~$1.3k-11k/mo compute cut, zero coverage loss (safety proven in AUDI-1175)"
 result: ""
 question: "Can we gate the scoring input to DS14-addressable IPs and cut ~39-69% of daily scoring compute with no coverage loss?"
 framing_state: locked
@@ -12,40 +12,105 @@ framing_state: locked
 # AUDI-1176: Gate audience_intent scoring input to DS14-addressable IP set
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1176
-**Status:** Backlog
-**Date Started:** 2026-07-28
+**Status:** Backlog (sprint-ready — diligence complete in AUDI-1175)
 **Assignee:** Malachi
-**Blocked by:** [AUDI-1175](https://mntn.atlassian.net/browse/AUDI-1175) (sizing + consumer audit + go/no-go)
+**Blocked by:** [AUDI-1175](https://mntn.atlassian.net/browse/AUDI-1175) — sizing, cost, and consumer/safety audit (DONE; verdict: safe)
+
+---
+
+## BLUF
+
+**Stop scoring IPs we can never bid on.** `audience_intent` scores a full 31-day IP universe every day, but DS14 (the freshness gate ANDed onto every audience expression) means only IPs seen in the last ~8 days are biddable. So **~69% of MM Core (DS19) and ~39% of vertical (DS13) scored IPs are recomputed daily for nothing.** Intersect the scoring input with the current DS14 (8-day) set before the expensive jobs → **~$1.3k–11k/mo compute saved (~up to $130k/yr), zero biddable-coverage loss.** All safety diligence is done (AUDI-1175): the HHST recommender is auction-scoped (no coupling), and every other consumer is unaffected. This ticket is the implementation only.
 
 ---
 
 ## 0. Framing (locked 2026-07-28)
 
 - **Question:** Can the `audience_intent` scoring input be gated to the DS14-addressable (8-day) IP set, cutting ~39% (verticals) / ~69% (MM Core) of daily scoring compute, without losing any biddable coverage?
-- **Goal (why):** Realize the cost reduction AUDI-1175 sizes. Also shrinks IPDSC volume (MembershipDB resilience). Decision AUDI-1175 gates funding.
-- **Objective (done-when):** Scoring input intersected with current DS14 set before `vertical_high/mid` + `populate_data_source`; a before/after run shows the compute drop and identical biddable delivery (no lost impressions/reach on a holdout of advertisers). Shipped behind a flag with rollback.
-- **Approach:** Insert a DS14-recent filter at the input of `vertical_high.py` / `vertical_mid.py` (pre-filter the exploded 31-day DS13 IPDSC set against the current DS14 8d set), and mirror for the Fangorn 14-day path. Alternative insertion point: intersect `intent_score_map` output before serving-store load. **The largest $ lever is the DS19 path: gate `prospecting_keywords` input (34% of DAG cost, ~$9.6k/mo prize) — not just the vertical jobs (~$1.3k/mo).** Validate delivery parity on a shadow run before cutover.
-- **What would change the answer:** if AUDI-1175's consumer audit finds a non-bidding consumer that needs the full universe, gate only the serving-bound output path (not the model inputs). If shadow-run delivery drops, revert and diagnose the coverage-loss mechanism.
+- **Goal (why):** Realize the cost reduction AUDI-1175 sized. Also shrinks IPDSC volume (MembershipDB resilience). Cost-reduction (Kale focus area).
+- **Objective (done-when):** Scoring input intersected with the current DS14 8-day set before the expensive scoring jobs; a shadow run shows the compute drop AND identical biddable delivery on an advertiser holdout (no lost impressions/reach/visit-rate). Shipped behind a flag with rollback.
+- **Approach:** Pre-filter the scoring input against DS14-recent (details in §3). **Largest $ lever = the DS19 `prospecting_keywords` job (34% of DAG cost, ~$9.6k/mo)**, not just the vertical jobs (~$1.3k/mo). Validate delivery parity before cutover.
+- **What would change the answer:** if a shadow run shows any delivery drop, revert and diagnose (the expected mechanism is the DS14-snapshot vs 8-day-serving-window alignment — see §3 guardrails).
 
-## 1. Introduction
+## 1. The Problem
 
-Implementation ticket for the optimization AUDI-1175 identified: MM/vertical scoring runs over the full 31-day IP universe; only the ~8-day DS14-addressable slice is ever biddable. See AUDI-1175 §4 for the full finding and sizing.
+- Scoring (`vertical_high/mid`, `prospecting_keywords`, `populate_data_source`) reads a **31-day** DS13/DS19 IPDSC window and emits a score for **every** IP in it — including IPs with no recent activity (`vertical_mid` BUCKET 2 scores them deliberately).
+- Bidding requires the IP to pass **DS14** (ANDed on every expression; ~8-day effective serving TTL, per-IP epoch decay). IPs outside that window can't be bid on.
+- **Sizing (AUDI-1175, `ipdsc__v1` HLL, 2026-07-28):**
 
-## 2. The Problem
+  | Scored universe (31d) | Addressable ∩ (DS14 8d) | Non-biddable | Waste |
+  |---|---:|---:|---:|
+  | DS19 (MM Core) 499.4M | 156.6M | 342.8M | **69%** |
+  | DS13 (verticals) 269.8M | 164.7M | 105.1M | **39%** |
 
-Daily scoring recomputes the full 31-day universe. 39% (DS13) / 69% (DS19) of scored IPs cannot be bid on within the 8-day DS14 window and are thrown away and recomputed the next day.
+- That non-biddable remainder is scored and stored **daily**, then discarded and recomputed the next day.
 
-## 3. Plan of Action
+## 2. The Solution
 
-1. Gate on AUDI-1175 go/no-go (consumer audit + $ figure).
-2. Add DS14-recent intersection at `vertical_high/mid` input (flagged).
-3. Shadow run: compare scored-set size, compute cost, and biddable delivery vs current.
-4. Verify zero coverage loss on an advertiser holdout.
-5. Cutover; measure realized compute drop.
+Intersect the scoring **input** with the **current DS14 (8-day union)** set before the expensive scoring, so we only score IPs that can actually be bid on. Keep raw-visit / DS13 retention at 30 days (that is the model's scoring lookback, NOT slack) — the lever is the *scoring output universe*, not input retention. No model or targeting-quality change; the same IPs that get bid on today still get scored.
 
-## 8. Open Items / Follow-ups
+## 3. Implementation (repo: `SteelHouse/airflow-ti`)
 
-- Precise insertion point (input pre-filter vs output intersection) TBD in design.
-- Fangorn 14-day path (`fangorn_14day_lookback.ipdsc_inclusion_flag`) may already be partially gated — confirm.
-- **HHST constraint — RESOLVED (AUDI-1175, code-confirmed 2026-07-28):** the prod PTV HHST writer is the 3-hop chain camperbid **v3/v4** compute → `performance.optimized_intent_thresholds` sync → `SteelHouse/idso` BOS upsert (the sole writer of `dso.household_score_thresholds`, hourly cron). Its bucket population is **auction-scoped** (`COUNT(DISTINCT ip)` over `bid_price_log`+`bidder_bid_events`), so gating scoring does NOT starve or bias it. No HHST implementation outside the fenced DDM pilot reads `prospecting_intent`, and that pilot never writes the applied table. **→ no HHST design change needed to gate.** (Max-Reach + starvation-baseline shadow queries were run: 65% of campaigns already at Max Reach, gate-neutral.)
-- **Confirm before global gate:** AUD-5221 deciles (Alex/Zach — no code found) and any LiftLab full-scored export (#dev-incremental-lift — none found).
+> **Prod-safety:** airflow-ti is the prod feature-store repo. Feature branch + PR + review; NO direct main / DAG edits. Ship behind a flag, staged rollout, rollback ready. (See memory `airflow_prod_safety`.)
+
+**The DS14 set to gate against** = union of the last **8** daily DS14 builds, `data_source_id=14` (matches the 8-day serving TTL; a single day under-covers). Source options: `dw-main-bronze.external.ipdsc__v1 WHERE data_source_id=14` (materialized, ~149M/day; 8d union ≈ 259M), or the upstream `create_mntn_global_data_pyspark.py` output. Use `category_id=1` (the standard gate; note auction-only IPs carry only an exchange category and would be excluded — acceptable, matches the bidder gate).
+
+**Insertion points, in $ priority order:**
+
+1. **PRIMARY — `prospecting_keywords` (DS19 keyword job).** The ~33.8B-row, ~$396/day job (34% of DAG). Pre-filter its input IP set against DS14-8d before the keyword×IP explosion. → the ~$9.6k/mo lever.
+2. **`vertical_high.py` / `vertical_mid.py`** — pre-filter the exploded 31-day DS13 IPDSC load (`for i in range(0,31)`) against DS14-8d before scoring. → ~$1.3k/mo (verticals).
+3. **`spark/data_source/populate_data_source.py`** — the DS13/DS19/DS46 IPDSC build; gate the emitted output universe (storage-side).
+4. **Fangorn path** (`models/audience_intent/fangorn_prospecting_scoring.py`, `fangorn_14day_lookback.ipdsc_inclusion_flag`) — check whether it's already partially gated; mirror if not.
+
+**Alternative (lower prize, simpler/safer):** intersect `intent_score_map` **output** against DS14-8d before the serving-store load. This gates storage + downstream but NOT the expensive per-IP compute — captures the storage win only. Use as a fallback if input-gating a specific job is risky.
+
+**Guardrails (why coverage loss is zero):**
+- An IP that re-enters DS14 later is scored **that day** from its still-retained 30-day DS13 history — so gating loses nothing that would have been biddable.
+- Intra-day brand-new IPs are handled by **RTC** (`realtime_conquest_score`), not the batch MM score — already the case today.
+- Gate on the **8-day union**, not one day, or you clip IPs that are addressable-but-not-in-today's-build.
+
+**DAG:** `dags/audience_intent/audience_intent.py` (`export_intent('prospecting'/'advertiser')`; preconditions already wait on IPDSC DS13/DS19). Add the DS14-8d dependency for the gated jobs.
+
+## 4. Impact
+
+**Changes:**
+- Daily Dataproc-serverless scoring compute ↓ **~39% (DS13) / ~69% (DS19)** on the gated jobs.
+- IPDSC output volume ↓ (DS19 ~499M→~157M, DS13 ~270M→~165M addressable rows/day) → storage + downstream-scan savings, and smaller MembershipDB load.
+
+**Unchanged — proven safe in AUDI-1175 (so no re-litigation needed):**
+- **Biddable delivery** — zero coverage loss (guardrails above).
+- **HHST recommender** — its population is **auction-scoped** (`bid_price_log`+`bidder_bid_events`, via the v3/v4 → `optimized_intent_thresholds` → idso chain); it never reads the scored universe. No coupling.
+- **Serving/bidding** (Aerospike/membership-db), **Fangorn** (separate 1%-sampled feature store), **LiftLab** (served-only), **AUD-5221** (intent-score deciles on the addressable set), **totals/sizing** (already DS14-gated).
+
+**Monitoring caveat (no delivery impact, but give a heads-up):** `ddm.cache_hhst_population_filters` reads the full `prospecting_intent` as a `pct_visible/pct_active` denominator (it writes an analytics cache, never thresholds). Gating scoring will **shift that monitoring metric**. Flag the DDM/Devon owner before cutover so a metric shift isn't misread as an incident.
+
+## 5. Expected Improvement (quantified)
+
+- **~$1.3k/mo (DS13 verticals) to ~$11k/mo (~$130k/yr)** if the DS19 cut is applied to `prospecting_keywords` where the MM Core volume lands. Whole scoring DAG ≈ **$39k/mo**, so this is ~3–28% of it.
+- Plus IPDSC storage / downstream-scan reduction (not separately $-sized).
+- **Confidence: order-of-magnitude** — $ is a Dataproc-serverless config estimate (executor sizes exact; runtime assumed). Firm to a point via the **GCP Billing BQ export** (Dataproc Serverless SKUs by batch label) or `gcloud dataproc batches describe` (`milliDcuSeconds`) — a ~10-min step to do at sprint start.
+
+## 6. Validation & Acceptance Criteria
+
+- [ ] DS14-8d intersection added to the gated job(s), behind a flag.
+- [ ] **Shadow run** on a recent day: gated scored-set size + Dataproc cost vs current (proves the compute drop).
+- [ ] **Delivery parity** on an advertiser holdout: no lost impressions / reach / visit-rate vs ungated. (This is the go/no-go for cutover.)
+- [ ] DDM/Devon notified of the `pct_visible` monitoring-metric shift.
+- [ ] Cutover flagged with rollback; realized compute reduction measured post-launch.
+
+## 7. Risks Cleared (from AUDI-1175 — diligence is done)
+
+| Risk | Status |
+|---|---|
+| HHST recommender starved/biased | ✅ auction-scoped, no coupling (code-confirmed ×2) |
+| Serving / bidder / Aerospike | ✅ addressable-bound already |
+| Fangorn training/inference | ✅ separate 1%-sampled feature store |
+| LiftLab / incrementality export | ✅ served-only (MAPI), no scored-universe read |
+| AUD-5221 deciles | ✅ intent-score deciles on the addressable set |
+| Starvation → Max Reach | ✅ 65% already at Max Reach; gate-neutral |
+
+## 8. Open Design Questions (resolve at sprint start, not blockers)
+
+- Input pre-filter (max compute win) vs output intersection (simpler) per job — pick per risk tolerance.
+- Whether the Fangorn 14-day path is already partially gated by `ipdsc_inclusion_flag`.
+- Firm the $ with the GCP billing export before/at kickoff.
