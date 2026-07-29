@@ -1,0 +1,80 @@
+# domain_scrub_map.txt — SECOND-pass literal find⇒replace, applied by package_kit.sh AFTER sanitize_map.txt.
+# sanitize_map removes literal secrets; THIS removes job/domain CONTEXT (illustrative table/dataset/system/
+# incident/ticket names + the domain taxonomy) so the bundle reveals nothing about what the job is.
+# Format: FIND<TAB>REPLACE (ordered, longest/most-specific first; literal, not regex). '#'/blank ignored.
+# The acceptance gate then greps the bundle for job-identifying words and fails if any survive.
+
+# --- tables / datasets → neutral generic (sales/analytics) example schema ---
+sqlmesh__logdata.logdata__spend_log__2162828994	sqlmesh__sales.sales__orders__1000000001
+one row per won-bid impression — advertiser spend + win cost at auction grain	one row per event at source grain
+spend → spend_log + cost_impression_log + CPM glossary	metric → source_table + cost_table + glossary
+logdata.spend_log	sales.orders
+agg__daily_sum_by_campaign	agg__daily_by_entity
+sum_by_campaign_by_day	daily_by_entity
+cost_impression_log	cost_log
+logdata,summarydata,core,aggregates	<DATASETS>
+integrationprod	sources
+dataset: logdata	dataset: sales
+table: spend_log	table: orders
+spend_log	orders
+win_logs	shipments
+bid_logs	requests
+bidder_bid_events	request_events
+
+# --- columns / entities ---
+advertiser_vertical_id	segment_id
+advertiser_id	customer_id
+campaign_groups	entity_groups
+campaign_id	order_id
+Advertisers	Customers
+Advertiser	Customer
+advertisers	customers
+advertiser	customer
+campaigns	entities
+
+# --- systems / partners / internal platform ---
+shopper_graph	example_repo
+fangorn	example_pipeline
+bombora	example_partner
+ipdsc	example_dataset
+Compass	the internal platform
+compass	the internal platform
+
+# --- capture domain taxonomy (this list reveals the business) ---
+workflow · bigquery · experimentation · audience-scoring · bidding · identity · incrementality · pricing · infra · repos · routing-people · jira-process · leadership · project · data-catalog · business	workflow · data · experimentation · infra · repos · people · process · leadership · project · business
+
+# --- oncall incident examples ---
+the fangorn alert sat un-logged in `on-call/` until INC-002	an alert sat un-logged in `on-call/` until it was triaged
+INC-002 was OBSERVED as `transient_infra` until the owner root-caused it as `resource_contention` — RESOLVED.	an alert can be OBSERVED as `transient_infra` until the owner root-causes it as `resource_contention`.
+INC-002	INC-000
+
+# --- frame skill experiment examples ---
+A/B, holdout, vendor lift, BUK, BER-2250	A/B test, holdout, vendor lift
+
+# --- transcribe / new_ticket ticket examples ---
+audi_1070_02_quick_sync_incrementality_2026_07_02	proj_110_02_quick_sync_topic_2026_07_02
+ber_2250_.../ti_835_...	proj_200_.../proj_120_...
+ti_842_present_results --parent ber_2250_incrementality_overhaul	proj_201_present_results --parent proj_200_example_epic
+quick_sync_incrementality	quick_sync_topic
+ti_650_stage_3_vv_audit	proj_140_example
+ti_777_new_investigation	proj_141_example
+ti_1037	proj_101
+audi_1070	proj_110
+ti_835	proj_120
+ti_504	proj_130
+
+# --- xlsx_builder docstring example (adtech sample narrative) ---
+Product Matched leads visit rate in every vertical	Product A leads the key metric in every segment
+<ORG> Matched leads visit rate in every vertical	Product A leads the key metric in every segment
+Advertiser-weighted medians; prospecting only; visits = views + clicks.	Entity-weighted medians; one cohort only; metric = a + b.
+The headline: MM vs 3P visit rate, CPV and ROAS by vertical	The headline: cohort A vs cohort B on the key metric by segment
+
+# --- instruction inventory example ---
+holdout formula, advertiser IDs	domain formulas, entity IDs
+
+# --- residual business-term catch-alls (ordered last; neutral) ---
+Incrementality	Experiments
+incrementality	experiments
+conquest	example_feature
+visit rate	conversion rate
+ROAS	ROI

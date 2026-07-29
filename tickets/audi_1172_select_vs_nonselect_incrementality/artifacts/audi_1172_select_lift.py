@@ -12,7 +12,7 @@ import pandas as pd
 from google.cloud import bigquery
 from lib.mntn_xlsx import MntnWorkbook, FMT, rag_threshold
 
-GEN = "2026-07-28"
+GEN = "2026-07-29"
 TICKET = "AUDI-1172"
 TDIR = "/Users/malachi/Developer/work/mntn/workspace/tickets/audi_1172_select_vs_nonselect_incrementality"
 client = bigquery.Client(project="dw-main-silver")
@@ -207,7 +207,7 @@ wb = MntnWorkbook(
     title="MNTN Select vs Non-Select Incrementality",
     ticket=TICKET,
     subtitle="Ghost-bid holdout visit lift, prospecting, advertisers running both products",
-    period="2026-06-22 to 2026-07-27; visits within 7d of each IP's first bid",
+    period="2026-06-22 to 2026-07-27",   # neutral date range: accurate for every tab (the 7d-window detail is on the Read me/Method tabs)
     generated=GEN,
 )
 

@@ -13,13 +13,28 @@ gate blocks malformed files, and the docs describing the system are themselves g
 
 ---
 
+## 0. The cross-job barrier — why this is safe to carry between jobs
+
+This bundle reveals **nothing about the job it came from**. The packager runs two gates and refuses to
+emit unless BOTH are clean:
+- **Secrets sweep** — zero literal private values (paths, emails, tracker/warehouse IDs, hosts, names).
+- **Domain-blind sweep** — zero job/domain CONTEXT: illustrative table/dataset/pipeline/incident/ticket
+  names and the domain taxonomy are scrubbed to neutral generics. A reader learns the machinery, not the business.
+
+What never travels: the knowledge base, real memory facts, real tickets/incidents, the runbook's real
+catalog, and (global layer) session history, prior-job transcripts, and any live token. You carry your
+framework, not your data. A fresh bundle per job keeps the two jobs isolated.
+
 ## 1. Quickstart
 
 ```bash
 tar xzf ai-workflow-kit.tar.gz && cd ai-workflow-kit   # or: cd into the bundle folder
-bash bootstrap.sh                                       # preflight → chmod → hooks → memory symlink → build → verify
+bash bootstrap.sh                  # repo layer: preflight → chmod → hooks → memory symlink → build → verify
+bash bootstrap.sh --with-global    # ALSO install your personal ~/.claude/ framework (backs up any existing)
 ```
 `bootstrap.sh` is idempotent. It ends by listing the placeholder files still to fill and the auth steps.
+The `global/` layer (your `~/.claude/CLAUDE.md`, settings, MCP snippet) installs only with `--with-global`,
+backs up anything it replaces, and never copies the live task-manager token (fill it yourself).
 
 ---
 
@@ -118,7 +133,10 @@ single one. Placeholders only matter when you actually run the subsystem that re
 
 ## 8. Intentionally dropped in this port (add back if you want them)
 
-MNTN business content (`knowledge/*` prose docs, real memory facts, real tickets/incidents), the licensed
-brand assets (`lib/assets/`), the vendored task-manager MCP build, `settings.local.json` (per-machine),
-the self-review, and a narrow Databricks smoke-test one-off. The machinery that operated on them all
-shipped; only the job-specific payload was left behind.
+The prior job's business content (`knowledge/*` prose docs, real memory facts, real tickets/incidents), the
+licensed brand assets (`lib/assets/`), the vendored task-manager MCP build, `settings.local.json`
+(per-machine), the self-review, a narrow Databricks smoke-test one-off, and — for domain-blindness — the
+two most example-dense design docs (`workflows/INGEST_GUIDE.md`, `workflows/bq_velocity_provenance_plan.md`)
+and the adtech-sample `lib/xlsx_demo.py`. The `slack_bot/` recovery note was replaced with a generic one.
+The machinery that operated on all of it shipped; only the job-specific payload was left behind. To harden
+further, extend `documentation/ai_workflow_kit/domain_scrub_map.txt` and re-run the packager.

@@ -5,6 +5,7 @@
 set -uo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(pwd)"
+WITH_GLOBAL=0; for a in "$@"; do [ "$a" = "--with-global" ] && WITH_GLOBAL=1; done
 say() { printf '%s\n' "$*"; }
 hr()  { printf -- '----------------------------------------------------------------\n'; }
 
@@ -75,6 +76,28 @@ git add -A 2>/dev/null || true   # stage so verify's index-freshness (git diff) 
 # 6. Verify --------------------------------------------------------------------
 hr; say "[verify] running the deterministic doctor"
 if bash .claude/scripts/verify.sh; then say "  verify: PASS"; else say "  verify: FAIL — see output above"; fi
+
+# 6b. Global personal ~/.claude framework (opt-in) -----------------------------
+hr
+if [ "$WITH_GLOBAL" = 1 ] && [ -d global ]; then
+  say "[global] installing personal ~/.claude framework"
+  mkdir -p "$HOME/.claude"
+  if [ -f "$HOME/.claude/CLAUDE.md" ]; then
+    cp "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md.backup-preport"
+    say "  backed up existing ~/.claude/CLAUDE.md -> CLAUDE.md.backup-preport"
+  fi
+  cp global/CLAUDE.md "$HOME/.claude/CLAUDE.md"; say "  installed ~/.claude/CLAUDE.md"
+  if [ -f "$HOME/.claude/settings.json" ]; then
+    cp global/settings.json "$HOME/.claude/settings.json.from-kit"
+    say "  kept your ~/.claude/settings.json; wrote settings.json.from-kit to merge by hand"
+  else
+    cp global/settings.json "$HOME/.claude/settings.json"; say "  installed ~/.claude/settings.json"
+  fi
+  say "  MCP: merge global/mcp_servers.json into ~/.claude.json by hand + fill the token (never auto-written)"
+  say "  revert: restore ~/.claude/CLAUDE.md.backup-preport"
+else
+  say "[global] skipped — run 'bash bootstrap.sh --with-global' to also install your ~/.claude/ framework"
+fi
 
 # 7. Next steps ----------------------------------------------------------------
 hr; say "Placeholders still to fill (edit these, then re-run verify):"
