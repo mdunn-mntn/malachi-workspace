@@ -3,7 +3,7 @@ doc_type: runbook
 title: On-Call Runbook — Master
 summary: "Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here."
 last_verified: 2026-07-28
-keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, audience_intent, fangorn_score_monitor, ipdsc_geo, ModelPysparkBatchOperator, dataproc serverless, dataproc batch, batches wait, driver output, AnalysisException, PATH_NOT_FOUND, path does not exist, producer consumer race, PAM, privileged access manager, storage.objects.get, INC-001, INC-002, INC-003, INC-004, enriched_impressions, analytics_curated, bombora skip downstream, ds51 zero, ds51 disappeared]
+keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, audience_intent, fangorn_score_monitor, ipdsc_geo, ModelPysparkBatchOperator, dataproc serverless, dataproc batch, batches wait, driver output, AnalysisException, PATH_NOT_FOUND, path does not exist, producer consumer race, PAM, privileged access manager, storage.objects.get, INC-001, INC-002, INC-003, INC-004, enriched_impressions, analytics_curated, bombora skip downstream, ds51 zero, ds51 disappeared, tpa_mntn_id_export, mntn id export, mntn_id_data, tpa export, ttl exceeded, batch cancelled, batch was cancelled, cancelling batch as ttl exceeded, dataproc serverless ttl, ModelPysparkBatchOperator ttl, FetchFailedException, FetchFailed storm, shuffle fetch, shuffle fetch failure, auth bootstrap timeout, doSparkAuth, SettableFuture timeout, maxExecutors, zero ttl headroom, sh-dw-external-tables, INC-005]
 tags: [on-call, airflow, incident-response]
 ---
 
@@ -109,6 +109,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even in QA / a challenger run — starves `create-dataproc-cluster` → code 9. Resource contention, NOT stockout or config. | **Resource contention** — confirm no other Dataproc job is running, let the concurrent/challenger job FINISH, then manually re-trigger the champion. Blind re-run fails while a job still runs. | INC-002 |
 | `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the drift template declares `run_date` (its KFP source `fangorn_daily_feature_drift_pipeline.py:393` uses `run_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch. | **DAG bug** — route to owner (Brian/ML). **PR #1158 (airflow-ti) does NOT fix it** (confirmed: re-run on the fixed bundle re-failed identically); the operator-injected `reference_date` is the failing param. Real fix = rename the KFP pipeline param `run_date`→`reference_date` in **`targeting-infra-ml`** + recompile/redeploy the template. Do NOT blind-re-run until that ships. **RESOLVED 2026-07-28** (Brian redeployed template, green on try 5). | INC-003 |
 | `audience_intent / fangorn_score_monitor` | Airflow log = boilerplate `AirflowException: … Dataproc Agent reports job failure`; **batch driver output** = `AnalysisException [PATH_NOT_FOUND]: gs://mntn-data-archive-prod/ipdsc_geo/dt=<run_date>`. PagerDuty, retries exhausted. | Consumer `ModelPysparkBatchOperator` reads `ipdsc_geo/dt=<run_date>`, which lands on D+1 with ~3.5h-variable timing (tpa_export `run_geo`); monitor has only `retries=2×10min` + no cross-DAG sensor → races the producer, pages when it slips past ~07:45Z. | **Late data** (this case) — pull the driver output for the real error (Airflow log is boilerplate), confirm `ipdsc_geo/dt=<run_date>/_SUCCESS` is present, then clear+re-run the monitor. If partition still absent → real upstream failure, re-run tpa_export `run_geo`. **RESOLVED 2026-07-29.** | INC-004 |
+| `tpa_mntn_id_export / tpa_mntn_id_export` | Airflow log = boilerplate `AirflowException: Batch job <id> was cancelled`; **batch `stateHistory`** = `Cancelling batch as ttl exceeded` (ran the full `ttl=10800s`=3h); **driver output** = `FetchFailedException` storm (auth-bootstrap 30s `SettableFuture` TimeoutException) + many stage Resubmitted, 0 OOM / 0 ExecutorLost. All retries exhausted. | Shuffle-heavy job (14-way full-outer-join on `ip` + `groupBy(mntn_id)` window) hit a **shuffle-fetch RPC-auth instability storm** → map stages recompute → runtime blew past the 3h TTL. NOT data volume (inputs identical to last good day), NOT contention, NOT config. Same Dataproc Serverless subnet as INC-004's flagged "connection refused to master" anomaly. Zero TTL headroom (baseline ~78 min). | **Transient_infra + TTL-headroom** — get the TTL reason from `batches describe` stateHistory (Airflow log omits it); confirm FetchFailed storm in driver output; rule out data volume (`du -s` inputs vs last good day) + contention. Then **one controlled re-run** (fresh batch_id, no trap). Re-storms → route to owner to raise TTL / cap `maxExecutors` / raise auth+shuffle-retry timeouts (do NOT hot-patch). **OBSERVED 2026-07-29 — 07-28 export still missing.** | INC-005 |
 
 ---
 
@@ -462,6 +463,60 @@ scoring path. Suggestion PR only (not merged) — Ryan owns the DAG.
 
 ---
 
+### INC-005 — `tpa_mntn_id_export` `tpa_mntn_id_export` — Dataproc batch cancelled at 3h TTL (shuffle FetchFailed storm)
+**Date:** 2026-07-29 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [tpa_mntn_id_export/tpa_mntn_id_export] at 2026-07-29 01:19:35 PT`, run `manual__2026-07-29T08:19:35+00:00`, try 3/3 (`max_tries=2` → exhausted). Slack (#alerts-tpa-pipeline): Brian McAdams "Looks like it hit TTL", pinged Sean Yang.
+**Error — the Airflow log is boilerplate** (`AirflowException: Batch job tpa-mntn-id-20260729-3 was cancelled`); the TTL reason is only in the **batch state history**:
+```
+stateHistory: PENDING 14:40:09Z → RUNNING 14:41:42Z → CANCELLING "Cancelling batch as ttl exceeded" 17:40:14Z   (ttl=10800s = 3h)
+driveroutput tail:  95× FetchFailedException (shuffleId=45, stage 829), 33 Lost task, 58 stage Resubmitted,
+                    Caused by TimeoutException: Waited 30000 ms for SettableFuture ... doSparkAuth / AuthClientBootstrap
+```
+
+**STATUS: OBSERVED — mechanism confirmed, storm-trigger not root-caused, no fix verified. 07-28 export still MISSING.** Routed to owner (TPA_EXPORT / Sean Yang + Brian McAdams, already in-thread). Do NOT mark resolved until a re-run produces `mntn_id_data/2026/07/28/`.
+
+**Verdict: TRANSIENT_INFRA (Dataproc Serverless shuffle-fetch instability) aggravated by ZERO TTL headroom — NOT data volume, NOT config, NOT concurrent-job contention.** The batch ran the full 3h and Dataproc killed it at the TTL. Root of the slowness = a **shuffle FetchFailed retry storm**: executors could not complete the RPC **auth handshake** to fetch each other's shuffle blocks within its 30s timeout (`doSparkAuth` → `SettableFuture` TimeoutException), so Spark marked map output lost and **re-ran map stages 58×** → runtime blew past 3h. Same-day sibling of INC-004, same `targeting` prod Dataproc Serverless subnet (`mntn-prod-prj-snet-central1`) whose Compass RCA already flagged a "Failed to connect to master / Connection refused" networking anomaly — this is the same class of network/RPC instability, and it hurts far more here because this job does a ~54TB all-to-all shuffle.
+
+**What was ruled out (the discriminators that matter):**
+- **Data volume — RULED OUT.** Input partitions ~identical 07-27 (last good) vs 07-28 (failed): `ipdsc_geo` 4.94GB vs 4.93GB; `ipdsc/…ds=4` 11.21GB vs 11.23GB; `ds=19` 1.91GB vs 1.88GB. Runtime **doubled on identical input** (78 min on 07-28 → >180 min ×3 on 07-29).
+- **Concurrent-job contention (INC-002 shape) — RULED OUT.** The batch provisioned fine (RUNNING 1.5 min after create); the surrounding window is healthy small-job churn (`site_network_hourly`, `aug_log_rollup`, … all SUCCEEDED in 2-6 min). No big concurrent job hogging Dataproc.
+- **OOM / executor loss — RULED OUT.** 0 `OutOfMemory`, 0 `ExecutorLost`/decommission in the driver output. The failures are purely shuffle-fetch RPC-auth timeouts.
+- **Code change / "Sean edited it mid-incident" — WEAKENED.** The model's 16:21Z mtime is a **full `ti_resources_v2/main` redeploy** (every model file stamped 16:21:55–58Z = routine CI sync on a main merge), not a targeted edit. All 3 tries ran the pre-16:21 bundle. (The main branch DID get a merge at 16:21Z; whether it touched this model needs the source repo git history — the current GCS copy still hardcodes `timeout=10_800`.)
+
+**The job** (`gs://mntn-data-archive-prod/ti_resources_v2/main/models/tpa_export/tpa_mntn_id_export.py`, `ModelPysparkBatchOperator`, team `targeting`): "TPA export keyed by MNTN (household) id." Reads ~15 IPDSC `ipdsc/dt=D/data_source_id=*` partitions, does a **14-way cascade of FULL OUTER JOINs on `ip`**, joins `ipdsc_geo` + the identity graph (`identity-graph-prod/mntn-graph/household_graph_parquet`, pinned max(asOfDate)→max(GraphVersion)), maps ip→mntn_id, then `groupBy(mntn_id)` collect_list of fat category arrays **+ a `Window.partitionBy(mntn_id)` best-location sort** (the `sort_addToSorter` in the FetchFailed stack), intersects with a BQ campaign-group allowlist (CG 127075, broadcast), writes JSONL to `gs://sh-dw-external-tables-prod/mntn_id_data/YYYY/MM/DD/`. Inherently shuffle-heavy. `timeout=10_800` (3h) and `spark.dynamicAllocation.maxExecutors=150` are **hardcoded in the model decorator** (lines 48-75). Idempotent: `force=false` + `_already_exported()` skips a day whose output exists; `export_date = latest ipdsc dt ≤ run_date`.
+
+**Binding-timeout insight for the owner:** the failing timeout is the **30s auth-bootstrap** (`Waited 30000 ms for SettableFuture` in `doSparkAuth`), NOT `spark.network.timeout` (already 600s). So widening `network.timeout` won't help. The storm-reducing levers are: **lower `maxExecutors`** (150 → e.g. 60-80, fewer all-to-all auth handshakes), raise the RPC/auth + `spark.shuffle.io.maxRetries`/`retryWait`, and **raise the 3h TTL for headroom** (precedent: sibling `fangorn_prospecting_scoring` got an emergency 6h TTL bump, PR #1147, 07-24 — IMP-005). All are owner-side model-decorator changes — do NOT hot-patch.
+
+**Diagnosis run (copy-paste — Airflow log says only "was cancelled"):**
+```bash
+# 1. WHY cancelled — the state history gives the TTL reason the Airflow log omits:
+gcloud dataproc batches describe <batch-id> --region us-central1 --project mntn-prj-prod-00 \
+  --format="yaml(state,stateHistory,runtimeInfo.approximateUsage)"     # -> "Cancelling batch as ttl exceeded"
+# 2. WHY it ran long — pull the driver output, count the storm:
+OUT=$(gcloud dataproc batches describe <batch-id> --region us-central1 --project mntn-prj-prod-00 --format="value(runtimeInfo.outputUri)")
+gcloud storage cat "${OUT}.*" | grep -c 'FetchFailed'      # >0 with 0 OOM / 0 ExecutorLost = shuffle-fetch storm
+# 3. Rule out data volume — compare input sizes vs the last GOOD day (identical => not data):
+for dt in 2026-07-27 2026-07-28; do gcloud storage du -s "gs://mntn-data-archive-prod/ipdsc_geo/dt=${dt}/"; done
+# 4. Rule out contention — is a big concurrent batch running the same window?
+gcloud dataproc batches list --region us-central1 --project mntn-prj-prod-00 --sort-by=~createTime --limit=60 --format="table(state,createTime,stateTime,labels.job_type)"
+# 5. Is the output actually missing?
+gcloud storage ls "gs://sh-dw-external-tables-prod/mntn_id_data/2026/07/28/"    # 0 entries = export missing
+```
+
+**Decision tree — `ModelPysparkBatchOperator` "Batch job … was cancelled" (Dataproc Serverless):**
+1. Get the **state history** (cmd 1). `Cancelling batch as ttl exceeded` = it ran the full TTL, was NOT a code/input error → go to 2. (Any other cancel reason → treat as its own error via the driver output.)
+2. Pull the **driver output** (cmd 2). `FetchFailed` storm + 0 OOM + 0 ExecutorLost = **shuffle-fetch/RPC-auth instability** (this case). OOM/skew/AnalysisException instead → route that specific error.
+3. Rule out data volume (cmd 3) and contention (cmd 4). Normal input + healthy churn → **transient_infra on a zero-TTL-headroom job.**
+4. **Action = one controlled re-run** (env may have recovered; a fresh batch picks up the live bundle) — clear the task in Astronomer, or the owner triggers a new `tpa_ipdsc_export.trigger_mntn_id_export`. Each re-run mints a fresh timestamped batch_id → **no batch-id trap** for this task. Verify `mntn_id_data/<date>/` lands.
+5. **Re-storms again** → do NOT keep burning 3h runs (~2,400 DCU-hr/try, ~$100-150/try). Route to owner for the model-decorator fix (raise TTL / lower maxExecutors / raise auth+shuffle-retry timeouts — see binding-timeout insight). Never hot-patch prod.
+
+**Severity: MEDIUM.** Production household-keyed TPA audience export for the default campaign group (CG 127075) → `mntn_id_data/` external-table bucket (activation/serving contract). 07-28's export is missing (last good = dt=07-27, written by the 07-28 17:41Z run). Self-heals on the next successful run; downstream consumer of `mntn_id_data/` not traced (owner can confirm activation impact). Not a monitoring leaf like INC-003/004 — this is serving data — hence MEDIUM not LOW.
+
+**Durable fix → IMP-007.** Raise TTL / cap `maxExecutors` / raise auth+shuffle-retry timeouts on the `tpa_mntn_id_export` model decorator to survive a shuffle-fetch storm on a zero-headroom job; and (cross-ref IMP-006) the same Dataproc Serverless subnet networking anomaly (INC-004 Compass §, run_geo "connection refused to master") should be routed to whoever owns the `dataproc-prod` subnet/SA config.
+
+**Logs:** `on-call/incidents/INC-005/`.
+
+---
+
 ## 4. System reference (producer → consumer maps as we learn them)
 
 **IPDSC / TPA export chain (team TPA_EXPORT, `airflow-ti`)**
@@ -489,6 +544,13 @@ run_geo ──▶ tpa_export ──▶ external table bucket           precondit
   (targeting, `8 0 * * *`) reads `ipdsc_geo/dt=<run_date>`. Pre-INC-004 it had no sensor → **raced the
   producer** and paged (`AnalysisException [PATH_NOT_FOUND]`) when geo slipped past its ~30-40min retry slack.
   PR #1160 added `wait_for_ipdsc_geo` on the `_SUCCESS` marker so the monitor waits instead of racing.
+- **`tpa_mntn_id_export` is the OTHER (synchronous, no-race) `ipdsc`/`ipdsc_geo` consumer** — triggered inside
+  the producer DAG (`tpa_ipdsc_export.trigger_mntn_id_export`), so it never races. It reads ~15
+  `ipdsc/dt=D/data_source_id=*` partitions + `ipdsc_geo/dt=D` + the identity graph, does a 14-way
+  full-outer-join on `ip` + a `groupBy(mntn_id)` window (~54TB shuffle), and writes household-keyed JSONL to
+  `gs://sh-dw-external-tables-prod/mntn_id_data/YYYY/MM/DD/` for CG 127075 (TPA activation).
+  `ModelPysparkBatchOperator`, hardcoded **3h TTL** + `maxExecutors=150`, baseline ~78 min → **zero TTL
+  headroom**; a shuffle-fetch storm tips it over the wall (INC-005).
 
 **Fangorn inference chain (ML pipeline, `airflow-ti` → Vertex/Dataproc)**
 ```
