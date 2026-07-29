@@ -378,9 +378,11 @@ tpa_export/ipdsc chain as INC-001. Monitor code + DAG both unchanged (07-02 / 07
 for many data sources** last night (self-correcting the next day); Scotty separately reported a data-pipeline
 delay that left mission-control system-signals un-updated for the prior day. That systemic DS-flow delay is
 why `ipdsc_geo/dt=2026-07-28` (built at the tail of the ipdsc chain) landed ~3h late. So the "why was it
-late" is a system-wide DS-flow lag, not an isolated builder bug. (Possibly-related same-night item: the
-`aud22` Geo Includes/Excludes audit fired on multiple CGs — likely stale/partial geo data, not a true
-violation; verify against today's data once the flow catches up.)
+late" is a system-wide DS-flow lag, not an isolated builder bug. (Same-night `aud22` Geo Includes/Excludes
+audit: **RULED OUT as related** — Compass confirmed aud22 reads CIL + `geo.network_locations` + audience
+config from BigQuery, never `ipdsc_geo`/the DS chain, and is geo_version-pinned. Its 07-28 fires are *real
+but boundary-noise* (6 CGs, 11 IPs, 12 imps, $0.12), below aud22's own daily FAIL noise floor. NOT a data
+artifact. Separate from INC-004.)
 
 **Compass RCA (2026-07-29) — deeper findings (evidence: Cloud Audit Logs + Spark logs + git):**
 - **Late START, not slow compute.** `run_geo` CreateBatch was accepted at **08:07:23Z**; the geo Spark job
