@@ -512,7 +512,8 @@ All three yes → valid ghost-bid candidate for that campaign. All three fields 
 | **Kristen** | Data analytics. May be doing related incrementality intent analysis (posted in #chapter-data-analytics). Check before duplicating work. |
 | **Zach Schoenberger** | Audience tools team (with Jordan). Provided the holdout hash function (`MD5('{AID}:{IP}')` mod 1000). Confirmed expression_type 1 is legacy/not read. Key contact for audience expression mechanics. |
 | **Jordan** | Audience tools team (with Zach Schoenberger). Nick wants Jordan to build an "expression → IP list" tool. Key contact for audience infrastructure. |
-| **Ryan Kleck** | TI team. Suggested MemDB hash reuse for deciles. Works on feature store pipeline (airflow-ti). **Deployed the MNTN-bidder (Rust) ghost-bid logging** (2026-05-27) and the fcap-cache change; owns the bidder-side ghost-bid mechanics. |
+| **Ryan Kleck** (`rkleck-mntn`) | TI team. Suggested MemDB hash reuse for deciles. Works on feature store pipeline (airflow-ti). **Deployed the MNTN-bidder (Rust) ghost-bid logging** (2026-05-27), the fcap-cache change, and **authored the in-bidder ghost/holdout enforcement** (INCR-15 / INCR-63); owns the bidder-side ghost-bid/holdout mechanics. NOT the owner of the fcap-cap-config crate (that is @SteelHouse/rtb — see below). |
+| **@SteelHouse/rtb (fcap crate owners)** | Own the `rtb-campaign-service` frequency-cap crate — the fcap knob. Authors/maintainers: **snowsignal (Jane Lewis, crate author)**, **rogusdev (Chris Rogus)**, **RockyGitHub (Chris Davidoff)**. Route any per-household fcap / cap-arm feature request here (AUDI-1173: cap arms need NEW bidder code, `CampaignModel` has no per-household cap field). NOT jtang (audience-tools), NOT Zach/Jordan (audience-tools / `campaign.rs` routing). |
 | **Bryce Wagg** | TPM/Scrum Master for TGT Infrastructure squad. Runs standups, manages sprint workflow, Jira hygiene. Updated Jira workflow (2026-04-07): developer field auto-assigned on move to in-progress, must go through in-review → ready-for-deployment → done. |
 | **Rogus** | Engineering leadership. Announced Engineering Levels & Skills Rubric (2026-04-06). Driving Q2 shift to output-driven delivery. |
 | **Forrest** | Involved in continuous scoring POC/MVP timeline discussions. |
@@ -836,7 +837,7 @@ The incrementality program touches multiple teams beyond TI:
 - **Jason** — integration-side work (data pipeline / publisher integration)
 - **Al** — reporting-side (incrementality dashboards customer-facing)
 - **Megan** — UI experiment-setup (advertiser-facing experiment configuration)
-- **Bidder team (Zach + Jordan)** — bidder-level ghost bidding (escapes augmentor 10-day TTL; production solution; pending Alex Bloore decision)
+- **Bidder-level ghost bidding** — escapes augmentor 10-day TTL; production solution; pending Alex Bloore decision. **Ownership correction (AUDI-1173):** the in-bidder ghost/holdout enforcement was authored by **Ryan Kleck** (`rkleck-mntn`, INCR-15/63); Zach + Jordan are **audience-tools** (`campaign.rs` routing / expression→IP), not the bidder ghost-bid or fcap owners. The fcap-cap-config crate is **@SteelHouse/rtb** (snowsignal/rogusdev/RockyGitHub). Matt Brorby owns the ghost-bid lift-measurement pipeline.
 - **Edgar** — third-party attribution liaison (Houzz, LiftLab)
 - **Matt** — uplift modeling PRD
 
