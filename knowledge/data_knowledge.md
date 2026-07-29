@@ -1599,19 +1599,24 @@ MES is the enrichment service that processes impressions and validates audience 
 the ipdsc file for the relevant data source are dropped. This is the root cause of HH discrepancy
 investigations (TI-644, MM-44) where targeting audiences appear smaller than expected.
 
-**Optional-partner skip day → that source's same-dt impressions = 0 downstream (DS51/Bombora, 2026-07-29).**
-When an optional 3P partner (currently only Bombora/DS51) skips its daily drop, **no `ipdsc/dt=D/data_source_id=51/`
-partition is written** (the `ipdsc_bombora` builder skips; on-call INC-001). Downstream, `mntn-analytics-prod-01.analytics_curated.enriched_impressions`
-then shows **DS51 = 0 for that same dt** — confirmed correct / by-design for dt=2026-07-27 by the table owner
-(Jordan Piepkow, Staff SWE). DS51 ipdsc calendar (direct delivery began ~07-06): ABSENT 07-13/15/17/19/25/27,
-present otherwise; present days ≈ 108K-141K DS51 impressions. A transient non-zero the prior day (110,798→0 on
-07-27) = a preliminary/incomplete build reconciling to the correct 0.
-**OPEN (owner still investigating — do not treat the mechanism as settled):** WHY the documented ~30-35d
-lookback above does NOT backfill DS51 onto 07-27 impressions from the present 07-26 drop. Leading hypothesis
-(UNCONFIRMED): the effective `data_source_id` tag is same-day-keyed for this table, so an absent same-dt
-partition zeroes it while the lookback governs only IP eligibility. **Discriminating test (one query):** overlay
-the DS51 count vs the skip-day calendar over 07-06→28 — DS51=0 landing on *exactly* the skip days confirms
-same-day keying. See on-call INC-001.
+**Optional-partner skip day → that source's same-dt impressions = 0 downstream — because SERVING goes dark, NOT
+because enrichment drops it (DS51/Bombora, PROVEN end-to-end 2026-07-29).** When an optional 3P partner (currently
+only Bombora/DS51) skips its daily drop, **no `ipdsc/dt=D/data_source_id=51/` partition is written** (the
+`ipdsc_bombora` builder skips; on-call INC-001) → the bidder has no Bombora audience loaded that day → a campaign
+targeting ONLY that DS serves 0 impressions → downstream `enriched_impressions` DS51 = 0 for that dt. Confirmed
+correct for dt=2026-07-27. **The builder is `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`**
+(prod config `lookback=2`, `ipdsc_lookback=35`, `dsid_block_list=[2,14,42]`; output `summarydata.enriched_impressions`,
+materialized to `mntn-analytics-prod-01`): the `data_source_id` tag = **what the campaign targeted**
+(`v_campaign_group_segment_history`), and the ipdsc join is a **35-day BACKWARD** window
+(`ipdsc_dt BETWEEN to_date(time)-35d AND time`) — so it WOULD backfill 07-27 from the present 07-26 partition **if
+any DS51 impressions had been served**. Proof: exactly one CG targets DS51 (CG 131563 / adv 30506, new campaign
+live 07-24, targets only DS51); its `cost_impression_log` served counts are 07-25=104,177 · 07-26=108,744 · 07-27=0 ·
+07-28=141,002, matching enriched DS51 **1:1** (108,744=108,744; 141,002≈140,998). So enriched DS51 ≈ that campaign's
+served impressions; 0 served on 07-27 → correctly 0. **The 35d lookback never applies — it enriches impressions that
+WERE served, it can't resurrect ones that never happened.** (RETRACTS the earlier "same-day-keyed" hypothesis: the
+join is a backward window; the zero originates upstream at serving.) The 110,798 seen the prior day = a transient in
+the rolling 2-day dynamic-overwrite rebuild, not real volume. **General rule:** a single-source campaign goes fully
+dark on its DS's ipdsc skip days; multi-source campaigns only lose the skipped DS's contribution. See on-call INC-001.
 
 ### Data Source (DS) Type Reference
 | DS ID | Name | Type | In IPDSC | In tmul_daily | Notes |

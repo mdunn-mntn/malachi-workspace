@@ -2366,13 +2366,21 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
 - **`website_crawl_verticals` (wcv)** — GCS parquet `gs://mntn-data-archive-prod/vertical_categorizations/website_crawl_verticals/*.parquet`, ~1.42M domains. Cols: **`domain_name → vertical_id, vertical_name` (e.g. 104008 "B2B - Information Technology & Engineering"), `bucket_id`, `is_manual_override`**. This is the **DS13 domain→vertical** map (cached, refreshed ~every few months). Used as the "usable domain" gate (any domain in wcv, minus a webmail blocklist) AND as the vertical grain for category-level coverage (q3f). `product_categorization` (pc, DS19): `composite_key (URL) → product_category` + `data_source_category_id.list[].element` (keyword cat ids **≥900000** = the DS19 keyword categories; ids <900000 are other taxonomy). Both queried as external tables via the runbook svs setup.
 - **`dw-main-bronze.coredw.usage_reporting_audits`** — audit/anomaly-gate table (documented above; 20 cols, 99 rows).
 - ⛔ **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the meter
-  consumes (F1 impression ⋈ targeted segments ⋈ IPDSC, 30-day lookback; produced by the UI Audience Segment
-  Reporting pipeline). **Access Denied as of 2026-07-20** — cross-project (`mntn-analytics-prod-01`), locked by a
-  recent security change. **Read path: request PAM temp access.** Schema unverified until then (visible cols from a
-  user query: `dt` DATE partition, `data_source_id`, `ad_served_id`, `category_info` JSON).
-  **Gotcha (2026-07-29):** an optional-partner ipdsc **skip day** (Bombora/DS51) → that source's impressions = **0
-  for that same dt** here (confirmed correct by owner Jordan Piepkow for dt=07-27); the lookback does NOT backfill
-  from a prior present drop (mechanism open). See `data_knowledge.md` § IPDSC + on-call INC-001.
+  consumes (F1 impression ⋈ targeted segments ⋈ IPDSC; produced by the UI Audience Segment Reporting pipeline).
+  **Access Denied as of 2026-07-20** — cross-project (`mntn-analytics-prod-01`), locked by a recent security change.
+  **Read path: request PAM temp access.** Schema unverified until then (visible cols from a user query: `dt` DATE
+  partition, `data_source_id`, `ad_served_id`, `category_info` JSON).
+  **Builder (found 2026-07-29):** `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`, prod config
+  `conf/impression_enrichment/prod/config.yaml` — `lookback=2` (impression days), `ipdsc_lookback=35`,
+  `dsid_block_list=[2,14,42]`, inputs all `dw-main-silver` (`logdata.cost_impression_log`, `public.campaigns/advertisers`,
+  `summarydata.v_campaign_group_segment_history`, `ber_stg.category_facts__domain_x_publisher_types`) + ipdsc from
+  `gs://mntn-data-archive-prod/ipdsc`; writes `summarydata.enriched_impressions` bucketed by `ad_served_id` (600),
+  partitioned `dt,hh`, **dynamic overwrite** on a rolling 2-day window. The `data_source_id` tag = what the campaign
+  **targeted** (segment history); the ipdsc join is a **35-day BACKWARD** window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`).
+  **Gotcha (PROVEN 2026-07-29):** an optional-partner ipdsc **skip day** (Bombora/DS51) → that source's impressions = **0
+  for that dt** here, because a single-source campaign goes dark at SERVING (no audience loaded), NOT because enrichment
+  drops it (the backward lookback would have backfilled). enriched DS51 ≈ the targeting campaign's served impressions 1:1.
+  See `data_knowledge.md` § IPDSC + on-call INC-001.
 - Scripts: `SteelHouse/bae-sql-utility/ddp/`.
 
 ### DDP file-drop batch ingestion → fpa_vendor_log + site_visit_signal (AUDI-1089)

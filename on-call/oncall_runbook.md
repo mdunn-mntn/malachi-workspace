@@ -218,14 +218,22 @@ mechanism (why the lookback doesn't backfill it). So: a DS51 skip day genuinely 
 for that `dt`; the ~110,798 was a **preliminary/incomplete build** of the 07-27 partition that reconciled to
 the correct 0 on overnight completion.
 
-**Why 0 despite a ~30-35d IPDSC lookback (the piece Jordan is still chasing — mechanism OPEN, not settled):**
-the outcome (0 is correct) is confirmed by the owner; the *reason* is not. **Leading hypothesis (UNCONFIRMED):**
-the lookback governs IP *eligibility*, but the effective `data_source_id=51` tag is **same-day-keyed** for this
-table, so an absent same-dt partition zeroes it and the lookback doesn't resurrect it. Note this sits in tension
-with the documented ~30-35d MES lookback inner-join (`data_knowledge.md` § IPDSC), which is exactly why it's
-non-obvious — don't assert the mechanism until tested. **Discriminating test (one query, settles it):** run the
-DS51 count over 07-06→28 and overlay the skip-day calendar above — DS51=0 landing on *exactly* the ABSENT days
-(07-13/15/17/19/25/27) confirms same-day keying; anything else points elsewhere. Not a bug either way.
+**Why 0 despite a ~30-35d IPDSC lookback — MECHANISM PROVEN (2026-07-29, self-serviced end-to-end). It's
+SERVING-side, not enrichment.** Pulled the actual builder (`SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`
++ prod config: `lookback=2`, `ipdsc_lookback=35`, `dsid_block_list=[2,14,42]` — DS51 NOT blocked; output
+`summarydata.enriched_impressions` → materialized to `mntn-analytics-prod-01`). The `data_source_id` tag comes
+from **what the campaign targeted** (`v_campaign_group_segment_history`), and the ipdsc join is a **35-day
+BACKWARD** window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`) — so the enrichment WOULD have backfilled
+07-27 from the present 07-26 DS51 partition **if any DS51 impressions had been served**. They weren't. Verified
+in `cost_impression_log`: exactly one campaign group targets DS51 — **CG 131563 / adv 30506** (new campaign live
+2026-07-24, targets ONLY DS51) — and its served-impression counts are **07-25=104,177 · 07-26=108,744 · 07-27=0
+· 07-28=141,002**, matching enriched DS51 **1:1** (07-26 108,744=108,744; 07-28 141,002≈140,998). So: the DS51
+skip left the bidder with no Bombora audience on 07-27 → a campaign targeting only DS51 served **0 impressions**
+→ enriched DS51 correctly 0. The 35d lookback never applies because it enriches impressions that WERE served;
+it can't resurrect impressions that never happened. **(This RETRACTS the earlier "same-day-keyed" hypothesis —
+the join is a 35d backward window; the zero originates one layer upstream, at serving.)** The ~110,798 seen for
+07-27 the prior day = a transient during the pipeline's rolling 2-day dynamic-overwrite rebuild (the campaign
+served 0 that day, so it reconciled to 0), not real DS51 volume.
 
 **⚠ Process lesson (the real takeaway — a reasoning trap, logged so we don't repeat it):** the original
 GCS-evidenced call (0 correct, benign skip) was right. When Jordan raised a smart architectural objection
