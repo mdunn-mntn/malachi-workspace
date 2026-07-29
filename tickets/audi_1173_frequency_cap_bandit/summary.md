@@ -32,7 +32,12 @@ Refined the 7d Phase-0 curve into a 30d, all-stage, household-grain delivered cu
 - **Load-bearing caveat (headline):** the observational curve CANNOT establish diminishing returns. Attributed visits/1k-imp declines partly as a mechanical last-touch artifact (~1/n); attributed AND total (`guid_log`) visits/household RISE with frequency (heavily-served households visit more — a selection confound). Purged combined attributed CPV is roughly FLAT (~$2.6–2.7) across freq 1–40, so the 7d "7× CPV rise" largely evaporates once shared IPs are purged. Neither observational metric proves capping recovers value — only the household-randomized RCT can. The total-visit observational curve was dropped as both a 968 GB cost-trap AND selection-confounded. RCT metric = total visits per household + cost-per-household.
 
 ## 4. Deliverables
+- **Sprint-ready implementation plan (pull-and-execute):** `artifacts/audi_1173_implementation_plan.md` — BLUF / Problem / Solution / ordered work-list / Impact / Expected-improvement / ready-to-sprint checklist.
+- **RFD (buy-in decision doc):** `artifacts/audi_1173_rfd_draft.md`; also rendered as a claude.ai artifact (`a5cd4a66-2d0d-4159-b121-c81a5aa851e4`, private).
+- **RCT design + pre-registration:** `artifacts/audi_1173_rct_design.md`, `audi_1173_rct_prereg.md` (DRAFT-PENDING-LOCK).
+- **Ownership + holdout feasibility (bidder code paths):** `artifacts/audi_1173_ownership_feasibility_memo.md`. **Total-visit signal probe:** `audi_1173_total_visit_signal_probe.md`. **Leakage brief:** `audi_1173_leakage_brief.md`. **Bandit + offline-replay design:** `audi_1173_bandit_design.md`.
 - **Full scope doc (HHST + frequency + retargeting + RCT spec + data appendix):** `artifacts/audi_1173_scope.md`.
+- **Impact model:** frequency capping is MNTN-revenue-neutral under CPM + fixed budgets (redistributes impressions to fresh reach); value = advertiser efficiency / incremental ROAS → retention.
 - **Queries:** `queries/audi_1173_*.sql` (frequency curves, leakage, HHST context). **Outputs:** `outputs/*.json`. Perf-log ticket label: `freq_cap_sizing`.
 
 ## 5. Next — sizing done; the causal question is RCT-only

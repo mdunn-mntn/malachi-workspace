@@ -317,6 +317,7 @@ Paulo asked the AUDI team to **own high-quality Bombora audience design** for a 
 
 ### Pricing Model & Incrementality Impact (Kale, 2026-04-08)
 - MNTN charges on **CPM** (cost per thousand impressions), not CPV — so changing targeting for incrementality shouldn't directly affect profit/revenue.
+  - **Frequency capping is revenue-neutral under this model + fixed campaign budgets:** a cap redistributes impressions from over-served households to fresh reach (the same budget is still spent), it does not remove spend. The value accrues to the **advertiser** (efficiency / incremental ROAS → retention), not MNTN revenue. Caveat: **attributed IVR / performance metrics shift on the capped tail** (fewer easy last-touch credits on already-saturated households) — a reporting artifact of removing frequency-inflated attribution, not a real regression. (AUDI-1173.)
 - **But it WILL affect performance metrics (IVR)** — if targeting is adjusted to optimize for incrementality (e.g., reaching lower-intent users), IVR performance will suffer.
 - TI squad could appear to be performing worse on current metrics while actually improving incrementality.
 - Incrementality is a bucket/category of measurement — if the North Star is IVR and we adjust for incrementality, IVR suffers. This is the core tension.

@@ -16,7 +16,11 @@ The more incidents we log, the faster the next one closes. If an alert matches a
 - **Entry point:** run **`/oncall`** (or `/oncall <alert-log-file>`) — it triages, matches the catalog,
   and **enforces the write-back** (§3 + §2 + the JSONL log) so nothing leaks. This runbook is what
   `/oncall` reads and writes.
-- **Home:** `on-call/` (raw alert logs live here too, named as downloaded).
+- **Home:** `on-call/`. A **new** raw alert log lands at the top level (named as downloaded) so the
+  triage-reminder Stop hook (`find -maxdepth 1`) flags it as un-triaged. **On resolution, file its logs
+  under `on-call/incidents/INC-NNN/`** (one folder per incident), renamed
+  `<dag-or-task>_<rundate>_try<N>_<outcome>.txt` — this clears the loose-log signal and keeps evidence with
+  its incident. Top level stays just the runbook, `incident_log.jsonl`, and the `incidents/` tree.
 - **Indexed:** this file carries `doc_type: runbook` front-matter, so `.claude/scripts/build_index.sh`
   folds its `keywords:` into `knowledge/_ROUTING.md` and lists it in `knowledge/runbooks/INDEX.md`.
   Grep `_ROUTING.md` for an alert symptom (`sensor timeout`, `dataproc`, `bombora`) and it points here.
@@ -103,7 +107,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 |---|---|---|---|---|
 | `ipdsc_monitor / precondition_<partner>` | GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) `AirflowSensorTimeout` | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
 | `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even in QA / a challenger run — starves `create-dataproc-cluster` → code 9. Resource contention, NOT stockout or config. | **Resource contention** — confirm no other Dataproc job is running, let the concurrent/challenger job FINISH, then manually re-trigger the champion. Blind re-run fails while a job still runs. | INC-002 |
-| `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the drift template declares `run_date` (its KFP source `fangorn_daily_feature_drift_pipeline.py:393` uses `run_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch. | **DAG bug** — route to owner (Brian/ML). **PR #1158 (airflow-ti) does NOT fix it** (confirmed: re-run on the fixed bundle re-failed identically); the operator-injected `reference_date` is the failing param. Real fix = rename the KFP pipeline param `run_date`→`reference_date` in **`targeting-infra-ml`** + recompile/redeploy the template. Do NOT blind-re-run until that ships. | INC-003 |
+| `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the drift template declares `run_date` (its KFP source `fangorn_daily_feature_drift_pipeline.py:393` uses `run_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch. | **DAG bug** — route to owner (Brian/ML). **PR #1158 (airflow-ti) does NOT fix it** (confirmed: re-run on the fixed bundle re-failed identically); the operator-injected `reference_date` is the failing param. Real fix = rename the KFP pipeline param `run_date`→`reference_date` in **`targeting-infra-ml`** + recompile/redeploy the template. Do NOT blind-re-run until that ships. **RESOLVED 2026-07-28** (Brian redeployed template, green on try 5). | INC-003 |
 
 ---
 
@@ -254,17 +258,21 @@ Vertex pipeline `fangorn_daily_feature_drift_pipeline` (template
 `gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_daily_feature_drift_pipeline.json`,
 project `mntn-targeting-prj-prod`, region `us-central1`).
 
-**STATUS: OBSERVED / RE-OPENED — routed + owner-accepted; awaiting template redeploy.** The merged DAG fix
-(PR #1158) does NOT fix this; the fix is owner-side in `targeting-infra-ml` (rename the KFP param
-`run_date`→`reference_date`, recompile, redeploy the template). **Brian McAdams confirmed (2026-07-28) he
-will update it.** resolved=false until verified green.
+**STATUS: RESOLVED — owner redeployed the template; re-run went green (2026-07-28).** Two-part fix, both
+landed: (1) **PR #1158** (airflow-ti) dropped the DAG's redundant `run_date`; (2) **Brian McAdams
+redeployed the Vertex template** — renamed the KFP param `run_date`→`reference_date` in `targeting-infra-ml`,
+recompiled, redeployed `fangorn_daily_feature_drift_pipeline.json` (GCS object updated 23:31Z; verified it now
+declares `reference_date`, no `run_date`). A plain **Clear Task Instance** on the same v6 run then went green
+(Try #5, `Pipeline completed with state: 4` = SUCCEEDED). No new DAG version was needed — the template is read
+live from GCS at task runtime, so the redeploy applied without a bundle change.
 
-**Close-out for next on-call (after Brian's redeploy):**
-1. Confirm the template now declares `reference_date` (diagnosis command 2 below — expect `reference_date`
-   to replace `run_date` in the param list).
-2. Then clear + re-run `daily_drift_pipeline` with "Run with latest bundled version" (the current bundle
-   already has PR #1158 — no new bundle needed), or let the next `0 18 * * *` UTC run self-verify.
-3. Green → flip STATUS to RESOLVED, set `resolved:true` + `resolved_by:"Brian McAdams"` in the JSONL row.
+**Key lesson — the DAG fix alone was a NO-OP; the empirical re-run caught it.** The param mismatch is
+invisible at DAG-parse, so PR #1158 looked like the fix but the re-run on the fixed bundle re-failed
+identically. Only checking the compiled template's declared params (diagnosis command 2) revealed the real
+half. **When a Vertex `parameter … not found` fix is proposed, verify the *template* param list changed —
+don't trust a DAG-side PR alone.**
+
+**Logs:** `on-call/incidents/INC-003/` (try2/try3 failed = `reference_date` mismatch; try5 succeeded).
 
 **Re-run proof (2026-07-28 23:16Z, attempt 3):** re-ran WITH "Run with latest bundled version" — the bundle
 loaded was `2026-07-28T21:55:33Z`, i.e. AFTER PR #1158 merged (21:54:58Z), so the DAG fix WAS active — and

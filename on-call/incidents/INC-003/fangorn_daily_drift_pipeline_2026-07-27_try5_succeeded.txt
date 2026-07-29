@@ -1,0 +1,30 @@
+::group::Log message source detailssources=["http://100.64.4.50:39091/log/dag_id=fangorn_inference_pipeline_run/run_id=scheduled__2026-07-27T18:00:00+00:00/task_id=daily_drift_pipeline/attempt=5.log"] 
+::endgroup::
+[2026-07-28T23:57:31.205702Z] INFO - DAG bundles loaded: mainsource=airflow.dag_processing.bundles.manager.DagBundlesManager loc=manager.py:179 
+[2026-07-28T23:57:31.207778Z] INFO - Filling up the DagBag from /tmp/airflow/dag_bundles/astro/main/dags/2026-07-28T21:55:33.4005448Z/dags/machine_learning/fangorn_inference_pipeline_run.pysource=airflow.models.dagbag.DagBag loc=dagbag.py:593 
+[2026-07-28T23:57:32.364358Z] WARNING - Skipping masking for a secret as it's too short (<5 chars)source=airflow.sdk._shared.secrets_masker.secrets_masker loc=secrets_masker.py:555 
+[2026-07-28T23:57:32.366549Z] WARNING - Skipping masking for a secret as it's too short (<5 chars)source=airflow._shared.secrets_masker.secrets_masker loc=secrets_masker.py:555 
+[2026-07-28T23:57:32.372703Z] WARNING - The `airflow.operators.python.PythonOperator` attribute is deprecated. Please use `'airflow.providers.standard.operators.python.PythonOperator'`.category=DeprecatedImportWarning source=py.warnings loc=/usr/local/airflow/include/vertex/operators.py:45 
+[2026-07-28T23:57:32.420440Z] WARNING - This process (pid=338) is multi-threaded, use of fork() may lead to deadlocks in the child.category=DeprecationWarning source=py.warnings loc=/usr/local/lib/python3.12/site-packages/airflow/providers/openlineage/plugins/listener.py:599 
+[2026-07-28T23:57:32.972546Z] INFO - DEFAULT_HTTP already found in environment variables, skipping aliasing OPENLINEAGE_URLsource=openlineage.client.client loc=client.py:345 
+[2026-07-28T23:57:32.974201Z] INFO - OpenLineageClient will use `composite` transportsource=openlineage.client.client loc=client.py:116 
+[2026-07-28T23:57:33.162765Z] INFO - Stopping OpenLineage CompositeTransport emission after the first successful delivery because `continue_on_success=False`. Transport that emitted the event: <HttpTransport(name=astro_primary, kind=http, priority=2)>source=openlineage.client.transport.composite loc=composite.py:135 
+[2026-07-28T23:57:33.162959Z] INFO - Successfully emitted OpenLineage `START` event of id `019fa4bb-d100-7091-bf83-1d0e758d38c7`source=airflow.providers.openlineage.plugins.adapter.OpenLineageAdapter loc=adapter.py:167 
+[2026-07-28T23:57:33.196448Z] INFO - TaskInstance Details: dag_id=fangorn_inference_pipeline_run task_id=daily_drift_pipeline dagrun_id=scheduled__2026-07-27T18:00:00+00:00 map_index=-1 run_start_date=2026-07-28T23:57:29.556624Z try_number=5 op_classpath=["airflow.providers.standard.operators.python.PythonOperator"] source=astronomer.runtime.listener loc=listener.py:23 
+[2026-07-28T23:57:45.303774Z] WARNING - Using Variable.get from `airflow.models` is deprecated.Please use `get` on Variable from sdk(`airflow.sdk.Variable`) insteadcategory=DeprecationWarning source=py.warnings loc=/usr/local/lib/python3.12/site-packages/airflow/models/variable.py:151 
+[2026-07-28T23:57:45.304902Z] INFO - Submitting Vertex AI Pipeline:source=task.stdout 
+[2026-07-28T23:57:45.305078Z] INFO -   Pipeline: fangorn_daily_feature_drift_pipelinesource=task.stdout 
+[2026-07-28T23:57:45.305232Z] INFO -   Template: gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_daily_feature_drift_pipeline.jsonsource=task.stdout 
+[2026-07-28T23:57:45.305307Z] INFO -   Reference Date: 2026-07-28source=task.stdout 
+[2026-07-28T23:57:45.305369Z] INFO -   Project: mntn-targeting-prj-prodsource=task.stdout 
+[2026-07-28T23:57:45.305442Z] INFO -   ENV: prodsource=task.stdout 
+[2026-07-28T23:57:45.305498Z] INFO -   Branch: mainsource=task.stdout 
+[2026-07-28T23:57:45.305553Z] INFO -   Bucket: targeting-infra-vertex-pipelines-prodsource=task.stdout 
+[2026-07-28T23:57:45.305608Z] INFO -   Service Account: vertex-ai@mntn-targeting-prj-prod.iam.gserviceaccount.comsource=task.stdout 
+[2026-07-28T23:57:45.305662Z] INFO -   Network: projects/439867869459/global/networks/mntn-host-ntwrk-prod-00source=task.stdout 
+[2026-07-28T23:57:45.778128Z] INFO - Pipeline Run URL: https://console.cloud.google.com/vertex-ai/locations/us-central1/pipelines/runs/fangorn-daily-feature-drift-pipeline-20260728235745?project=mntn-targeting-prj-prodsource=task.stdout 
+[2026-07-29T00:24:36.545602Z] INFO - Pipeline completed with state: 4source=task.stdout 
+[2026-07-29T00:24:36.767857Z] INFO - Done. Returned value was: {'job_name': 'fangorn-daily-feature-drift-pipeline-20260728235745', 'resource_name': 'projects/401977096985/locations/us-central1/pipelineJobs/fangorn-daily-feature-drift-pipeline-20260728235745', 'state': '4', 'console_url': 'https://console.cloud.google.com/vertex-ai/locations/us-central1/pipelines/runs/fangorn-daily-feature-drift-pipeline-20260728235745?project=mntn-targeting-prj-prod'}source=airflow.task.operators.airflow.providers.standard.operators.python.PythonOperator loc=python.py:217 
+[2026-07-29T00:24:36.768250Z] INFO - Pushing xcomti=RuntimeTaskInstance(id=UUID('019fab29-6fc8-7ef4-af0b-519d9ee69ad2'), task_id='daily_drift_pipeline', dag_id='fangorn_inference_pipeline_run', run_id='scheduled__2026-07-27T18:00:00+00:00', try_number=5, dag_version_id=UUID('019faaba-dcfa-764f-8221-055ac61af2b7'), map_index=-1, hostname='100.64.4.50', context_carrier=None, task=<Task(PythonOperator): daily_drift_pipeline>, bundle_instance=AstroBundleBackend(name=main), max_tries=5, start_date=datetime.datetime(2026, 7, 28, 23, 57, 29, 556624, tzinfo=datetime.timezone.utc), end_date=None, state=<TaskInstanceState.RUNNING: 'running'>, is_mapped=False, rendered_map_index=None) source=task loc=task_runner.py:1370 
+[2026-07-29T00:24:37.371634Z] INFO - DEFAULT_HTTP already found in environment variables, skipping aliasing OPENLINEAGE_URLsource=openlineage.client.client loc=client.py:345 
+[2026-07-29T00:24:37.373280Z] INFO - OpenLineageClient will use `composite` transportsource=openlineage.client.client loc=client.py:116 
