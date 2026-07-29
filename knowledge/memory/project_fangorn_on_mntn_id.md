@@ -47,6 +47,15 @@ IPv6/GUID later moves a household's score). Bidder resolves via **id-service** (
 HHID; `SteelHouse/id-service/src/bigtable.rs#L1084`); IPv4-only leaves IPv6/MAID-only households unscored (bidder
 may not bid) — accepted. Bidder ~a few weeks off (id-service latency standup) → not near-term-blocking.
 
+**Feature-aggregation membership = THE core FS-build decision (Brian McAdams/Ryan/Sean, 2026-07-29):** an
+identifier can belong to multiple HHIDs at different confidence (IPv6 → HHID1@0.3 AND HHID2@0.7); features
+derive at the raw-row grain then attribute to household(s). Choice: resolve each row to **1 HHID by
+max(confidence)** (like id-service, no overlap) vs let features **flow to multiple HHIDs (duplicates
+visits/conversions → "LiveRamp segments" = HHID store unusable for analytics)**. Ryan: don't duplicate visit
+counts; Sean leans resolve-to-1; Ryan: **test both ways**. Throw out shared IPs; more IDs in a lookup → higher
+confidence; the graph resolves the ID-combo (IP+device_id disambiguates ISP rotations). Same call as the collapse
+function — lands in AUDI-1168/1100, gates AUDI-1105 analytics. Loop in Matt.
+
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on

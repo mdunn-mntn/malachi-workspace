@@ -10,10 +10,11 @@
 - `knowledge/data_catalog.md` — schemas, partitions, clustering, join keys, query tips · `knowledge/data_knowledge.md` — business logic, gotchas, architecture, tribal knowledge · `knowledge/strategic_north_star.md` — Q2 OKR leverage filter (read at session start; evaluate every task against it).
 
 ## Always-on working rules (how I write & work)
-- **BLUF / terse.** Lead every human-facing comm (chat, Jira, Slack, deck, standup) with the conclusion; cut filler. Terse Comms caps apply to Jira/PR/commit/xlsx. **Slack thread replies = human prose** (conversational, contractions, translate jargon, minimal formatting) — NOT the bulleted Jira shape. [[feedback_bluf_communication]] [[feedback_terse_chat_replies]] [[feedback_slack_reply_voice]] [[feedback_terse_tickets]]
+- **BLUF / terse.** Lead every human-facing comm (chat, Jira, Slack, deck, standup) with the conclusion; cut filler. Terse Comms caps apply to Jira/PR/commit/xlsx. **Slack thread replies = human prose** (conversational, contractions, no em-dashes, few colons, plain statements), not the bulleted Jira shape. [[feedback_bluf_communication]] [[feedback_terse_chat_replies]] [[feedback_slack_reply_voice]] [[feedback_terse_tickets]]
 - **No em-dashes, no name-dropping** in written deliverables. [[feedback_no_emdash_no_namedrop]]
 - **MNTN only** — never mention IPSOS or other orgs; Todoist = MNTN section of MindWyre, on-request only. [[feedback_mntn_only]] [[feedback_todoist]]
 - **Simple & factual** — simplest deliverable, no invented terms/columns, plain facts + caveats, no unsolicited next-steps. [[feedback_minimize_complexity]] [[feedback_facts_not_presentation]] [[feedback_no_unsolicited_suggestions]]
+- **Hold the evidenced verdict** — don't fold to a domain owner's plausible-but-hedged pushback; treat it as a hypothesis, keep the evidenced answer, settle it with a discriminating test. [[feedback_hold_evidenced_verdict]]
 - **Rank descending** — primary metric, most on top, every table/chart. [[feedback_rank_desc_always]]
 - **Default deliverable = branded `.xlsx`** to the Drive mount `My Drive/Tickets/<KEY>/` (lib/mntn_xlsx.py). [[feedback_xlsx_default_output]] [[reference_xlsx_master_format]]
 - **IPs from source log tables**, never proxies (CIL). [[feedback_source_table_ips]]

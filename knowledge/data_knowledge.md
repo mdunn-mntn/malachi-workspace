@@ -3299,6 +3299,20 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   the bidder resolves via IPv6/MAID only won't have an AUDI score → the bidder may not bid on them (accepted for
   v1). Bidder integration is "a few weeks" off (id-service latency standup) → not near-term-blocking. Working
   channel = **#dev-audi-mntn-id**.
+- **Feature-aggregation membership = the core FS-build decision (Brian McAdams / Ryan / Sean, 2026-07-29).** An
+  identifier can belong to **multiple households at different confidence** (e.g. an IPv6 → HHID1 @0.3 AND HHID2
+  @0.7). Features derive at the **raw-log-row grain** (1 row, up to N identifiers → visits/conversions), then
+  get attributed to a household — so the choice at the **aggregation/build step** is: resolve each row to **1
+  HHID by max(confidence)** (like id-service; no overlap) **OR** let its features **flow to multiple HHIDs**
+  (**duplicates visit/conversion counts**). **Allowing overlap = the "LiveRamp segments" failure mode:** one
+  person's counts inflate multiple HHIDs → the counts don't sum and the **HHID feature store is unusable for
+  analytics** (matters for MID-vs-IP validation). Ryan's priority: don't duplicate visit counts; Sean leans
+  resolve-to-1-HHID (match id-service); Ryan says **test it both ways**. Guidance: **throw out shared IPs**;
+  **more IDs in a lookup → higher household-resolution confidence**; the **graph resolves the ID-combo for you**
+  (IP `1.1.1.1`+`device_id=aaa`=one household, but `1.1.1.1`+`device_id=bbb` after an ISP rotation = another).
+  This is the same call as the multi-IP→household collapse function above, now with the double-counting +
+  analytics-usability dimensions — an AUDI feature-quality decision (AUDI-1168 aggregation / AUDI-1100 / gates
+  AUDI-1105).
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

@@ -175,7 +175,8 @@ monitor tickets Backlog, most Unassigned** — including the whole L1/L2/L3 buil
 3. **Multi-IP→household collapse function.** Identity's quick path (ID-358/359) picked **random/first for the
    intent score + union-dedupe for categories, "for code simplicity," revisit "if it becomes a performance
    baseline"** — it now is. Random pick can **dilute the HI/PP two-pass signal.** AUDI feature-quality call
-   (your AUDI-1100/1168; your own open AUDI-1057 comment asks exactly this).
+   (your AUDI-1100/1168; your own open AUDI-1057 comment asks exactly this). **See §7e** — sharpened into
+   resolve-to-1-HHID vs allow-overlap (the double-counting / analytics-usability decision).
 4. **HHID stability across graph runs** (Ryan Kleck ×2): if household IDs churn run-to-run, **audience counts
    inflate + MID feature/score semantics drift.** The keyset-vs-household_id L2 choice (§2) is the hedge.
 5. **Household label source** (Decision 7 / AUDI-1102): roll IP-grain VVs up through the graph vs HHID-native
@@ -312,6 +313,33 @@ IPv6/MAID only **won't have a score → the bidder may not bid on it.** **Timeli
 off — Ryan is still standing up id-service to hit their latency SLA — so bidder-alignment is **not near-term
 blocking**; AUDI can proceed IPv4-only. The ID team's **pyspark "SDK-type" interface** (the graph-selection +
 translation-logging helper, §7c) is what AUDI will consume for the resolution + crediting logic.
+
+## 7e. Feature-aggregation membership — the double-counting decision (Slack #dev-audi-mntn-id, 2026-07-29)
+**The core FS-build design decision, and it's Malachi's to settle empirically.** Sharpens §6.3. Matt to be looped in.
+
+**The problem (Brian McAdams, with a diagram).** One identifier can belong to **multiple households at
+different confidence** — his example: an **IPv6 → HHID1 @0.3 AND HHID2 @0.7.** Features are derived at the
+**raw-log-row grain** (1 row carries up to N identifiers → visits/conversions/etc.), then attributed to a
+household. So a row's features (its visits) can flow to *one* HHID or to *several*. If the IPv6's features feed
+HHID2 (0.7, the max), then **HHID2's intent score is partly influenced by features that also belong to HHID1** —
+and at serving the bidder looking up that IPv6 gets HHID2's score.
+
+**The decision (build step, not serving):** resolve each raw row to **1 HHID by max(confidence)** — the way the
+**id-service** already does it (single pile of IDs → 1 HHID) — **OR** let the row's features **flow to multiple
+HHIDs**, which **duplicates visit/conversion counts.**
+- **Allowing overlap = the "LiveRamp segments" failure mode (Brian):** one person's counts inflate multiple
+  HHIDs, so the counts don't sum cleanly and **the HHID feature store becomes unusable for analytics** (matters
+  for AUDI-1105 validation). Ryan's stated priority: **don't duplicate visit/conversion counts.**
+- **Resolve-to-1-HHID (Sean's lean):** match id-service — max(confidence) → one household per row, no overlap.
+- **Brian's precise framing:** "an identifier can resolve to multiple HHIDs, so its features either affect
+  multiple HHIDs, **or we constrain the aggregation so there's no overlap based on confidence scores.**"
+
+**Resolution: test it both ways (Ryan, twice)** — this is an empirical feature-quality call, exactly the
+collapse-function question (§6.3) now sharpened with the multi-HHID + analytics-usability dimensions. It lands
+in **AUDI-1168 (L2 aggregation)** and **AUDI-1100 (feature-eng)**, and its analytics-usability side gates
+**AUDI-1105**. Ryan's guidance: **throw out shared IPs**; **the more IDs you use in a lookup the more confident
+the household resolution**; the **graph resolves the ID-combo for you** (handles IP rotation — IP `1.1.1.1` +
+`device_id=aaa` = ryan, but `1.1.1.1` + `device_id=bbb` after an ISP rotation = a different household).
 
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive

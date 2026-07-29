@@ -68,3 +68,8 @@ _(document household L2 model naming + aggregation semantics)_
   EXISTING IP-keyed L1** — leave L1 alone (the keyset-struct L1 is a fast-follow). So this ticket owns the
   IPv4→HHID `resolve_households()` join (AUDI-1167) at L2. Consume the ID team's pyspark SDK for
   resolution + translation-signal logging.
+- **THE membership/double-counting decision lands HERE (epic §7e).** An identifier can belong to multiple
+  HHIDs at different confidence, and features derive at the raw-row grain → do a row's features flow to **1
+  HHID (max confidence, like id-service — no overlap)** or to **multiple HHIDs (duplicates visits/conversions →
+  the "LiveRamp segments" analytics-unusable failure mode)**? **Test both ways** (Ryan). Throw out shared IPs.
+  This is the sharpened collapse-function call (§6.3); it also gates AUDI-1105's analytics usability.
