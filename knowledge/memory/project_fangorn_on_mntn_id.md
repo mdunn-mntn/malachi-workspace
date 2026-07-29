@@ -105,6 +105,12 @@ mirror = perf fallback; Sean stubbing it). **AUDI-1167 (`household_resolution.py
 lives inline in the L2 model before L158 for v1; Sean stubbing the util). Sean's draft PR airflow-ti #1156 adds
 a Layer-1 `(ip, guid)` grain table (for Ryan's GUID fast-follow; not needed for IPv4-only v1).
 
+**AUDI-1170 (orchestration/backfill/shadow) ASSIGNED to Malachi 2026-07-29** — his first concrete ticket on the
+epic. Run `/frame` before moving to in_progress (gate). Scope given the converged design: wire the `hh_`-prefixed
+L2/L3 models into `feature_store_setup_model.py` as an additive task group (no forked DAG), backfill over
+`as_of_date` (60d BQ + `household_graph_parquet` fallback), and shadow-parity dashboards (household-vs-IP
+audience sizes, resolution/coverage split, day-over-day household stability + the ~9.5%-shared under-rep).
+
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on

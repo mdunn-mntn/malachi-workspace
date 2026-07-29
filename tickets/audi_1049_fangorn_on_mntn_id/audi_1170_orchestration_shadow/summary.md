@@ -13,7 +13,7 @@ framing_state: draft
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1170
 **Parent epic:** AUDI-1049 · **Build umbrella frame:** `../audi_1134_feature_store_build/summary.md`
-**Status:** backlog · **Assignee:** Malachi (unassigned in Jira — claim at planning)
+**Status:** backlog · **Assignee:** Malachi — **ASSIGNED 2026-07-29** (run `/frame` to lock §0 before moving to `in_progress`; the framing gate blocks it while `framing_state: draft`)
 
 ---
 ## 0. Framing  ← run `/frame` when you start; inherits the AUDI-1134 build-frame

@@ -13,9 +13,9 @@ framing_state: "skip: epic — per-child framing (1166-1170 build, 1100 tuning, 
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1049
 **Epic owner:** Matt Brorby · **RFD decider:** Alyson Lefkowitz · **FS-build lead:** Sean Yang
-**Malachi's lane (updated 2026-07-29, see §7i):** **co-own the L2/L3 feature-store build (AUDI-1168/1169) with
-Brian McAdams** (Sean moved to DS13/19) · 1166 mirror = optional, 1167 resolution = placeholder (Sean stubbing) ·
-feature-eng 1100 · validation 1105 secondary
+**Malachi's lane (updated 2026-07-29, see §7i):** **AUDI-1170 (orchestration/backfill/shadow) ASSIGNED** ·
+**co-own the L2/L3 feature-store build (AUDI-1168/1169) with Brian McAdams** (Sean moved to DS13/19) · 1166
+mirror = optional, 1167 resolution = placeholder (Sean stubbing) · feature-eng 1100 · validation 1105 secondary
 **Status:** backlog · **Date:** 2026-07-28
 
 > **This folder is the home for all of Malachi's work on this epic.** Child folders below hold per-ticket

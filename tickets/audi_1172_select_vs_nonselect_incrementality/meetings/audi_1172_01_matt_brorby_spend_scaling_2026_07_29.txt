@@ -1,0 +1,93 @@
+[00:00] We're good to go.
+[00:01] So then, let's see.
+[00:03] Yeah, the last part, I think, yeah, the first part, it all makes sense.
+[00:09] Incremental visits, you just calculate them from the absolute intent to treat effect.
+[00:19] And just, yeah, the checks that everything passed is all you need.
+[00:27] things, it doesn't really matter too much. Especially since probably here, a campaign
+[00:33] or advertiser level becomes less of an issue.
+[00:38] So then the last part. I think everything, it's a campaign group is either on beeswax
+[00:50] or it's on the Mountain Bidder. So, I think all the new select stuff was going to Mountain
+[01:02] Bidder and then all the PTV stuff was still going to beeswax. So, there's a difference
+[01:09] between the types of campaigns. But that was the point of this, right? Select versus non-select
+[01:14] campaigns.
+[01:15] Yeah.
+[01:16] So that's okay. There's no campaign that's split between the two. So that should
+[01:24] be fine.
+[01:25] Yeah.
+[01:26] The spend part is where it gets tricky because the analysis in the pipelines that
+[01:33] I've set up, like the data that you're using, there's many differences between what's there
+[01:42] and what we actually report out.
+[01:45] So when I'm counting things up, the visits that I count
+[01:50] are not verified, attributed visits.
+[01:53] They're just seeing a page view, seeing the pixel fire
+[01:59] within a seven-day window from the earliest bid time
+[02:05] for that IP.
+[02:07] I'm doing attribution a very different way
+[02:10] and like over a smaller window so like the visits and the incremental visits that you're calculating
+[02:16] are not going to line up so what i might suggest is that you kind of recalculate the incremental
+[02:24] visits using that formula that you have but uh i'm also limiting it to seven days to so that
+[02:33] everything has an equal amount of time but it shouldn't matter because it's going to affect
+[02:37] the treatment and the non-treated equally.
+[02:39] You want to align it in some way.
+[02:43] Because if you just look at the number of treatment visits, say, and you compare it
+[02:49] to what's actually in the UI and reporting, it's not going to be the same.
+[02:56] And the spend, I'm not tracking the spend, which thinking back, it would be good to try
+[03:02] to do that in some way, but we would need to go back and try to figure out how to calculate
+[03:12] the spend, the actual spend for these visits that we actually are counting.
+[03:20] So I want to clarify there.
+[03:22] So isn't the spend reported in the cost impression log?
+[03:28] But I don't use cost impression log, really.
+[03:32] oh you don't this you use what are you using to calculate spend i'm not calculating spend i don't
+[03:40] think i don't recall putting that in so oh oh okay i was gonna say i was like i didn't know
+[03:46] there's an alternative way okay that makes sense yeah so i'm just trying my whole goal is just to
+[03:51] get like the increment incremental lift which will give you like a relative number so then you can
+[03:59] And maybe begin to work it backwards from our reported numbers. That was going to be
+[04:05] the goal for the UI is we kind of take all these rates that we're calculating. And then
+[04:13] we can use that on the reporting side to come up with the incremental visits or something
+[04:19] like that. I have incremental visits just as a number to use. But yeah, it's tricky
+[04:27] because if you just go in and take spend,
+[04:31] it's likely going to be a larger number
+[04:36] than what you should actually be using
+[04:38] because we're only looking at a subset of all visits
+[04:41] and all of the events, I guess.
+[04:46] Yeah, it's from the all facts table.
+[04:49] Yeah, that's what I was thinking too.
+[04:51] So, I mean, it's not super like,
+[04:53] this is like, they just messaged me today
+[04:55] and are like hey can you do this and i'm like maybe so inside we do have something maybe where
+[05:04] i think in one of the tables not the roll-up i don't think but the results table in the gold
+[05:12] it has compliance which let me think compliance that is uh so okay let's just take another step
+[05:24] back. The N treatment, N underscore treatment is the number of unique IPs that we bid on.
+[05:36] So it's bids, unique bids. And then what I check is how many of those bids convert into
+[05:48] impressions. So that's what the compliance is. And for a lot of these, it's like, you
+[05:56] know, it's a good fraction of 50%. 50% of the IPs that we bid on, we eventually win
+[06:03] and get an impression on.
+[06:05] It's only 50?
+[06:07] 50, yeah.
+[06:09] I thought our win rate would be higher.
+[06:12] From the sample that I looked at, that's what I recall.
+[06:16] it no i mean i believe you i'm just thinking you it seems weird to well i guess that makes sense
+[06:22] there's there's going to be a lot of competition for them so if we lose we lose so it's consistent
+[06:27] with the win rates the win rates are lower like the win rate is like 20 to 40 win rate on any
+[06:36] given auction for any given campaign. So, kind of a line. But in any case, that kind of then tells
+[06:46] you the number of impressions to kind of figure out unique impressions or households reached
+[06:52] is take the compliance number and multiply it by the end treatment. And then that gives you
+[06:59] how many households you actually reached approximately through impressions and then
+[07:06] you can say okay if i reached 10 000 households that means i spent at least this much
+[07:12] you could have like a rough calculation there and then use the incremental visits to get the
+[07:19] spend per incremental visit that's kind of how i'm thinking about it but i there's a lot of like
+[07:28] extra massaging that needs to be done i think to kind of figure this all out okay i think that
+[07:34] gives me enough context i'll figure it out and then when i come up with an answer i will
+[07:39] i'll send it to you and be like hey this is what i did and uh get your get your nod of approval or
+[07:47] your your what would you say nodding is up and down what do you say when you go shake
+[07:54] your shake of disapproval um anyways um yeah um cool okay so yeah then that's
+[08:07] let me think if there's anything else the all facts that has everything right it has like the
+[08:14] spend it has impressions it has the verified visits and conversions too yep okay might have
+[08:21] everything you need then in there and you just kind of like the other way to come at it is you
+[08:26] just take the relative lift that might be it's all a little fuzzy so yeah yeah i'm not gonna go
+[08:36] down another road but it's kind of fuzzy i just i could imagine it being the cost of uh
+[08:46] Yeah, I could just imagine that being like valuable. I did that previously. So we had something we would call it incremental cost of acquired customer. I was like, everybody has their own use use case. But that's super valuable to advertisers, too, because it tells you like, how much did it really cost you to get a net new user, which is like super valuable. And then after that, you can do the whole lifetime value type stuff and all that.
+[09:11] So I think that solving this is probably pretty, pretty valuable.
+[09:17] So, yeah.
+[09:18] All right.
+[09:20] I'm going to stop recording, but I have another question for you.
