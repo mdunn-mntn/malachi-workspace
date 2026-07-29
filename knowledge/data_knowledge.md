@@ -3285,6 +3285,20 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
 - **DDP crediting:** **Fangorn uses no DDP data → no DDP crediting for Fangorn.** But **DS13/DS19 use DDP** →
   DDP-vendor crediting under MNTN ID still needs resolving for those (Alyson), by ~mid-October for real-campaign
   testing. See `reference_ddp_billing_logic`.
+- **IPv4-only v1 → edit L2/L3, LEAVE L1 ALONE (Ryan/Sean/Brian, 2026-07-29).** Map IPv4→HHID and build the
+  household L2/L3 on top of the **existing IP-keyed guid_log L1**; "just edit the level-2 and level-3 feature
+  store jobs and leave level 1 alone." The **keyset-struct rebuild of L1 (Ryan's fuller recommendation) is the
+  fast-follow**, not v1. The graph-snapshot mirror is still built (L2/L3 join against it).
+- **Multiple-membership intent shift (Brian McAdams):** a household with both IPv4 and IPv6/GUID/MAID will have
+  its intent **change noticeably when identifiers are added later** (more signal rolls into the household). Ship
+  IPv4-only cleanly first; treat the identifier expansion as a measured change (ties to the collapse-function).
+- **Bidder resolution — single-ID → 1 HHID via id-service:** the bidder will call **id-service**
+  (`SteelHouse/id-service/src/bigtable.rs#L1084`) with whatever's in the bid stream (IPv4, IPv6-only, MAID) and
+  get the single highest-confidence household_id — a single-ID lookup resolves to exactly one HHID (simpler than
+  the multi-ID max-confidence join AUDI does in the FS). **Coverage gap:** IPv4-only scoring means households
+  the bidder resolves via IPv6/MAID only won't have an AUDI score → the bidder may not bid on them (accepted for
+  v1). Bidder integration is "a few weeks" off (id-service latency standup) → not near-term-blocking. Working
+  channel = **#dev-audi-mntn-id**.
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

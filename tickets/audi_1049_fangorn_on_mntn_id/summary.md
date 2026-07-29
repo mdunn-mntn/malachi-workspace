@@ -287,6 +287,32 @@ Fangorn.** But **DS13/DS19 DO use DDP** → DDP-vendor crediting still needs to 
 Alyson to bring the team's thoughts. Needed by **~mid-October** for real-campaign testing. Ties to
 `reference_ddp_billing_logic`.
 
+## 7d. IPv4-only implementation approach + bidder resolution (Slack #dev-audi-mntn-id, 2026-07-29)
+Refines §7b's "keyset struct in L1" — for the **IPv4-only v1 the existing L1 stays untouched.**
+
+**IPv4-only v1 = edit L2/L3 only, LEAVE L1 ALONE (Ryan/Sean/Brian).** Map IPv4→HHID and build the parallel
+household L2/L3 **on top of the existing IP-keyed L1** — "just edit the level-2 and level-3 feature store jobs
+and leave level 1 alone" (Ryan). So the **keyset-struct rebuild of L1 (§7b) is the FAST-FOLLOW**, not v1; v1's
+graph join lands in AUDI-1168/1169, not a rebuilt AUDI-1166 guid_log L1. (The graph-snapshot mirror itself is
+still built.) Sean is fine with IPv4-only for a quicker turnaround, pending alignment with the bigger team's
+deliverables.
+
+**Multiple-membership risk (Brian McAdams) — the reason to defer, not rush, multi-identifier.** If a household
+has both an IPv4 and an IPv6 (or GUID/MAID), then **adding those identifiers later will shift household intent
+noticeably** — more IPs/signal roll into the household, so a household's score can change drastically when the
+logic expands. Ship IPv4-only cleanly first; treat the identifier expansion as a deliberate, measured change
+(this is also why the collapse-function §6.3 matters).
+
+**How the bidder resolves (Ryan) — single-ID → 1 HHID via id-service.** The bidder will soon call **id-service**
+with whatever identifier is in the bid stream (IPv4, IPv6-with-no-IPv4, MAID, …) and get back the **single
+highest-confidence household_id** (`SteelHouse/id-service/src/bigtable.rs#L1084`). A single-ID lookup resolves
+to exactly one HHID — simpler than the multi-ID max-confidence join AUDI does in the FS. **Coverage gap
+(accepted for v1):** if AUDI only scores IPv4-resolved households, a household the bidder resolves via
+IPv6/MAID only **won't have a score → the bidder may not bid on it.** **Timeline:** the bidder is "a few weeks"
+off — Ryan is still standing up id-service to hit their latency SLA — so bidder-alignment is **not near-term
+blocking**; AUDI can proceed IPv4-only. The ID team's **pyspark "SDK-type" interface** (the graph-selection +
+translation-logging helper, §7c) is what AUDI will consume for the resolution + crediting logic.
+
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
 persuadables audience).** Fangorn ranks propensity (ROC-AUC 0.96) but the High band (~78% of volume) returns

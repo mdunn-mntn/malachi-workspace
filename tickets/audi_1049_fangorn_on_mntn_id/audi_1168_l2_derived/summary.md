@@ -60,7 +60,11 @@ _(document household L2 model naming + aggregation semantics)_
 - Collapse-function tuning = AUDI-1100 (this ships IP-parity v1). Label cols blocked on AUDI-1102.
 - Daily-vs-monthly L3 (§6.2) affects whether a monthly L2 aggregate is also needed for training.
 - **Meeting 2026-07-28 (see epic §7b):** the **graph join happens HERE at L2** (against the historical
-  snapshot graph via the as-of pattern), not in L1 — L1 stays the keyset struct. Fangorn's L2 = `guid_log`
+  snapshot graph via the as-of pattern), not in L1. Fangorn's L2 = `guid_log`
   aggregated to **day/IP/vertical + a 30-day snapshot**, and on the **1st of the month it runs the monthly
   version, else daily** — so a monthly L2 aggregate IS part of the design (informs §6.2). Only ~1 L2 table
   feeds Fangorn; `augmentor_log` excluded.
+- **IPv4-only v1 (Slack 2026-07-29, epic §7d):** map **IPv4→HHID and build household L2/L3 on top of the
+  EXISTING IP-keyed L1** — leave L1 alone (the keyset-struct L1 is a fast-follow). So this ticket owns the
+  IPv4→HHID `resolve_households()` join (AUDI-1167) at L2. Consume the ID team's pyspark SDK for
+  resolution + translation-signal logging.

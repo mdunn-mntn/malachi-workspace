@@ -3,7 +3,7 @@ doc_type: runbook
 title: On-Call Runbook — Master
 summary: "Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here."
 last_verified: 2026-07-28
-keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, audience_intent, fangorn_score_monitor, ipdsc_geo, ModelPysparkBatchOperator, dataproc serverless, dataproc batch, batches wait, driver output, AnalysisException, PATH_NOT_FOUND, path does not exist, producer consumer race, PAM, privileged access manager, storage.objects.get, INC-001, INC-002, INC-003, INC-004]
+keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, audience_intent, fangorn_score_monitor, ipdsc_geo, ModelPysparkBatchOperator, dataproc serverless, dataproc batch, batches wait, driver output, AnalysisException, PATH_NOT_FOUND, path does not exist, producer consumer race, PAM, privileged access manager, storage.objects.get, INC-001, INC-002, INC-003, INC-004, enriched_impressions, analytics_curated, bombora skip downstream, ds51 zero, ds51 disappeared]
 tags: [on-call, airflow, incident-response]
 ---
 
@@ -202,6 +202,17 @@ crash) or arrives late (`force_export:true` manual run).
 skips (e.g. `soft_fail=True` on optional partners' preconditions) so it stops paging on expected skips.
 That's a `airflow-ti` code change owned by the TPA_EXPORT / AUDI team — propose it, don't hot-patch.
 Tracked as **IMP-001** in `improvements_backlog.md`.
+
+**Update 2026-07-29 (07-28 self-heal confirmed + downstream `enriched_impressions` symptom).** Re-verified
+live in GCS: Bombora source `partners/bombora/segments/20260726/` **empty** → `ipdsc/dt=2026-07-27/data_source_id=51/`
+**absent** (07-26 ✓, 07-28 ✓; sources 20260725 ✓ / 20260727 ✓ → **07-28 recovered automatically**, matching the
+self-heal pattern). Symptom surfaced by Jordan Piepkow (#alerts, Slack): `mntn-analytics-prod-01.analytics_curated.enriched_impressions`
+DS51 impression count for `dt=2026-07-27` read ~110,798 one day and **0** the next. Cause = the same skip:
+the 07-27 partition reprocessed overnight and reconciled to the true (empty) Bombora source; the prior
+non-zero was a stale/preliminary build. **There is ONE Bombora ingestion path in MNTN (INC-001 provenance),
+so a DS51 skip day is empty at origin for EVERY downstream table, not just `ipdsc`** — `enriched_impressions`,
+audience membership, and any DS51-tagged rollup will all read 0 for 07-27. Won't backfill without a late
+source drop + `force_export:true` manual `tpa_ipdsc_export` for that `dt`. Benign; no action.
 
 ---
 
