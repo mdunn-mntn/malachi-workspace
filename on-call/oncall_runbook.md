@@ -203,16 +203,28 @@ skips (e.g. `soft_fail=True` on optional partners' preconditions) so it stops pa
 That's a `airflow-ti` code change owned by the TPA_EXPORT / AUDI team — propose it, don't hot-patch.
 Tracked as **IMP-001** in `improvements_backlog.md`.
 
-**Update 2026-07-29 (07-28 self-heal confirmed + downstream `enriched_impressions` symptom).** Re-verified
-live in GCS: Bombora source `partners/bombora/segments/20260726/` **empty** → `ipdsc/dt=2026-07-27/data_source_id=51/`
-**absent** (07-26 ✓, 07-28 ✓; sources 20260725 ✓ / 20260727 ✓ → **07-28 recovered automatically**, matching the
-self-heal pattern). Symptom surfaced by Jordan Piepkow (#alerts, Slack): `mntn-analytics-prod-01.analytics_curated.enriched_impressions`
-DS51 impression count for `dt=2026-07-27` read ~110,798 one day and **0** the next. Cause = the same skip:
-the 07-27 partition reprocessed overnight and reconciled to the true (empty) Bombora source; the prior
-non-zero was a stale/preliminary build. **There is ONE Bombora ingestion path in MNTN (INC-001 provenance),
-so a DS51 skip day is empty at origin for EVERY downstream table, not just `ipdsc`** — `enriched_impressions`,
-audience membership, and any DS51-tagged rollup will all read 0 for 07-27. Won't backfill without a late
-source drop + `force_export:true` manual `tpa_ipdsc_export` for that `dt`. Benign; no action.
+**Update 2026-07-29 (07-28 self-heal confirmed for the IPDSC partition).** Re-verified live in GCS: Bombora
+source `partners/bombora/segments/20260726/` **empty** → `ipdsc/dt=2026-07-27/data_source_id=51/` **absent**
+(07-26 ✓, 07-28 ✓; sources 20260725 ✓ / 20260727 ✓ → **07-28 recovered automatically**). DS51 same-day
+partition calendar (delivery began ~07-06): **ABSENT** 07-13/15/17/19/25/27; **PRESENT** 07-06→12, 14, 16,
+18, 20→24, 26, 28. All correct/expected for the intermittent Bombora feed.
+
+**⚠ CORRECTION — a downstream DS51-zero is NOT automatically explained by an IPDSC skip day.** Jordan
+Piepkow (Staff SWE, #alerts) flagged `mntn-analytics-prod-01.analytics_curated.enriched_impressions` DS51
+count for `dt=2026-07-27` reading ~110,798 one day and **0** the next, and correctly pushed back on the
+first-pass "0 is correct" read: **IPDSC = targetable IPs, not impressions.** enriched_impressions joins
+impressions to IPDSC over a **~35-day lookback**, so an impression served on 07-27 to an IP from a *prior*
+DS51 drop (07-26 was present) still tags DS51. A missing same-day refresh therefore should **not** zero
+07-27 DS51 impressions — so the 110,798→0 (flip happened on the overnight *rebuild*, not statically) is a
+**suspected build artifact, not benign**. Leading hypothesis: the DS51 enrichment is keyed on / hard-reads
+the same-day IPDSC partition and silently drops (or errors → empty) when it's absent, instead of honoring
+the lookback — **same failure shape as INC-004** (`spark.read.parquet(ipdsc.../dt=<run_date>)` empties on an
+absent partition). **Discriminating test (Jordan can run):** overlay enriched DS51 count vs the skip-day
+calendar above over 07-06→28 — if DS51=0 lands on *exactly* the ABSENT days, the build is same-day-coupled
+(bug); if only 07-27 is 0, it's specific to that rebuild (check partition last-modified + build logs).
+**Status: OPEN, owned by Jordan / enriched_impressions build; root cause TBD — document here when known.**
+Lesson: an upstream skip explains the *upstream* zero; do not extend it to a downstream table whose join
+semantics (lookback vs same-day) you haven't confirmed.
 
 ---
 
