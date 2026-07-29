@@ -74,6 +74,15 @@ merges are always a human motion. See `COMPONENTS.md` for the live list.
 
 ## Adopt it (setup)
 
+**One command (recommended).** `bash .claude/scripts/package_kit.sh [OUT_DIR]` emits a sanitized,
+generic-seeded `ai-workflow-kit/` bundle (+ `.tar.gz`): it copies the machinery, swaps every private
+value for a `<PLACEHOLDER>` via `sanitize_map.txt`, overlays the generic seeds in `templates/`,
+regenerates indexes + this inventory, and refuses to emit unless the sanitization sweep and an in-bundle
+`verify.sh` both pass. On the target machine: unpack, then `bash bootstrap.sh` (preflight → chmod →
+install the commit gate → rebuild the memory reverse-symlink for the new checkout path → build indexes →
+verify), and fill the placeholders `PORTING.md` lists. See memory `reference_workflow_kit_porting`.
+
+**By hand (equivalent steps, if you prefer):**
 1. Copy `.claude/` (hooks, scripts, skills, agents, `settings.json`), `.githooks/`, and a `knowledge/`
    seed (`START_HERE.md` + the front-matter conventions) into your repo.
 2. Replace placeholders: `<your-workspace-path>`, `<JIRA_ACCOUNT_ID>`, `<JIRA_CUSTOMFIELD_*>`,

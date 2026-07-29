@@ -571,8 +571,32 @@ class MntnWorkbook:
             self._toc.append((ws.title, toc, "glossary"))
         return ws
 
+    @staticmethod
+    def _cap_comment_runs(sql_text, cap=3):
+        """Cap every SQL comment HEADER at `cap` lines so the Query tab never becomes a wall of grey.
+        A run of consecutive `--` lines (blank lines between them are treated as interior to the same
+        header and collapsed) is trimmed to its first `cap` lines. Code and code-separating blanks are
+        untouched. Returns (text, dropped_comment_lines). Rule: a query header is a label, not prose."""
+        out, run, dropped = [], 0, 0
+        for ln in sql_text.split("\n"):
+            s = ln.strip()
+            if s.startswith("--"):
+                run += 1
+                if run <= cap:
+                    out.append(ln)
+                else:
+                    dropped += 1
+            elif s == "" and run > 0:
+                pass  # collapse blanks inside a comment header (keeps blank-split blocks as one run)
+            else:
+                if run > 0:
+                    out.append("")  # one clean separator between the capped header and the code
+                run = 0
+                out.append(ln)
+        return "\n".join(out), dropped
+
     # -- public: SQL / queries ----------------------------------------------
-    def sql(self, name, sql_text, note="", toc="The SQL behind the numbers", width=120):
+    def sql(self, name, sql_text, note="", toc="The SQL behind the numbers", width=120, max_comment_run=3):
         ws = self._new_sheet(name, "sql")
         self._sheet_title(ws, "Queries used (for validation)")
         if note:
@@ -580,6 +604,11 @@ class MntnWorkbook:
             nc.font = _font(10, italic=True, color=BRAND["GREY"])
             nc.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
         self._accent_rule(ws, 1)
+        sql_text, dropped = self._cap_comment_runs(sql_text, max_comment_run)
+        if dropped:
+            import sys
+            print(f"[mntn_xlsx] Query '{name}' trimmed {dropped} comment line(s) over the "
+                  f"{max_comment_run}-line header cap. Tighten the SQL comment headers.", file=sys.stderr)
         r = 4
         for line in sql_text.split("\n"):  # SQL body left verbatim (never sanitized)
             c = ws.cell(row=r, column=1, value=line)

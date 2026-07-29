@@ -204,6 +204,10 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-29 · v14** — SQL comment headers hard-capped. `sql()` trims any run of `--` comment lines
+  (blank-separated blocks merged) to `max_comment_run` (default 3) and warns, so the Query tab never
+  becomes a wall of grey. A query header is a 1-line label (what it drives + source), not prose. When
+  embedding a `.sql` file, strip its own leading comment block first; keep the tab subtitle to one line.
 - **2026-07-29 · v13** — Finding TITLE wraps to the table width. Row 1 is now merged + `wrap_text` across
   the table columns with `_fit_title_height()` sizing it (Excel won't auto-fit a merged cell), so a long
   `finding=` wraps in place instead of running off the right edge. The deeper rule stands: `finding=` is a

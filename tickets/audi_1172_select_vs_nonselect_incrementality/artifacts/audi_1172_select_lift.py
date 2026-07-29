@@ -308,10 +308,7 @@ wb.glossary(
     ],
 )
 
-SCOPING_SQL = """-- SCOPING QUERY (validation only - does NOT feed any number in this workbook).
--- Purpose: confirm every campaign group in scope is prospecting (objective_id = 1) and see the
--- Select vs non-Select split. Ghost-bid holdout only exists on the prospecting pool, so this
--- verifies no retargeting/other funnel rows slipped in.
+SCOPING_SQL = """-- SCOPING QUERY (validation only) - confirms every campaign group is prospecting (objective_id=1).
 WITH aids AS (SELECT advertiser_id FROM UNNEST([ /* the same 93 AIDs as the main query */ ]) AS advertiser_id),
 cg AS (
   SELECT r.advertiser_id, pcg.product_id, pcg.objective_id, r.n_treatment, r.n_holdout
@@ -327,23 +324,23 @@ FROM cg GROUP BY 1, 2 ORDER BY 1, n_cg DESC;
 -- Only objective_id = 1 present -> the cohort is 100% prospecting, as expected."""
 
 import re
-# CPIV/CPIA query behind the Cost per incremental tab; collapse its 93-AID list like the scoping query.
+# CPIV/CPIA query behind the Cost per incremental tab. Strip its own leading comment block (we add one
+# short header below) and collapse its 93-AID list like the scoping query.
 CPIV_SQL = open(f"{TDIR}/queries/audi_1172_cpiv_vv_correct.sql").read().strip()
+CPIV_SQL = re.sub(r"\A(\s*--[^\n]*\n)+", "", CPIV_SQL)                       # drop the file's leading comments
 CPIV_SQL = re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([ /* the same 93 AIDs as the main query */ ])", CPIV_SQL, flags=re.S)
 
+# One short header per query (<=3 lines; the sql() tab enforces this cap and warns otherwise).
 QUERY_TAB = (
-    "-- MAIN QUERY (LIFT) - drives the Headline / By advertiser / All by product tabs. One row per\n"
-    "-- advertiser x product; the pooled comparison, 27/35 paired test, CIs, z-scores and rel/abs lift\n"
-    "-- are all computed in Python from this single result set (see the .py in artifacts/).\n\n"
+    "-- LIFT QUERY - drives Headline / By advertiser / All by product (one row per advertiser x product).\n\n"
     + SQL.strip() + "\n\n\n"
-    "-- COST QUERY (CPIV/CPIA) - drives the Cost per incremental tab. Reporting Verified Visits +\n"
-    "-- conversions (clicks+views+competing) x the ghost-bid relative lift; spend from all_facts, obj=1.\n\n"
-    + CPIV_SQL + "\n\n\n" + SCOPING_SQL + "\n"
+    "-- COST QUERY - drives Cost per incremental (CPIV/CPIA).\n\n"
+    + CPIV_SQL.strip() + "\n\n\n"
+    + SCOPING_SQL + "\n"
 )
 
-wb.sql("Query", QUERY_TAB, note="The lift query drives the Headline/advertiser/product tabs; the cost query drives "
-                                "Cost per incremental; the scoping query is validation only. Sources: "
-                                "reporting.lift__ghost_bid_rollup x campaign_groups; summarydata.all_facts.")
+wb.sql("Query", QUERY_TAB, note="The SQL behind every number, kept for validation. "
+                                "Sources: lift__ghost_bid_rollup, campaign_groups, all_facts.")
 
 wb.notes(
     "Method & caveats",
