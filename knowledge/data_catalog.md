@@ -2368,7 +2368,11 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
 - ⛔ **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the meter
   consumes (F1 impression ⋈ targeted segments ⋈ IPDSC, 30-day lookback; produced by the UI Audience Segment
   Reporting pipeline). **Access Denied as of 2026-07-20** — cross-project (`mntn-analytics-prod-01`), locked by a
-  recent security change. **Read path: request PAM temp access.** Schema unverified until then.
+  recent security change. **Read path: request PAM temp access.** Schema unverified until then (visible cols from a
+  user query: `dt` DATE partition, `data_source_id`, `ad_served_id`, `category_info` JSON).
+  **Gotcha (2026-07-29):** an optional-partner ipdsc **skip day** (Bombora/DS51) → that source's impressions = **0
+  for that same dt** here (confirmed correct by owner Jordan Piepkow for dt=07-27); the lookback does NOT backfill
+  from a prior present drop (mechanism open). See `data_knowledge.md` § IPDSC + on-call INC-001.
 - Scripts: `SteelHouse/bae-sql-utility/ddp/`.
 
 ### DDP file-drop batch ingestion → fpa_vendor_log + site_visit_signal (AUDI-1089)

@@ -218,13 +218,14 @@ mechanism (why the lookback doesn't backfill it). So: a DS51 skip day genuinely 
 for that `dt`; the ~110,798 was a **preliminary/incomplete build** of the 07-27 partition that reconciled to
 the correct 0 on overnight completion.
 
-**Why 0 despite a ~35-day IPDSC lookback (the piece Jordan was chasing):** the lookback governs IP
-*eligibility*, but the `data_source_id=51` **tag on an impression is assigned from the same-day IPDSC/membership
-materialization**, which is empty on a skip day (the `ipdsc_bombora` builder skipped → no `data_source_id=51`
-partition for `dt=07-27`) → no impression gets a DS51 row that day, and the lookback does not resurrect it.
-**Empirical proof (one query, no code needed):** run the DS51 count over 07-06→28 and overlay the skip-day
-calendar above — DS51=0 lands on *exactly* the ABSENT days (07-13/15/17/19/25/27) and is non-zero on PRESENT
-days. That 1:1 alignment is the confirmation; it's designed same-day-membership behavior, not a bug.
+**Why 0 despite a ~30-35d IPDSC lookback (the piece Jordan is still chasing — mechanism OPEN, not settled):**
+the outcome (0 is correct) is confirmed by the owner; the *reason* is not. **Leading hypothesis (UNCONFIRMED):**
+the lookback governs IP *eligibility*, but the effective `data_source_id=51` tag is **same-day-keyed** for this
+table, so an absent same-dt partition zeroes it and the lookback doesn't resurrect it. Note this sits in tension
+with the documented ~30-35d MES lookback inner-join (`data_knowledge.md` § IPDSC), which is exactly why it's
+non-obvious — don't assert the mechanism until tested. **Discriminating test (one query, settles it):** run the
+DS51 count over 07-06→28 and overlay the skip-day calendar above — DS51=0 landing on *exactly* the ABSENT days
+(07-13/15/17/19/25/27) confirms same-day keying; anything else points elsewhere. Not a bug either way.
 
 **⚠ Process lesson (the real takeaway — a reasoning trap, logged so we don't repeat it):** the original
 GCS-evidenced call (0 correct, benign skip) was right. When Jordan raised a smart architectural objection

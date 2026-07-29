@@ -1599,6 +1599,20 @@ MES is the enrichment service that processes impressions and validates audience 
 the ipdsc file for the relevant data source are dropped. This is the root cause of HH discrepancy
 investigations (TI-644, MM-44) where targeting audiences appear smaller than expected.
 
+**Optional-partner skip day → that source's same-dt impressions = 0 downstream (DS51/Bombora, 2026-07-29).**
+When an optional 3P partner (currently only Bombora/DS51) skips its daily drop, **no `ipdsc/dt=D/data_source_id=51/`
+partition is written** (the `ipdsc_bombora` builder skips; on-call INC-001). Downstream, `mntn-analytics-prod-01.analytics_curated.enriched_impressions`
+then shows **DS51 = 0 for that same dt** — confirmed correct / by-design for dt=2026-07-27 by the table owner
+(Jordan Piepkow, Staff SWE). DS51 ipdsc calendar (direct delivery began ~07-06): ABSENT 07-13/15/17/19/25/27,
+present otherwise; present days ≈ 108K-141K DS51 impressions. A transient non-zero the prior day (110,798→0 on
+07-27) = a preliminary/incomplete build reconciling to the correct 0.
+**OPEN (owner still investigating — do not treat the mechanism as settled):** WHY the documented ~30-35d
+lookback above does NOT backfill DS51 onto 07-27 impressions from the present 07-26 drop. Leading hypothesis
+(UNCONFIRMED): the effective `data_source_id` tag is same-day-keyed for this table, so an absent same-dt
+partition zeroes it while the lookback governs only IP eligibility. **Discriminating test (one query):** overlay
+the DS51 count vs the skip-day calendar over 07-06→28 — DS51=0 landing on *exactly* the skip days confirms
+same-day keying. See on-call INC-001.
+
 ### Data Source (DS) Type Reference
 | DS ID | Name | Type | In IPDSC | In tmul_daily | Notes |
 |-------|------|------|----------|---------------|-------|
