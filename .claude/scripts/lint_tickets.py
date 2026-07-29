@@ -7,9 +7,9 @@ a ticket marked `status: done` must state a real `result` (no buried answers, no
 
 Checks (per card):
   · front-matter present with doc_type in {ticket, epic}
-  · title / date / summary / result all present and non-placeholder
+  · title / date / summary all present and non-placeholder
   · status in {backlog, in_progress, blocked, done}
-  · status: done  =>  result is real (not empty / '—' / a {template} stub)
+  · status: done  =>  result is real (not empty / '—' / a {template} stub)  [result is required only when done]
 
 Framing gate (the start-of-ticket mirror of the result-when-done rule):
   · framing_state (when present) must be draft | locked | skip: <reason>
@@ -63,10 +63,13 @@ def check(path, rel):
     st = fm.get("status")
     if st not in STATUSES:
         v.append(f"{rel}: status={st!r} (must be {sorted(STATUSES)})")
-    for field in ("title", "date", "summary", "result"):
+    for field in ("title", "date", "summary"):
         val = fm.get(field, "")
         if not val or PLACEHOLDER.match(val):
             v.append(f"{rel}: {field} missing/placeholder ({val!r})")
+    # `result` is the blessed final answer — required ONLY when done (an in-progress ticket has no
+    # result yet; requiring it everywhere forces fake answers and would trip the commit gate on every
+    # touch of a live ticket). This matches the docstring's "status: done => result is real" intent.
     if st == "done":
         r = fm.get("result", "")
         if not r or PLACEHOLDER.match(r):

@@ -1,7 +1,10 @@
 ---
+doc_type: ticket
 key: AUDI-1173
 title: "Adaptive frequency-cap bandit: Phase-0 sizing done, RCT design next"
 status: backlog
+date: 2026-07-28
+summary: "Adaptive household frequency-cap bandit — Phase-0 sizing done; RCT design next (3-arm, total-visit-count primary, ~10-12wk) + a small @SteelHouse/rtb bidder feature. MNTN's candidate first MAB."
 framing_state: locked
 question: "Would an adaptive (bandit-set) household frequency cap beat MNTN's static per-campaign/group caps on incremental visits per dollar, and is the pool large enough to justify building it?"
 created: 2026-07-28
