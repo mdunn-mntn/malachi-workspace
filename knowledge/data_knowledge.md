@@ -3333,12 +3333,21 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   resolve-to-1-household-first** (single max-confidence HHID, no visit duplication); the multi-HHID alt =
   store all ids as **columns in `site_visit_signal`**, return multiple HHIDs, **drop confidence < 0.5**, let
   visits duplicate. (5) **Coverage is fine if the bidder never targets an unscored HHID** (Brian) — hard
-  serving-side requirement, makes IPv4-only acceptable.
+  serving-side requirement, makes IPv4-only acceptable. **Nuance (Ryan): the bidder is UNCHANGED** — if the
+  campaign's HHST threshold is set it looks up the score; **if there's no score AND threshold=0 it bids anyway**
+  (threshold≤0 = no gate, serve anyone — see HHST pacing lever). So an unscored (no-IPv4) HHID is NOT
+  automatically skipped; it gets bid on whenever the gate is open (threshold 0), which is exactly the case to
+  watch for the coverage gap.
 - **DS13/DS19 lineage — `site_visit_signal` (SVS):** DS13 is built from **`site_visit_signal` = `guid_log`
   UNION DDP** (and **`augmentor_log`** is in SVS now too — see the `dsid*_*_processing.py` svs feeders in
   `airflow-ti`). Re-keying DS13/DS19 to household = re-keying SVS; Ryan's suggestion is to resolve DS13 in the
   **`tpa_ipdsc_export`** job (→ household `tpa_hhdsc_export`, AUDI-1156/1157). This is why DS13/19/46 fall under
   AUDI to re-key — same graph-translation problem as Fangorn.
+- **DS13 IPv6 handling + re-key location (Sean, 2026-07-29):** DS13's upstream is **`ip_vertical_associations`**,
+  which currently **drops IPv6** via `.filter("ip NOT LIKE '%:%'")` (the `:` matches IPv6 colons). To support
+  IPv6 you'd go upstream and add them back at `ip_vertical_associations`; **for IPv4-only, just convert
+  IP→household right before `tpa_ipdsc_export`** (no upstream change needed). Mirrors the Fangorn "resolve at
+  L2, leave upstream alone" pattern.
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

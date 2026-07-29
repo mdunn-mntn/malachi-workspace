@@ -358,9 +358,14 @@ the household resolution**; the **graph resolves the ID-combo for you** (handles
   (and `augmentor_log` is in it now too).** So re-keying DS13 to household means re-keying site_visit_signal.
   Ryan's suggestion: **resolve DS13 in the `tpa_ipdsc_export` job** (→ the household `tpa_hhdsc_export`,
   AUDI-1156/1157, Sean's). This is why DS13/19/46 "fall under AUDI" (§7c) — they share the same re-key problem.
+  **DS13 upstream = `ip_vertical_associations`, which currently DROPS IPv6** (`.filter("ip NOT LIKE '%:%'")`) —
+  to support IPv6 you'd add them back there; **for IPv4-only, Sean just converts IP→household right before
+  `tpa_ipdsc_export`** (no upstream change). Same "resolve late, leave upstream alone" pattern as Fangorn's L2.
 - **Coverage constraint (Brian, makes IPv4-only acceptable):** there will be **HHIDs with no IPv4 resolution →
   no intent score** — that's fine **"as long as the bidder never tries to reach a HHID that doesn't have an
-  intent score."** This formalizes the §7d coverage-gap tradeoff into a hard requirement on the serving side.
+  intent score."** **BUT the bidder is unchanged (Ryan): if the HHST threshold is set it looks up the score; if
+  no score AND threshold=0 it bids anyway** (threshold≤0 = no gate). So unscored HHIDs are NOT auto-skipped —
+  they get bid on whenever the gate is open (0). Watch this for the coverage gap.
 
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
