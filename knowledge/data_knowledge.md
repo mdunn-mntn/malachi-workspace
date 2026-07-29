@@ -1522,6 +1522,16 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   **BGE-large** (`system.ai.bge_large_en_v1_5/3`, 1024-d, local Databricks/free) vector search vs
   `etl_mm_taxonomy_vector_index` @ threshold 0.6, **Step3 auto-add new keywords is currently COMMENTED OUT**
   ("post migration" TODO) → `product_categorization` → `tpa_export`/`mntn_matched_taxonomy_bq`/reporting → DS19.
+- **GCS artifact layout + cadence + ~2-day dt lag (INC-006, 2026-07-29):** the fetch DAG's stages land under
+  `gs://mntn-data-archive-prod/shopper_graph/` as **daily `dt=` partitions**: `openai_batch_submissions/` → `openai_batch_results/`
+  (the fetched OpenAI output, ~37GB / ~880 files, ~42MB/file) → `openai_batch_results_joined/` → `product_categorization/`
+  (~3.5GB / ~53 files). **`product_categorization` `dt` lags the run by ~2 days** (dt=07-25 written 07-27T12:50Z; dt=07-26 written
+  07-28T13:34Z), because the OpenAI Batch API step is ~24h async. A run (`mntn_match_incrementals_fetch`, `0 9 * * *`) normally
+  finishes `product_categorization` ~13:00-13:34Z, ~4.5h after its 09:00 start. **Consumer:** `keyword_ddp_reporting` (`0 15 * * *`)
+  gates on it via an `ExternalTaskSensor` `wait_for_product_categorization` (`external_task_id=batch_post.product_categorization`,
+  `execution_delta=6h` → pokes logical 09:00, `allowed_states=["success"]`, 6h timeout). Timing is normally fine (upstream done ~13:34,
+  consumer starts 15:00); a `batch_fetch` failure is what makes the sensor time out (INC-006). The `batch_fetch` step (`fetch_results.py` →
+  `openai_wrapper/batch_fetcher.py::download_file`) has a real crash bug on a completed-all-errored batch (`output_file_id=None`) — see INC-006 / IMP-010.
 - **`data_source_id` does NOT multiply OpenAI cost.** Dedup is on `composite_key` (the query-stripped URL); a URL is
   sent to OpenAI **once** regardless of how many vendors report it. `data_source_id` is retained only for **billing
   attribution** to the source vendor. (augmentor_log DS30 duplicate URLs are absorbed by the anti-join.)

@@ -20,6 +20,8 @@ last_verified: 2026-06-10
 
 **Coverage gap:** Quickframe (QF) platforms mostly NOT covered (built outside core infra) — only thin billing/GCP. Don't use for deep QF work.
 
+**Coverage gaps found INC-006 (2026-07-29):** (1) **The Airflow/Astronomer deploy that runs `airflow-ti` DAGs is NOT in Compass's monitored GKE/Loki fleet** — it searched all 5 clusters (`mntn-gke-mgmt/prod/bidder-01,02/restricted`) + 844 ArgoCD apps and found zero `airflow`/`openai_batch_runner` pods, so it **cannot pull Airflow task/pod logs or tracebacks** (likely Cloud Composer or a cluster/project outside the fleet). (2) Compass hit **`PERMISSION_DENIED` on `gs://mntn-data-archive-prod`** (a different, unidentified GCP project, not `mntn-prj-prod-00`) — it can't read that bucket. **I (malachi@mountain.com via gcloud) CAN read `mntn-data-archive-prod`**, so on a Compass RCA that's GCS-blocked, close the GCS half myself. Compass is strong at static code (code_read/code_blame/code_history over repos) even when live infra is blind — lean on it for source-level root cause, then verify the runtime state with my own GCS/BQ access.
+
 **Relevant to our killed Slack bot:** Compass's Slack integration + knowledge-doc authoring are ROADMAP (§9), not shipped — so Compass does NOT yet replace a scheduled Slack-scrape→markdown pipeline. See [[reference_pi5_server]] (bot decommissioned 2026-06-10) and `knowledge/mntn_business.md` Compass section.
 
 **Secret policy (paired):** no local-env API keys / no local Slack apps. Secrets → SOPS-encrypted in ArgoCD repo, rotated via Basecamp tool (KMS Decrypt disabled for individuals; Vault optional/unsupported).
