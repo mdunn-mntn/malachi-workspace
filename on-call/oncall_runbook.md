@@ -467,4 +467,5 @@ Record shape (one line per incident):
 Fields: `inc` · `date` (YYYY-MM-DD) · `dag` · `task` · `team` · `signature` (short) · `verdict`
 (`benign_expected|late_data|transient_infra|resource_contention|real_upstream_failure|dag_bug`) · `action`
 (`ack_no_rerun|clear_task|rerun|force_export|routed_owner|spawned_ticket`) · `resolved` (bool) ·
-`ticket` (TI/AUDI key if a durable fix was spun out, else null) · `ref` (`§3 INC-NNN`).
+`ticket` (TI/AUDI key if a durable fix was spun out, else null) · `pagerduty` (PD incident # if it paged, else null) ·
+`ref` (`§3 INC-NNN`). **When the user gives a PagerDuty incident #, record it in `pagerduty` and cite it in the §3 alert line** — it ties our INC-NNN to the PD record.
