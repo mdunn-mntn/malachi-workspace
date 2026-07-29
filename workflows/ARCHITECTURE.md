@@ -172,6 +172,11 @@ when a `--phase full` run has no prior `--phase sample` sharing its `--label` (k
 
 ## 7. Ticket operating model — anti-sprawl
 
+> **This workspace's live ticket layout** (authoritative — see `.claude/CLAUDE.md` + `folder_definitions.md`)
+> is `summary.md` (the analytical record) + optional `presentation.md`, with `queries/ outputs/ meetings/
+> artifacts/`. The generic filenames below are the kit's original template; the anti-sprawl RULES still
+> apply, but read `run_log.md`/`tasks.md`/`review.md` as "the fields inside `summary.md`."
+
 A ticket folder contains **exactly**: `README.md, ticket.md, run_log.md, tasks.md, review.md,
 queries/, outputs/` (+ the one permitted nested `outputs/decks/`). Hard rules:
 1. Only `queries/` and `outputs/` (and `outputs/decks/`) may be subdirectories. No `scratch/`,
@@ -218,7 +223,10 @@ file is the single source of truth for each role (no drift). A headless driver
 
 ## 9. Deterministic backbone: hooks + wrappers
 
-`.claude/settings.json` registers **7 hooks** (all defensive: missing file / non-match → silent exit 0):
+<!-- Live component counts are GENERATED in documentation/ai_workflow_kit/COMPONENTS.md (build_kit_manifest.sh) —
+     that file, not this prose, is the source of truth for hook/script/skill/agent counts. -->
+`.claude/settings.json` registers **9 hooks** (see `documentation/ai_workflow_kit/COMPONENTS.md` for the
+generated, always-current list; all defensive: missing file / non-match → silent exit 0):
 - **PreToolUse : Bash** → `enforce_bq_wrapper.sh` — blocks a raw `bq … query` (exit 2) unless it goes
   through `bq_run.sh`, is a `--dry_run`, or is an `INFORMATION_SCHEMA` read. The teeth behind G3.
 - **PreToolUse : Bash** → `comms_lint_precheck.sh` — when the command is a Jira REST v2 write (comment
