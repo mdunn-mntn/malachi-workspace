@@ -7,7 +7,7 @@ metadata:
 doc_type: memory
 keywords: [memory unification, knowledge/memory, MEMORY.md hot tier, reverse-symlink, native memory tool, lint_memory.py, _MEMORY_INDEX, _MEMORY_LIFECYCLE, doc_type memory, native auto-recall validation]
 domain: [workflow, infra]
-lifecycle: active
+lifecycle: archived
 last_verified: 2026-07-29
 ---
 
