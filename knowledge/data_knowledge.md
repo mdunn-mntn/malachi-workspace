@@ -3269,6 +3269,23 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   swap). DS13/DS19/DS46 (MM/audience data sources) also fall under AUDI to re-key; DS13 today is rule-based
   (group-by-IP verticals), not feature-store.
 
+**Post-sync scope + crediting updates (Slack, 2026-07-29 — decisions still forming):**
+- **Sept-4 = "simplest end-to-end" (Matt Brorby, anti-scope-creep; team aligning):** a working Fangorn
+  pipeline re-keyed to MNTN ID using the simplest logic (Ryan's smoke-test logic). **PUNT:** DS13/DS19/DS46
+  replication to MNTN ID, the **bidder-resolution alignment** (our IP→HHID must match the bidder's or scores
+  are unreliable), full **IPv6**, and **non-IPv4 households**. v1 covers only households that have an IPv4.
+- **Identifier scope = IPv4 (30) + maybe GUID (42), NOT IPv6:** `guid_log` has **no IPv6** (IPv6 only matters
+  once `augmentor_log` enters training, excluded from v1), but `guid_log` carries **`guid` = graph
+  `id_type=42`**, which the initial IPv4-only design didn't scope. Open: bake GUID into the L1 keyset for Sept-4?
+- **NEW crediting requirement on AUDI (Jack Barbey / Luis Chelala):** the FS must **log every ID→household
+  translation event** → `dw-main-silver.identity.graph_translation_signal` (Weiang Li dev; modeled on
+  `hashed_email_signal`) so **graph vendors get credited** — required even though the FS sources only internal
+  logs (the graph itself holds licensed-vendor data). ID team ships a **pyspark graph interface** (current-graph
+  selection + translation logging) ~early Aug; Sean wires it into the FS resolution code (AUDI-1167).
+- **DDP crediting:** **Fangorn uses no DDP data → no DDP crediting for Fangorn.** But **DS13/DS19 use DDP** →
+  DDP-vendor crediting under MNTN ID still needs resolving for those (Alyson), by ~mid-October for real-campaign
+  testing. See `reference_ddp_billing_logic`.
+
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP
 2. `ci_pct_new` (cost_impression_log) — % impressions where IP is "new"
