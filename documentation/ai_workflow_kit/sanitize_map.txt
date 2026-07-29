@@ -1,0 +1,44 @@
+# sanitize_map.txt — literal find⇒replace pairs applied by package_kit.sh to every text file in the bundle.
+# Format: FIND<TAB>REPLACE   (one per line; '#' comments; blank lines ignored). Applied IN ORDER, so
+# put the most specific pattern first. Replacement is a literal string swap (not regex).
+#
+# After this map runs, the acceptance sweep greps the bundle for the concrete private tokens
+# (malachi, mdunn, 192.168., mountain.com, dw-main, atlassian.net, pi5, mntn/MNTN) and asserts ZERO hits.
+# Fill every <PLACEHOLDER> on the new machine — see PORTING.md for the table.
+
+# --- absolute workspace path (must run before the org-word rules that would rewrite /mntn/) ---
+/Users/malachi/Developer/work/mntn/workspace	<WORKSPACE_PATH>
+
+# --- identity / auth ---
+malachi@mountain.com	<WORK_EMAIL>
+https://mntn.atlassian.net	<JIRA_BASE_URL>
+mntn.atlassian.net	<JIRA_HOST>
+
+# --- warehouse (project + region) ---
+dw-main-silver	<GCP_PROJECT>
+dw-main-bronze	<GCP_PROJECT_BRONZE>
+region-us-central1	region-<BQ_REGION>
+us-central1	<BQ_REGION>
+
+# --- scheduled-audit host (Pi cron) ---
+pi5@192.168.10.177	<AUDIT_HOST>
+pi5@<host>	<AUDIT_HOST>
+192.168.10.177	<AUDIT_HOST_IP>
+~/.ssh/pi5	<AUDIT_SSH_KEY>
+
+# --- deck sharing (GitHub gist owner) ---
+mdunn-mntn	<GH_USER>
+
+# --- machine-specific interpreter (transcription local whisper) ---
+/opt/homebrew/opt/python@3.11/bin/python3.11	<PYTHON311>
+
+# --- org domain (run AFTER the email rule so malachi@mountain.com is already gone) ---
+mountain.com	<ORG_DOMAIN>
+
+# --- the org word, last (all code identifiers containing it are renamed by package_kit.sh first) ---
+MNTN	<ORG>
+Mntn	<Org>
+mntn	<org>
+
+# --- catch-all: any stray home-dir user token (e.g. the demo's CLAUDE_SCRATCH default slug) ---
+malachi	<user>

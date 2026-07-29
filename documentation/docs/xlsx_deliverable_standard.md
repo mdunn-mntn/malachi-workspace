@@ -204,6 +204,10 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-29 · v13** — Finding TITLE wraps to the table width. Row 1 is now merged + `wrap_text` across
+  the table columns with `_fit_title_height()` sizing it (Excel won't auto-fit a merged cell), so a long
+  `finding=` wraps in place instead of running off the right edge. The deeper rule stands: `finding=` is a
+  Power Line (the takeaway), not a sentence — put numbers in the cells, not the title.
 - **2026-07-28 · v12** — Read me / glossary terseness guard. A glossary entry is a term + 1-2 tight
   sentences, not a paragraph. `glossary()` now warns at BUILD time (stderr) when any definition exceeds
   `max_def_chars` (default 220, ~3 lines) or the sheet exceeds `max_entries` (default 14), so a Read me

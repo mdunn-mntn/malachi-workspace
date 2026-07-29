@@ -150,14 +150,16 @@ PP2 = '0.00"pp"'
 
 # --- Sheet: pooled headline (both cohort) ---
 ph = pooled[pooled["Cohort"] == "Advertisers running BOTH"].copy()
+# Holdout VR (baseline) is the observed count-pooled rate; Abs/Rel lift are IVW-pooled and are
+# defined relative to that baseline (rel = abs/holdout), so the three reconcile. The raw count-pooled
+# Treated VR does NOT subtract to the IVW Abs lift, so it's dropped here to keep the headline consistent.
 head_df = pd.DataFrame({
     "Product":        ph["Product"].values,
     "Advertisers":    ph["n_advertisers"].values,
     "Campaign groups": ph["n_cg"].values,
-    "Treated VR":     ph["treated_vr"].values,
-    "Holdout VR":     ph["holdout_vr"].values,
-    "Abs lift":       ph["visit_lift_pp"].values,            # percentage points
-    "Rel lift":       ph["rel_lift"].values,                 # relative (%)
+    "Holdout VR":     ph["holdout_vr"].values,               # observed baseline visit rate
+    "Abs lift":       ph["visit_lift_pp"].values,            # percentage points (IVW)
+    "Rel lift":       ph["rel_lift"].values,                 # relative (%) = abs/holdout
     "CI low":         ph["ci_low_pp"].values,                # pp
     "CI high":        ph["ci_high_pp"].values,               # pp
     "Sig 95%":        [YESNO(b) for b in ph["sig95"].values],
@@ -214,7 +216,7 @@ wb.table(
     finding="Select prospecting drives ~5x the relative visit lift of non-Select (+22% vs +4%)",
     method="Pooled across 35 advertisers running both, inverse-variance-weighted; ghost-bid holdout, prospecting. "
            "See Read me for definitions.",
-    formats={"Treated VR": FMT.PCT2, "Holdout VR": FMT.PCT2, "Abs lift": PP3,
+    formats={"Holdout VR": FMT.PCT2, "Abs lift": PP3,
              "Rel lift": FMT.PCT1, "CI low": PP3, "CI high": PP3,
              "Treated bids": FMT.INT, "Holdout bids": FMT.INT},
     signal={"Rel lift": {"sig": "Sig 95%"}, "Abs lift": {"sig": "Sig 95%"}},
@@ -248,39 +250,60 @@ wb.table(
     toc="Every advertiser x product row behind the pooled and paired numbers.",
 )
 
+# --- Sheet: cost per incremental (client Verified-Visit basis) ---
+# Numbers from artifacts/audi_1172_cpiv_vv_compute.py -> outputs/audi_1172_cpiv_vv_pooled.csv.
+cpiv = pd.read_csv(f"{OUT}/audi_1172_cpiv_vv_pooled.csv")
+_pm = {"Select": "Select", "non_Select": "non-Select"}
+cpiv_df = pd.DataFrame({
+    "Product":         cpiv["product"].map(_pm).values,
+    "Spend":           cpiv["spend"].values,
+    "Verified visits": cpiv["vv_reported"].values,
+    "Incr. visits":    cpiv["incr_vv"].values,
+    "CPIV":            cpiv["cpiv_vv"].values,
+    "Incr. conv":      cpiv["incr_conv"].values,
+    "CPIA":            cpiv["cpia_vv"].values,
+}).sort_values("CPIV")
+
+wb.table(
+    "Cost per incremental", cpiv_df,
+    finding="Select is cheaper per incremental outcome: ~1.6x per visit, ~3x per conversion",
+    method="Spend (metered, prospecting) / incremental, where incremental = Reporting Verified Visits (or "
+           "conversions) x the ghost-bid relative lift. See Read me for the method and the lift-estimator note.",
+    formats={"Spend": FMT.USD0, "Verified visits": FMT.INT, "Incr. visits": FMT.INT,
+             "CPIV": FMT.USD, "Incr. conv": FMT.INT, "CPIA": FMT.USD0},
+    heat={"CPIV": "low", "CPIA": "low"},   # cost: lower is greener
+    kind="data", first_col_width=18,
+    toc="Cost per incremental visit and conversion, on the basis advertisers see in Reporting.",
+)
+
 wb.glossary(
     "Read me",
     intro="How the Select vs non-Select incrementality numbers were produced and how to read them.",
     rows=[
-        ("Reading the numbers", ""),
-        ("Reading % vs pp", "'%' = a rate (Treated/Holdout VR) or a RELATIVE lift (% over baseline); 'pp' = an ABSOLUTE "
-            "percentage-point gap. Different: a 2.76pp gap on a 2.9% baseline is a 95% relative lift."),
+        ("How to read this", ""),
+        ("% vs pp", "'%' = a rate or a RELATIVE lift (% over baseline); 'pp' = an absolute percentage-point gap. "
+            "A 0.27pp gap on a 1.2% baseline is a +22% relative lift."),
         ("What this measures", "Incremental visit lift from MNTN's ghost-bid holdout: ~10% of prospecting IPs are held out "
-            "(evaluated 'as if served', not served). Treated minus holdout visit rate = the incremental effect. No holdout = no causal read."),
-        ("Select vs non-Select", "Product on the campaign group. Select = product_id 2; non-Select = PTV (product_id 1). "
-            "All rows here are prospecting (objective_id 1) - the ghost-bid holdout only exists on the prospecting pool."),
-        ("Abs lift (pp)", "Treated visit rate minus holdout visit rate, in percentage points. The absolute incremental effect. "
-            "Small here because it is bid-grain (see below), so it is not the headline comparison."),
-        ("Rel lift (%)", "Abs lift / holdout rate = % over the no-ad baseline. 95% = treated visited 95% more than holdout, "
-            "NOT 95% of people. The fair cross-product comparison (normalizes baselines). Negatives are usually noise, not harm."),
-        ("Blank Rel lift but Sig = Yes?", "Holdout recorded zero visits -> relative % is undefined (can't divide by zero) so it's "
-            "blank, but the absolute (pp) lift still computes and can clear significance. A zero-visit-holdout result is fragile."),
-        ("Bid-grain ITT", "The unit is a bid, not a served user. Treatment bids win only ~10% of auctions, so the "
-            "absolute pp numbers are diluted. Relative lift is the comparable metric; do not read the pp as a served-user rate."),
-        ("Method", ""),
-        ("Pooling (IVW)", "Campaign groups are combined by inverse-variance weights (weight = 1/SE^2), not a raw "
-            "visit count pool - a count pool produces Simpson's-paradox artifacts across heterogeneous campaigns."),
-        ("Sig 95%", "The 95% confidence interval excludes zero. At bid-grain N, z is inflated, so treat significance "
-            "as a floor and rank on relative magnitude."),
-        ("Which rows are included", "Only campaign groups with a usable holdout (real, big enough to compute a rate, not "
-            "low-coverage); the rest are dropped - no baseline. Upstream anchors each IP to its entry cohort and drops the "
-            "left-censored first day."),
+            "(evaluated as-if-served). Treated minus holdout visit rate = the incremental effect."),
+        ("Select vs non-Select", "Product on the campaign group: Select = product_id 2 (MNTN/Rust bidder); non-Select = PTV "
+            "(product_id 1, Beeswax). All rows are prospecting (objective_id 1)."),
+        ("Rel lift (%)", "Abs lift / holdout rate = % over the no-ad baseline. +22% = treated visited 22% more than holdout, "
+            "NOT 22% of people. The fair cross-product comparison; negatives are usually noise."),
+        ("Bid-grain ITT", "The unit is a bid, not a served user; treatment bids win ~10% of auctions, so absolute pp is "
+            "diluted. Relative lift is the comparable metric."),
+        ("Method & cost", ""),
+        ("Pooling (IVW)", "Campaign groups combine by inverse-variance weights (1/SE^2), not a raw count pool (which gives "
+            "Simpson's-paradox artifacts). Significance at bid-grain N is a floor."),
+        ("Cost (CPIV/CPIA)", "Spend / incremental, where incremental = Reporting Verified Visits (view+click+competing visits, "
+            "the client-UI number) x the ghost-bid relative lift."),
+        ("Why the lift looks bigger there", "CPIV uses the volume-weighted lift (right for a total-cost metric); the lift tabs "
+            "use the average-campaign lift (IVW). Same data, different question."),
         ("Coverage & window", ""),
-        ("Window", "Data covers 2026-06-22 to 2026-07-27. Each IP's visits count within 7 days of its first bid (a fixed "
-            "per-IP window, not the full period), so the most recent ~7 days aren't fully mature. No data before 6/22 (no backfill)."),
-        ("Coverage caveat", "These views are the Beeswax bidder leg. The MNTN Rust-bidder leg is not folded in yet, "
-            "which is why Select coverage is a subset of all live Select advertisers."),
-        ("Cohort", f"93 AIDs requested. With usable-holdout lift data: {len(both_ids)} run both products, "
+        ("Window", "2026-06-22 to 07-27; each IP's visits count within 7 days of its first bid (fixed per-IP window). "
+            "Trailing ~7 days still maturing. No pre-6/22 data (no backfill)."),
+        ("Coverage", "Both bidder legs are in (Select = MNTN/Rust, non-Select = Beeswax). Select is a subset only from the "
+            "6/22 floor and dropping groups without a usable holdout."),
+        ("Cohort", f"93 AIDs requested; with usable-holdout data: {len(both_ids)} run both, "
             f"{len(sel_only)} Select-only, {len(ns_only)} non-Select-only."),
     ],
 )
@@ -328,8 +351,13 @@ wb.notes(
             "visits are counted over a FIXED 7-day window from its own first bid - not the full calendar period - so early and "
             "late entrants are measured on equal footing (removes an entry-time bias). Tradeoff: visits >7 days after an IP's first "
             "bid aren't attributed, and the trailing ~7 days are still maturing (right-censored). 'IP' ~ a household. No pre-6/22 data (no backfill)."),
-        ("Coverage", "Beeswax bidder leg only; MNTN Rust-bidder leg not yet folded in. 43 of 93 requested advertisers have Select "
-            "lift data, 66 have non-Select; 35 have both once campaign groups without a usable holdout are excluded."),
+        ("Coverage", "Both bidder legs are in: Select = the MNTN (Rust) bidder, non-Select/PTV = Beeswax (the leg tracks the "
+            "product). 43 of 93 requested advertisers have Select lift data, 66 have non-Select; 35 have both once campaign "
+            "groups without a usable holdout are excluded, plus the 6/22 data floor (no backfill)."),
+        ("Cost per incremental (CPIV/CPIA)", "Spend / incremental, where incremental = Reporting Verified Visits (or "
+            "conversions) x the ghost-bid relative lift. On this client basis Select is $5.23/incr visit vs $8.23 (1.6x) and "
+            "$84 vs $256/incr conversion (3.0x) - cheaper on both, but a narrower gap than the lift ratio, because non-Select "
+            "delivers far more total visits. Uses the volume-weighted lift (the total-cost basis), not the IVW lift on the other tabs."),
         ("Do not over-read", "Individual low-volume campaigns have wide intervals; a single small Select campaign is not a verdict. "
             "The pooled and paired advertiser-level reads are the defensible outputs."),
     ],
@@ -338,6 +366,7 @@ wb.notes(
 wb.cover(takeaways=[
     "Select prospecting drives +22% relative visit lift vs +4% for non-Select - roughly 5x, both significant.",
     "The edge is consistent: Select beats non-Select in 27 of 35 advertisers running both (median +46pp of relative lift).",
+    "Cost: on the basis advertisers see in Reporting, Select runs $5.23 per incremental visit vs $8.23 (1.6x) and $84 vs $256 per incremental conversion (3.0x).",
     "Window is 2026-06-22 onward (no earlier data); numbers are ghost-bid ITT, compared relatively, prospecting only.",
 ])
 

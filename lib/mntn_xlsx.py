@@ -256,7 +256,7 @@ class MntnWorkbook:
         The subtitle is merged across the table columns and wrapped, so it never runs off to the
         right past the table below it. Its row height is fitted later in table() once column widths
         are known (Excel/Sheets won't auto-fit a merged cell). Applies to every table sheet."""
-        self._sheet_title(ws, finding)
+        self._sheet_title(ws, finding, ncols)
         if method:
             m = ws.cell(row=2, column=1, value=_demdash(method))
             m.font = _font(10, italic=True, color=BRAND["GREY"])
@@ -275,16 +275,29 @@ class MntnWorkbook:
             ws.cell(row=row, column=cc).fill = _fill(BRAND["ACCENT"])
         ws.row_dimensions[row].height = height
 
-    def _sheet_title(self, ws, text):
+    def _sheet_title(self, ws, text, ncols=1):
         """Write the row-1 sheet title with top breathing room: a taller row with the title
         BOTTOM-aligned, so there is whitespace above it and the title no longer jams into the top
         edge (the cover keeps the brand band; content/reference tabs just get clean top air).
-        Used on every non-cover sheet so the top spacing is uniform."""
+        Merged + wrapped across the table columns (ncols>1) so a long finding wraps within the table
+        width instead of overflowing off the right edge; height is fitted later in table() once the
+        column widths are known. Used on every non-cover sheet so the top spacing is uniform."""
         c = ws.cell(row=1, column=1, value=_demdash(text))
         c.font = _font(15, bold=True, color=BRAND["PRIMARY"])
-        c.alignment = Alignment(horizontal="left", vertical="bottom")
+        c.alignment = Alignment(horizontal="left", vertical="bottom", wrap_text=True)
+        if ncols > 1:
+            ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncols)
         ws.row_dimensions[1].height = 34   # ~2.2x default -> the air sits above the bottom-aligned title
         return c
+
+    def _fit_title_height(self, ws, text, total_width_chars, per_line=19.0, pad=9.0, base=34.0, maxlines=3):
+        """Size the merged row-1 title height to its wrapped text at the table width (Excel won't
+        auto-fit a merged cell). 15pt bold fits ~0.6 chars per width-unit; keeps the base top air."""
+        if not text:
+            return
+        cpl = max(int(total_width_chars * 0.60), 18)   # chars per line for 15pt bold across the span
+        lines = min(max(1, -(-len(_demdash(text)) // cpl)), maxlines)
+        ws.row_dimensions[1].height = max(base, lines * per_line + pad)
 
     def _fit_subtitle_height(self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5):
         """Set a merged, wrapped subtitle row's height to fit its text at the table width.
@@ -489,8 +502,11 @@ class MntnWorkbook:
         ws.auto_filter.ref = f"A{start}:{last_col}{start+n}"
         colw = self._autosize(ws, df, widths=widths, first_col=first_col_width)
         self._fit_row_heights(ws, df, start, colw)
-        # subtitle (row 2) is merged across the table; size its height to the wrapped text at table width
-        self._fit_subtitle_height(ws, 2, method, sum(colw.get(c, 12) for c in df.columns))
+        # rows 1 (title) and 2 (subtitle) are merged across the table; size heights to the wrapped
+        # text at table width so a long finding/method wraps in place instead of running off the edge.
+        table_width = sum(colw.get(c, 12) for c in df.columns)
+        self._fit_title_height(ws, finding, table_width)
+        self._fit_subtitle_height(ws, 2, method, table_width)
         self._footnote(ws, f"Source: {self.ticket}."
                        + (f"  Period: {self.period}." if self.period else "")
                        + (f"  Generated {self.generated}." if self.generated else ""),
