@@ -1530,8 +1530,13 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   finishes `product_categorization` ~13:00-13:34Z, ~4.5h after its 09:00 start. **Consumer:** `keyword_ddp_reporting` (`0 15 * * *`)
   gates on it via an `ExternalTaskSensor` `wait_for_product_categorization` (`external_task_id=batch_post.product_categorization`,
   `execution_delta=6h` → pokes logical 09:00, `allowed_states=["success"]`, 6h timeout). Timing is normally fine (upstream done ~13:34,
-  consumer starts 15:00); a `batch_fetch` failure is what makes the sensor time out (INC-006). The `batch_fetch` step (`fetch_results.py` →
-  `openai_wrapper/batch_fetcher.py::download_file`) has a real crash bug on a completed-all-errored batch (`output_file_id=None`) — see INC-006 / IMP-010.
+  consumer starts 15:00); a `batch_fetch` failure is what makes the sensor time out (INC-006). **`batch_fetch` (`fetch_results.py` →
+  `openai_wrapper/batch_fetcher.py::download_file`) is not fault-isolated (verified from source + GCS 2026-07-29):** it loops over every
+  submitted batch with no null-check on `output_file_id` and no per-batch try/except, so one completed-but-errored batch
+  (`output_file_id=None`) throws in `files.content(None)` and aborts the WHOLE loop, leaving the rest un-downloaded. `update_source_file_s3`
+  also set `was_downloaded=True` unconditionally, stranding skipped batches. Net effect: each retry grabs a few more then dies on the next
+  bad batch, so a bad cycle limps forward (07-27 stuck at 928/1101 results, downstream never assembled) but never produces
+  `product_categorization`. Fix: PR `SteelHouse/shopper_graph#296` (skip bad batches, gate the `was_downloaded` update). See INC-006 / IMP-010.
 - **`data_source_id` does NOT multiply OpenAI cost.** Dedup is on `composite_key` (the query-stripped URL); a URL is
   sent to OpenAI **once** regardless of how many vendors report it. `data_source_id` is retained only for **billing
   attribution** to the source vendor. (augmentor_log DS30 duplicate URLs are absorbed by the anti-join.)
