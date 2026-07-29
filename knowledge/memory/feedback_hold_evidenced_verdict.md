@@ -26,9 +26,9 @@ mechanism. I'd conceded a correct conclusion and flip-flopped the runbook three 
 **How to apply:**
 1. Acknowledge the objection as valid to check — don't dismiss it, don't fold to it.
 2. Keep the evidenced verdict as the working answer until the objection is actually confirmed.
-3. Design/run the **discriminating test** that separates the two hypotheses (e.g., overlay DS51=0 against
-   the skip-day calendar → 1:1 alignment proves same-day-membership semantics, settling it empirically
-   without needing the build code).
+3. Design/run the **discriminating test** that separates the hypotheses (here: overlay DS51=0 against the
+   skip-day calendar, then check the actual serving side — the real answer was serving-side, NOT the
+   "same-day-membership" guess I floated; the test + the source beat every hypothesis).
 4. Distinguish "correct answer" from "known mechanism" — an answer can be right while the *why* is still
    open; say exactly that instead of reopening the verdict.
 5. **When the mechanism is a code fact, close it by reading the DEPLOYED SOURCE, not by hypothesizing.** If
