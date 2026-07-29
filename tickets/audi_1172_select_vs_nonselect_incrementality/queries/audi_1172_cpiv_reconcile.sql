@@ -39,6 +39,7 @@ af AS (
     SUM(first_touch_visits) AS first_touch_visits_total
   FROM `dw-main-silver.summarydata.all_facts`
   WHERE hour >= DATETIME '2026-06-22' AND hour < DATETIME '2026-07-28'
+    AND objective_id = 1                      -- match the lift cohort (prospecting, obj=1 only)
     AND campaign_group_id IN (SELECT cgid FROM cg)
   GROUP BY 1
 )

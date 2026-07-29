@@ -1,0 +1,9 @@
+Root-cause a prod Airflow task failure. DAG mntn_match_incrementals_fetch (team ML, schedule 0 9 * * *), task batch_fetch (MntnKubePodOperator, pod name openai_batch_runner, image OPEN_AI_BATCH, cmd `python fetch_results.py`) failed for the run with logical date 2026-07-28T09:00:00+00:00 (executed ~2026-07-29T09:00Z). It has retries: 3 and exhausted all of them, so its downstream batch_post.product_categorization went upstream_failed and never wrote gs://mntn-data-archive-prod/shopper_graph/product_categorization/dt=2026-07-27/ (normal completion ~13:34Z).
+
+Determine:
+1. The exact exception in the batch_fetch pod logs across all 3 retries — full traceback and the fetch_results.py line.
+2. The OpenAI Batch API job for this cycle: its batch id and status (in_progress/completed/failed/expired/cancelled). Was it submitted by the upstream batch_transition (transition_batch.py), and did it ever complete at OpenAI? Look for a batch-id artifact/marker in GCS or logs.
+3. Whether the failure is (a) the OpenAI batch itself (expired/failed/never completed), (b) the fetch code (bug/auth/parsing), or (c) pod infra (OOM at the 1Gi limit, eviction, network).
+4. The exact repo + file + line where a fix belongs (the OPEN_AI_BATCH image source: fetch_results.py / transition_batch.py), with a recommended fix.
+
+Return: root cause in one line, evidence (log locations, batch id, timestamps, pod/namespace), and the fix location. Context: on-call INC-006; the downstream keyword_ddp_reporting.wait_for_product_categorization timed out after 6h because of this.

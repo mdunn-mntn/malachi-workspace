@@ -597,6 +597,8 @@ gcloud storage ls "gs://mntn-data-archive-prod/shopper_graph/product_categorizat
 
 **Durable fix → IMP-009** (direct alerting on the OpenAI-batch upstream failure / data-aware scheduling for keyword_ddp).
 
+**Downstream fix PR: [SteelHouse/airflow-ti#1162](https://github.com/SteelHouse/airflow-ti/pull/1162)** — the sensor's `failed_states` was `["failed","skipped"]`, but a failed `batch_fetch` puts `product_categorization` in **`upstream_failed`** (not `failed`), which fell through → it poked the full 6h then timed out. PR adds `"upstream_failed"` so it fails in seconds. Downstream hygiene only; does NOT fix the upstream `batch_fetch` failure. **Upstream root cause: routed to Compass** (prompt saved in `incidents/INC-006/compass_rootcause_prompt.txt`) — `batch_fetch` already retries 3× and still failed, so it's persistent (likely the OpenAI batch expired/never completed); the fix lives in the `OPEN_AI_BATCH` image, not airflow-ti.
+
 **Logs:** `on-call/incidents/INC-006/`.
 
 ---
