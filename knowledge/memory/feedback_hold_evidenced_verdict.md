@@ -5,8 +5,12 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 443e7168-7c62-47df-afdd-8d8cbe74c71d
+doc_type: memory
+keywords: [hold the evidenced verdict, dont fold to pushback, domain owner objection, hypothesis not refutation, discriminating test, correct answer vs known mechanism, DS51 enriched_impressions, INC-001]
+domain: [workflow]
+lifecycle: active
+last_verified: 2026-07-29
 ---
-
 When I've reached a conclusion backed by direct evidence and someone (even the domain owner / a senior
 engineer) pushes back with a plausible architectural objection — especially one hedged with "who knows" /
 "I'm hoping that's true" — that is a **hypothesis to test, not a refutation to fold to**. Do NOT abandon a

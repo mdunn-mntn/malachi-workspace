@@ -163,6 +163,10 @@ echo '```'
 if have "$SCRIPTS/health_scorecard.py"; then
   run $PY "$SCRIPTS/health_scorecard.py" --memory
 else echo "health_scorecard.py not found"; fi
+if have "$SCRIPTS/lint_memory.py"; then
+  echo "--- unindexed / broken (lint_memory --check) ---"
+  run $PY "$SCRIPTS/lint_memory.py" --check 2>&1 | { grep -E "VIOLATION|WIKILINK|--check:" || true; }
+fi
 echo '```'
 echo
 

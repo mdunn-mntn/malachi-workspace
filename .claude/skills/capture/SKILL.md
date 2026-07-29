@@ -128,8 +128,14 @@ always-on (a new global working rule or stack gotcha) — rare.
 drop any `MEMORY.md` line it had (the file stays grep-reachable). If a fact is superseded, set
 `lifecycle: superseded` or edit it in place. Only delete a file when it is entirely false (Step 5).
 
-**After writing/editing any memory file, run** `bash .claude/scripts/build_index.sh` so the new keywords
-fold into `_ROUTING.md` and the memory indexes (`_MEMORY_INDEX.md`, `_MEMORY_LIFECYCLE.md`) regenerate.
+**After writing/editing any memory file, run both:**
+```bash
+python3 .claude/scripts/lint_memory.py --fix   # normalize native-tool-written raw files (adds doc_type + seeds keywords)
+bash .claude/scripts/build_index.sh            # fold keywords into _ROUTING.md + regenerate _MEMORY_INDEX/_MEMORY_LIFECYCLE
+```
+The native memory tool writes its OWN raw schema (no `doc_type`/`keywords`), so any file it auto-wrote sits
+OUT of `_ROUTING.md` until `lint_memory --fix` normalizes it — the SessionStart `Memory :` line flags these
+as `UNINDEXED`. Sharpen the auto-seeded keywords on any file `--fix` just touched (a floor, not final).
 
 ## Step 7 — Report, then commit
 

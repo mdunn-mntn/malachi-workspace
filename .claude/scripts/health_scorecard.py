@@ -219,6 +219,18 @@ def memory_budget():
     return b, b // 4
 
 
+def memory_unindexed():
+    """Native-tool-written memory files not yet normalized (have name+description but no doc_type:memory)
+    → silently absent from _ROUTING.md until `lint_memory.py --fix` (or /capture) runs. This is the
+    steady-state gap: the native memory tool writes its own raw schema, unaware of the unified one."""
+    out = []
+    for p in _mem_files():
+        fm = _mem_fm(p)
+        if fm.get("name") and fm.get("description") and fm.get("doc_type") != "memory":
+            out.append(os.path.basename(p))
+    return out
+
+
 def main():
     verbose = "--verbose" in sys.argv
     mem_only = "--memory" in sys.argv
@@ -230,18 +242,24 @@ def main():
         mcounts, mstale = memory_lifecycle()
         mclusters = memory_overlap_clusters()
         munres = memory_wikilinks()
+        munidx = memory_unindexed()
         _mbytes, mtok = memory_budget()
     except Exception:
         return 0  # never break the caller
 
     over = " OVER" if mtok > MEM_TOKEN_CAP else ""
-    mem_line = (f"Memory  : {sum(mcounts.values())} files · {len(mstale)} stale(>{MEM_STALE_DAYS}d) · "
+    uix = f" · {len(munidx)} UNINDEXED" if munidx else ""   # native-written raw files not in _ROUTING yet
+    mem_line = (f"Memory  : {sum(mcounts.values())} files{uix} · {len(mstale)} stale(>{MEM_STALE_DAYS}d) · "
                 f"{len(mclusters)} overlap-cluster(s) · {len(munres)} unresolved link(s) · "
                 f"MEMORY.md ~{mtok/1000:.1f}k/{MEM_TOKEN_CAP/1000:.1f}k{over}")
 
     def _mem_detail():
         print(f"\nMemory lifecycle: active {mcounts['active']} · superseded {mcounts['superseded']} "
               f"· archived {mcounts['archived']}")
+        if munidx:
+            print(f"UNINDEXED (native-written; run `lint_memory.py --fix` to fold into _ROUTING):")
+            for n in munidx:
+                print(f"  {n}")
         if mstale:
             print(f"Stale active memories (>{MEM_STALE_DAYS}d since last_verified):")
             for n, d in mstale[:15]:
