@@ -85,6 +85,29 @@ _(PRs, config, code)_
 _(document the shadow-parity methodology + household-stability metric)_
 
 ## 8. Open Items / Follow-ups
+### Clarify with Sean Yang (FS lead + ticket author, now on DS13/19) — before/early in the build
+1. **PR #1156 base + the `(ip,guid)` L1 table:** should the household `hh_` L2/L3 models build on your draft
+   PR (airflow-ti #1156) or a fresh branch — and does its `(ip,guid)` L1 table stub anything I'd duplicate?
+   Confirming your own question back: for IPv4-only Sept-4 we use the **existing IP-keyed guid_log L1 as-is**,
+   and `(ip,guid)` is only for Ryan's GUID fast-follow — right?
+2. **Resolver interface:** where will your `household_resolution.py` / `identity_graph_ip_mntn_id` stubs live,
+   and their signature? Should my L2 resolution **call the stub (swap-ready)** or **inline the max-conf join**
+   for v1? (Avoid building a parallel resolver.)
+3. **Direct-graph-join vs mirror:** did your cost test on joining the full `household_graph_parquet` directly
+   land — is direct-join OK for v1, or do we need the daily mirror (1166)? (Sets whether 1166 is real or stays optional.)
+4. **DS13/19 seam:** now that you own DS13/19 — where's the boundary vs my Fangorn `guid_log` L2/L3 re-key? Do my
+   `hh_` L2/L3 outputs feed your DS13/19 (`site_visit_signal`/`tpa_ipdsc_export`) work, or are they independent?
+5. **Split with Brian:** preferred division of the real L2/L3 models (1168/1169) vs the 1170 orchestration/shadow
+   skeleton across me + Brian?
+
+### Decide with the group (Sean/Ryan/Matt)
+6. **Lookback-churn:** do features follow the **day's household** or the **snapshot's household**? Defines what
+   "correct" shadow parity even means (§7i / §6 open item).
+
+### I'll self-serve from the airflow-ti clone (not Sean's time)
+Exact `hh_` model naming pattern (naming-standards doc), the IP-side parity comparand tables/paths, L158
+context in `guid_log_derived_ip_vertical_id.py`, and the additive-task-group mechanics in `feature_store_setup_model.py`.
+
 - Backfill depth gated by 60-vs-90d retention (§6.1, AUDI-1101). Reconciliation band (§6.6) undefined — this
   ticket produces the parity numbers that band will be set against.
 - **Convention confirmed (Slack 2026-07-29, epic §7h): REUSE the existing DAGs; add HHID work as new MODELS with

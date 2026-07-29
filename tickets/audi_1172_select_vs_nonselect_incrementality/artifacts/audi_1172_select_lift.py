@@ -268,7 +268,7 @@ wb.table(
     "Cost per incremental", cpiv_df,
     finding="Select is cheaper per incremental outcome: ~1.6x per visit, ~3x per conversion",
     method="Spend (metered, prospecting) / incremental, where incremental = Reporting Verified Visits (or "
-           "conversions) x the ghost-bid relative lift. See Read me for the method and the lift-estimator note.",
+           "conversions) x lift / (1 + lift), lift = the ghost-bid relative lift. See Read me for the method.",
     formats={"Spend": FMT.USD0, "Verified visits": FMT.INT, "Incr. visits": FMT.INT,
              "CPIV": FMT.USD, "Incr. conv": FMT.INT, "CPIA": FMT.USD0},
     heat={"CPIV": "low", "CPIA": "low"},   # cost: lower is greener
@@ -294,8 +294,8 @@ wb.glossary(
         ("Method & cost", ""),
         ("Pooling (IVW)", "Campaign groups combine by inverse-variance weights (1/SE^2), not a raw count pool (which gives "
             "Simpson's-paradox artifacts). Significance at bid-grain N is a floor."),
-        ("Cost (CPIV/CPIA)", "Spend / incremental, where incremental = Reporting Verified Visits (view+click+competing visits, "
-            "the client-UI number) x the ghost-bid relative lift."),
+        ("Cost (CPIV/CPIA)", "Spend / incremental. Incremental = Reporting Verified Visits (view+click+competing visits, the "
+            "client-UI number) x lift / (1 + lift), lift = the ghost-bid relative lift (÷(1+lift) strips out the organic baseline)."),
         ("Why the lift looks bigger there", "CPIV uses the volume-weighted lift (right for a total-cost metric); the lift tabs "
             "use the average-campaign lift (IVW). Same data, different question."),
         ("Coverage & window", ""),
@@ -361,9 +361,10 @@ wb.notes(
             "product). 43 of 93 requested advertisers have Select lift data, 66 have non-Select; 35 have both once campaign "
             "groups without a usable holdout are excluded, plus the 6/22 data floor (no backfill)."),
         ("Cost per incremental (CPIV/CPIA)", "Spend / incremental, where incremental = Reporting Verified Visits (or "
-            "conversions) x the ghost-bid relative lift. On this client basis Select is $5.23/incr visit vs $8.23 (1.6x) and "
-            "$84 vs $256/incr conversion (3.0x) - cheaper on both, but a narrower gap than the lift ratio, because non-Select "
-            "delivers far more total visits. Uses the volume-weighted lift (the total-cost basis), not the IVW lift on the other tabs."),
+            "conversions) x lift / (1 + lift), lift = the ghost-bid relative lift (÷(1+lift) removes the organic baseline; method "
+            "confirmed by Matt Brorby, matches the customer-facing dashboard). On this client basis Select is $5.23/incr visit vs "
+            "$8.23 (1.6x) and $84 vs $256/incr conversion (3.0x) - cheaper on both, but a narrower gap than the lift ratio because "
+            "non-Select delivers far more total visits. Uses the volume-weighted lift (total-cost basis), not the IVW lift on the other tabs."),
         ("Do not over-read", "Individual low-volume campaigns have wide intervals; a single small Select campaign is not a verdict. "
             "The pooled and paired advertiser-level reads are the defensible outputs."),
     ],
