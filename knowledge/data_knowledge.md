@@ -1611,7 +1611,7 @@ correct for dt=2026-07-27. **The builder is `SteelHouse/data-pipeline/pyspark_pi
 materialized to `mntn-analytics-prod-01`): the `data_source_id` tag = **what the campaign targeted**
 (`v_campaign_group_segment_history`), and the ipdsc join is a **35-day BACKWARD** window
 (`ipdsc_dt BETWEEN to_date(time)-35d AND time`) — so it WOULD backfill 07-27 from the present 07-26 partition **if
-any DS51 impressions had been served**. Proof: exactly one CG targets DS51 (CG 131563 / adv 30506, new campaign
+any DS51 impressions had been served**. Proof: exactly one CG targets DS51 (CG 131563 / adv 30506 = "MNTN - No ENG Testing", an INTERNAL TEST advertiser, new campaign
 live 07-24, targets only DS51); its `cost_impression_log` served counts are 07-25=104,177 · 07-26=108,744 · 07-27=0 ·
 07-28=141,002, matching enriched DS51 **1:1** (108,744=108,744; 141,002≈140,998). So enriched DS51 ≈ that campaign's
 served impressions; 0 served on 07-27 → correctly 0. **The 35d lookback never applies — it enriches impressions that

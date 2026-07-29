@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: 443e7168-7c62-47df-afdd-8d8cbe74c71d
 doc_type: memory
-keywords: [hold the evidenced verdict, dont fold to pushback, domain owner objection, hypothesis not refutation, discriminating test, correct answer vs known mechanism, DS51 enriched_impressions, INC-001]
+keywords: [hold the evidenced verdict, dont fold to pushback, domain owner objection, hypothesis not refutation, discriminating test, read the deployed source, github org code-search, correct answer vs known mechanism, DS51 enriched_impressions, INC-001]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-29
@@ -31,5 +31,11 @@ mechanism. I'd conceded a correct conclusion and flip-flopped the runbook three 
    without needing the build code).
 4. Distinguish "correct answer" from "known mechanism" — an answer can be right while the *why* is still
    open; say exactly that instead of reopening the verdict.
+5. **When the mechanism is a code fact, close it by reading the DEPLOYED SOURCE, not by hypothesizing.** If
+   the repo isn't cloned locally, GitHub org code-search finds it (`enriched_impressions org:SteelHouse` found
+   `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`). Reading that builder + a 1:1
+   source replication proved the DS51 zero was **serving-side** (a single-source campaign served 0 impressions
+   on the skip day), which RETRACTED my own interim "same-day-keyed" guess. A guessed mechanism (even a
+   plausible one) is worth exactly nothing next to the actual code — read it before asserting.
 
-Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[reference_oncall_runbook]].
+Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]].

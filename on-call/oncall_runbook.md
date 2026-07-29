@@ -567,7 +567,7 @@ gcloud storage ls "gs://sh-dw-external-tables-prod/mntn_id_data/2026/07/28/"    
 ### INC-006 — `keyword_ddp_reporting` `wait_for_product_categorization` — ExternalTaskSensor 6h timeout (upstream OpenAI-batch product_categorization not ready)
 **Date:** 2026-07-29 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [keyword_ddp_reporting/wait_for_product_categorization] at 2026-07-28 08:00 PT`, run `scheduled__2026-07-28T15:00:00+00:00`, try 1/1. `AirflowSensorTimeout: run duration 21682.7s exceeds timeout 21600.0` (6h; 307 reschedule pokes).
 
-**STATUS: OBSERVED — the 07-28-cycle upstream `product_categorization` did NOT produce; failed-vs-slow needs the upstream Airflow/pod state I can't reach from here. Routed to the pipeline owner.**
+**STATUS: CONFIRMED real_upstream_failure — owner Sean Yang confirmed the `batch_fetch` (OpenAI batch) step failed and is re-running `mntn_match_incrementals_fetch` (#alerts, 2026-07-29).** The GCS evidence (below) was right: upstream never produced. Remaining: wait for Sean's re-run to write `product_categorization` `dt=2026-07-27`, then **clear keyword_ddp's `wait_for_product_categorization` sensor** so the reporting DAG proceeds. NOT resolved until that partition lands and the sensor is cleared/green.
 
 **Verdict: real_upstream_failure OR late_data (upstream not ready) — NOT a sensor misconfig.** `keyword_ddp_reporting` (`0 15 * * *`) waits via `ExternalTaskSensor` for `mntn_match_incrementals_fetch.batch_post.product_categorization` at logical `07-28T09:00` (`execution_delta=6h`, `allowed_states=["success"]`, `mode=reschedule`, `timeout=21600`). Alignment is CORRECT (upstream schedule `0 9 * * *` + 6h delta → 09:00). It poked 307× over 6h; the upstream never reached success → timed out.
 
