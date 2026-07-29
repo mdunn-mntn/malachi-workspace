@@ -60,3 +60,7 @@ _(document the shadow-parity methodology + household-stability metric)_
 ## 8. Open Items / Follow-ups
 - Backfill depth gated by 60-vs-90d retention (§6.1, AUDI-1101). Reconciliation band (§6.6) undefined — this
   ticket produces the parity numbers that band will be set against.
+- **Convention confirmed (Slack 2026-07-29, epic §7h): REUSE the existing DAGs; add HHID work as new MODELS with
+  an `hh_` prefix** — NOT a separate `feature_store_hhid_*` DAG set. This is the concrete form of the "additive
+  task group, no forked DAG" scope. Resolution happens in L2 (IPv4-only), so the household models are L2/L3
+  `hh_`-prefixed additions to `feature_store_setup_model.py`.

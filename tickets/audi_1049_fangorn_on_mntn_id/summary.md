@@ -427,6 +427,16 @@ The 4-case read (§7f) was **confirmed "100% right" by Ryan Kleck.** The thread 
   rollup ≡ household rollup). **So the HLL question is resolved (merge, don't sum), and the re-key IS a real
   change** — Ryan confirms it improves both case 2 (multi-IP aggregation) and the lookback.
 
+## 7h. Work split + DAG/model convention (Slack #dev-audi-mntn-id, 2026-07-29)
+- **Consensus reached** on the aggregation approach (Brian: "I can get behind that").
+- **Work split — Ryan Kleck owns the GUID fast-follow, in PARALLEL.** Once the IPv4 path works, Ryan will take
+  a stab at **adding GUID to Layer 1 + the ip/guid-combo lookup in Layer 2** (Sean: "we can do both in
+  parallel"). Good for Malachi/AUDI: the multi-identifier extension is **off the IPv4 critical path and has an
+  owner (Ryan)** — the AUDI-1166/1167 keyset-struct fast-follow (§7d) is effectively Ryan's to prototype.
+- **DAG/model convention (Sean, confirmed): REUSE the existing DAGs; add the HHID work as new MODELS with an
+  `hh_` prefix** — NOT a separate `feature_store_hhid_*` DAG set. This pins AUDI-1170's "additive task group, no
+  forked DAG" decision and sets the naming standard (`hh_` prefix on the new household models).
+
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
 persuadables audience).** Fangorn ranks propensity (ROC-AUC 0.96) but the High band (~78% of volume) returns

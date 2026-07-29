@@ -91,6 +91,12 @@ sum/min/max. Works because of the **FS Layer-1 invariant** (every L1 feature agg
 sum/min/max/hll_merge) → household GROUP BY mntn_id reuses the temporal-rollup primitives (**temporal rollup ≡
 household rollup**; see [[reference_airflow_ti]]). Re-key confirmed a real change (improves multi-IP case + lookback).
 
+**Work split + convention (2026-07-29):** design consensus reached. **Ryan Kleck owns the GUID fast-follow in
+PARALLEL** (add GUID to L1 + ip/guid-combo lookup in L2, once IPv4 works) → the L1 keyset/multi-identifier work
+is off Malachi's IPv4 critical path. **DAG convention (Sean, confirmed): reuse existing DAGs, add HHID work as
+new models with an `hh_` prefix** (not a separate `feature_store_hhid_*` DAG set) — the concrete form of
+AUDI-1170's additive-task-group / no-forked-DAG.
+
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on

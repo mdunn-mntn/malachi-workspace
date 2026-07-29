@@ -73,3 +73,6 @@ _(add Identity Graph table schema + as-of semantics to `data_catalog.md`)_
   ticket's graph-snapshot **mirror** is still built (it's what L2/L3 join against) — but don't re-key the
   existing guid_log L1 for v1. Deferring multi-identifier avoids the **multiple-membership intent shift**
   (adding IPv6/GUID later moves a household's score as more signal rolls in — Brian McAdams).
+- **The GUID fast-follow is RYAN's, in parallel (epic §7h):** once IPv4 works, Ryan Kleck takes a stab at adding
+  GUID to L1 + the ip/guid-combo lookup in L2. So this ticket's L1 keyset/GUID work is off Malachi's critical
+  path — coordinate with Ryan rather than build it here.
