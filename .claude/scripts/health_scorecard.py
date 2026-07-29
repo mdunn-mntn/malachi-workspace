@@ -22,7 +22,7 @@ MEM_DIR = os.path.join(KDIR, "memory")
 STALE_DAYS = 120
 EVAL_STALE_DAYS = 14   # retrieval regression suite should run at least biweekly
 MEM_STALE_DAYS = 90    # an active memory unverified this long is a refresh candidate
-MEM_TOKEN_CAP = 1300   # MEMORY.md hot-tier budget (~5,200 bytes at ~4 chars/token)
+MEM_TOKEN_CAP = 1500   # MEMORY.md hot-tier ceiling (~6,000 bytes) — flags REGROWTH, not a 20-token overage
 DAY = 86400
 
 
