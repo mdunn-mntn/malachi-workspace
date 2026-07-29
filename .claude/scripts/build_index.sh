@@ -8,7 +8,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 python3 - "$ROOT" <<'PY'
-import os, sys
+import os, re, sys
 
 root = sys.argv[1]
 kdir = os.path.join(root, "knowledge")
@@ -223,6 +223,28 @@ for d in sorted(active, key=lambda x: (g(x, "last_verified") or "0000", g(x, "ti
 if not active:
     out.append("| _(none)_ | | | |")
 write(os.path.join(kdir, "_MEMORY_LIFECYCLE.md"), "\n".join(out) + "\n")
+
+# ---- memory recall map (_MEMORY_RECALL.tsv): compact keyword→memory for the UserPromptSubmit recall hook ----
+# This Claude Code setup has no native per-file semantic recall (memory arrives only via the whole-file
+# MEMORY.md startup injection). `memory_recall.py` rebuilds recall on top of this map: one line per ACTIVE
+# memory NOT already in the always-loaded hot tier (MEMORY.md wikilinks) → `stem\tdescription\tkw1|kw2|…`.
+# Not a `.md` and `_`-prefixed, so the crawl never re-indexes it.
+mm_path = os.path.join(kdir, "memory", "MEMORY.md")
+hot = set()
+if os.path.exists(mm_path):
+    for _m in re.findall(r"\[\[([^\]]+)\]\]", open(mm_path, encoding="utf-8").read()):
+        hot.add(_m.strip().lower().replace("-", "_"))
+rec_lines = []
+for d in sorted(active, key=lambda x: g(x, "title")):
+    stem = os.path.splitext(os.path.basename(d["_abspath"]))[0]
+    if stem.lower() in hot:                       # already always-loaded — don't re-surface
+        continue
+    kws = d.get("keywords") if isinstance(d.get("keywords"), list) else []
+    if not kws:
+        continue
+    desc = g(d, "description").replace("\t", " ").replace("\n", " ")
+    rec_lines.append(f"{stem}\t{desc}\t{'|'.join(kws)}")
+write(os.path.join(kdir, "_MEMORY_RECALL.tsv"), "\n".join(rec_lines) + ("\n" if rec_lines else ""))
 
 # ---- BQ catalog index ----
 bqdir = os.path.join(kdir, "bq")

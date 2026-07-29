@@ -11,13 +11,14 @@ chmod +x .claude/hooks/*.sh scripts/*.sh
 Hooks auto-load from `.claude/settings.json` whenever Claude Code is opened at the repo root.
 Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the scripts.)
 
-## Hooks (8, all defensive: any parse failure or non-match exits 0 — a hook never wedges a session)
+## Hooks (9, all defensive: any parse failure or non-match exits 0 — a hook never wedges a session)
 
 | event | script | what it does | can it block? |
 |-------|--------|--------------|---------------|
 | `PreToolUse:Bash` | `enforce_bq_wrapper.sh` | blocks a raw `bq … query`; forces it through `scripts/bq_run.sh` (allows `bq_run.sh`, `--dry_run`, `INFORMATION_SCHEMA`, `bq show/ls`) | **yes** (exit 2) |
 | `PreToolUse:Bash` | `comms_lint_precheck.sh` | when the command is a Jira REST v2 write (comment or issue-create curl), lints the body/description/title against the Terse Comms Standard (`scripts/lint_comms.py`) before it posts | no (advisory; one-line flip to exit 2) |
 | `PostToolUse:Bash` | `flag_net_new_tables.sh` | after a `bq_run.sh` call, appends any referenced table with no catalog doc to `knowledge/bq/_UNDOCUMENTED.queue` | no |
+| `UserPromptSubmit` | `memory_recall.py` | deterministic per-prompt memory recall: matches the prompt against active non-hot-tier memory keywords (`knowledge/_MEMORY_RECALL.tsv`) and injects a compact `memory/*.md` pointer block on a confident match (strong phrase or ≥2 hits). Fills the gap left by this setup having no native per-file recall. | no (injects context; silent on no-match) |
 | `UserPromptSubmit` | `log_request.py` | appends ONE keyword-only record (verb + ≤10 nouns + one-way hash — never the raw prompt) to the gitignored `knowledge/.request_log.jsonl`; feeds `request_digest.py` | no (silent, always exit 0) |
 | `SessionStart` | `session_start_routing.sh` | prints the retrieval map + coverage rollup + doc-debt count + perf-log size + the `health_scorecard.py` line so a fresh chat orients without full ingestion | no |
 | `Stop` | `capture_reminder.sh` | advisory: if the queue is non-empty or a knowledge doc changed since the last index build, reminds you to `/capture` + `build_index.sh` | no (advisory) |

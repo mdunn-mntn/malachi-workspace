@@ -56,12 +56,13 @@ the corpus. `.claude/scripts/lint_memory.py` migrates/lints memory front-matter;
 (propose-only). Add or retire memory via `/capture` (it holds the sole delete/merge authority).
 
 **Deterministic layer (`.claude/`, runs itself):** the existing `bq_run.sh` wrapper now also logs
-`sql_tables` (clean names). Eight hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
+`sql_tables` (clean names). Nine hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
 wrapper), lint any Jira write-curl against the Terse Comms Standard before it posts
 (`comms_lint_precheck.sh` → `lint_comms.py`), flag net-new tables to `knowledge/bq/_UNDOCUMENTED.queue`,
-print routing/coverage + health at SessionStart, log a keyword-only record of each prompt at
-UserPromptSubmit, and at Stop remind to `/capture` + keep comments terse + flag un-triaged on-call
-alert logs in `on-call/` (`oncall_triage_reminder.sh` → run `/oncall`). `.claude/scripts/build_index.sh` regenerates every index from front-matter (run
+print routing/coverage + health at SessionStart, at UserPromptSubmit inject relevant `memory/*.md`
+pointers (`memory_recall.py` — deterministic per-prompt recall, since this setup has no native per-file
+recall) + log a keyword-only record of each prompt, and at Stop remind to `/capture` + keep comments terse
++ flag un-triaged on-call alert logs in `on-call/` (`oncall_triage_reminder.sh` → run `/oncall`). `.claude/scripts/build_index.sh` regenerates every index from front-matter (run
 after any `knowledge/` change). `perf_digest.py` mines the perf log. **Self-improvement (read/append-only,
 no delete authority):** `health_scorecard.py` prints days-since-`/capture` + orphan-doc + dup-title
 signals into the SessionStart block; `request_digest.py` mines `knowledge/.request_log.jsonl` (the
