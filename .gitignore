@@ -6,6 +6,9 @@
 *.xls
 *.parquet
 *.json
+# ...except the generated memory-recall index (a build_index artifact like _ROUTING.md, versioned so a
+# fresh checkout / the Pi has it without a rebuild; deterministic → no churn)
+!knowledge/_MEMORY_RECALL.tsv
 
 # Video / audio recordings
 *.mp4
