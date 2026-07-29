@@ -1,0 +1,183 @@
+# APP span (start->last event): 2.94h  (2h56m38s)
+# Executors: added=150 removed=0 max_concurrent=150
+# FetchFailed tasks total: 33  across 5 (stage,shuffle) pairs
+    stage 777 shuffleId 43: 13
+    stage 733 shuffleId 41: 8
+    stage 777 shuffleId 107: 6
+    stage 802 shuffleId 108: 4
+    stage 829 shuffleId 45: 2
+# FetchFailed time span: 104.6 min (first 48min into run, last 153min)
+
+# JOBS:
+    job 0: result=JobSucceeded stages=1 dur=0h00m03s
+    job 1: result=JobSucceeded stages=1 dur=0h00m02s
+    job 2: result=JobSucceeded stages=1 dur=0h00m02s
+    job 3: result=JobSucceeded stages=1 dur=0h00m02s
+    job 4: result=JobSucceeded stages=1 dur=0h00m00s
+    job 5: result=JobSucceeded stages=1 dur=0h00m03s
+    job 6: result=JobSucceeded stages=1 dur=0h00m00s
+    job 7: result=JobSucceeded stages=1 dur=0h00m00s
+    job 8: result=JobSucceeded stages=1 dur=0h00m03s
+    job 9: result=JobSucceeded stages=1 dur=0h00m00s
+    job 10: result=JobSucceeded stages=1 dur=0h00m00s
+    job 11: result=JobSucceeded stages=1 dur=0h00m02s
+    job 12: result=JobSucceeded stages=1 dur=0h00m00s
+    job 13: result=JobSucceeded stages=1 dur=0h00m00s
+    job 14: result=JobSucceeded stages=1 dur=0h00m00s
+    job 15: result=JobSucceeded stages=1 dur=0h00m00s
+    job 16: result=JobSucceeded stages=1 dur=0h00m16s
+    job 17: result=JobSucceeded stages=1 dur=0h00m14s
+    job 18: result=JobSucceeded stages=1 dur=0h00m24s
+    job 19: result=JobSucceeded stages=1 dur=0h00m36s
+    job 20: result=JobSucceeded stages=1 dur=0h00m27s
+    job 21: result=JobSucceeded stages=1 dur=0h00m38s
+    job 22: result=JobSucceeded stages=1 dur=0h00m43s
+    job 23: result=JobSucceeded stages=1 dur=0h01m33s
+    job 24: result=JobSucceeded stages=1 dur=0h01m38s
+    job 25: result=JobSucceeded stages=1 dur=0h01m51s
+    job 26: result=JobSucceeded stages=1 dur=0h01m57s
+    job 27: result=JobSucceeded stages=1 dur=0h02m02s
+    job 28: result=JobSucceeded stages=1 dur=0h02m05s
+    job 29: result=JobSucceeded stages=1 dur=0h02m04s
+    job 30: result=JobSucceeded stages=1 dur=0h02m03s
+    job 31: result=JobSucceeded stages=1 dur=0h02m13s
+    job 32: result=JobSucceeded stages=3 dur=0h02m04s
+    job 33: result=JobSucceeded stages=5 dur=0h00m08s
+    job 34: result=JobSucceeded stages=7 dur=0h00m08s
+    job 35: result=JobSucceeded stages=9 dur=0h00m07s
+    job 36: result=JobSucceeded stages=11 dur=0h00m06s
+    job 37: result=JobSucceeded stages=13 dur=0h00m08s
+    job 38: result=JobSucceeded stages=15 dur=0h00m13s
+    job 39: result=JobSucceeded stages=17 dur=0h00m08s
+    job 40: result=JobSucceeded stages=19 dur=0h00m13s
+    job 41: result=JobSucceeded stages=21 dur=0h00m09s
+    job 42: result=JobSucceeded stages=23 dur=0h00m13s
+    job 43: result=JobSucceeded stages=25 dur=0h00m12s
+    job 44: result=JobSucceeded stages=27 dur=0h00m12s
+    job 45: result=JobSucceeded stages=29 dur=0h00m12s
+    job 46: result=JobSucceeded stages=31 dur=0h00m03s
+    job 47: result=JobSucceeded stages=1 dur=0h00m00s
+    job 48: result=JobSucceeded stages=1 dur=0h01m21s
+    job 49: result=JobSucceeded stages=2 dur=0h00m02s
+    job 50: result=JobSucceeded stages=1 dur=0h00m00s
+    job 51: result=JobSucceeded stages=1 dur=0h00m07s
+    job 52: result=JobSucceeded stages=2 dur=0h00m00s
+    job 53: result=JobSucceeded stages=1 dur=0h00m08s
+    job 54: result=JobSucceeded stages=1 dur=0h00m01s
+    job 55: result=JobSucceeded stages=1 dur=0h00m18s
+    job 56: result=JobSucceeded stages=1 dur=0h00m24s
+    job 57: result=JobSucceeded stages=1 dur=0h00m13s
+    job 58: result=JobSucceeded stages=1 dur=0h00m38s
+    job 59: result=JobSucceeded stages=1 dur=0h00m40s
+    job 60: result=JobSucceeded stages=1 dur=0h02m12s
+    job 61: result=JobSucceeded stages=1 dur=0h02m17s
+    job 62: result=JobSucceeded stages=1 dur=0h02m24s
+    job 63: result=JobSucceeded stages=1 dur=0h02m30s
+    job 64: result=JobSucceeded stages=1 dur=0h02m19s
+    job 65: result=JobSucceeded stages=1 dur=0h02m26s
+    job 66: result=JobSucceeded stages=1 dur=0h02m14s
+    job 67: result=JobSucceeded stages=1 dur=0h02m16s
+    job 68: result=JobSucceeded stages=1 dur=0h02m27s
+    job 69: result=JobSucceeded stages=1 dur=0h03m03s
+    job 70: result=JobSucceeded stages=1 dur=0h02m53s
+    job 71: result=JobSucceeded stages=1 dur=0h02m51s
+    job 72: result=JobSucceeded stages=1 dur=0h02m58s
+    job 73: result=JobSucceeded stages=1 dur=0h03m05s
+    job 74: result=JobSucceeded stages=1 dur=0h02m53s
+    job 75: result=JobSucceeded stages=1 dur=0h02m58s
+    job 76: result=JobSucceeded stages=1 dur=0h03m04s
+    job 77: result=JobSucceeded stages=1 dur=0h02m56s
+    job 78: result=JobSucceeded stages=1 dur=0h03m02s
+    job 79: result=JobSucceeded stages=1 dur=0h03m15s
+    job 80: result=JobSucceeded stages=1 dur=0h03m08s
+    job 81: result=JobSucceeded stages=1 dur=0h03m01s
+    job 82: result=JobSucceeded stages=1 dur=0h03m05s
+    job 83: result=JobSucceeded stages=1 dur=0h02m59s
+    job 84: result=JobSucceeded stages=1 dur=0h03m02s
+    job 85: result=JobSucceeded stages=1 dur=0h03m30s
+    job 86: result=JobSucceeded stages=1 dur=0h03m30s
+    job 87: result=JobSucceeded stages=1 dur=0h03m30s
+    job 88: result=JobSucceeded stages=1 dur=0h03m28s
+    job 89: result=JobSucceeded stages=1 dur=0h03m30s
+    job 90: result=JobSucceeded stages=1 dur=0h03m31s
+    job 91: result=JobSucceeded stages=1 dur=0h03m28s
+    job 92: result=JobSucceeded stages=1 dur=0h03m31s
+    job 93: result=JobSucceeded stages=1 dur=0h03m29s
+    job 94: result=JobSucceeded stages=1 dur=0h03m30s
+    job 95: result=JobSucceeded stages=1 dur=0h03m29s
+    job 96: result=JobSucceeded stages=1 dur=0h03m30s
+    job 97: result=JobSucceeded stages=1 dur=0h03m30s
+    job 98: result=JobSucceeded stages=1 dur=0h03m32s
+    job 99: result=JobSucceeded stages=1 dur=0h03m29s
+    job 100: result=JobSucceeded stages=1 dur=0h03m30s
+    job 101: result=JobSucceeded stages=1 dur=0h03m29s
+    job 102: result=JobSucceeded stages=3 dur=0h03m36s
+    job 103: result=JobSucceeded stages=3 dur=0h00m46s
+    job 104: result=JobSucceeded stages=2 dur=0h00m46s
+    job 105: result=JobSucceeded stages=2 dur=0h00m13s
+    job 106: result=JobSucceeded stages=2 dur=0h00m13s
+    job 107: result=JobSucceeded stages=2 dur=0h00m13s
+    job 108: result=JobSucceeded stages=2 dur=0h00m13s
+    job 109: result=JobSucceeded stages=2 dur=0h00m13s
+    job 110: result=JobSucceeded stages=2 dur=0h00m12s
+    job 111: result=JobSucceeded stages=2 dur=0h00m20s
+    job 112: result=JobSucceeded stages=2 dur=0h00m17s
+    job 113: result=JobSucceeded stages=2 dur=0h00m17s
+    job 114: result=JobSucceeded stages=2 dur=0h00m17s
+    job 115: result=JobSucceeded stages=2 dur=0h00m17s
+    job 116: result=JobSucceeded stages=2 dur=0h00m19s
+    job 117: result=JobSucceeded stages=2 dur=0h00m17s
+    job 118: result=JobSucceeded stages=2 dur=0h00m17s
+    job 119: result=JobSucceeded stages=2 dur=0h00m16s
+    job 120: result=JobSucceeded stages=2 dur=0h00m15s
+    job 121: result=JobSucceeded stages=5 dur=0h00m12s
+    job 122: result=JobSucceeded stages=5 dur=0h00m16s
+    job 123: result=JobSucceeded stages=7 dur=0h00m05s
+    job 124: result=JobSucceeded stages=9 dur=0h00m04s
+    job 125: result=JobSucceeded stages=7 dur=0h00m05s
+    job 126: result=JobSucceeded stages=11 dur=0h00m05s
+    job 127: result=JobSucceeded stages=9 dur=0h00m06s
+    job 128: result=JobSucceeded stages=13 dur=0h00m05s
+    job 129: result=JobSucceeded stages=11 dur=0h00m47s
+    job 130: result=JobSucceeded stages=15 dur=0h00m43s
+    job 131: result=JobSucceeded stages=17 dur=0h00m04s
+    job 132: result=JobSucceeded stages=13 dur=0h00m33s
+    job 133: result=JobSucceeded stages=19 dur=0h00m27s
+    job 134: result=JobSucceeded stages=21 dur=0h00m03s
+    job 135: result=JobSucceeded stages=23 dur=0h00m06s
+    job 136: result=JobSucceeded stages=15 dur=0h09m09s
+    job 137: result=JobSucceeded stages=25 dur=0h08m11s
+    job 138: result=JobSucceeded stages=27 dur=0h00m07s
+    job 139: result=JobSucceeded stages=29 dur=0h00m12s
+    job 140: result=JobSucceeded stages=33 dur=0h07m30s
+    job 141: result=JobSucceeded stages=17 dur=0h15m15s
+    job 142: result=JobSucceeded stages=19 dur=0h19m35s
+    job 143: result=JobSucceeded stages=21 dur=0h16m39s
+    job 144: result=JobSucceeded stages=23 dur=0h34m34s
+    job 145: result=JobSucceeded stages=25 dur=0h33m41s
+    job 146: result=None stages=27 dur=INCOMPLETE
+
+# TOP STAGES by cumulative executor Run Time (where wall-clock went):
+ stg att   nTsk     ok  fail    FF      wall   runT_sum  cpu%   gc% fetchWt%    shRead   shWrite  spill(m/d)GB  maxTask
+ 802   2   1000   1022     0     4  0h33m41s 129h56m17s    8    0      70   1952.6G   1953.2G 5975.9/2909.5 0h17m35s
+ 733   2   1000   1010     0     8  0h19m35s 123h15m34s    8    0      80   1863.5G   1861.9G 3050.5/1482.8 0h17m35s
+ 754   1   1000   1000     0     0  0h16m39s 120h36m06s    9    0      75   1850.5G   1852.6G 3269.7/1610.3 0h14m46s
+ 777   2   1000   1045     0    19  0h34m28s 103h33m03s   10    0      81   1988.7G   1992.6G 4918.4/2394.8 0h19m33s
+ 829   2   1000   1013     0     2  0h34m49s 102h56m12s   10    0      80   1946.3G   1939.5G 5448.8/2555.2 0h15m25s
+ 714   1   1000   1000     0     0  0h15m15s  94h32m16s   10    0      71   1837.9G   1839.4G 3182.6/1551.8 0h10m37s
+ 583   1   1000   1000     0     0  0h09m09s  66h27m35s   13    0      82   1812.4G   1832.1G 3114.0/1292.7 0h06m11s
+ 697   1   1000   1000     0     0  0h07m30s  20h35m16s    7    0      91     70.1G     51.8G   0.0/  0.0 0h06m40s
+ 302   1   6144   6144     0     0  0h02m12s  14h33m07s   41    1       0      0.0G   1538.4G   0.0/  0.0 0h00m37s
+ 608   1   1000   1000     0     0  0h08m11s   9h07m45s    2    0      97     11.6G     10.3G   0.0/  0.0 0h01m59s
+ 311   1   5026   5026     0     0  0h03m03s   5h51m21s   25    1       0      0.0G     39.0G   0.0/  0.0 0h00m18s
+ 475   1   1000   1000     0     0  0h00m43s   4h27m47s    6    0      91      6.7G      5.1G   0.0/  0.0 0h00m34s
+ 288   1  84677  84677     0     0  0h01m21s   4h20m14s   10    0       0      0.0G      0.0G   0.0/  0.0 0h00m04s
+ 328   1   5026   5026     0     0  0h03m30s   4h16m07s   36    2       0      0.0G     41.5G   0.0/  0.0 0h00m18s
+ 505   1   1000   1000     0     0  0h00m33s   3h46m35s   35    1      58    273.5G    273.9G   0.0/  0.0 0h00m23s
+ 460   1   1000   1000     0     0  0h00m47s   2h19m19s   54    1      33    262.7G    269.1G   0.0/  0.0 0h00m44s
+
+# DOMINANT stage name: json at NativeMethodAccessorImpl.java:0
+# task dur (sampled n=1022): p50=0h08m01s p95=0h11m58s p99=0h13m44s max=0h17m35s  -> skew ratio max/p50 = 2.2x
+# dominant peakExecMem/task max = 7.89GB ; spill mem=5975.9GB disk=2909.5GB
+
+# SQL executions:
