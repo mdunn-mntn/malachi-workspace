@@ -30,8 +30,26 @@ Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the 
 - `scripts/new_ticket.sh <folder_name> [--title ..] [--summary ..] [--status ..] [--parent <epic>] [--epic] [--jira <url>]` — scaffold a conforming ticket folder in one command: validates the name (lowercase+underscores), creates `queries/ outputs/ meetings/ artifacts/`, writes `summary.md` with prefilled front-matter that passes `lint_tickets`, and refreshes `tickets/INDEX.md`.
 
 **Self-improvement scripts (read/append-only — no delete authority):**
-- `scripts/health_scorecard.py [--verbose]` — days-since-`/capture` (the `: capture` ritual commit), orphan docs (knowledge docs untouched in git > 120d), and duplicate-H1-title count. Prints one line into the SessionStart block; `--verbose` names the offenders.
+- `scripts/health_scorecard.py [--verbose] [--memory]` — days-since-`/capture` (the `: capture` ritual commit), orphan docs (knowledge docs untouched in git > 120d), and duplicate-H1-title count. `--memory` adds the auto-memory signals (lifecycle rollup, stale-active refresh queue, overlap-cluster merge candidates, unresolved wikilinks, `MEMORY.md` hot-tier budget). Prints one line each into the SessionStart block; `--verbose`/`--memory` name the offenders.
+- `scripts/lint_memory.py [--check | --fix]` — linter + idempotent migrator for `knowledge/memory/*.md`: `--fix` adds the unified front-matter (`doc_type: memory`, `keywords`, `domain`, `lifecycle`, `last_verified`) additively (never restructures the native `name`/`description`/`metadata`); `--check` reports files missing `doc_type`/`keywords` and unresolved wikilinks.
 - `scripts/request_digest.py [--min N]` — mines `.request_log.jsonl` for recurring verb+noun shapes and **proposes** a `/skill` for anything that recurs ≥ N times. Proposal only — a human decides; skills are never auto-created (and knowledge is never auto-deleted).
+
+## Auto-memory (unified in git, one-time setup)
+Cross-session memory files live in `knowledge/memory/` (in git), indexed by `build_index.sh` into
+`_ROUTING.md` + `_MEMORY_INDEX.md` + `_MEMORY_LIFECYCLE.md` exactly like any knowledge doc. `MEMORY.md`
+there is the small always-loaded **hot tier**; everything else is grep-on-demand, so the always-loaded
+cost never grows with the corpus. `/capture` writes new memory here (never a per-fact `MEMORY.md` line).
+
+**The reverse-symlink (one-time, machine-local, Mac only — NOT committed).** Claude Code's native memory
+tool reads/writes `~/.claude/projects/-Users-malachi-Developer-work-mntn-workspace/memory/`. That path is a
+**symlink into the repo** so the native tool's own writes land in git and native auto-recall keeps working:
+```bash
+NATIVE=~/.claude/projects/-Users-malachi-Developer-work-mntn-workspace/memory
+ln -s /Users/malachi/Developer/work/mntn/workspace/knowledge/memory "$NATIVE"   # after moving the old dir aside
+```
+If a fresh session ever fails to auto-load `MEMORY.md` or stops surfacing memory by description-match, the
+native tool is rejecting the symlink — revert with `rm "$NATIVE" && mv "$NATIVE".backup-*-presymlink "$NATIVE"`
+(the files stay safe in git regardless; retrieval falls back to grepping `_ROUTING.md`).
 
 ### What is automatic vs. triggered
 Hooks are **shell** — they can log, detect, print, and block, but they **cannot invoke an agent**.

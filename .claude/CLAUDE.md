@@ -44,6 +44,17 @@ table reaches `enriched`/`verified` in `bq/_COVERAGE.md`, its `data_catalog.md` 
 `<Fill:>` stubs from being marked verified. Refresh a doc: `.claude/scripts/bq_introspect.sh <dataset>`
 (regenerates schema, preserves human sections + view-resolved partition/cluster).
 
+**Auto-memory is a first-class citizen of the same index.** The cross-session memory files live in
+`knowledge/memory/` (in git; the native memory dir is a reverse-symlink to it — a one-time Mac setup, see
+`.claude/README.md`). Each carries `doc_type: memory` + `keywords` + `domain` + `lifecycle` +
+`last_verified`, so `build_index.sh` folds them into `_ROUTING.md` (the one grep surface) and generates
+`knowledge/_MEMORY_INDEX.md` (browse by domain) + `knowledge/_MEMORY_LIFECYCLE.md` (refresh/dedup queue).
+`MEMORY.md` is the small always-loaded HOT TIER (behavioral rules + stack gotchas) — new task-specific
+facts do NOT get a `MEMORY.md` line; they are grep-on-demand, so the always-loaded cost stops growing with
+the corpus. `.claude/scripts/lint_memory.py` migrates/lints memory front-matter; `health_scorecard.py
+--memory` + `workflow_audit.sh` §10 surface stale / overlap-cluster / broken-wikilink / budget signals
+(propose-only). Add or retire memory via `/capture` (it holds the sole delete/merge authority).
+
 **Deterministic layer (`.claude/`, runs itself):** the existing `bq_run.sh` wrapper now also logs
 `sql_tables` (clean names). Eight hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
 wrapper), lint any Jira write-curl against the Terse Comms Standard before it posts

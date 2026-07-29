@@ -43,12 +43,17 @@ Every query runs through `.claude/scripts/bq_run.sh` (logs cost + `sql_tables` t
 | **verify how a reported number was produced** | `.claude/scripts/bq_verify.py <ticket \| label \| sql_sha256>` → the exact SQL fingerprint + `job_id` (recovers full SQL via `bq show -j`) + git commit + cost. Every `bq_run.sh` run is provenance-stamped. |
 | **an Airflow / pager / pipeline alert (on-call)** | `on-call/oncall_runbook.md` — §0 classify (alert vs ticket) → §2 catalog → §3 incidents — or run **`/oncall`**. Grep `_ROUTING.md` for the symptom (`sensor timeout`, `dataproc`, the DAG name). |
 | **prior work on a topic** | `tickets/INDEX.md` → the ticket's `summary.md` |
+| **a cross-session fact / how-I-work rule / prior decision (memory)** | grep `_ROUTING.md` (memory folds in) or browse `_MEMORY_INDEX.md` (by domain) → the one `memory/<file>.md`. Always-on rules live in the hot tier `memory/MEMORY.md`. |
 | **where a file belongs** | `folder_definitions.md` (ticket structure authority) |
 
 ## The system (how this workspace documents itself)
 - **Deterministic layer** (`.claude/`): the `bq_run.sh` wrapper + 8 hooks + `build_index.sh` +
-  `lint_coverage.py` + `lint_tickets.py` keep the indexes true and flag doc-debt automatically;
-  `health_scorecard.py` (SessionStart) and `request_digest.py` add self-improvement signals. See `.claude/README.md`.
+  `lint_coverage.py` + `lint_tickets.py` + `lint_memory.py` keep the indexes true and flag doc-debt
+  automatically; `health_scorecard.py` (SessionStart, incl. memory signals) and `request_digest.py` add
+  self-improvement signals. See `.claude/README.md`.
+- **Auto-memory is unified in** `knowledge/memory/` (the native memory dir is a symlink to it): each file
+  carries `doc_type: memory` + `keywords`, so it folds into the same `_ROUTING.md` grep surface. `MEMORY.md`
+  is the small always-loaded hot tier; everything else is grep-on-demand. Add via `/capture`.
 - **Agents** (`.claude/agents/`): cataloger (skeleton→enriched), reviewer-adversarial ×2, fixer,
   synthesizer, perf-analyst, curator. The crawl uses this loop. See `workflows/ARCHITECTURE.md`.
 - **Session startup + always-on behaviors + BQ rules:** `.claude/CLAUDE.md`.
