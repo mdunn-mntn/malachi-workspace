@@ -543,6 +543,8 @@ gcloud storage ls "gs://sh-dw-external-tables-prod/mntn_id_data/2026/07/28/"    
 
 **Durable fix → IMP-007.** Raise TTL / cap `maxExecutors` / raise auth+shuffle-retry timeouts on the `tpa_mntn_id_export` model decorator to survive a shuffle-fetch storm on a zero-headroom job; and (cross-ref IMP-006) the same Dataproc Serverless subnet networking anomaly (INC-004 Compass §, run_geo "connection refused to master") should be routed to whoever owns the `dataproc-prod` subnet/SA config.
 
+**Fix PR: [SteelHouse/airflow-ti#1161](https://github.com/SteelHouse/airflow-ti/pull/1161)** (2026-07-29) — 2 commits: core (persist `mntn_df` DISK_ONLY + `shuffle.partitions` 1000→8000 + TTL 10800→14400) and optional (collapse the 14 crossJoins). Patch + linted PR body in `incidents/INC-005/`. **Owner routing (Sean Yang, #alerts-tpa-pipeline):** real fix/redevelop routed to **Nivas Nalla** (with Ryan Kleck); Sean asked whether the job is business-critical and, if not, to re-route its alerts off #alerts-tpa-pipeline and let Nivas take it in a sprint. So the PR is a ready stopgap Nivas can take or supersede. A re-run to unblock the missing 07-28 export is still separate (may pass since the spiral is timing-dependent).
+
 **Logs:** `on-call/incidents/INC-005/`.
 
 ---
