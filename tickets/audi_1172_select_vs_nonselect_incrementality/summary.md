@@ -108,3 +108,12 @@ The xlsx went through several format-clarity passes driven by review feedback, a
 ## 7. Delivery
 
 Delivered to Kirsa 2026-07-28; she's sharing to the Select-analysis tiger team. RT exclusion confirmed to her (all rows objective_id=1 prospecting; ghost-bid holdout is prospecting-only). Overwriting the live Drive copy on rebuild is fine (Malachi confirmed) — regenerate over `My Drive/Tickets/AUDI-1172/` as needed; make a separate copy only if asked. Clean rebuildable source = the committed builder + local artifact.
+
+## 8. Open items
+
+**CPIV/CPIA (Kirsa follow-up, 2026-07-29) — computed but NOT shipped.** She asked for cost per incremental visit/conversion. First-pass pooled (`total_spend / incremental_visits`, `all_facts` obj=1 spend, 2026-06-22..07-27): Select ~$6 vs non-Select ~$30 CPIV; CPIA Select ~$117 vs non-Select ~$1,030. Directional only. Adversarial verification (workflow) found it not tiger-team-ready. Blocked on:
+- **Spend↔Verified-Visit scaling (Matt Brorby).** His pipeline "visit" (`incremental_visits`) ≠ Reporting VV; spend must be scaled to align. He has no mapping yet — needs a chat. This is the one true blocker.
+- **Leg confound.** Select lift is ~97% the MNTN Rust leg (partner 79), non-Select ~100% Beeswax (partner 8). Different legs (Rust=clean, Beeswax=biased) confound BOTH the CPIV and the headline +22% vs +4% — confirm same-leg.
+- **Headline internal inconsistency (fix regardless).** The Headline shows count-pooled treated/holdout rates (imply ~+100% Select lift) next to the IVW abs-lift (+22%). Different estimators side by side; a reader can catch that 2.39% − 1.19% ≠ 0.262pp. Pick one basis per table before the copy propagates.
+
+Resolved by us (no Matt): spend = total (media+data+platform, Select bundles platform into a gross CPM so media-only flatters PTV); denominator = raw-count `incremental_visits` (Matt confirmed); CPIV pooled-only (per-advertiser unstable, Select cheaper in 15/28 = concentration-driven); CPIA pooled-only. Full question list: `experimentation.md` §Ghost-bid lift. Outputs: `outputs/audi_1172_cpiv_raw.json`, `audi_1172_cpiv_by_adv.csv`.
