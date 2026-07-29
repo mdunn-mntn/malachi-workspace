@@ -382,6 +382,29 @@ late" is a system-wide DS-flow lag, not an isolated builder bug. (Possibly-relat
 `aud22` Geo Includes/Excludes audit fired on multiple CGs — likely stale/partial geo data, not a true
 violation; verify against today's data once the flow catches up.)
 
+**Compass RCA (2026-07-29) — deeper findings (evidence: Cloud Audit Logs + Spark logs + git):**
+- **Late START, not slow compute.** `run_geo` CreateBatch was accepted at **08:07:23Z**; the geo Spark job
+  then ran ~10 min (`_SUCCESS` 08:17:34Z). The miss is 100% "run_geo launched 3h late," not slow geo compute.
+  The delay is upstream of run_geo's launch (a builder/gate finishing late), not run_geo itself.
+- **Chronically flaky producer, NOT a new regression.** `ipdsc_geo` launch crept from a tight ~03:45Z band
+  (mid-June) to ~04:45–06:53Z (late July), with historical outliers of **+14h (06-23→24) and +16h (06-28→29)**
+  that dwarf 07-28's +3h. **07-28 was the first time this recurring lateness collided with an unguarded
+  consumer deadline** (the then-new `fangorn_score_monitor`). Design for multi-hour, even mid-day, delays.
+- **Leading (unconfirmed) suspect: `DS9` was added to `tpa_ipdsc_export` the day before** (commits 07-27
+  "Add DS 9" / 07-28 "Fix DS number and add DS 9", Alyson) — one more `ipdsc_ds_*` builder upstream of
+  `run_geo`. **Open gap:** the specific long-pole builder couldn't be pinned from audit logs (batch-ID naming
+  mismatch); to close it, pull the `ipdsc_ds_*` task-instance start/end times from the **Astronomer/Airflow
+  metadata DB**, not GCP audit logs.
+- **Consumer scope confirmed complete.** Only two `ipdsc_geo` consumers exist: `tpa_mntn_id_export`
+  (triggered synchronously downstream inside the producer DAG → no race) and `fangorn_score_monitor` (the one
+  that raced). PR #1160's sensor covers the only racing consumer. 18h sensor timeout > worst-ever +16h slip.
+- **Separate anomaly to route (not causal here):** run_geo's Spark workers hit `Failed to connect to master …
+  Connection refused` + `SIGNAL TERM` at 08:20:17–18Z — AFTER `_SUCCESS` (08:17:34Z), so it reads as normal
+  decommission of a finished batch. Flag to whoever owns the Dataproc Serverless subnet/SA config.
+- **Producer-side fix recommended (Compass):** the consumer sensor stops the page but doesn't touch the
+  producer's recurring tail latency. Add wall-clock alerting (repo pattern `dag_run_duration_watchdog`) on
+  `tpa_ipdsc_export` so a 3h+ slip pages **TPA_EXPORT** proactively. Tracked as **IMP-006**.
+
 **Diagnosis path (copy-paste — the Airflow log is NOT enough):**
 ```bash
 # 1. Airflow log only says "Dataproc Agent reports job failure" — get the REAL error from the batch driver output:
