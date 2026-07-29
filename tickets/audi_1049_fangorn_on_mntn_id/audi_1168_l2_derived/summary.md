@@ -14,6 +14,8 @@ framing_state: draft
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1168
 **Parent epic:** AUDI-1049 · **Build umbrella frame:** `../audi_1134_feature_store_build/summary.md`
 **Status:** backlog · **Assignee:** Malachi (unassigned in Jira — claim at planning)
+> **⚠ Update 2026-07-29 (epic §7i): now co-owned Malachi + Brian McAdams** (Sean moved to DS13/19). This + 1169
+> is the core L2/L3 build you two lead. Resolution lands inline here (before L158 of the guid_log L2 model).
 
 ---
 ## 0. Framing  ← run `/frame` when you start; inherits the AUDI-1134 build-frame

@@ -13,7 +13,9 @@ framing_state: "skip: epic — per-child framing (1166-1170 build, 1100 tuning, 
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1049
 **Epic owner:** Matt Brorby · **RFD decider:** Alyson Lefkowitz · **FS-build lead:** Sean Yang
-**Malachi's lane:** feature-store build (AUDI-1166→1170, 1100) primary · validation (AUDI-1105) secondary
+**Malachi's lane (updated 2026-07-29, see §7i):** **co-own the L2/L3 feature-store build (AUDI-1168/1169) with
+Brian McAdams** (Sean moved to DS13/19) · 1166 mirror = optional, 1167 resolution = placeholder (Sean stubbing) ·
+feature-eng 1100 · validation 1105 secondary
 **Status:** backlog · **Date:** 2026-07-28
 
 > **This folder is the home for all of Malachi's work on this epic.** Child folders below hold per-ticket
@@ -121,7 +123,10 @@ HH content exists; validation is **offline-first, not champion/challenger** (gra
 
 ---
 ## 4. Child map & sequencing (Malachi's lane in **bold**; ⚠ epic = AUDI-1049, not 1057)
+> **⚠ Owners updated 2026-07-29 (§7i):** Sean → DS13/19; **Malachi + Brian co-own L2/L3 (1168/1169)**; 1166
+> optional / 1167 placeholder. The table below is the original plan — read §7i for current ownership.
 Critical path: **L1 mirror → resolution → L2 → L3 → orchestration → train → validate → experiment.**
+For IPv4-only v1 the path collapses to **graph-join-at-L2 → L3 → orchestration** (1166 optional, 1167 inline).
 
 | WS | Ticket | Owner | Role | Folder |
 |---|---|---|---|---|
@@ -436,6 +441,23 @@ The 4-case read (§7f) was **confirmed "100% right" by Ryan Kleck.** The thread 
 - **DAG/model convention (Sean, confirmed): REUSE the existing DAGs; add the HHID work as new MODELS with an
   `hh_` prefix** — NOT a separate `feature_store_hhid_*` DAG set. This pins AUDI-1170's "additive task group, no
   forked DAG" decision and sets the naming standard (`hh_` prefix on the new household models).
+
+## 7i. Ownership shift — Sean → DS13/19, Malachi + Brian → L2/L3 (Slack #dev-audi-mntn-id, 2026-07-29)
+**This reshapes the lane — supersedes the §4/§5 owner columns where they conflict.**
+- **Sean Yang is moving to DS13/DS19** (Alyson: DS13/19 is AUDI's responsibility for the initial rollout too).
+  Sean asked **Brian McAdams to work on the Layer 2/3 feature store WITH Malachi** → **Malachi + Brian now
+  co-own the core L2/L3 build (AUDI-1168/1169).** Sean stays on audience_intent/HHDSC/export (1136/1156/1157)
+  + the DS13/19 re-key. So Malachi is no longer "one builder under Sean" — he's a **co-lead of the L2/L3 FS**.
+- **AUDI-1166 `identity_graph_ip_mntn_id` (daily graph mirror) is now OPTIONAL.** Per Ryan, **join the graph
+  directly by default**; the mirror is a **reserve/fallback** for when joining the full graph every run causes
+  performance issues. Sean is landing the module as a stub — use it only if you find a benefit.
+- **AUDI-1167 `household_resolution.py` is a PLACEHOLDER.** Intended as the single source of truth for
+  identifier→household resolution, but feasibility is uncertain (edge cases across features/grains). Kept as a
+  placeholder until the resolution logic is finalized. Sean stubbing it. So the resolution logic effectively
+  lives inline in the L2 model (before L158) for v1, not in a shared util yet.
+- **Sean's draft PR (airflow-ti #1156)** adds a **new Layer-1 table at `(ip, guid)` grain** (the ip/guid keyset
+  L1 that supports Ryan's GUID fast-follow). Sean asked if Malachi/Brian need it → **decide from the L2/L3
+  design** (for IPv4-only v1 you likely don't need the guid grain yet).
 
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive

@@ -14,6 +14,8 @@ framing_state: draft
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1169
 **Parent epic:** AUDI-1049 · **Build umbrella frame:** `../audi_1134_feature_store_build/summary.md`
 **Status:** backlog · **Assignee:** Malachi (unassigned in Jira — claim at planning)
+> **⚠ Update 2026-07-29 (epic §7i): now co-owned Malachi + Brian McAdams** (Sean moved to DS13/19). Core L2/L3
+> build you two lead, `hh_`-prefixed models in the existing DAG.
 
 ---
 ## 0. Framing  ← run `/frame` when you start; inherits the AUDI-1134 build-frame

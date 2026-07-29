@@ -14,6 +14,10 @@ framing_state: draft
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1167
 **Parent epic:** AUDI-1049 · **Build umbrella frame:** `../audi_1134_feature_store_build/summary.md`
 **Status:** backlog · **Assignee:** Malachi (unassigned in Jira — claim at planning)
+> **⚠ Update 2026-07-29 (epic §7i): this is now a PLACEHOLDER.** A shared single-source-of-truth resolver is
+> hard given edge cases across features/grains, so for IPv4-only v1 the resolution logic lives **inline in the
+> L2 model (before L158 of `guid_log_derived_ip_vertical_id.py`)**, not in this shared util. **Sean is stubbing
+> `household_resolution.py`;** promote it to the real util once the resolution logic is finalized.
 
 ---
 ## 0. Framing  ← run `/frame` when you start; inherits the AUDI-1134 build-frame

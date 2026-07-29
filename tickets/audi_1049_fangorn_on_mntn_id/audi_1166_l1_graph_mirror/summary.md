@@ -14,6 +14,9 @@ framing_state: draft
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1166
 **Parent epic:** AUDI-1049 · **Build umbrella frame:** `../audi_1134_feature_store_build/summary.md`
 **Status:** backlog · **Assignee:** Malachi (unassigned in Jira — claim at planning)
+> **⚠ Update 2026-07-29 (epic §7i): this ticket is now OPTIONAL.** Default is to **join the graph directly**;
+> the mirror is a reserve/fallback for full-graph-join performance issues. **Sean is landing it as a stub.**
+> Not on Malachi's IPv4-only critical path.
 
 ---
 ## 0. Framing  ← run `/frame` when you start; inherits the AUDI-1134 build-frame

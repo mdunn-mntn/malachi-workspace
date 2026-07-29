@@ -1,6 +1,6 @@
 ---
 name: project_fangorn_on_mntn_id
-description: "AUDI-1049 Fangorn-on-MNTN-ID epic — re-key Fangorn feature store IP→household (Option 1); Malachi's lane = FS build (1166-1170) + validation (1105); folder + full context at tickets/audi_1049_*"
+description: "AUDI-1049 Fangorn-on-MNTN-ID epic — re-key Fangorn feature store IP→household (Option 1, IPv4-only Sept-4); Malachi + Brian co-own L2/L3 build (1168/1169), Sean→DS13/19, 1166 optional/1167 placeholder; validation 1105; folder tickets/audi_1049_*"
 metadata: 
   node_type: memory
   type: project
@@ -96,6 +96,14 @@ PARALLEL** (add GUID to L1 + ip/guid-combo lookup in L2, once IPv4 works) → th
 is off Malachi's IPv4 critical path. **DAG convention (Sean, confirmed): reuse existing DAGs, add HHID work as
 new models with an `hh_` prefix** (not a separate `feature_store_hhid_*` DAG set) — the concrete form of
 AUDI-1170's additive-task-group / no-forked-DAG.
+
+**OWNERSHIP SHIFT (2026-07-29, reshapes the lane):** **Sean Yang moved to DS13/DS19** (Alyson: DS13/19 is
+AUDI's initial-rollout responsibility too); Sean asked **Brian McAdams to build the L2/L3 feature store WITH
+Malachi** → **Malachi + Brian now CO-OWN the core L2/L3 build (AUDI-1168/1169)** — Malachi is a co-lead, no
+longer a builder under Sean. **AUDI-1166 (graph mirror) is now OPTIONAL** (join the graph directly by default;
+mirror = perf fallback; Sean stubbing it). **AUDI-1167 (`household_resolution.py`) is a PLACEHOLDER** (resolution
+lives inline in the L2 model before L158 for v1; Sean stubbing the util). Sean's draft PR airflow-ti #1156 adds
+a Layer-1 `(ip, guid)` grain table (for Ryan's GUID fast-follow; not needed for IPv4-only v1).
 
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
