@@ -575,8 +575,10 @@ VVs / 19% of conversions on HHID (Jun 1-15).
 - **Identity** (owns the graph + Identity Service): **Jack Barbey** (TL/EM, endpoint spec), Elena Donnelly
   (PRD), Luis Chelala (TPM), **Ryan Kleck** (bridges Identity↔audience_intent, ID-358), Nivas (ID-359 IPDSC).
 - **AUDI** (targeting leg — Fangorn feature store + scoring, epic AUDI-1049): **Matt Brorby** (epic + modeling
-  + uplift RFD), **Sean Yang** (feature-store build lead), Brian McAdams (Vertex train/scoring + FinOps),
-  Alex Knorr (thresholds), Malachi (FS build + validation), Alyson Lefkowitz (dept lead / RFD decider).
+  + uplift RFD), **Sean Yang** (audience_intent/HHDSC/export + **DS13/DS19 re-key** — moved off the FS build
+  2026-07-29), **Malachi + Brian McAdams** (co-own the **L2/L3 feature-store build**; Brian also Vertex
+  train/scoring + FinOps), Alex Knorr (thresholds), Alyson Lefkowitz (dept lead / RFD decider). Ryan Kleck
+  (Identity) owns the GUID fast-follow in parallel.
 - **Audience Platform** (serving/membership): Jaime Mutale (audience-services RFD), Daniel Hartnett
   (MembershipDB AP-5385), **Zach Schoenberger** (SoT resolver + MID membership DB), Mike Dolt (infra budget).
 - **Bidder** (dual auction + cache blend, f-cap reset, BID-3356); **Pacing** (Swapnil Patil, HHST deprecation
