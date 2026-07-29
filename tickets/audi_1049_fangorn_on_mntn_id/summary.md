@@ -418,6 +418,14 @@ The 4-case read (§7f) was **confirmed "100% right" by Ryan Kleck.** The thread 
   window** — an IP can change households mid-window; **undecided whether features follow the day's household or
   the snapshot's** (this is the as-of dimension made concrete). (b) **orphaned/shared IPs vanish** → they
   systematically **under-represent shared-IP households**; **~9.5% of current IPv4 rows are flagged shared.**
+- **Exact insertion point + why it's mechanically clean (Ryan, 1:42–1:46).** Do the HHID lookup **right before
+  line 158 of `models/feature_store/feature_group_2_derived/guid_log_derived_ip_vertical_id.py`** (airflow-ti).
+  Distinct features → **`hll_merge`** the HLL sketches (not sum); everything else = **sum/min/max** by feature
+  (Sean). **Load-bearing FS invariant (Ryan): every Feature-Store Layer-1 feature must be aggregatable over 30
+  days via `sum/min/max/hll_merge/…`** — which is exactly *why* the household `GROUP BY mntn_id` just works: the
+  same aggregation primitives that roll a feature over 30 days also roll it across a household's IPs (temporal
+  rollup ≡ household rollup). **So the HLL question is resolved (merge, don't sum), and the re-key IS a real
+  change** — Ryan confirms it improves both case 2 (multi-IP aggregation) and the lookback.
 
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive

@@ -21,6 +21,7 @@ last_verified: 2026-07-22
 ## Architecture
 Three-layer feature store on GCP Dataproc Serverless via Airflow (Astronomer):
 - **Layer 1 (source):** `feature_group_1_source/` — daily/hourly rollups, raw counts, `dt=` partition
+  - **INVARIANT (Ryan Kleck):** every L1 feature must be **aggregatable over 30 days via `sum`/`min`/`max`/`hll_merge`/etc.** — nothing that can't be aggregated goes in L1. This is why the MNTN-ID household re-key is mechanically clean: household `GROUP BY mntn_id` reuses the same aggregation primitives as the temporal rollup (**temporal rollup ≡ household rollup**; distincts = HLL sketches → `hll_merge`, not sum). See [[project_fangorn_on_mntn_id]].
 - **Layer 2 (derived):** `feature_group_2_derived/` — 7/14/30d windows, joins, transforms, `effective_date=` partition
 - **Layer 3 (pivoted):** `feature_group_3_pivoted/` — wide format for model consumption
 

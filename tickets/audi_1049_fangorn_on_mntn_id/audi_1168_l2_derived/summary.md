@@ -81,4 +81,9 @@ _(document household L2 model naming + aggregation semantics)_
   so a household aggregates ALL its IPs' features (the household value; pick-one = ~IP-level, discards signal).
   This is FEATURE aggregation, NOT the `intent_score_household_map` score-translation (keep-highest-conf-IP).
   **SUM works, but distinct-count / HLL features do NOT sum** — need HLL-merge or household-grain re-derivation.
-  **First check: does the guid_log L2 use any HLL/distinct features?** (answerable from the airflow-ti L2 model).
+- **RESOLVED (Ryan, epic §7g): insertion point = right before line 158 of
+  `models/feature_store/feature_group_2_derived/guid_log_derived_ip_vertical_id.py`;** distincts → **`hll_merge`**
+  the sketches, everything else **sum/min/max** by feature. Works because of the **FS L1 invariant** (every L1
+  feature is aggregatable over 30d via sum/min/max/hll_merge) → household `GROUP BY mntn_id` reuses the temporal
+  aggregation primitives (temporal rollup ≡ household rollup). Confirmed: the re-key is a real change (improves
+  the multi-IP case + lookback).

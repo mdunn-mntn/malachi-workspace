@@ -3371,6 +3371,15 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   divergence sources: **graph churn across the lookback window** (an IP can change households mid-window — open:
   features follow the day's household or the snapshot's?) and **orphaned/shared IPs vanish** (~**9.5% of current
   IPv4 rows flagged shared** → systematically under-represents shared-IP households).
+- **Feature-Store Layer-1 aggregation invariant (Ryan Kleck, load-bearing).** Every L1 feature must be
+  **aggregatable over 30 days via `sum` / `min` / `max` / `hll_merge` / etc.** — nothing goes in L1 that can't
+  be. This is *why* the household re-key is mechanically clean: the household `GROUP BY mntn_id` uses the **same
+  aggregation primitives** as the 30-day temporal rollup, so **temporal rollup ≡ household rollup** (a distinct
+  feature is an HLL sketch → `hll_merge` across a household's IPs, not `sum`; counts/sums → sum; others min/max).
+  **Insertion point for the household re-key:** do the HHID lookup **right before line 158 of
+  `models/feature_store/feature_group_2_derived/guid_log_derived_ip_vertical_id.py`** (airflow-ti), then GROUP BY
+  household. Resolves the HLL question (merge, don't sum) and confirms the re-key is a real change (improves the
+  multi-IP case + the lookback).
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

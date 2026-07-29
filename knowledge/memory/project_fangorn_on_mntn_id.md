@@ -85,6 +85,12 @@ household aggregates ALL its IPs' features (pick-one discards signal). Cardinali
 divergence sources: graph churn over the lookback (features follow day's vs snapshot's household — undecided);
 orphaned/shared IPs vanish (**~9.5% of current IPv4 rows flagged shared**).
 
+**RESOLVED (Ryan, 2026-07-29):** insertion point = **right before L158 of
+`feature_group_2_derived/guid_log_derived_ip_vertical_id.py`**; distincts → **hll_merge** the sketches, else
+sum/min/max. Works because of the **FS Layer-1 invariant** (every L1 feature aggregatable over 30d via
+sum/min/max/hll_merge) → household GROUP BY mntn_id reuses the temporal-rollup primitives (**temporal rollup ≡
+household rollup**; see [[reference_airflow_ti]]). Re-key confirmed a real change (improves multi-IP case + lookback).
+
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on
