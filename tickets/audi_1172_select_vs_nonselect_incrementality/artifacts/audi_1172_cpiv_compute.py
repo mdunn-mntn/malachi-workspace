@@ -7,6 +7,7 @@ import json, csv, pathlib
 
 TDIR = pathlib.Path("/Users/malachi/Developer/work/mntn/workspace/tickets/audi_1172_select_vs_nonselect_incrementality")
 rows = json.loads((TDIR / "outputs/audi_1172_cpiv_reconcile.json").read_text())
+conv = {c["product"]: c for c in json.loads((TDIR / "outputs/audi_1172_cpia_conv.json").read_text())}
 
 out = []
 for r in rows:
@@ -28,10 +29,14 @@ for r in rows:
     ip_comp = hh / n_t                       # implied ip_compliance (households / bid IPs)
     freq = imps / hh                         # impressions per household
 
+    incr_conv = float(conv[p]["incr_conv"])  # conv_abs_itt * n_treatment, pooled
+    cpia_pipe = spend / incr_conv            # cost per incremental conversion (pipeline basis)
+
     out.append(dict(product=p, n_treatment=int(n_t), incr_visits=round(incr),
                     spend=round(spend), cpiv_pipeline=round(cpiv_pipe, 2),
                     k_pipe_to_vv=round(k, 3), incr_vv=round(incr_vv),
-                    cpiv_vv=round(cpiv_vv, 2), ecpm=round(ecpm, 2),
+                    cpiv_vv=round(cpiv_vv, 2), incr_conv=round(incr_conv),
+                    cpia_pipeline=round(cpia_pipe, 2), ecpm=round(ecpm, 2),
                     cost_per_household=round(cost_per_hh, 3),
                     ip_compliance=round(ip_comp, 3), freq=round(freq, 2)))
 
@@ -49,3 +54,5 @@ sel = next(d for d in out if d["product"] == "Select")
 non = next(d for d in out if d["product"] == "non_Select")
 print(f"\nCPIV gap (non-Select / Select): pipeline {non['cpiv_pipeline']/sel['cpiv_pipeline']:.1f}x"
       f"  |  VV-basis {non['cpiv_vv']/sel['cpiv_vv']:.1f}x")
+print(f"CPIA (pipeline): Select ${sel['cpia_pipeline']:,.2f}  non-Select ${non['cpia_pipeline']:,.2f}"
+      f"  |  gap {non['cpia_pipeline']/sel['cpia_pipeline']:.1f}x")
