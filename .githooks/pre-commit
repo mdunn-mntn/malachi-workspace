@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# AI Workflow Kit — commit gate (file format + index freshness), STAGED-SCOPED.
+# Blocks a commit only when a file THIS commit stages is malformed, or a staged doc's generated
+# index isn't re-staged. Pre-existing debt elsewhere never blocks. Fix with:
+#   .claude/scripts/verify.sh --fix   (then re-stage)
+# Emergency bypass (use sparingly): git commit --no-verify
+set -uo pipefail
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+V="$ROOT/.claude/scripts/verify.sh"
+[ -x "$V" ] || [ -f "$V" ] || { echo "[gate] verify.sh not found — skipping (run .claude/scripts/install_git_hooks.sh)"; exit 0; }
+exec bash "$V" --staged
