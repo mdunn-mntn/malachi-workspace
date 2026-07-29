@@ -3,7 +3,7 @@ doc_type: runbook
 title: On-Call Runbook — Master
 summary: "Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here."
 last_verified: 2026-07-28
-keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, INC-001, INC-002, INC-003]
+keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, audience_intent, fangorn_score_monitor, ipdsc_geo, ModelPysparkBatchOperator, dataproc serverless, dataproc batch, batches wait, driver output, AnalysisException, PATH_NOT_FOUND, path does not exist, producer consumer race, PAM, privileged access manager, storage.objects.get, INC-001, INC-002, INC-003, INC-004]
 tags: [on-call, airflow, incident-response]
 ---
 
@@ -108,6 +108,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | `ipdsc_monitor / precondition_<partner>` | GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) `AirflowSensorTimeout` | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
 | `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even in QA / a challenger run — starves `create-dataproc-cluster` → code 9. Resource contention, NOT stockout or config. | **Resource contention** — confirm no other Dataproc job is running, let the concurrent/challenger job FINISH, then manually re-trigger the champion. Blind re-run fails while a job still runs. | INC-002 |
 | `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the drift template declares `run_date` (its KFP source `fangorn_daily_feature_drift_pipeline.py:393` uses `run_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch. | **DAG bug** — route to owner (Brian/ML). **PR #1158 (airflow-ti) does NOT fix it** (confirmed: re-run on the fixed bundle re-failed identically); the operator-injected `reference_date` is the failing param. Real fix = rename the KFP pipeline param `run_date`→`reference_date` in **`targeting-infra-ml`** + recompile/redeploy the template. Do NOT blind-re-run until that ships. **RESOLVED 2026-07-28** (Brian redeployed template, green on try 5). | INC-003 |
+| `audience_intent / fangorn_score_monitor` | Airflow log = boilerplate `AirflowException: … Dataproc Agent reports job failure`; **batch driver output** = `AnalysisException [PATH_NOT_FOUND]: gs://mntn-data-archive-prod/ipdsc_geo/dt=<run_date>`. PagerDuty, retries exhausted. | Consumer `ModelPysparkBatchOperator` reads `ipdsc_geo/dt=<run_date>`, which lands on D+1 with ~3.5h-variable timing (tpa_export `run_geo`); monitor has only `retries=2×10min` + no cross-DAG sensor → races the producer, pages when it slips past ~07:45Z. | **Late data** (this case) — pull the driver output for the real error (Airflow log is boilerplate), confirm `ipdsc_geo/dt=<run_date>/_SUCCESS` is present, then clear+re-run the monitor. If partition still absent → real upstream failure, re-run tpa_export `run_geo`. **RESOLVED 2026-07-29.** | INC-004 |
 
 ---
 
@@ -345,6 +346,59 @@ DAG-parse. Tracked as **IMP-003** in `improvements_backlog.md` (standardize Fang
 
 ---
 
+### INC-004 — `audience_intent` `fangorn_score_monitor` — Dataproc batch AnalysisException, missing `ipdsc_geo/dt=<run_date>` (LATE DATA)
+**Date:** 2026-07-29 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [audience_intent/fangorn_score_monitor] at 2026-07-27 17:08 PT`, run `scheduled__2026-07-28T00:08:00+00:00`, try 3/3 (`max_tries=2` → exhausted → PagerDuty).
+**Error — the Airflow task log is boilerplate** (`AirflowException: Batch job … Google Cloud Dataproc Agent reports job failure`); the real Spark traceback is only in the **Dataproc Serverless batch driver output**:
+```
+File ".../fangorn_score_monitor.py", line 216, in model
+    self.spark.read.parquet(self._ipdsc_geo_path(run_date))
+pyspark.errors.exceptions.captured.AnalysisException: [PATH_NOT_FOUND] Path does not exist: gs://mntn-data-archive-prod/ipdsc_geo/dt=2026-07-28.
+```
+
+**STATUS: RESOLVED — late data; clear+re-run the monitor.** The monitor reads `ipdsc_geo/dt=<run_date>`;
+that partition was absent when the batch ran (last retry 2026-07-29 07:43Z) and landed **complete 34 min
+later at 08:17:34Z** (18 part-files ~5.2GB + `_SUCCESS`, same shape as 07-27). Action: **Clear Task
+Instance on `fangorn_score_monitor`** → it re-reads the now-present partition and passes. Each clear mints a
+fresh Dataproc batch_id (timestamped) so there's **no batch-id trap**. No producer re-run and no code change
+— the producer completed, just late.
+
+**Root cause = a producer/consumer RACE, not a bug.** `ipdsc_geo/dt=D` (tpa_export `run_geo`,
+`gs://mntn-data-archive-prod/ipdsc_geo/`) lands on D+1 with a **~3.5h-variable arrival**: 07-25→04:56Z,
+07-26→06:26Z, 07-27→05:00Z, **07-28→08:17Z (late)**. `audience_intent` (`8 0 * * *`) runs
+`fangorn_score_monitor` with only `retries=2 × 10-min` (~30-40 min of slack) and **no cross-DAG sensor** on
+`ipdsc_geo`, so when the producer slips past ~07:45Z the monitor exhausts retries and pages. Same
+tpa_export/ipdsc chain as INC-001. Monitor code + DAG both unchanged (07-02 / 07-24) — not a regression.
+
+**Diagnosis path (copy-paste — the Airflow log is NOT enough):**
+```bash
+# 1. Airflow log only says "Dataproc Agent reports job failure" — get the REAL error from the batch driver output:
+gcloud dataproc batches wait '<batch-id>' --region us-central1 --project mntn-prj-prod-00 2>&1 | tail -80
+#    (needs storage.objects.get on the mntn-prj-prod-00 dataproc-staging bucket — request PAM 'audi-storage-object-view' if 403)
+# 2. The traceback names the missing path. Does it exist NOW, and when did it land?
+gcloud storage ls -l "gs://mntn-data-archive-prod/ipdsc_geo/dt=<run_date>/_SUCCESS"
+# 3. Present + landed AFTER the task's last try = LATE DATA -> clear+re-run the consumer task.
+```
+
+**Decision tree — `ModelPysparkBatchOperator` "Dataproc Agent reports job failure":**
+1. The Airflow log is boilerplate — always pull the batch **driver output** (command 1) for the Spark traceback.
+2. `AnalysisException [PATH_NOT_FOUND]` → an input partition was missing at run time. Check if it exists now (command 2):
+   - **Present, landed AFTER the last try** → **late_data → clear+re-run the task** (this case).
+   - **Still absent** → real upstream failure → re-run the producer (`ipdsc_geo` = tpa_export `run_geo`; mind the INC-001 batch-id trap), or route to the feed owner.
+3. Other Spark errors (OOM / skew / schema) → the driver output shows it; route to the owning team.
+
+**Severity: LOW.** `fangorn_score_monitor` is a reporting leaf (emails/Slacks Fangorn intent-band counts,
+writes a monitoring parquet). Its downstream siblings (`household_score_distribution`, `intent_score_map`,
+`trigger_intent_score_household`) all went green in the same run → no scoring/serving impact, just a missed
+monitoring email for 07-28.
+
+**Durable fix → IMP-004:** add a `GCSObjectExistenceSensor` on `ipdsc_geo/dt={{ds}}/_SUCCESS` before
+`fangorn_score_monitor` (mirrors INC-001's `precondition_*` pattern), or widen its retry window to cover the
+producer's ~3.5h arrival variance. Owner = targeting/Ryan. Don't hot-patch.
+
+**Logs:** `on-call/incidents/INC-004/`.
+
+---
+
 ## 4. System reference (producer → consumer maps as we learn them)
 
 **IPDSC / TPA export chain (team TPA_EXPORT, `airflow-ti`)**
@@ -361,6 +415,10 @@ run_geo ──▶ tpa_export ──▶ external table bucket           precondit
   hard-fails `tpa_export`. Only optional partners (currently just Bombora/DS51) skip silently.
 - `ds17` sources ShareThis at `gs://mntn-data-partners/partners/sharethis/segments/date=<D-1>/`.
 - Full DS id → vendor map + ipdsc query tips: `knowledge/data_catalog.md` (`bronze.external.ipdsc__v1`, DS-id legend).
+- **`run_geo` also writes `gs://mntn-data-archive-prod/ipdsc_geo/dt=D` (lands D+1, ~05:00–08:17Z, variable).**
+  Downstream consumer: `audience_intent` `fangorn_score_monitor` reads `ipdsc_geo/dt=<run_date>` with no
+  cross-DAG sensor → **races the producer** (INC-004: pages when ipdsc_geo slips past the monitor's retry
+  window). If `ipdsc_geo/dt=D` is late/absent, that monitor `AnalysisException [PATH_NOT_FOUND]`s.
 
 **Fangorn inference chain (ML pipeline, `airflow-ti` → Vertex/Dataproc)**
 ```
