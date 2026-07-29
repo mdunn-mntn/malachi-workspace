@@ -423,9 +423,16 @@ run_geo ──▶ tpa_export ──▶ external table bucket           precondit
 - `ds17` sources ShareThis at `gs://mntn-data-partners/partners/sharethis/segments/date=<D-1>/`.
 - Full DS id → vendor map + ipdsc query tips: `knowledge/data_catalog.md` (`bronze.external.ipdsc__v1`, DS-id legend).
 - **`run_geo` also writes `gs://mntn-data-archive-prod/ipdsc_geo/dt=D` (lands D+1, ~05:00–08:17Z, variable).**
-  Downstream consumer: `audience_intent` `fangorn_score_monitor` reads `ipdsc_geo/dt=<run_date>` with no
-  cross-DAG sensor → **races the producer** (INC-004: pages when ipdsc_geo slips past the monitor's retry
-  window). If `ipdsc_geo/dt=D` is late/absent, that monitor `AnalysisException [PATH_NOT_FOUND]`s.
+  Producer = task `run_geo` (Airflow task_id `ipdsc_geo`, a `DataprocCreateBatchOperator`) in
+  `tpa_ipdsc_export.py`, TPA_EXPORT team, schedule `35 2 * * *` (02:35 UTC). It runs LAST — after all
+  `ipdsc_ds_*` builders + audience-builder tasks (`trigger_rule=NONE_FAILED_MIN_ONE_SUCCESS`) — and joins
+  them into the IP→geo table `external.ipdsc_geo__v1` (`ip, geo_version, location_id[], lat, long,
+  accuracy_radius`). Its finish time swings ~3.5h with the builder chain's runtime, so its landing time is
+  not fixed. Writes `_SUCCESS` last (complete-partition marker).
+  Downstream consumer (different team + schedule, no cross-DAG dep): `audience_intent` `fangorn_score_monitor`
+  (targeting, `8 0 * * *`) reads `ipdsc_geo/dt=<run_date>`. Pre-INC-004 it had no sensor → **raced the
+  producer** and paged (`AnalysisException [PATH_NOT_FOUND]`) when geo slipped past its ~30-40min retry slack.
+  PR #1160 added `wait_for_ipdsc_geo` on the `_SUCCESS` marker so the monitor waits instead of racing.
 
 **Fangorn inference chain (ML pipeline, `airflow-ti` → Vertex/Dataproc)**
 ```
