@@ -43,4 +43,4 @@ last_verified: 2026-06-01
 - Fangorn rollout monitoring: track the count of Fangorn-on advertisers and the FL1 distinct-score count (10,000 = full continuous; lower = degraded).
 - Spot-check pipeline health: any sudden drop in score volume or distinct score count indicates a pipeline outage worth investigating.
 
-**See also:** [[reference-rtc-hhst-gating]] (RTC scoring waterfall), `knowledge/data_knowledge.md` § "Daily Prospecting Scores Distribution Monitor (GCS, PROD)" for the canonical write-up.
+**See also:** [[reference_rtc_hhst_gating]] (RTC scoring waterfall), `knowledge/data_knowledge.md` § "Daily Prospecting Scores Distribution Monitor (GCS, PROD)" for the canonical write-up.

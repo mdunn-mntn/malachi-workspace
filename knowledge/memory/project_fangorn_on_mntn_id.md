@@ -51,4 +51,4 @@ may not bid) — accepted. Bidder ~a few weeks off (id-service latency standup) 
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on
 the same MID-keyed L3 tables. Related: [[reference_audience_intent_scoring_dag]] [[reference_airflow_ti]]
-[[reference_fangorn_two_model_passes]] [[incrementality_experiment]] [[reference_bidder_serving_stores]].
+[[reference_fangorn_two_model_passes]] [[project_incrementality_experiment]] [[reference_bidder_serving_stores]].

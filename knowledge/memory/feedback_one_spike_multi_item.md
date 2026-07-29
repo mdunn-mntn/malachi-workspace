@@ -21,4 +21,4 @@ in the workspace, **one subfolder per item** inside the single ticket folder to 
 
 **How to apply:** next multi-item spike → single AUDI ticket, wiki checklist `(x)`→`(/)` per item in the
 description, per-item subfolders (each with summary.md, queries/, outputs/, artifacts/), shared cross-item
-work at ticket root. Related: [[jira-conventions]].
+work at ticket root. Related: [[reference_jira_conventions]].

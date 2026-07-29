@@ -80,7 +80,7 @@ Every TI Jira ticket must include these at creation time:
 
 **Why:** I had been auto-stamping `Backend` on every ticket. Most TI work is analysis/tooling, so this mismarked dozens of tickets. `Done` + `Backend` + **no fix version** trips the release automation and finance reports — Bryce had to sweep and clean them up (TI-961, TI-1019, TI-962 caught 2026-06-09). User: "we don't want to mark every ticket we have as backend." Refined 2026-06-17: for non-prod tickets just leave Release Type off entirely.
 
-**How to apply:** On every `curl` ticket creation, set PMO Rep + quarterly label always. **Leave Release Type off** unless the ticket genuinely ships prod code — then set Backend AND attach a fix version (or UI for front-end). Linked: [[feedback_jira_create_curl]], [[feedback_jira_task_type]].
+**How to apply:** On every `curl` ticket creation, set PMO Rep + quarterly label always. **Leave Release Type off** unless the ticket genuinely ships prod code — then set Backend AND attach a fix version (or UI for front-end). Linked: [[reference_jira_conventions]], [[reference_jira_conventions]].
 
 ## from feedback_jira_bug_required_fields.md
 Creating a `{"issuetype": {"name": "Bug"}}` ticket in the TI Jira project requires two extra fields beyond what Task tickets need:
@@ -196,7 +196,7 @@ curl -s -u "malachi@mountain.com:${JIRA_API_TOKEN}" \
   -d '{"jql": "project = AUDI ORDER BY created DESC", "maxResults": 20, "fields": ["summary","status","labels","created"]}'
 ```
 
-Single-issue reads (`/rest/api/2/issue/KEY`), comment/create writes (REST v2, see [[feedback_jira_create_curl]]) are unchanged. Project fully migrated TI→AUDI with numbers preserved (TI-1037 = AUDI-1037); new tickets go in project key `AUDI`, "Backlog" is the default workflow status. See [[reference_team_name]], [[feedback_jira_required_fields]].
+Single-issue reads (`/rest/api/2/issue/KEY`), comment/create writes (REST v2, see [[reference_jira_conventions]]) are unchanged. Project fully migrated TI→AUDI with numbers preserved (TI-1037 = AUDI-1037); new tickets go in project key `AUDI`, "Backlog" is the default workflow status. See [[reference_team_name]], [[reference_jira_conventions]].
 
 ## Sprint, status transitions, delete (verified AUDI-1172/1177, 2026-07-28)
 

@@ -22,4 +22,4 @@ per IP→household link).
 
 **How to apply:** any per-IP value/quality scoring idea (e.g. weighting vendor-supplied IPs by advertiser
 diversity — Malachi's AUDI-1089 idea) should extend/consume ID-164's score, not build a parallel pipeline.
-Loop in the Identity team first. Related: [[ddp-valuation-framework]].
+Loop in the Identity team first. Related: [[reference_ddp_valuation_framework]].

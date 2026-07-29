@@ -14,7 +14,7 @@ last_verified: 2026-05-29
 When CRM (DS4/DS8/DS47) appears alongside MM (or any positive audience-targeting axis) in the same prospecting campaign, **polarity changes the meaning fundamentally at the scoring layer**:
 
 - **CRM-exclude** (`op:not` wrapping the DS4/8/47 clause): hygiene only. Suppresses known customers from prospecting. Doesn't change MM scoring — eligibility-IP pool is just narrowed to "MM-scored IPs that aren't already customers." Standard prospecting practice.
-- **CRM-include** (positive `op:any` clause with DS4/8/47): real positive targeting layer. The eligibility intersection becomes "MM-scored IPs ∩ CRM-list IPs," so MM scoring now ranks over the customer-list cohort only. Effectively a customer-list-seeded MM prospecting motion (per Zach: this is the intended use of CRM in prospecting, not retargeting — see [[reference-audience-platform-authority]]).
+- **CRM-include** (positive `op:any` clause with DS4/8/47): real positive targeting layer. The eligibility intersection becomes "MM-scored IPs ∩ CRM-list IPs," so MM scoring now ranks over the customer-list cohort only. Effectively a customer-list-seeded MM prospecting motion (per Zach: this is the intended use of CRM in prospecting, not retargeting — see [[reference_audience_platform_authority]]).
 
 **Why:** the bidder's scoring waterfall applies to whichever IPs survive the eligibility filter. Excluding customers leaves MM-scored IPs untouched; including the customer list as a positive clause intersects the MM-scored set with the CRM IPs, dramatically reshaping who gets scored.
 

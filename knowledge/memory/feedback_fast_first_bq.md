@@ -15,7 +15,7 @@ Answer BQ questions fast-first, then scale to exact. Get a directionally-correct
 seconds/rows before spending a big scan on a query whose shape might be wrong.
 
 **Why:** MNTN runs on a reserved us-central1 slot pool and the standing rule is "stop considering cost"
-([[bq-workflow]]). The real constraint is wall-time and slot contention: one large query at a time, a
+([[feedback_bq_workflow]]). The real constraint is wall-time and slot contention: one large query at a time, a
 hard 6-hour interactive wall, big queries queue behind each other. A wrong-shaped query that burns a 6h
 slot is the expensive mistake, not the dollars.
 

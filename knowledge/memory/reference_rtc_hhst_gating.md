@@ -39,4 +39,4 @@ last_verified: 2026-06-01
 - Does Fangorn (DS46) also use RTC? User question 2026-06-01.
 - How the bidder mechanism actually combines RTC score + HHST threshold + other scores into a bid-or-skip decision. Ryan acknowledged he doesn't fully understand it.
 
-**See also:** [[feedback-crm-polarity-matters-with-mm]] (CRM polarity rule for MM scoring), [[reference-audience-platform-authority]] (Zach Schoenberger is the authoritative source for audience-platform questions).
+**See also:** [[feedback_crm_polarity_matters_with_mm]] (CRM polarity rule for MM scoring), [[reference_audience_platform_authority]] (Zach Schoenberger is the authoritative source for audience-platform questions).

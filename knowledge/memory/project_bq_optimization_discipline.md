@@ -21,7 +21,7 @@ across `data_catalog.md` / `data_knowledge.md` / 264 table docs.
 
 **Built (LIVE 2026-07-27, commit fbaf936c):**
 - `knowledge/bq/query_cookbook.md` (doc_type `bq_cookbook`) — §A cheapest-form query library, §B
-  before/after tuning wins, §C fast-first approximation toolkit. Fast-first how-to = [[fast-first-bq]].
+  before/after tuning wins, §C fast-first approximation toolkit. Fast-first how-to = [[feedback_fast_first_bq]].
 - `knowledge/bq/optimization_playbook.md` (doc_type `bq_playbook`) — fast-first→scale workflow, consolidated
   speed rules, `bq show -j <job_id>` join/stage attribution recipe.
 - `perf_digest.py` two defects fixed (2026-07-27): `--mode repeats` keyed `sql_sha1` (wrapper logs
@@ -46,4 +46,4 @@ across `data_catalog.md` / `data_knowledge.md` / 264 table docs.
 - Path/config drift: ~5 files reference a nested `knowledge/bq/bq_perf_log.jsonl` (real path is
   `knowledge/bq_perf_log.jsonl`); rotation size 40 MB (script) vs 20 MB (config.env).
 
-Related: [[bq-workflow]], [[fast-first-bq]], [[project_structured_bq_catalog]], [[reference_bq_location_reservation]].
+Related: [[feedback_bq_workflow]], [[feedback_fast_first_bq]], [[project_structured_bq_catalog]], [[reference_bq_location_reservation]].

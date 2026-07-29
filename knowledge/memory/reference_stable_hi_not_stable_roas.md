@@ -19,4 +19,4 @@ last_verified: 2026-07-01
 
 **The line to say out loud:** HI-share tells you WHO you reached (composition); ROAS is revenue-per-DOLLAR (marginal efficiency = how hard you spent into the pool + timing). Frozen composition ≠ frozen ROAS. **Monthly wobble ≠ trend:** aggregate Jan–May prospecting ROAS 7.93× (2025) → 8.59× (2026), +8% on −18% spend = healthy. Contrast HexClad, whose chart doesn't wobble — it steps DOWN after the gate came off + spend blew out to $903k.
 
-Chart `tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts/avon_spend_roas_envelope.png`; data `outputs/avon_mom_lt_decomposition.csv`; knowledge `data_knowledge.md` §5k. Related: [[reference_client_chart_spend_match_id]], [[reference_ddp_valuation_framework]], [[reference_hhst_pacing_lever]].
+Chart `tickets/audi_1070_yoy_decline_caraway_avon_hexclad/artifacts/avon_spend_roas_envelope.png`; data `outputs/avon_mom_lt_decomposition.csv`; knowledge `data_knowledge.md` §5k. Related: reference_client_chart_spend_match_id, [[reference_ddp_valuation_framework]], [[reference_hhst_pacing_lever]].

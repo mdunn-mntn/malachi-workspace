@@ -22,4 +22,4 @@ DS14 ("MNTN Global Data") is an **availability gate** ANDed onto ~every audience
 
 **Key safety finding (why it's safe):** the prod HHST threshold recommender does NOT couple to the scored universe. Its population is **auction-scoped** — chain = camperbid **v3/v4** compute → CoreDB `performance.optimized_intent_thresholds` → **`SteelHouse/idso` BOS** hourly-cron upsert (sole writer of `dso.household_score_thresholds`, PK campaign_id, ~2K PTV camps/day). Only the fenced DDM `test_hhst_campaigns` pilot reads `prospecting_intent`, and it never writes the applied table. Applied-threshold distribution: 65% of 32,550 campaigns already at Max Reach (threshold=0). Full detail lives in git `knowledge/data_knowledge.md` (DS14-opt block) + the ticket summaries.
 
-See [[hhst_efficiency_sizing]], [[frequency_capping]], [[reference_causal_impact_pattern]].
+See [[reference_hhst_efficiency_sizing]], [[reference_frequency_capping]], [[reference_causal_impact_pattern]].

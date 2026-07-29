@@ -22,4 +22,4 @@ When authoring Workflow-tool multi-agent passes with an adversarial verify gate:
 - **No silent caps.** A thrown pipeline stage drops the item to `null`, vanishing from BOTH pass and fail lists. Wrap stages in try/catch and record `extract_error`/`converge_error` so a retry-cap failure is a tracked row, never a silent gap.
 - **Hand-finish the tail.** For a few persistent schema-cap failures, hand-author those cards from source rather than re-running the whole pass.
 
-Links: [[project-self-optimizing-context]], [[reference-ticket-context-eval-tooling]], [[feedback-bq-workflow]].
+Links: [[project_self_optimizing_context]], [[reference_ticket_context_eval_tooling]], [[feedback_bq_workflow]].

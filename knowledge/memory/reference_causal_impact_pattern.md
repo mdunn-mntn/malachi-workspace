@@ -45,7 +45,7 @@ The MNTN standard analysis stack for any experiment / tiered rollout has two par
 - [tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py](tickets/ti_961_fangorn_causal_impact/artifacts/RolloutTierEvaluations.py) — current canonical (tier-level CI + DiD bootstrap, both VIF→BIC and inference)
 - [tickets/ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py](tickets/ti_849_fangorn_score_monitoring/artifacts/ti_849_method3_causal_impact.py) — per-advertiser CI variant (TI-849, still useful when per-AID effects are needed)
 - [tickets/ti_748_causal_impact_media_plan/artifacts/ti_748_covariate_validation.py](tickets/ti_748_causal_impact_media_plan/artifacts/ti_748_covariate_validation.py) — original advertiser-level covariate-validation pipeline
-- Methodology codified in [[experimentation-md-standard-protocol]] (`knowledge/experimentation.md` § "⭐ Standard Analysis Protocol")
-- Trigger wired in [[workspace-claude-md-experiment-trigger]] (workspace `.claude/CLAUDE.md`)
+- Methodology codified in experimentation-md-standard-protocol (`knowledge/experimentation.md` § "⭐ Standard Analysis Protocol")
+- Trigger wired in workspace-claude-md-experiment-trigger (workspace `.claude/CLAUDE.md`)
 
 Pip: `pip install statsmodels scipy google-cloud-bigquery pandas numpy matplotlib`. No `causalimpact` package — we use statsmodels UCM directly (cluster pip-install for causalimpact often fails; UCM is equivalent for our needs).

@@ -26,4 +26,4 @@ Whenever ANY background/async task is outstanding — `Agent(run_in_background:t
 - **Declare HUNG and act (stop + re-dispatch the unfinished unit) when:** `TaskOutput(block:false)` returns "No task found" with no completion notification, OR transcript/output mtimes are stale > ~15 min while nominally running, OR the perf/activity log shows no new entries for the task.
 - **Prefer the `Workflow` tool for multi-unit fan-out** (one tracked task + `/workflows` progress + single completion) over many loose background `Agent`s — fewer independent things that can silently hang.
 - This is **stall detection (idle / no forward progress), NOT impatience.** Do not preempt a task that is long but actively progressing (a legitimately slow BQ query) — see [[feedback_bq_workflow]]. Judge by idle time, not elapsed time.
-- Relates to [[adversarial_workflow_authoring]] (the multi-agent verify pattern this monitoring wraps).
+- Relates to [[feedback_adversarial_workflow_authoring]] (the multi-agent verify pattern this monitoring wraps).

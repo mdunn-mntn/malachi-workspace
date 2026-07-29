@@ -49,8 +49,8 @@ the workbook from scratch"; **shareable validation package = runbook/queries/MAN
 ordered queries mapped to rows/charts, standalone bq patterns, validation anchors). User lens (apply in future evals): thinks at VISIT grain (ip x domain x DATE) — always offer the
 date-aware variant; wants standalone-vs-free-only AND marginal-at-position economics side by side;
 label estimates as dependent REVENUE with an explicit PAY RANGE column at the 10-30% blended margin (user's range, avg ~20% — not 15/20/30); everything must land IN the xlsx,
-not just chat/PNGs. Related: [[audi-1089-ddp-evals]], [[reference_ddp_valuation_framework]],
-[[feedback-rank-desc-always]].
+not just chat/PNGs. Related: [[project_audi_1089_ddp_evals]], [[reference_ddp_valuation_framework]],
+[[feedback_rank_desc_always]].
 
 **2026-07-15 final:** decisions gained block 6 (DS19 EXPOSURE: tier table labeled "SERVED members
 only — the targeting reality" + category table labeled "ALL member IPs — the audience-COUNT lens";

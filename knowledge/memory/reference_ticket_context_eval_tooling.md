@@ -18,4 +18,4 @@ Ticket-context + retrieval-eval tooling (all in git):
 - **Record an eval run:** append a line to `knowledge/eval_runs.log` and commit with `retrieval-eval: run —` in the message. `.claude/scripts/health_scorecard.py` reads that signature → prints `retrieval-eval Nd ago` on SessionStart, STALE >14d (`EVAL_STALE_DAYS`).
 - **Routing:** `.claude/scripts/build_index.sh` walks `tickets/` and folds ticket-card `keywords:` into `_ROUTING.md` alongside doc keywords. Rebuild after any front-matter/keyword change.
 
-See [[project-self-optimizing-context]].
+See [[project_self_optimizing_context]].

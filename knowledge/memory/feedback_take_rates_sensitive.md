@@ -21,7 +21,7 @@ share analyses exposing it.
 
 **How to apply:** any vendor-value / cost analysis shared beyond self (decks, Jira, Slack, docs) uses
 media_spend + data_spend lenses only. No platform_spend, no billed=media+data+platform, no take-rate or
-margin formulas in shareable artifacts. Client pricing mechanics stay internal-only: [[client-pricing-model]].
+margin formulas in shareable artifacts. Client pricing mechanics stay internal-only: [[reference_client_pricing_model]].
 
 **Companion guidance (ray, same thread):** "we get paid no matter what" — billed/cost dollars are NOT the
 vendor-value metric; end-to-end value to the customer (performance → retention) is. Vendor-value cases lead

@@ -13,7 +13,7 @@ last_verified: 2026-06-10
 ---
 CUPED (Deng et al. 2013) reduces variance on the post-period estimate by adjusting for pre-period covariate values, with theta = Cov(post, pre) / Var(pre) estimated on the pooled sample. The variance-reduction guarantee Var(Y_adj) = Var(Y_post) × (1 − ρ²) holds **only when randomization makes E[pre_T − pre_C] = 0** in expectation.
 
-For non-randomized cohorts with deliberate baseline imbalance (e.g., Tier 2 random sample vs Tier 5 Wave-3 manually-flagged holdout — see [[wave3-selection-bias]]), the unbiasedness condition is violated. Three things go wrong:
+For non-randomized cohorts with deliberate baseline imbalance (e.g., Tier 2 random sample vs Tier 5 Wave-3 manually-flagged holdout — see [[reference_wave3_selection_bias]]), the unbiasedness condition is violated. Three things go wrong:
 
 1. **Standard CUPED estimator `τ̂_add = ȳ_adj,T − ȳ_adj,C` is biased** — the (pre_T − pre_C) imbalance leaks into the post-period comparison via θ.
 2. **Trying to combine CUPED with DiD** (e.g., `τ̂_add = (ȳ_adj,T − ȳ_adj,C) − (ȳ_pre,T − ȳ_pre,C)`) **double-counts the pre-period correction**: the formula algebraically expands to `(ȳ_post,T − ȳ_post,C) − (1+θ)·(ȳ_pre,T − ȳ_pre,C)`, multiplying baseline imbalance by `(1+θ)` instead of either 1 or θ. This generates spurious effects even when treated and control have NO real time trend (verified synthetically — 33.8% spurious lift when pre=post for both groups).

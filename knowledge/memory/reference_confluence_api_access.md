@@ -18,7 +18,7 @@ curl -s -u "malachi@mountain.com:${JIRA_API_TOKEN}" \
   "https://mntn.atlassian.net/wiki/rest/api/content/<PAGE_ID>?expand=body.storage,version,title"
 ```
 
-`<PAGE_ID>` is the numeric id in the page URL (`.../pages/2927263763/Aerospike+Datastore` → `2927263763`). The `body.storage.value` field is XHTML (code blocks in `<ac:plain-text-body><![CDATA[...]]>`). Confirmed working 2026-06-09 (pulled the BP "Aerospike Datastore" page). So when given a Confluence link, hit the API directly instead of asking the user to export a PDF. Related: [[feedback_jira_create_curl]].
+`<PAGE_ID>` is the numeric id in the page URL (`.../pages/2927263763/Aerospike+Datastore` → `2927263763`). The `body.storage.value` field is XHTML (code blocks in `<ac:plain-text-body><![CDATA[...]]>`). Confirmed working 2026-06-09 (pulled the BP "Aerospike Datastore" page). So when given a Confluence link, hit the API directly instead of asking the user to export a PDF. Related: [[reference_jira_conventions]].
 
 **WRITE also works (confirmed 2026-07-08 — created the MM taxonomy page 3691708511):**
 

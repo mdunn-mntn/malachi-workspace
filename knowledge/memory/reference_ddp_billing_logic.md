@@ -55,7 +55,7 @@ variant ≈ $284K (barely more than visit grain). Workbook decisions POST-PREEMP
 q12_post_preemption.png.
 
 Full detail: data_knowledge.md § Site Visit Signal (credit-model evidence 2026-07-13); runbook/dependency_valuation.md (LOO + frontier).
-Related: [[reference_ddp_valuation_framework]], [[audi-1089-ddp-evals]], [[feedback-take-rates-sensitive]].
+Related: [[reference_ddp_valuation_framework]], [[project_audi_1089_ddp_evals]], [[feedback_take_rates_sensitive]].
 
 **2026-07-17 upstream nuance (AUDI-1115 §4f, gold `dw-main-gold.reporting.ddp_*` family — Alyson's
 pointer):** the "May+ integer" reading applies to `usage_reporting_data.impressions`, NOT the
@@ -151,7 +151,7 @@ vs impression-winner (~27.5M/mo = credited/pricing); the crediting system's grai
 sets how much bill survives preemption. Per-credited-impression media CPM ~$10.7 is MNTN's CTV
 media rate (vendor-independent) → break-even ~$1-3 for all → $0.50 below break-even on the
 residual → the rate is fine; preemption (volume) is the lever, not a rate cut. See
-[[audi-1111-vendor-quality]], data_knowledge § billing, valuation framework § 2026-07-17.
+[[project_audi_1111_vendor_quality]], data_knowledge § billing, valuation framework § 2026-07-17.
 
 **MNTN ID crediting wrinkle (2026-07-29, [[project_fangorn_on_mntn_id]]):** under MNTN ID, crediting splits in
 two. (1) **Graph-vendor crediting** — every ID→household translation in the feature store must be logged to

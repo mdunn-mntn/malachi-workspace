@@ -75,7 +75,7 @@ Two anchor docs now exist (the `START_HERE.md` "tune a slow/expensive query" rou
   (reservation, one-big-query, 6h wall, TIMESTAMP-not-DATE, literal-date, projection), and the
   `bq show -j <job_id>` recipe for attributing which join/stage took longest.
 
-Fast-first discipline: [[fast-first-bq]]. `perf_digest.py --mode repeats` fixed 2026-07-27 (was keying
+Fast-first discipline: [[feedback_fast_first_bq]]. `perf_digest.py --mode repeats` fixed 2026-07-27 (was keying
 `sql_sha1`; wrapper logs `sql_sha256`) — repeat/materialization candidates now surface.
 
 **Auth fallback (2026-07-28):** if `bq_run.sh` / the `bq` CLI dies with "Reauthentication failed … cannot

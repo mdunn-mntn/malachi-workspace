@@ -22,7 +22,7 @@ From SteelHouse/sqlmesh CIL pipeline (cil__impression_info.sql → cil__spend_ca
     same campaign, different impressions bill differently.
 - Canonical lookup: `pricing_model_type` in SQLMesh `advertiser_attributes.sql`.
 
-**INTERNAL-ONLY** — the formulas involve take rates, which are sensitive: [[take-rates-sensitive]].
+**INTERNAL-ONLY** — the formulas involve take rates, which are sensitive: [[feedback_take_rates_sensitive]].
 No universal flat rate across clients for the same impression volume.
 
 **Blended margin color (user, AUDI-1089 meeting 2026-07-13, INTERNAL):** CPM upcharge ~10-30%;

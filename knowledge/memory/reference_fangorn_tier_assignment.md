@@ -49,7 +49,7 @@ The fact that the inclusion-date semantics differ between structured-rollout tie
 
 ## See also
 
-- [[no-y-lags-in-causalimpact]] — methodology
-- [[bootstrap-must-match-design]] — stratified bootstrap for future designs
-- [[reference-causal-impact-pattern]] — canonical analysis stack
+- [[feedback_no_y_lags_in_causalimpact]] — methodology
+- [[feedback_bootstrap_must_match_design]] — stratified bootstrap for future designs
+- [[reference_causal_impact_pattern]] — canonical analysis stack
 - `documentation/docs/feature_rollout_experimental_design.md` — how to design the next major rollout

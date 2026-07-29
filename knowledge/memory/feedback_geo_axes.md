@@ -43,8 +43,8 @@ GEO-NARROW-incl / GEO-NARROW-excl).
 need to be split by country, or "broad" may need to mean "country-level only" rather
 than "US specifically."
 
-**See also:** [[reference-mm-3p-intersection-mechanics]] for the targeting-mechanics
-context behind these permutations; [[project-ti-999-strategic-goal]] for the TI-999
+**See also:** [[reference_mm_3p_intersection_mechanics]] for the targeting-mechanics
+context behind these permutations; [[project_ti_999_strategic_goal]] for the TI-999
 deck argument that uses these buckets.
 
 ## from feedback_geo_narrow_excl_not_meaningful_axis.md
@@ -71,7 +71,7 @@ permutation count without adding signal (per user, 2026-06-01).
   to a state/DMA/city/ZIP) survives as a geo axis. That one DOES change who gets
   bid on.
 - This is the same logic that drops `GEO-BROAD-incl` per
-  [[feedback-us-only-no-geo-broad-axis]] — both are "small-effect" axes that
+  [[feedback_geo_axes]] — both are "small-effect" axes that
   fragment the matrix without informing the buyer story.
 - Pass 32 (in TI-999) is the canonical implementation. Pass 28-30 are deprecated
   for this reason.
@@ -81,6 +81,6 @@ behavior (e.g. "do advertisers carving out specific states perform better?"),
 then GEO-NARROW-excl becomes the headline axis and should NOT be collapsed.
 This rule is for general buyer-permutation views.
 
-**See also:** [[feedback-us-only-no-geo-broad-axis]] (sibling rule for GEO-BROAD);
-[[reference-mm-3p-intersection-mechanics]] (load-bearing context for what
+**See also:** [[feedback_geo_axes]] (sibling rule for GEO-BROAD);
+[[reference_mm_3p_intersection_mechanics]] (load-bearing context for what
 "meaningful audience change" means in MM scoring).

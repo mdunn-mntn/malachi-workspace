@@ -30,7 +30,7 @@ action list. The fifth learning loop from `claude-prompts/self_improvement_engin
 **Scheduled split (compliant, key-free) — added 2026-07-24:**
 - **Pi cron** (Mon 08:00 PT, `~/run_workflow_audit.sh`) runs ONLY the aggregator, commits dated
   `signals_<date>.md`. Guarantees weekly capture even when the Mac sleeps. No key on the Pi (that is the
-  pattern MNTN killed with the Slack bot). See [[reference-pi5-server]] / [[raspberry-pi-5-server]].
+  pattern MNTN killed with the Slack bot). See [[reference_pi5_server]] / [[reference_pi5_server]].
 - **Mac** runs `/workflow-audit` at the next session → reasons over fresh signals (incl. the local-only
   request log) → writes `audit_<date>.md`. Full autonomy on a schedule would need a model always-on =
   a key on the Pi = not allowed; that trade was made deliberately (chose compliance over hands-off).

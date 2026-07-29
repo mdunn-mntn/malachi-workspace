@@ -30,11 +30,11 @@ last_verified: 2026-05-29
 - **3P-only (no MM, no CRM, no Select) is the only clean signal** for measuring 3P-quality changes.
 - Current 3P-only cohort: 404 campaigns / 179 advertisers / $1.23M / 30d / CVR 0.10% / cost-per-conv $29.64.
 
-**Sibling ticket:** [[reference-airflow-ti]] mentions TI-956 — that's the scoring pipeline build TI-999 justifies. See `tickets/ti_956_interest_segment_scoring_schedule/`.
+**Sibling ticket:** [[reference_airflow_ti]] mentions TI-956 — that's the scoring pipeline build TI-999 justifies. See `tickets/ti_956_interest_segment_scoring_schedule/`.
 
 **How to apply:**
 - Any future TI-999 analysis should map back to "does this help us evaluate the curation/ranking intervention?"
 - When analyzing per-bucket performance, the cleanest comparison is **3P-only as pre-period vs hypothetical-curated-3P as post-period**.
 - Within 3P-only, look at per-segment KPI distributions (top decile vs bottom decile) — wide tails mean curation has high prize.
 - Per-3P-provider breakdown (LiveRamp vs ShareThis vs Dstillery) is relevant because LiveRamp dominates and is fresh; ShareThis/Dstillery catalogs are 100% >2yr stale.
-- See also [[reference-causal-impact-pattern]] for the standard tiered-rollout evaluation if/when curation ships and we need to measure lift.
+- See also [[reference_causal_impact_pattern]] for the standard tiered-rollout evaluation if/when curation ships and we need to measure lift.

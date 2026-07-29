@@ -50,7 +50,7 @@ confirms the cross-repo dependency is solvable. Packaging targeting-infra-ml
 unlocks ALL these future use cases, not just TI-956. Strong argument for doing
 it properly vs vendoring into airflow-ti's utils_model.
 
-**See also:** [[reference-ti-956-per-pattern-application]] (the per-pattern UI
-logic TI-999 produced for TI-956); [[project-buk-rebrand]] (BUK = Behavior
+**See also:** [[reference_ti_956_per_pattern_application]] (the per-pattern UI
+logic TI-999 produced for TI-956); [[project_buk_rebrand]] (BUK = Behavior
 Keywords, the DS 19 context); `tickets/ti_956_interest_segment_scoring_schedule/`
 for the current TI-956 implementation.

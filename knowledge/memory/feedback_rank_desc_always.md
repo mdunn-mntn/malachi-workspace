@@ -15,4 +15,4 @@ All tables and charts rank entities by the primary metric of that visual, **larg
 
 **Why:** the user reads these top-down; the biggest thing should be the first thing.
 
-**How to apply:** before rendering any table/bar chart, sort by the column that is the visual's point (rows/day, spend, score...). Sectioned tables (in-scope vs context/internal) sort within each section. Related: [[feedback-runbook-artifacts-png-sql-only]], [[reference-deck-standards]].
+**How to apply:** before rendering any table/bar chart, sort by the column that is the visual's point (rows/day, spend, score...). Sectioned tables (in-scope vs context/internal) sort within each section. Related: [[feedback_runbook_artifacts_png_sql_only]], [[reference_deck_standards]].

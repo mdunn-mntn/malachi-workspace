@@ -47,4 +47,4 @@ last_verified: 2026-06-01
 - HHST not set (or = 0): bidder ignores scores → 3P expands MM by bringing unscored 3P-only IPs into bidding. This is the bad pattern — buyers broadening to unscored audiences without realizing.
 - HHST distribution across MM+3P campaigns is currently unknown. Pending investigation (search `bid_events` for the threshold per Ryan).
 
-**See also:** [[reference-rtc-hhst-gating]] (HHST gates whether ANY score is used by the bidder), [[reference-prospecting-scores-gcs-monitor]] (Fangorn-on vs Non-Fangorn distribution), [[project-ti-999-strategic-goal]] (overall TI-999 framing), `knowledge/data_knowledge.md` § "MM + 3P intersection mechanics — LOCKED LOGIC" for the full canonical write-up with Venn diagram.
+**See also:** [[reference_rtc_hhst_gating]] (HHST gates whether ANY score is used by the bidder), [[reference_prospecting_scores_gcs_monitor]] (Fangorn-on vs Non-Fangorn distribution), [[project_ti_999_strategic_goal]] (overall TI-999 framing), `knowledge/data_knowledge.md` § "MM + 3P intersection mechanics — LOCKED LOGIC" for the full canonical write-up with Venn diagram.

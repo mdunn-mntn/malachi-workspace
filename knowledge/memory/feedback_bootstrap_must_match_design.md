@@ -32,4 +32,4 @@ The bootstrap is not a single algorithm. The classical i.i.d. consistency theore
 - For future MNTN rollouts designed under the experimental design framework (`documentation/docs/feature_rollout_experimental_design.md`) with stratified randomization → use the stratified bootstrap variant sketched in that doc
 - For any new analysis: ALWAYS ask "how was the original sample drawn?" before picking the bootstrap variant. The default `np.random.choice` with replacement is the classical i.i.d. version and only applies when the design is i.i.d. random.
 
-Discovered 2026-06-03 during TI-961 closeout discussion. See [[reference-causal-impact-pattern]] and the experimental design doc.
+Discovered 2026-06-03 during TI-961 closeout discussion. See [[reference_causal_impact_pattern]] and the experimental design doc.

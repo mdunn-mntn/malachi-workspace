@@ -8,7 +8,7 @@ metadata:
 doc_type: memory
 keywords: [audi-1083, mm classifier, mm_campaign_classifier, sqlmesh, mm_class mmv1 mmv2 mmv3, is_flagship, DS19 DS13 DS46, restriction_level, targeting-infrastructure, funnel_level 1]
 domain: [audience-scoring, project]
-lifecycle: active
+lifecycle: archived
 last_verified: 2026-07-27
 ---
 **AUDI-1083 = a durable campaign-grain view classifying MNTN Matched configs**, so analyses can

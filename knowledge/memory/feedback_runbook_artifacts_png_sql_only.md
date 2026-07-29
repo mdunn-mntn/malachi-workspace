@@ -22,7 +22,7 @@ output CSVs are gitignored, so a script that can't reproduce its own numbers is 
 query package: run an outsider-lens header sweep — headers rot when mid-ticket facts change
 (the May-2026 credit-regime change left two headers describing 1/N split as current; an anchor
 comment stated a diagnostic comparison as an equality). Ship a VALIDATION_GUIDE.md (glossary +
-windows + anchors + tooling-substitution note) with any package (AUDI-1089 precedent). Related: [[feedback-doc-style]], [[reference-ddp-valuation-framework]].
+windows + anchors + tooling-substitution note) with any package (AUDI-1089 precedent). Related: [[feedback_doc_style]], [[reference_ddp_valuation_framework]].
 
 **2026-07-16 additions to the pre-share sweep:** (1) header FILLS/mapping lines must reference
 sheet TABLES/COLUMNS BY TITLE, never row numbers — row maps rot as the workbook evolves (a stale

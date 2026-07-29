@@ -19,7 +19,7 @@ When BigQuery / a hand-pull / the "Performance Report" chart disagree with the c
 
 **EXACT BQ reproduction (`silver.summarydata.all_facts`, time col `hour`, per-col `SUM(IFNULL())`):** Verified Visits `clicks+views+competing_views` = **692,888/598,436 = UI EXACT**; Order Value `+competing_view_order_value` → **ROAS 22.09/26.36 ≈ UI 22.12/26.36**; CPA $2.39/$2.03 & CVR 4.41%/5.26% EXACT; Households `HLL_COUNT.MERGE(uniques)` ~1–2% under (HLL engine only). Last-touch-only gives 526,929 / 17.3× — does NOT match. Query: `tickets/audi_1070_yoy_decline_caraway_avon_hexclad/queries/avon_chapi_exact_reproduction.sql`. Bridge: API 9.4 (prospecting) → +retargeting(obj=4) → BQ last-touch 17.3 → +competing_*(first-touch) → UI 22.1. Every scope/source UP YoY.
 
-Source: client UI/API = CHAPI ([[reference_attribution_industry_standard_ft.md]] — industry_standard=first-touch, confirmed). Full detail: `knowledge/data_knowledge.md` §5e-bis/§5g + `data_catalog.md` `sum_by_campaign_by_day` attribution-variant gotcha.
+Source: client UI/API = CHAPI (reference_attribution_industry_standard_ft.md — industry_standard=first-touch, confirmed). Full detail: `knowledge/data_knowledge.md` §5e-bis/§5g + `data_catalog.md` `sum_by_campaign_by_day` attribution-variant gotcha.
 
 ## from reference_chapi_clickhouse_ui_source.md
 
@@ -31,7 +31,7 @@ Source: client UI/API = CHAPI ([[reference_attribution_industry_standard_ft.md]]
 - **CHAPI ≈ 1.276× the `sum_by_advertiser` rollup** on visits/conversions/revenue/ROAS, **stable across years ⇒ the factor CANCELS in YoY.** So a naive `sum_by_advertiser` pull won't match the client's *level* but reproduces the *YoY direction/magnitude* (Avon ROAS +19%: UI 22.12→26.36 ≡ rollup 17.33→20.68).
 - `logdata.conversion_log` raw = un-attributed firehose (Avon 171K orders / $8.7M ≈ 6.8× attributed) — attribution-join before comparing to UI.
 
-Conversions are last-touch only (no first-touch conversion table) — see [[reference_attribution_industry_standard_ft]].
+Conversions are last-touch only (no first-touch conversion table) — see reference_attribution_industry_standard_ft.
 
 ## from reference_attribution_industry_standard_ft.md
 
@@ -43,7 +43,7 @@ Conversions are last-touch only (no first-touch conversion table) — see [[refe
 - `summarydata.sum_by_*` / `all_facts` unprefixed headline cols ≈ last-touch. The client UI (CHAPI→ClickHouse) = last-touch + competing_*. Reproduce the UI in BQ with `queries/avon_chapi_exact_reproduction.sql` (swap advertiser_id). For CTV advertisers last_touch == last_tv_touch (every touch is a TV touch).
 - **Relabel "first-touch (FT)" → "industry_standard (last-touch + competing_*)"** anywhere it appears (decks, notes). Every YoY-decline conclusion is UNCHANGED (both the plain-last-touch and industry_standard views decline) — only the label was wrong.
 - When a client reports a YoY decline, confirm both years use the SAME reporting_style — a bulk migration mid-window (r2_advertiser_settings.update_time 2025-12-10 on Caraway/Avon/HexClad) inflates the apparent drop.
-Related: [[reference_chapi_clickhouse_ui_source]], [[reference_chapi_ui_reconciliation]].
+Related: reference_chapi_clickhouse_ui_source, reference_chapi_ui_reconciliation.
 
 ## from reference_client_chart_spend_match_id.md
 
@@ -55,4 +55,4 @@ Related: [[reference_chapi_clickhouse_ui_source]], [[reference_chapi_ui_reconcil
 
 **MoM widget lens is PER-ADVERTISER:** HexClad's MoM = `industry_standard`; Avon's MoM = **last-touch** (adding competing overshot Avon ~1.3× visits / ~1.2× ROAS). `reporting_style` differs by advertiser AND a widget can differ from the summary cards. **Rule: reproduce BOTH ways (LT and LT+competing) and let the exact match reveal the lens — never assume; never trust the chart's label.** Scope for MoM = prospecting `objective_id IN (1,5,6)` (confirm via spend match). Query: `tickets/audi_1070_yoy_decline_caraway_avon_hexclad/queries/avon_chapi_exact_reproduction.sql` (all_facts, `hour` DATETIME, `SUM(IFNULL(col,0))`, toggle competing_* terms).
 
-Related: [[reference_attribution_industry_standard_ft]], [[reference_chapi_ui_reconciliation]], [[reference_chapi_clickhouse_ui_source]], [[reference_stable_hi_not_stable_roas]].
+Related: reference_attribution_industry_standard_ft, reference_chapi_ui_reconciliation, reference_chapi_clickhouse_ui_source, [[reference_stable_hi_not_stable_roas]].

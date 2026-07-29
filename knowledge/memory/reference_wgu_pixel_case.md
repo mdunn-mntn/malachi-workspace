@@ -20,4 +20,4 @@ WGU (31357) pixel forensics, closed 2026-07-08 ("WGU-REV"). Load-bearing facts f
 - **Untyped LP tag cycles on/off** in WGU's Adobe Launch: on 2026-04-30→05-16 (~5K/day), off, **on again 06-24→present** (~2K/day) — matches CS pixel-QA notes.
 - **WGU stance (Imani Clark)**: lead-focused, revenue not a priority. Open: event taxonomy, 10942 re-point, CPA-goal resets.
 
-**Full detail:** `knowledge/data_knowledge.md` § "WGU (31357) revenue — it was NEVER real", § "Conversion pixel payload anatomy", § "Detecting an advertiser pixel/tag change" (the reusable playbook), § "WGU YoY comparisons are confounded" (adds the separate **Jul 2025 visit-tracking step**, IVR re-based 1.2%→2.2%). People: [[pixel ops bug routing]].
+**Full detail:** `knowledge/data_knowledge.md` § "WGU (31357) revenue — it was NEVER real", § "Conversion pixel payload anatomy", § "Detecting an advertiser pixel/tag change" (the reusable playbook), § "WGU YoY comparisons are confounded" (adds the separate **Jul 2025 visit-tracking step**, IVR re-based 1.2%→2.2%). People: [[reference_pixel_ops_routing]].

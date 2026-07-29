@@ -51,6 +51,6 @@ last_verified: 2026-06-01
 - Sample-size floor for per-advertiser per-segment scoring?
 - Cold-start handling for new segments (no history yet)?
 - Where does the ranked list surface in UI?
-- HHST visibility — per-campaign HHST isn't yet locatable in BQ (it's NOT in bidder_bid_events per [[reference-bidder-score-fields-empirically-zero]]). Until probed, assume HHST > 0 dominates and Rule 2 (theater UI hygiene) applies.
+- HHST visibility — per-campaign HHST isn't yet locatable in BQ (it's NOT in bidder_bid_events per [[reference_bidder_score_fields_empirically_zero]]). Until probed, assume HHST > 0 dominates and Rule 2 (theater UI hygiene) applies.
 
-**See also:** [[reference-mm-3p-intersection-mechanics]] (the load-bearing mechanic); [[reference-rtc-hhst-gating]] (HHST gate); [[feedback-us-only-no-geo-broad-axis]] + [[feedback-geo-narrow-excl-not-meaningful-axis]] (geo axes dropped); [[project-ti-999-strategic-goal]] (overall framing); `tickets/ti_999_interest_segment_sizing/artifacts/ti_956_per_pattern_segment_application.md` for the full design doc shareable to Alex/Alyson.
+**See also:** [[reference_mm_3p_intersection_mechanics]] (the load-bearing mechanic); [[reference_rtc_hhst_gating]] (HHST gate); [[feedback_geo_axes]] + [[feedback_geo_axes]] (geo axes dropped); [[project_ti_999_strategic_goal]] (overall framing); `tickets/ti_999_interest_segment_sizing/artifacts/ti_956_per_pattern_segment_application.md` for the full design doc shareable to Alex/Alyson.

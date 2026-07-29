@@ -57,7 +57,7 @@ marginal/keep-drop vs impression-winner ~27.5M/mo = credited/pricing, ~5× apart
 grain the eng team's fractional-credit system uses is THE 07-20 sync question (sets residual
 volume/total). Also from BAE: credit splits across matched DATA PATHS (3P segments DS17 @ $0.95
 CPM in the denominator). Fractional-credit CPM sheet now in BOTH the quality + deck workbooks
-(shared `cpm_fractional_sheet.py`). See [[reference-ddp-billing-logic]], data_knowledge § billing,
+(shared `cpm_fractional_sheet.py`). See [[reference_ddp_billing_logic]], data_knowledge § billing,
 valuation framework § 2026-07-17.
 
 **Why:** proposal spine = "the price, not the data, is the problem; the real-time layers don't
@@ -65,5 +65,5 @@ need vendors." Routing: consolidated proposal → pre-read Alyson → Mike + Kal
 **Open:** flat-fee bills (Maya) = 24 xlsx cells; 1113/1114 owners at grooming; Monday
 2026-07-20 billing credit-rule meeting (fractional vs Victor's first-reporter); CTV soft-gate
 mechanism (MemDB or Zach/Sean); candidate tickets NOT yet created (selection-bias/IPDSC test;
-keyword campaign-usage report). Related: [[audi-1089-ddp-evals]] [[reference-ddp-billing-logic]]
+keyword campaign-usage report). Related: [[project_audi_1089_ddp_evals]] [[reference_ddp_billing_logic]]
 [[reference_ddp_valuation_framework]].

@@ -17,7 +17,7 @@ Cross-session context does NOT live in Todoist — it lives in git history, each
 
 **Why:** When the AI silently maintains the task list, it replaces Malachi's own planning loop — picking the frog, feeling the A/B/C weight, engaging with the list daily. That active-recall habit is the whole point of the system; auto-logging defeats it and leaves a dead artifact he doesn't open. He raised this himself on 2026-07-05 and chose to keep Todoist as his own tool while taking the AI off the auto-logging protocol.
 
-**How to apply:** Reactive only. When he asks, follow the structure in [[feedback_todoist_eat_that_frog]] and [[feedback_todoist_structure]] (ABCDE priorities, flat 1-layer, MNTN section of MindWyre). Otherwise, leave Todoist alone. This supersedes any older "keep Todoist current automatically" framing. Codified in global `~/.claude/CLAUDE.md` §1b and §11.
+**How to apply:** Reactive only. When he asks, follow the structure in [[feedback_todoist]] and [[feedback_todoist]] (ABCDE priorities, flat 1-layer, MNTN section of MindWyre). Otherwise, leave Todoist alone. This supersedes any older "keep Todoist current automatically" framing. Codified in global `~/.claude/CLAUDE.md` §1b and §11.
 
 ## from feedback_todoist_eat_that_frog.md
 
@@ -78,7 +78,7 @@ Only manage tasks in the **MNTN section** (ID: `6cwmRpfXpCxQ5G9M`) of the **Mind
 
 **Why:** Malachi follows Brian Tracy's Eat That Frog method to stay focused on high-impact work and avoid busywork. This system ensures consistency across conversations.
 
-**How to apply:** These rules govern *how* to structure Todoist **when the user explicitly asks** (task creation, "plan my day", "weekly review"). Todoist is off the always-on path — never create/tick/comment on your own initiative (see [[feedback_todoist_on_request_only]]). When invoked, scope all operations to the MNTN section of the MindWyre project.
+**How to apply:** These rules govern *how* to structure Todoist **when the user explicitly asks** (task creation, "plan my day", "weekly review"). Todoist is off the always-on path — never create/tick/comment on your own initiative (see [[feedback_todoist]]). When invoked, scope all operations to the MNTN section of the MindWyre project.
 
 ## from feedback_todoist_structure.md
 

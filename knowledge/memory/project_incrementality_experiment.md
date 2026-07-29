@@ -18,7 +18,7 @@ BER-2250 "Incrementality Overhaul" is the highest-leverage initiative for Q2 202
 - **Ghost-bid lift is productionized:** gold `dw-main-gold.reporting.lift__ghost_bid_{results,rollup}` (time-boxed AUDI-1148, accumulates no-TTL). Query gated, aggregate per-campaign `abs_itt` with **inverse-variance weights, never a naive count pool** (that gives a Simpson-confounded no_score +29%; IVW → ~0).
 - **The persuadables gradient (refreshed 2026-07-24, holds on the wider window):** Mid +9.2% · MaxReach +6.6% · PP +1.8% · High +1.7% · no_score +0.2% (~dead). Mid-intent carries the lift; top-intent + untargeted reach are incrementally dead. Raw-visit rank is ~INVERTED vs incremental-lift rank.
 - **AUDI-789 (RTC/Fangorn scoring) is the go-forward targeting vehicle** — a visit/spend-optimized scorer de-optimizes incrementality unless lift is a target/guardrail.
-- **User steer 2026-07-24:** treat these as old/reassigned work — don't keep extending BER-2250/AUDI-789 unprompted. See [[feedback-dont-extend-old-tickets]].
+- **User steer 2026-07-24:** treat these as old/reassigned work — don't keep extending BER-2250/AUDI-789 unprompted. See [[feedback_dont_extend_old_tickets]].
 
 **Kale's direction (2026-04-08):** "The most valuable thing right now is getting this incrementality thing out. Solving this would be HUGE and would dramatically change growth and retention." Everything regresses to incrementality / incremental ROAS.
 

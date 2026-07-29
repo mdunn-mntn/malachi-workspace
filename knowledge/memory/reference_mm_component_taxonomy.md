@@ -18,7 +18,7 @@ last_verified: 2026-07-23
 - **DS46 = "Peak Performance v2"** (Fangorn) — SAME slot as DS13 (identical leaf `{"data_source_id":N,"category_ids":[<6-digit vertical id = the RTC id>]}`); the flip swaps 13→46, so **DS13∧DS46 = 0 campaigns, ever**.
 - **"Expanded PP"** = DS13 with bucket (3-digit) ids — named, never shipped; ZERO live leaves carry bucket ids.
 - **"Vertical only"** (Matt's colloquialism) = PP-only / PP-v2-only campaigns (no DS19). Tier reach differs by generation: v1 vertical-only delivered HI 10000s + PP 8000s (categorical); **v2 vertical-only tops out at 8000 — the v2 HI band (8001–10000) requires the keyword layer** (verified 2026-07-08: 100% of >8000 delivery on DS19 campaigns).
-- **v1 vs v2 scoring mechanism:** v1 = categorical fixed points (8000/10000 exactly; nothing between). v2 = two continuous passes, label follows the SCORE: PP pass → 6666–8000 band, HI pass → 8001–10000, pins at band tops; below-bar structural matches fall to MI/MaxReach. See [[reference-fangorn-two-model-passes]] + methodology page 3414917161.
+- **v1 vs v2 scoring mechanism:** v1 = categorical fixed points (8000/10000 exactly; nothing between). v2 = two continuous passes, label follows the SCORE: PP pass → 6666–8000 band, HI pass → 8001–10000, pins at band tops; below-bar structural matches fall to MI/MaxReach. See [[reference_fangorn_two_model_passes]] + methodology page 3414917161.
 
 **Key rules:** include leaves OR-join (adding a leaf broadens); HHST gates delivery by score (10000→HI, 6666→HI+PP, 0→all matched); HI/PP/MI/MaxReach are IP tiers, not campaign types; **MM = any of DS19/DS13/DS46** — a "has DS19" test (Alyson's old working def) misses ~7.6% of prospecting spend / ~157 advertisers. Segment level (`audience.audience_segments` type 2 targeted) is authoritative; template level still shows DS13/DS19 after a Fangorn flip.
 
@@ -31,7 +31,7 @@ last_verified: 2026-07-23
 - `mm_flagship_fangorn` (DS19+DS46), `fangorn_vertical_only` (DS46-only), `non_mm` KEEP structural names. **Fangorn (DS46) = "updated DS13" (continuous scoring), same vertical slot.**
 - **`mmv3` now spans two structural configs** (DS19+DS13 reach HI; DS13-only-post-cutoff caps at PP), so `tiers_reachable` is computed from the raw DS flags, not `mm_class`. New col `campaign_created` exposed. Verified counts: mmv2 3,594 / flagship 1,761 / fangorn_vertical_only 411 / mmv3 393 (312+81) / mmv1 134 / non_mm 8,182.
 
-Related: [[reference-fangorn-audience-overlay]] (the flip mechanic), [[reference_mntn_1p_3p_mm_definitions]], [[reference_fangorn_two_model_passes]], [[reference_audience_intent_scoring_dag]].
+Related: [[reference_fangorn_audience_overlay]] (the flip mechanic), [[reference_mntn_1p_3p_mm_definitions]], [[reference_fangorn_two_model_passes]], [[reference_audience_intent_scoring_dag]].
 
 **Migration status (Matt Brorby 2026-07-13): most active advertisers ALREADY on DS46; forcing the
 DS13 remainder is uncontroversial (Alex owns the tail solutions). DS46 = guid_log only (post-retrain:

@@ -19,6 +19,6 @@ In any CausalImpact / synthetic-control counterfactual setup using `statsmodels.
 - Building a candidate covariate pool for `run_ci_for_tier()` or similar: include only exogenous-only candidates (control series + their lags, holiday/calendar dummies, scaled volumes). Specifically: `control_rate`, `control_rate_lag1`, `control_scale`, `holiday` is the canonical 4-candidate set.
 - Weekly seasonality: handle via `freq_seasonal=[{"period": 7, "harmonics": 2}]` on the UCM, NOT via `is_weekend` dummy in exog.
 - Inference: use simulation via `res.simulate(...)` with N=2000 paths, NOT a hand-rolled SE from per-day forecast bounds (the per-day-avg SD drops `1/n` scaling and ignores cross-day covariance; ratio-of-bounds for relative CI explodes when counterfactual nears zero).
-- See [[reference-causal-impact-pattern]] for the canonical implementation.
+- See [[reference_causal_impact_pattern]] for the canonical implementation.
 
 Discovered 2026-06-03 during Alex Knorr's review of TI-961 RolloutTierEvaluations. Three compounding bugs I had introduced (lags of y, is_weekend dummy, hand-rolled SE) all corrected. The TI-961 deck-quality numbers from 2026-05-28 through 2026-06-02 are deprecated; only post-correction runs are trustworthy.

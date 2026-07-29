@@ -27,7 +27,7 @@ blessing incl. can-3P-interest-vendors-cover-same → implement credit change = 
 Malachi likely to OWN the DDP pipeline. Ownership: nobody owns credit logic today; Andy owns contracts+flat fees.
 
 **AUDI-1089** renewal evals — deliverable workbook COMPLETE (`outputs/audi_1089_quality_template_filled.xlsx`,
-139 rows x 14 vendors, 4 sheets; see [[reference-audi-1089-template-workbook]]). Verdicts stand:
+139 rows x 14 vendors, 4 sheets; see [[reference_audi_1089_template_workbook]]). Verdicts stand:
 KEEP 5x5/Predactiv (lock flat; HEM blocker) · KEEP-trim Justuno · NEGOTIATE 33Across+API combined
 (~$598K/yr, one vendor) · DROP Sovrn/Cybba · **Klickly drop-unless-~free APPROVED in team review
 2026-07-13** (transcript audi_1089_01; answer to Paulo due same day). **Cybba flip-option:** top-2
@@ -54,7 +54,7 @@ concentrates in ~10 ad-invisible verticals (health/beauty/travel 0-26% retained 
 >=94% everywhere). Charts q3d_score_coverage/vertical_impact.png; scenario table has HI/PP cols.**
 
 **2026-07-14: SOLO sheet COMPLETE** (user ask — each vendor as ONLY paid source, overlap vs
-free logs only; see [[reference-audi-1089-template-workbook]] for mechanics; q8a/q8b landed
+free logs only; see [[reference_audi_1089_template_workbook]] for mechanics; q8a/q8b landed
 same day, all anchors passed, 0 pending). MEASURED solo: T2_solo runs 3-5x ABOVE density
 estimates (33Across $724K vs $397K est — estimates inherit sole-cohort adverse selection);
 33Across feeds clear bills on REVENUE basis (1.6-2.5x — vendor will argue this lens) but
@@ -127,5 +127,5 @@ preemption fix before/instead of overlap-motivated drops.
 (deck_d1-d8, one per table; copy-paste proven from clean folder; zip byte-verified), 9-slide technical
 TLDR deck (RevealJS gist; user's Net Kept Margin formula). All proof runs landed and reconciled
 (d8: served signal 63.66% free-covered; d2/d7 exact). Free-row standalone convention = vs ALL paid.
-d1 relaunch LANDED 07-16 (anchors exact, workbook final — 'upload this one' delivered). Follow-on work moved to epic [[audi-1111-vendor-quality]]. Still external: flat fees (Maya), Data Eng ingest costs, AUDI-1093 rollout.
-Related: [[reference-ddp-billing-logic]] [[reference_ddp_valuation_framework]] [[reference-audi-1089-template-workbook]].
+d1 relaunch LANDED 07-16 (anchors exact, workbook final — 'upload this one' delivered). Follow-on work moved to epic [[project_audi_1111_vendor_quality]]. Still external: flat fees (Maya), Data Eng ingest costs, AUDI-1093 rollout.
+Related: [[reference_ddp_billing_logic]] [[reference_ddp_valuation_framework]] [[reference_audi_1089_template_workbook]].
