@@ -95,23 +95,41 @@ Contradiction-hunting is a first-class part of the sweep, equal to adding new fa
 
 ## Step 6 — Memory files (follow the format exactly)
 
-For cross-session facts, check for an existing memory file that already covers it and **update
-that file** rather than duplicating. Only create a new file when nothing fits. Each new file:
+Memory now lives IN the repo at `knowledge/memory/` (the native memory dir is a symlink to it), so each
+file is indexed like any knowledge doc. Before creating one, **grep `knowledge/_MEMORY_INDEX.md` and
+`knowledge/_ROUTING.md` for the topic** — if a file already covers it, UPDATE that file rather than
+duplicating (this is what stops overlap clusters forming). Only create a new file when nothing fits.
+
+Each new file is `knowledge/memory/<slug>.md`, where `<slug>` = the filename stem = the `name:` value:
 
 ```markdown
 ---
-name: <short-kebab-case-slug>
-description: <one-line summary used for recall relevance>
+name: <slug>                       # MUST equal the filename stem, so [[wikilinks]] resolve
+description: <one-line summary used for recall relevance — keep it to ~1 tight sentence>
 metadata:
+  node_type: memory
   type: user | feedback | project | reference
+doc_type: memory                   # folds this file into _ROUTING.md (the one grep surface)
+keywords: [term, entity, symptom]  # 5-10 terms a future session would grep to FIND this: topic name + concrete entities (table names, DS ids, people, repos, ticket ids) + synonyms
+domain: [<1-3 from the list>]      # workflow · bigquery · experimentation · audience-scoring · bidding · identity · incrementality · pricing · infra · repos · routing-people · jira-process · leadership · project · data-catalog · business
+lifecycle: active                  # active | superseded | archived
+last_verified: <today>
 ---
 
-<the fact. For feedback/project, add **Why:** and **How to apply:** lines. Link relatives with [[other-name]].>
+<the fact. For feedback/project, add **Why:** and **How to apply:** lines. Link relatives with [[other_slug]].>
 ```
 
-Then add exactly one line to `MEMORY.md` under the right section: `- [Title](file.md) — hook`.
-Memory content never goes in `MEMORY.md` itself — index only. The memory dir is
-`/Users/malachi/.claude/projects/-Users-malachi-Developer-work-mntn-workspace/memory/`.
+**Do NOT add a line to `MEMORY.md`.** `MEMORY.md` is now the small always-loaded HOT TIER — reserved for
+facts relevant to (nearly) every session. A new task-specific fact is reached via a `_ROUTING.md` grep +
+`_MEMORY_INDEX.md`; it does not go in `MEMORY.md`. Only add a `MEMORY.md` line if the fact is genuinely
+always-on (a new global working rule or stack gotcha) — rare.
+
+**Lifecycle (retire, don't delete):** when a project finishes, set its memory's `lifecycle: archived` and
+drop any `MEMORY.md` line it had (the file stays grep-reachable). If a fact is superseded, set
+`lifecycle: superseded` or edit it in place. Only delete a file when it is entirely false (Step 5).
+
+**After writing/editing any memory file, run** `bash .claude/scripts/build_index.sh` so the new keywords
+fold into `_ROUTING.md` and the memory indexes (`_MEMORY_INDEX.md`, `_MEMORY_LIFECYCLE.md`) regenerate.
 
 ## Step 7 — Report, then commit
 
@@ -130,8 +148,8 @@ Nothing to add for: mntn_business, experimentation
 Always state the "nothing to add" destinations too — that's the *verification* the user wants:
 proof the sweep looked everywhere, not just where it found something.
 
-Then commit and push everything in one commit (per the workspace constant-commit rule; memory
-files live outside the repo so commit those changes are implicit to the memory tool, not git):
+Then commit and push everything in one commit (per the workspace constant-commit rule). Memory files
+now live in the repo at `knowledge/memory/`, so `git add .` versions them like any other change:
 
 ```bash
 cd /Users/malachi/Developer/work/mntn/workspace && git add . && \
