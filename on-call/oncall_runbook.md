@@ -396,7 +396,7 @@ writes a monitoring parquet). Its downstream siblings (`household_score_distribu
 `trigger_intent_score_household`) all went green in the same run → no scoring/serving impact, just a missed
 monitoring email for 07-28.
 
-**Durable fix → IMP-004 → PR #1160 (open, routed to Ryan).** Adds a `GCSObjectExistenceSensor`
+**Durable fix → IMP-004 → PR #1160 (MERGED 2026-07-29).** Adds a `GCSObjectExistenceSensor`
 `wait_for_ipdsc_geo` on `ipdsc_geo/dt={{ ds }}/_SUCCESS` gating `fangorn_score_monitor` (mirrors the DAG's
 existing `wait_for_ipdsc_13/19` preconditions; `soft_fail` so a truly-absent day skips instead of paging).
 Wired `scoring() >> wait_for_ipdsc_geo >> fangorn_score_monitor` so only the monitor waits on geo, not the
