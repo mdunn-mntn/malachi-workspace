@@ -3359,6 +3359,18 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   to map).** Load-bearing point: **case (i) — combining a household's multiple IPv4s — is where the
   household-keying VALUE lives**; pick-one keeps it ~IP-level. The empirical **household-aggregated vs IP
   features** comparison (Ryan: "code it and compare") is the first thing to run — AUDI-1105 / AUDI-1168.
+- **Score-translation ≠ feature-aggregation (the crux, validated by Ryan Kleck 2026-07-29).** Same graph, two
+  different operations: **score translation** (Nivas's convert-at-end; the existing **`intent_score_household_map`**
+  job) keeps, per household, the **single highest-confidence IP's score** — right for a *finished score*.
+  **Feature aggregation** (the FS build, AUDI-1168) resolves per IP (max-conf → no fan-out) then **`GROUP BY
+  mntn_id`** so a household gets the **aggregated features of ALL its IPs** — pick-one would discard signal.
+  Cardinality: with max-conf + a fixed `asOfDate`/day, IPv4→HHID is effectively **1:1 per day**, HHID→IPv4 is
+  **1:many**; the graph already maps each *current* IPv4 to exactly one household (case 3 rare, max-conf = a
+  guard); **not many HHIDs have many IPs**. **Aggregation = SUM, BUT distinct-count / HLL features do NOT sum**
+  (need HLL-merge or household-grain re-derivation) — open whether `guid_log`/its L2 has any distincts. Two more
+  divergence sources: **graph churn across the lookback window** (an IP can change households mid-window — open:
+  features follow the day's household or the snapshot's?) and **orphaned/shared IPs vanish** (~**9.5% of current
+  IPv4 rows flagged shared** → systematically under-represents shared-IP households).
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

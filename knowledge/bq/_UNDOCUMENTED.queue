@@ -14,3 +14,4 @@ integrationprod.dso_configuration_service_campaign_presets
 integrationprod.dso_household_score_thresholds
 reporting.ddp_mm_winners_imp_202606
 reporting.lift__ghost_bid_results
+reporting.lift__ghost_bid_rollup

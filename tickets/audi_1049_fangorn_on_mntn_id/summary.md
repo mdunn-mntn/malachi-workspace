@@ -393,6 +393,32 @@ the household resolution**; the **graph resolves the ID-combo for you** (handles
   *now* is a third source of change independent of the 4 cases. So: not the wrong frame, but add the temporal
   axis and treat case-2-additive as the point, not an edge case.
 
+## 7g. Cardinality + score-translation vs feature-aggregation (validated 2026-07-29)
+The 4-case read (§7f) was **confirmed "100% right" by Ryan Kleck.** The thread converged on the crux:
+
+- **Cardinality (resolved):** with **max-confidence at lookup + a fixed `asOfDate` per day**, IPv4→HHID is
+  **effectively 1:1 per day**, and **HHID→IPv4 is 1:many.** Empirically **the graph already assigns each
+  *current* IPv4 to exactly one household**, so case 3 (1 IPv4→2 HHID) barely happens — max-confidence is a
+  **guard, not a routine path.** Ryan's prior: **not many HHIDs have many IPs** (so the multi-IP aggregation
+  benefit may be modest — quantify it).
+- **THE distinction — score-translation ≠ feature-aggregation (the whole point):**
+  - **Score translation** (Nivas's convert-at-end; the existing **`intent_score_household_map`** job): per
+    household, **keep the single highest-confidence IP's score.** Correct for translating a *finished score*.
+  - **Feature aggregation** (the FS build, AUDI-1168): resolve per IP (max-conf → no fan-out) then **`GROUP BY
+    mntn_id`** → a household gets the **aggregated features of ALL its IPs.** Many IPs collapsing into one
+    household is the *normal path* and is where the richer household features come from. **Picking one IP would
+    discard signal** — that's the trap the score-translation pattern would lead you into. Same graph, different
+    operation.
+- **Aggregation method = SUM, but mind distincts/HLL (Ryan):** summable features (counts, sums) combine
+  trivially across a household's IPs; **HLL sketches / DISTINCT counts do NOT sum** — combining them needs an
+  HLL-merge or a household-grain re-derivation, not `a+b`. **Open: does `guid_log`/its L2 use any HLL or
+  distinct-count features?** (Sean checking.) This is an AUDI-1168 correctness detail. *(Malachi can answer this
+  empirically from the airflow-ti L2 model / the guid_log feature defs.)*
+- **Two things that change aggregation — decide (a), monitor (b):** (a) **graph churn across the lookback
+  window** — an IP can change households mid-window; **undecided whether features follow the day's household or
+  the snapshot's** (this is the as-of dimension made concrete). (b) **orphaned/shared IPs vanish** → they
+  systematically **under-represent shared-IP households**; **~9.5% of current IPv4 rows are flagged shared.**
+
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
 persuadables audience).** Fangorn ranks propensity (ROC-AUC 0.96) but the High band (~78% of volume) returns

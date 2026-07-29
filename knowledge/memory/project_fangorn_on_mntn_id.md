@@ -76,6 +76,15 @@ no-IPv4 HHID=no score. **Aggregation diverges from IP-L2 only via (i) a HHID inh
 household-vs-IP feature-distribution comparison early (Ryan: "code it and compare") to size whether the MID model
 is worth it.
 
+**Score-translation ≠ feature-aggregation (validated "100% right" by Ryan, 2026-07-29):** score translation
+(`intent_score_household_map`, convert-at-end) keeps the single highest-confidence IP's score per household;
+**feature aggregation (FS build, AUDI-1168) resolves per IP (max-conf, no fan-out) then GROUP BY mntn_id** so a
+household aggregates ALL its IPs' features (pick-one discards signal). Cardinality: max-conf + fixed asOfDate/day
+→ IPv4→HHID ~1:1/day, HHID→IPv4 1:many; graph maps each current IPv4 to one household (case 3 rare). Aggregation
+= SUM, but **distinct/HLL features don't sum** (need HLL-merge) — open: does guid_log L2 have distincts? Two more
+divergence sources: graph churn over the lookback (features follow day's vs snapshot's household — undecided);
+orphaned/shared IPs vanish (**~9.5% of current IPv4 rows flagged shared**).
+
 **Gating open questions before building:** 60-vs-90d graph retention (AUDI-1101); daily-vs-monthly L3 training
 table; multi-IP→household collapse function (Identity chose random-pick "for code simplicity" — AUDI feature-
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on

@@ -77,3 +77,8 @@ _(document household L2 model naming + aggregation semantics)_
   optional; **Matt/Brian lean resolve-to-1-household-first** (single max-confidence HHID, no duplication). Naming
   standard = **`household_id`** (Jack). Coverage: unscored (no-IPv4) HHIDs are fine **iff the bidder never
   targets them.**
+- **Aggregation pattern (validated, epic §7g): resolve per IP (max-conf → no fan-out) then `GROUP BY mntn_id`**
+  so a household aggregates ALL its IPs' features (the household value; pick-one = ~IP-level, discards signal).
+  This is FEATURE aggregation, NOT the `intent_score_household_map` score-translation (keep-highest-conf-IP).
+  **SUM works, but distinct-count / HLL features do NOT sum** — need HLL-merge or household-grain re-derivation.
+  **First check: does the guid_log L2 use any HLL/distinct features?** (answerable from the airflow-ti L2 model).
