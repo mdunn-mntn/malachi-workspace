@@ -49,11 +49,17 @@ class DbtImageName(str, Enum):
 FOLLOWING day's run unless manually triggered.
 
 **Worked example #2 (INC-007, 2026-07-30):** the OpenAI file-cleanup fix (`openai/` change to
-`delete_all_storage_files.py` — per-file delete, paginate `files.list` via `auto_paging_iter`, retention
-72h→48h) applied the SAME rule → shipped via `deploy_openai_dockerhub_gcp.yml`, NOT middleware. Merge
-`cf2c76e` (branch `audi-1042/fix-openai-storage-cleanup`) → run 30577185770 SUCCESS ~20:00Z → pushed
-`steelhousedev/openai_batch_runner:gcp-prod` (digest `sha256:f6448696…`) + `:gcp-prod-cf2c76e`. Both the
-INC-006 fetch fix (#296) and this INC-007 cleanup fix (#297) now live on the same `gcp-prod` image tag.
+`delete_all_storage_files.py` — per-file delete, retention 72h→48h) applied the SAME rule → shipped via
+`deploy_openai_dockerhub_gcp.yml`, NOT middleware. **⚠ Two attempts:** the FIRST, `#297` (merge `cf2c76e`,
+run 30577185770), **REGRESSED** — it paged with `client.files.list().auto_paging_iter()`, a method the OpenAI
+SDK does not have, so every `batch_cleanup` crashed `AttributeError` on `SyncCursorPage` and deleted nothing
+(see [[reference_openai_sdk_pagination]]). The REAL fix `#298` (branch `audi-1042/hotfix-cleanup-pagination`)
+reverted to `for file in client.files.list():` (SDK auto-pages) → merge `8b23620` (now main HEAD) → run
+30586147014 SUCCESS 22:11Z → pushed `steelhousedev/openai_batch_runner:gcp-prod` (digest `sha256:20d1cf25…`)
+from `8b23620`. `#299` (a manual after-cursor loop) closed as superseded. Both the INC-006 fetch fix (#296)
+and this INC-007 cleanup fix (#298) now live on the same `gcp-prod` image tag; `batch_cleanup` verified green
+on the #298 image. (Because `image_pull_policy=Always`, cleanup tasks whose pods started before vs after the
+#297 deploy ran different code — see [[reference_mntn_matched_batch_pipeline]].)
 
 ## Access
 - **Argo:** request via the **IT service desk** (HR → IT support). In the ticket comment ask for
@@ -74,8 +80,10 @@ INC-006 fetch fix (#296) and this INC-007 cleanup fix (#297) now live on the sam
   airflow-side durable follow-ups (direct `batch_fetch` alerting / DAG-dependency hardening).
 - A **new OpenAI quota-increase ticket** (from Alyson) may land on Malachi; Victor had a prior ticket for
   it. Distinct from the file-hygiene fix (AUDI-1042 — Malachi's, **In Progress + P1-Critical**, cleanup
-  fix shipped via #297 2026-07-30, storage-drop validation pending — INC-007 / IMP-013).
+  fix shipped via **#298** 2026-07-30 after #297 regressed, storage-drop validation pending — INC-007 / IMP-013).
 
 See [[reference_airflow_ti]] (our model-repo deploy flow — a different, GCS→bundle path),
 [[reference_oncall_runbook]] (INC-006 fetch bug #296, INC-007 quota AUDI-1042),
+[[reference_mntn_matched_batch_pipeline]] (the submit/fetch DAG mechanics + cross-DAG contract),
+[[reference_openai_sdk_pagination]] (the SDK list-pagination gotcha that regressed #297),
 [[reference_github_pr_no_clone]].

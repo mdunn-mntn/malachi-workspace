@@ -1537,6 +1537,15 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   also set `was_downloaded=True` unconditionally, stranding skipped batches. Net effect: each retry grabs a few more then dies on the next
   bad batch, so a bad cycle limps forward (07-27 stuck at 928/1101 results, downstream never assembled) but never produces
   `product_categorization`. Fix: PR `SteelHouse/shopper_graph#296` (skip bad batches, gate the `was_downloaded` update). See INC-006 / IMP-010.
+- **OpenAI file-storage cleanup + the SDK pagination gotcha (INC-007 / AUDI-1042, 2026-07-30):** `batch_cleanup_1/2`
+  (identical bookend tasks, `openai/delete_all_storage_files.py`, ~4×/day across both DAGs) purge old OpenAI files to
+  stay under the **2.5TB project file-storage quota**; when they stop keeping up, `batch_submit` fails 400 "exceeded your
+  file storage quota" and the day's `openai_batch_submissions/dt=` is never written. **OpenAI Python SDK gotcha:** iterate
+  a list response directly — `for file in client.files.list():` — and it AUTO-fetches all pages; there is **NO**
+  `.auto_paging_iter()` method (a Stripe idiom → `AttributeError: 'SyncCursorPage[FileObject]' object has no attribute
+  'auto_paging_iter'`). The cleanup fix #297 introduced that nonexistent call and crashed every cleanup (deleted 0 files);
+  #298 reverted to direct iteration (the real fix), #299 (manual `has_more` loop) was closed. Detail: memory
+  `reference_openai_sdk_pagination` + `reference_mntn_matched_batch_pipeline`.
 - **`data_source_id` does NOT multiply OpenAI cost.** Dedup is on `composite_key` (the query-stripped URL); a URL is
   sent to OpenAI **once** regardless of how many vendors report it. `data_source_id` is retained only for **billing
   attribution** to the source vendor. (augmentor_log DS30 duplicate URLs are absorbed by the anti-join.)
