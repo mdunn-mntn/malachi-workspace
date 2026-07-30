@@ -1,0 +1,434 @@
+[00:00] deploy dbt
+[00:04] open ai batch runner
+[00:10] when is that uh deployed open ai batch runner oh you just did that what does that what that
+[00:16] does that do does what the open ai batch runner yeah it's maybe that is what you gotta do yeah
+[00:29] So it's different than the other thing.
+[00:35] What was he?
+[00:36] Brian was showing me exactly what you just pointed out,
+[00:38] and then he talked about Argo CD and all that.
+[00:41] But I think this is separate.
+[00:42] The OpenAI stuff is separate.
+[00:43] At least when I was trying to run it with Claude,
+[00:45] Claude told me that.
+[00:46] It is.
+[00:47] Okay.
+[00:47] Yeah.
+[00:48] Middleware is the thing, is the API.
+[00:51] It's poorly named.
+[00:53] Middleware is the API, and when you run it,
+[00:56] it should make an Argo PR for you.
+[01:01] Yeah.
+[01:01] Yeah.
+[01:01] If you,
+[01:02] yeah.
+[01:04] So if you click on that right there,
+[01:05] yeah.
+[01:05] Click on that.
+[01:06] So this is like,
+[01:07] if you're gonna make changes to the API,
+[01:09] you know,
+[01:09] and then you see,
+[01:10] you see once it runs,
+[01:11] it's like,
+[01:12] Oh,
+[01:12] click here to view emerge Argo CD PR.
+[01:15] So if you do that,
+[01:16] then that will take you to Argo or the Argo repo.
+[01:21] If you click there,
+[01:23] Oh,
+[01:24] you can go ahead and click.
+[01:25] And I just got Argo access the other day.
+[01:29] I see.
+[01:29] Then this, if you look at the files changed.
+[01:32] So this is Brian deployed something.
+[01:35] So if you look at files changed, it's just bumping the version there.
+[01:39] Yeah.
+[01:40] He.
+[01:41] Yeah.
+[01:41] Yep.
+[01:42] He was doing it for mine this morning.
+[01:45] Well, actually, he thought Sean's was mine.
+[01:48] So he deployed Sean's.
+[01:50] But I was like, mine wasn't.
+[01:51] Oopsie.
+[01:52] Oh, yeah.
+[01:53] It was not a big deal.
+[01:55] I'm trying to see.
+[01:58] So, yeah.
+[01:59] That's the one that I had this morning, which was this one.
+[02:04] So much fun stuff.
+[02:06] Yeah, I'm trying to get to.
+[02:08] Oh, where is it?
+[02:09] There it is.
+[02:10] Yeah, but that.
+[02:11] So is it deep?
+[02:12] But I think you have to run dbt.
+[02:13] Or, man, what does your cursor say?
+[02:17] Or why did you run OpenAI BatchRunner?
+[02:19] What does that control?
+[02:20] I'm just confused. What's the difference between deploy OpenAI BatchRunner and dbt?
+[02:30] Deploy dbt.
+[02:31] I don't know. I don't know that answer.
+[02:37] Ask cursor real quick.
+[02:40] Yeah, I will ask. OpenAI. Oh, sorry. The difference between the OpenAI, would you call
+[02:48] it BatchRunner?
+[02:49] Yeah, open up.
+[02:51] Like, basically, this...
+[02:53] Here, I'll give you...
+[02:55] What's the difference between this GitHub action
+[02:56] and...
+[03:00] this GitHub action?
+[03:05] Those two.
+[03:09] Okay.
+[03:11] Also, I threw in your additional thing
+[03:15] where you said if it goes over the weekend
+[03:17] and there's going to be one more commit,
+[03:19] Okay. I mean, that's fine. I think it's
+[03:23] Yeah. So, I will there's one more commit in the PR. But what I was trying to do,
+[03:31] it's trying to figure it out. 297. I think it just threw in another commit. Okay. Good
+[03:42] away. I might still the approval might still change age delete only part file. Yeah, but
+[03:56] the batch files take up room too. So you're not going to delete the batch files. I don't
+[04:01] think just just just leave it how you had it just reverse that commit. Okay. Just leave
+[04:07] it dude because but dude i mean we have problems with the job or if it doesn't
+[04:13] yeah this job needs some love probably but well one of the things that i've been trying to do
+[04:21] every single time i have an issue is like there's a lot of things that come up as failures and i'm
+[04:28] like we could fix these you know so they're not failures anymore because i'm not a huge fan of
+[04:34] having to double check and triple check
+[04:37] all these
+[04:37] things all the time.
+[04:41] Okay.
+[04:43] Yeah, reverse that last commit.
+[04:45] How do you do that
+[04:47] in UI?
+[04:51] I just have cursor do it
+[04:53] for me. Yeah, I don't remember this stuff.
+[04:55] I've become so dependent on this crap.
+[04:57] I asked her to
+[04:59] reverse the last commit.
+[05:01] Yeah.
+[05:04] Yeah, I guess.
+[05:08] Okay. So, the answer for this says... Okay. So, the image is different. One builds
+[05:16] from OpenAI, OpenAI Docker file. The other one does a repo root plus dbt Docker file.
+[05:23] The OpenAI batch API scripts contain... Okay. Here. I'll just send this to you.
+[05:29] What?
+[05:30] My wife is calling me.
+[05:35] Yeah, no problem.
+[05:40] Yes, I think we want to do the deploy dbt.
+[05:50] Script.
+[05:53] Okay, obviously.
+[05:57] Image.
+[06:00] open AI
+[06:02] dude Opus 5 is so chatty
+[06:15] no matter what I do
+[06:17] it like wants to send paragraphs
+[06:20] and paragraphs and stuff
+[06:21] I think they make it that way
+[06:23] they want to
+[06:24] my context is like filling up now so quickly
+[06:28] I've been more
+[06:28] I need to like
+[06:31] constantly tell it to
+[06:34] dump all its learnings into a file
+[06:36] and let me start a new chat but as soon as
+[06:38] I start a new chat it's like the context
+[06:40] just fills up so
+[06:42] quick
+[06:42] okay so I guess
+[06:46] both are manual
+[06:47] the two images are the two halves of the mountain
+[06:49] dude ask it which one
+[06:51] ask it with the files you changed which one
+[06:54] to do just ask it that
+[06:55] because it sounds
+[06:58] like, yeah, is that, let me go back to your pull request. It sounds like if it's in the
+[07:03] open AI folder, what files did you change? You did change open AI. Okay. So I think you
+[07:10] are going to have to, yeah, I think you did the right one. Yeah. That's what I understood
+[07:15] is that it's specific to open AI. Yeah. Cause it's not in dbt. If you modify things in the
+[07:26] dbt folder
+[07:28] yeah
+[07:29] okay that's where I got
+[07:34] confused because there is
+[07:36] some of those openai files
+[07:38] are
+[07:40] in
+[07:40] the dbt folder
+[07:43] post batch
+[07:45] this repo is so confusing I don't
+[07:48] know why this was set up by Phil
+[07:50] I don't know who Phil
+[07:52] is but
+[07:52] he's actually my buddy but he got me
+[07:56] the job here, but then he left
+[07:58] shortly after.
+[08:04] But yeah, revert that.
+[08:06] Do the open AI
+[08:08] action.
+[08:10] And then I think that's all you need
+[08:12] to do.
+[08:14] There's no Argo.
+[08:19] Argo's for like
+[08:20] I forget
+[08:24] how
+[08:25] when this runs
+[08:29] how does this run
+[08:34] I forget how this works
+[08:36] how does mountain match
+[08:39] yeah do you understand
+[08:45] how it works because I
+[08:46] forget
+[08:47] how the mountain match
+[08:50] incremental spatch runs
+[08:52] yeah
+[08:53] yeah there's a lot of these things are connected the other PR
+[08:58] they're working on is on that I don't remember off the top of my head
+[09:02] the I would have to I would have to check
+[09:06] it's if you go to the oh because it's a
+[09:09] cube some of these are
+[09:14] yeah
+[09:17] let me show you
+[09:22] some if you have time.
+[09:24] Yeah, show me. I just want to clarify
+[09:26] the commit that I was going to roll back
+[09:28] was the addition
+[09:29] Oh, what did it just do?
+[09:35] The weekend stuff?
+[09:37] It was the
+[09:37] Yeah, roll back
+[09:42] this so that you add
+[09:45] batch back
+[09:47] in because otherwise
+[09:48] you'll never delete
+[09:50] batch things are...
+[09:56] Let me show you.
+[09:59] I can drop some knowledge on you here.
+[10:01] Okay.
+[10:03] We upload files.
+[10:06] This all goes under the same storage.
+[10:08] We upload files.
+[10:09] So if you look at my screen...
+[10:11] Okay.
+[10:12] Somewhere in here is some part files that we uploaded.
+[10:16] If I keep scrolling
+[10:17] farther down.
+[10:19] Ah, whatever.
+[10:20] Yeah, the part files.
+[10:23] Yeah, part files.
+[10:24] Anyway, yeah, so those are the ones we upload.
+[10:26] And it has the prompt and everything.
+[10:29] It has all the data it needs to do this in a batch.
+[10:32] And then it will give us the results in these batch files
+[10:41] and put it on its storage.
+[10:43] So when we upload files, it uses up the storage capacity,
+[10:47] and then when it replies, it uses up.
+[10:49] Yeah.
+[10:49] one second Ryan I gotta run upstairs
+[10:53] I will be right back like a minute
+[10:55] yeah
+[11:19] All right.
+[11:37] I'm back.
+[11:38] Okay.
+[11:39] Yeah.
+[11:40] Oh, man.
+[11:41] Yeah.
+[11:41] See, you got to be careful with this job.
+[11:42] It looks like somebody might have kicked it off again as we're uploading part files again.
+[11:47] Or maybe not.
+[11:48] But I don't know.
+[11:49] Anyway, these part JSON-L files are the ones we upload.
+[11:54] Multi-line JSON, right?
+[11:56] And then the batch ones are what it responds with.
+[12:02] And you can even download these and see once you get access.
+[12:07] And so this is the output of that.
+[12:09] And there's also error ones.
+[12:11] if it hits any errors
+[12:13] it'll
+[12:15] have
+[12:17] error
+[12:19] or whatever in it
+[12:21] anyway so that's
+[12:22] that's how that works
+[12:25] kinda that's basically how that works
+[12:27] you know it's a batch of their response
+[12:29] part is the ones that we
+[12:31] upload
+[12:32] anyway
+[12:34] so that's why you should
+[12:37] delete their response to
+[12:39] once you're sure
+[12:40] that we get it.
+[12:44] That's why that 48 hours.
+[12:46] This is assuming that our job,
+[12:49] the fetch job won't fail
+[12:50] within 48 hours
+[12:55] or won't fail.
+[12:57] You know what I mean.
+[13:01] You're on mute, by the way.
+[13:02] I don't know if you can hear me.
+[13:05] Oops, yes.
+[13:06] I was talking to you, my bad.
+[13:09] Yes, okay.
+[13:10] yeah so so this is fine yeah this is all fine or yeah just just revert that commit
+[13:16] okay what else was i gonna show you yeah because i think the thought was well i didn't even know
+[13:24] that it was broken up that much i was like wow i were really sending 2.5 terabytes in like a
+[13:29] couple days and i was like oh no we're not yeah um so yeah it's their it's their responses plus
+[13:36] all the errors plus it's we all up we and open ai both upload to the same file storage which sucks
+[13:44] um okay oh yeah i was going to show you the difference you could tell the difference
+[13:50] when you look at this dag a mountain mat mountain match fetch or whatever you could tell which
+[14:00] which one is in OpenAI runner versus which one's in DBT by the operators.
+[14:09] And I'm not quite sure why we did it this way.
+[14:11] But see, this is a mountain kube pod operator.
+[14:16] So this is actually an OpenAI job.
+[14:26] you know so so if you're changing this step if you're changing this file you need to do the open
+[14:33] ai deployment this this one you need to do the open ai deploy open ai batch runner if you're
+[14:42] and then so that one too so you're you're doing where i forget where we're cleanups at but then
+[14:49] these are dbt ones. So that's, that's how you could tell which kind of which one you have to,
+[14:59] which action you have to run. So yeah, so then it just gets the dbt image,
+[15:07] shopper graph dot value, where's that set? Well, I guess that's the part I don't quite understand.
+[15:16] And you'd have to ask.
+[15:21] UBG image name.
+[15:24] I don't know how this is set.
+[15:27] It must be via environment variable.
+[15:34] UBG image.
+[15:36] It's getting the image name, though, and then it'll download, you know, it'll use that image from Docker Hub.
+[15:42] It's kind of the idea, right?
+[15:46] So anyway, so you did clean up. Yeah.
+[15:49] So clean up is a, is an opening eye image.
+[15:56] Does that make sense? Yeah. Yep. It does. Okay. Okay.
+[16:01] Well I will, I will roll back that commit.
+[16:03] Then I'll merge the PR and then all that and hopefully everything's all good.
+[16:09] I mean, this wasn't like anything breaking, but I just didn't want to. Yeah.
+[16:12] Yeah. Yeah. So this is good. Yeah. You should,
+[16:15] this is good practice for you to fix any errors and stuff and then you can learn it as you go and
+[16:21] yeah just yeah submerge it and then do the deploy open ai batch runner from maine to prod yeah
+[16:29] the one thing that i would say like with the whole push for using using ai that i don't like
+[16:36] is it like productivity is super high and like you sacrifice some quality but the thing that sucks is
+[16:43] that like i don't know you you get like real deep knowledge when you're working on something for a
+[16:49] long time you but you can't produce as much you know i'm saying and so like it just kind of depends
+[16:53] where you are with stuff so like when i do all these things like i'm catching like understanding
+[16:58] how certain things are working and all that but yeah it's totally different than like sitting
+[17:04] there and like going through logs okay and then manually doing everything i just feel like you
+[17:08] get a little bit more of that like hands-on you know experience yeah what sucks is kind of like
+[17:15] with yeah i kind of have different thoughts about that i mean because yeah when you're kind of
+[17:21] younger or you know newer yeah it does kind of suck to not get that base but dude then the other
+[17:28] side of the coin though for me is like at some point i mean i don't mind learning stuff but like
+[17:34] I know what I want to do
+[17:37] I just can't write the code
+[17:39] fast enough you know
+[17:40] or like
+[17:42] and I do want to understand
+[17:45] it but sometimes I just want to get it done
+[17:47] you know and I know
+[17:49] so like
+[17:51] when I use AI
+[17:53] you know it's more about like helping me
+[17:55] with infrastructure things that would take me
+[17:57] forever by myself you know
+[17:59] and like yeah modifying
+[18:01] like a you know
+[18:03] I consider myself a sequel expert
+[18:07] and PySpark
+[18:07] maybe not an expert
+[18:09] I could write all those
+[18:12] but also I could just have AI
+[18:15] do it and then check
+[18:16] its work real quick
+[18:18] and test it really
+[18:20] so it is
+[18:22] but I get what you mean
+[18:24] I guess at the end of the day
+[18:26] do you
+[18:27] what benefits you more
+[18:30] having deep knowledge about something
+[18:32] obscure or or getting stuff done quick you know that's kind of the trade-off yeah my thought well
+[18:42] my thought process is like if it just you just didn't have access to it you know what like what
+[18:48] would you do you know type of thing um not that you couldn't solve it but did you be on stack
+[18:53] overflow though you'd be like i which that's true i guess that is true i remember doing that
+[18:58] I remember searching for like, oh, I, I mean,
+[19:02] it was more in college because AI came out literally like two years into my
+[19:06] career, but like, it was so, I don't,
+[19:08] I didn't have much of a career before it, but yeah,
+[19:13] like my annoying thing I've ever seen on Stack Overflow,
+[19:15] trying to get a Python chart to look specific way and like,
+[19:19] yeah,
+[19:20] forums and stuff trying to figure it out.
+[19:22] To me, that's almost like a waste of time or not.
+[19:26] it's not a waste of time,
+[19:28] but you get,
+[19:29] you get further in your career,
+[19:31] you know,
+[19:31] and like,
+[19:31] honestly,
+[19:32] I've forgotten more stuff than I remember.
+[19:35] You know,
+[19:35] there there's times where like,
+[19:36] I've heard,
+[19:37] Oh,
+[19:37] I got to remember how to do things.
+[19:39] And I don't know,
+[19:40] just having AI.
+[19:43] It's like,
+[19:44] I think it comes down to like,
+[19:46] I was talking to Dustin about this.
+[19:48] Like,
+[19:48] do you,
+[19:48] I mean,
+[19:50] do you,
+[19:52] like,
+[19:52] dude,
+[19:52] nobody at the end of the day,
+[19:54] dude,
+[19:54] they're paying you to solve problems they're not paying you to like learn code
+[20:00] deep knowledge of code and stuff.
+[20:03] And now does knowing that help you solve the problems?
+[20:05] If it does,
+[20:06] then yeah,
+[20:07] you should do that.
+[20:08] But I don't,
+[20:08] I don't think like for mountains sake,
+[20:11] it does do that.
+[20:12] Like,
+[20:13] like if you're working on a compiler or something for C plus plus or
+[20:17] something,
+[20:17] like if you were like,
+[20:18] yeah,
+[20:18] deep PhD guy trying to like,
+[20:21] like a quant trying to like eke out milliseconds out of,
+[20:25] of a function or something,
+[20:28] you know,
+[20:28] then yeah,
+[20:29] that,
+[20:29] that's where you want to be well versed in that but i don't know that's just my two cents
+[20:37] and yeah i agree dude just like dude just like self-driving cars dude ai
+[20:43] like you it doesn't have to be perfect it just has to be better than humans
+[20:48] and like i've i've seen human code that's way sloppier than ai so oh yeah yeah um yeah
+[20:58] yeah okay it does it does suck for like the newer guys kind of like you i think where
+[21:05] but i mean you got a good foundation under you you know so yeah so it's not like i don't know
+[21:12] anything um yeah i don't feel that way it was just more of like now i'm doing all this dd stuff and
+[21:18] like a lot of times i'm just solving stuff real quick and like not taking too much time to be like
+[21:23] I agree
+[21:25] dude I mean I still don't
+[21:26] I don't know that much there's things
+[21:28] I want to learn but I just have AI
+[21:30] do it for me
+[21:31] but I do I think eventually
+[21:34] it'll osmos into my brain because I've seen
+[21:36] it I'll have it tell me the commands
+[21:38] it does and I've seen them
+[21:40] enough like all the Kubernetes stuff
+[21:42] like kubectl
+[21:43] I want to learn all those but also
+[21:46] yeah it's just
+[21:48] eventually I think I'll see it
+[21:50] enough times I'll be like oh okay
+[21:51] and I try to have it explain like the high level
+[21:54] concepts to me like what you know
+[21:56] so I don't know
+[21:58] anyway yeah good
+[22:00] luck dude yeah just need to open
+[22:02] AI did you merge it yet
+[22:04] no I haven't alright well
+[22:06] I'll stop talking yeah let me know if you get stuck
+[22:08] and then yeah okay cool
+[22:10] hey I really appreciate you taking the time
+[22:12] thank you for sure yeah anytime
+[22:14] yeah take care bye

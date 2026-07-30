@@ -158,13 +158,15 @@ run Select vs those who don't", "accounts on feature X vs not"):
    *across-group* comparison is a descriptive cut. Always state "observational, not causal" on the deliverable.
 
 2. **The pooling weight can invert the finding when the group has a heavy tail.** On AUDI-1172, PTV-only
-   advertisers pooled to **+0.2% IVW** (precision/volume-weighted → a few huge spenders, who are barely
-   incremental, dominate) but **+12.4% for the median advertiser**. Same group, 60× apart. With a heavy tail
-   (one advertiser 294× the median), **report BOTH a volume-weighted and an equal-weight/median number** — they
-   answer different questions ("where does the incremental volume sit" vs "what is the typical advertiser"),
-   and showing both is the honest, robust read for leadership. Prefer the **median** over the mean for the
-   equal-weight number — per-unit relative lifts explode when a denominator (holdout rate) is tiny, which
-   skews a mean but not a median. Exclude internal/test accounts and the single most extreme outlier up front.
+   advertisers pooled to **+0.2% IVW** (inverse-variance weighted → for proportions the weight ≈ sample size,
+   so a few huge spenders, who are barely incremental, dominate) but **+12.4% for the median advertiser**. Same
+   group, 60× apart. With a heavy tail (one advertiser 294× the median), **report BOTH the IVW-pooled and a
+   median-advertiser number** — they answer different questions ("where does the incremental volume sit" vs
+   "what is the median advertiser"), and showing both is the honest, robust read for leadership. **Label it
+   IVW / inverse-variance, not "volume-weighted"** — the two coincide for proportions but the method is
+   inverse-variance, and a reviewer will (correctly) call out the loose label. Prefer the **median** over the
+   mean for the per-advertiser number — per-unit relative lifts explode when a denominator (holdout rate) is
+   tiny, which skews a mean but not a median. Exclude internal/test accounts and the single most extreme outlier.
 
 ## Experiment results archive (TI-1003 / TI-1033)
 

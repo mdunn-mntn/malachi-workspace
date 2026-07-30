@@ -305,6 +305,11 @@ NA = lambda x: x if (isinstance(x, (int, float)) and pd.notna(x)) else "n/a"
 by = {}
 for _, r in cpa.iterrows():
     by.setdefault(int(r["advertiser_id"]), {})[r["product"]] = r
+def _num(x):
+    return x if (isinstance(x, (int, float)) and pd.notna(x)) else None
+def _edge(sel, non):   # non-Select minus Select -> positive = Select is CHEAPER (green); n/a if either missing
+    a, b = _num(sel), _num(non)
+    return (b - a) if (a is not None and b is not None) else None
 cost_recs = []
 for aid in both_ids:
     aid = int(aid)
@@ -312,14 +317,14 @@ for aid in both_ids:
     if s is None and n is None:
         continue
     name = (s if s is not None else n)["company_name"]
+    scv, sca = (s["cpiv"], s["cpia"]) if s is not None else (None, None)
+    ncv, nca = (n["cpiv"], n["cpia"]) if n is not None else (None, None)
     cost_recs.append({
         "Advertiser":   name if (isinstance(name, str) and name) else str(aid),
         "AID":          aid,
-        "Select CPIV":  NA(s["cpiv"]) if s is not None else "n/a",
-        "Select CPIA":  NA(s["cpia"]) if s is not None else "n/a",
+        "Select CPIV":  NA(scv), "non-Sel CPIV": NA(ncv), "CPIV edge": NA(_edge(scv, ncv)),
+        "Select CPIA":  NA(sca), "non-Sel CPIA": NA(nca), "CPIA edge": NA(_edge(sca, nca)),
         "Select sig":   YESNO(sigmap.get((aid, "Select"), False)),
-        "non-Sel CPIV": NA(n["cpiv"]) if n is not None else "n/a",
-        "non-Sel CPIA": NA(n["cpia"]) if n is not None else "n/a",
         "non-Sel sig":  YESNO(sigmap.get((aid, "non_Select"), False)),
     })
 cost_adv_df = pd.DataFrame(cost_recs).sort_values("AID")
@@ -327,12 +332,14 @@ cost_adv_df = pd.DataFrame(cost_recs).sort_values("AID")
 wb.table(
     "Cost by advertiser", cost_adv_df,
     finding="Cost per incremental visit and conversion, per advertiser (filter Sig to Yes)",
-    method="Per advertiser x product, same method as Cost per incremental. Filter the Sig columns to Yes; "
-           "'n/a' = the advertiser's lift was not net-incremental or too small to measure (tiny holdout).",
-    formats={"Select CPIV": FMT.USD, "Select CPIA": FMT.USD0,
-             "non-Sel CPIV": FMT.USD, "non-Sel CPIA": FMT.USD0},
-    kind="data", first_col_width=30,   # no heat: a 35-row lookup table reads cleaner as plain numbers + the Sig filter
-    toc="CPIV/CPIA per advertiser (both cohort); filter the Sig columns to significant rows.",
+    method="Per advertiser x product, same method as Cost per incremental. Edge = non-Select minus Select "
+           "(positive/green = Select is cheaper). Filter the Sig columns; 'n/a' = lift not net-incremental / too small.",
+    formats={"Select CPIV": FMT.USD, "non-Sel CPIV": FMT.USD, "CPIV edge": FMT.USD,
+             "Select CPIA": FMT.USD0, "non-Sel CPIA": FMT.USD0, "CPIA edge": FMT.USD0},
+    heat={"Select CPIV": "low", "non-Sel CPIV": "low", "Select CPIA": "low", "non-Sel CPIA": "low"},
+    signal={"CPIV edge": {}, "CPIA edge": {}},   # signed: Select-cheaper green, Select-pricier red
+    kind="data", first_col_width=30,
+    toc="CPIV/CPIA per advertiser (both cohort) + Select-vs-non-Select edge; filter the Sig columns.",
 )
 
 # --- Sheet: AID-level overall incrementality, 3 product-mix groups (all MNTN advertisers) ---
@@ -342,29 +349,29 @@ grp = grp.sort_values("group", key=lambda col: col.map(gorder)).reset_index(drop
 vsig = grp["vis_sig"].astype(str).str.lower().isin(["true", "1", "yes"])
 CN = lambda x, n: (x if (pd.notna(x) and n >= 5) else "n/a")   # hide conv lift on thin groups (Select-only n=2)
 group_df = pd.DataFrame({
-    "Group":                 grp["group"].values,
-    "Advertisers":           grp["n_adv"].values,
-    "Visit lift (vol-wtd)":  grp["vis_ivw"].values,
-    "Visit lift (typical)":  grp["vis_ew_med"].values,
-    "Vis sig":               [YESNO(b) for b in vsig],
-    "Conv lift (vol-wtd)":   [CN(x, n) for x, n in zip(grp["conv_ivw"], grp["n_conv"])],
-    "# w/ conv":             grp["n_conv"].values,
+    "Group":                grp["group"].values,
+    "Advertisers":          grp["n_adv"].values,
+    "Visit lift (IVW)":     grp["vis_ivw"].values,
+    "Visit lift (median)":  grp["vis_ew_med"].values,
+    "Vis sig":              [YESNO(b) for b in vsig],
+    "Conv lift (IVW)":      [CN(x, n) for x, n in zip(grp["conv_ivw"], grp["n_conv"])],
+    "# w/ conv":            grp["n_conv"].values,
 })
 _b = grp[grp["group"] == "Both"].iloc[0]
 _p = grp[grp["group"] == "PTV-only"].iloc[0]
 wb.table(
     "AID-level lift by group", group_df,
     finding=(f"Select-running advertisers are more incremental overall than PTV-only "
-             f"(volume-weighted {_b.vis_ivw*100:+.1f}% vs {_p.vis_ivw*100:+.1f}%; "
-             f"typical advertiser {_b.vis_ew_med*100:+.0f}% vs {_p.vis_ew_med*100:+.0f}%)"),
+             f"(IVW {_b.vis_ivw*100:+.1f}% vs {_p.vis_ivw*100:+.1f}%; "
+             f"median advertiser {_b.vis_ew_med*100:+.0f}% vs {_p.vis_ew_med*100:+.0f}%)"),
     method="Overall advertiser-level visit lift (all of an advertiser's prospecting, both products), across ALL "
-           "MNTN advertisers. Volume-weighted = precision-pooled (big advertisers drive it); typical adv = median "
-           "advertiser. Observational, not causal. Test accounts + WGU excluded. See Read me / Method.",
-    formats={"Visit lift (vol-wtd)": FMT.PCT1, "Visit lift (typical)": FMT.PCT1,
-             "Conv lift (vol-wtd)": FMT.PCT1, "Advertisers": FMT.INT, "# w/ conv": FMT.INT},
-    signal={"Visit lift (vol-wtd)": {"sig": "Vis sig"}, "Visit lift (typical)": {}},
-    widths={"Visit lift (vol-wtd)": 17, "Visit lift (typical)": 17, "Conv lift (vol-wtd)": 17,
-            "Advertisers": 12, "Vis sig": 8, "# w/ conv": 10},
+           "MNTN advertisers. IVW = inverse-variance weighted (precision-pooled; weight rises with sample size, so "
+           "the largest advertisers dominate); median = the median advertiser. Observational, not causal. Test "
+           "accounts + WGU excluded. See Read me / Method.",
+    formats={"Visit lift (IVW)": FMT.PCT1, "Visit lift (median)": FMT.PCT1,
+             "Conv lift (IVW)": FMT.PCT1, "Advertisers": FMT.INT, "# w/ conv": FMT.INT},
+    widths={"Visit lift (IVW)": 15, "Visit lift (median)": 16, "Conv lift (IVW)": 15,
+            "Advertisers": 14, "Vis sig": 8, "# w/ conv": 10},
     kind="data", first_col_width=14,
     toc="Overall incrementality by product mix: Both / Select-only / PTV-only (all advertisers).",
 )
@@ -394,8 +401,8 @@ wb.glossary(
             "use the average-campaign lift (IVW). Same data, different question."),
         ("Cost by advertiser", "Per-customer CPIV/CPIA (both cohort). Filter the Sig columns to Yes; 'n/a' = that advertiser's "
             "lift was not net-incremental or too small to measure (tiny holdout)."),
-        ("AID-level lift by group", "Overall advertiser incrementality (all their prospecting), ALL MNTN advertisers, split "
-            "PTV-only / Select-only / Both. Volume-weighted (big advertisers drive it) vs typical (median) advertiser. Observational, not causal."),
+        ("AID-level lift by group", "Overall advertiser incrementality, all MNTN advertisers, split PTV-only / Select-only / "
+            "Both. IVW (inverse-variance; larger advertisers dominate) vs median advertiser. Observational, not causal."),
         ("Coverage & window", ""),
         ("Window", "2026-06-22 to 07-27; each IP's visits count within 7 days of its first bid (fixed per-IP window). "
             "Trailing ~7 days still maturing. No pre-6/22 data (no backfill)."),
@@ -465,8 +472,8 @@ wb.notes(
             "non-Select delivers far more total visits. Uses the volume-weighted lift (total-cost basis), not the IVW lift on the other tabs."),
         ("AID-level lift by group (observational)", "The 3-group comparison (PTV-only / Select-only / Both, all MNTN "
             "advertisers) is OBSERVATIONAL, not causal: advertisers self-select into Select, so a higher Both/Select lift shows "
-            "association, not that Select caused it. Volume-weighted pools by precision (a few big advertisers dominate; PTV-only "
-            "lands near 0% because its largest spenders are barely incremental), while the typical (median) advertiser is higher - "
+            "association, not that Select caused it. IVW pools by inverse-variance so weight rises with sample size (a few big "
+            "advertisers dominate; PTV-only lands near 0% because its largest spenders are barely incremental), while the median advertiser is higher - "
             "read both. Test accounts + WGU (an extreme outlier) excluded. Select-only n is small (wide interval); its conversion "
             "lift is n/a (too few advertisers with holdout conversions)."),
         ("Do not over-read", "Individual low-volume campaigns have wide intervals; a single small Select campaign is not a verdict. "
@@ -481,8 +488,8 @@ wb.cover(takeaways=[
     f"The edge is consistent: Select beats non-Select in {N_SEL_HI} of {N_BOTH} advertisers running both (median +{MED_GAP:.0f}pp of relative lift).",
     f"Cost: on the basis advertisers see in Reporting, Select runs ${_cs.cpiv_vv:.2f} per incremental visit vs ${_cn.cpiv_vv:.2f} "
     f"({_cn.cpiv_vv/_cs.cpiv_vv:.1f}x) and ${_cs.cpia_vv:.0f} vs ${_cn.cpia_vv:.0f} per incremental conversion ({_cn.cpia_vv/_cs.cpia_vv:.1f}x).",
-    f"Overall (all advertisers, observational): the typical Select-running advertiser is more incremental than PTV-only "
-    f"(+{_b.vis_ew_med*100:.0f}% vs +{_p.vis_ew_med*100:.0f}% median advertiser).",
+    f"Overall (all advertisers, observational): the median Select-running advertiser is more incremental than PTV-only "
+    f"(+{_b.vis_ew_med*100:.0f}% vs +{_p.vis_ew_med*100:.0f}%).",
     "Window is 2026-06-22 onward (no earlier data); numbers are ghost-bid ITT, compared relatively, prospecting only.",
 ])
 
