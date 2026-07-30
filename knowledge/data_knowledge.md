@@ -2026,7 +2026,7 @@ Question: does MNTN score/store more IPs than it can ever bid on? **Verdict: yes
    does it fall back to `data_source_ttls['14']=`**8**. So `'14': 8` is a **fallback, not guaranteed effective** — which one is live
    is UNRESOLVED (needs the deployed `segments-data-source-info-cache` / portal `get_active_data_sources`; Compass 2026-07-30 read
    the code but not the live cache). The `'14': 8` value is confirmed and long-standing (no commit ever touched DS14). The 1-4d
-   build only sets epoch freshness. See Runtime verification below.
+   build only sets epoch freshness. **Net in-market window** ≈ 9-12 days from an IP's last log sighting (build lookback 1-4d + 8d TTL) IF the 8d path is live (≈ up to ~34d if the 30d path is). See Runtime verification below.
 3. **DS14 IS materialized in IPDSC** (`ipdsc__v1`, `data_source_id=14`). Corrects the prior "zero ipdsc rows" note.
 4. **Scoring is UNGATED by DS14.** `spark/audience_intent/vertical_high.py` / `vertical_mid.py` score every (ip, vertical_id)
    over a **31-day DS13 IPDSC window** with no recency/DS14 intersection; `vertical_mid` BUCKET 2 deliberately scores IPs with

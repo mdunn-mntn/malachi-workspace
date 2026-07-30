@@ -99,7 +99,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | Terse tickets and docs | feedback | 2026-07-24 | [doc](memory/feedback_terse_tickets.md) |
 | feedback-dont-extend-old-tickets | feedback | 2026-07-24 | [doc](memory/feedback_dont_extend_old_tickets.md) |
 | feedback_terse_chat_replies | feedback | 2026-07-24 | [doc](memory/feedback_terse_chat_replies.md) |
-| incrementality-experiment-ber-2250 | project | 2026-07-24 | [doc](memory/project_incrementality_experiment.md) |
 | raspberry-pi-5-server | reference | 2026-07-24 | [doc](memory/reference_pi5_server.md) |
 | reference-workflow-audit-loop | reference | 2026-07-24 | [doc](memory/reference_workflow_audit_loop.md) |
 | reference_ghost_bid_lift_register | reference | 2026-07-24 | [doc](memory/reference_ghost_bid_lift_register.md) |
@@ -158,5 +157,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | sparse_code_comments | feedback | 2026-07-29 | [doc](memory/feedback_sparse_code_comments.md) |
 | sprint_ready_plan | feedback | 2026-07-29 | [doc](memory/feedback_sprint_ready_plan.md) |
 | feedback_self_qa_before_shipping | feedback | 2026-07-30 | [doc](memory/feedback_self_qa_before_shipping.md) |
+| incrementality-experiment-ber-2250 | project | 2026-07-30 | [doc](memory/project_incrementality_experiment.md) |
 | reference_shopper_graph_deploy | reference | 2026-07-30 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-07-30 | [doc](memory/reference_xlsx_master_format.md) |

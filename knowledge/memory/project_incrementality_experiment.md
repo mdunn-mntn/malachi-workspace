@@ -6,10 +6,10 @@ metadata:
   type: project
   originSessionId: 9c582365-7ebc-49fa-9d1e-6d93ac47841b
 doc_type: memory
-keywords: [incrementality, ber-2250, ghost-bid lift, persuadables gradient, liftlab, kochava, guid_log, clickpass_log, ti-835, incremental roas, matt brorby]
+keywords: [incrementality, ber-2250, ghost-bid lift, persuadables gradient, liftlab, kochava, guid_log, clickpass_log, ti-835, incremental roas, matt brorby, remove-ds14 experiment, ds14 availability gate, kirsa, audi-1176, audi-1117]
 domain: [incrementality, experimentation, project]
 lifecycle: active
-last_verified: 2026-07-24
+last_verified: 2026-07-30
 ---
 BER-2250 "Incrementality Overhaul" is the highest-leverage initiative for Q2 2026.
 
@@ -19,6 +19,7 @@ BER-2250 "Incrementality Overhaul" is the highest-leverage initiative for Q2 202
 - **The persuadables gradient (refreshed 2026-07-24, holds on the wider window):** Mid +9.2% · MaxReach +6.6% · PP +1.8% · High +1.7% · no_score +0.2% (~dead). Mid-intent carries the lift; top-intent + untargeted reach are incrementally dead. Raw-visit rank is ~INVERTED vs incremental-lift rank.
 - **AUDI-789 (RTC/Fangorn scoring) is the go-forward targeting vehicle** — a visit/spend-optimized scorer de-optimizes incrementality unless lift is a target/guardrail.
 - **User steer 2026-07-24:** treat these as old/reassigned work — don't keep extending BER-2250/AUDI-789 unprompted. See [[feedback_dont_extend_old_tickets]].
+- **Remove-DS14 experiment treatment (Kirsa, 2026-07-30):** Kirsa is designing an incrementality experiment that uses **removing the DS14 availability gate** as a campaign treatment — bidding on IPs NOT recently in the free logs. DS14 = "MNTN Global Data" IP-recency gate (built from augmentor_log 1d + bidder_auction_events 1d + guid_log 4d; ~8-day serving TTL, though conditional — could be 30d; see [[project_audi_1175_ds14_scoring_cost]]). Removing it ~1.6× (verticals) / ~3.2× (MM Core) the biddable pool onto scored-but-not-recently-seen IPs; **negligible for display** (100% same-day augmentor echo), **material for CTV** (empirical DS14-window ticket = AUDI-1117). **Mechanism to remove it:** the DS14/cat1 clause is baked into the STORED audience-segment expression at creation (like DS13's `PEAK_PERFORMANCE_DATA_SOURCE_ID=13` in mntn-go), NOT injected at bid time — so removal = edit the segment/expression builder, not a membership-db config. Sign-off before prod: Sean Yang / Zach Schoenberger / Ryan Kleck. **CONFLICT:** AUDI-1176 (gate scoring input to the DS14-addressable set) would FORECLOSE this experiment (it needs the full scored universe). Incrementality is Q2 #1 → sequence AUDI-1176 after it, gate output-only, or hold.
 
 **Kale's direction (2026-04-08):** "The most valuable thing right now is getting this incrementality thing out. Solving this would be HUGE and would dramatically change growth and retention." Everything regresses to incrementality / incremental ROAS.
 
