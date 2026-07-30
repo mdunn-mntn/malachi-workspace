@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [advertiser_id, campaign_id, funnel_mode]
 time_unit: date
 ttl_days: null
-approx_rows: 187051929
-approx_logical_bytes: 42537927068
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 232613323
+approx_logical_bytes: 54098219663
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, conversion_funnel, attribution]
 keywords: [waypoints, funnel, funnel_mode, sequential, full_volume, event_group, event_group_order, transition, source_event, target_event, ga_client_id, session_key, ad_served_id, from_verified_impression, stage]
 source: INFORMATION_SCHEMA+human
@@ -154,7 +154,7 @@ ad-driven (MNTN-served) funnel activity. It is an **additive** fact — SUM the 
   `campaign_id`".
 - **`event_name='*'` are group-level wildcard rows.** Including them alongside named-event rows can
   double-count if you're rolling up by stage — decide whether you want per-event or per-stage granularity.
-- **Young table:** partitions run **2026-02-10 → present** (160 daily partitions as of 2026-07-19). No history
+- **Young table:** partitions run **2026-02-10 → present** (169 daily partitions as of 2026-07-29). No history
   before Feb 2026 — do not use it for long pre-period baselines.
 - **No partition TTL** (`expirationTime` null) — but the partition filter is **mandatory** (query errors
   without a `day` predicate).
@@ -172,7 +172,7 @@ ad-driven (MNTN-served) funnel activity. It is an **additive** fact — SUM the 
   - 4 narrow cols (`advertiser_id, campaign_id, funnel_mode, current_event_count_flag`), one day: **0.207 GB**
     — ~5.6x cheaper than `SELECT *` on the same partition. Select only the columns you need.
   - `SELECT *`, 7-day range (`2026-07-11..17`): **3.769 GB** (dry-run) — days vary in size; not a flat 7x.
-- **Physical backing:** 187,051,929 rows / 42,537,927,068 bytes (~39.6 GiB) across 160 daily partitions
+- **Physical backing:** 232,613,323 rows / 54,098,219,663 bytes (~50.4 GiB) across 169 daily partitions
   (single physical `sqlmesh__summarydata` table; not a UNION view).
 
 ## Example queries
@@ -217,6 +217,7 @@ GROUP BY 1;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md for this table (net-new; only related pixel-config tables were documented) — enriched from live schema + empirical sampling. Confirmed partition=day / require_partition_filter=true / cluster=[advertiser_id,campaign_id,funnel_mode] / no TTL off the physical (187M rows, 42.5GB, single table not a UNION). Established: additive fact (no unique key, ~5x dim repetition — SUM count flags); funnel_mode∈{full_volume,sequential}, event_type∈{URL,DLV}; source_event_*=current step, target_event_*=next, previous_event_*=prior; campaign_id>0 ⟺ current_ad_served_id NOT NULL exactly; group_id always 0; from_verified_impression TRUE-or-NULL only; partitions 2026-02-10→present.
+- 2026-07-29: enriched→verified. Re-derived from live source: 29-column schema unchanged (exact types/order match AUTO:SCHEMA); physical metadata confirms partition=day (DAY, require_partition_filter=true), cluster=[advertiser_id,campaign_id,funnel_mode] source order, no partitionExpirationMs (no TTL). Physical grown 187M→232.6M rows / 42.5GB→54.1GB, 160→169 partitions, still 2026-02-10→2026-07-28 (min unchanged). Updated approx_rows/bytes + partition counts; all curated grain/join/gotcha claims still hold.
 <!-- CHANGELOG END -->
 
 ## View definition
