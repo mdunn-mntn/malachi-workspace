@@ -13,10 +13,10 @@ cluster_by: [advertiser_id, campaign_id, funnel_mode]
 time_unit: date
 ttl_days: null
 approx_rows: null
-approx_logical_bytes: 42537927068
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_logical_bytes: 54098086880
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints]
 keywords: [funnel, waypoint, sequential, full_volume, event_group, funnel_stage, transition, ga_client_id, on_site_events, customer_journey, from_verified_impression]
 source: INFORMATION_SCHEMA+human
@@ -84,7 +84,7 @@ The Waypoint funnel product — a daily rollup of on-site event/funnel activity 
 - **`advertiser_id` → `advertisers.id`** (silver.core / `integrationprod.advertisers`) — N:1, dim lookup. Join for `company_name` (note: `fpa_advertiser_verticals.advertiser_name` is unreliable/empty since 2025-12 — use `advertisers.company_name`). Fan-out safe (many waypoint rows per advertiser; dim side is 1).
 - **`campaign_id` → `campaigns.id`** — N:1 dim lookup; cluster key #2. Fan-out safe from the dim side.
 - **Stage definitions** (the funnel stage list that drives the sequential zero-scaffold): `integrationprod.attr_advertiser_waypoints_event_mapping` (grain ≈ one row per advertiser × `event_group` × `event_group_order`, with a `deleted` flag classifying event names into stages), consumed via `sqlmesh__ber_stg.ber_stg__waypoints__event_mapping_prepared`. Related config: `attr_advertiser_selective_performance_config`. 1 stage-definition row per (advertiser, event_group_order) after the view's `QUALIFY row_number()=1` dedup.
-- **Base fact `sqlmesh__summarydata.summarydata__waypoints_fact__2720337691`** (physical TABLE: 187,051,929 rows, ~42.5 GB, partition `day` DAY require-filter, cluster `advertiser_id, campaign_id, funnel_mode`) — `waypoints_by_day` is the computed rollup over this fact + stage definitions. Lineage: `waypoints_by_day` → `waypoints_stage_daily` (view) → `waypoints_fact` (fact) ⋈ `waypoints__event_mapping_prepared` (stage defs).
+- **Base fact `sqlmesh__summarydata.summarydata__waypoints_fact__2720337691`** (physical TABLE: 232,613,083 rows, ~54.1 GB as of 2026-07-29 — up from 187M/42.5 GB at enrichment; rolling retention, partition `day` DAY require-filter, cluster `advertiser_id, campaign_id, funnel_mode`) — `waypoints_by_day` is the computed rollup over this fact + stage definitions. Lineage: `waypoints_by_day` → `waypoints_stage_daily` (view) → `waypoints_fact` (fact) ⋈ `waypoints__event_mapping_prepared` (stage defs).
 - **`current_ad_served_id`** could in principle link to ad-served/impression logs, but it is ~94% NULL — not a reliable join key.
 
 ## Gotchas
@@ -106,7 +106,7 @@ The Waypoint funnel product — a daily rollup of on-site event/funnel activity 
   - **1 day, 3 narrow cols** (`day, advertiser_id, transition_count`) → **446,103,688 bytes — identical** to `SELECT *` (view forces full scan; pruning ineffective).
   - **7 days, `SELECT *`** → 2,053,220,795 bytes (~1.9 GiB) — scales ~linearly with day count, confirming `day` is the partition.
   - **No filter** → ERROR (require_partition_filter on `day`).
-- `approx_logical_bytes` (42.5 GB) = the base physical fact `waypoints_fact.numBytes`; the view is non-materialized (physical row/byte counts are 0).
+- `approx_logical_bytes` (54.1 GB, 2026-07-29) = the base physical fact `waypoints_fact.numBytes`; the view is non-materialized (physical row/byte counts are 0).
 
 ## Example queries
 ```sql
@@ -144,6 +144,7 @@ ORDER BY events DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md (net-new/undocumented table; only related `attr_advertiser_waypoints_event_mapping` mentions found). Enriched from LIVE schema + empirical sampling. Confirmed partition `day` (require-filter; no-filter errors; bytes scale with day range), cluster `[advertiser_id, campaign_id, funnel_mode]`, base fact `waypoints_fact` (187M rows, ~42.5 GB, no TTL). Derived `funnel_mode` domain {full_volume, sequential} and `event_type` all-NULL from live DISTINCT. Documented mixed grain / zero-scaffold rows, `current_event_count_flag`=summed-count (not a flag), and that column pruning does not reduce bytes on this computed view.
+- 2026-07-29: enriched→verified. Re-introspected live: 26 cols/types unchanged, view hash `__2466311869` unchanged, partition `day` require-filter + cluster `[advertiser_id, campaign_id, funnel_mode]` intact. Base fact `waypoints_fact` grew 187M→232.6M rows / 42.5→54.1 GB (rolling retention); refreshed `approx_logical_bytes` + prose. funnel_mode still {sequential, full_volume}, from_verified_impression still {NULL, TRUE} (no FALSE). No schema/partition/cluster drift.
 <!-- CHANGELOG END -->
 
 ## View definition
