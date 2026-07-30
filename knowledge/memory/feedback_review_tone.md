@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [review tone, self-review, openings, rubric-forward, task descriptions, improvement areas, review #1 gold standard]
 domain: [workflow, leadership]
 lifecycle: active
-last_verified: 2026-03-18
+last_verified: 2026-07-29
 ---
 Self-review tone:
 - **Openings**: 2 sentences, directly map to rubric criteria using natural language. Confident and specific. NOT philosophical, NOT navel-gazing, NOT "a big part of my value is..." style.

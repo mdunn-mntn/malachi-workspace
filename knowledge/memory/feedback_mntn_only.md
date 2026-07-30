@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [mntn_only, mntn section, mindwyre, section_id 6cwmRpfXpCxQ5G9M, todoist filter, hard boundary, never mention other section]
 domain: [workflow, jira-process]
 lifecycle: active
-last_verified: 2026-04-01
+last_verified: 2026-07-29
 ---
 **ABSOLUTE RULE — overrides everything else.**
 

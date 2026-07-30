@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [self-review habit, self_review_2.md, proactive update, after every ticket, gitignored, speed craft adaptability]
 domain: [workflow, leadership]
 lifecycle: active
-last_verified: 2026-03-26
+last_verified: 2026-07-29
 ---
 Update self_review/self_review_2.md after every ticket or significant task completion — not in a batch at the end.
 

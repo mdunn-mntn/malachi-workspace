@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [paulo_direction, Paulo, explain system behavior, go-to person, Alyson, targeting mastery, self-review framing, VP direction]
 domain: [leadership, workflow]
 lifecycle: active
-last_verified: 2026-03-18
+last_verified: 2026-07-29
 ---
 Paulo (VP, Kale's boss) answered "Why are you on the payroll?" on 2026-03-18:
 

@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [review cycle, self review, self_review_2, cadence, annual, kale, review files]
 domain: [leadership, jira-process]
 lifecycle: active
-last_verified: 2026-03-18
+last_verified: 2026-07-29
 ---
 Self-review cycle cadence is uncertain — Malachi will confirm with Kale whether it's annual or semi-annual.
 

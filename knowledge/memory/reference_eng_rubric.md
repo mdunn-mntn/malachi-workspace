@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [eng rubric, engineering levels, speed craft adaptability, promotion criteria, self review rationale, associate senior staff principal, mntn rubric]
 domain: [leadership, jira-process]
 lifecycle: active
-last_verified: 2026-04-06
+last_verified: 2026-07-29
 ---
 **Location:** `documentation/architecture/ENG-Engineering Levels & Skills Rubric-060426-200313.pdf`
 

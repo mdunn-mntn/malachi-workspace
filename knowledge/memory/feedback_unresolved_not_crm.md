@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [unresolved vv, crm, liveramp, identity graph, ip path, lookback window, ttl truncation, clickpass_ip, bid_ip, stage 3]
 domain: [identity, incrementality]
 lifecycle: active
-last_verified: 2026-03-23
+last_verified: 2026-07-29
 ---
 It is IMPOSSIBLE for LiveRamp/CRM identity graph entries to cause unresolved VVs in the audit. Every VV MUST follow the IP-based system (S3 bid_ip → prior S2/S1 VV clickpass_ip, S2 bid_ip → S1 event_log.ip). If resolution fails, the causes are:
 1. Lookback window not long enough

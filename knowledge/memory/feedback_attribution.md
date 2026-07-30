@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [attribution, misattribute ideas, Malachi primary speaker, meeting transcript, credit, who said what, weighted aggregate lift]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-04-03
+last_verified: 2026-07-29
 ---
 Never attribute Malachi's ideas or suggestions to other people in the meeting. In meeting transcripts, Malachi is the primary analyst — when he proposes an analysis approach, framing, or idea, credit it to him.
 

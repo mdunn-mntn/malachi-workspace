@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [doc style, single table, presentation doc, findings doc, ti_790, story, one doc]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-04-01
+last_verified: 2026-07-29
 ---
 When creating analysis/findings docs, follow the ti_790_presentation.md pattern:
 - One doc, not many

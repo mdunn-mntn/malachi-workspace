@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [source table ips, bid_logs, win_logs, impression_log, event_log, clickpass_log, CIL proxy, IP tracing, MES pipeline, auction_id]
 domain: [bigquery, identity, data-catalog]
 lifecycle: active
-last_verified: 2026-03-13
+last_verified: 2026-07-29
 ---
 When tracing an IP through the MES pipeline, each step's IP must come from the actual source table for that step. Do NOT use CIL or any other proxy table as a shortcut to get bid_ip — use bid_logs.ip directly.
 

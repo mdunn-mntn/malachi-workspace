@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [incrementality pivot, incrementality, kale, fangorn, intent targeting, roas, strategic narrowing, ti team]
 domain: [project, incrementality]
 lifecycle: active
-last_verified: 2026-03-31
+last_verified: 2026-07-29
 ---
 Kale is sharpening TI team focus toward **incrementality** as the primary optimization objective (2026-03-31 1x1).
 

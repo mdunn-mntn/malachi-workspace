@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [rubric rollout, engineering rubric, rogus, alyson, review checkpoint, levels and skills, april 2027, self review]
 domain: [leadership, jira-process]
 lifecycle: active
-last_verified: 2026-04-06
+last_verified: 2026-07-29
 ---
 Rogus announced the Engineering Levels & Skills Rubric on 2026-04-06.
 

@@ -7,21 +7,9 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 
 | memory | type | last_verified | doc |
 |--------|------|---------------|-----|
-| Use source tables for IP tracing | feedback | 2026-03-13 | [doc](memory/feedback_source_table_ips.md) |
-| Paulo's direction — why Malachi is on the payroll | feedback | 2026-03-18 | [doc](memory/feedback_paulo_direction.md) |
-| Review cycle cadence | project | 2026-03-18 | [doc](memory/project_review_cycle.md) |
-| Self-review tone preference | feedback | 2026-03-18 | [doc](memory/feedback_review_tone.md) |
-| Unresolved VVs are NOT CRM/LiveRamp | feedback | 2026-03-23 | [doc](memory/feedback_unresolved_not_crm.md) |
-| Self-review updates must be proactive | feedback | 2026-03-26 | [doc](memory/feedback_self_review_habit.md) |
 | Bidstream Feature Store Initiative | project | 2026-03-30 | [doc](memory/project_bidstream_initiative.md) |
-| TI team pivoting to incrementality focus | project | 2026-03-31 | [doc](memory/project_incrementality_pivot.md) |
-| Document style preference | feedback | 2026-04-01 | [doc](memory/feedback_doc_style.md) |
-| MNTN only — hard boundary | feedback | 2026-04-01 | [doc](memory/feedback_mntn_only.md) |
 | TI-810 Ryan deployment answers | project | 2026-04-02 | [doc](memory/project_ti810_ryan_answers.md) |
 | buk_loom_presentation | project | 2026-04-03 | [doc](memory/project_buk_loom_request.md) |
-| feedback_attribution | feedback | 2026-04-03 | [doc](memory/feedback_attribution.md) |
-| Engineering Levels & Skills Rubric | reference | 2026-04-06 | [doc](memory/reference_eng_rubric.md) |
-| Engineering Rubric Rollout Timeline | project | 2026-04-06 | [doc](memory/project_rubric_rollout.md) |
 | Data Engineering MCP/AI Service | reference | 2026-04-07 | [doc](memory/reference_data_eng_mcp.md) |
 | Q2 2026 AUD/TI ceremony changes | project | 2026-04-07 | [doc](memory/project_q2_ceremonies.md) |
 | rubric_strategy | feedback | 2026-04-08 | [doc](memory/feedback_rubric_strategy.md) |
@@ -143,7 +131,19 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_select_vs_nonselect_incrementality | reference | 2026-07-28 | [doc](memory/reference_select_vs_nonselect_incrementality.md) |
 | reference_total_visit_signal | reference | 2026-07-28 | [doc](memory/reference_total_visit_signal.md) |
 | reference_xlsx_master_format | reference | 2026-07-28 | [doc](memory/reference_xlsx_master_format.md) |
+| Document style preference | feedback | 2026-07-29 | [doc](memory/feedback_doc_style.md) |
+| Engineering Levels & Skills Rubric | reference | 2026-07-29 | [doc](memory/reference_eng_rubric.md) |
+| Engineering Rubric Rollout Timeline | project | 2026-07-29 | [doc](memory/project_rubric_rollout.md) |
+| MNTN only — hard boundary | feedback | 2026-07-29 | [doc](memory/feedback_mntn_only.md) |
+| Paulo's direction — why Malachi is on the payroll | feedback | 2026-07-29 | [doc](memory/feedback_paulo_direction.md) |
+| Review cycle cadence | project | 2026-07-29 | [doc](memory/project_review_cycle.md) |
+| Self-review tone preference | feedback | 2026-07-29 | [doc](memory/feedback_review_tone.md) |
+| Self-review updates must be proactive | feedback | 2026-07-29 | [doc](memory/feedback_self_review_habit.md) |
+| TI team pivoting to incrementality focus | project | 2026-07-29 | [doc](memory/project_incrementality_pivot.md) |
+| Unresolved VVs are NOT CRM/LiveRamp | feedback | 2026-07-29 | [doc](memory/feedback_unresolved_not_crm.md) |
+| Use source tables for IP tracing | feedback | 2026-07-29 | [doc](memory/feedback_source_table_ips.md) |
 | dataproc-cost-awareness | feedback | 2026-07-29 | [doc](memory/feedback_dataproc_cost_awareness.md) |
+| feedback_attribution | feedback | 2026-07-29 | [doc](memory/feedback_attribution.md) |
 | feedback_hold_evidenced_verdict | feedback | 2026-07-29 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_shared_worktree_commits | feedback | 2026-07-29 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_slack_reply_voice | feedback | 2026-07-29 | [doc](memory/feedback_slack_reply_voice.md) |
