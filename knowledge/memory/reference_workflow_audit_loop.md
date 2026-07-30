@@ -52,3 +52,12 @@ MEMORY.md budget). §11 runs `verify.sh` **whole-repo** (the 3 front-matter lint
 9-hook self-test) so the same checks the commit gate enforces per-commit are surfaced repo-wide weekly. The
 gate ([[reference_commit_gate]]) is per-commit enforcement; §11 is the whole-repo review (propose-only:
 Tier 1 `verify.sh --fix` for a stale index, Tier 2 for a real violation).
+
+**The §10 overlap-cluster signal is a REVIEW PROMPT, not a dup-detector (established 2026-07-29).** It
+flags active memories sharing a filename-stem token (≥3 files); sharing a token usually means DISTINCT
+facets, not duplicates. Reviewed all 18 flagged clusters (fangorn / repo / scoring / bidder / …) in one
+pass — **0 genuine near-duplicates**; every file was a distinct fact (the `repo` cluster = 7 files each
+about a different repo). Do NOT auto-merge on this signal; read the cluster, merge only true same-fact
+redundancy (via `/capture`, the sole merge authority). A cluster review CAN still surface a factual
+contradiction to fix (e.g. `reference_hhst_pacing_lever` named the DDM pilot as the prod HHST setter,
+corrected to the camperbid→idso chain) — that's a correction, not a merge.
