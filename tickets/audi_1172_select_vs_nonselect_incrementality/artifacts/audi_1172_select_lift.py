@@ -355,6 +355,7 @@ group_df = pd.DataFrame({
     "Visit lift (median)":  grp["vis_ew_med"].values,
     "Vis sig":              [YESNO(b) for b in vsig],
     "Conv lift (IVW)":      [CN(x, n) for x, n in zip(grp["conv_ivw"], grp["n_conv"])],
+    "Conv lift (median)":   [CN(x, n) for x, n in zip(grp["conv_ew_med"], grp["n_conv"])],
     "# w/ conv":            grp["n_conv"].values,
 })
 _b = grp[grp["group"] == "Both"].iloc[0]
@@ -367,10 +368,13 @@ wb.table(
     method="Overall advertiser-level visit lift, all MNTN advertisers, by product mix. Observational, not causal. "
            "See Read me / Method for IVW vs median and exclusions.",
     formats={"Visit lift (IVW)": FMT.PCT1, "Visit lift (median)": FMT.PCT1,
-             "Conv lift (IVW)": FMT.PCT1, "Advertisers": FMT.INT, "# w/ conv": FMT.INT},
-    signal={"Visit lift (IVW)": {"sig": "Vis sig"}, "Visit lift (median)": {}},
+             "Conv lift (IVW)": FMT.PCT1, "Conv lift (median)": FMT.PCT1,
+             "Advertisers": FMT.INT, "# w/ conv": FMT.INT},
+    # signal colors each column on its OWN scale, so conv (a different scale) is highlighted within its own box
+    signal={"Visit lift (IVW)": {"sig": "Vis sig"}, "Visit lift (median)": {},
+            "Conv lift (IVW)": {}, "Conv lift (median)": {}},
     widths={"Visit lift (IVW)": 15, "Visit lift (median)": 16, "Conv lift (IVW)": 15,
-            "Advertisers": 14, "Vis sig": 8, "# w/ conv": 10},
+            "Conv lift (median)": 16, "Advertisers": 14, "Vis sig": 8, "# w/ conv": 10},
     kind="data", first_col_width=14,
     toc="Overall incrementality by product mix: Both / Select-only / PTV-only (all advertisers).",
 )
