@@ -121,7 +121,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_oncall_runbook | reference | 2026-07-28 | [doc](memory/reference_oncall_runbook.md) |
 | reference_select_vs_nonselect_incrementality | reference | 2026-07-28 | [doc](memory/reference_select_vs_nonselect_incrementality.md) |
 | reference_total_visit_signal | reference | 2026-07-28 | [doc](memory/reference_total_visit_signal.md) |
-| reference_xlsx_master_format | reference | 2026-07-28 | [doc](memory/reference_xlsx_master_format.md) |
 | BUK rebranded to Behavior Keywords | project | 2026-07-29 | [doc](memory/project_buk_rebrand.md) |
 | Data Engineering MCP/AI Service | reference | 2026-07-29 | [doc](memory/reference_data_eng_mcp.md) |
 | Document style preference | feedback | 2026-07-29 | [doc](memory/feedback_doc_style.md) |
@@ -160,3 +159,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | sprint_ready_plan | feedback | 2026-07-29 | [doc](memory/feedback_sprint_ready_plan.md) |
 | feedback_self_qa_before_shipping | feedback | 2026-07-30 | [doc](memory/feedback_self_qa_before_shipping.md) |
 | reference_shopper_graph_deploy | reference | 2026-07-30 | [doc](memory/reference_shopper_graph_deploy.md) |
+| reference_xlsx_master_format | reference | 2026-07-30 | [doc](memory/reference_xlsx_master_format.md) |

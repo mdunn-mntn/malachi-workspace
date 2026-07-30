@@ -117,6 +117,31 @@ split into a sub-brand.
   `"neutral"` white→navy). RAG = discrete traffic-light fills. **Never put `heat` and `rag` on the same
   column** — a color-scale and a manual fill collide in Excel.
 
+### What to highlight (the paint rule)
+
+**Paint the answer, not the arithmetic.** Color lands only on the column(s) the tab exists to deliver — the
+number a reader would quote. Every other column stays unpainted. This is why the painted columns differ tab
+to tab (Headline paints lift, the cost tab paints CPIV/CPIA) yet the workbook still reads as consistent: the
+*rule* is constant even though the *answer* changes. Five column roles, one gets color:
+
+| Role | Examples | Paint |
+|---|---|---|
+| **Answer** — what the tab is for; the quotable number | lift (abs/rel), CPIV, CPIA, group lift | **Yes** |
+| **Label / dimension** — the row's identity | Product, Advertiser, AID, Group | No |
+| **Scale / provenance** — sizes & lets you trust the answer | # advertisers, campaign groups, treated/holdout bids, # w/ conv | No |
+| **Baseline** — anchors the answer but isn't it | Holdout VR | No |
+| **Uncertainty** — qualifies the answer | CI low/high, Sig | No paint; Sig is the `signal` *gate* + the AutoFilter |
+
+- **Mechanism by meaning:** `signal` when the *sign* is a verdict (lift — negative is bad) → sig-gated
+  red/green; `heat` when it's pure magnitude with one better direction (cost — lower always better) → ramp.
+- **Baseline + effect, not both endpoints (summary tabs).** Show the baseline (Holdout VR) + the effect
+  (Abs/Rel lift) and drop the third co-linear value (Treatment VR = Holdout VR + Abs lift — the reader
+  derives it). **Detail/audit tabs are the exception** — show both raw endpoints (Treated VR *and* Holdout
+  VR) because that tab is the receipts.
+- **Difference / "edge" columns:** paint only when one direction is a verdict *for the deliverable's
+  thesis* (a lift edge where Select-wins = good → paint). If it's just "two things differ" with no winner
+  implied (a cost edge across two products), leave it a signed number, no paint.
+
 ### Typography
 - **Inter** everywhere — the official MNTN body/UI font (open-license/OFL), and it renders natively in
   Google Sheets, which is the actual delivery surface. **Consolas/Menlo** for SQL. Set `FONT_BODY =
@@ -204,6 +229,13 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-30 · v16** — The paint rule written down (see "What to highlight" in §3). Color lands on the
+  **answer** column only — the quotable number the tab exists to deliver; labels, scale/provenance,
+  baseline, and uncertainty stay unpainted. `signal` for signed verdicts (lift), `heat` for one-directional
+  magnitude (cost). Sub-rules: summary tabs show baseline + effect and drop the co-linear endpoint
+  (Holdout VR yes, Treatment VR no; detail/audit tabs show both); an edge/diff column is painted only when a
+  direction is a verdict for the thesis (lift edge yes, cost edge no). Codifies the previously-tacit choice
+  that made highlighting look inconsistent across tabs when it wasn't.
 - **2026-07-30 · v15** — Build-time ENFORCEMENT (mistakes fail the build, not the reviewer). `save_local`/
   `save_drive` now RAISE on collected rule violations, so a broken workbook is never written: **notes block >
   320 chars** and **glossary def > 220 chars** are hard fails (were warn-only / unguarded). **Header rows
@@ -220,7 +252,8 @@ Every existing builder re-run picks up the new look automatically. That is the p
 1. **Open the rebuilt file / read each new tab.** Don't ship a tab you haven't looked at rendered.
 2. **Color is signal, not decoration.** Heat/gradient on summaries (few rows); plain on many-row lookup tables.
    Diverging red/green ONLY where one direction is genuinely good/bad — a neutral two-product diff is a signed
-   number, not red/green.
+   number, not red/green. **Paint the answer column only** (§3 "What to highlight"): labels, scale/provenance,
+   baseline, and CI/Sig stay unpainted; Sig is the gate, not a painted column.
 3. **Titles/subtitles:** finding = a Power Line; subtitle = ONE line (definitions live on Read me / Method).
 4. **Overview + Read me + Method + Query all updated for every new tab** — a takeaway, a glossary row, a caveat,
    and the query. Result numbers are f-string DYNAMIC (never hardcoded — they drift as data accumulates).
