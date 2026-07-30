@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 231953
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, taxonomy]
 keywords: [ds19, mntn matched, mm core, keyword taxonomy, data_source_category_id, shoppergraph, product category, id to name, ipdsc, category resolver]
 source: INFORMATION_SCHEMA+human
@@ -172,4 +172,5 @@ WHERE i.data_source_id = 19 AND i.dt = '2026-06-10';
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Confirmed grain empirically (231,953 rows = 231,953 distinct data_source_category_id, all data_source_id=19; flat: parent_id=1 & is_leaf_node=TRUE on every row). External GCS parquet flat glob (gs://mntn-data-archive-prod/shopper_graph/mntn_matched_taxonomy_bq/*.parquet), no hive partition → dry-run gives a 0-byte lower bound, approx_logical_bytes left null. Reconciled prose drift: data_catalog/data_knowledge said "covers the >=900000 space" but the DS19 keyword id space is actually ~100001-979321 (>=900000 is only 26,291 of 231,953 ids); also flagged the "~20,000 keywords" DS19 note vs 231,953 ids here (likely targetable subset vs full namespace). Documented name=description=path redundancy and names/path_from_root JSON-string encodings.
+- 2026-07-29: enriched→verified. Re-derived from source: 231,953 rows = 231,953 distinct data_source_category_id, all data_source_id=19, id range 100,001–979,321, deprecated=2. Schema (17 cols) unchanged. No drift.
 <!-- CHANGELOG END -->

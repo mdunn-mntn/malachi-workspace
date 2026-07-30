@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 79874
 approx_logical_bytes: 40931433
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting]
 keywords: [audiences, audience_id, expression, audience_type_id, segment_type_id, segmentation_default_id, external_audience_id, legacy, frozen, dimension, advertiser_id]
 source: INFORMATION_SCHEMA+human
@@ -127,6 +127,7 @@ WHERE ca.is_test = FALSE
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Resolved view → `bronze.integrationprod.core_audiences` (TABLE, unpartitioned, cluster=audience_id, 79,874 rows / ~39 MB, no TTL). Grain = 1 row/audience_id (unique PK). Decoded audience_type_id / segment_type_id / segmentation_default_id enums from live decode tables. Resolved datastream_metadata.source_timestamp = milliseconds (uniform backfill snapshot). Key drift reconciled: data_catalog's `audience.audiences` prose maps to the LIVE `audience_audiences` table (updated to today), NOT this `core.audiences` — this is the FROZEN legacy core-schema predecessor (max update_time 2023-12-15); flagged the freeze + missing `deleted` column + missing `expression_type_id` as gotchas. No prior prose section existed for `core.audiences` specifically.
+- 2026-07-29: enriched→verified. Re-introspected live: physical unchanged (79,874 rows / ~39 MB, unpartitioned, cluster=audience_id, no TTL) — frozen legacy table, row count identical to enrichment. Silver view schema matches AUTO:SCHEMA (16 cols). No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

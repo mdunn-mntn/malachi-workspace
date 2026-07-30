@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 31
 approx_logical_bytes: 2744
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaign_config, pacing, delivery]
 keywords: [campaign_group, padding, pacing, delivery, override, budget_padding, multiplier, cdc_dimension, PER_ticket]
 source: INFORMATION_SCHEMA+human
@@ -152,6 +152,9 @@ WHERE g.deleted = FALSE AND g.is_test = FALSE;
   1 row/campaign_group_id, 1:1 join to `campaign_groups` (all 31 match, no fan-out). Resolved
   `datastream_metadata.source_timestamp` = milliseconds (CDC-capture, not business time). Flagged
   `padding` STRING with mixed formatting.
+- 2026-07-29: enriched→verified. Re-introspected live: physical unchanged (31 rows/2744B,
+  unpartitioned, cluster=campaign_group_id, no TTL, 6 cols incl datastream_metadata). Silver view
+  schema matches AUTO:SCHEMA. No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

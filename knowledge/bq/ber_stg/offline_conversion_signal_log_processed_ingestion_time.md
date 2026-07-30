@@ -14,9 +14,9 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: 1
 approx_logical_bytes: 8
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [offline-conversions, pipeline-internal, reporting]
 keywords: [watermark, checkpoint, bookmark, high-water-mark, incremental-ingestion, offline-conversion-signal, ingestion-time]
 source: INFORMATION_SCHEMA+human
@@ -79,4 +79,5 @@ FROM `dw-main-silver.ber_stg.offline_conversion_signal_log_processed_ingestion_t
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md (net-new/undocumented); enriched from LIVE schema + `bq show` + value read. Confirmed base TABLE, 1 row / 8 bytes, no partition/cluster/TTL; `last_processed_ingestion_timestamp` = native UTC TIMESTAMP watermark (observed 2026-07-20 09:00:00, modified same day). Front-matter drift reconciled: require_partition_filter unknown→false, time_unit unknown→timestamp.
+- 2026-07-29: enriched→verified. Re-derived from live source. Still a base TABLE (not a view), 1 row / 8 bytes, single TIMESTAMP column `last_processed_ingestion_timestamp`, no partition/cluster/TTL — all confirmed via bq show + INFORMATION_SCHEMA. No drift.
 <!-- CHANGELOG END -->

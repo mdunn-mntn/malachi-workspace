@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [advertiser_id, change_id]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 933551068
-approx_logical_bytes: 1048468977845
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1035171000
+approx_logical_bytes: 1168018242189
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, delivery]
 keywords: [budget-change, unstable, cost_impression_log, cil, change-impact, post-change, ber_stg, staging, delivery]
 source: INFORMATION_SCHEMA+human
@@ -144,8 +144,8 @@ tags: [staging, non-canonical, ber, change-impact]
 ## Cost & partitioning notes
 - **The one filter to always apply:** `DATE(time) = ...` or `time BETWEEN ...`. Partition = `time` (DAY), confirmed empirically by dry-run diff (advertiser_id column only): full-table **6.95 GB** (7,468,408,544 B) vs one day **0.22 GB** (230,313,152 B) — ~32x prune. Same-column-set comparison.
 - Clustered on **`advertiser_id`, `change_id`** — add an `advertiser_id` and/or `change_id` predicate to prune within a day.
-- **Never `SELECT *`** — 57 wide columns including `model_params`, `user_agent`, `domain` strings; the dry-run figures above are for a single narrow column and understate a full-row scan by 10–50x.
-- Physical backing (single table): ~933.6M rows, ~1.05 TB (1,048,468,977,845 B) storage.
+- **Never `SELECT *`** — 63 wide columns including `model_params`, `user_agent`, `domain` strings; the dry-run figures above are for a single narrow column and understate a full-row scan by 10–50x.
+- Physical backing (single table): ~1.035B rows, ~1.17 TB (1,168,018,242,189 B) storage (2026-07-29).
 
 ## Example queries
 ```sql
@@ -173,6 +173,7 @@ ORDER BY impressions DESC
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-20: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new BER staging table). Resolved physical: partition=`time` DAY (dry-run confirmed ~32x prune), cluster=[advertiser_id, change_id], no TTL, ~933.6M rows / ~1.05 TB, partitions 2026-03-27→present. Epoch units resolved: `epoch`=microseconds, `change_epoch`/`batch_epoch`/`source_batch_epoch`=seconds. Grain = impression × change_id (~1.47x fan-out over distinct impression_id); `batch_source` constant "post_change".
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema (63 cols name+type) identical to AUTO:SCHEMA; view→physical hash `__3518197138` current; partition=`time` DAY, cluster=[advertiser_id, change_id], require_partition_filter=false, no TTL — confirmed via bq show; min partition 2026-03-27 confirmed via INFORMATION_SCHEMA.PARTITIONS. Fixed prose column-count 57→63. Append growth: ~933.6M→~1.035B rows, ~1.05→~1.17 TB (approx_* refreshed). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -602,7 +602,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 ---
 
 ## silver.logdata.cost_impression_log
-- **⚠️ CIL can re-stamp real impressions to `campaign_id = -3` (unresolved-campaign sentinel) — a campaign-resolution regression (PROVEN 2026-07-29, INC-001):** CIL = `spend_log` (wins/spend, source of truth) + `win_logs` (Beeswax wins), and resolves `campaign_id` via a dim join. A build/reprocess can regress a resolved partition: the rows keep their impression but get `campaign_id = -3`, so the real id reads **0** while the count sits under `-3`. Verified: Bombora campaigns (CG 131563) `dt=2026-07-27` = 0 under 648318-648323 but **110,750 under `-3`** (spend_log 110,792 / $904 billed / 100% rendered; win_logs 110,862); time-travel showed 109,530 correctly attributed 47h ago → 0 now. Cascaded `enriched_impressions=0` (can't map `-3` to a segment). **The rows are NOT lost — check `campaign_id=-3` and reconcile vs `spend_log` before trusting a CIL per-campaign zero.** `-3` = unresolved campaign; real ids are positive.
+- **⚠️ CIL can re-stamp real impressions to `campaign_id = -3` (unresolved-campaign sentinel) — a campaign-resolution regression (PROVEN 2026-07-29, INC-001):** CIL = `spend_log` (wins/spend, source of truth) + `win_logs` (Beeswax wins), and resolves `campaign_id` via a dim join. A build/reprocess can regress a resolved partition: the rows keep their impression but get `campaign_id = -3`, so the real id reads **0** while the count sits under `-3`. Verified: Bombora campaigns (CG 131563) `dt=2026-07-27` = 0 under 648318-648323 but **110,750 under `-3`** (spend_log 110,792 / $904 billed / 100% rendered; win_logs 110,862); time-travel showed 109,530 correctly attributed 47h ago → 0 now. Cascaded `enriched_impressions=0` (can't map `-3` to a segment). **The rows are NOT lost — check `campaign_id=-3` and reconcile vs `spend_log` before trusting a CIL per-campaign zero.** `-3` = unresolved campaign; real ids are positive. **Time-travel to confirm a regression: the VIEW ignores `FOR SYSTEM_TIME` ("Snapshot time ignored ... because it is a view") — query the PHYSICAL `dw-main-silver.sqlmesh__logdata.logdata__cost_impression_log__2498930125 FOR SYSTEM_TIME AS OF ...` (worked at 26-47h back; ~48h horizon).**
 - **Retention: NOT 90 days — floor is 2023-10-01 (fixed, so the window GROWS)**: the live table (`sqlmesh__logdata.logdata__cost_impression_log__2498930125`) has 1,012 contiguous daily partitions 20231001→today, verified with row counts (2023-10-15 = 53.6M rows; 2024-09-15 = 92M) on 2026-07-08 (TI-1037). ~33 months of history today, +1 month per month. Supersedes both the old "90d TTL" note and the 2026-07-07 "floor ≈ 2025-01-01" estimate. `household_score` is NULL on ALL pre-2025-06 rows (verified same check) — IP reach is computable to Oct 2023, HI/score analysis only from Jun 2025.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical, 71 B rows / 56 TB)
 - **Partition:** DAY on `time`
@@ -2385,6 +2385,11 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
   impressions are real (spend_log 110,792, $904 billed) and PRESENT in CIL as `-3`, not lost; NOT the ipdsc skip, serving,
   or enrichment. **Reconcile a per-campaign enriched/CIL zero against spend_log AND check `campaign_id=-3`.** See
   `data_knowledge.md` § IPDSC + on-call INC-001.
+  **Scope note (2026-07-29):** enriched `data_source_id=51` = the Bombora test campaign CG 131563 essentially 1:1 (07-26
+  enriched 108,744 = CG 131563 CIL 108,744), NOT the broader DS51-targeted population (Sonali's CIL `campaign→segment`
+  join shows ~141K/day DS51-targeted, i.e. other campaign groups too). On 07-27 the total `source_row_count` was 63.2M
+  (normal, matching 07-26/28) with DS51=0 — the partition is fully built, so a DS51 zero is an ATTRIBUTION failure, not a
+  lag/missing-partition.
 - Scripts: `SteelHouse/bae-sql-utility/ddp/`.
 
 ### DDP file-drop batch ingestion → fpa_vendor_log + site_visit_signal (AUDI-1089)

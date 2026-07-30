@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 27966
 approx_logical_bytes: 2315804
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting]
 keywords: [campaign_group, audience, bridge, junction, segment, legacy, cdc, association]
 source: INFORMATION_SCHEMA+human
@@ -95,6 +95,7 @@ ORDER BY b.create_time DESC
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle section existed (table only appeared in the data_catalog.md silver.core inventory list) — enriched from live schema + empirical queries. Resolved physical to `dw-main-bronze.integrationprod.core_campaign_group_x_audiences` (real TABLE, ~28K rows, 2.31 MB, unpartitioned, clustered on PK). Confirmed grain = (campaign_group_id, audience_id); 100% FK to core.audiences; campaign_group→bridge fan-out max 4. Resolved source_timestamp epoch = MILLISECONDS (uniform snapshot 2025-12-19). Flagged frozen-since-2023-12-15 / superseded-by audience_audience_x_campaign_groups; noted absence of deleted/is_test/update_time and 100%-NULL user_id.
+- 2026-07-29: enriched→verified. Re-introspected live: physical unchanged (27,966 rows / 2.31 MB, unpartitioned, cluster=campaign_group_x_audience_id, no TTL) — frozen legacy bridge, row count identical to enrichment. Silver view schema matches AUTO:SCHEMA (7 cols). No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

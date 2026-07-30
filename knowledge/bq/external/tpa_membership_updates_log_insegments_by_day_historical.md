@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 16449116829
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, holdout, incrementality, membership]
 keywords: [tpa, membership, holdout, insegments, ds3, mntn_third_party, historical, backfill, gcs_parquet, external, hive_partition, segment_membership, ip_segment, legacy_union]
 source: INFORMATION_SCHEMA+human
@@ -112,4 +112,5 @@ WHERE date = '2025-09-01' AND segment_id = 428075;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (net-new; in `bq/_UNDOCUMENTED.queue`) — enriched from live external config + sampling. Confirmed EXTERNAL hive-partitioned PARQUET at `gs://mntn-data-archive-prod/static/.../date=YYYY-MM-DD/` (169.73 GiB, 11 days 2025-08-31..2025-09-10, 16,449,116,829 rows). Partition = `date` (STRING, only pruning lever; no clustering — actual: advid one day 11.21 GB vs all-days 131.59 GB, ~11.7×). Grain (date, ip, advertiser_id, campaign_id, segment_id) verified exact (adv 31297/2025-09-01: 244,146 = distinct). Reconciled drift vs the live `tpa_membership_updates_log_insegments`: here `date` is STRING (not DATE), `tags` is a JSON STRING `["holdout"]` (not ARRAY<STRING>), and `data_source_id` is 100% NULL (not `3`) — the `__legacy` UNION view performs those casts. `score` 0–10000, ~41.7% NULL (2025-09-01). Consumer = `aggregates.tpa_membership_updates_log_insegments__legacy` (historical branch, 1:1 row-preserving).
+- 2026-07-29: enriched→verified. Re-introspected live: schema (8 cols) + hive partition [date] unchanged; documented drift confirmed in the live schema (date STRING, tags STRING, data_source_id nullable INT64). GCS shows exactly the 11 frozen partitions 2025-08-31..2025-09-10 (frozen archive, cannot change). No drift.
 <!-- CHANGELOG END -->

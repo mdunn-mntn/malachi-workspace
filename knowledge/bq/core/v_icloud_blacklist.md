@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 38440
+approx_rows: 39213
 approx_logical_bytes: null
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [identity, advertiser-config]
 keywords: [icloud, private-relay, blacklist, whitelist, verified-visits, audience-targeting, conversion-attribution, advertiser-flags]
 source: INFORMATION_SCHEMA+human
@@ -43,9 +43,9 @@ Net effect: in the **view**, `TRUE = allowed / iCloud handling enabled`, `FALSE 
 opposite polarity of the base `core_icloud_blacklist` table.
 
 ## Grain & keys
-- **Grain:** one row per `advertiser_id` — **every** advertiser in `public_advertisers` (verified live:
-  view rows = distinct advertiser_id = `public_advertisers` count = **38,440**; only **2** advertisers
-  have any flag FALSE).
+- **Grain:** one row per `advertiser_id` — **every** advertiser in `public_advertisers` (verified live
+  2026-07-29: view rows = distinct advertiser_id = `public_advertisers` count = **39,213**; only **2**
+  advertisers have any flag FALSE).
 - **Primary key:** `advertiser_id` (1:1 with the advertiser dimension — no duplicates).
 - **Join column:** `advertiser_id` → `advertisers.advertiser_id` / any table's `advertiser_id`.
 
@@ -91,7 +91,7 @@ opposite polarity of the base `core_icloud_blacklist` table.
   *allowed*; `core_icloud_blacklist.verified_visits = TRUE` means *blacklisted*. Never mix the two.
   Filter the view for restrictions with `WHERE NOT verified_visits OR NOT audience_targeting OR NOT
   conversion_attribution`.
-- **Default-allow, not default-deny.** 38,438 of 38,440 advertisers are all-TRUE by construction, not
+- **Default-allow, not default-deny.** 39,211 of 39,213 advertisers are all-TRUE by construction, not
   because they were explicitly whitelisted. Only presence in the base blacklist changes anything.
 - **`create_time` is a literal for most rows** (see column meanings) — useless as a real date except
   for the handful of blacklisted advertisers.
@@ -137,6 +137,7 @@ WHERE NOT verified_visits OR NOT audience_targeting OR NOT conversion_attributio
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved view → SQLMesh view (…__2166105455) → `public_advertisers LEFT JOIN core_icloud_blacklist … UNION ALL`. Confirmed grain 1:1 with advertisers (38,440 rows; 2 restricted). Documented inverted whitelist polarity vs base `core_icloud_blacklist`, hardcoded `create_time` literal + NULL `update_time` for default-allow rows, no partition/TTL, ~0.0003 GB SELECT *. No detailed prose oracle existed (data_catalog.md only lists it in the core view inventory + generic iCloud Private Relay notes); enriched from live schema + view definition.
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. Schema unchanged (6 cols). Re-read sqlmesh `…__2166105455` SQL: confirmed default-allow branch (`TRUE`×3 + `CAST('2022-10-01 12:34:56' AS TIMESTAMP)` create_time + NULL update_time WHERE base row absent) `UNION ALL` inverted branch (`NOT b.*`). Drift fixed: `public_advertisers` grew 38,440→**39,213** advertisers (still exactly 2 restricted). Grain 1:1 holds.
 <!-- CHANGELOG END -->
 
 ## View definition

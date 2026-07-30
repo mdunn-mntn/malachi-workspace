@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 1
 approx_logical_bytes: 86
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser, config, pacing]
 keywords: [padding, override, multiplier, advertiser_id, pacing, cdc, datastream, exception-table]
 source: INFORMATION_SCHEMA+human
@@ -130,6 +130,7 @@ WHERE a.deleted = FALSE AND a.is_test = FALSE
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (table only appears in the data_catalog.md silver.core inventory list — no `##` section, nothing in data_knowledge.md), so enriched from LIVE schema + sampling. Confirmed physical is a real TABLE (not SQLMesh view): 1 row / 86 bytes, no partition, clustered on advertiser_id, no TTL. Resolved `datastream_metadata.source_timestamp` = MILLISECONDS (TIMESTAMP_MILLIS → 2025-12-19; MICROS → 1970). FK advertiser_id → advertisers.advertiser_id (1:1) verified live. Drift vs dataset convention: this dim has NO deleted/is_test columns (hygiene must come from advertisers). `padding` is a STRING multiplier ("1.05" = +5%); override-only exception table.
+- 2026-07-29: enriched→verified. Re-introspected live: schema (6 cols, `padding` STRING), physical TABLE `dw-main-bronze.integrationprod.core_advertiser_padding_overrides` (1 row / 86 bytes, no partition, cluster `[advertiser_id]`, no TTL) all UNCHANGED — zero drift.
 <!-- CHANGELOG END -->
 
 ## View definition

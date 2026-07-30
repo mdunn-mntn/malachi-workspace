@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [advertiser_id, change_id]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 1486837
-approx_logical_bytes: 3145403345
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1578959
+approx_logical_bytes: 3357989781
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [ber, conversions, attribution, change_impact]
 keywords: [conversions, attribution, change_impact, pre_change, snapshot, ber_stg, staging, change_id, batch_source]
 source: INFORMATION_SCHEMA+human
@@ -168,7 +168,7 @@ change-impact / QA analysis, never for reporting conversion totals.
   `WHERE time >= '2026-07-01'` → **429,944 B (~0.43 MB)**. Same column set, ~28x reduction — confirms `time` is the partition.
 - `SELECT *` for `time >= '2026-07-01'` (~20 days) → **119,884,727 B (~120 MB)** (all-columns figure — do
   not compare to the one-column numbers above).
-- Physical backing: `numBytes` = 3,145,403,345 B (~3.15 GB), `numRows` = 1,486,837 (whole table, all columns).
+- Physical backing: `numBytes` = 3,357,989,781 B (~3.36 GB), `numRows` = 1,578,959 (whole table, all columns; 2026-07-29).
 - The one filter to always apply: `WHERE time >= '2026-07-01' AND time < '2026-07-08'` (a bounded date range on the partition), plus a `change_id` predicate when analyzing a specific change.
 
 ## Example queries
@@ -194,6 +194,7 @@ WHERE time >= '2026-07-01' AND time < '2026-07-08'
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md (net-new table) — enriched from LIVE schema + empirical queries. Confirmed partition=`time` (DAY, ~28x prune, one-col dry-run), cluster=[advertiser_id, change_id], no TTL (accumulating 2026-01-31→present, ~1.49M rows / 3.15 GB). Resolved epoch units: epoch/event_epoch/impression_epoch = microseconds, change_epoch/batch_epoch = seconds; conversion_day = 1-indexed attribution day. Grain = per pre-change attributed conversion × change_id (no unique key). Identified sibling unstable__conversions_post_change + canonical summarydata.conversions.
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema (57 cols name+type) identical to AUTO:SCHEMA; view→physical hash `__1453283275` current; partition=`time` DAY, cluster=[advertiser_id, change_id], require_partition_filter=false, no TTL — confirmed via bq show; min partition 2026-01-31 confirmed via INFORMATION_SCHEMA.PARTITIONS. Append growth: ~1.49M→~1.58M rows, 3.15→3.36 GB (approx_* refreshed). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

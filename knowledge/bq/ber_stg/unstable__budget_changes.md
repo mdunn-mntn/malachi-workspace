@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: seconds
 ttl_days: null
-approx_rows: 11083
-approx_logical_bytes: 1701547
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 11476
+approx_logical_bytes: 1762060
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - reporting
   - budgets
@@ -98,8 +98,8 @@ BER (backend-reporting) **staging** table capturing **significant flight budget 
 ## Cost & partitioning notes
 - **Partition = `change_time` (DAY), no clustering, no TTL** — confirmed off the physical table (`sqlmesh__ber_stg.ber_stg__unstable__budget_changes__348367159`, a real materialized TABLE, not a nested view) and by dry-run diff. Partition filter is **not required**, but always apply one.
 - **The one filter to always apply:** `WHERE change_time >= '<start>'` (or a BETWEEN). Dry-run diff, single column `advertiser_id`: **full scan = 177,328 B** vs **one-day filter = 10,816 B** (~16x prune) — pruning works through the view.
-- **`SELECT *` full scan = 1,701,547 B** (= physical `numBytes`); a single-column full scan is ~9.6x cheaper. Avoid `SELECT *`. The whole table is only ~1.6 MB / 11,083 rows, so cost is negligible either way, but keep the habit.
-- `approx_logical_bytes` = 1,701,547 (physical `numBytes`); `approx_rows` = 11,083.
+- **`SELECT *` full scan ≈ physical `numBytes` = 1,762,060 B** (was 1,701,547 on 2026-07-20); a single-column full scan is ~9.6x cheaper. Avoid `SELECT *`. The whole table is only ~1.7 MB / 11,476 rows, so cost is negligible either way, but keep the habit.
+- `approx_logical_bytes` = 1,762,060 (physical `numBytes`); `approx_rows` = 11,476 (2026-07-29).
 
 ## Example queries
 ```sql
@@ -128,6 +128,7 @@ ORDER BY change_time DESC
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md / data_knowledge.md (net-new/undocumented table) — enriched from live schema + queries alone. Confirmed partition = change_time DAY (dry-run diff, 16x prune), no cluster/TTL, physical is a real materialized TABLE. Resolved both epoch columns as UNIX_SECONDS (batch_epoch=UNIX_SECONDS(batch_time), change_epoch=UNIX_SECONDS(change_time)). Grain (flight_id, change_time) unique = 11,083 rows. budget_change_type_id verified 1=increase/2=decrease on daily budget; flight_change_type_id NOT a clean direction flag (prior_flight_budget NULL ~93%); sig_change/sig_change_max constant 1. Data begins ~2026-03-08.
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema (20 cols name+type) identical to AUTO:SCHEMA; view→physical hash `__348367159` current; partition = change_time DAY, no cluster, require_partition_filter=false, no TTL — confirmed via bq show; min partition 2026-03-08 confirmed via INFORMATION_SCHEMA.PARTITIONS. Append growth: 11,083→11,476 rows, 1,701,547→1,762,060 bytes (approx_* refreshed). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

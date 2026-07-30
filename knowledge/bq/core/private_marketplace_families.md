@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 21
 approx_logical_bytes: 1697
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pmp, ctv, inventory, dimension]
 keywords: [private marketplace, pmp, family, ctv, publisher, network, media company, deal grouping, lookup dim]
 source: INFORMATION_SCHEMA+human
@@ -103,6 +103,7 @@ ORDER BY deals DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live: 5-col schema, unpartitioned, cluster=[private_marketplace_family_id], no TTL unchanged; 21 rows / 1,697 B stable (ids 1-21, create_time 2023-04-20→2023-06-28, still frozen). Silver view still `SELECT * FROM bronze.integrationprod.core_private_marketplace_families`.
 - 2026-07-19: skeleton→enriched. Resolved view→physical `dw-main-bronze.integrationprod.core_private_marketplace_families` (21 rows / 1697 B, no partition, cluster=private_marketplace_family_id, no TTL, no deleted/is_test cols). Confirmed `datastream_metadata.source_timestamp` epoch = MILLISECONDS (identical CDC-snapshot value, not business time). Mapped grain (parent CTV media/network brands) + the FK from core_private_marketplace_deals (sparse: 94/1072 deals populated; 1 family:N deals; safe 1:1 lookup from deals side). Noted family is orthogonal to the groups/levels PMP hierarchy. No dedicated prose oracle existed in data_catalog.md/data_knowledge.md (table only appeared in the silver.core inventory list); enriched from live schema + sampling.
 <!-- CHANGELOG END -->
 

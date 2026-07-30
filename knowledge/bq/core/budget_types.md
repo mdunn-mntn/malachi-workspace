@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 3
 approx_logical_bytes: 188
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [dimensions, campaigns, budgeting]
 keywords: [budget_type, budget_type_id, pacing, flighted, daily, monthly, campaign_groups, enum, lookup, cdc]
 source: INFORMATION_SCHEMA+human
@@ -124,6 +124,7 @@ SELECT budget_type_id, name FROM `dw-main-silver`.core.budget_types ORDER BY bud
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical (dw-main-bronze.integrationprod.core_budget_types: 3 rows/188B TABLE, no partition, clustered budget_type_id, no TTL). Live enum domain {1=Monthly, 2=Daily, 3=Flighted}. datastream_metadata.source_timestamp confirmed = milliseconds (TIMESTAMP_MILLIS→2026-01-14; identical uuid+ts across all rows = single CDC backfill). Reconciled prose drift: data_catalog.md said "(Daily, Flight, etc.)" → actual labels Monthly/Daily/Flighted. Noted no deleted/is_test columns on this dim.
+- 2026-07-29: enriched→verified. Re-introspected live: physical unchanged (3 rows/188B, unpartitioned, cluster=budget_type_id, no TTL). Enum re-confirmed live {1=Monthly, 2=Daily, 3=Flighted}. Schema matches AUTO:SCHEMA. No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

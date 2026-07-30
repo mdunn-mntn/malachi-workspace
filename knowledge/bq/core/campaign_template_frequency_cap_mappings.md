@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 63
 approx_logical_bytes: 6165
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaign-config, frequency-capping]
 keywords: [frequency cap, campaign template, primary impressions, secondary impressions, duration seconds, optimization mode, AUTOMATED, AGGRESSIVE, MANUAL]
 source: INFORMATION_SCHEMA+human
@@ -104,6 +104,7 @@ JOIN `dw-main-silver.core.campaign_template_frequency_cap_mappings` m
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented table) — enriched from live schema + sampling alone. Resolved physical to dw-main-bronze.integrationprod.core_campaign_template_frequency_cap_mappings (63 rows, 6165 B, unpartitioned, clustered on campaign_template_id+frequency_cap_optimized, no TTL). Confirmed grain = (campaign_template_id, frequency_cap_optimized), 0 dup PKs. Enum domain AGGRESSIVE/AUTOMATED/MANUAL. Durations are seconds; primary tier often NULL. datastream_metadata.source_timestamp = milliseconds CDC snapshot (identical across all rows). No deleted/is_test columns — standard dim filter N/A. Campaign join fans out 1:3, must constrain frequency_cap_optimized.
+- 2026-07-29: enriched→verified vs live source. Schema (9 cols), physical (63 rows, 6165 B, unpartitioned, cluster=campaign_template_id+frequency_cap_optimized, no TTL) unchanged. Re-confirmed grain: 63 rows = 63 distinct (template, mode) = 21 templates × 3 modes; mode enum still AGGRESSIVE/AUTOMATED/MANUAL. No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

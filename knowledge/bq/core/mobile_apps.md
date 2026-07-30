@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 125
 approx_logical_bytes: 11120
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [core-dim, mobile, advertiser]
 keywords: [mobile_app, app_id, bundle_id, app_store_id, package_name, app_install, advertiser, partner, cdc_dim]
 source: INFORMATION_SCHEMA+human
@@ -59,8 +59,8 @@ so it is effectively free to scan.
   package names (`com.pof.android`, `com.pinger.textfree`) and iOS App Store numeric track ids prefixed
   with `id` (`id917554930`, `id435588892`). No separate platform column — infer platform from the
   format (`id<digits>` = iOS, dotted string = Android). Not unique (see Grain & keys).
-- **`active`** — BOOL soft-status flag (this dim has NO `deleted`/`is_test` columns). 105 active / 20
-  inactive at 2026-07-19. Filter `active = TRUE` for the live app set; there is no other liveness gate.
+- **`active`** — BOOL soft-status flag (this dim has NO `deleted`/`is_test` columns). 95 active / 30
+  inactive at 2026-07-29. Filter `active = TRUE` for the live app set; there is no other liveness gate.
 - **`advertiser_id`** — owning MNTN advertiser. 57 distinct advertisers own the 125 apps (one advertiser
   can register many apps).
 - **`partner_id`** — data/integration partner that supplied the app. Only 4 distinct values present
@@ -137,6 +137,7 @@ ORDER BY ma.mobile_app_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (mobile_apps appeared only in the data_catalog.md core view-inventory list, no dedicated section; nothing in data_knowledge.md) — enriched from LIVE schema + sampling. Resolved physical to `bronze.integrationprod.core_mobile_apps` (real TABLE, 125 rows, 11,120 bytes, unpartitioned, clustered on mobile_app_id). Confirmed PK = mobile_app_id (1:1); app_id NOT unique (121 distinct / 125 rows). Confirmed `datastream_metadata.source_timestamp` = milliseconds (TIMESTAMP_MILLIS → 2025-12→2026-05). Noted this dim has NO deleted/is_test columns → use `active = TRUE`. Verified partner_id → core.partners (79 rows, 1:1, N:1 safe).
+- 2026-07-29: enriched→verified. Re-introspected live: 6 cols / types / partition(none) / cluster(`mobile_app_id`) / no-TTL / view→`core_mobile_apps` physical all unchanged & correct. Counts stable (125 rows = 125 distinct mobile_app_id, 121 distinct app_id, 57 advertisers, 4 partners {7,14,15,78} w/ 7 dominant). Refreshed only the active split: 105/20 → 95 active / 30 inactive (10 apps deactivated).
 <!-- CHANGELOG END -->
 
 ## View definition

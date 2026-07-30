@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 5866
 approx_logical_bytes: 616092
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [margins, billing, advertiser-dim]
 keywords: [advertiser margin, channel margin, budget_margin, platform_fee, data_margin, target_cpm, ad_buying_cpm, take rate, CTV, display, pricing]
 source: INFORMATION_SCHEMA+human
@@ -97,6 +97,7 @@ WHERE channel_id = 8   -- 8=CTV, 1=display
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (table only appears in the silver.core inventory list). Enriched from LIVE schema + physical `dw-main-bronze.integrationprod.core_advertiser_channel_margins`. Confirmed empirically: grain = (advertiser_id, channel_id) unique (5,866 rows / 5,866 PK / 3,170 advertisers); channel_id domain = {1 display, 8 CTV}; source_timestamp = milliseconds (≈ UNIX_MILLIS(update_time)). DRIFT reconciled vs dataset-context assumption: this table has NO deleted/is_test columns (Datastream current-state snapshot), so the standard dimension filter does not apply. SENSITIVE — rate values intentionally not sampled/documented.
+- 2026-07-29: enriched→verified. Re-introspected live: schema (11 cols incl the 5 sensitive NUMERIC rate cols), physical TABLE (5,866 rows / 616,092 bytes, no partition, cluster `[advertiser_channel_margin_id]`, no TTL) all UNCHANGED — zero drift. Rate values deliberately not sampled (SENSITIVE).
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [advertiser_id, change_id]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 22854495
-approx_logical_bytes: 10921496518
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 25349221
+approx_logical_bytes: 12122321207
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [backend-reporting, attribution, visits, change-impact]
 keywords: [ber_stg, visits, post_change, change_id, budget_change, attribution, last_tv_touch, competing, staging, pre_post_change]
 source: INFORMATION_SCHEMA+human
@@ -177,8 +177,8 @@ Epoch columns carry **different units per column** (all verified by anchoring to
     ~**20×** the 3-column scan, so **prune columns**.
   - No `time` filter: **ERROR** (require-partition-filter) — cannot estimate/run.
 - **View is a straight passthrough** (`SELECT * FROM` the SQLMesh physical, no UNION). `approx_logical_bytes`
-  = physical `numBytes` = **10,921,496,518 bytes ≈ 10.17 GiB** across **22,854,495 rows / 117 partitions**
-  (bq show on `sqlmesh__ber_stg.ber_stg__unstable__visits_post_change__1748979808`).
+  = physical `numBytes` = **12,122,321,207 bytes ≈ 11.29 GiB** across **25,349,221 rows / 126 partitions**
+  (bq show on `sqlmesh__ber_stg.ber_stg__unstable__visits_post_change__1748979808`, 2026-07-29).
 
 ## Example queries
 ```sql
@@ -204,7 +204,8 @@ ORDER BY n_rows DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
-- 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md — enriched from LIVE physical + empirical probes. Confirmed partition=`time` (DAY, require_partition_filter=TRUE) and cluster=(advertiser_id, change_id) off `bq show` on the SQLMesh physical (numRows 22,854,495 / numBytes 10,921,496,518 / min partition 2026-03-27 + a NULL partition). Anchored epoch units: epoch & impression_epoch = MICROSECONDS, change_epoch = SECONDS (change_id/change_epoch/change_time a fixed triple). Found source_type ∈ {visits, last_tv_touch_visits} (maps to attribution_model_type_id 1/3 vs 2/4; {1,2}→is_competing=false, {3,4}→true); batch_source='post_change', batch_epoch NULL. Verified budget_changes join on (advertiser_id, change_epoch) = 100% (1670/1670, 2026-07-05) with fan-out caveat. Dry-run cost: SELECT * 1-day 232MB (0.216 GiB) vs 3-col 1-day 11.5MB (0.011 GiB); no-filter errors.
+- 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md — enriched from LIVE physical + empirical probes. Confirmed partition=`time` (DAY, require_partition_filter=TRUE) and cluster=(advertiser_id, change_id) off `bq show` on the SQLMesh physical (numRows 22,854,495 / numBytes 10,921,496,518 / min partition 2026-03-27 + a NULL partition).
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema (48 cols name+type) identical to AUTO:SCHEMA; view→physical hash `__1748979808` current; partition=`time` DAY with require_partition_filter=TRUE, cluster=[advertiser_id, change_id], no TTL — confirmed via bq show; min partition 2026-03-27 + `__NULL__` partition confirmed via INFORMATION_SCHEMA.PARTITIONS. Append growth: 22.85M→25.35M rows / 117→126 partitions, 10.92→12.12 GB (approx_* refreshed). No schema/partition drift. Anchored epoch units: epoch & impression_epoch = MICROSECONDS, change_epoch = SECONDS (change_id/change_epoch/change_time a fixed triple). Found source_type ∈ {visits, last_tv_touch_visits} (maps to attribution_model_type_id 1/3 vs 2/4; {1,2}→is_competing=false, {3,4}→true); batch_source='post_change', batch_epoch NULL. Verified budget_changes join on (advertiser_id, change_epoch) = 100% (1670/1670, 2026-07-05) with fan-out caveat. Dry-run cost: SELECT * 1-day 232MB (0.216 GiB) vs 3-col 1-day 11.5MB (0.011 GiB); no-filter errors.
 <!-- CHANGELOG END -->
 
 ## View definition

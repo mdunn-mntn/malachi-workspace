@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 7
 approx_logical_bytes: 1293
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [core, dimensions, segmentation, retargeting]
 keywords: [segmentation_defaults, retargeting presets, segment templates, audience expression dsl, auto_append, segmentation_section_id, cdc dimension]
 source: INFORMATION_SCHEMA+human
@@ -131,6 +131,7 @@ WHERE auto_append = TRUE;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Resolved view to physical `bronze.integrationprod.core_segmentation_defaults` (7 rows / 1293 B, unpartitioned, clustered on segmentation_default_id, no deleted/is_test cols). Confirmed PK uniqueness (7/7), full section-id domain {1,2}, and source_timestamp = UNIX_MILLIS snapshot (identical on all rows) vs business created_at. No prose oracle existed in data_catalog.md (only an inventory-list mention at core.* section) or data_knowledge.md — enriched from LIVE schema + samples alone.
+- 2026-07-29: enriched→verified. Re-introspected LIVE source. Zero drift — schema still 7 cols, 7 rows / 1293 B, unpartitioned, cluster=segmentation_default_id; re-confirmed full 7-row set, section-id domain {1,2} (section 2 only for id 5 Ego), auto_append TRUE only on id 1 (Auto Default). schema_synced 2026-07-29.
 <!-- CHANGELOG END -->
 
 ## View definition

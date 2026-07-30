@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [ddp, billing, signals, data_sources]
 keywords: [targeted_signal, external.targeted_signal, ddp, data deal partner, vendor crediting, usage reporting, data_source_id, source_data_source_id, data_source_category_id, mm site visit, keyword ds19, ds13, ds4 crm, signal_type_id, used signal, mntn-data-archive-prod, parquet external table, hive partitioned, signal decomposition]
 source: INFORMATION_SCHEMA+human
@@ -145,4 +145,5 @@ ORDER BY used_rows DESC
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-29: skeleton→enriched (cataloged from INFORMATION_SCHEMA + bq show + GCS layout + LIMIT 5 sample; prior tribal knowledge in data_knowledge.md § DDP billing hard logic).
+- 2026-07-29: enriched→verified. Re-introspected live: schema (10 cols) + hive partition [data_source_id, dt, source_data_source_id] unchanged vs source; GCS DS dirs = {4,13,19}, live dt through 2026-07-27. No drift.
 <!-- CHANGELOG END -->

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 1
 approx_logical_bytes: 86
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser-config, pacing]
 keywords: [padding, pacing, delivery, budget, override, exception, advertiser]
 source: INFORMATION_SCHEMA+human
@@ -97,6 +97,7 @@ WHERE a.id = 31966;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle (only a name mention in data_catalog.md core inventory line ~1257; no data_knowledge.md gotcha). Enriched from live schema + sampling. Resolved view chain: silver.core.advertiser_padding_overrides_vw → bronze.integrationprod.core_advertiser_padding_overrides_vw (view) → sqlmesh__integrationprod physical (view, SAFE_CASTs padding STRING→NUMERIC) → real TABLE bronze.integrationprod.core_advertiser_padding_overrides (1 row, 86 bytes, unpartitioned, clustered by advertiser_id). Confirmed NO deleted/is_test columns (exception/override table, not a soft-delete dim); padding is STRING-in-source, SAFE_CAST NUMERIC in view.
+- 2026-07-29: enriched→verified. Re-introspected live: schema (5 cols, `padding` NUMERIC in the view), and view chain re-confirmed — `core.advertiser_padding_overrides_vw` → `integrationprod.core_advertiser_padding_overrides_vw` (VIEW) → `sqlmesh__integrationprod.integrationprod__core_advertiser_padding_overrides_vw__3035520343` → real TABLE `core_advertiser_padding_overrides` (1 row / 86 bytes, no partition, cluster `[advertiser_id]`, no TTL). Zero drift.
 <!-- CHANGELOG END -->
 
 ## View definition

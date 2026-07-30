@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 2
 approx_logical_bytes: 138
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser, privacy, dimension]
 keywords: [icloud, apple, private relay, blacklist, advertiser, verified_visits, audience_targeting, conversion_attribution, cdc, datastream]
 source: INFORMATION_SCHEMA+human
@@ -129,6 +129,7 @@ LEFT JOIN `core.icloud_blacklist` b USING (advertiser_id);
   schema + sampling alone. Resolved physical to unpartitioned bronze TABLE (2 rows, 138 B, cluster
   advertiser_id); resolved datastream_metadata.source_timestamp epoch = MILLISECONDS empirically;
   set grain = one row per advertiser_id; documented all-true 2-row content and flag-polarity caveat.
+- 2026-07-29: enriched→verified. Re-introspected live: 7 cols / types / partition(none) / cluster(`advertiser_id`) / no-TTL / view→`core_icloud_blacklist` physical all unchanged & correct. Still exactly 2 rows (advertiser_id 22607, 22955), all three scope flags true — no drift. numRows 2 / numBytes 138 stable.
 <!-- CHANGELOG END -->
 
 ## View definition

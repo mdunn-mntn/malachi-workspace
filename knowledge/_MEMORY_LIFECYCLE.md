@@ -117,7 +117,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_drive_mount_xlsx_delivery | reference | 2026-07-28 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_frequency_capping | reference | 2026-07-28 | [doc](memory/reference_frequency_capping.md) |
 | reference_hhst_efficiency_sizing | reference | 2026-07-28 | [doc](memory/reference_hhst_efficiency_sizing.md) |
-| reference_hhst_pacing_lever | reference | 2026-07-28 | [doc](memory/reference_hhst_pacing_lever.md) |
 | reference_improvements_backlog | reference | 2026-07-28 | [doc](memory/reference_improvements_backlog.md) |
 | reference_oncall_runbook | reference | 2026-07-28 | [doc](memory/reference_oncall_runbook.md) |
 | reference_select_vs_nonselect_incrementality | reference | 2026-07-28 | [doc](memory/reference_select_vs_nonselect_incrementality.md) |
@@ -153,6 +152,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_dataproc_eventlog_profiling | reference | 2026-07-29 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_github_pr_no_clone | reference | 2026-07-29 | [doc](memory/reference_github_pr_no_clone.md) |
 | reference_gitignore_json_rule | reference | 2026-07-29 | [doc](memory/reference_gitignore_json_rule.md) |
+| reference_hhst_pacing_lever | reference | 2026-07-29 | [doc](memory/reference_hhst_pacing_lever.md) |
 | reference_workflow_kit_porting | reference | 2026-07-29 | [doc](memory/reference_workflow_kit_porting.md) |
 | rubric_strategy | feedback | 2026-07-29 | [doc](memory/feedback_rubric_strategy.md) |
 | sparse_code_comments | feedback | 2026-07-29 | [doc](memory/feedback_sparse_code_comments.md) |

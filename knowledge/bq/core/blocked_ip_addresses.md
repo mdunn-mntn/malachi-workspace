@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [ip, advertiser_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 657395
-approx_logical_bytes: 81486875
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 657387
+approx_logical_bytes: 81486003
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [fraud, targeting, exclusions]
 keywords: [blocklist, ip-exclusion, fraud-prevention, blocked-ip, suppression, audience-upload, advertiser-exclusion]
 source: INFORMATION_SCHEMA+human
@@ -34,7 +34,7 @@ targeting/billing. It is a CDC dimension mirror (add/remove/edit reflected via
 Datastream), not an event log.
 
 ## Grain & keys
-- **Grain:** one row per `(advertiser_id, ip)` — verified: `COUNT(*) = COUNT(DISTINCT advertiser_id|ip) = 657,395` (2026-07-19). Adding `audience_upload_id` does not increase the distinct count, so the pair is the natural key.
+- **Grain:** one row per `(advertiser_id, ip)` — verified: `COUNT(*) = COUNT(DISTINCT advertiser_id|ip) = 657,387` (re-confirmed 2026-07-29). Adding `audience_upload_id` does not increase the distinct count, so the pair is the natural key.
 - **Key(s):** composite `(advertiser_id, ip)`. Same IP can be blocked by many advertisers (253,495 distinct IPs across 330 advertisers), so `ip` alone is **not** unique.
 - **Join columns:** `advertiser_id`, `ip`, `audience_upload_id`, `user_id`.
 
@@ -74,9 +74,9 @@ Datastream), not an event log.
 - **Use `create_time`/`update_time`, not `datastream_metadata.source_timestamp`, for business timing** — the latter is CDC-capture (ms epoch) and reflects pipeline replay, not when the advertiser added the block.
 
 ## Cost & partitioning notes
-- **No partition** (`timePartitioning: None`) and **no TTL** — it's a small CDC dimension (657,395 rows, ~81.5 MB backing storage). There is no partition filter to apply; a full scan is cheap.
+- **No partition** (`timePartitioning: None`) and **no TTL** — it's a small CDC dimension (657,387 rows, ~81.5 MB backing storage). There is no partition filter to apply; a full scan is cheap.
 - **Clustered on `(ip, advertiser_id)`** — filtering or joining on `ip` and/or `advertiser_id` gets cluster pruning; lead with `ip` for point lookups.
-- **The one habit:** avoid `SELECT *`. Labeled dry-runs (2026-07-19): `SELECT *` (all 8 cols incl the `description` free-text + `datastream_metadata` struct) = **81,486,875 B**; `SELECT advertiser_id, ip` = **15,940,136 B** (~5.1x cheaper). Project only the columns you need. `approx_logical_bytes: 81486875` = full backing storage (`numBytes`).
+- **The one habit:** avoid `SELECT *`. Labeled dry-runs (2026-07-19): `SELECT *` (all 8 cols incl the `description` free-text + `datastream_metadata` struct) = **81,486,003 B**; `SELECT advertiser_id, ip` = **15,940,136 B** (~5.1x cheaper). Project only the columns you need. `approx_logical_bytes: 81486003` = full backing storage (`numBytes`).
 
 ## Example queries
 ```sql
@@ -107,6 +107,7 @@ ORDER BY n_ips DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical to `dw-main-bronze.integrationprod.core_blocked_ip_addresses` (real TABLE, 657,395 rows, ~81.5 MB, no partition, clustered on ip+advertiser_id). Confirmed grain (advertiser_id, ip) empirically; `source_timestamp` = milliseconds (matches create_time); no deleted/is_test columns. Prose oracle was a single inventory line ("IP blocklist for fraud prevention") in data_catalog.md — no dedicated section or data_knowledge gotcha existed; enriched from live schema + samples.
+- 2026-07-29: enriched→verified. Re-introspected live: schema/partition/cluster unchanged (8 cols, unpartitioned, cluster=[ip, advertiser_id], no TTL). Grain (advertiser_id, ip) re-confirmed unique (657,387 rows = 657,387 pairs); distinct IPs 253,495 and advertisers 330 unchanged; total 657,395→657,387 / 81,486,875→81,486,003 B. No structural drift.
 <!-- CHANGELOG END -->
 
 ## View definition

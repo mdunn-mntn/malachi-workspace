@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 7
 approx_logical_bytes: 520
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaigns, reference]
 keywords: [campaign_status_id, campaign status, Live, Paused, Inactive, enum, lookup, dimension, delivering]
 source: INFORMATION_SCHEMA+human
@@ -127,6 +127,7 @@ WHERE advertiser_id = @aid
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved view → physical `dw-main-bronze.integrationprod.core_campaign_statuses` (7 rows, 520 B, unpartitioned, cluster=[campaign_status_id], no TTL). Verified full enum domain live (1 Ready, 3 Live, 4 Pause By Advertisers, 5 Pause By MNTN, 7 Inactive, 8 Deleted, 9 Legacy Archived; ids 2/6 absent) — matches data_knowledge.md §"campaign_status_id mapping" exactly. Resolved `datastream_metadata.source_timestamp` epoch = milliseconds (single shared capture instant, not business time). Noted no deleted/is_test columns on this dim. Prose oracle and live schema fully agree; no drift to reconcile.
+- 2026-07-29: enriched→verified vs live source. Schema (4 cols), physical (7 rows, 520 B, unpartitioned, cluster=campaign_status_id, no TTL) unchanged. Re-confirmed the full 7-value enum live (1 Ready / 3 Live / 4 Pause By Advertisers / 5 Pause By MNTN / 7 Inactive / 8 Deleted / 9 Legacy Archived; 2 and 6 still absent). No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

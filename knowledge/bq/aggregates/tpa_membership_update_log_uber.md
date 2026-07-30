@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [date, advertiser_id, campaign_id]
 time_unit: timestamp
 ttl_days: null
-approx_rows: 5964344958
-approx_logical_bytes: 472727275671
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 6331459583
+approx_logical_bytes: 501792137265
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting]
 keywords: [tpa, third-party-audience, membership, segment, ip, snapshot, data_source_id, segment_id]
 source: INFORMATION_SCHEMA+human
@@ -71,8 +71,8 @@ sibling variants** (`_uber`, `_insegments`, `_insegments__legacy`): `_uber` alon
   count of rows). Same across all IPs sharing a segment on a given day.
 - **data_source_id** — segment source id; **only `2` observed** (2026-07-15) → the TPA / third-party
   audience source. Not the DS4/DS8/DS13/DS19/DS46 prospecting/MM data-source taxonomy.
-- **segment_id** — the TPA segment/audience the IP is a member of (campaign-scoped). Only 3 distinct
-  segments/day in current data.
+- **segment_id** — the TPA segment/audience the IP is a member of (campaign-scoped). Only a handful of
+  distinct segments/day in current data (2–3 observed).
 - **score** — INT64, **entirely NULL** in current data (unused in this variant; present for schema
   parity with the `_insegments` siblings).
 - **tags** — `ARRAY<STRUCT<tag_value STRING>>`, **REQUIRED array but empty `[]`** in current data
@@ -100,9 +100,10 @@ sibling variants** (`_uber`, `_insegments`, `_insegments__legacy`): `_uber` alon
 - **Snapshot, not a change-log.** Name says "update_log" but every partition is a full membership
   re-listing. To detect membership *changes* you must diff consecutive `date` partitions yourself; there
   is no add/remove event semantics.
-- **Currently populated for a SINGLE advertiser.** Every day 2026-07-09..2026-07-18 shows exactly
-  `advertiser_id = 34411`, 3 campaigns, 3 segments, `data_source_id = 2`. Do **not** assume this table
-  covers all advertisers/segments — it is narrow right now. Re-check breadth before generalizing.
+- **Currently populated for a SINGLE advertiser.** Every sampled day (2026-07-09..18 and re-checked
+  2026-07-27) shows exactly `advertiser_id = 34411`, `data_source_id = 2`, with only a handful of
+  campaigns/segments (3 on 2026-07-09..18, 2 on 2026-07-27). Do **not** assume this table covers all
+  advertisers/segments — it is narrow right now. Re-check breadth before generalizing.
 - **`score` is always NULL and `tags` always empty** in current data — don't build logic on them here.
 - **`time`/`activity_time` are a single per-day constant** (08:00 UTC = midnight PT), not real per-IP
   timestamps — useless as an event clock; use `date`.
@@ -119,8 +120,8 @@ sibling variants** (`_uber`, `_insegments`, `_insegments__legacy`): `_uber` alon
   `date`.** `require_partition_filter` is **not enforced**, so an unfiltered query silently full-scans.
 - **Cluster:** `[date, advertiser_id, campaign_id]` — adding `advertiser_id`/`campaign_id` predicates
   prunes further within a day (though only 1 advertiser exists today).
-- **Backing storage (all columns, `bq show` numBytes):** ~472.7 GB / ~440 GiB across
-  **199 daily partitions** (2026-01-01 → 2026-07-18), ~5.96B rows (~30–37M rows/day).
+- **Backing storage (all columns, `bq show` numBytes):** ~501.8 GB / ~467 GiB across
+  daily partitions from **2026-01-01 → present** (2026-07-28), ~6.33B rows (~30–37M rows/day).
 - **Measured dry-runs (label = exact column set):**
   - `SELECT ip` no filter → 90.2 GB (upper bound). `SELECT ip WHERE date = 1 day` → 0.85 GB.
   - `COUNT DISTINCT advertiser_id/campaign_id/segment_id/data_source_id/time` over 8 days →
@@ -161,6 +162,7 @@ FROM (
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified vs live source. Physical hash `__556747428` unchanged; VIEW is `SELECT *` over it. Structure re-confirmed: partition=`date` DAY, cluster=[date, advertiser_id, campaign_id], requirePartitionFilter=None, no TTL; all 11 columns match AUTO:SCHEMA (incl. `tags` ARRAY<STRUCT<tag_value STRING>>). Distinguishing business claims cheaply re-verified on 2026-07-27: single advertiser (34411 only), `data_source_id`=2 uniformly, `score` 100% NULL, `tags` empty ([] len 0), `version` ms-epoch (max 1741380888811 = 2025-03-07), snapshot `time` = 08:00:00 UTC constant. **Drift fixed:** natural growth — approx_rows 5,964,344,958→6,331,459,583, approx_logical_bytes 472,727,275,671→501,792,137,265; campaign/segment breadth now 2 (was 3); backing-storage + partition-span lines updated; schema_synced→2026-07-29.
 - 2026-07-19: skeleton→enriched. Prose oracle was a 2-line stub (data_catalog.md:1442 grouping the 3 tpa_membership views as "VIEWs — TPA membership tracking" with no schema/grain) — enriched from live schema + sampling. Confirmed empirically: DAY partition on `date` (90.2GB→0.85GB single-`ip` dry-run diff), cluster [date, advertiser_id, campaign_id], ~5.96B rows/~473GB, no TTL, 199 partitions 2026-01-01→2026-07-18. Grain = daily snapshot, 1 row per (ip,campaign_id,segment_id). `version` resolved as ms-epoch segment-version stamp; `score` NULL & `tags` empty in current data; `data_source_id`=2 (TPA) and only advertiser 34411/3 segments currently populated. Documented _uber vs _insegments/_insegments__legacy schema difference (uber adds time/activity_time/version; __legacy deprecated).
 <!-- CHANGELOG END -->
 

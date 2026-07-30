@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 1
 approx_logical_bytes: 118
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pricing, mntn_select]
 keywords: [select advertiser margin, budget_margin, data_margin, platform_fee, take rate, mntn select pricing, margin override, select_margins default]
 source: INFORMATION_SCHEMA+human
@@ -138,6 +138,7 @@ WHERE a.deleted = FALSE AND a.is_test = FALSE;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical to `dw-main-bronze.integrationprod.core_select_advertiser_margins` (unpartitioned CDC dim, cluster=select_advertiser_margin_id, numRows=1, numBytes=118, no TTL, no deleted/is_test cols). Confirmed no partition (nothing to filter). Resolved `datastream_metadata.source_timestamp` = MILLISECONDS (1766121490229→2025-12-19). Documented margin columns as NUMERIC(5,4) fractional rates, values marked SENSITIVE (not sampled). Prose oracle: data_catalog.md lists it only in the core VIEW inventory (no dedicated section); data_knowledge.md (~L772) tags it "Select-specific pricing" alongside core_select_margins — reconciled: this is the per-advertiser override, select_margins is the global default. No drift found vs live schema.
+- 2026-07-29: enriched→verified. Re-introspected LIVE source. Zero drift — schema still 8 cols (budget/data/platform NUMERIC(5,4)), 1 row / 118 B, unpartitioned, cluster=select_advertiser_margin_id, no deleted/is_test. Sparse override table (still 1 row); margin VALUES not sampled (SENSITIVE). Unlike the sibling select_margins it has no user_id/margin_reason_id columns. schema_synced 2026-07-29.
 <!-- CHANGELOG END -->
 
 ## View definition

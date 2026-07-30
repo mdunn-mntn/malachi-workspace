@@ -13,10 +13,10 @@ cluster_by: []
 time_unit: microseconds
 ttl_days: null
 approx_rows: 17
-approx_logical_bytes: 1611
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_logical_bytes: 1615
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [offline-conversions, attribution, ber-staging]
 keywords: [offline conversions, upload eligibility, conversion window, hashed value, ip attribution, prep deadline, ber_stg, staging worklist]
 source: INFORMATION_SCHEMA+human
@@ -112,11 +112,11 @@ this doc's tiny snapshot.)
   `offline__conversions_final` / `summarydata.conversions`.
 
 ## Cost & partitioning notes
-- **No partition, no clustering, no TTL** (physical: 17 rows, 1611 bytes, `timePartitioning`
+- **No partition, no clustering, no TTL** (physical: 17 rows, 1615 bytes, `timePartitioning`
   null, `clustering` null). It is a tiny full-refresh snapshot — there is no partition column
-  to filter and none is needed.
-- **`SELECT *` = 1611 bytes** (dry-run, all 11 columns / full table). Cost is negligible;
-  scanning the whole table is fine. `approx_logical_bytes` = 1611 (physical `numBytes`).
+  to filter and none is needed. Row count is coincidental to the snapshot (17 on both 2026-07-20 and 2026-07-29).
+- **`SELECT *` ≈ 1.6 KB** (dry-run, all 11 columns / full table). Cost is negligible;
+  scanning the whole table is fine. `approx_logical_bytes` = 1615 (physical `numBytes`, 2026-07-29).
 
 ## Example queries
 ```sql
@@ -143,6 +143,7 @@ ORDER BY entry_count DESC
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + sampled rows alone. Verified: physical is a full-refresh snapshot (17 rows / 1611 bytes / no partition / no cluster / no TTL); grain = one row per upload_id; conversion_window = MICROSECONDS duration (30d/60d observed); order_curr not case-normalized (usd/USD); entry_count and unique_uploaded_hashed_values are independent counts. Set partition_by none, time_unit microseconds, approx_rows 17, approx_logical_bytes 1611.
+- 2026-07-29: enriched→verified. Re-derived from live source. Physical hash `__1614858931` unchanged; still no partition/cluster/TTL; 11-column schema unchanged (matches AUTO:SCHEMA). Full-refresh snapshot still 17 rows (1615 bytes). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 76498
 approx_logical_bytes: 6486220
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting]
 keywords: [campaign_x_audiences, campaign_id, audience_id, segment_id, junction, bridge, legacy, frozen, campaigns, audiences, datastream_metadata]
 source: INFORMATION_SCHEMA+human
@@ -154,6 +154,12 @@ ORDER BY create_time DESC;
   (CDC capture, not business time); campaign_id → campaigns.campaign_id N:1 (0% orphan, campaigns PK
   unique over 548,673 rows). segment_id core-era target not present in this dataset region
   (live-unverifiable); doc kept at enriched.
+- 2026-07-29: enriched→verified vs live source. Schema (7 cols), physical (unpartitioned TABLE,
+  cluster=campaign_x_audience_id, 76,498 rows / 6,486,220 B, no TTL) unchanged. Re-confirmed:
+  76,498 rows = 76,498 distinct campaign_x_audience_id = 76,498 distinct (campaign_id,audience_id);
+  LEGACY/FROZEN (max create_time still 2023-12-15); user_id 100% NULL (0 populated); segment_id
+  11,576 NULL (~15%). No drift. (segment_id core-era FK target remains not present in this dataset
+  region, but that gap does not block verification of grain/schema/freeze.)
 <!-- CHANGELOG END -->
 
 ## View definition

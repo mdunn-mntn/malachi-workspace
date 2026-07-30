@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: core.v_campaign_group_channel_margins
-summary: "Per-campaign-group, per-channel margin/pricing config (budget margin, platform fee, target & ad-buying CPM, data margin) — a small ~587-row override dimension. SENSITIVE: rate/margin values are private, document schema only."
+summary: "Per-campaign-group, per-channel margin/pricing config (budget margin, platform fee, target & ad-buying CPM, data margin) — a small ~624-row override dimension. SENSITIVE: rate/margin values are private, document schema only."
 dataset: core
 table: v_campaign_group_channel_margins
 object_type: VIEW
@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [campaign_group_channel_margin_id]
 time_unit: timestamp
 ttl_days: null
-approx_rows: 587
-approx_logical_bytes: 87762
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 624
+approx_logical_bytes: 92880
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pricing, margins, billing]
 keywords: [margin, campaign_group, channel, cpm, platform_fee, budget_margin, data_margin, ad_buying_cpm, pricing, margin_source]
 source: INFORMATION_SCHEMA+human
@@ -30,7 +30,7 @@ Small dimension holding the **margin / pricing configuration** for a campaign gr
 channel — the budget margin, platform fee, target CPM, ad-buying CPM, and data margin MNTN applies
 when pricing that campaign group's delivery. Reach for it to answer "what margin/CPM config is set
 for this campaign group on CTV vs display?" It is a **per-campaign-group override** table: a row exists
-only where a campaign group has an explicit channel-level margin config (587 rows across 119
+only where a campaign group has an explicit channel-level margin config (624 rows across 130
 advertisers). Where no row exists, application logic falls back to channel-level defaults in
 `core.channel_margins` — **this view does NOT perform that fallback** (see Gotchas).
 
@@ -39,10 +39,10 @@ advertisers). Where no row exists, application logic falls back to channel-level
 > `ad_buying_cpm` values or any example row containing them.
 
 ## Grain & keys
-- **Grain:** one row per **(campaign_group_id, channel_id)** margin override. Verified: 587 rows, 587
-  distinct (cg, channel) combos, 585 distinct campaign_groups (a campaign group may hold up to 2 rows
-  — one per channel), 119 distinct advertisers.
-- **Primary key:** `campaign_group_channel_margin_id` (surrogate; 587/587 distinct — unique). It is the
+- **Grain:** one row per **(campaign_group_id, channel_id)** margin override. Verified 2026-07-29: 624
+  rows, 624 distinct (cg, channel) combos, 612 distinct campaign_groups (a campaign group may hold up to
+  2 rows — one per channel; 12 groups carry both), 130 distinct advertisers.
+- **Primary key:** `campaign_group_channel_margin_id` (surrogate; 624/624 distinct — unique). It is the
   clustering key on the physical base table.
 - **Join / foreign keys:** `advertiser_id`, `campaign_group_id`, `channel_id`, `margin_source_id`.
 
@@ -65,9 +65,9 @@ advertisers). Where no row exists, application logic falls back to channel-level
 
 ## Column meanings (only the non-obvious ones)
 - `campaign_group_channel_margin_id` — surrogate PK; also the clustering column on the base physical.
-- `channel_id` — which channel this margin config applies to. Domain observed: **8 = CTV** (585 rows),
-  **1 = display** (2 rows). Matches the org-wide `channel_id` convention (8=CTV / 1=display). Config is
-  overwhelmingly CTV today.
+- `channel_id` — which channel this margin config applies to. Domain observed (2026-07-29): **8 = CTV**
+  (612 rows), **1 = display** (12 rows). Matches the org-wide `channel_id` convention (8=CTV / 1=display).
+  Config is overwhelmingly CTV today.
 - `margin_source_id` — FK to `core.margin_sources` naming the system/source that set the margin.
   Domain: **1 = DTR, 2 = MSS**. Every current row uses `margin_source_id = 2` (MSS).
 - `create_time` / `update_time` — native `TIMESTAMP` business times (row created / last updated), **not**
@@ -99,7 +99,7 @@ This is the join *fact-of-record* for a campaign group's channel margin; it poin
   `channel_margins` defaults. A campaign group with no row here has no margin in this view; the
   channel-default fallback happens in application logic, not in this view.
 - **No `deleted` / `is_test` columns.** The standard `deleted=FALSE AND is_test=FALSE` dimension filter
-  does **not** apply — there is no soft-delete flag to filter on. All 587 rows are live as far as this
+  does **not** apply — there is no soft-delete flag to filter on. All 624 rows are live as far as this
   table exposes.
 - **CDC capture time is stripped.** `datastream_metadata` (source_timestamp) exists on the base
   `core.campaign_group_channel_margins` but not on this view. For CDC ordering use the base table; for
@@ -109,11 +109,11 @@ This is the join *fact-of-record* for a campaign group's channel margin; it poin
   not assume even coverage across channels or sources.
 
 ## Cost & partitioning notes
-- **No partition** (587-row dimension). Physical base `TABLE` is clustered on
+- **No partition** (624-row dimension). Physical base `TABLE` is clustered on
   `campaign_group_channel_margin_id`. TTL: none.
-- Trivial to scan: `SELECT *` over the full view = **60,760 bytes** (~59 KB, dry-run, all 12 columns).
-  Backing storage `numBytes` = 87,762 bytes (~86 KB). No date filter needed — there is no partition and
-  the table is tiny.
+- Trivial to scan: `SELECT *` over the full view is ~65 KB (dry-run, all 12 columns).
+  Backing storage `numBytes` = 92,880 bytes (~91 KB, 2026-07-29). No date filter needed — there is no
+  partition and the table is tiny.
 - For point lookups, filter/cluster-prune on `campaign_group_channel_margin_id` (PK/cluster col), or
   filter `campaign_group_id` / `advertiser_id` for a group's or advertiser's config.
 
@@ -144,6 +144,7 @@ GROUP BY advertiser_id ORDER BY n_channel_margins DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle in data_catalog.md/data_knowledge.md (name appears only in the silver.core VIEW inventory list) — enriched from LIVE schema + dry-runs + count/distinct queries. Resolved view chain: silver.core.v_… → bronze.integrationprod.core_v_… (VIEW) → SQLMesh physical …__1459569055 (VIEW) → base TABLE dw-main-bronze.integrationprod.core_campaign_group_channel_margins (587 rows, ~86KB, no partition, clustered on campaign_group_channel_margin_id). Confirmed the v_ view is a pure projection dropping only datastream_metadata (NOT a channel-default coalesce). Grain = (campaign_group_id, channel_id); channel_id 8=CTV(585)/1=display(2); margin_source_id 2=MSS on all rows (margin_sources: 1=DTR,2=MSS). No deleted/is_test columns. SENSITIVE: rate values not sampled.
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. Schema unchanged (12 cols); sqlmesh `…__1459569055` SQL re-confirms pure column projection of the base table (no channel-default coalesce). Drift fixed: table grew — 587→**624 rows** (624 PK / 624 (cg,channel) / 612 campaign_groups / 130 advertisers; 612 CTV + 12 display; margin_source still {2}=MSS), backing `numBytes` 87,762→92,880. Grain (PK + (cg,channel) unique) still holds.
 <!-- CHANGELOG END -->
 
 ## View definition

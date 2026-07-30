@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 13
 approx_logical_bytes: 1008
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, reference]
 keywords: [segment_type, segment_type_id, audience, enum, dimension, segmentation_default, intent_tier, control_group, ego, cart]
 source: INFORMATION_SCHEMA+human
@@ -115,6 +115,7 @@ ORDER BY segment_type_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Prose oracle was only a one-line inventory entry in data_catalog.md ("core_segment_types | segment_type_id | Audience segment type ENUM"); enriched from LIVE schema + full 13-row sample. Reconciled: view resolves to physical dw-main-bronze.integrationprod.core_segment_types (TABLE, 13 rows, 1008 B, unpartitioned, cluster=segment_type_id); no deleted/is_test columns; datastream_metadata.source_timestamp = MILLISECONDS (constant load timestamp); full segment_type_id domain decoded; FK segmentation_default_id → core_segmentation_defaults (7-row) and consumer core_audiences.segment_type_id (1:N) established.
+- 2026-07-29: enriched→verified. Re-introspected LIVE source. Zero drift — schema still 5 cols, 13 rows / 1008 B, unpartitioned, cluster=segment_type_id; full 13-row id→name→segmentation_default_id domain re-confirmed identical (non-null seg_default_id on ids 3,4,5,6,7,10,11). schema_synced 2026-07-29.
 <!-- CHANGELOG END -->
 
 ## View definition

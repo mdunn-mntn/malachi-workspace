@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 7
 approx_logical_bytes: 566
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaign-config, enum-dim, funnel-stage]
 keywords: [objective_id, prospecting, retargeting, multi-touch, ego, onsite, funnel_level, campaign-objective, enum-lookup]
 source: INFORMATION_SCHEMA+human
@@ -101,6 +101,7 @@ LIMIT 100
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical to `dw-main-bronze.integrationprod.core_objectives` (TABLE, 7 rows / 566 bytes, no partition, clustered on objective_id, no deleted/is_test/create_time/update_time). Dumped full 7-row enum domain live. Confirmed `datastream_metadata.source_timestamp` = MILLISECONDS empirically. Reconciled prose: data_catalog listed only 3 cols (missing datastream_metadata); id 2 description is NULL (prose said "Onsite = ads on customer's own site"); id 7 name=Ego but description=Retargeting. Carried forward the critical data_knowledge gotcha (objective_id unreliable as stage indicator; funnel_level authoritative; prospecting = IN(1,5,6) / NOT IN(4,7)).
+- 2026-07-29: enriched→verified. Re-introspected live: 4 cols / types / partition(none) / cluster(`objective_id`) / no-TTL / view→`core_objectives` physical all unchanged & correct. Full 7-row enum re-confirmed live (ids 1-7; id2 description NULL; id7 name=Ego/description=Retargeting) — no drift. numRows 7 / numBytes 566 stable. Stage gotcha (objective_id unreliable; funnel_level authoritative) carried forward.
 <!-- CHANGELOG END -->
 
 ## View definition

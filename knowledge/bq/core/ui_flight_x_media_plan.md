@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: core.ui_flight_x_media_plan
-summary: "Junction/bridge dim: one row per UI flight, linking that flight to the media plan it belongs to. Tiny (629 rows). One media_plan spans many flights."
+summary: "Junction/bridge dim: one row per UI flight, linking that flight to the media plan it belongs to. Tiny (1,004 rows). One media_plan spans many flights."
 dataset: core
 table: ui_flight_x_media_plan
 object_type: VIEW
@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [media_plan_id, ui_flight_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 629
-approx_logical_bytes: 49062
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 1004
+approx_logical_bytes: 78312
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [media_planning, flights]
 keywords: [ui_flight, media_plan, bridge, junction, flight_planner, cdc_dim]
 source: INFORMATION_SCHEMA+human
@@ -29,8 +29,8 @@ tags: []
 Association (bridge/junction) dimension that ties a **UI flight** to the **media plan** it lives under. Reach for it when you need to go from a flight (`ui_ui_flights.flight_id`) to its planner-generated media plan (`core.media_plan`) — i.e. to attribute a flight to its plan-level advertiser / campaign-group / publisher-recommendation context, or to find which flights a given media plan produced. It is a thin silver view over the bronze CDC table `dw-main-bronze.integrationprod.core_ui_flight_x_media_plan` (a real physical TABLE, no further view nesting).
 
 ## Grain & keys
-- **Grain:** one row per **`ui_flight_id`** — verified unique (629 rows = 629 distinct `ui_flight_id`). A flight belongs to exactly one media plan.
-- **`media_plan_id`** is **not** unique: 372 distinct plans across the 629 rows, so one media plan links to many flights (~1.7 flights/plan on average). This is the 1:N side.
+- **Grain:** one row per **`ui_flight_id`** — verified unique (1,004 rows = 1,004 distinct `ui_flight_id`, re-verified 2026-07-29). A flight belongs to exactly one media plan.
+- **`media_plan_id`** is **not** unique: 565 distinct plans across the 1,004 rows, so one media plan links to many flights (~1.8 flights/plan on average). This is the 1:N side.
 - **Composite key / cluster key:** `(media_plan_id, ui_flight_id)` — clustered in that order; `ui_flight_id` alone is a sufficient unique key.
 - Both FK columns are **NOT NULL** (0 nulls in either) despite the schema marking them nullable.
 
@@ -51,20 +51,20 @@ Association (bridge/junction) dimension that ties a **UI flight** to the **media
 - **`datastream_metadata.source_timestamp`** — CDC-capture epoch in **milliseconds** (resolved empirically: `TIMESTAMP_MILLIS(1784527746767)` = `2026-07-20 06:09:06`, exactly matching that row's `update_time`; the micros interpretation lands in 1970). It is Datastream capture time, not a business field — prefer `create_time`/`update_time` for business logic. `datastream_metadata.uuid` = CDC change UUID.
 
 ## Joins & relationships
-- **→ `core.media_plan`** on `media_plan_id`. Partner grain: `media_plan_id` is the **unique PK** of `core_media_plan` (1,603 rows, all distinct). This bridge → media_plan is **N:1** (many bridge rows per plan) — **safe, no fan-out**. Going the other way (media_plan → bridge) fans out **1:N** (up to several flights per plan). Only 372 of 1,603 media plans appear in this bridge.
-- **→ `ui_ui_flights`** (bronze `dw-main-bronze.integrationprod.ui_ui_flights`; silver `ui.ui_flights`) on `ui_flight_id = flight_id`. Partner grain: `flight_id` is the **unique PK** of `ui_ui_flights` (352,832 rows, all distinct). Because `ui_flight_id` is also unique here, this join is effectively **1:1** on the matched subset — no fan-out either direction. Only 629 of 352,832 UI flights are linked through this bridge (it covers a small, recent subset — the media-plan/planner feature).
-- **Referential integrity:** 100% — all 629 rows match a live `core_media_plan` row and a live `ui_ui_flights` row.
+- **→ `core.media_plan`** on `media_plan_id`. Partner grain: `media_plan_id` is the **unique PK** of `core_media_plan`. This bridge → media_plan is **N:1** (many bridge rows per plan) — **safe, no fan-out**. Going the other way (media_plan → bridge) fans out **1:N** (up to several flights per plan). Only 565 distinct media plans appear in this bridge.
+- **→ `ui_ui_flights`** (bronze `dw-main-bronze.integrationprod.ui_ui_flights`; silver `ui.ui_flights`) on `ui_flight_id = flight_id`. Partner grain: `flight_id` is the **unique PK** of `ui_ui_flights`. Because `ui_flight_id` is also unique here, this join is effectively **1:1** on the matched subset — no fan-out either direction. Only 1,004 UI flights are linked through this bridge (it covers a small, recent subset — the media-plan/planner feature).
+- **Referential integrity:** 100% — all 1,004 rows match a live `core_media_plan` row and a live `ui_ui_flights` row (re-verified 2026-07-29: 1,004/1,004 on both joins).
 
 ## Gotchas
 - **No `deleted` / `is_test` columns** — unlike most `core.*` dims, this bridge has neither, so there is **no soft-delete filter to apply** (the usual `deleted=FALSE AND is_test=FALSE` does not apply here). Every row is live.
-- **Sparse coverage:** only 629 of 352,832 UI flights are in the bridge. A flight missing from this table simply has no media-plan association — do **not** treat absence as a data error. Use a LEFT JOIN if you need all flights.
+- **Sparse coverage:** only 1,004 UI flights (of the ~350K in `ui_ui_flights`) are in the bridge. A flight missing from this table simply has no media-plan association — do **not** treat absence as a data error. Use a LEFT JOIN if you need all flights.
 - **`media_plan_id` is not unique** — never assume it's a key. Aggregating by `media_plan_id` collapses multiple flights.
 - **`source_timestamp` is milliseconds, not micros** — the common `bronze.raw` / bidder-table micros assumption does not hold; use `TIMESTAMP_MILLIS()`.
 - **`update_time` can appear "in the future"** relative to the query date by a few hours — it is UTC while `create_time` data starts 2025-10-20; just a timezone/clock artifact, not corruption.
 
 ## Cost & partitioning notes
-- **Unpartitioned, and it does not matter.** The entire table is 629 rows / **49,062 bytes** (`bq show` numBytes). A `SELECT *` full scan dry-runs at **49,062 bytes** (all 5 columns) — smaller than BigQuery's 10 MB minimum bill, so it always bills as tier-1 minimum regardless of filter. There is **no partition column** and none is needed.
-- **Cluster key `(media_plan_id, ui_flight_id)`** gives point-lookup pruning by plan or flight, but on a 49 KB table it is immaterial for cost.
+- **Unpartitioned, and it does not matter.** The entire table is 1,004 rows / **78,312 bytes** (`bq show` numBytes). A `SELECT *` full scan dry-runs at ~**78,312 bytes** (all 5 columns) — smaller than BigQuery's 10 MB minimum bill, so it always bills as tier-1 minimum regardless of filter. There is **no partition column** and none is needed.
+- **Cluster key `(media_plan_id, ui_flight_id)`** gives point-lookup pruning by plan or flight, but on a ~76 KB table it is immaterial for cost.
 - The one filter worth applying is a **join predicate**, not a scan filter: always join back to `core.media_plan` (N:1, safe) or `ui.ui_flights` (1:1) rather than reading raw ids.
 
 ## Example queries
@@ -96,6 +96,7 @@ WHERE b.ui_flight_id = <id>;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (only a bare name in the core view inventory); enriched from LIVE schema + empirical queries. Resolved: grain = 1 row/ui_flight_id (unique, 629 rows); media_plan_id 1:N (372 distinct); source_timestamp epoch = milliseconds; both FKs 100% resolve (media_plan N:1 PK, ui_ui_flights 1:1 PK); no deleted/is_test cols; unpartitioned 49,062 bytes (full scan < min bill).
+- 2026-07-29: enriched→verified. Re-introspected LIVE source. Schema unchanged (5 cols, cluster media_plan_id+ui_flight_id, unpartitioned). COUNT DRIFT (natural CDC growth): 629→1,004 rows, 49,062→78,312 B, distinct media_plan_id 372→565 (~1.8 flights/plan). Grain still unique 1/ui_flight_id (1,004=1,004 distinct); RI re-verified 100% (1,004/1,004 match media_plan and ui_ui_flights). Updated counts throughout + front-matter. schema_synced 2026-07-29.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 34410
-approx_logical_bytes: 2408700
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 35146
+approx_logical_bytes: 2460220
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser, beta, dimension, cdc]
 keywords: [beta_advertisers, beta program, advertiser flag, enrollment, membership, datastream cdc, advertiser dimension]
 source: INFORMATION_SCHEMA+human
@@ -30,12 +30,12 @@ Membership/flag dimension: the presence of a row means the advertiser is enrolle
 MNTN's "beta" program. It is a thin silver VIEW (`SELECT *`) over the CDC-replicated
 Postgres dimension `bronze.integrationprod.core_beta_advertisers`. Reach for it when you
 need to know whether a given advertiser is a beta member (join on `advertiser_id`).
-Coverage is near-universal — 34,410 of the 38,421 advertisers in the dimension (~90%)
+Coverage is near-universal — 35,146 of the 39,211 advertisers in the dimension (~90%)
 carry a row — so treat "beta" as a broadly-applied flag, not a small exclusive early-access
 cohort.
 
 ## Grain & keys
-- **Grain:** one row per advertiser. Empirically `n_rows = COUNT(DISTINCT id) = COUNT(DISTINCT advertiser_id) = 34,410` — no duplicate advertisers.
+- **Grain:** one row per advertiser. Empirically `n_rows = COUNT(DISTINCT id) = COUNT(DISTINCT advertiser_id) = 35,146` — no duplicate advertisers.
 - **Surrogate PK:** `id` (also the cluster key).
 - **Business/natural key & FK:** `advertiser_id` → `bronze.integrationprod.advertisers.advertiser_id` (1:1). This is what you join on; it is the value analysts care about.
 
@@ -57,20 +57,20 @@ cohort.
   - `source_timestamp` — **INT64 epoch in MILLISECONDS** (anchor: `TIMESTAMP_MILLIS(source_timestamp)` reproduces `create_time` exactly, e.g. `1784510887978` → `2026-07-20 01:28:07`). This is the source-commit/replication time, not a separate business date.
 
 ## Joins & relationships
-- **`advertiser_id` → `bronze.integrationprod.advertisers` (advertiser_id, PK).** Partner grain: 1 row per advertiser (38,421 rows). Join is **1:1**, no fan-out either direction. beta_advertisers is a ~90% subset of the advertiser dimension.
-  - 34,392 / 34,410 beta rows match the dimension; **18 are orphans** (advertiser_id absent from the current dim — deleted/purged or pre-migration). Use a LEFT join if you need to keep all beta rows.
+- **`advertiser_id` → `bronze.integrationprod.advertisers` (advertiser_id, PK).** Partner grain: 1 row per advertiser (39,211 rows). Join is **1:1**, no fan-out either direction. beta_advertisers is a ~90% subset of the advertiser dimension.
+  - 35,140 / 35,146 beta rows match the dimension; **6 are orphans** (advertiser_id absent from the current dim — deleted/purged or pre-migration). Use a LEFT join if you need to keep all beta rows.
   - Use `advertisers.company_name` for the authoritative advertiser name (this table carries no name).
 - This table itself has **no `deleted` / `is_test` columns** — it cannot self-filter. To restrict to production advertisers, join to `advertisers` and filter `is_test = FALSE` (`deleted = FALSE`).
 
 ## Gotchas
-- **No soft-delete / test flag on this table.** Unlike most `integrationprod` dims, the schema is only `id, advertiser_id, create_time, datastream_metadata` — the usual `deleted=FALSE AND is_test=FALSE` filter cannot be applied here. **2,600 of the 34,410 beta rows point at `is_test = TRUE` advertisers**; join to `advertisers` and filter `is_test = FALSE` to exclude them from production analysis.
+- **No soft-delete / test flag on this table.** Unlike most `integrationprod` dims, the schema is only `id, advertiser_id, create_time, datastream_metadata` — the usual `deleted=FALSE AND is_test=FALSE` filter cannot be applied here. **2,634 of the 35,146 beta rows point at `is_test = TRUE` advertisers**; join to `advertisers` and filter `is_test = FALSE` to exclude them from production analysis.
 - **"Beta" is near-universal (~90% of advertisers), not exclusive.** Don't read a small early-access cohort into this table; membership is broad. Its exact business meaning (which product/feature the "beta" refers to) is not documented in the prose oracle — confirm with the source before attributing behavior to it.
 - **`id` vs `advertiser_id`** — `id` is the enrollment surrogate key (cluster key); joins to the advertiser world must use `advertiser_id`.
-- **18 orphan advertiser_ids** don't resolve to the dimension — inner joins silently drop them.
+- **6 orphan advertiser_ids** don't resolve to the dimension — inner joins silently drop them.
 
 ## Cost & partitioning notes
-- **Unpartitioned dimension.** Physical `dw-main-bronze.integrationprod.core_beta_advertisers` is a plain TABLE (no time partitioning), clustered on `id`, 34,410 rows, **2,408,700 bytes (~2.3 MB) total backing storage**. `require_partition_filter = false` — there is no partition column to filter, and the "always filter the partition" rule does not apply.
-- **Full-scan safe.** `SELECT *` dry-run = **2,408,700 bytes** (= the whole table; column set = all 4 columns). Any query is effectively free (tier-1). Narrow-column queries (e.g. `advertiser_id` only) processed ~0.001 GB in practice. No pruning strategy is needed at this size.
+- **Unpartitioned dimension.** Physical `dw-main-bronze.integrationprod.core_beta_advertisers` is a plain TABLE (no time partitioning), clustered on `id`, 35,146 rows, **2,460,220 bytes (~2.3 MB) total backing storage**. `require_partition_filter = false` — there is no partition column to filter, and the "always filter the partition" rule does not apply.
+- **Full-scan safe.** `SELECT *` reads ≈ **2,460,220 bytes** (= the whole table; column set = all 4 columns). Any query is effectively free (tier-1). Narrow-column queries (e.g. `advertiser_id` only) processed ~0.001 GB in practice. No pruning strategy is needed at this size.
 
 ## Example queries
 ```sql
@@ -101,6 +101,7 @@ WHERE advertiser_id = @advertiser_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical to `bronze.integrationprod.core_beta_advertisers` (TABLE, unpartitioned, cluster=[id], 34,410 rows, 2,408,700 bytes). Grain confirmed 1 row/advertiser (id=advertiser_id distinct). `datastream_metadata.source_timestamp` resolved to MILLISECONDS (= create_time). FK `advertiser_id`→advertisers is 1:1, 18 orphans, 2,600 rows on is_test advertisers. No dedicated prose oracle existed — data_catalog.md only lists the table name in the silver.core inventory (line 1259); enriched from live schema + advertisers-dim join.
+- 2026-07-29: enriched→verified. Re-introspected live: schema/partition/cluster unchanged (4 cols, unpartitioned, cluster=[id], no TTL). CDC table grew — refreshed counts: 34,410→35,146 rows / 2,408,700→2,460,220 B; advertiser dim 38,421→39,211 (beta still ~90%); orphans 18→6; is_test rows 2,600→2,634. Grain (1 row/advertiser) re-confirmed. No structural drift.
 <!-- CHANGELOG END -->
 
 ## View definition

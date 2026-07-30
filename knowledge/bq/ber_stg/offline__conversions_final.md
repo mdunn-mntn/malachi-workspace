@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: "seconds (epoch); microseconds (event_epoch, impression_epoch)"
 ttl_days: null
-approx_rows: 707977
-approx_logical_bytes: 324833970
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 736896
+approx_logical_bytes: 338184960
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: ["conversions", "attribution", "offline-conversions"]
 keywords: ["offline conversions", "call tracking", "view-through attribution", "guid", "hashed_value", "ber staging", "conversions pipeline", "attribution model"]
 source: INFORMATION_SCHEMA+human
@@ -34,7 +34,7 @@ impression and attributed to a campaign/creative. Reach for it to see HOW an off
 was attributed to a specific impression before it is rolled into canonical reporting. **Do NOT use for
 canonical conversion counts** — the durable, deduped conversion of record lives downstream in
 `summarydata.conversions`, and the impression/conversion event record in `logdata.cost_impression_log`.
-Small full snapshot (~708K rows, ~0.32 GB), recomputed by the pipeline (see `run_time`).
+Small full snapshot (~737K rows, ~0.32 GB as of 2026-07-29), recomputed by the pipeline (see `run_time`).
 
 ## Grain & keys
 - **Grain:** one row per **attributed impression touchpoint** for an offline conversion — a conversion
@@ -151,11 +151,11 @@ Small full snapshot (~708K rows, ~0.32 GB), recomputed by the pipeline (see `run
   observed snapshot property, not a guaranteed schema constraint.
 
 ## Cost & partitioning notes
-- **Unpartitioned, unclustered, no TTL.** Physical backing (bq show, 2026-07-20) = 324,833,970 bytes
-  (~0.32 GB / ~310 MB), 707,977 rows.
-- No partition to filter -> the only cost lever is **column projection**. Measured dry-runs (2026-07-20):
-  `SELECT *` = **324.83 MB**; `SELECT order_id` (one narrow col) = **9.40 MB** (~35x cheaper);
-  `WHERE time >= '2026-07-01'` = 324.83 MB (unchanged) — confirms no partitioning. **Always list explicit
+- **Unpartitioned, unclustered, no TTL.** Physical backing (bq show, 2026-07-29) = 338,184,960 bytes
+  (~0.32 GB / ~323 MB), 736,896 rows.
+- No partition to filter -> the only cost lever is **column projection**. Measured dry-runs (2026-07-29):
+  `SELECT *` = **338.18 MB**; `SELECT order_id` (one narrow col) = **9.92 MB** (~34x cheaper). A
+  `WHERE time >= '<date>'` filter does not reduce bytes (no partitioning). **Always list explicit
   columns; avoid `SELECT *`.**
 - Whole table is small enough to full-scan cheaply, but still project only the columns you need.
 
@@ -186,6 +186,7 @@ GROUP BY guid
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Resolved physical (unpartitioned, unclustered, no TTL; 707,977 rows / 324,833,970 bytes). Epoch units: `epoch`=UNIX_SECONDS(time), `event_epoch`/`impression_epoch`=UNIX_MICROS (sub-second). `event_*`==`impression_*` for 100% of rows (view-through). Grain = guid×impression fan-out (avg 2.1, max ~1,898 rows/guid), not deduped. Enum domains from SELECT DISTINCT (conversion_type all call-tracking + `-102`; channel 1/8; attr_model 7/8; conv_source 31/37). No prose oracle existed in data_catalog.md / data_knowledge.md — enriched from live schema + sampling alone.
+- 2026-07-29: enriched→verified. Re-derived from live source. Physical hash `__2948769173` unchanged; still unpartitioned/unclustered/no-TTL; 42-column schema unchanged (names/types match AUTO:SCHEMA exactly). Refreshed counts to 736,896 rows / 338,184,960 bytes (+4% growth) and dry-run cost (SELECT * 338.18 MB; SELECT order_id 9.92 MB). Dated grain-fan-out figures above are the 2026-07-19 snapshot. No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -12,10 +12,10 @@ require_partition_filter: false
 cluster_by: [guid, ga_client_id]
 time_unit: timestamp
 ttl_days: 45
-approx_rows: 3560965855
-approx_logical_bytes: 976108465816
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
+approx_rows: 3571733354
+approx_logical_bytes: 980702933957
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
 coverage_state: enriched
 domain: [identity, aggregates]
 keywords: [guid, identity graph, household graph, ga_client_id, device linkage, ip, original_ip, ua_raw, augmentor, bidder auction, identity team, device-to-device]
@@ -162,7 +162,7 @@ raw guid↔device/IP linkages for a given day rather than the resolved household
   required.
 - `MAX(day)` over all partitions costs ~28.5 GB (scans the `day` column across every partition) — do
   not use it as a cheap freshness probe.
-- Physical backing storage: ~976 GB / ~3.56B rows across the ~45 live partitions.
+- Physical backing storage: ~981 GB / ~3.57B rows across the ~45 live partitions.
 
 ## Example queries
 ```sql
@@ -191,6 +191,7 @@ LIMIT 100;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: verification pass vs live source. Physical hash `__678075530` unchanged; VIEW is `SELECT *` over it. Structure re-confirmed: partition=`day` DAY with 45-day partition expiration (expirationMs 3888000000), cluster=[guid, ga_client_id], requirePartitionFilter=None; all 11 columns match AUTO:SCHEMA. **Drift fixed:** natural growth — approx_rows 3,560,965,855→3,571,733,354, approx_logical_bytes 976,108,465,816→980,702,933,957 (~981 GB); schema_synced→2026-07-29. **Kept coverage_state=enriched:** load-bearing narrative claims (no-share-advertiser filter policy "slated", ~6 h/day runtime, volume-explosion/timeout freshness risk) remain Slack-sourced and not confirmable from cheap metadata; the exact 6-tuple grain would need an expensive full-day distinct scan to re-derive.
 - 2026-07-19: skeleton→enriched. Live-verified physical `..._678075530`: partition=`day` (DAY, empirical 43x prune), cluster=(guid, ga_client_id), TTL=45 days (expirationMs 3.888e9), ~3.56B rows / ~976 GB, require_partition_filter=false. Grain corrected: NOT guid×day — one row per (guid, ip, original_ip, ga_client_id, ua_raw) daily linkage (~1.6 rows/guid/day; 82M rows vs 51M distinct guid on 2026-07-15). Column semantics verified: distinct_seconds ≤ event_count always (=88% of rows); `seconds` native ARRAY<TIMESTAMP> (no epoch); phone 100% NULL + email ~0.7% on sample day; original_ip ~14.5% NULL, ga_client_id ~24% NULL, ip 0% NULL. Prose oracle (data_catalog §silver.aggregates.guid_identity_daily + Identity-team notes) said "maps guid → ip/ga_client_id/device/phone/email" — reconciled: that is the column list, but phone/email are near-empty and the grain is per-linkage not per-guid; also captured 45-day TTL, volume-explosion/timeout freshness risk, no-share filter policy, and Spark/GCS migration, none of which were in the per-table prose.
 - 2026-07-19: fixer pass (two adversarial reviews, both ISSUES). Grain corrected: the 5-tuple stated
   as THE key is NOT unique — the **exact unique key is the 6-tuple** (guid, ip, original_ip,

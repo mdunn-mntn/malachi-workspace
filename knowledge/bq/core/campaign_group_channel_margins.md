@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: core.campaign_group_channel_margins
-summary: "Small CDC pricing dimension — one row per (campaign_group, channel) holding the margin/fee/CPM config (budget_margin, platform_fee, data_margin, target_cpm, ad_buying_cpm). SENSITIVE take-rate table: document schema only, never reproduce rate values."
+summary: "Small CDC pricing dimension (624 rows) — one row per (campaign_group, channel) holding the margin/fee/CPM config (budget_margin, platform_fee, data_margin, target_cpm, ad_buying_cpm). SENSITIVE take-rate table: document schema only, never reproduce rate values."
 dataset: core
 table: campaign_group_channel_margins
 object_type: VIEW
@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [campaign_group_channel_margin_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 587
-approx_logical_bytes: 87762
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 624
+approx_logical_bytes: 92880
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pricing, margins, campaign_group, config]
 keywords: [margin, take_rate, platform_fee, target_cpm, data_margin, ad_buying_cpm, budget_margin, campaign_group, channel, ctv, display, pricing, margin_source]
 source: INFORMATION_SCHEMA+human
@@ -30,7 +30,7 @@ Per-(campaign_group × channel) **pricing/margin configuration**. Holds the take
 that price a campaign group's delivery on a given channel: budget margin, platform fee, data margin,
 target CPM, and the underlying ad-buying (media) CPM. Reach for it when you need the pricing terms in
 force for a campaign group, or to attribute revenue-vs-cost per channel. It is a small CDC dimension
-(587 rows), not an event/log table.
+(624 rows), not an event/log table.
 
 > **SENSITIVE — take rates are private.** This doc describes the schema/grain/keys only. Do NOT print,
 > sample, or reproduce the actual values of `budget_margin`, `platform_fee`, `target_cpm`,
@@ -38,11 +38,11 @@ force for a campaign group, or to attribute revenue-vs-cost per channel. It is a
 > uses the media/data-spend lenses, not these rate columns (see memory `feedback_take_rates_sensitive`).
 
 ## Grain & keys
-- **Grain:** one row per **(campaign_group_id, channel_id)** margin configuration. Verified: 587 rows,
-  587 distinct `(campaign_group_id, channel_id)` pairs — the pair is unique. `campaign_group_id` alone
-  is NOT unique (585 distinct) because 2 campaign groups carry a row for both channels (CTV + display).
-  Spans 119 advertisers.
-- **Surrogate PK:** `campaign_group_channel_margin_id` — unique (587 distinct = row count); the cluster key.
+- **Grain:** one row per **(campaign_group_id, channel_id)** margin configuration. Verified: 624 rows,
+  624 distinct `(campaign_group_id, channel_id)` pairs — the pair is unique. `campaign_group_id` alone
+  is NOT unique (612 distinct) because 12 campaign groups carry a row for both channels (CTV + display).
+  Spans 130 advertisers.
+- **Surrogate PK:** `campaign_group_channel_margin_id` — unique (624 distinct = row count); the cluster key.
 - **Natural key / join columns:** `(campaign_group_id, channel_id)`; also filter/join by `advertiser_id`.
 - **No soft-delete or test flags:** this table has **no `deleted` and no `is_test` column** — the
   standard `deleted=FALSE AND is_test=FALSE` dimension filter does **not** apply here (nothing to filter).
@@ -67,7 +67,7 @@ force for a campaign group, or to attribute revenue-vs-cost per channel. It is a
 
 ## Column meanings (only the non-obvious ones)
 - `campaign_group_channel_margin_id` — surrogate PK (unique); the physical cluster key.
-- `channel_id` — standard MNTN channel enum: **8 = CTV** (585 rows), **1 = display** (2 rows). Determines
+- `channel_id` — standard MNTN channel enum: **8 = CTV** (612 rows), **1 = display** (12 rows). Determines
   which channel these margin terms price. (No dedicated `channels` dim in `core`; this is the same enum
   used across the stack — `channel_id` 8=CTV / 1=display.)
 - `margin_source_id` — FK to `core_margin_sources`. Domain there = **{1: DTR, 2: MSS}**. Every current
@@ -84,7 +84,7 @@ force for a campaign group, or to attribute revenue-vs-cost per channel. It is a
 
 ## Joins & relationships
 - `advertiser_id` → `core.advertisers` (`advertiser_id` PK). **N:1** (many margin rows per advertiser,
-  119 advertisers over 587 rows). Joining advertisers onto this table is fan-out-safe (1 advertiser row per margin row).
+  130 advertisers over 624 rows). Joining advertisers onto this table is fan-out-safe (1 advertiser row per margin row).
 - `campaign_group_id` → `core.campaign_groups` (`campaign_group_id` PK). This table is ~1 row per
   (group, channel), so a group can map to **up to N rows here (currently max 2, one per channel)** —
   joining `campaign_groups → this table` can **fan out ≤2×**; the reverse (`this → campaign_groups`) is
@@ -94,9 +94,14 @@ force for a campaign group, or to attribute revenue-vs-cost per channel. It is a
 
 ## Gotchas
 - **SENSITIVE take-rate table** — see the boxed warning under Purpose; never emit rate values or example rows.
-- **CTV-dominant:** 585 of 587 rows are `channel_id=8` (CTV); only 2 display rows. Do not assume display coverage.
+- **CTV-dominant:** 612 of 624 rows are `channel_id=8` (CTV); only 12 display rows. Do not assume display coverage.
 - **`campaign_group_id` is NOT unique** — always key on `(campaign_group_id, channel_id)` (or the surrogate
-  PK). Joining on `campaign_group_id` alone will duplicate the 2 dual-channel groups.
+  PK). Joining on `campaign_group_id` alone will duplicate the 12 dual-channel groups.
+- **Bronze physical has 2 columns the silver view does not expose.** The bronze `core_campaign_group_channel_margins`
+  now carries `user_id` (INT) and `margin_reason_id` (INT), each populated on ~11/624 rows. The silver
+  `core.campaign_group_channel_margins` view is a `SELECT *` whose output schema was frozen at 13 columns at
+  creation, so these two never surface through the view (AUTO:SCHEMA = 13 cols is correct). Query the bronze
+  table directly if you need them.
 - **No `deleted`/`is_test` columns** — the reflexive `deleted=FALSE AND is_test=FALSE` core-dim filter
   will error here; there is no soft-delete to apply.
 - **`source_timestamp` is ingestion time, not business time** — in ms; use `update_time` for change recency.
@@ -107,10 +112,10 @@ force for a campaign group, or to attribute revenue-vs-cost per channel. It is a
   no TTL/expiration. Clustered on `campaign_group_channel_margin_id` only — clustering prunes by the
   surrogate PK, so `advertiser_id`/`campaign_group_id` filters do NOT prune. That's fine: the whole table
   is tiny, so there is no partition filter to "always apply."
-- **Cost:** `SELECT *` (all columns, full table) = **87,762 bytes** (dry-run, whole table) ≈ 0.01 GB
+- **Cost:** `SELECT *` (all columns, full table) ≈ **92,880 bytes** (whole table) ≈ 0.01 GB
   billed (tier-1 minimum). Grain/enum-only aggregate scans measured 0.01 GB billed. Full scans are free
   in practice; optimize for correctness, not bytes.
-- `approx_logical_bytes` = 87,762 (bq show `numBytes` on the physical bronze table).
+- `approx_logical_bytes` = 92,880 (bq show `numBytes` on the physical bronze table).
 
 ## Example queries
 ```sql
@@ -135,6 +140,7 @@ WHERE campaign_group_id = <cg_id>;   -- returns ≤2 rows (one per channel)
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle existed (table only appears in the data_catalog.md core inventory list, no `##` section; nothing in data_knowledge.md). Enriched from LIVE schema + physical bronze introspection. Confirmed: physical `core_campaign_group_channel_margins` is a plain TABLE (587 rows, 87,762 B), unpartitioned, clustered on `campaign_group_channel_margin_id`, no TTL, no `deleted`/`is_test` cols. Grain = (campaign_group_id, channel_id) (587 unique); PK unique. channel_id {8=CTV:585, 1=display:2}; margin_source_id all=2 (MSS), domain {1:DTR,2:MSS} from core_margin_sources. source_timestamp epoch = MILLISECONDS (≈ UNIX_MILLIS(update_time)). SENSITIVE take-rate table — schema documented, rate values not sampled.
+- 2026-07-29: enriched→verified. Re-introspected live: silver view schema matches AUTO:SCHEMA (13 cols); partition/cluster/TTL unchanged (unpartitioned, cluster=campaign_group_channel_margin_id, no TTL). CDC grew — refreshed counts (IDs only, no rate values): 587→624 rows / 87,762→92,880 B; distinct cg 585→612; advertisers 119→130; CTV/display 585/2→612/12; 12 dual-channel groups. margin_source_id still all=2 (MSS). Grain (cg, channel) re-confirmed unique. New: bronze physical added user_id + margin_reason_id (INT, ~11/624 populated) NOT exposed by the frozen SELECT* silver view — added as a gotcha; AUTO:SCHEMA stays 13 cols.
 <!-- CHANGELOG END -->
 
 ## View definition

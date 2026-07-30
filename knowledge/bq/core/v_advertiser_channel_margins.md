@@ -9,14 +9,14 @@ physical_table: dw-main-bronze.integrationprod.core_advertiser_channel_margins
 grain: "one row per (advertiser_id, channel_id) margin config; PK advertiser_channel_margin_id"
 partition_by: none
 require_partition_filter: false
-cluster_by: []
+cluster_by: [advertiser_channel_margin_id]
 time_unit: timestamp
 ttl_days: null
 approx_rows: 5866
 approx_logical_bytes: 616092
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [margins, pricing, advertiser_dimension]
 keywords: [advertiser_channel_margins, budget_margin, data_margin, platform_fee, target_cpm, ad_buying_cpm, partner_id, channel_id, ctv, display, take_rate]
 source: INFORMATION_SCHEMA+human
@@ -71,7 +71,7 @@ Per-advertiser, per-channel margin/pricing configuration — the take-rate and C
 - **SENSITIVE — take rates.** `budget_margin`, `data_margin`, `platform_fee`, `target_cpm`, `ad_buying_cpm` are private margin economics. Never export, share externally, or reproduce example rows containing these values (take rates are private per workspace policy).
 
 ## Cost & partitioning notes
-- Tiny dimension — **no partition, no cluster, no TTL, no `require_partition_filter`**. Whole-view scans are trivially cheap; no filter is required for cost reasons.
+- Tiny dimension — **no partition, no TTL, no `require_partition_filter`**. The physical base `core_advertiser_channel_margins` is **clustered on `advertiser_channel_margin_id`** (the PK) for point lookups; the silver view is not itself clustered. Whole-view scans are trivially cheap; no filter is required for cost reasons.
 - `SELECT *` dry-run = **346,443 bytes (~0.33 MB, upper bound)** [full-row column set].
 - Real backing storage: base table `core_advertiser_channel_margins` `numBytes` = **616,092 bytes (~0.6 MB)**; `numRows` = 5,866. The view and its lookup partners add no material physical storage.
 - Resolution chain: `silver.core.v_advertiser_channel_margins` → `dw-main-bronze.integrationprod.core_v_advertiser_channel_margins` (view) → `sqlmesh__integrationprod.integrationprod__core_v_advertiser_channel_margins__839763578` (derived view: injects partner_id=8, LEFT JOINs channel margins) → base TABLE `dw-main-bronze.integrationprod.core_advertiser_channel_margins`.
@@ -103,6 +103,7 @@ WHERE m.advertiser_id = <AID>;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle existed (table only listed in the core VIEW inventory at data_catalog.md:1270; no data_knowledge.md entry) — enriched from LIVE schema + resolved view definition. Reconciled drift: the inventory implies a thin passthrough of one CDC table, but the view is DERIVED — it hardcodes `partner_id = 8` (base table has no partner_id) and backfills `ad_buying_cpm` via a 1:1 LEFT JOIN to channel-level margins. Grain (advertiser_id, channel_id) and 1:1 join (no fan-out) verified empirically (5,866 rows both sides). Base has no deleted/is_test columns. Flagged SENSITIVE (take rates) — schema documented, no values sampled.
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. Schema unchanged (11 cols). Re-resolved chain: silver view → bronze `core_v_advertiser_channel_margins` → sqlmesh `…__839763578` (SQL confirms `8 AS partner_id` literal + `coalesce(ad_buying_cpm, target_cpm * vcm.budget_margin)` via LEFT JOIN to channel margins on partner_id=8 + `CAST(... AS NUMERIC)` on platform_fee/target_cpm/data_margin) → base TABLE `core_advertiser_channel_margins` (5,866 rows / 616,092 B). Drift fixed: base is **clustered on advertiser_channel_margin_id** — front-matter `cluster_by` and Cost note corrected (previously said "no cluster").
 <!-- CHANGELOG END -->
 
 ## View definition

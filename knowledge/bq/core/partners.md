@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 79
 approx_logical_bytes: 7326
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reference, programmatic-supply, partners]
 keywords: [partner_id, partner_type_id, exchange, ssp, dsp, mmp, inventory, private_marketplace_deals, campaigns, sovrn, fmx]
 source: INFORMATION_SCHEMA+human
@@ -127,6 +127,7 @@ WHERE c.deleted = FALSE AND c.is_test = FALSE;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live: schema (6 cols), unpartitioned, cluster=[partner_id], no TTL all unchanged; 79 rows / 7,326 B stable. partner_type_id domain {1,2,3} and partner_id 68=Sovrn confirmed vs source. Silver view still `SELECT * FROM bronze.integrationprod.core_partners`.
 - 2026-07-19: skeleton→enriched. Resolved physical to `bronze.integrationprod.core_partners` (79 rows / 7,326 B, unpartitioned, clustered on partner_id). Derived partner_type_id domain {1=demand/social, 2=SSP/exchange, 3=MMP} from live DISTINCT + name samples. Resolved datastream_metadata.source_timestamp = MILLISECONDS (single snapshot constant, not business time). Reconciled prose drift: (a) prose oracle (data_catalog L2032) listed only "exchange partner" — clarified it also covers DSP/social + MMP types; (b) flagged the core.partners-vs-tpa.direct_data_partners distinction (Sovrn = partner_id 68 here vs data_source_id 33 there); (c) noted no deleted/is_test columns so the standard live-row filter does not apply.
 <!-- CHANGELOG END -->
 

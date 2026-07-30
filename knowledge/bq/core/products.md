@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 3
 approx_logical_bytes: 235
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [product, dimension, lookup]
 keywords: [products, product_id, PTV, Select, QuickFrame, product_line, campaign_groups, dimension, lookup]
 source: INFORMATION_SCHEMA+human
@@ -120,6 +120,7 @@ SELECT product_id, name FROM `core.products` ORDER BY product_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved view→physical TABLE `dw-main-bronze.integrationprod.core_products` (3 rows / 235 bytes, no partition, cluster=[product_id]). Confirmed empirically: 3 product lines (1=PTV/2=Select/3=QuickFrame); `datastream_metadata.source_timestamp` = milliseconds (UNIX_MILLIS of CDC capture); no `deleted`/`is_test` columns. Prose oracle = data_catalog.md §bronze.integrationprod.core_products + data_knowledge.md §"MNTN Product Identification" — reconciled with no conflict; added the drift note that `create_time`/`update_time` are CDC-replication stamps (all 2025-03-18), NOT product-launch age.
+- 2026-07-29: enriched→verified. Re-introspected LIVE source. Zero drift — schema still 5 cols, 3 rows / 235 B, unpartitioned, cluster=[product_id]; product-line domain re-confirmed {1=PTV,2=Select,3=QuickFrame}. schema_synced 2026-07-29.
 <!-- CHANGELOG END -->
 
 ## View definition

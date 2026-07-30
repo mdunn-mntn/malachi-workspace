@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: core.private_marketplace_groups
-summary: "Small named catalog of PMP (private-marketplace) inventory groups — premium exclusive/tentpole CTV deal packages (WBD/NBC, FIFA/NASCAR/Tour de France). Thin silver view over the unpartitioned bronze CDC dimension core_private_marketplace_groups. 145 rows, one per PMP group."
+summary: "Small named catalog of PMP (private-marketplace) inventory groups — premium exclusive/tentpole CTV deal packages (WBD/NBC, FIFA/NASCAR/Tour de France). Thin silver view over the unpartitioned bronze CDC dimension core_private_marketplace_groups. 146 rows, one per PMP group."
 dataset: core
 table: private_marketplace_groups
 object_type: VIEW
@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [private_marketplace_group_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 145
-approx_logical_bytes: 19895
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 146
+approx_logical_bytes: 20041
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [select, pmp, inventory]
 keywords: [private marketplace, pmp, select, exclusive deal, tentpole, deal hierarchy, ctv inventory, beeswax, dsp partner, dimension]
 source: INFORMATION_SCHEMA+human
@@ -30,7 +30,7 @@ Small named **catalog of PMP (private-marketplace) inventory groups** — the pr
 exclusive/tentpole deal packages MNTN buys against. Rows are curated bundles like
 `WBD-Game of Thrones Universe`, `NBC-FIFA World Cup 2026`, `WBD-AMSOIL INC: NASCAR Cup Series 2026`,
 `MNTN_Display Deals`. Names typically encode `Publisher-Advertiser: Event`. Overwhelmingly CTV
-(`channel_id=8`, 142/145). This is deal-catalog metadata, **not** delivery/spend — reach for it to
+(`channel_id=8`, 143/146). This is deal-catalog metadata, **not** delivery/spend — reach for it to
 enumerate or label the exclusive-inventory groups available to MNTN Select / Pause Ads, and to look
 up which DSP partner (Beeswax vs MNTN Bidder) and deal type an inventory group carries. It is one of
 the "PMP hierarchy" reference tables (`private_marketplace_families`, `_groups`, `_deals`, `_levels`)
@@ -38,7 +38,7 @@ noted in `data_knowledge.md` under MNTN Select. A thin silver passthrough view; 
 Postgres-CDC dimension `bronze.integrationprod.core_private_marketplace_groups`.
 
 ## Grain & keys
-- **Grain:** one row per PMP inventory group. 145 rows, `private_marketplace_group_id` unique (145/145) — no duplicates, no fan-out on the PK.
+- **Grain:** one row per PMP inventory group. 146 rows, `private_marketplace_group_id` unique (146/146) — no duplicates, no fan-out on the PK.
 - **Primary key:** `private_marketplace_group_id`.
 - **Foreign keys:** `private_marketplace_level_id` → `core_private_marketplace_levels.id`; `dsp_partner_id` → `core_partners.partner_id`; `user_id` → application user (creator/owner). `advertiser_id` / `campaign_group_id` are declared FK columns but **100% NULL** (see Gotchas — a consequence of every row being level=global). `channel_id` uses the standard channel enum.
 - **No `deleted` / `is_test` columns** on this dimension — the usual `deleted=FALSE AND is_test=FALSE` live-row filter does **not** apply here (and cannot be used).
@@ -68,18 +68,18 @@ Postgres-CDC dimension `bronze.integrationprod.core_private_marketplace_groups`.
 <!-- AUTO:SCHEMA END -->
 
 ## Column meanings (only the non-obvious ones)
-- **`private_marketplace_level_id`** — scope level; FK to `core_private_marketplace_levels` (id→name: `1=global`, `2=advertiser`, `3=campaign_group`). **All 145 rows are level 1 = global.** The level dictates which scope column is populated: at `global`, both `advertiser_id` and `campaign_group_id` stay NULL; they'd only fill at level 2 / 3 respectively. This is *why* those two columns are entirely empty today.
-- **`advertiser_id`, `campaign_group_id`** — **100% NULL** (145/145). Declared scope columns, unused because every current group is global-scope. Do **not** join delivery through these; the advertiser is encoded in the group `name` string, not this column.
-- **`channel_id`** — standard channel enum: `8`=CTV (142 rows), `1`=display (2), `3`=(1). Predominantly CTV.
-- **`partnership_deal_type`** — STRING, single observed value `EXCLUSIVE` (111 rows) or NULL (34). Marks the group as exclusive/reserved inventory vs a plain (untyped/NULL) group.
-- **`dsp_partner_id`** — FK to `core_partners.partner_id`; the DSP/bidder that serves the inventory. Observed: `8`=Beeswax (118 rows, the WBD/NBC exclusives), `79`=MNTN Bidder (5 rows, `MNTN_Display Deals`), NULL (22).
-- **`private_marketplace_group_type_id`** — **100% NULL** on all 145 rows; the type dimension is unused for this table.
+- **`private_marketplace_level_id`** — scope level; FK to `core_private_marketplace_levels` (id→name: `1=global`, `2=advertiser`, `3=campaign_group`). **All 146 rows are level 1 = global.** The level dictates which scope column is populated: at `global`, both `advertiser_id` and `campaign_group_id` stay NULL; they'd only fill at level 2 / 3 respectively. This is *why* those two columns are entirely empty today.
+- **`advertiser_id`, `campaign_group_id`** — **100% NULL** (146/146). Declared scope columns, unused because every current group is global-scope. Do **not** join delivery through these; the advertiser is encoded in the group `name` string, not this column.
+- **`channel_id`** — standard channel enum: `8`=CTV (143 rows), `1`=display (2), `3`=(1). Predominantly CTV.
+- **`partnership_deal_type`** — STRING, single observed value `EXCLUSIVE` (112 rows) or NULL (34). Marks the group as exclusive/reserved inventory vs a plain (untyped/NULL) group.
+- **`dsp_partner_id`** — FK to `core_partners.partner_id`; the DSP/bidder that serves the inventory. Observed: `8`=Beeswax (119 rows, the WBD/NBC exclusives), `79`=MNTN Bidder (5 rows, `MNTN_Display Deals`), NULL (22).
+- **`private_marketplace_group_type_id`** — **100% NULL** on all 146 rows; the type dimension is unused for this table.
 - **`min_budget` / `max_budget`** (NUMERIC) — group-level budget band; **almost always NULL** (min NULL 144/145, max NULL 143/145). Not a reliable field.
-- **`pmp_threshold_floor` / `pmp_threshold_ceiling`** (INT) — bid/price threshold band; `pmp_threshold_ceiling` is **100% NULL** (145/145), `pmp_threshold_floor` NULL 143/145. Effectively unpopulated.
+- **`pmp_threshold_floor` / `pmp_threshold_ceiling`** (INT) — bid/price threshold band; `pmp_threshold_ceiling` is **100% NULL** (146/146), `pmp_threshold_floor` NULL 144/146. Effectively unpopulated.
 - **`start_time` / `end_time`** (TIMESTAMP) — group flight window; mostly NULL (start NULL 131/145, end NULL 144/145). Sparse — do not rely on for active-window filtering.
-- **`create_time` / `update_time`** (TIMESTAMP, native) — record lifecycle. `create_time` spans 2023-06-30 → 2026-07-17, so PMP groups **predate MNTN Select** (which started 2025-07-31). Prefer these over the CDC epoch below for business time.
+- **`create_time` / `update_time`** (TIMESTAMP, native) — record lifecycle. `create_time` spans 2023-06-30 → 2026-07-23, so PMP groups **predate MNTN Select** (which started 2025-07-31). Prefer these over the CDC epoch below for business time.
 - **`datastream_metadata.source_timestamp`** (INT64) — Datastream CDC WAL-capture epoch in **milliseconds** (13-digit; verified `MAX(source_timestamp)=1784321131263` ≈ `MAX(UNIX_MILLIS(update_time))=1784321131260`, whereas `UNIX_MICROS` is 16-digit). This is the replication event time, **not** business time — use `update_time`. `datastream_metadata.uuid` = replication event id.
-- **`user_id`** — creating/owning application user; never NULL (0/145).
+- **`user_id`** — creating/owning application user; never NULL (0/146).
 
 ## Joins & relationships
 - **`private_marketplace_level_id` → `core_private_marketplace_levels.id`** — 1:1 to a 3-row lookup (`global` / `advertiser` / `campaign_group`). No fan-out.
@@ -88,7 +88,7 @@ Postgres-CDC dimension `bronze.integrationprod.core_private_marketplace_groups`.
 - **Campaign-group linkage lives elsewhere.** Per `data_knowledge.md`, the group↔deal↔campaign_group mapping is via `core_private_marketplace_deals` (has `campaign_group_id`) and the junction `core_campaign_group_x_private_marketplace_deals` (`campaign_group_id`↔`private_marketplace_deal_id`, N:M) — not through this table. Deal-attachment is also **not** a clean MNTN-Select proxy (28 PTV/Pause-Ads groups also carry PMP deals).
 
 ## Gotchas
-- **`advertiser_id` and `campaign_group_id` are 100% NULL** — not a data-quality bug; every row is level=global so the scoped columns are unused. Never join delivery/spend through them.
+- **`advertiser_id` and `campaign_group_id` are 100% NULL (146/146)** — not a data-quality bug; every row is level=global so the scoped columns are unused. Never join delivery/spend through them.
 - **`private_marketplace_group_type_id` and `pmp_threshold_ceiling` are 100% NULL**; `min_budget`, `max_budget`, `pmp_threshold_floor`, `start_time`, `end_time` are ~99% NULL. Treat these as effectively unpopulated — the meaningful populated columns are `private_marketplace_group_id`, `name`, `channel_id`, `dsp_partner_id`, `partnership_deal_type`, `create_time`, `update_time`, `user_id`.
 - **No `deleted` / `is_test` columns** — you cannot apply the standard live-row filter; every row in the table is "live." (Some ENG/QA test groups exist by name, e.g. `WBD-NASCAR ENG TEST` — filter by name if excluding tests.)
 - **No FK from deals to groups** — do not fabricate a `private_marketplace_group_id` join into `core_private_marketplace_deals`; it doesn't exist.
@@ -96,8 +96,8 @@ Postgres-CDC dimension `bronze.integrationprod.core_private_marketplace_groups`.
 - **Group `name` encodes the advertiser/event**, not a structured column — parse the string (`Publisher-Advertiser: Event`) if you need advertiser attribution, and treat it as unstructured.
 
 ## Cost & partitioning notes
-- **Unpartitioned, tiny dimension** (physical `numBytes` = 19,895 B ≈ 19.4 KiB, 145 rows). `timePartitioning=None`; clustered on `private_marketplace_group_id` only. `require_partition_filter=false` — there is no partition column to filter, and none is needed.
-- **`SELECT *` scans the whole table:** dry-run = **19,895 bytes** (full-column SELECT * on the silver view = physical numBytes; billed at the 10 MB tier-1 minimum ≈ 0.01 GB). No pruning is possible or necessary — cost is negligible; safe to `SELECT *` without a date filter.
+- **Unpartitioned, tiny dimension** (physical `numBytes` = 20,041 B ≈ 19.6 KiB, 146 rows). `timePartitioning=None`; clustered on `private_marketplace_group_id` only. `require_partition_filter=false` — there is no partition column to filter, and none is needed.
+- **`SELECT *` scans the whole table:** dry-run = **20,041 bytes** (full-column SELECT * on the silver view = physical numBytes; billed at the 10 MB tier-1 minimum ≈ 0.01 GB). No pruning is possible or necessary — cost is negligible; safe to `SELECT *` without a date filter.
 - The silver view is a thin `SELECT * FROM dw-main-bronze.integrationprod.core_private_marketplace_groups` passthrough (no SQLMesh; the physical is a real TABLE, not a versioned hash).
 
 ## Example queries
@@ -132,6 +132,7 @@ JOIN `core.private_marketplace_levels` l ON g.private_marketplace_level_id = l.i
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live: 19-col schema, unpartitioned, cluster=[private_marketplace_group_id], no deleted/is_test/TTL unchanged. Grew 145→146 rows / 20,041 B. All claims re-confirmed vs source: PK unique, all rows level=global, advertiser_id/campaign_group_id/group_type_id/pmp_threshold_ceiling 100% NULL, channel_id 8=CTV(143)/1(2)/3(1), partnership_deal_type EXCLUSIVE(112)/NULL(34), dsp_partner_id 8=Beeswax(119)/79=MNTN Bidder(5)/NULL(22), user_id never NULL. Silver view still `SELECT * FROM bronze.integrationprod.core_private_marketplace_groups`.
 - 2026-07-19: skeleton→enriched. Resolved physical (unpartitioned bronze CDC dim, 145 rows, 19,895 B, cluster=private_marketplace_group_id, no deleted/is_test). Confirmed PK unique; enums via SELECT DISTINCT (level 1=global all rows; channel 8=CTV dominant; partnership_deal_type∈{EXCLUSIVE,NULL}; dsp_partner 8=Beeswax/79=MNTN Bidder); datastream_metadata.source_timestamp = epoch ms. Prose oracle: no dedicated data_catalog.md section (table only listed in core inventory + data_knowledge.md PMP-hierarchy note); enriched primarily from live schema. Drift reconciled: (a) advertiser_id/campaign_group_id are 100% NULL (level=global), so this table is NOT the campaign_group join path — that lives in core_private_marketplace_deals + core_campaign_group_x_private_marketplace_deals; (b) deals table has NO private_marketplace_group_id FK, so groups is a standalone catalog, not a strict parent of deals.
 <!-- CHANGELOG END -->
 

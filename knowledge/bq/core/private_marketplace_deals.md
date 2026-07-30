@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [private_marketplace_deal_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 1072
-approx_logical_bytes: 239619
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 1073
+approx_logical_bytes: 239903
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pmp, deals, supply, inventory, ctv]
 keywords: [private marketplace, pmp, deal, beeswax, exchange, floor price, publisher, ssp, pub_direct, partner, dsp]
 source: INFORMATION_SCHEMA+human
@@ -34,10 +34,10 @@ exist, on which exchange, at what floor, for which channel." Not built by MNTN �
 from the platform config DB (deals originate from Beeswax/exchanges). Tiny (~1,072 rows).
 
 ## Grain & keys
-- **Grain:** one row per `private_marketplace_deal_id` (verified: 1,072 rows = 1,072 distinct
+- **Grain:** one row per `private_marketplace_deal_id` (verified: 1,073 rows = 1,073 distinct
   `private_marketplace_deal_id`). No history/versioning — this is the current-state config row per deal.
 - **Primary key:** `private_marketplace_deal_id` (also the physical cluster key).
-- **Alternate key:** `partner_deal_id` is 1:1 with the PK (1,072 distinct) — the exchange-side deal id
+- **Alternate key:** `partner_deal_id` is 1:1 with the PK (1,073 distinct) — the exchange-side deal id
   string used to match against `impression_log.private_marketplace_id` / augmentor-log PMP fields.
 - **No `deleted` / `is_test` columns** on this dim (unlike most integrationprod tables) — do NOT add the
   standard `deleted=FALSE AND is_test=FALSE` filter; it will error. Liveness is expressed by `active` +
@@ -77,31 +77,31 @@ from the platform config DB (deals originate from Beeswax/exchanges). Tiny (~1,0
 - **`partner_deal_id`** — exchange/SSP-side deal id string; the value that shows up as `private_marketplace_id`
   on impression/augmentor rows. Join on this (not the internal `private_marketplace_deal_id`) to reconcile
   logs to config.
-- **`advertiser_id` — empirically ALWAYS NULL (1,072/1,072).** Do NOT use this column to attribute a deal
+- **`advertiser_id` — empirically ALWAYS NULL (1,073/1,073).** Do NOT use this column to attribute a deal
   to an advertiser; it is not populated at the deal-config grain. See Joins for where the binding lives.
-- **`campaign_group_id` — empirically NULL for 1,071/1,072 rows.** Same warning as `advertiser_id`; not the
+- **`campaign_group_id` — empirically NULL for 1,072/1,073 rows.** Same warning as `advertiser_id`; not the
   join path despite what older catalog prose implied.
 - **`private_marketplace_family_id`** — groups deals into a family/bundle (21 distinct families; set on only
-  94/1,072 rows, NULL otherwise). The advertiser/campaign-group binding happens at this family/group level,
+  94/1,073 rows, NULL otherwise). The advertiser/campaign-group binding happens at this family/group level,
   not per-deal (see Joins).
-- **`private_marketplace_level_id`** — deal-scope enum; 1 = the ordinary per-deal level (1,071/1,072), 3 = one
+- **`private_marketplace_level_id`** — deal-scope enum; 1 = the ordinary per-deal level (1,072/1,073), 3 = one
   outlier row (rare higher-level scope). Effectively constant.
 - **`floor_price`** (NUMERIC) — the deal's bid-floor CPM (exchange-side price floor); always populated. This
   is an inventory price floor, not an MNTN margin/take-rate.
-- **`pricing_model`** (STRING) — how the deal is priced: `FIXED` (887), `BIDDABLE` (119), NULL (66).
-- **`partnership_deal_type`** (STRING) — supply-path type: `PUB_DIRECT` (664, publisher-direct), `SSP` (166),
+- **`pricing_model`** (STRING) — how the deal is priced: `FIXED` (888), `BIDDABLE` (119), NULL (66).
+- **`partnership_deal_type`** (STRING) — supply-path type: `PUB_DIRECT` (665, publisher-direct), `SSP` (166),
   `EXCLUSIVE` (153), NULL (89).
 - **`deal_type_id`** — empirically constant = 2 for every row (single-value enum in current data).
 - **`channel_id`** — empirically constant = 8 = **CTV** for every row (all PMP deals here are CTV/OTT; 8=CTV
   per the platform channel convention, 1=display).
 - **`partner_id`** — exchange/SSP partner id (FK to a partners lookup; many values, top: 12, 13, 19, 61, 11…).
-- **`dsp_partner_id`** — DSP partner id: 8 (836, the dominant Beeswax path), 79 (178), 2 (57), NULL (1).
-- **`publisher_id`** — publisher FK; set on only 136/1,072 rows (mostly NULL — populated for publisher-direct deals).
-- **`min_budget` / `max_budget`** (NUMERIC) — deal budget bounds; set on only 14/1,072 rows (almost always NULL).
-- **`active`** (BOOL) — soft on/off flag: 416 TRUE / 656 FALSE. Not a delete; combine with the
+- **`dsp_partner_id`** — DSP partner id: 8 (836, the dominant Beeswax path), 79 (179), 2 (57), NULL (1).
+- **`publisher_id`** — publisher FK; set on only 136/1,073 rows (mostly NULL — populated for publisher-direct deals).
+- **`min_budget` / `max_budget`** (NUMERIC) — deal budget bounds; set on only 14/1,073 rows (almost always NULL).
+- **`active`** (BOOL) — soft on/off flag: 411 TRUE / 662 FALSE. Not a delete; combine with the
   `start_time`/`end_time` window for true liveness.
 - **`user_id` / `audit_user_id`** — platform user who owns / last edited the deal (FK to users; not analytics-relevant).
-- **`create_time` / `update_time`** (native TIMESTAMP, UTC) — config create / last-modified; range 2021-12-15 → 2026-07-17.
+- **`create_time` / `update_time`** (native TIMESTAMP, UTC) — config create / last-modified; range 2021-12-15 → 2026-07-30.
   Prefer these for business time.
 - **`datastream_metadata.source_timestamp`** — CDC-capture epoch in **MILLISECONDS** (resolved: `TIMESTAMP_MILLIS(source_timestamp)`
   == `update_time` exactly; `TIMESTAMP_MICROS` yields 1970). It is CDC replication time, NOT business time — use
@@ -141,7 +141,7 @@ from the platform config DB (deals originate from Beeswax/exchanges). Tiny (~1,0
   (e.g. `'%nba%'` for sports); no controlled vocabulary.
 
 ## Cost & partitioning notes
-- **Unpartitioned, tiny dimension** — no partition trap. Physical `core_private_marketplace_deals` is ~1,072
+- **Unpartitioned, tiny dimension** — no partition trap. Physical `core_private_marketplace_deals` is ~1,073
   rows / ~234 KB, clustered on `private_marketplace_deal_id`. A full `SELECT *` here billed the 10 MB minimum
   (dry-run showed 0 GB processed / 0.01 GB billed) — scanning the whole table is free-tier cheap.
 - **The one filter that matters is on the JOIN partner, not this table** — when joining to impression/augmentor
@@ -175,6 +175,7 @@ WHERE g.advertiser_id = <AID>;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-introspected live: 25-col schema, unpartitioned, cluster=[private_marketplace_deal_id], no deleted/is_test/TTL unchanged. Grew 1,072→1,073 rows / 239,903 B. All claims re-confirmed vs source: advertiser_id 100% NULL, campaign_group_id 1,072/1,073 NULL, channel_id≡8 (CTV), deal_type_id≡2, pricing_model FIXED(888)/BIDDABLE(119)/NULL(66), partnership_deal_type PUB_DIRECT(665)/SSP(166)/EXCLUSIVE(153)/NULL(89), active 411T/662F, family_id 94/1,073. Silver view still `SELECT * FROM bronze.integrationprod.core_private_marketplace_deals`.
 - 2026-07-19: skeleton→enriched. Confirmed physical = unpartitioned TABLE (1,072 rows / 239,619 bytes), cluster=[private_marketplace_deal_id], no deleted/is_test cols. Grain 1:1 on private_marketplace_deal_id (and partner_deal_id). Resolved datastream_metadata.source_timestamp = MILLISECONDS (== UNIX_MILLIS(update_time)). Enum domains derived from live SELECT DISTINCT: channel_id≡8 (CTV), deal_type_id≡2, pmp_level_id 1/3, pricing_model FIXED/BIDDABLE/NULL, partnership_deal_type PUB_DIRECT/SSP/EXCLUSIVE/NULL. **Drift reconciled:** data_catalog prose lists advertiser_id/campaign_group_id as the deal→group join, but both are empirically NULL (100% / 99.9%) — real binding is core_private_marketplace_groups + core_campaign_group_x_private_marketplace_deals junction (keyed on private_marketplace_deal_group_id, not the deal id).
 <!-- CHANGELOG END -->
 

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 2
 approx_logical_bytes: 118
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [billing, margin]
 keywords: [margin_source, margin, channel_margin, lookup, dimension, cdc]
 source: INFORMATION_SCHEMA+human
@@ -91,6 +91,7 @@ LEFT JOIN `core.margin_sources` m USING (margin_source_id)
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (margin_sources appears only in the data_catalog.md core table inventory, no dedicated section) — enriched from LIVE schema alone. Resolved physical to dw-main-bronze.integrationprod.core_margin_sources (plain CDC TABLE, 2 rows / 118 B, unpartitioned, cluster=margin_source_id). Confirmed datastream_metadata.source_timestamp epoch = MILLISECONDS. Named FK partners (campaign_group_channel_margins, select_margins) as N:1 children. Sensitive-margin policy: schema/grain/keys only, no value strings printed.
+- 2026-07-29: enriched→verified. Re-introspected live: 3 cols / types / partition(none) / cluster(`margin_source_id`) / no-TTL / view→`core_margin_sources` physical all unchanged & correct. 2 rows = 2 distinct margin_source_id re-confirmed — no drift. numRows 2 / numBytes 118 stable (value strings withheld per margin-sensitivity policy).
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [hotel_id, advertiser_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 41214
-approx_logical_bytes: 2706053
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 41999
+approx_logical_bytes: 2760267
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser, account-hierarchy, dimension]
 keywords: [hotel, portfolio, account-group, agency, advertiser, bridge, junction, parent, child, portfolio-role]
 source: INFORMATION_SCHEMA+human
@@ -37,8 +37,8 @@ partner-managed accounts.
 
 ## Grain & keys
 - **Grain:** one row per **(advertiser_id, hotel_id)** membership. `(advertiser_id, hotel_id)` is
-  unique — 41,214 rows = 41,214 distinct pairs (verified 2026-07-19).
-- **Many-to-many:** 38,230 distinct advertisers, 35,289 distinct hotels. An advertiser can belong to
+  unique — 41,999 rows = 41,999 distinct pairs (verified 2026-07-29).
+- **Many-to-many:** 39,008 distinct advertisers, 36,031 distinct hotels. An advertiser can belong to
   several hotels (up to 14 observed); a hotel groups many advertisers (up to 180 observed). There is
   **no single-column primary key** — the pair is the key.
 - **Foreign keys:** `advertiser_id` → `advertisers` (silver `core.advertisers`); `hotel_id` →
@@ -56,11 +56,11 @@ partner-managed accounts.
 
 ## Column meanings (only the non-obvious ones)
 - **portfolio_role** — the advertiser's role *within that hotel/portfolio*. Domain (verified via
-  `SELECT DISTINCT`, 2026-07-19): `NULL` = 41,127 rows (99.8%, plain membership, no designated
+  `SELECT DISTINCT`, 2026-07-29): `NULL` = 41,912 rows (99.8%, plain membership, no designated
   role), `child` = 79 rows, `parent` = 8 rows. Treat NULL as "member, unspecified role"; only a
   tiny minority of memberships carry an explicit parent/child designation.
-- **user_id** — the MNTN/agency user who owns/created the mapping. **54% NULL** (22,443 of 41,214).
-  Do not assume populated; 10,019 distinct users across the populated rows. Not a strong join key.
+- **user_id** — the MNTN/agency user who owns/created the mapping. **54% NULL** (22,535 of 41,999).
+  Do not assume populated; not a strong join key.
 - **datastream_metadata.source_timestamp** — INT64 epoch in **milliseconds** (UNIX_MILLIS). Anchor:
   `TIMESTAMP_MILLIS(source_timestamp)` yields 2025-12-19 → present (min = 2025-12-19, which equals
   the table's backfill/creation time). This is **Datastream CDC ingest metadata, not a business
@@ -92,18 +92,18 @@ partner-managed accounts.
 - **`source_timestamp` is CDC metadata, not a business timestamp** (see above) — its floor is the
   table's Dec-2025 backfill, so it cannot be used to reconstruct when a membership was created.
 - **portfolio_role is almost always NULL** — filtering `portfolio_role='parent'/'child'` returns
-  only 87 of 41,214 rows; do not treat a NULL role as an error.
+  only 87 of 41,999 rows; do not treat a NULL role as an error.
 - **Legacy vocabulary:** "hotel" ≠ hospitality; it is SteelHouse's original word for a portfolio/
   account container. Present it to stakeholders as "portfolio", not "hotel".
 
 ## Cost & partitioning notes
 - Physical is a **real TABLE** (not a SQLMesh view target): `dw-main-bronze.integrationprod.
-  core_advertisers_x_hotels`, **41,214 rows / 2,706,053 bytes (~2.6 MB)**, **no time partitioning**,
-  **clustered on (hotel_id, advertiser_id)**. `approx_logical_bytes = 2,706,053` (bq show numBytes).
+  core_advertisers_x_hotels`, **41,999 rows / 2,760,267 bytes (~2.6 MB)**, **no time partitioning**,
+  **clustered on (hotel_id, advertiser_id)**. `approx_logical_bytes = 2,760,267` (bq show numBytes).
 - **The one filter to always apply:** none is needed for cost — the whole table is < 3 MB, so a full
   scan is trivial. Instead of a partition filter, restrict by `hotel_id` / `advertiser_id` (the
   cluster keys) for efficient point lookups when you only need one portfolio or advertiser.
-- **Dry-run cost (verified 2026-07-19):** `SELECT *` over the full table = **2,706,053 bytes** (all
+- **Dry-run cost (verified 2026-07-29):** `SELECT *` over the full table = **2,760,267 bytes** (all
   5 columns, whole table). There is no partition to prune against, so column pruning is the only
   lever — but at this size it is immaterial.
 
@@ -132,6 +132,7 @@ ORDER BY x.portfolio_role, a.company_name;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (table only appeared in the silver.core inventory list in data_catalog.md, no dedicated section; nothing in data_knowledge.md). Enriched from live schema + sampling: physical is a real TABLE (41,214 rows / 2.7 MB, no partition, clustered hotel_id+advertiser_id); grain = unique (advertiser_id, hotel_id) many-to-many; "hotel" = portfolio/agency account-grouping; portfolio_role domain {NULL 99.8%, child 79, parent 8}; source_timestamp = UNIX_MILLIS CDC metadata; NO deleted/is_test on bridge or core_hotels (apply live filter on advertisers dim, which is `integrationprod.advertisers` with no core_ prefix).
+- 2026-07-29: enriched→verified. Re-introspected live: schema (5 cols) + physical TABLE (no partition, cluster `[hotel_id, advertiser_id]`, no TTL) UNCHANGED. Grain re-confirmed: pair 41,999 distinct = row count (M:M holds). portfolio_role domain {NULL 41,912, child 79, parent 8} and user_id ~54% NULL still hold. Only drift = organic growth 41,214→41,999 rows / 2,706,053→2,760,267 bytes; 39,008 advertisers, 36,031 hotels (refreshed).
 <!-- CHANGELOG END -->
 
 ## View definition

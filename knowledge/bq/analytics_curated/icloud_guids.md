@@ -14,9 +14,9 @@ time_unit: none
 ttl_days: null
 approx_rows: 120482
 approx_logical_bytes: 6465476
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [identity_resolution, apple_private_relay, attribution]
 keywords: [icloud, private_relay, apple, guid, ipv4, identity, relay_ip, geo_targeting]
 source: INFORMATION_SCHEMA+human
@@ -96,4 +96,5 @@ WHERE l.day = '2026-07-19'
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Confirmed BASE TABLE, no partition/cluster/TTL, no time column (time_unit=none). Verified strict 1:1 grain (120,482 rows = distinct ip = distinct guid, zero NULLs); ip = individual IPv4 (no CIDR, no IPv6); guid = version-3 name-based UUID. Verified ip set is identical to analytics_curated.icloud_ipv4 (0 IPs absent); icloud_ipv6 empty (IPv4-only coverage). Dry-run cost per column set recorded. Prose oracle: data_catalog.md §"silver.summarydata.icloud_guids/..." was a stub (no grain/columns) + the icloud_ipv4_ips legacy note + data_knowledge.md §"icloud_ tables"; reconciled — prose never documented the guid column, the 1:1 ip↔guid mapping, or the version-3 UUID nature (all established live here).
+- 2026-07-29: enriched→verified. Re-derived from live source (dw-main-bronze.analytics_curated.icloud_guids): BASE TABLE, no partition/cluster/TTL unchanged; schema still (ip, guid) STRING; row/byte counts unchanged (120,482 / 6,465,476). Strict 1:1 grain re-confirmed (120,482 rows = distinct ip = distinct guid). No drift.
 <!-- CHANGELOG END -->

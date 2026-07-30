@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: audience.campaign_segment_history
-summary: "SCD-2 validity-interval history of every data-source keyword/category selected in each campaign's audience expression, positioned by AND/OR clause (and_seq/or_seq). end_time IS NULL = currently active. Unpartitioned VIEW over 9.47M rows (~558 MB) — full-scans every query. Contaminated for 'which audience is this campaign using' — use audience_segment_campaigns + audience_segments instead."
+summary: "SCD-2 validity-interval history of every data-source keyword/category selected in each campaign's audience expression, positioned by AND/OR clause (and_seq/or_seq). end_time IS NULL = currently active. Unpartitioned VIEW over ~9.71M rows (~572 MB) — full-scans every query. Contaminated for 'which audience is this campaign using' — use audience_segment_campaigns + audience_segments instead."
 dataset: audience
 table: campaign_segment_history
 object_type: VIEW
@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: "native TIMESTAMP (UTC) — start_time/end_time, not epoch"
 ttl_days: null
-approx_rows: 9471313
-approx_logical_bytes: 584739480
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 9711963
+approx_logical_bytes: 599659624
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting]
 keywords: [campaign_segment_history, audience_expression, and_seq, or_seq, data_source_id, data_source_category_id, scd2, valid_time_history, keyword_history, mm_ds19, prospecting_audience, audience_keyword_state_archives, contamination]
 source: INFORMATION_SCHEMA+human+live
@@ -112,7 +112,7 @@ audience is this campaign using right now." For production audience-membership a
   `summarydata.v_campaign_group_segment_history` has the same issue. This table is fine for *change-history /
   timeline* questions, which is its real value.
 - **No partition, no clustering** — the physical table (`sqlmesh__audience.audience__campaign_segment_history__2255962104`,
-  9,471,313 rows / ~558 MB) is unpartitioned. No date filter can prune; every query full-scans. Aggregate,
+  ~9.71M rows / ~572 MB as of 2026-07-29) is unpartitioned. No date filter can prune; every query full-scans. Aggregate,
   project only needed columns, never `SELECT *`.
 - **`end_time IS NULL` = current state** — always filter it for "targeting as of now." Historical/closed rows
   greatly outnumber active ones (72% closed).
@@ -122,7 +122,7 @@ audience is this campaign using right now." For production audience-membership a
 - **22 duplicate grain combos** (near-simultaneous writes) — dedup with `ROW_NUMBER()` if you need exact 1-row-per-key.
 
 ## Cost & partitioning notes
-- **Unpartitioned VIEW** over a 9.47M-row / ~558 MB physical table. `partition_by: none`, `cluster_by: []` are
+- **Unpartitioned VIEW** over a ~9.71M-row / ~572 MB physical table. `partition_by: none`, `cluster_by: []` are
   confirmed facts (physical table has `timePartitioning: None`, `clustering: None`), not gaps. A full
   `GROUP BY data_source_id` scans the whole ~0.5 GB — there is no cheaper slice. Push filtering/aggregation into
   the query; the table is small enough that a full scan is ~0.5 GB but you cannot reduce it via partition pruning.
@@ -161,6 +161,7 @@ GROUP BY campaign_id;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-20: skeleton→enriched — verified grain (7-col key incl start_time, effectively unique: 22 dup combos / 9.47M), SCD-2 valid-time history (end_time NULL=active 28%, 0 overlaps on busy campaigns, 2000-01-01 sentinel 271K rows), and_seq 1-213 / or_seq 1-7 expression positions, DS domain (DS19 dominant, DS14 widest by campaign), physical table unpartitioned/unclustered (9.47M rows/~558MB), archives_audience_keyword_state_archives lineage relation, carried contamination warning from data_knowledge.md.
+- 2026-07-29: enriched→verified. Re-derived from live source. Physical hash `__2255962104` unchanged; VIEW is still `SELECT *` over it; unpartitioned/unclustered/no-TTL confirmed; 8-column schema unchanged (all INT64 + start_time/end_time TIMESTAMP). Refreshed counts to current 9,711,963 rows / 599,659,624 bytes (~9.71M / ~572 MB; +2.5% growth since enrichment — the dated grain-uniqueness figures above are the 2026-07-20 snapshot). No schema/partition/cluster drift.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertising, impressions, cost]
 keywords: [impression, display, ad_served_id, impression_log, cost_impression_log, cil, bid_ip, cpm, gcs, external, parquet, beeswax, bidder]
 source: INFORMATION_SCHEMA+human
@@ -155,4 +155,5 @@ LIMIT 100;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Confirmed external hive-partitioned parquet (`gs://mntn-data-archive-prod/impression/dt=*/hh=*`), partition dt+hh, no cluster/TTL. Verified epoch=UNIX_MICROS(time) (microseconds). Empirically: ip/original_ip = internal RFC1918 server IPs (~95% private) vs bid_ip = real user IP; cpm/cpi 100% NULL; app_bundle ~0.1% (display, not app/CTV); ~18.1M rows/day. Labeled cost figures (1col: 1hr=0.030GB, 1day=0.687GB; COUNT(*)=0GB footer-only). No dedicated prose section in data_catalog.md; prose oracle = data_knowledge.md (impression_log = impression__v1 ∪ vastimpression__v1; 3h lookback; CIL unlinked flag; ad_served_id link key) — reconciled, no drift.
+- 2026-07-29: enriched→verified. Re-introspected LIVE `bq show`: EXTERNAL PARQUET, schema unchanged (51 cols incl. `user_agent` RECORD, `_source_file`/`_batch_id` REQUIRED), hive partitions `dt`+`hh` (mode CUSTOM), sourceUriPrefix `gs://mntn-data-archive-prod/impression/` — all match doc. epoch=µs / bid_ip-vs-ip / cpm-NULL semantics were sample-verified on dt=2026-07-15 at enrichment; no cheap-metadata contradiction.
 <!-- CHANGELOG END -->

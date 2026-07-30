@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 3
 approx_logical_bytes: 246
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [private_marketplace, mntn_select, dimensions]
 keywords: [pmp, private marketplace, level, scope, global, advertiser, campaign group, enum lookup, cdc dimension]
 source: INFORMATION_SCHEMA+human
@@ -50,11 +50,11 @@ Enum lookup that names the **scope at which a private-marketplace group applies*
 - **`datastream_metadata.source_timestamp`** — Datastream CDC-capture epoch in **milliseconds** (anchor: `TIMESTAMP_MILLIS(1766121457224) = 2025-12-19 05:17:37`; `TIMESTAMP_MICROS` yields 1970 = wrong). It is the capture/re-sync time, **not** business time — all 3 rows share the identical value (a full-table CDC re-snapshot), so it is useless for ordering or change detection here. Prefer `create_time`/`update_time`.
 
 ## Joins & relationships
-- **`private_marketplace_groups.private_marketplace_level_id = private_marketplace_levels.id`** — partner grain: `private_marketplace_groups` is the **N side** (145 group rows as of 2026-07-19), this table is the **1 side** (3 rows). Joining **groups → levels is a safe N:1 decorate** (no fan-out — adds the level name to each group). Joining **levels → groups fans out 1:N** (one level maps to many groups) — do not start a join from this table unless you intend that fan-out.
+- **`private_marketplace_groups.private_marketplace_level_id = private_marketplace_levels.id`** — partner grain: `private_marketplace_groups` is the **N side** (146 group rows as of 2026-07-29), this table is the **1 side** (3 rows). Joining **groups → levels is a safe N:1 decorate** (no fan-out — adds the level name to each group). Joining **levels → groups fans out 1:N** (one level maps to many groups) — do not start a join from this table unless you intend that fan-out.
 - Part of the PMP dimension family: `private_marketplace_families`, `private_marketplace_groups` (references this table), `private_marketplace_deals`, `private_marketplace_deals_x_private_marketplace_groups`, `campaign_group_x_private_marketplace_deals`.
 
 ## Gotchas
-- **Only `global` (id=1) is actually used.** As of 2026-07-19, all 145 `private_marketplace_groups` rows carry `private_marketplace_level_id=1`. Levels 2 (`advertiser`) and 3 (`campaign_group`) are seeded enum values with **zero referencing groups** — real but unused. Don't assume advertiser/campaign-group-scoped PMP groups exist in the data just because the enum defines them.
+- **Only `global` (id=1) is actually used.** As of 2026-07-29, all 146 `private_marketplace_groups` rows carry `private_marketplace_level_id=1`. Levels 2 (`advertiser`) and 3 (`campaign_group`) are seeded enum values with **zero referencing groups** — real but unused. Don't assume advertiser/campaign-group-scoped PMP groups exist in the data just because the enum defines them.
 - **No soft-delete columns.** Unlike most CDC dims, there is no `deleted`/`is_test` here — every row is live; do not add that filter (it will error).
 - **`datastream_metadata.source_timestamp` is uniform** across all rows (CDC re-sync artifact, ms epoch) — never treat it as a per-row change timestamp.
 - Static seed data: `create_time == update_time` for all rows; do not expect this dim to change.
@@ -87,6 +87,7 @@ LEFT JOIN `dw-main-silver.core.private_marketplace_levels` l
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical (bronze.integrationprod.core_private_marketplace_levels, TABLE, 3 rows/246 B, no partition, cluster=id). Domain of name = global/advertiser/campaign_group. source_timestamp unit = milliseconds (anchor 2025-12-19). FK from private_marketplace_groups confirmed (N:1); only level 1=global used (145 groups). No prose oracle existed in data_catalog.md/data_knowledge.md beyond the silver.core inventory listing — enriched from live schema.
+- 2026-07-29: enriched→verified. Re-introspected LIVE source. Schema/metadata unchanged (5 cols, 3 rows/246 B, unpartitioned, cluster=id). Name domain re-confirmed {1=global,2=advertiser,3=campaign_group}. Group usage grew 145→146, still 100% level 1=global. schema_synced 2026-07-29.
 <!-- CHANGELOG END -->
 
 ## View definition

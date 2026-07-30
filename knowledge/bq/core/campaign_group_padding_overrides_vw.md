@@ -14,9 +14,9 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: 31
 approx_logical_bytes: 2744
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaign-group-config, pacing]
 keywords: [padding, pacing, delivery, budget, override, exception, campaign-group, flight]
 source: INFORMATION_SCHEMA+human
@@ -103,6 +103,7 @@ WHERE cg.deleted = FALSE AND cg.is_test = FALSE
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle (only a bare table-name mention in the data_catalog.md silver.core inventory list ~line 1261; no data_knowledge.md gotcha). Enriched from live schema + sampling. Resolved view chain: silver.core.campaign_group_padding_overrides_vw → bronze.integrationprod.core_campaign_group_padding_overrides_vw (view) → sqlmesh__integrationprod.integrationprod__core_campaign_group_padding_overrides_vw__3585675705 (view, SAFE_CASTs padding STRING→NUMERIC, drops datastream_metadata) → real TABLE bronze.integrationprod.core_campaign_group_padding_overrides (31 rows, 2744 bytes, unpartitioned, clustered by campaign_group_id, no TTL, datastream_metadata RECORD present but hidden). Confirmed NO deleted/is_test columns (exception/override table, not a soft-delete dim); padding is STRING-in-source with mixed conventions (decimals 1.01/1.05/1.1 + integers 1/5, all cast cleanly); campaign_group_id unique (31/31); FK → bronze.integrationprod.campaign_groups.campaign_group_id (1:1). Sibling of advertiser_padding_overrides_vw / campaign_padding_overrides.
+- 2026-07-29: enriched→verified. Re-introspected live: view chain unchanged (silver.core.campaign_group_padding_overrides_vw → bronze core_campaign_group_padding_overrides_vw view → sqlmesh → base TABLE core_campaign_group_padding_overrides, 31 rows/2744B, unpartitioned, cluster=campaign_group_id, no TTL). View schema matches AUTO:SCHEMA (5 cols, padding NUMERIC, datastream_metadata dropped). No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

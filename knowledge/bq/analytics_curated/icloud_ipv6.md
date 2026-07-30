@@ -14,9 +14,9 @@ time_unit: none
 ttl_days: null
 approx_rows: 406799
 approx_logical_bytes: null
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [identity, ip]
 keywords: [icloud, private-relay, apple, ipv6, cidr, geo, relay-egress, identity-resolution, egress-ranges]
 source: INFORMATION_SCHEMA+human
@@ -158,6 +158,9 @@ WHERE first_16_bits = '2606:54c0'
   is the upstream EXTERNAL source in `dw-main-bronze.analytics_curated`. Documented the misnamed
   `first_8_bits`/`first_16_bits` (hextets, not octets) and the CIDR-range vs equality-join gotcha vs
   the IPv4 sibling.
+- 2026-07-29: enriched→verified. Re-derived from live source (dw-main-bronze.analytics_curated.icloud_ipv6):
+  EXTERNAL PARQUET over `gs://mntn-analytics-curated/coredw/summarydata/icloud_ipv6/*.parquet`,
+  requirePartitionFilter=false, no partition/cluster/TTL; schema unchanged (ip, prefix, first_8_bits,
+  first_16_bits, network — all STRING); `ip` unique key re-confirmed (406,799 rows = 406,799 distinct ip).
+  Removed a stray malformed tail (`</content></invoke>`) left by the enrichment pass. No schema drift.
 <!-- CHANGELOG END -->
-</content>
-</invoke>

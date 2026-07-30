@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [advertiser_id, change_id]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 40972060
-approx_logical_bytes: 19343999939
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 42820677
+approx_logical_bytes: 20231201460
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [ber, visits, attribution, change_impact]
 keywords: [visits, attribution, change_impact, pre_change, snapshot, ber_stg, staging, change_id, batch_source, re_attribution]
 source: INFORMATION_SCHEMA+human
@@ -168,7 +168,7 @@ this view only for change-impact / QA analysis, never for reporting visit totals
   `impression_epoch`. Use those if you need sub-second ordering.
 - **`visit_day` is FLOAT64 but really an integer 1–14** (attribution day), and is frequently NULL (more so on
   `last_tv_touch_visits`) — do not treat it as a date.
-- **Accumulating, no TTL.** Data spans **2026-01-30 07:35:57 → present** (40,972,060 rows) and keeps growing
+- **Accumulating, no TTL.** Data spans **2026-01-30 → present** (42,820,677 rows on 2026-07-29) and keeps growing
   (expirationTime = none); an unfiltered scan grows over time.
 
 ## Cost & partitioning notes
@@ -180,7 +180,7 @@ this view only for change-impact / QA analysis, never for reporting visit totals
   confirms `time` is the partition.
 - `SELECT *` for `time >= '2026-07-01'` (~20 days, **all columns**) → **620,710,589 B (~620.7 MB)** — do not
   compare to the one-column numbers above.
-- Physical backing: `numBytes` = 19,343,999,939 B (~**19.34 GB**), `numRows` = 40,972,060 (whole table, all columns).
+- Physical backing: `numBytes` = 20,231,201,460 B (~**20.23 GB**), `numRows` = 42,820,677 (whole table, all columns; 2026-07-29).
 - The one filter to always apply: `WHERE time BETWEEN <start> AND <end>` (+ `change_id` when analyzing a
   specific re-attribution batch).
 
@@ -208,6 +208,7 @@ WHERE time >= '2026-07-01' AND time < '2026-07-08'
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md — enriched from LIVE schema + empirical queries. Resolved physical (partition `time` DAY, cluster [advertiser_id, change_id], 40.97M rows / 19.34 GB, no TTL); verified epoch units (epoch/impression_epoch=microseconds, change_epoch/batch_epoch=seconds); confirmed grain, visit_day=attribution-day 1–14, and pre/post + parent `summarydata.unstable_ui_visits` (UNION ALL) → canonical `summarydata.visits` lineage.
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema (48 cols name+type) identical to AUTO:SCHEMA; view→physical hash `__3983473504` current; partition=`time` DAY, cluster=[advertiser_id, change_id], require_partition_filter=false, no TTL — confirmed via bq show; min partition 2026-01-30 confirmed via INFORMATION_SCHEMA.PARTITIONS. Append growth: 40.97M→42.82M rows, 19.34→20.23 GB (approx_* refreshed). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

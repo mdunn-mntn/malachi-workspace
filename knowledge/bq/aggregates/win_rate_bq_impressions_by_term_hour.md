@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [hh, campaign_id, term_id]
 time_unit: none
 ttl_days: 45
-approx_rows: 12832936
-approx_logical_bytes: 457950538
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 12949225
+approx_logical_bytes: 463346365
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [win-rate, bidding, keywords]
 keywords: [win rate, impressions, bids, denominator, numerator, term_id, keyword, hour, campaign, auction, hh]
 source: INFORMATION_SCHEMA+human
@@ -32,7 +32,7 @@ win rate = impressions / bids at term granularity — e.g. diagnosing which keyw
 losing auctions, or how win rate varies by hour of day. It is meaningless alone: it is a raw
 impression count and only becomes "win rate" once divided by the matching bid count in the
 sibling table `aggregates.win_rate_bq_bids_by_term_hour` on the same 4-tuple. SQLMesh-materialized
-daily rollup; small (~437 MB, ~12.8M rows) with a 45-day partition TTL.
+daily rollup; small (~442 MB, ~12.95M rows) with a 45-day partition TTL.
 
 ## Grain & keys
 - **Grain:** one row per **(date, hh, campaign_id, term_id)** — empirically unique (0 duplicate
@@ -104,11 +104,11 @@ daily rollup; small (~437 MB, ~12.8M rows) with a 45-day partition TTL.
   `hh`/`campaign_id` prunes clustered blocks). `require_partition_filter` is **false**, but always
   filter `date` anyway.
 - **The one filter to always apply:** `WHERE date = '<day>'` (or a tight range).
-- **Cost (all 5 columns):** full-table scan (no date filter) ≈ **457,950,538 bytes (~437 MB)**;
+- **Cost (all 5 columns):** full-table scan (no date filter) ≈ **463,346,365 bytes (~442 MB)**;
   single-day filter ≈ **9,677,333 bytes (~9.2 MB)** — same column set, so the date filter prunes
-  **~47x**. The whole table is tiny, so even a full scan is cheap, but filter `date` by habit.
-- `approx_logical_bytes: 457950538` = the physical backing table's real `numBytes` (single physical
-  table, not a UNION), ~437 MB. `approx_rows: 12832936`.
+  **~48x**. The whole table is tiny, so even a full scan is cheap, but filter `date` by habit.
+- `approx_logical_bytes: 463346365` = the physical backing table's real `numBytes` (single physical
+  table, not a UNION), ~442 MB. `approx_rows: 12949225`.
 
 ## Example queries
 ```sql
@@ -150,6 +150,7 @@ GROUP BY 1, 2;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified vs live source. Physical hash `__2439509640` unchanged; VIEW is `SELECT *` over it. Structure re-confirmed: partition=`date` DAY with 45-day partition expiration (expirationMs 3888000000), cluster=[hh, campaign_id, term_id], requirePartitionFilter=None. All 5 columns match AUTO:SCHEMA. Grain re-verified on 2026-07-27: COUNT(*)=COUNT(DISTINCT 4-tuple)=288,082; hh min0/max23; NULL term_id=152,918 (~53%). **Drift fixed:** rolling-window churn — approx_rows 12,832,936→12,949,225, approx_logical_bytes 457,950,538→463,346,365; schema_synced→2026-07-29.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical queries alone. Resolved physical `sqlmesh__aggregates.aggregates__win_rate_bq_impressions_by_term_hour__2439509640`: partition=date DAY, cluster=[hh,campaign_id,term_id], TTL=45d, 12.83M rows / 457,950,538 bytes. Empirically confirmed: partition prunes ~47x (458MB full → 9.7MB/day, same 5 cols); grain (date,hh,campaign_id,term_id) unique; hh=hour-of-day 0-23; term_id campaign-scoped numeric STRING with NULL=no-term bucket (~57% of rows); 1:1 no-fanout join to sibling denominator win_rate_bq_bids_by_term_hour (both unique on 4-tuple). Documented NULL-term equi-join drop + per-row win_rate>1 timing-skew gotchas.
 <!-- CHANGELOG END -->
 

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [impressions, ctv, identity, billing]
 keywords: [vast, ctv, impression, ad_served_id, impression_log, cil, cost_impression_log, vast_impression, guid, bid_ip, ttd_impression_id, gcs, external, parquet, hive-partition]
 source: INFORMATION_SCHEMA+human
@@ -117,7 +117,7 @@ Raw, GCS-archived firehose of **served CTV / VAST video impressions** — a BigQ
 - **`--dry_run` cannot estimate cost** — it returns *"lower bound of 0 bytes"* for this table. You **cannot** pre-check bytes; budget from the partition object size instead (~20.7 GiB/day, see Cost).
 - **Always filter `dt`** (and `hh` when possible). No `requirePartitionFilter` is enforced, but an unfiltered query scans **every parquet object across the entire archive**.
 - **`dt=__HIVE_DEFAULT_PARTITION__`** — rows whose `dt` couldn't be parsed land in `gs://…/vastimpression/dt=__HIVE_DEFAULT_PARTITION__/`. A `WHERE dt BETWEEN …` range **silently excludes** them.
-- **Rolling archive, not permanent.** Earliest partition present = `dt=2025-08-25`, latest = `dt=2026-07-20` (330 daily partitions as of 2026-07-20) → **~11-month rolling retention** governed by the GCS bucket lifecycle, **not a BQ TTL**. Older dates (e.g. `2025-01-15`) return **zero rows**.
+- **Rolling archive, not permanent.** Earliest partition present = `dt=2025-08-25`, latest = `dt=2026-07-30` (present at the 2026-07-29 verify; the archive rolls forward daily, ~11 months of partitions) → **~11-month rolling retention** governed by the GCS bucket lifecycle, **not a BQ TTL**. Older dates (e.g. `2025-01-15`) return **zero rows**.
 - **`cpm`/`cpi` are always NULL here** — get impression price from `spend_log`/CIL.
 - **`ip` is a bare IP** on current data (no `/32` suffix); the CIDR-suffix quirk documented for `event_log.ip` on pre-2026 data does not appear on these partitions.
 - **`hh` is a STRING**, not an INT.
@@ -159,4 +159,5 @@ LIMIT 10;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Live-verified vs GCS + sampled partitions. No dedicated `data_catalog.md` section existed (net-new to per-table catalog); prose oracle limited to the CIL note in `data_knowledge.md` (impression_log = impression__v1 UNION vastimpression__v1; CIL 3-hr lookback) — incorporated and extended. Confirmed empirically: external federated PARQUET over `gs://mntn-data-archive-prod/vastimpression/`, hive-partitioned dt→hh; grain = 1 row per ad_served_id (unique); `epoch = UNIX_MICROS(time)` (microseconds); ip==bid_ip ~95%; cpm/cpi all NULL; original_aid/cid match current >99.99%; ~11-month rolling archive (dt 2025-08-25 → 2026-07-20, 330 partitions); ~20.7 GiB/day backing (SELECT *, gsutil du); dry-run cannot estimate external bytes.
+- 2026-07-29: enriched→verified. Re-introspected live: schema (51 cols) + hive partition [dt→hh] unchanged vs source; GCS rolling archive now spans dt=2025-08-25..2026-07-30 (+__HIVE_DEFAULT_PARTITION__), live. Grain (1 row/ad_served_id) + epoch(µs) unchanged. Updated latest-partition note (was 2026-07-20).
 <!-- CHANGELOG END -->

@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [hh, campaign_id, term_id]
 time_unit: hour
 ttl_days: 45
-approx_rows: 13429398
-approx_logical_bytes: 453547721
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 13412794
+approx_logical_bytes: 455817705
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - bidding
   - win-rate
@@ -89,7 +89,7 @@ BigQuery bid pipeline) is **not verified** — treat it as opaque, not a claim.
 
 ## Cost & partitioning notes
 - Partition `date` (DAY), **require_partition_filter is NOT enforced** — but always filter `date` anyway. Cluster `[hh, campaign_id, term_id]`, so filtering campaign_id / term_id after date prunes well.
-- Whole table ≈ **13.4M rows / ~454 MB** across 45 daily partitions.
+- Whole table ≈ **13.4M rows / ~456 MB** across 45 daily partitions.
 - **One-day slices are cheap:** a single-day aggregate scanned ~0.01 GB (~308K rows). Filtering to specific campaigns/terms stays in the low-MB range.
 - **Avoid full scans:** a query that first computes `MAX(date)` scans all 45 partitions (~0.42 GB billed). Hardcode the date literal instead of deriving it in the same query.
 
@@ -120,6 +120,7 @@ ORDER BY b.bids DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified vs live source. Physical hash `__2287421574` unchanged; VIEW is `SELECT *` over it. Structure re-confirmed: partition=`date` DAY with 45-day partition expiration (expirationMs 3888000000), cluster=[hh, campaign_id, term_id], requirePartitionFilter=None. All 5 columns match AUTO:SCHEMA (types/order/nullability). Grain re-verified on 2026-07-27: COUNT(*)=COUNT(DISTINCT 4-tuple)=314,847; hh min0/max23; NULL term_id=220,182 (~70%). **Drift fixed:** rolling-window churn — approx_rows 13,429,398→13,412,794, approx_logical_bytes 453,547,721→455,817,705; schema_synced→2026-07-29.
 - 2026-07-19: skeleton→enriched from live schema + sampling (no prose oracle in data_catalog/data_knowledge for this net-new table). Verified: physical is a real partitioned TABLE (date DAY, 45-day expiration, cluster hh/campaign_id/term_id) behind a passthrough view; grain = 1 row per (date,hh,campaign_id,term_id); hh 0–23; term_id numeric-STRING, campaign-scoped; NULL term_id = separate no-term bucket (~71% rows), NOT a rollup; bids = win-rate denominator, join sibling win_rate_bq_impressions_by_term_hour for win_rate=impressions/bids; retention 2026-06-05→07-19 (45 partitions). Unverified: "bq" prefix meaning, campaigns dim join, date timezone.
 <!-- CHANGELOG END -->
 

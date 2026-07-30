@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [hotel_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 35480
-approx_logical_bytes: 3705785
+approx_rows: 36219
+approx_logical_bytes: 3788767
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser, account-hierarchy, dimension]
 keywords: [hotel, portfolio, account-group, agency, advertiser, parent, child, hotel_type_id, cdc-dimension, advertisers_x_hotels]
 source: INFORMATION_SCHEMA+human
@@ -35,8 +35,8 @@ a `hotel_id` → portfolio name, or as the parent dim behind `core.advertisers_x
 advertisers up to their agency/portfolio.
 
 ## Grain & keys
-- **Grain:** one row per **hotel** (portfolio). `hotel_id` is unique — 35,480 rows = 35,480 distinct
-  `hotel_id` (verified 2026-07-19).
+- **Grain:** one row per **hotel** (portfolio). `hotel_id` is unique — 36,219 rows = 36,219 distinct
+  `hotel_id` (verified 2026-07-29).
 - **Primary key:** `hotel_id`.
 - **Foreign keys out:** `user_id` → owning/creating MNTN user (weak: 60% NULL); `parent_hotel_id` →
   `hotel_id` (self-reference, but **100% NULL in live data** — unused, see Gotchas).
@@ -58,17 +58,17 @@ advertisers up to their agency/portfolio.
 
 ## Column meanings (only the non-obvious ones)
 - **hotel_id** — PK; also the physical cluster key. Referenced by `advertisers_x_hotels.hotel_id`.
-- **hotel_type_id** — portfolio type enum. **Uniformly `1` across all 35,480 rows** (verified via
-  `SELECT DISTINCT`, 2026-07-19) — effectively a constant, not a useful filter/discriminator today.
+- **hotel_type_id** — portfolio type enum. **Uniformly `1` across all 36,219 rows** (verified via
+  `SELECT DISTINCT`, 2026-07-29) — effectively a constant, not a useful filter/discriminator today.
 - **parent_hotel_id** — self-referential pointer for a hotel→parent-hotel hierarchy, but **100% NULL
-  in live data** (0 of 35,480 populated). The column exists in the schema, yet the parent/child
+  in live data** (0 of 36,219 populated). The column exists in the schema, yet the parent/child
   relationship is actually expressed on the **bridge** via `advertisers_x_hotels.portfolio_role`
   (`parent`/`child`), not here. Do not build hierarchy logic off `parent_hotel_id`.
 - **name** — portfolio display name; **never NULL** (0 empty), but can be near-empty (" Portfolio"
   with a blank prefix — ~automation-created placeholders that carry a NULL `user_id`).
-- **hotel_notes** — free-text notes; **98% NULL** (34,709 of 35,480). Sparse, do not rely on it.
-- **user_id** — the MNTN user who created/owns the portfolio. **60% NULL** (21,453 of 35,480);
-  9,663 distinct users among the populated rows. Weak join key — NULL rows are system/automation
+- **hotel_notes** — free-text notes; **98% NULL** (35,443 of 36,219). Sparse, do not rely on it.
+- **user_id** — the MNTN user who created/owns the portfolio. **60% NULL** (21,535 of 36,219);
+  10,263 distinct users among the populated rows. Weak join key — NULL rows are system/automation
   creations. Not `advertiser_id` — this is an internal user, not the advertiser.
 - **create_time / update_time** — business timestamps (TIMESTAMP, UTC). `create_time` spans
   2020-08-05 → present. Use these for lifecycle, NOT `datastream_metadata.source_timestamp`.
@@ -83,8 +83,8 @@ advertisers up to their agency/portfolio.
 - **← `core.advertisers_x_hotels`** on `hotel_id`. Bridge grain: **one row per (advertiser_id,
   hotel_id)** membership (many-to-many). `hotels` → bridge is **1:N** — a single hotel groups many
   advertisers (up to ~180 observed). **Fan-out risk:** joining `hotels` → the bridge multiplies each
-  hotel row by its advertiser count; aggregate/dedup if you only want the portfolio. 35,294 of
-  35,480 hotels appear in the bridge — **~186 hotels are empty portfolios** with no advertiser, so an
+  hotel row by its advertiser count; aggregate/dedup if you only want the portfolio. 36,031 of
+  36,219 hotels appear in the bridge — **~188 hotels are empty portfolios** with no advertiser, so an
   INNER join to the bridge silently drops them (use LEFT if you need every portfolio).
 - **→ `advertisers`** (two hops, via the bridge) on `advertiser_id`. Note the physical advertiser dim
   is `dw-main-bronze.integrationprod.advertisers` (silver `core.advertisers`) — **no `core_` prefix**,
@@ -107,14 +107,14 @@ advertisers up to their agency/portfolio.
 
 ## Cost & partitioning notes
 - Physical is a **real TABLE** (not a SQLMesh target): `dw-main-bronze.integrationprod.core_hotels`,
-  **35,480 rows / 3,705,785 bytes (~3.5 MB)**, **no time partitioning**, **clustered on `hotel_id`**.
-  `approx_logical_bytes = 3,705,785` (bq show numBytes).
+  **36,219 rows / 3,788,767 bytes (~3.6 MB)**, **no time partitioning**, **clustered on `hotel_id`**.
+  `approx_logical_bytes = 3,788,767` (bq show numBytes).
 - **The one filter to always apply:** there is no partition, so no partition filter is needed — the
   whole table is < 4 MB and a full scan is trivial. For point lookups, restrict by `hotel_id` (the
   cluster key). The only cost lever is **column pruning** (columnar storage), and even that is
   immaterial at this size.
-- **Dry-run cost (verified 2026-07-19):** `SELECT *` (all 9 columns, whole table) = **3,705,785
-  bytes**; `SELECT hotel_id, name` (2 columns, whole table) = **1,097,976 bytes**. Same-scan
+- **Dry-run cost (verified 2026-07-29):** `SELECT *` (all 9 columns, whole table) = **3,788,767
+  bytes**; `SELECT hotel_id, name` (2 columns, whole table) = **1,123,864 bytes**. Same-scan
   comparison shows column pruning cuts ~3.4x here, but no partition exists to prune against.
 
 ## Example queries
@@ -141,6 +141,7 @@ GROUP BY h.hotel_id, h.name;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed — `hotels` only appears in the silver.core inventory list in data_catalog.md (no dedicated section); the only data_knowledge.md "hotels" hit is an unrelated hospitality-vertical example. Enriched from live schema + sampling: physical is a real TABLE (35,480 rows / 3.5 MB, no partition, clustered on hotel_id); grain = unique hotel_id; "hotel" = SteelHouse portfolio/account-grouping (all names end " Portfolio"). Empirical facts: hotel_type_id uniformly 1; parent_hotel_id 100% NULL (hierarchy unused — parent/child lives on advertisers_x_hotels.portfolio_role); hotel_notes 98% NULL; user_id 60% NULL; source_timestamp = UNIX_MILLIS CDC capture, not business time. NO deleted/is_test columns → standard core-dim live filter does not apply (filter on `integrationprod.advertisers`, no core_ prefix). Reconciled a drift vs sibling advertisers_x_hotels.md, which implies parent_hotel_id drives an active hotel hierarchy — verified it is entirely NULL/unused.
+- 2026-07-29: enriched→verified. Re-introspected live: 9 cols / types / partition(none) / cluster(`hotel_id`) / no-TTL / view→`core_hotels` physical all unchanged & correct. Structural claims re-confirmed (hotel_type_id constant 1; parent_hotel_id 100% NULL; name never empty). Refreshed CDC growth: 35,480→36,219 rows, hotel_notes-null 34,709→35,443, user_id-null 21,453→21,535, distinct users 9,663→10,263, bridge coverage 35,294→36,031 (~188 empty portfolios), numBytes 3,705,785→3,788,767.
 <!-- CHANGELOG END -->
 
 ## View definition

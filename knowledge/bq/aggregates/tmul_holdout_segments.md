@@ -12,10 +12,10 @@ require_partition_filter: false
 cluster_by: [date, advertiser_id, campaign_id]
 time_unit: none
 ttl_days: null
-approx_rows: 736162909153
-approx_logical_bytes: 47162511139880
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
+approx_rows: 758547067895
+approx_logical_bytes: 48596715593720
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
 coverage_state: enriched
 domain: [audience, holdout, incrementality]
 keywords: [holdout, control group, tmul, tpa membership, segment membership, incrementality, per-ip roster, tmul_holdout_segments]
@@ -118,7 +118,7 @@ ITT control cohort). It is a very large, expensive table — see Cost.
   view is a flattened, per-IP, DATE-partitioned holdout roster with **no TTL** and much longer
   history.
 - **No TTL / partition expiration.** Data runs daily from **2025-09-23** (physical creation) through
-  present (2026-07-18 confirmed), and keeps growing — hence 736B rows / 47 TB.
+  present (2026-07-28 confirmed), and keeps growing — hence ~758.5B rows / ~48.6 TB.
 - **Cross-project physical.** The physical resolves through a link to `mntn-coredw-prod`:
   `INFORMATION_SCHEMA.VIEWS`/`.PARTITIONS` on the sqlmesh dataset error with a coredw-prod
   permission denial, but `bq show` and normal queries through the silver view work fine.
@@ -137,7 +137,8 @@ ITT control cohort). It is a very large, expensive table — see Cost.
     as the plain 3-col read; UNNEST adds no scan cost
 - Actual billed (real run): 7-col advertiser-day profile = **2.03 GB** — consistent (below the
   2.36 GiB `SELECT *` advertiser-day dry-run upper bound, since dry-run bounds on-demand bytes billed).
-- `approx_logical_bytes` = physical `numBytes` = 47,162,511,139,880 B (42.9 TiB backing storage).
+- `approx_logical_bytes` = physical `numBytes` = 48,596,715,593,720 B (~44.2 TiB backing storage as of
+  2026-07-29; the 42.89 TiB dry-run figure above is the dated 2026-07-19 measurement — table has grown).
 
 ## Example queries
 ```sql
@@ -169,6 +170,7 @@ GROUP BY campaign_id, segment_id;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: verification pass vs live source. Physical hash `__4196200260` unchanged (now directly addressable in dw-main-silver via `bq show`, real metadata returned); VIEW is `SELECT *` over it. Structure re-confirmed: partition=`date` DAY, cluster=[date, advertiser_id, campaign_id], requirePartitionFilter=None, no TTL; all 8 columns match AUTO:SCHEMA. **Drift fixed:** natural growth — approx_rows 736,162,909,153→758,547,067,895, approx_logical_bytes 47,162,511,139,880→48,596,715,593,720 (~44.2 TiB); backing-storage line + date span updated; schema_synced→2026-07-29. **Kept coverage_state=enriched:** the `score`=10000 "would-have-qualified control" reading is explicitly inferred, and re-confirming the tags=["holdout"] / data_source_id=3 / score-NULL distribution would need a 38+ GiB single-column full-day scan (not cheap metadata) — so not promoted.
 - 2026-07-19: skeleton→enriched. Prose oracle was thin (data_catalog.md L1442 grouped it as one of
   three "TPA membership tracking VIEWs" with no grain/partition/encoding). Enriched from live: grain =
   1 row per (date, ip, advertiser_id, campaign_id, segment_id) verified no-dup on WGU/2026-07-10;

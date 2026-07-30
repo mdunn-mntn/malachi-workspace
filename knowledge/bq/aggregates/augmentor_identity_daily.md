@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: aggregates.augmentor_identity_daily
-summary: "Daily per-identity (IP/IPv6/IFA) rollup of bidder auction observations, feeding the MNTN identity/household graph. NOW a thin view over an EXTERNAL GCS-Parquet table — as of 2026-07-19 the GCS prefix is empty, so every BQ read ERRORS."
+summary: "Daily per-identity (IP/IPv6/IFA) rollup of bidder auction observations, feeding the MNTN identity/household graph. NOW a thin view over an EXTERNAL GCS-Parquet table — as of 2026-07-29 the GCS prefix is still empty, so every BQ read ERRORS."
 dataset: aggregates
 table: augmentor_identity_daily
 object_type: VIEW
@@ -14,8 +14,8 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
 coverage_state: enriched
 domain: [identity]
 keywords: [identity graph, household graph, augmentor, device-to-device, ip, ipv6, ifa, daily rollup, external parquet, gcs, dt hive partition, empty table]
@@ -43,7 +43,7 @@ view is now a thin pass-through:
 aggregates.augmentor_identity_daily  (VIEW)
   → sqlmesh__aggregates.aggregates__augmentor_identity_daily__2089722211  (VIEW — unnests Parquet LIST arrays)
     → dw-main-bronze.external.augmentor_identity_daily__v1  (EXTERNAL Parquet, hive-partitioned on dt)
-      → gs://mntn-data-archive-dev/identity/augmentor_identity_daily/*   ← EMPTY as of 2026-07-19
+      → gs://mntn-data-archive-dev/identity/augmentor_identity_daily/*   ← EMPTY as of 2026-07-29 (re-confirmed)
 ```
 
 The GCS prefix currently matches **no files**, so any query against the view (or the external table)
@@ -103,7 +103,7 @@ the live identity signal is consumed from GCS/Databricks directly, not through t
   augmentor_identity_daily.day` and expect heavy fan-out.
 - **aggregates.guid_identity_daily** — sibling Identity-team model (guid-keyed device/network
   linkages extracted from **bidder auction logs**), also feeding the identity graph. Unlike this
-  table it is **NOT** migrated to GCS — it is a live, populated BQ **TABLE** (~3.56B rows / ~976 GB,
+  table it is **NOT** migrated to GCS — it is a live, populated BQ **TABLE** (~3.57B rows / ~981 GB,
   DAY-partitioned on `day`, 45-day TTL, clustered `(guid, ga_client_id)`) that queries normally.
   Its grain is **finer than identity×day**: one row per `(guid, ip, original_ip, ga_client_id,
   ua_raw)` daily linkage (~1.6 rows/guid/day) — see its own doc. Do not assume the augmentor and
@@ -163,6 +163,7 @@ WHERE dt = '2026-07-18';
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: verification pass vs live source. Clean-name VIEW → SQLMesh physical `__2089722211` (still a VIEW, numRows 0) → EXTERNAL `dw-main-bronze.external.augmentor_identity_daily__v1` — hash unchanged; external still PARQUET over `gs://mntn-data-archive-dev/identity/augmentor_identity_daily/*`, hive `dt` CUSTOM, **numBytes 0**. Re-confirmed the headline: a dry-run read of the view still ERRORS `Failed to expand … matched no files`. All 9 columns match AUTO:SCHEMA. Refreshed guid-sibling cross-ref numbers (~3.57B / ~981 GB); schema_synced+last_verified→2026-07-29. **Kept coverage_state=enriched:** the identity×day grain remains live-unverifiable (GCS prefix empty, every read errors) — nothing to promote against.
 - 2026-07-19: fixer pass (2 adversarial reviews reconciled vs live source). (1) front-matter `partition_by: day` → `none`: the view exposes only in-file `day` (does NOT prune) and drops the real hive partition `dt` (external `hivePartitioningOptions.fields=['dt']`, CUSTOM) — no working prune column at the view layer, so `none` per spend_pacing.md convention (body/Cost keep documenting `dt` as the view-hidden external prune column). (2) `guid_identity_daily` join note corrected: it is NOT GCS-migrated — live `..._678075530` = BQ TABLE (3.56B rows / 976 GB, DAY-partitioned `day`, 45d TTL, cluster (guid, ga_client_id)); grain is finer than identity×day (~1.6 rows/(guid,ip,original_ip,ga_client_id,ua_raw)/day per sibling verified doc); sourced from bidder auction logs, not `guid_log`. (3) removed unsupported "distinct" from domains/user_agents/networks/inventory_sources — view is a straight LIST flatten (no DISTINCT). (4) `v_augmentor_log` join key fixed: it has no `day` column (live schema: `time` TIMESTAMP / `epoch` INTEGER) → join `DATE(time)=day`. (5) tempered single-key identity×day grain with sibling-precedent caveat. Rejected nothing — all five findings verified against live source. Kept at enriched: grain remains live-unverifiable (empty GCS prefix, every read errors).
 - 2026-07-19: skeleton→enriched. Resolved lineage: view → SQLMesh view (Parquet LIST unnest) → EXTERNAL table `dw-main-bronze.external.augmentor_identity_daily__v1` over `gs://mntn-data-archive-dev/identity/augmentor_identity_daily/*` (hive partition `dt` STRING). Live drift vs prose: GCS prefix is EMPTY as of 2026-07-19 — view ERRORS ("matched no files") on any read (dry-run + COUNT both failed); table currently non-functional. Documented `day` (in-file, no prune) vs `dt` (hive partition, view-hidden); `seconds` is native TIMESTAMP array not epoch seconds (no integer-epoch cols → time_unit=timestamp). require_partition_filter not enforced (external); ttl/rows/bytes null (external + empty).
 <!-- CHANGELOG END -->

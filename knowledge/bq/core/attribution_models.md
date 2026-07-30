@@ -14,9 +14,9 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: 30
 approx_logical_bytes: 3399
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, conversions]
 keywords: [attribution_model, last-touch, last-tv-touch, competing, counterpart, ctv-vs-display, conversion-attribution, freshpaint, dimension]
 source: INFORMATION_SCHEMA+human
@@ -144,6 +144,7 @@ WHERE a.attribution_model_type_id IN (1,3);  -- display side only, avoid dupes
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Resolved view→physical (bronze.integrationprod.core_attribution_models, 30 rows/3399B, unpartitioned, cluster=attribution_model_id). Derived attribution_model_type_id domain (1/2/3/4) live. Reconciled 2 prose drifts: counterpart = display↔CTV mirror (NOT "competing model ID"); no "probabilistic" model (all last-touch). Noted deleted/is_test absent (standard core-dim filter N/A) and datastream_metadata RECORD dropped by silver view.
+- 2026-07-29: enriched→verified. Re-introspected live: physical unchanged (30 rows/3399B, unpartitioned, cluster=attribution_model_id, no TTL). Silver view schema matches AUTO:SCHEMA (5 cols; bronze's 6th datastream_metadata still dropped). No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

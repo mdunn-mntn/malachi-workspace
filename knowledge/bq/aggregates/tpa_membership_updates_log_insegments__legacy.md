@@ -12,10 +12,10 @@ require_partition_filter: false
 cluster_by: [date, advertiser_id, campaign_id]
 time_unit: date
 ttl_days: null
-approx_rows: 723495542526
+approx_rows: 745879701268
 approx_logical_bytes: null
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
 coverage_state: enriched
 domain: [audience, targeting]
 keywords: [tpa, third-party-audience, segment-membership, insegments, ip-segment, holdout, ds3, legacy, sqlmesh-federated-union]
@@ -71,14 +71,14 @@ This `__legacy` object is a **backward-compatibility, full-history VIEW**. It is
 - **Federated UNION view.** Because one branch is an external GCS-Parquet table, `--dry_run` byte estimates come back "accuracy is unknown because of federated tables or clustered tables", and the external branch cannot use BQ clustering/partition pruning the way the live physical does. For clean, prunable, cheaper scans of recent data, query the non-legacy `tpa_membership_updates_log_insegments` (or the physical) directly.
 - **Boundary at 2025-09-11.** The live branch is filtered `date >= '2025-09-11'`; the historical branch is `2025-08-31..2025-09-10`. So 2025-09-01..09-10 comes from the frozen GCS backfill even though the live physical also has those partitions — the two branches are stitched, not overlapping. Total view coverage: **2025-08-31 -> present**.
 - **`score` NULL on holdout rows.** Do not assume `score` is always populated — holdout-tagged members have NULL score. Filter/handle NULLs before averaging.
-- **Huge daily volume.** ~2.5 B rows/day (2026-07-15), ~723 B rows total on the live branch. One IP appears once per (advertiser, campaign, segment) it belongs to, so per-IP row counts are large. Never scan without a `date` filter.
+- **Huge daily volume.** ~2.5 B rows/day (2026-07-15), ~745.9 B rows total on the live branch. One IP appears once per (advertiser, campaign, segment) it belongs to, so per-IP row counts are large. Never scan without a `date` filter.
 - **DS domain is narrow in practice.** Only `data_source_id = 3` was present on the sampled day; treat DS 2 as possible-but-verify rather than guaranteed. DS 4 (CRM) is absent by design.
 - **`tags` semantics.** `tags` is an operational flag array (e.g. `holdout`), not free-form metadata; the sibling `tmul_holdout_segments` view is the holdout-focused cut.
-- **Physical `numRows` is trustworthy here.** Unlike most SQLMesh physicals, the live insegments physical reports a real `numRows` (7.23e11) via `bq show`; the `__legacy` physical itself is a VIEW (numRows 0) — resolve through it.
+- **Physical `numRows` is trustworthy here.** Unlike most SQLMesh physicals, the live insegments physical reports a real `numRows` (7.46e11) via `bq show`; the `__legacy` physical itself is a VIEW (numRows 0) — resolve through it.
 
 ## Cost & partitioning notes
 - **The one filter to always apply: `WHERE date = '<day>'`** (or a tight `date BETWEEN`). Partition = `date` (DAY), cluster = `(date, advertiser_id, campaign_id)` on the live branch. `require_partition_filter` is not enforced (a no-filter scan is allowed) — so it is on YOU to add the `date` predicate. Add `advertiser_id`/`campaign_id` equality predicates too, to exploit clustering.
-- Backing storage (live branch physical `__4126169799`, from `INFORMATION_SCHEMA.PARTITIONS`): **~45.5 TB total_logical_bytes / ~723 B rows across 322 daily partitions** (2025-09-01 -> present). No TTL (partitions retained indefinitely). The historical GCS-Parquet branch reports `numBytes 0` in `bq show` (external), so total logical bytes is not summable -> `approx_logical_bytes: null`.
+- Backing storage (live branch physical `__4126169799`, from `bq show` numBytes): **~50.4 TB / ~745.9 B rows across daily partitions** (2025-09-01 -> present; INFORMATION_SCHEMA total_logical_bytes was ~45.5 TB at 2026-07-19 enrichment — table has grown). No TTL (partitions retained indefinitely). The historical GCS-Parquet branch reports `numBytes 0` in `bq show` (external), so total logical bytes is not summable -> `approx_logical_bytes: null`.
 - **Dry-run scan estimates (via `--dry_run`, labeled by column set — same-column-set only is comparable):**
   - `SELECT ip WHERE date='2026-07-15'` (1 col, 1 day): **~54.5 GB** (58,472,355,306 B).
   - `SELECT ip` (1 col, NO date filter, full view): **~14.8 TB** (16,287,540,112,308 B) — the `date` filter prunes ~**280x** for this column set.
@@ -119,6 +119,7 @@ WHERE a.time >= '2026-07-15' AND a.time < '2026-07-16'
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: verification pass vs live source. `__legacy` physical hash `__4254198051` unchanged and still a VIEW (numRows 0) = UNION ALL of live SQLMesh physical `__4126169799` (date>=2025-09-11) + GCS-Parquet external `dw-main-bronze.external.tpa_membership_updates_log_insegments_by_day_historical`. Live-branch structure re-confirmed off `__4126169799`: partition=`date` DAY, cluster=[date, advertiser_id, campaign_id], no TTL; all 8 columns match AUTO:SCHEMA. **Drift fixed:** natural growth — approx_rows 723,495,542,526→745,879,701,268 (numRows 7.46e11), backing-storage line updated (~50.4 TB numBytes); approx_logical_bytes stays null (federated external branch, not summable); schema_synced→2026-07-29. **Kept coverage_state=enriched:** federated UNION view (dry-run bytes carry the "accuracy unknown" caveat), and DS2-possible + the 2025-08-31..09-10 historical-branch composition are not confirmable from cheap metadata.
 - 2026-07-19: skeleton→enriched. Resolved view: legacy = UNION ALL of live SQLMesh physical `__4126169799` (date>=2025-09-11) + GCS-Parquet external `dw-main-bronze.external.tpa_membership_updates_log_insegments_by_day_historical` (2025-08-31..09-10, hive-partitioned on date). Confirmed partition=date (DAY), cluster=(date,advertiser_id,campaign_id), no TTL, require_partition_filter not enforced, live branch ~723B rows/~45.5TB. Verified domain live: data_source_id=3 only on 2026-07-15, score 1..10000 (NULL on holdout-tagged rows), tags=ARRAY<STRING> e.g. "holdout". Prose oracle was thin (one grouped-sibling line in data_catalog.md:1442, "VIEWs — TPA membership tracking"); no per-table prose section existed — enriched from live schema. Reconciled drift: prose says TPA family = DS2+DS3 but live sampled day showed DS3 only (noted DS2 as possible-not-guaranteed); no time_unit epoch column exists (temporal col is native DATE `date`).
 <!-- CHANGELOG END -->
 

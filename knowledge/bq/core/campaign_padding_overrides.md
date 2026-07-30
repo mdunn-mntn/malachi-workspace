@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 2
 approx_logical_bytes: 171
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaign, config, pacing]
 keywords: [padding, override, multiplier, campaign_id, pacing, cdc, datastream, exception-table]
 source: INFORMATION_SCHEMA+human
@@ -130,6 +130,7 @@ WHERE c.deleted = FALSE AND c.is_test = FALSE
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (table appears only in the data_catalog.md silver.core inventory list at line 1261 — no `##` section, nothing in data_knowledge.md), so enriched from LIVE schema + sampling, mirroring the verified sibling `core.advertiser_padding_overrides`. Confirmed physical is a real TABLE (not SQLMesh view): 2 rows / 171 bytes, no partition, clustered on campaign_id, no TTL. Resolved `datastream_metadata.source_timestamp` = MILLISECONDS (TIMESTAMP_MILLIS → 2026-02-12 / 2025-12-19; MICROS → 1970). FK campaign_id → campaigns.campaign_id (1:1, ~548.7K-row parent) verified via metadata. Drift vs dataset convention: this dim has NO deleted/is_test columns (hygiene must come from campaigns). `padding` is a STRING multiplier ("1.4" = +40%, "1.05" = +5%); override-only exception table (absence = default 1.0).
+- 2026-07-29: enriched→verified vs live source. Schema (6 cols, campaign_id/padding STRING/notes/create_time/update_time/datastream_metadata), physical (real TABLE, 2 rows / 171 B, unpartitioned, cluster=campaign_id, no TTL) unchanged. Both override rows re-confirmed live: campaign 219898 padding "1.05" notes PER-2694, campaign 531697 padding "1.4" notes PER-5842. No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

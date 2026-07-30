@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 3
 approx_logical_bytes: 236
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [dimension, partners, enum]
 keywords: [partner_type, partner_type_id, dsp, ssp, mobile_attribution, lookup, enum, core_partners]
 source: INFORMATION_SCHEMA+human
@@ -87,6 +87,7 @@ ORDER BY p.partner_id
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle existed in data_catalog.md (partner_types appears only in the silver.core VIEW inventory list, line 1265; nothing in data_knowledge.md). Enriched from LIVE schema + a full 3-row sample. Resolved domain {1 DSP, 2 SSP, 3 Mobile Attribution}, epoch unit (source_timestamp = milliseconds), and the core.partners FK relationship (1:N parent side, no fan-out).
+- 2026-07-29: enriched→verified. Re-introspected live: 3 cols / types / partition(none) / cluster(`partner_type_id`) / no-TTL / view→`core_partner_types` physical all unchanged & correct. Enum {1 DSP, 2 SSP, 3 Mobile Attribution} re-confirmed live — no drift. numRows 3 / numBytes 236 stable.
 <!-- CHANGELOG END -->
 
 ## View definition

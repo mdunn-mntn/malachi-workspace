@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 8
 approx_logical_bytes: 517
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [core, dimensions, pixel, ecommerce]
 keywords: [pixel_integration_type, shopify, magento, gtm, prestashop, ecommerce, conversion_pixel, lookup, enum]
 source: INFORMATION_SCHEMA+human
@@ -113,6 +113,7 @@ WHERE pi.advertiser_id = 31357
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live: 3-col schema, unpartitioned, cluster=[pixel_integration_type_id], no TTL unchanged; 8 rows / 517 B stable. Full enum domain 1=shopify…8=reset re-confirmed vs source. Silver view still `SELECT * FROM bronze.integrationprod.core_pixel_integration_types`.
 - 2026-07-19: skeleton→enriched. Resolved view→physical `dw-main-bronze.integrationprod.core_pixel_integration_types` (8-row/517B TABLE, no partition, clustered on pixel_integration_type_id, no TTL). Captured full live enum domain (1-8) via SELECT DISTINCT. Confirmed `datastream_metadata.source_timestamp` = MILLISECONDS (TIMESTAMP_MILLIS → 2025-12-19; micros mis-decodes to 1970); CDC capture time, identical across all rows. Documented N:1 join to core.pixel_integrations. Prose reconciliation: data_knowledge.md named only "type 4 = manual" and "shopify etc." — live schema supplied the full 8-value domain (magento/prestashop/mntn-wordpress-plugin/gtm/sans-pixel/reset), no contradiction. Noted absence of deleted/is_test columns (standard live-row filter N/A).
 <!-- CHANGELOG END -->
 

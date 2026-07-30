@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [bidding, spend, auctions]
 keywords: [win notification, nurl, beeswax, mntn-native bidder, gcs archive, mntn_auction_id, bid_price, win_price, ctv, spend pipeline]
 source: INFORMATION_SCHEMA+human
@@ -188,4 +188,5 @@ GROUP BY dt;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-20: skeleton→enriched. No dedicated prose oracle for `external.bidder_win_notifications__v1` in data_catalog.md/data_knowledge.md; reconciled against the two live-warehouse counterparts (`bronze.raw.bidder_win_notifications` MNTN-native + `bronze.raw.bidder_beeswax_win_notifications` Beeswax) and the STICKYADS/World-Cup data-quality note (catalog §2944). Live-verified from external config + samples on dt=2026-07-18: hive partition `dt`+`hh` on GCS `mntn-data-archive-prod/bidder_win_notifications/region=central/`; grain = one win notification (~70.7M/day, 95% Beeswax / 5% MNTN-native, mutually exclusive on bid_id vs beeswax_*); epoch units resolved per-column (auction_timestamp=ns, impression_timestamp=µs, notification/flight_end/segment_ttl/geo_version=s); prices = micro-$/imp; `-1`/`0` sentinels; `impression_id` = pod-slot index (not a key). Drift reconciled: catalog treats native and Beeswax win notifications as two separate raw tables — this external archive **merges both feeds** into one table, so a `bid_id` join silently drops the 95% Beeswax share (documented in Gotchas). Dry-run yields no cost estimate for federated GCS parquet (returns 0-byte lower bound), noted in Cost.
+- 2026-07-29: enriched→verified. Re-introspected LIVE `bq show`: EXTERNAL PARQUET, schema unchanged (46 cols), hive partitions `dt`+`hh` (mode CUSTOM), sourceUriPrefix `gs://mntn-data-archive-prod/bidder_win_notifications/region=central/` — all match doc. Epoch-unit / sentinel / delivery-path (95% Beeswax / 5% MNTN-native) semantics were sample-verified on dt=2026-07-18 at enrichment; no cheap-metadata contradiction.
 <!-- CHANGELOG END -->

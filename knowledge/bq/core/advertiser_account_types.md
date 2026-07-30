@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 16
 approx_logical_bytes: 1120
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser, dimension, account-classification]
 keywords: [account_type, account_type_id, advertiser classification, B2B, Mobile, Ecommerce, Gaming, Agency, CDC dimension, datastream]
 source: INFORMATION_SCHEMA+human
@@ -121,6 +121,7 @@ ORDER BY a.account_type_id;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle existed (table appeared only in the `silver.core` inventory list in data_catalog.md, no `##` section). Enriched from live schema + sampling. Confirmed: physical TABLE 16 rows / 1120 bytes, no partition, cluster `(account_type_id, advertiser_id)`, no TTL; grain = one row per advertiser; `source_timestamp` = epoch MILLISECONDS (Datastream backfill 2025-12-19); account_type enum 1-8 from `core_account_types`, only ids 2/3/8 used. Reconciled dataset-wide `deleted/is_test` filter drift: those columns are absent here (apply on the `advertisers` partner instead).
+- 2026-07-29: enriched→verified. Re-introspected live: schema (4 cols), physical TABLE `dw-main-bronze.integrationprod.core_advertiser_account_types` (16 rows / 1120 bytes, no partition, cluster `[account_type_id, advertiser_id]`, no TTL) all UNCHANGED — zero drift. View def confirmed `SELECT * FROM …core_advertiser_account_types`.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 6
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [ctv, video, impressions, reference]
 keywords: [event_type, event_type_id, event_type_raw, vast, vast_impression, video_quartile, ctv, lookup, event_log, dimension]
 source: INFORMATION_SCHEMA+human
@@ -139,4 +139,5 @@ LEFT JOIN `dw-main-bronze.external.event_types` t
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle in data_catalog.md/data_knowledge.md for `external.event_types` (net-new/undocumented); enriched from LIVE schema + full 6-row dump + the related `silver.logdata.event_log` VAST prose (catalog lines ~287-318). Confirmed 6 rows, all 3 columns 1:1 distinct; source = GCS parquet `gs://mntn-analytics-curated/coredw/public/event_types/*.parquet`.
+- 2026-07-29: enriched→verified. Re-introspected LIVE. Schema unchanged (3 cols); sourceUri `gs://mntn-analytics-curated/coredw/public/event_types/*.parquet` confirmed. Re-dumped all 6 rows — contents identical (1 vast_impression … 6 vast_complete), all 3 columns still 1:1 distinct.
 <!-- CHANGELOG END -->

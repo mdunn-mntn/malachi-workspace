@@ -14,9 +14,9 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: 2
 approx_logical_bytes: 171
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaigns, pacing-delivery, overrides]
 keywords: [campaign_padding_overrides, padding, pacing, delivery-override, over-delivery, campaign_id, PER-ticket]
 source: INFORMATION_SCHEMA+human
@@ -128,6 +128,7 @@ LEFT JOIN `dw-main-silver.core.campaign_padding_overrides_vw` p
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (table only listed in data_catalog.md silver.core inventory, no dedicated section) — enriched from LIVE schema + a 2-row sample. Resolved view chain to physical `core_campaign_padding_overrides` (TABLE, 2 rows, 171 B, unpartitioned, cluster=campaign_id); confirmed padding is raw STRING SAFE_CAST→NUMERIC (decimal delivery-pad factor, not margin), notes=PER-XXXX Jira ref, timestamps native (time_unit=timestamp), no deleted/is_test cols, datastream_metadata dropped by the view.
+- 2026-07-29: enriched→verified vs live source. INFORMATION_SCHEMA confirms the 5-col view (padding exposed as NUMERIC, datastream_metadata dropped) over physical `core_campaign_padding_overrides` (2 rows, 171 B, unpartitioned, cluster=campaign_id, no TTL). Both override rows unchanged (219898=1.05/PER-2694, 531697=1.4/PER-5842). No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

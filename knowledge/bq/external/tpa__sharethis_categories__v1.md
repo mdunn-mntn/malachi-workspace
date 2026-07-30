@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 1850
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - audience
   - taxonomy
@@ -187,4 +187,5 @@ WHERE u.data_source_id = 17;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Confirmed empirically (COUNT/profile, 2026-07-19): 1,850 rows, DS17-only, PK=data_source_category_id (unique), flat 3-level tree (ROOT/ShareThis-container/1,848 leaves under parent_id=1), name=description=path on 100% of rows, advertiser_id/sort_order/updated_date all NULL, created_date 2024-01-01..2024-02-04 (static snapshot). GCS backing gs://mntn-data-archive-prod/static/sharethis_categories/*.parquet. Prose oracle: no dedicated data_catalog.md/data_knowledge.md section for this table; enriched from LIVE schema + external config + DS17/ShareThis context in data_catalog.md (§audience_data_sources, §usage_reporting_data) and data_knowledge.md (§tpa.direct_data_partners, TI-999 "1,850 active categories — taxonomy 100% >2yr stale"). The prose 1,850-category count reconciles exactly with the live row count (1,848 leaves + ROOT + container).
+- 2026-07-29: enriched→verified. Re-derived from source: 1,850 rows = 1,850 distinct data_source_category_id (PK), all data_source_id=17, sharethis_id 1,849 distinct, 1,848 leaves. Schema (18 cols) unchanged. No drift.
 <!-- CHANGELOG END -->

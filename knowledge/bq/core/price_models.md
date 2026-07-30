@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 18
 approx_logical_bytes: 6860
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [billing, pricing, reference-dim]
 keywords: [price_model, billing, cpm, cpc, cpa, revenue-share, formula-price-model, calculator, campaign-billing, steelhouse-statistics]
 source: INFORMATION_SCHEMA+live-sample
@@ -125,6 +125,7 @@ ORDER BY price_model_id;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-introspected live: 7-col schema, unpartitioned, cluster=[price_model_id], no TTL unchanged; 18 rows / 6,860 B stable. calculator_name single-valued FormulaPriceModel re-confirmed vs source. Silver view still `SELECT * FROM bronze.integrationprod.core_price_models`.
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md (only a name in the silver.core inventory list); enriched from live schema + a full 18-row sample. Resolved view → physical bronze TABLE (18 rows, 6,860 B, cluster=price_model_id, no partition/TTL); confirmed source_timestamp epoch = MILLISECONDS; confirmed price_model_id is the only price_model FK in integrationprod (no in-warehouse partner).
 <!-- CHANGELOG END -->
 

@@ -12,10 +12,10 @@ require_partition_filter: false
 cluster_by: [date, advertiser_id, campaign_id]
 time_unit: date
 ttl_days: null
-approx_rows: 723495542526
-approx_logical_bytes: 48903305821489
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
+approx_rows: 745879701268
+approx_logical_bytes: 50439238241233
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
 coverage_state: enriched
 domain: [audience, holdout, incrementality, membership]
 keywords: [tpa, membership, holdout, insegments, ds3, mntn_third_party, segment_membership, household_score, lift, incrementality, ip_segment]
@@ -45,7 +45,7 @@ Daily materialized snapshot of **holdout-group IP memberships** in **MNTN Third 
 | data_source_id | INT64 | YES |  |  |
 <!-- AUTO:SCHEMA END -->
 
-> Physical metadata (off `bq show` of the resolved physical): partition = `date` (DAY), cluster = `date, advertiser_id, campaign_id`, ~723.5B rows, ~48.9 TB logical, 321 daily partitions spanning **2025-09-01 → 2026-07-18**. No `require_partition_filter` set (but filtering `date` is mandatory in practice — see Cost).
+> Physical metadata (off `bq show` of the resolved physical): partition = `date` (DAY), cluster = `date, advertiser_id, campaign_id`, ~745.9B rows, ~50.4 TB (numBytes), daily partitions from **2025-09-01 → present**. No `require_partition_filter` set (but filtering `date` is mandatory in practice — see Cost).
 
 ## Column meanings (only the non-obvious ones)
 - **`ip`** — the holdout household IPv4 as a STRING. Join key to bid/impression/visit tables; mind the `ip` vs `ip_raw` convention on partner tables.
@@ -61,7 +61,7 @@ Daily materialized snapshot of **holdout-group IP memberships** in **MNTN Third 
 - **`segment_id` → DS3 segment metadata** — no confirmed DS3-segment name table in BQ (DS3 segment names live_unverifiable this pass; `tpa.categories` covers DS35/16/13/14/21, not DS3).
 - **Sibling variants (all in `aggregates`, all VIEWs over `sqlmesh__aggregates` physicals):**
   - `tpa_membership_update_log_uber` — event-level membership CHANGE log; richer schema (adds `time`, `activity_time` TIMESTAMPs, `version` INT; `tags` = RECORD array). ~5.96B rows, ~473 GB, partition `date`, cluster `date, advertiser_id, campaign_id`. Use for *when* an IP entered/left a segment.
-  - `tpa_membership_updates_log_insegments` — **THIS doc**; flattened daily per-campaign holdout snapshot (no timestamps). ~723B rows, ~48.9 TB. 121× more rows than `_uber` because it expands membership across campaigns per day, not per change event.
+  - `tpa_membership_updates_log_insegments` — **THIS doc**; flattened daily per-campaign holdout snapshot (no timestamps). ~745.9B rows, ~50.4 TB. ~118× more rows than `_uber` because it expands membership across campaigns per day, not per change event.
   - `tpa_membership_updates_log_insegments__legacy` — **retired, 0 rows** (last modified 2026-06-17, no partition/cluster). Same 8-col shape as current. Always query the **non-`__legacy`** name.
   - `tmul_holdout_segments` — separate holdout-oriented view in the same dataset (related but distinct object).
 
@@ -110,6 +110,7 @@ WHERE date = '2026-07-17' AND advertiser_id = 38363 AND campaign_id = 566599 AND
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: verification pass vs live source. Physical hash `__4126169799` unchanged; VIEW is `SELECT *` over it. Structure re-confirmed: partition=`date` DAY, cluster=[date, advertiser_id, campaign_id], requirePartitionFilter=None, no TTL; all 8 columns match AUTO:SCHEMA (`tags` ARRAY<STRING>). **Drift fixed:** natural growth — approx_rows 723,495,542,526→745,879,701,268, approx_logical_bytes 48,903,305,821,489→50,439,238,241,233 (~50.4 TB); physical-metadata + sibling-ratio (~118×) lines updated; schema_synced→2026-07-29. **Kept coverage_state=enriched:** re-confirming the identity claims (tags=["holdout"] 100%, data_source_id=3 only, score 1–10000 with day-varying NULL 42–66%) would need a 38+ GiB single-column full-day scan (not cheap metadata); the DS3 segment-name dim remains unresolved.
 - 2026-07-19: skeleton→enriched. Partition confirmed = `date` (dry-run prune 9.86 TB→58.6 GB, one col). Cluster `date, advertiser_id, campaign_id` + ~723.5B rows / ~48.9 TB / 321 partitions (2025-09-01→2026-07-18) off resolved physical. Grain (date, advertiser_id, campaign_id, segment_id, ip) verified exact. Empirically: `data_source_id` uniformly = 3 = "MNTN Third Party"; `tags` uniformly `["holdout"]` (100%, empty=0, 3 sampled days); `score` 1–10000 with NULL 42–66% (day-varying). Characterized siblings `_uber` (event log, +time/version, 5.96B rows) and `_insegments__legacy` (0 rows, retired). Prose oracle was only a 2-line stub in data_catalog.md §"silver.aggregates.tmul_holdout_segments / tpa_membership_update_log_uber / tpa_membership_updates_log_insegments" (type-only); enriched from live schema + queries.
 <!-- CHANGELOG END -->
 

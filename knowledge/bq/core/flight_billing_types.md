@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [core_flight_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 74198
-approx_logical_bytes: 5787444
+approx_rows: 74769
+approx_logical_bytes: 5831982
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [billing, core-dimensions, flights]
 keywords: [flight_billing_types, billing_type_id, core_flight_id, ptv-fixed-cpm, mntn-select, gary-ql, per-6526]
 source: INFORMATION_SCHEMA+human
@@ -38,8 +38,8 @@ SELECT/Premier UI does not pass billing type on flight creation; Gary maps it fr
 `product_id`. (`gary-ql/src/gql/types/Budget/UiToCore.ts#L1026-L1037`, `.../data/Budget.ts#L1813-L1905`.)
 
 ## Grain & keys
-- **Grain:** one row per flight — `core_flight_id` is the primary key. Verified 1:1 on 2026-07-19:
-  74,198 rows = 74,198 distinct `core_flight_id`, zero duplicates. No history/versioning — a flight's
+- **Grain:** one row per flight — `core_flight_id` is the primary key. Verified 1:1 on 2026-07-29:
+  74,769 rows = 74,769 distinct `core_flight_id`, zero duplicates. No history/versioning — a flight's
   billing type is upserted in place (see `update_time`), so there is at most one live row per flight.
 - **Primary key:** `core_flight_id` (also the physical clustering key).
 - **Join column:** `core_flight_id` → the flights dimension; `billing_type_id` is the enum value
@@ -57,8 +57,8 @@ SELECT/Premier UI does not pass billing type on flight creation; Gary maps it fr
 
 ## Column meanings (only the non-obvious ones)
 - **`core_flight_id`** — the flight's primary key; join key to the flights dimension. PK here (1:1).
-- **`billing_type_id`** — the CPM billing-model enum. Live domain on 2026-07-19 is **{1, 2}**
-  (`SELECT DISTINCT`): `1` = 61,484 flights (~83%), `2` = 12,714 flights (~17%).
+- **`billing_type_id`** — the CPM billing-model enum. Live domain on 2026-07-29 is **{1, 2}**
+  (`SELECT DISTINCT`): `1` = 61,859 flights (~83%), `2` = 12,910 flights (~17%).
   - `2` = **PTV Fixed CPM** (per prose oracle, Tony Chen 2026-06-02). As of 2026-06-02 MNTN SELECT
     campaigns *also* share `billing_type_id = 2` — they are treated as equivalent in the current
     billing pipeline but are behaviourally distinct and are slated to be separated.
@@ -109,11 +109,11 @@ SELECT/Premier UI does not pass billing type on flight creation; Gary maps it fr
 
 ## Cost & partitioning notes
 - **Unpartitioned, clustered on `core_flight_id`** (physical `dw-main-bronze.integrationprod.core_flight_billing_types`:
-  74,198 rows, ~5.79 MB, `timePartitioning: None`). No TTL. There is no partition filter to apply —
+  74,769 rows, ~5.83 MB, `timePartitioning: None`). No TTL. There is no partition filter to apply —
   the whole table is tiny; a full scan is cheap.
-- **The one lever that matters: prune `datastream_metadata`.** Dry-run 2026-07-19:
-  `SELECT *` = **5,787,444 bytes (~5.79 MB)**; `SELECT core_flight_id, billing_type_id` = **1,187,168
-  bytes (~1.19 MB)**. The `datastream_metadata` STRUCT is ~80% of the bytes, so avoid `SELECT *` when
+- **The one lever that matters: prune `datastream_metadata`.** Dry-run 2026-07-29:
+  `SELECT *` = **5,831,982 bytes (~5.83 MB)**; `SELECT core_flight_id, billing_type_id` = **1,196,304
+  bytes (~1.20 MB)**. The `datastream_metadata` STRUCT is ~80% of the bytes, so avoid `SELECT *` when
   you only need the mapping (~4.9x cheaper). Both figures are labeled by their exact column set.
 - When joining a large table to this dim, filter/join on `core_flight_id` (the cluster key) and select
   only the columns you need.
@@ -144,6 +144,7 @@ GROUP BY billing_type_id ORDER BY billing_type_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical to `dw-main-bronze.integrationprod.core_flight_billing_types` (74,198 rows, ~5.79 MB, unpartitioned, clustered on core_flight_id). Confirmed grain 1:1 on core_flight_id. `datastream_metadata.source_timestamp` = epoch MILLISECONDS (= UNIX_MILLIS(update_time)). Drift reconciled: (a) prose-referenced lookup `core.billing_types` does NOT exist in bronze.integrationprod — enum labels live only in prose/tickets; (b) live domain is {1,2}, prose only documented 2=PTV Fixed CPM and the proposed-but-not-live 3 — billing_type_id=1 (83% of flights) is undocumented/unlabeled and flagged; (c) table has no deleted/is_test columns, so the standard dimension filter does not apply.
+- 2026-07-29: enriched→verified. Re-introspected live: 5 cols / types / partition(none) / cluster(`core_flight_id`) / no-TTL / view→`core_flight_billing_types` physical all unchanged & correct. Grain re-confirmed 1:1 (74,769=74,769 distinct). Refreshed CDC growth: 74,198→74,769 rows, bt1 61,484→61,859, bt2 12,714→12,910, numBytes 5,787,444→5,831,982; domain still {1,2} (proposed 3 still absent).
 <!-- CHANGELOG END -->
 
 ## View definition

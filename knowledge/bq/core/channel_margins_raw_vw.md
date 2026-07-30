@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [channel_margin_id]
 time_unit: timestamp
 ttl_days: null
-approx_rows: 8
-approx_logical_bytes: 927
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 9
+approx_logical_bytes: 1040
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [billing, pricing, margins]
 keywords: [channel margin, partner margin, budget margin, data margin, budget padding, platform fee, target cpm, take rate, config dimension, sensitive]
 source: INFORMATION_SCHEMA+human
@@ -35,9 +35,9 @@ Reach for it when you need to know which margin/fee parameters apply to a
 document and join on keys, but do not print or share the NUMERIC rate columns' values.
 
 ## Grain & keys
-- **Grain:** one row per `channel_margin_id` (surrogate PK). Currently **8 rows** total.
-- **Key(s) / join columns:** `channel_margin_id` PK (8 distinct = 8 rows, 1:1 confirmed).
-  Natural key `(channel_id, partner_id)` is also unique (8 combos over 8 rows), so each
+- **Grain:** one row per `channel_margin_id` (surrogate PK). Currently **9 rows** total (2026-07-29).
+- **Key(s) / join columns:** `channel_margin_id` PK (9 distinct = 9 rows, 1:1 confirmed).
+  Natural key `(channel_id, partner_id)` is also unique (9 combos over 9 rows), so each
   row is exactly one channel×partner config. FKs: `partner_id` → `core.partners`,
   `channel_id` = channel/media-type identifier (see Joins).
 
@@ -62,9 +62,9 @@ document and join on keys, but do not print or share the NUMERIC rate columns' v
 - **channel_id** — channel / media-type identifier for the config. There is **no
   `core_channels` dimension table** to join to (it does not exist); interpret via the
   channel enum used elsewhere (e.g. log tables use `channel_id` 1=display, 8=CTV). 5
-  distinct values across the 8 rows.
+  distinct values across the 9 rows ({1, 3, 4, 7, 8}).
 - **partner_id** — FK to `core.partners` (supply/demand partner). Non-null in all rows;
-  3 distinct values across the 8 rows.
+  3 distinct values across the 9 rows ({2 Trade Desk, 8 Beeswax, 79 MNTN Bidder}).
 - **budget_margin, budget_padding, partner_margin, data_margin** — NUMERIC rate
   components (**SENSITIVE**). In the SQLMesh view these four are wrapped in
   `SAFE_CAST(... AS NUMERIC)` — the underlying raw column stores a looser type and a
@@ -90,7 +90,7 @@ document and join on keys, but do not print or share the NUMERIC rate columns' v
   prefer it when you want the untransformed source rows.
 
 ## Gotchas
-- **Tiny reference table (8 rows, 927 bytes).** No partition, no cost trap; no aggregation
+- **Tiny reference table (9 rows, 1,040 bytes).** No partition, no cost trap; no aggregation
   or date filter needed.
 - **NO `deleted` / `is_test` columns.** Unlike most `core.*` CDC dimensions, this table has
   neither, so the standard `deleted=FALSE AND is_test=FALSE` live-row filter does **not
@@ -107,9 +107,10 @@ document and join on keys, but do not print or share the NUMERIC rate columns' v
 ## Cost & partitioning notes
 - **No partition, no partition filter required or possible.** Physical
   `bronze.integrationprod.core_channel_margins_raw` is an unpartitioned TABLE clustered by
-  `channel_margin_id` (927 bytes, 8 rows). Nothing to prune.
-- `SELECT *` (all 11 columns) dry-run = **559 bytes upper bound** (2026-07-19). Effectively
-  free at any read pattern; `SELECT *` is fine here.
+  `channel_margin_id` (1,040 bytes, 9 rows). Nothing to prune.
+- `SELECT *` (all 11 columns) is far below the 10 MB billing floor. Effectively
+  free at any read pattern; `SELECT *` is fine here. (Raw physical now has 14 cols incl
+  `user_id` + `margin_reason_id`; the view exposes only the 11 above.)
 - View resolution chain: `silver.core.channel_margins_raw_vw` →
   `bronze.integrationprod.core_channel_margins_raw_vw` →
   `sqlmesh__integrationprod.integrationprod__core_channel_margins_raw_vw__2886411513` →
@@ -135,6 +136,7 @@ ORDER BY update_time DESC
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified vs live source. View schema (11 cols, 4 SAFE_CAST→NUMERIC) unchanged; physical `core_channel_margins_raw` unpartitioned, cluster=channel_margin_id. Drift fixed: rows 8→9 (new MNTN-Bidder display row), bytes 927→1,040; channel_id domain still {1,3,4,7,8}, partner_id still {2,8,79}; natural key (channel_id,partner_id) unique (9/9). Raw physical now has 14 cols incl user_id + margin_reason_id, both dropped by the view.
 - 2026-07-19: skeleton→enriched. Resolved view to physical `bronze.integrationprod.core_channel_margins_raw` (TABLE, 8 rows, 927 B, no partition, cluster=[channel_margin_id]). Confirmed grain (channel_margin_id PK; natural key channel_id×partner_id unique). No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented — only a name mention in the silver.core inventory). SENSITIVE margin table: documented keys/schema only, no rate values sampled.
 <!-- CHANGELOG END -->
 

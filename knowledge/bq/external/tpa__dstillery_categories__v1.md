@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: external.tpa__dstillery_categories__v1
-summary: "one row per Dstillery (DS18) 3P interest-category node — the shared, public taxonomy that decodes DS18 audience-segment category ids into human-readable paths; 11,688 nodes (2 structural roots + 11,686 leaves), 3,303 active / 8,385 deprecated"
+summary: "one row per Dstillery (DS18) 3P interest-category node — the shared, public taxonomy that decodes DS18 audience-segment category ids into human-readable paths; 11,688 nodes (2 structural roots + 11,686 leaves), 3,301 active targetable leaves / 8,385 deprecated"
 dataset: external
 table: tpa__dstillery_categories__v1
 object_type: EXTERNAL
@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 11688
 approx_logical_bytes: 1387918
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting, taxonomy]
 keywords: [dstillery, ds18, third-party, 3p, taxonomy, categories, interest-segments, data_source_id_18, audience-segments, gfk, predictive-locations]
 source: INFORMATION_SCHEMA+human
@@ -69,8 +69,8 @@ created 2025-09-18 and points at one 1.32 MiB parquet file (snapshot last writte
 - **advertiser_id** — always NULL. This is a **shared, public catalog**, NOT per-advertiser. (Contrast
   DS16 `bronze.tpa.categories`, where per-advertiser funnel tags carry an `advertiser_id`.)
 - **deprecated** — TRUE for 8,385 of 11,688 nodes (≈72%). `deprecated = TRUE` ⟺ `updated_date IS NOT
-  NULL` **exactly** (verified: 8,385 both / 0 either-only). The 3,303 non-deprecated leaves are the
-  "active" categories.
+  NULL` **exactly** (verified: 8,385 both / 0 either-only). The 3,303 non-deprecated rows = 3,301
+  active leaf categories + the 2 structural nodes (ROOT, Dstillery); the targetable set is those 3,301 leaves.
 - **public** — always TRUE.
 - **sort_order** — always NULL (unused).
 - **created_date** — always `2024-04-23` (single snapshot build date; DATE, no time/epoch).
@@ -101,8 +101,9 @@ created 2025-09-18 and points at one 1.32 MiB parquet file (snapshot last writte
 - **Stale by design.** All rows created 2024-04-23; the 3,303 active categories have never been
   updated (`updated_date` NULL). The taxonomy is >2yr stale — reconciles with the data_knowledge note
   "taxonomy 100% >2yr stale."
-- **~72% deprecated.** Only 3,303 of 11,688 nodes are active. Always filter
-  `deprecated = FALSE AND is_leaf_node = TRUE` (= 3,303 rows) for the usable, targetable set.
+- **~72% deprecated.** 3,303 of 11,688 nodes are non-deprecated. Filter
+  `deprecated = FALSE AND is_leaf_node = TRUE` (= **3,301 leaf rows**; the 3,303 non-deprecated total
+  also includes the 2 structural ROOT+Dstillery nodes) for the usable, targetable set.
 - **`updated_date` is a deprecation stamp**, not a general last-modified — it is NULL on every active
   category and non-NULL on every deprecated one.
 - **name = description = path** (redundant on leaves) and **names / path_from_root are JSON-in-STRING**
@@ -130,7 +131,7 @@ created 2025-09-18 and points at one 1.32 MiB parquet file (snapshot last writte
 
 ## Example queries
 ```sql
--- The usable, active, targetable DS18 categories (3,303 rows)
+-- The usable, active, targetable DS18 categories (3,301 rows)
 SELECT data_source_category_id, path, created_date
 FROM `dw-main-bronze.external.tpa__dstillery_categories__v1`
 WHERE data_source_id = 18 AND is_leaf_node = TRUE AND deprecated = FALSE
@@ -157,4 +158,5 @@ LEFT JOIN `dw-main-bronze.external.tpa__dstillery_categories__v1` c
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Live-verified against the GCS-backed external parquet: 11,688 rows, all `data_source_id=18`; PK = `data_source_category_id` (11,688 distinct); 2-level tree (ROOT=0, Dstillery=1, 11,686 leaves under parent_id=1); 8,385 deprecated ⟺ `updated_date IS NOT NULL` exactly; 3,303 active (updated_date NULL); all `public=TRUE`, `advertiser_id=NULL`, `sort_order=NULL`, `partner_id=0`, `created_date=2024-04-23`. Backing store = single 1,387,918-byte parquet (snapshot 2025-09-18). Reconciled prose drift: data_knowledge's "~32M rows/day, 3,303 active categories" — the 3,303 matches this taxonomy exactly, but the 32M/day is the IP×category MEMBERSHIP feed, not this category-definition table. No dedicated prose section existed in data_catalog.md (only the DS18 id mention on line 2111); enriched from live schema + the DS18 gotchas in data_knowledge.md.
+- 2026-07-29: enriched→verified. Re-derived grain from source: 11,688 rows = 11,688 distinct data_source_category_id, all data_source_id=18, 8,385 deprecated. FIXED count drift: the targetable set (deprecated=FALSE AND is_leaf_node=TRUE) = 3,301 leaves, not 3,303; 3,303 is non-deprecated rows incl the 2 structural ROOT+Dstillery nodes. Schema (17 cols) unchanged.
 <!-- CHANGELOG END -->

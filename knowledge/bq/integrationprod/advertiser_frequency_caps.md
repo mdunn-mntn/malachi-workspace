@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 0
 approx_logical_bytes: 0
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - advertiser
   - frequency_cap
@@ -119,6 +119,5 @@ LIMIT 100;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Introspected live (dw-main-bronze): BASE TABLE, self, unpartitioned, no clustering, no TTL. Confirmed EMPTY (0 rows / 0 bytes). Schema = 6 cols (advertiser_id, impressions, duration_seconds, user_id, create_time, update_time). Prose oracle = data_catalog.md §"frequency_caps config tables" + data_knowledge.md §"IP Frequency Capping (fcap)" (AUDI-1173): advertiser-scoped cap is an unused capability gap; populated caps live at campaign_group + DSO scope. Mapped columns to the fcap `(cap, duration_secs)` pair: impressions=cap, duration_seconds=window. last_verified left null pending an independent confirm pass.
+- 2026-07-29: enriched→verified. Independent confirm pass (dw-main-bronze): still EMPTY (numRows/numBytes=0); schema (6 cols) unchanged; sibling scoped-cap tables present in integrationprod (campaign_group_frequency_caps, dso_frequency_caps). Removed stray trailing tags. No drift.
 <!-- CHANGELOG END -->
-</content>
-</invoke>

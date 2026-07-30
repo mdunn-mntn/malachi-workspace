@@ -14,9 +14,9 @@ time_unit: n/a
 ttl_days: null
 approx_rows: 120482
 approx_logical_bytes: 1887160
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [identity, targeting]
 keywords: [icloud, private_relay, apple, ipv4, ip_exclusion, membershipdb, bidding, ip_list, geo_targeting]
 source: INFORMATION_SCHEMA+human
@@ -134,4 +134,5 @@ WHERE e.load_date BETWEEN '2026-07-01' AND '2026-07-07';
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Confirmed grain empirically (120,482 rows = 120,482 distinct ip, no dups/NULLs; 0 CIDR masks, 0 IPv6 → individual enumerated IPv4s, not ranges). Full-scan cost = 1,887,160 bytes (single column). Reconciled prose drift: column is `ip` not `ip_address` (external legacy table `logdata.icloud_ipv4_ips` uses `ip_address`); "IP ranges" in prose are pre-expanded to individual IPs. Set partition_by=none/require_partition_filter=false (static reference table, no time column → time_unit=n/a). Prose oracle: data_catalog.md §summarydata.icloud_* + §logdata.icloud_ipv4_ips (Ryan Kleck 2026-04-01), data_knowledge.md §icloud_ tables.
+- 2026-07-29: enriched→verified. Re-derived from live source: BASE TABLE, single `ip` STRING column, no partition/cluster/TTL; row/byte counts unchanged (120,482 / 1,887,160). Grain re-confirmed (120,482 rows = 120,482 distinct ip). No drift.
 <!-- CHANGELOG END -->

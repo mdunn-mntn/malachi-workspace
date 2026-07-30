@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 2952076098
 approx_logical_bytes: 319652802223
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [incrementality, experimentation, lift_measurement, ctv, prospecting]
 keywords: [lift ghost_bid_visits, ghost bid, ghost bidding, holdout, incrementality, lift measurement, itt, treatment control arm, visit lift, conversion lift, prospecting, ber-2250, incr, matt brorby, enriched]
 source: INFORMATION_SCHEMA+human
@@ -127,6 +127,7 @@ GROUP BY arm;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Cataloged net-new from live source + existing oracle prose (data_catalog.md §silver.enriched.lift__ghost_bid_*, experimentation.md §Ghost-bid lift). Resolved VIEW → physical `sqlmesh__enriched.enriched__lift__ghost_bid_visits__2999749496` (TABLE, ~2.95B rows / ~320 GB). Partition confirmed empirically: `dt` DAY prunes 44.3 GB→2.3 GB; no clustering, no TTL, require_partition_filter=false. Grain, arm semantics (ghost n_won=0), and outcome rates verified on the 2026-07-15 partition.
+- 2026-07-29: enriched→verified. Re-introspected LIVE. View still points to physical `…__2999749496`; `bq show` on that physical confirms TABLE / **2,952,076,098 rows / 319,652,802,223 B** / partition `dt` DAY / no clustering — matches front-matter. Schema unchanged (19 cols). Grain + arm/outcome semantics were empirically verified same-day (see Observed facts).
 <!-- CHANGELOG END -->
 
 ## View definition

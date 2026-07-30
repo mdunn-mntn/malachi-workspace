@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 16
 approx_logical_bytes: 1996
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [dimensions, campaigns, reference]
 keywords: [goal_type, goal_type_id, goal_type_name, ROAS, eCPA, CPA, VisitRate, CostPerVisit, optimization goal, campaign_groups, enum, lookup, cdc]
 source: INFORMATION_SCHEMA+human
@@ -153,6 +153,7 @@ ORDER BY goal_type_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical to dw-main-bronze.integrationprod.core_goal_types (16-row / 1996-byte unpartitioned TABLE, clustered on goal_type_id, no TTL). Domain queried live (contiguous 1-16). Confirmed no deleted/is_test cols. Resolved datastream_metadata.source_timestamp = MILLISECONDS (TIMESTAMP_MILLIS → 2026-01-14; MICROS → 1970); identical across all rows = bulk CDC snapshot. Primary FK campaign_groups.goal_type_id (N:1, no fan-out); campaign_groups denormalizes goal_type_name so join often unnecessary. Prose oracle = data_catalog.md line 2142 (generic "Goal type ENUM (CPA, ROAS, etc.)"); reconciled to full 16-value domain.
+- 2026-07-29: enriched→verified. Re-introspected live: 4 cols / types / partition(none) / cluster(`goal_type_id`) / no-TTL / view→`core_goal_types` physical all unchanged & correct. Full 16-row enum (ids 1-16 + names) re-confirmed live — no drift. numRows 16 / numBytes 1,996 stable.
 <!-- CHANGELOG END -->
 
 ## View definition

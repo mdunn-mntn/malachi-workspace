@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 71
 approx_logical_bytes: 7242
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [core, margins, billing]
 keywords: [ttd, the-trade-desk, advertiser-margin, channel-margin, budget-margin, cdc-dim, sensitive-margin]
 source: INFORMATION_SCHEMA+human
@@ -126,6 +126,7 @@ WHERE advertiser_id = <advertiser_id>;   -- N:1 to advertisers; ≤2 rows (displ
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md beyond the silver.core inventory listing (line 1270) — enriched from LIVE schema + physical metadata + aggregate counts (no rows/margin values read, table is SENSITIVE). Resolved physical to `dw-main-bronze.integrationprod.core_ttd_advertiser_channel_margins`: 71-row unpartitioned CDC TABLE, 7242 bytes, clustered by advertiser_channel_margin_id, no requirePartitionFilter, no deleted/is_test cols. Confirmed grain (advertiser_id, channel_id) unique; channel domain present = {1,8}; datastream_metadata.source_timestamp epoch = MILLISECONDS (anchor 1766121466991 → 2025-12-19), single-snapshot backfill. Flagged legacy/frozen (max update_time 2022-05-06).
+- 2026-07-29: enriched→verified. Re-introspected LIVE source. Zero drift — schema still 7 cols (budget_margin NUMERIC(5,4)), 71 rows / 7242 B, unpartitioned, cluster=advertiser_channel_margin_id. Channel domain re-confirmed {1:58 rows, 8:13 rows}; still legacy/frozen (max update_time 2022-05-06). Margin VALUES not sampled (SENSITIVE). schema_synced 2026-07-29.
 <!-- CHANGELOG END -->
 
 ## View definition

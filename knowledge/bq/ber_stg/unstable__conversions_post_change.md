@@ -14,11 +14,11 @@ cluster_by:
   - change_id
 time_unit: microseconds
 ttl_days: null
-approx_rows: 1096576
-approx_logical_bytes: 2452320321
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1270231
+approx_logical_bytes: 2845758965
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - reporting
   - conversions
@@ -156,8 +156,8 @@ Dimensions / flags:
 - **Partition `time` (DAY, require_partition_filter=true); cluster `advertiser_id, change_id`.** Always filter `time`; add `advertiser_id` to exploit cluster pruning.
 - Labeled dry-run estimates (2026-07-20):
   - 3 narrow cols (`advertiser_id, order_amt, time`): **1 day = 0.43 MB** (454,336 B) vs **30 days = 16.4 MB** (17,168,064 B) → `time` filter prunes, ~linear in days.
-  - `SELECT *` (all 58 cols), **1 day = 29.7 MB** (31,125,275 B) → ~68× the 3-col day. Select only needed columns; never `SELECT *`.
-- Physical backing (`bq show` numBytes): **~2.45 GB** (2,452,320,321 B) across ~1.10M rows total.
+  - `SELECT *` (all 57 cols), **1 day = 29.7 MB** (31,125,275 B) → ~68× the 3-col day. Select only needed columns; never `SELECT *`.
+- Physical backing (`bq show` numBytes): **~2.85 GB** (2,845,758,965 B) across ~1.27M rows total (2026-07-29).
 
 ## Example queries
 ```sql
@@ -184,6 +184,7 @@ ORDER BY change_id, conversion_day
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md (net-new table) — enriched from live schema + empirical sampling. Confirmed partition=`time` (DAY, require_partition_filter=true) and cluster=[advertiser_id, change_id] off the physical; resolved epoch units (epoch/event_epoch/impression_epoch = microseconds, change_epoch/batch_epoch = seconds); verified change_id 1:1 with (advertiser_id, change_time) and ~4:1 fan-out to unstable__budget_changes.
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema (57 cols name+type) identical to AUTO:SCHEMA; view→physical hash `__2857904261` current; partition=`time` DAY with require_partition_filter=TRUE, cluster=[advertiser_id, change_id], no TTL — confirmed via bq show; min partition 2026-03-27 confirmed via INFORMATION_SCHEMA.PARTITIONS. Fixed prose column-count 58→57. Append growth: ~1.10M→~1.27M rows, ~2.45→~2.85 GB (approx_* refreshed). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

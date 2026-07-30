@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [advertiser_id, conversion_source_id]
 time_unit: timestamp
 ttl_days: null
-approx_rows: 147725
-approx_logical_bytes: 7167256
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 149014
+approx_logical_bytes: 7251969
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversion, pixel, attribution]
 keywords: [conversion_type, pixel, tag change, conversion registry, sentinel, create_time, advertiser_conversion_type_id, conversion_source_id]
 source: INFORMATION_SCHEMA+human
@@ -38,7 +38,7 @@ table tracks advertiser-side pixel edits (confirmed by Kevin Cipriani 2026-07-08
 
 ## Grain & keys
 - **Grain:** one row per `(advertiser_id, conversion_type, conversion_source_id)` triple. Verified
-  live 2026-07-19: 147,725 rows, and both the surrogate PK and the triple have 147,725 distinct values
+  live 2026-07-29: 149,014 rows, and both the surrogate PK and the triple have 149,014 distinct values
   — **zero duplicate triples**. Re-registration of an existing type under a new source_id is negligible
   (~26 pairs platform-wide).
 - **Primary key:** `advertiser_conversion_type_id` (surrogate, unique).
@@ -121,7 +121,7 @@ table tracks advertiser-side pixel edits (confirmed by Kevin Cipriani 2026-07-08
   - `SELECT advertiser_conversion_type_id` (one narrow col), **full table**: **1,181,800 bytes** (~1.18 MB).
   - Same one col, `WHERE create_time >= '2026-07-01'`: **39,120 bytes** (~39 KB) — **~30× prune**, empirically
     confirming `create_time` is the partition column.
-  - `SELECT *`, full table: **7,167,256 bytes** (~7.17 MB) = full backing storage (`numBytes`).
+  - `SELECT *`, full table: **~7.25 MB** = full backing storage (`numBytes` 7,251,969, 2026-07-29).
   - Same-column-set comparison (one narrow col, filtered vs not) is the valid prune diff; `SELECT *` is ~6×
     the one-column full scan — avoid `SELECT *`.
 
@@ -155,6 +155,7 @@ ORDER BY t.create_time DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Resolved physical (SQLMesh TABLE sqlmesh__core.core__advertiser_conversion_types__1595573418): partition_by=create_time (DAY, empirically confirmed ~30× prune), cluster_by=[advertiser_id, conversion_source_id], require_partition_filter=false, 147,725 rows / 7,167,256 bytes, time_unit=timestamp. Grain verified live: PK advertiser_conversion_type_id unique, triple unique, 0 NULL create_time/conversion_type, range 2023-04-13→live. Prose oracle = data_catalog.md "bronze.integrationprod.core_advertiser_conversion_types" + data_knowledge.md pixel-registry sections. Drift reconciled: (a) dataset-context "core.* = thin view over bronze, no SQLMesh" is FALSE here — this is SQLMesh-materialized; (b) no deleted/is_test/user_id cols so the standard core-dim filter does not apply; (c) row count grew 141,431 (bronze, 2026-07-08) → 147,725 (silver, 2026-07-19), consistent with ~2.1–2.6K regs/mo + 50M-namespace flow.
+- 2026-07-29: enriched→verified. Re-introspected live. View still resolves to SQLMesh physical `sqlmesh__core.core__advertiser_conversion_types__1595573418` (hash unchanged) — partition `create_time` (DAY), cluster `[advertiser_id, conversion_source_id]`, no TTL: all UNCHANGED. Schema (5 cols) UNCHANGED. Grain re-confirmed: PK, triple both 149,014 distinct = row count, 0 NULL conversion_type. Only drift = organic growth 147,725→149,014 rows / 7,167,256→7,251,969 bytes (refreshed front-matter + counts).
 <!-- CHANGELOG END -->
 
 ## View definition

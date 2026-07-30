@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 161969
 approx_logical_bytes: null
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting, taxonomy]
 keywords: [oracle, bluekai, oracle data cloud, 3p taxonomy, audience categories, data_source_category_id, path_from_root, names, steelhouse dmp, ds1, tpa]
 source: INFORMATION_SCHEMA+human
@@ -179,6 +179,5 @@ ORDER BY name;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle section existed for this exact table in data_catalog.md/data_knowledge.md (only the DS1-Oracle legacy notes and the sibling tpa__mntn_matched_taxonomy__v2 section). Enriched from LIVE schema + empirical sampling. Confirmed: 161,969 rows, data_source_category_id unique (PK), root id=0, no partitioning (static GCS prefix), ~20.34 MiB GCS Parquet, content frozen 2018–2024. Reconciled the tpa.categories path_from_root gotcha to Oracle: path_from_root = id-struct (unreadable), readable path in `names`. Flagged Oracle id space ≠ MNTN id space and DS1-decode join as unverified.
+- 2026-07-29: enriched→verified. Re-derived from source: 161,969 rows = distinct data_source_category_id (PK), 58,845 deprecated, 132,401 leaves, id range 0–2,224,588. Schema (25 cols) unchanged. Removed stray trailing tags. No drift.
 <!-- CHANGELOG END -->
-</content>
-</invoke>
