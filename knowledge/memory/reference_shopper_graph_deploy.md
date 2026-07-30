@@ -48,6 +48,13 @@ class DbtImageName(str, Enum):
 `mntn_match_incrementals_fetch` (`0 9 * * *`, `catchup=False`) — a deploy after 09:00Z lands on the
 FOLLOWING day's run unless manually triggered.
 
+**Worked example #2 (INC-007, 2026-07-30):** the OpenAI file-cleanup fix (`openai/` change to
+`delete_all_storage_files.py` — per-file delete, paginate `files.list` via `auto_paging_iter`, retention
+72h→48h) applied the SAME rule → shipped via `deploy_openai_dockerhub_gcp.yml`, NOT middleware. Merge
+`cf2c76e` (branch `audi-1042/fix-openai-storage-cleanup`) → run 30577185770 SUCCESS ~20:00Z → pushed
+`steelhousedev/openai_batch_runner:gcp-prod` (digest `sha256:f6448696…`) + `:gcp-prod-cf2c76e`. Both the
+INC-006 fetch fix (#296) and this INC-007 cleanup fix (#297) now live on the same `gcp-prod` image tag.
+
 ## Access
 - **Argo:** request via the **IT service desk** (HR → IT support). In the ticket comment ask for
   **"Argo CD prod and non-prod"** (need BOTH prod and non-prod/QA). Malachi HAS this (prod + non-prod), granted 2026-07-30.
@@ -66,7 +73,8 @@ FOLLOWING day's run unless manually triggered.
   under-owned; **Ryan Kleck** is nearest (owns cross-DAG dependency wiring). Malachi will pair with Ryan on
   airflow-side durable follow-ups (direct `batch_fetch` alerting / DAG-dependency hardening).
 - A **new OpenAI quota-increase ticket** (from Alyson) may land on Malachi; Victor had a prior ticket for
-  it. Distinct from the file-hygiene fix (AUDI-1042, now Malachi's — INC-007 / IMP-013).
+  it. Distinct from the file-hygiene fix (AUDI-1042 — Malachi's, **In Progress + P1-Critical**, cleanup
+  fix shipped via #297 2026-07-30, storage-drop validation pending — INC-007 / IMP-013).
 
 See [[reference_airflow_ti]] (our model-repo deploy flow — a different, GCS→bundle path),
 [[reference_oncall_runbook]] (INC-006 fetch bug #296, INC-007 quota AUDI-1042),
