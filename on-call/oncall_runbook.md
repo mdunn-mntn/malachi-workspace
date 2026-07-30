@@ -249,7 +249,7 @@ benign" reframe — abandoning a well-evidenced conclusion instead of holding it
 test. Correct move: **acknowledge the objection, keep the evidenced verdict, and settle it with the test** —
 not concede. A domain owner's plausible pushback is a hypothesis to check, not an authority to fold to.
 
-**Update 2026-07-30 (owner handoff + backfill query).** Sonali (CIL / category-facts owner, BER) is manually
+**Update 2026-07-30 (owner handoff + backfill query; recorded as spike AUDI-1181, Done).** Sonali (CIL / category-facts owner, BER) is manually
 backfilling the 07-27 partition; her working hypothesis is the category-facts job's **2-day lookback** missed
 07-27 (compatible with the regression: a reprocess un-resolved the rows and a 2-day window won't self-heal them).
 Shared the isolation query + example rows. **Key for the backfill:** the `-3` re-stamp blanks `campaign_id`,
