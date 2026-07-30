@@ -13,10 +13,10 @@ cluster_by: []
 time_unit: timestamp
 ttl_days: null
 approx_rows: 542598
-approx_logical_bytes: 584422728
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_logical_bytes: 599659624
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting, segment-history]
 keywords: [campaign_group_id, audience_id, data_source_id, category_info, and_seq, or_seq, segment history, campaign_segment_history, DS19]
 source: INFORMATION_SCHEMA+human
@@ -121,8 +121,8 @@ actually bidding"** — verify against `audience.audience_segment_campaigns` (1:
 - **No partition, no clustering, no TTL.** The `sqlmesh__summarydata.…__1098153208` hash is itself a
   logical **VIEW** (numRows/numBytes = 0), resolving to `audience.campaign_segment_history` JOIN
   `public.campaigns` + `GROUP BY`. The real backing storage is the source table
-  `sqlmesh__audience.audience__campaign_segment_history__2255962104`: **TABLE, 9,466,163 rows,
-  584,422,728 bytes (~584 MB), unpartitioned, unclustered** (= `approx_logical_bytes`).
+  `sqlmesh__audience.audience__campaign_segment_history__2255962104`: **TABLE, 9,711,963 rows,
+  599,659,624 bytes (~600 MB), unpartitioned, unclustered** (= `approx_logical_bytes`).
 - **No filter prunes** — the view always re-scans and re-aggregates the whole source. Dry-run `SELECT *`
   with **and without** a `WHERE campaign_group_id = …` predicate both estimate **593,201,496 bytes**
   (identical). The only real cost lever is the **column set**, because the two aggregated columns force
@@ -162,6 +162,7 @@ WHERE start_time <= TIMESTAMP('2026-06-01') AND end_time > TIMESTAMP('2026-06-01
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. 7 columns match AUTO:SCHEMA exactly. View hash unchanged (`__1098153208`); re-read the view SQL — still `audience.campaign_segment_history` JOIN `public.campaigns` GROUP BY (campaign_group_id, audience_id, start_time, COALESCE(end_time,'9999-12-31'), data_source_id), category_info = TO_JSON_STRING of {data_source_category_id, and_seq, or_seq}. Backing source `audience__campaign_segment_history__2255962104` unpartitioned/unclustered (reconfirmed), grew 9,466,163→9,711,963 rows / 584,422,728→599,659,624 bytes — updated approx_logical_bytes + Cost. No partition/cluster/grain drift.
 - 2026-07-19: skeleton→enriched. Resolved view: physical hash is itself a logical VIEW = `audience.campaign_segment_history` (9.47M rows, 584 MB, unpartitioned) JOIN `public.campaigns`, GROUP BY campaign_group_id + audience_id + start/end + data_source_id. Confirmed live: no partition/cluster/TTL, 542,598 view rows / 59,632 cgids; end_time NULL→9999-12-31 sentinel (147,583 open, 0 NULL); start_time floor 2000-01-01 & future-scheduled max; category_info = JSON of {data_source_category_id, and_seq, or_seq} preserving AND/OR expression position. Cost by column set measured: SELECT * ~0.55 GB vs metadata-only ~0.34 GB; no predicate prunes (593 MB dry-run identical with/without cgid filter). Prose oracle (data_catalog L2589 / data_knowledge L2441,L2729) was Greenplum-framed & thin — reconciled the "same contamination as campaign_segment_history; verify vs audience_segment_campaigns" gotcha into this doc.
 <!-- CHANGELOG END -->
 

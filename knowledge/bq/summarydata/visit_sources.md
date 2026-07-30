@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: microseconds
 ttl_days: null
-approx_rows: 369754829
-approx_logical_bytes: 407338394403
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 394429420
+approx_logical_bytes: 434389947382
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, visits, referral, tamp-detection]
 keywords: [verified visits, VV, referral blocking, tamp detection, competing source, utm_source, utm_medium, utm_campaign, gclid, gbraid, wbraid, cm_mmc, referer, parent_referer, uuid, source_type, last_tv_touch_visits, from_verified_impression, key value fanout]
 source: INFORMATION_SCHEMA+human
@@ -136,7 +136,7 @@ The last nine columns (`uuid` … `blocked_value`) are what make this table dist
   - `SELECT *` · 1 day: **2,744,362,989 B (~2.74 GB)** — all 47 cols, one partition (the wide `referer` URL dominates; avoid `SELECT *`).
   - `SELECT time WHERE DATE(impression_time)=…`: **5,916,077,264 B (~5.92 GB)** — proves `impression_time` does NOT partition-prune (≈296x more than the 20 MB `time`-filtered read of the same `SELECT time`).
 - **History:** physical partitions span **2026-02-24 → 2026-07-20** (147 daily partitions), **no partition-expiration TTL** (`expirationTime: null`). This is a relatively new model — no long pre-2026 history available, unlike `visits`/`ui_visits` (back to 2023).
-- `approx_logical_bytes` = physical `numBytes` of the single backing table `summarydata__visit_sources__2853818179` = **407,338,394,403 B (~407 GB)**; `numRows` ≈ **369,754,829** (~370M, consistent with ~2.5M/day × 147 days). Single physical — no UNION to sum.
+- `approx_logical_bytes` = physical `numBytes` of the single backing table `summarydata__visit_sources__2853818179` = **434,389,947,382 B (~434 GB)**; `numRows` ≈ **394,429,420** (~394M, consistent with ~2.5M/day over the retained rolling window). Single physical — no UNION to sum.
 
 ## Example queries
 ```sql
@@ -175,6 +175,7 @@ GROUP BY uuid;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. 47 columns match AUTO:SCHEMA exactly. Hash unchanged (`__2853818179`); partition DAY on `time`, no clustering, require_partition_filter=false reconfirmed on the physical. Rolling window grew: numRows 369,754,829→394,429,420, numBytes 407,338,394,403→434,389,947,382 (~434 GB) — updated front-matter + Cost. No schema/partition/grain drift.
 - 2026-07-19: skeleton→enriched. **No prose oracle existed** (no `## …visit_sources` section in data_catalog.md, no gotcha in data_knowledge.md) — enriched from LIVE schema + empirical sampling alone. View resolves to a single physical TABLE `summarydata__visit_sources__2853818179` (no UNION). Confirmed partition DAY on `time` (dry-run: `time`-filtered `SELECT time` = 20 MB vs `impression_time`-filtered = 5.92 GB, no prune; 3-col `time`-filter 76.7 MB vs unfiltered 11.43 GB = ~149x). No clustering, no TTL; history 2026-02-24→2026-07-20 (147 parts). **Grain discovery:** one row per (verified visit × referer source-param), ~4 rows/visit (1–14), per-visit key `uuid` (627K visits ↔ 2.5M rows/day); this is a UTM/referral tamp-detection detail table, NOT a visit-count table. Resolved `epoch = UNIX_MICROS(time)` exact 100% (microseconds); `impression_epoch` μs, matches `impression_time` 79.7% (miss = ltt branch). Decoded key/raw_key/value/competing_source/blocked_source/blocked_value/referer/parent_referer/uuid; `key` domain = utm_source/medium/campaign/content/term, gclid, gbraid, wbraid, cm_mmc, %26cid; `value='-1'`=empty sentinel; `blocked_value=''` 100% of day; `from_verified_impression` constant TRUE; `source_type` ∈ {visits, last_tv_touch_visits} (same two-branch universe as ui_visits). Maps to the VVS "referral blocking / tamp detection" step in data_knowledge.
 <!-- CHANGELOG END -->
 

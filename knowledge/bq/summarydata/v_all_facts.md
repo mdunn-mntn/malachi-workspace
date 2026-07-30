@@ -5,18 +5,18 @@ summary: "ClickHouse/R2 reporting EXPORT view over summarydata.all_facts — dro
 dataset: summarydata
 table: v_all_facts
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__v_all_facts__2822025458
+physical_table: sqlmesh__summarydata.summarydata__v_all_facts__579284963
 grain: "one row per (hour x 19 dimension keys), hourly — same rows as all_facts but test campaigns excluded"
 partition_by: hour
 require_partition_filter: false
 cluster_by: [advertiser_id, campaign_id]
 time_unit: datetime
 ttl_days: null
-approx_rows: 107142395914
-approx_logical_bytes: 76261956533172
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 107750296651
+approx_logical_bytes: 76934110216984
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, attribution, spend, reach]
 keywords: [all_facts, v_all_facts, graph.usersreached, graph.sitevisitors, clickhouse, chapi, r2, reporting-export, hll, uniques, uniques_arr, competing, first-touch, verified-visits, is_test]
 source: INFORMATION_SCHEMA+human
@@ -357,10 +357,11 @@ WHERE hour >= '2026-07-10' AND hour < '2026-07-11' AND advertiser_id = 31460;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. Columns (166) match AUTO:SCHEMA exactly. Re-read the view SQL: still the UNION ALL of (leg 1) `all_facts` JOIN `bronze.integrationprod.public_campaigns` ON campaign_id WHERE `is_test=FALSE` + (leg 2) `campaign_id IS NULL`, every `*_arr` COALESCEd to `[CAST(NULL AS STRING)]` — logic unchanged. **v_all_facts view hash drifted `__2822025458`→`__579284963`** (SQLMesh rebuild; definition identical) — updated physical_table + View-definition. Base `all_facts` physical still `__3194417682` (partition DAY on `hour`, cluster [advertiser_id, campaign_id] reconfirmed); it grew to numRows 107,750,296,651 / numBytes 76,934,110,216,984 — updated front-matter. No schema/grain drift.
 - 2026-07-19: skeleton→enriched. Resolved view: VIEW→VIEW→TABLE `all_facts` (current physical `summarydata__all_facts__3194417682`; catalog hash `__2291495033` is stale). v_all_facts = UNION ALL of (leg 1) campaign-attributed all_facts rows INNER-joined to `bronze.integrationprod.public_campaigns` (1:1, 548,673 unique campaign_id, no fan-out) filtered `is_test=FALSE`, and (leg 2) `campaign_id IS NULL` rows; both COALESCE every `*_arr` array NULL→`[NULL]` for the ClickHouse `Array(Nullable(String))` export. Confirmed partition = `hour` empirically (dry-run: 1 day 0.89 GB vs full 1.71 TB, {hour,campaign_id} set); `hour` is DATETIME (base all_facts clustered on advertiser_id,campaign_id). Prose oracle = data_catalog.md "## silver.summarydata.all_facts" + data_knowledge.md "What the reporting graph table actually IS". Drift reconciled: (a) `hour` is DATETIME not TIMESTAMP (stale catalog note); (b) v_all_facts ≠ all_facts — it drops test campaigns + coalesces arrays, which the prose only implied; (c) current all_facts physical hash differs from the catalog's.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__v_all_facts__2822025458`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__v_all_facts__579284963`
 ```

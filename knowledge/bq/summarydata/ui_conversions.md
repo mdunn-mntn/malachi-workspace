@@ -5,7 +5,7 @@ summary: "Post-attribution conversion fact view — one row per attributed conve
 dataset: summarydata
 table: ui_conversions
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__ui_conversions__1431780340
+physical_table: sqlmesh__summarydata.summarydata__ui_conversions__2301761234
 grain: "one attributed conversion event (post-attribution output row); source_type splits the two attribution arms"
 partition_by: time
 require_partition_filter: false
@@ -13,10 +13,10 @@ cluster_by: []
 time_unit: microseconds
 ttl_days: null
 approx_rows: null
-approx_logical_bytes: 342837129453
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_logical_bytes: 345899685279
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, attribution, revenue]
 keywords: [ui_conversions, order_amt, attribution, conversion, last_tv_touch, source_type, conversion_day, is_competing, is_pa, conversion_type_sentinel, from_verified_impression]
 source: INFORMATION_SCHEMA+human
@@ -34,7 +34,7 @@ model, and dollar amount already joined — not raw pixel fires (that is `logdat
 `bronze.raw`, which are un-attributed and un-filtered).
 
 It is a pure VIEW (no physical rows of its own). Resolution chain:
-`summarydata.ui_conversions` → hash view `summarydata__ui_conversions__1431780340` (the UNION+join
+`summarydata.ui_conversions` → hash view `summarydata__ui_conversions__2301761234` (the UNION+join
 logic below) → two DAY-partitioned base TABLEs `summarydata__conversions__2893062813` (130.8M rows,
 228.5 GB) and `summarydata__last_tv_touch_conversions__3221502556` (58.2M rows, 114.3 GB).
 
@@ -215,12 +215,13 @@ ORDER BY revenue DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (52 cols, types/order unchanged; order_amt NUMERIC, no order_amt_usd). View chain re-confirmed via bq show: hash view rotated __1431780340→__2301761234 (SQLMesh rebuild) — physical_table updated. Still a UNION of two DAY-partitioned-on-`time` base TABLEs `summarydata__conversions__2893062813` (131.6M rows/230.5GB) + `summarydata__last_tv_touch_conversions__3221502556` (58.7M rows/115.4GB), both unclustered, no require_partition_filter, no TTL — partition_by=time confirmed. approx_logical_bytes refreshed 342.84GB→345.90GB (base numBytes sum). View SQL re-read: two source_type arms, attribution_model_type_id/is_competing/is_pa/conversion_day derivations unchanged.
 - 2026-07-19: skeleton→enriched. Resolved view chain (clean → hash view → 2 DAY-partitioned base tables on `time`); confirmed partition empirically via SELECT * dry-run (342.35 GB → 340.26 MB @ 1 day). Set epoch unit = microseconds (`epoch = UNIX_MICROS(time)` 100%). Documented the two `source_type` arms, `attribution_model_type_id` {1,2,3,4}/`is_competing`/`is_pa` derivation, `conversion_day` 1–14/NULL>14d window, arm-specific NULLs (`conversion_assist`, `first_touch_ad_served_id`). Prose↔schema drift reconciled: `order_amt_usd` is **absent** from this view (not merely NULL); `from_verified_impression`/`domain` are view-enforced (always TRUE / non-null). Carried forward the `-101` sentinel (six sentinels) and the extreme-amount attribution cap ($590K–$5.7M) gotchas.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__ui_conversions__1431780340`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__ui_conversions__2301761234`
 ```
 ```sql
 -- resolved hash-view logic (abridged): two-arm UNION ALL, then attribution enrichment

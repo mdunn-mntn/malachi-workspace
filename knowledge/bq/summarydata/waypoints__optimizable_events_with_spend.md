@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [advertiser_id, campaign_group_id, user_key]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 76724722
-approx_logical_bytes: 23104383689
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 112725143
+approx_logical_bytes: 33858079044
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, site-events, attribution, spend, optimization]
 keywords: [waypoints, optimizable_event, ad_served_id, total_spend, ga_client_id, guid, from_verified_impression, event_type, DLV, URL, site-visit, pageview]
 source: INFORMATION_SCHEMA+human
@@ -144,9 +144,9 @@ begins **2026-05-01** (no earlier history). Treat as a limited-cohort event stre
   - **`SELECT *` WHERE `day='2026-07-15'`** (all 19 cols, 1 partition) = **0.361 GB** (387,618,607 bytes).
   - **`SELECT advertiser_id` WHERE `day='2026-07-15'`** (1 narrow col, 1 partition) = **0.0205 GB**
     (20,477,632 bytes) — **~19x cheaper** than `SELECT *`; project only needed columns.
-  - **`SELECT *` full table** (all ~80 days) = **23.1 GB** (23,104,383,689 bytes = full backing storage);
-    pruning to one `day` partition cuts **~98.4%**.
-- `approx_logical_bytes` = 23,104,383,689 (physical `numBytes`); `approx_rows` = 76,724,722.
+  - **`SELECT *` full table** (all ~91 days) = **33.9 GB** (33,858,079,044 bytes = full backing storage);
+    pruning to one `day` partition cuts **~99%**.
+- `approx_logical_bytes` = 33,858,079,044 (physical `numBytes`); `approx_rows` = 112,725,143.
 
 ## Example queries
 ```sql
@@ -178,6 +178,7 @@ GROUP BY 1 ORDER BY spend DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. 19 columns match AUTO:SCHEMA exactly. Hash unchanged (`__2769892643`); real TABLE, partition DAY on `day` with require_partition_filter=true, cluster [advertiser_id, campaign_group_id, user_key] reconfirmed on the physical. Rolling window grew: numRows 76,724,722→112,725,143, numBytes 23,104,383,689→33,858,079,044 (~33.9 GB) — updated front-matter + Cost. (Row count matches sibling event_mapping / selective_performance, corroborating the shared event grain.) No schema/grain/partition drift.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md for this table (only a related mention of `attr_advertiser_waypoints_event_mapping` as event-name classification); enriched from LIVE schema + empirical sampling. Confirmed physical is a real TABLE (not nested view), partition=`day` (require_partition_filter=TRUE), cluster=[advertiser_id, campaign_group_id, user_key], no TTL, 76.7M rows / 23.1 GB, data from 2026-05-01. Resolved `epoch`=microseconds (UNIX_MICROS). Found event_type domain {URL, DLV}, total_spend on URL rows only, is_optimizable_event on DLV only, ~24% duplicate beacons, ~16-advertiser pilot cohort.
 <!-- CHANGELOG END -->
 

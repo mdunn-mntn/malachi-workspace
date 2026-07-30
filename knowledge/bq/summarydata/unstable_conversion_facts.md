@@ -5,18 +5,18 @@ summary: "NON-canonical STAGING/experimental copy of conversion_facts — a smal
 dataset: summarydata
 table: unstable_conversion_facts
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__unstable_conversion_facts__4183553511
+physical_table: sqlmesh__summarydata.summarydata__unstable_conversion_facts__2839138509
 grain: "one row per hour (DATETIME, hour-truncated) x full dimension tuple (advertiser/campaign/geo/device/creative/conversion_type/conversion_source/pa_model); change_id is a per-row batch stamp, not a versioning key"
 partition_by: hour
 require_partition_filter: false
 cluster_by: [advertiser_id, change_id]
 time_unit: datetime
 ttl_days: null
-approx_rows: 351067
-approx_logical_bytes: 207309382
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 398066
+approx_logical_bytes: 235183019
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, attribution, staging]
 keywords: [conversion_facts, unstable, staging, change_id, cdc, attribution, competing, probattr, last_touch, last_tv_touch, hourly]
 source: INFORMATION_SCHEMA+human
@@ -185,8 +185,8 @@ is enriched from the live schema + empirical sampling and the stable-sibling pro
 ## Cost & partitioning notes
 - **Partition = `hour` (DATETIME, DAY granularity); cluster = `advertiser_id, change_id`;
   `require_partition_filter = false`** (not enforced — but always filter anyway). Resolved from the
-  physical table `sqlmesh__summarydata.summarydata__unstable_conversion_facts__4183553511`
-  (TABLE; `numRows` 351,067; `numBytes` 207,309,382).
+  physical table `sqlmesh__summarydata.summarydata__unstable_conversion_facts__2839138509`
+  (TABLE; `numRows` 398,066; `numBytes` 235,183,019).
 - **The one filter to always apply:** `WHERE hour >= DATETIME('start') AND hour < DATETIME('end')`.
   Add `advertiser_id IN (...)` to lean on clustering.
 - **Dry-run figures (each labeled by column set — only compare same-column-set):**
@@ -224,10 +224,11 @@ LIMIT 100;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (53 cols = stable 52 + change_id; types/order unchanged; hour DATETIME). bq show: materialized TABLE, hash rotated __4183553511→__2839138509 — physical_table + body reference updated. Partition DAY on `hour`, cluster [advertiser_id, change_id] re-confirmed (require_partition_filter unset, no TTL). approx_rows 351,067→398,066, approx_logical_bytes 207.3MB→235.2MB. Non-canonical partial-subset characterization unchanged; use conversion_facts / all_facts.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new table); enriched from live schema + empirical sampling + stable-sibling (conversion_facts) prose. Confirmed partition=hour (DATETIME DAY) empirically (SELECT * 207.3MB full → 3.31MB one-day, ~63× prune); cluster=advertiser_id,change_id from physical. Grain verified unique (5,592 rows == 5,592 dim tuples for 2026-07-15) → change_id is a batch stamp, not a versioning key. Characterized as NON-canonical partial staging subset (~6.5% of stable conversion_facts rows/day). Drift reconciled: (1) catalog prose says stable conversion_facts.hour is TIMESTAMP, but live schema of BOTH tables is DATETIME; (2) this table adds change_id vs the stable 52-col schema; (3) pa_model_id uses sentinel/negative values (-7, 1002) here.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_conversion_facts__4183553511`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_conversion_facts__2839138509`
 ```

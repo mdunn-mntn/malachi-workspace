@@ -5,18 +5,18 @@ summary: "NON-CANONICAL staging/experimental copy of all_facts — a recent ~4-m
 dataset: summarydata
 table: unstable_all_facts
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__unstable_all_facts__724579328
+physical_table: sqlmesh__summarydata.summarydata__unstable_all_facts__2137599046
 grain: "one row per (all_facts 18-column grain: hour + 17 dims) x change_id x conversion_source_id x conversion_type — a conversion/pixel-attribution restatement. Every row carries change_id + conversion_source_id + conversion_type + pa_model_id NOT NULL (unlike all_facts, where those are NULL except on conversion/site legs). ~4M rows/day"
 partition_by: hour
 require_partition_filter: false
 cluster_by: [advertiser_id, campaign_id]
 time_unit: datetime
 ttl_days: null
-approx_rows: 464567098
-approx_logical_bytes: 450791639343
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 480321178
+approx_logical_bytes: 466445792474
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, attribution, conversions, staging]
 keywords: [unstable_all_facts, staging, non-canonical, all_facts copy, change_id, conversion restatement, conversion_source_id, conversion_type, pixel event, probabilistic attribution, pa_model_id, reprocessing, uniques, HLL, competing]
 source: INFORMATION_SCHEMA+human
@@ -351,10 +351,11 @@ GROUP BY 1, 2 ORDER BY rows DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (165 cols, types/order unchanged; `change_id` present, `view_impression`/`view_viewed` un-suffixed as documented). bq show: physical is a real materialized TABLE, hash rotated __724579328→__2137599046 (SQLMesh rebuild) — physical_table updated. Partition DAY on `hour` and cluster [advertiser_id, campaign_id] re-confirmed (require_partition_filter unset, no TTL). Rolling window advanced: approx_rows 464.6M→480.3M, approx_logical_bytes 450.8GB→466.4GB. Non-canonical staging characterization unchanged; use all_facts / v_all_facts.
 - 2026-07-19: skeleton→enriched. **No prose oracle** — no `unstable_all_facts` section exists in data_catalog.md or data_knowledge.md; enriched from LIVE schema + empirical one-day profiles, cross-referenced to the well-documented stable sibling `all_facts.md`. Live-verified: physical is a real materialized TABLE (464,567,098 rows, ~450.8 GB), partition=`hour` (DATETIME, DAY) confirmed empirically by dry-run diff (full-scan media_spend 14.87 GB vs 1 day 0.167 GB, ~89×), cluster=[advertiser_id, campaign_id], require_partition_filter=false, no BQ TTL. Window is only **121 daily partitions 2026-03-22→2026-07-20** (rolling ~4mo), vs all_facts' 2,111 partitions since 2020. Characterized as a **NON-CANONICAL conversion/pixel-attribution restatement staging copy**: ~4M rows/day (vs all_facts 55.69M), $35.9K vs $513K spend on 2026-07-10; every row has `change_id` (col absent from all_facts) + `conversion_source_id` (3 distinct, 99.86% one dominant) + `conversion_type` (50 distinct, advertiser pixel-event names) + `pa_model_id` all NOT NULL; measures genuinely populated (97% spend, 27% imps, 0.09% conversions). Schema drift vs all_facts: adds `change_id`, drops legacy_spend/raw_*/first_touch_visits/visitors/users_reached_ip_arr. Exact SQLMesh model role inferred (not read this pass) — flagged unverified. Directed all reporting use to all_facts / v_all_facts.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_all_facts__724579328`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_all_facts__2137599046`
 ```

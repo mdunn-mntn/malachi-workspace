@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [advertiser_id, campaign_group_id, user_key]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 76724722
-approx_logical_bytes: 23303765651
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 112725143
+approx_logical_bytes: 34074230148
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, waypoints, site-events]
 keywords: [waypoints, selective_performance, sp_ad_served_id, sp_spend, sp_campaign_group_id, optimizable_event, is_optimizable_event, ad_served_id, attribution, campaign_group, user_key, dlv, url_event]
 source: INFORMATION_SCHEMA+human
@@ -142,7 +142,7 @@ the rollup doesn't provide).
   sp_spend = NULL`. Filtering `WHERE sp_spend IS NOT NULL` keeps only reassigned events; for total SP
   behavior you must `COALESCE`/fall back to the naive columns yourself — the view does not merge them.
 - **Only `DLV` events are ever optimizable / reassigned.** `URL` events never carry SP or optimizable flags.
-- **Rolling ~80-day window.** Observed `day` range 2026-05-01 → 2026-07-19 (80 distinct days, 81 physical
+- **Rolling ~90-day window.** Observed `day` range 2026-05-01 → 2026-07-29 (~90 distinct days, ~91 physical
   partitions). No partition-expiration TTL is set on the physical table; the window is maintained by the
   SQLMesh full-refresh, so older days silently drop off — don't expect deep history here.
 - **SQLMesh view.** `summarydata.waypoints__selective_performance` resolves to
@@ -161,8 +161,8 @@ the rollup doesn't provide).
   - `SELECT sp_spend` (1 col, 1 day) → **11.0 MB** (11,033,856 B) — ~35× cheaper than `SELECT *`. Project
     only the columns you need.
   - `SELECT *` with no `day` filter → **rejected** (require_partition_filter).
-- Physical backing storage (bq show): `numRows` ≈ 76.7M, `numTotalLogicalBytes` ≈ 23.3 GB active logical
-  (physical active ≈ 18.2 GB; note ~17.7 GB time-travel physical from the daily full-refresh — not query-billed).
+- Physical backing storage (bq show): `numRows` ≈ 112.7M, `numTotalLogicalBytes` ≈ 34.07 GB
+  (34,074,230,148); the daily SQLMesh full-refresh also holds time-travel physical bytes that are not query-billed.
 
 ## Example queries
 ```sql
@@ -194,6 +194,7 @@ GROUP BY optimizable_event_name ORDER BY events DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. 22 columns match AUTO:SCHEMA exactly. Hash unchanged (`__3155232050`); partition DAY on `day` with require_partition_filter=true, cluster [advertiser_id, campaign_group_id, user_key] reconfirmed on the physical. Rolling window grew: numRows 76,724,722→112,725,143, numTotalLogicalBytes 23,303,765,651→34,074,230,148 (~34.07 GB) — updated front-matter + Cost + window end date. (Row count matches sibling event_mapping / with_spend, corroborating the column-superset event grain.) No schema/grain/partition drift.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md for this table (only a passing mention of the SP config tables); enriched from live schema + empirical sampling. Confirmed from physical: partition `day` (DAY, require_partition_filter=TRUE), cluster [advertiser_id, campaign_group_id, user_key], ~76.7M rows / ~23.3 GB logical, rolling ~80-day window (2026-05-01→2026-07-19). Verified epoch=UNIX_MICROS(time) (microseconds); user_key=`{advertiser_id}|{ga_client_id}` (100%); optimizable_event_name non-null iff is_optimizable_event; sp_* trio populated together on ~1.9% of rows; table is NOT deduplicated (~1.32 rows/event signature). Drift reconciled: front-matter previously guessed grain "N/A — derived view" / partition unknown / cluster [] — replaced with the empirically confirmed physical grain, partition, and cluster keys.
 <!-- CHANGELOG END -->
 

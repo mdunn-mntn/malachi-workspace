@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [advertiser_id, campaign_group_id, user_key]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 76724722
-approx_logical_bytes: 20649192585
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 112725143
+approx_logical_bytes: 30250874468
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, attribution, conversion, optimization, pixel-events]
 keywords: [waypoint, optimizable event, selective performance, raw_event_name, event_type, dlv, url, ad_served_id, from_verified_impression, ga_client_id, user_key, session_key, event stream]
 source: INFORMATION_SCHEMA+empirical
@@ -87,7 +87,7 @@ Atomic, **row-level event stream** for the **Waypoints** funnel/optimization pro
 - **SQLMesh view** — query the clean name `summarydata.waypoints__optimizable_event_mapping`; it is a `SELECT *` over the versioned physical `sqlmesh__summarydata.summarydata__waypoints__optimizable_event_mapping__258721018` (hash changes on rebuild).
 
 ## Cost & partitioning notes
-- **Partition = `day` (DATE, DAY, requirePartitionFilter=TRUE); cluster = [advertiser_id, campaign_group_id, user_key]; no TTL.** Physical: ~76.7M rows / **20.6 GB** (`bq show` numBytes 20,649,192,585, whole table). Partitions span **2026-05-01 -> 2026-07-19** (81 partitions incl. a `__NULL__` day partition).
+- **Partition = `day` (DATE, DAY, requirePartitionFilter=TRUE); cluster = [advertiser_id, campaign_group_id, user_key]; no TTL.** Physical: ~112.7M rows / **30.25 GB** (`bq show` numBytes 30,250,874,468, whole table). Partitions span **2026-05-01 -> 2026-07-29** (~91 partitions incl. a `__NULL__` day partition).
 - **Always filter `WHERE day = '<date>'`** (or a small `day` range) — the query errors otherwise. Then narrow further on the cluster keys `advertiser_id` / `campaign_group_id` / `user_key`, and select only needed columns.
 - Dry-run cost, one day 2026-07-17 (~3.38M rows), by column set:
   - `SELECT *` → **901,614,572 bytes (~0.90 GB)**
@@ -124,6 +124,7 @@ GROUP BY event_type;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. 18 columns match AUTO:SCHEMA exactly. Hash unchanged (`__258721018`); partition DAY on `day` with require_partition_filter=true, cluster [advertiser_id, campaign_group_id, user_key] reconfirmed on the physical. Rolling window grew: numRows 76,724,722→112,725,143, numBytes 20,649,192,585→30,250,874,468 (~30.25 GB) — updated front-matter + Cost. (Row count matches the sibling with_spend / selective_performance tables, corroborating the 1:1 column-superset lineage.) No schema/grain/partition drift.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new table); enriched from LIVE schema + empirical sampling. Confirmed partition=day (requirePartitionFilter=true, no-filter probe errors), cluster=[advertiser_id,campaign_group_id,user_key], 20.6 GB / 76.7M rows, data from 2026-05-01. Resolved epoch=UNIX_MICROS(time) (microseconds). Verified biconditional optimizable_event_name set iff is_optimizable_event=true; from_verified_impression is true/NULL only; event_type domain {URL,DLV}; user_key=advertiser_id|ga_client_id, session_key=+ga_session_id; table NOT deduplicated (~47% dup). Documented rollup relationship to waypoints__optimizable_event_aggregated (this = atomic source).
 <!-- CHANGELOG END -->
 

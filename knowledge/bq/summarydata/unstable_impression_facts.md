@@ -5,18 +5,18 @@ summary: "NON-CANONICAL staging twin of impression_facts — same hourly impress
 dataset: summarydata
 table: unstable_impression_facts
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__unstable_impression_facts__3085155177
+physical_table: sqlmesh__summarydata.summarydata__unstable_impression_facts__1351578643
 grain: "one row per (hour + 18 impression_facts dimensions: advertiser/campaign_group/campaign/channel/objective/group/creative/pmp/country/metro/region/city/postal/domain/unlinked/supply_vendor/device_type); change_id is a functionally-dependent attribute, not part of the key"
 partition_by: hour
 require_partition_filter: false
 cluster_by: [advertiser_id, change_id]
 time_unit: datetime
 ttl_days: null
-approx_rows: 455895586
-approx_logical_bytes: 168138951183
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 471266709
+approx_logical_bytes: 173950554391
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, impressions, staging]
 keywords: [staging, unstable, non_canonical, impression_facts, change_id, cdc, hourly_aggregate, impressions, ctv, display, media_cost, hll, uniques, clustered]
 source: INFORMATION_SCHEMA+human
@@ -102,7 +102,7 @@ tags: []
 ## Cost & partitioning notes
 - **The one filter to always apply:** `WHERE hour >= DATETIME("...") AND hour < DATETIME("...")`. `hour` is the DAY partition (confirmed empirically 2026-07-19). `require_partition_filter = false`, so a missing date filter silently full-scans.
 - **Bonus lever (unlike the stable table):** this physical **IS clustered on `(advertiser_id, change_id)`** (`bq show`, 2026-07-19), so an `advertiser_id` (or `change_id`) filter prunes at **runtime** — the stable `impression_facts` is unclustered and gains nothing from an advertiser filter. Note dry-run estimates do **not** reflect cluster pruning; you only see the benefit in actual billed bytes.
-- **Physical:** `sqlmesh__summarydata.summarydata__unstable_impression_facts__3085155177` — TABLE, **455,895,586 rows**, **168.1 GB** backing storage (`bq show` numBytes = 168,138,951,183 B, 2026-07-19). Partition DAY on `hour`; clustering `(advertiser_id, change_id)`; no partition expiration set. (This is ~6% the size of the 2.89 TB stable `impression_facts` — it holds a shorter window.)
+- **Physical:** `sqlmesh__summarydata.summarydata__unstable_impression_facts__1351578643` — TABLE, **471,266,709 rows**, **173.9 GB** backing storage (`bq show` numBytes = 173,950,554,391 B, 2026-07-29). Partition DAY on `hour`; clustering `(advertiser_id, change_id)`; no partition expiration set. (This is ~6% the size of the 2.89 TB stable `impression_facts` — it holds a shorter window.)
 - **Dry-run cost figures** (decimal GB = bytes ÷ 1e9; labeled by exact column set — do NOT cross-compare different column sets):
   - `SELECT hour`, **no** date filter → **3.65 GB** (3,647,164,688 B — scans `hour` across all 121 partitions).
   - `SELECT hour`, 2-day `hour` filter → **0.062 GB** (62,005,416 B; ~59× prune → confirms `hour` is the DAY partition).
@@ -145,12 +145,11 @@ For canonical reporting, run the equivalent query against `summarydata.impressio
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (36 cols = stable + change_id, minus users_reached_ip_arr; types/order unchanged). bq show: materialized TABLE, hash rotated __3085155177→__1351578643 — physical_table + body reference updated. Partition DAY on `hour`, cluster [advertiser_id, change_id] re-confirmed (require_partition_filter unset, no TTL). approx_rows 455.9M→471.3M, approx_logical_bytes 168.1GB→173.9GB. Cleaned stray trailing tags at EOF. Non-canonical staging twin characterization unchanged; use impression_facts / all_facts.
 - 2026-07-19: skeleton→enriched. **No prose oracle existed** in data_catalog.md or data_knowledge.md for `unstable_impression_facts` (net-new/undocumented) — enriched from LIVE schema + empirical queries, cross-referencing the verified stable sibling doc `impression_facts.md`. Confirmed physical partition DAY on `hour` empirically (SELECT hour: 3.65 GB no-filter → 0.062 GB with 2-day filter, ~59×). Physical `bq show`: 455.9M rows, 168.1 GB, clustering **(advertiser_id, change_id)** — demonstrated the clustering prune with actual runs (1-day 0.084 GB → +advertiser_id 0.008 GB, ~10×), a differentiator from the unclustered stable `impression_facts`. Grain verified identical to stable: one row per 18-col tuple per hour (COUNT(*) = distinct tuple = distinct tuple+change_id = 3,753,618 on 2026-07-15). Characterized `change_id` empirically = per-advertiser CDC change-set/load marker (each maps to 1 advertiser; ~1.65/advertiser/day; recurs across days, not a monotonic counter; functionally dependent on the tuple). Documented as **NON-CANONICAL staging twin** — use `impression_facts` for reporting; do not UNION the two (double-count). Schema diffs vs stable: **has** `change_id`, **lacks** `users_reached_ip_arr`. `unlinked` empirically constant FALSE; channel split 8→ctv/1→display matches stable. Freshness: through current day; ~120-day rolling window (min hour 2026-03-22). time_unit=datetime (`hour` is DATETIME, no INT epoch column). Carried the TI-1019 mixed IP/GUID `uniques` key + HLL-vs-`_arr` semantics from the stable sibling (same SQLMesh model output). last_verified=2026-07-19.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_impression_facts__3085155177`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_impression_facts__1351578643`
 ```
-</content>
-</invoke>

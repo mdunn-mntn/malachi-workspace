@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [advertiser_id, campaign_group_id, sp_campaign_group_id, event_name]
 time_unit: date
 ttl_days: null
-approx_rows: 1041415
-approx_logical_bytes: 308099018
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 1202034
+approx_logical_bytes: 354922174
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, selective_performance, conversion_events, optimization]
 keywords: [optimizable event, selective performance, waypoint, event aggregation, sp_campaign_group, from_verified_impression, url event, datalayer event, cost per event]
 source: INFORMATION_SCHEMA+human
@@ -83,7 +83,7 @@ All dimension joins have this table on the **"many"** side (N:1), so no fan-out 
 - **Event classification config:** `attr_advertiser_waypoints_event_mapping` + `attr_advertiser_selective_performance_config` define the event-name → type mapping (deleted flag on waypoints) that produces `event_type`/`event_name`. These are config, not fact tables — no direct row join by count.
 
 ## Gotchas
-- **NEW + limited scope.** Data begins **2026-05-01** (80 daily partitions to 2026-07-19); only **~16 advertisers/day**. This is the Waypoint / Selective Performance **beta** aggregation, not a general site-event table — do not treat its coverage as all advertisers.
+- **NEW + limited scope.** Data begins **2026-05-01** (~90 daily partitions to 2026-07-29); only **~16 advertisers/day**. This is the Waypoint / Selective Performance **beta** aggregation, not a general site-event table — do not treat its coverage as all advertisers.
 - **`require_partition_filter = true`** — a query without a `day` filter **errors**. Always filter `day`.
 - **`from_verified_impression` is `true`/NULL only** (never `false`). `NULL` = unverified; filtering `= true` drops it. Aggregate over both for totals.
 - **`sp_*` columns are sparse** — populated only on the tiny `is_optimizable_event = true` / SP subset (~0.03% of rows). NULL/0 elsewhere. `sp_user_count` is **always 0**.
@@ -93,10 +93,10 @@ All dimension joins have this table on the **"many"** side (N:1), so no fan-out 
 
 ## Cost & partitioning notes
 - **Always filter the `day` partition** (required; `PARTITION BY day`, `require_partition_filter=true`, DAY granularity). Cluster keys `[advertiser_id, campaign_group_id, sp_campaign_group_id, event_name]` accelerate advertiser/group/event filters.
-- **Whole table is tiny** — `numBytes` = 308,099,018 (~294 MB), 1,041,415 rows, no TTL.
+- **Whole table is tiny** — `numBytes` = 354,922,174 (~338 MB), 1,202,034 rows, no TTL.
 - Dry-run figures (actual `--dry_run`, labeled by column set):
   - **One day, `SELECT *` (all 23 cols, 2026-07-17):** 4,550,782 bytes ≈ **4.55 MB** (0.00424 GB).
-  - **Full 80-day range, `SELECT *` (all cols):** 308,153,337 bytes ≈ **308 MB** (0.287 GB) — the whole table.
+  - **Full range, `SELECT *` (all cols):** ≈ **338 MB** (0.33 GB) — the whole table (`numBytes` 354,922,174).
   - **One day, 3 narrow cols** (`advertiser_id, event_name, event_count`): 914,382 bytes ≈ **0.91 MB** — ~5x cheaper than same-day `SELECT *`. The BIGNUMERIC spend/cost columns and long URL `event_name` strings dominate width, so column pruning matters even on this small table.
 
 ## Example queries
@@ -133,6 +133,7 @@ LIMIT 100;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. 24 columns match AUTO:SCHEMA exactly. Hash unchanged (`__1837927616`); partition DAY on `day` with require_partition_filter=true, cluster [advertiser_id, campaign_group_id, sp_campaign_group_id, event_name] reconfirmed on the physical. Rolling window grew: numRows 1,041,415→1,202,034, numBytes 308,099,018→354,922,174 (~338 MB) — updated front-matter + Cost. Removed stray `</content>`/`</invoke>` tags left at EOF by the prior pass. No schema/grain/partition drift.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md for this table (net-new/undocumented); enriched from LIVE schema + empirical sampling. Reconciled: partition=`day` (DAY, require_partition_filter=true) and cluster=[advertiser_id, campaign_group_id, sp_campaign_group_id, event_name] confirmed off the physical (SQLMesh metadata was live, not stale — 1,041,415 rows / 308,099,018 bytes). Grain (11-col tuple) verified unique. Domains from live DISTINCT: event_type {URL,DLV}, from_verified_impression {true,NULL only}, sp_user_count always 0. Related prose context: "Waypoint Targeting" (planned B2B feature, mntn_business.md) and config tables attr_advertiser_waypoints_event_mapping + attr_advertiser_selective_performance_config (data_knowledge.md pixel-config registry).
 <!-- CHANGELOG END -->
 
@@ -140,5 +141,3 @@ LIMIT 100;
 ```sql
 SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__waypoints__optimizable_event_aggregated__1837927616`
 ```
-</content>
-</invoke>

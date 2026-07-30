@@ -5,18 +5,18 @@ summary: "NON-CANONICAL BER staging (CDC) view: UNION ALL of the pre-change and 
 dataset: summarydata
 table: unstable_cost_impression_log
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__unstable_cost_impression_log__3037319118
+physical_table: sqlmesh__summarydata.summarydata__unstable_cost_impression_log__2355034568
 grain: "one row per (impression_id x correction-batch change_id x pre/post snapshot) — NOT one row per impression"
 partition_by: time
 require_partition_filter: false
 cluster_by: [advertiser_id, change_id]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 3383466933
-approx_logical_bytes: 3752317572092
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 3593492603
+approx_logical_bytes: 3998975462057
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [cost, impressions, cdc, staging]
 keywords: [cost_impression_log, cdc, pre_change, post_change, change_id, batch_source, restatement, staging, ber_stg, non_canonical, media_spend, correction]
 source: INFORMATION_SCHEMA+human
@@ -35,10 +35,10 @@ canonical sibling **`logdata.cost_impression_log`** (deduped, one row per served
 score columns this view lacks).
 
 The `summarydata.unstable_cost_impression_log` view is a thin `SELECT *` over the SQLMesh physical view
-`sqlmesh__summarydata.summarydata__unstable_cost_impression_log__3037319118`, which resolves to a
+`sqlmesh__summarydata.summarydata__unstable_cost_impression_log__2355034568`, which resolves to a
 **`UNION ALL` of two BER-staging physical TABLEs** in `sqlmesh__ber_stg`:
-- `ber_stg__unstable__cil_post_change__3518197138` — TABLE, ~930M rows, ~1.04 TB, part `time` DAY, cluster [advertiser_id, change_id]
-- `ber_stg__unstable__cil_pre_change__2173039449` — TABLE, ~2.45B rows, ~2.71 TB, part `time` DAY, cluster [advertiser_id, change_id]
+- `ber_stg__unstable__cil_post_change__3518197138` — TABLE, ~1.04B rows, ~1.17 TB, part `time` DAY, cluster [advertiser_id, change_id]
+- `ber_stg__unstable__cil_pre_change__2173039449` — TABLE, ~2.56B rows, ~2.83 TB, part `time` DAY, cluster [advertiser_id, change_id]
 
 ## Grain & keys
 - **Grain:** one row per **(impression × correction-batch × pre/post snapshot)** — i.e. one row per
@@ -221,10 +221,11 @@ GROUP BY batch_source;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (55 cols, types/order unchanged). bq show: the SQLMesh physical rotated __3037319118→__2355034568 and is still a VIEW = UNION ALL of the two `sqlmesh__ber_stg` physicals `cil_post_change__3518197138` (1.04B rows/1.17TB) + `cil_pre_change__2173039449` (2.56B rows/2.83TB) — base hashes unchanged, both partition DAY on `time`, cluster [advertiser_id, change_id], no require_partition_filter, no TTL. physical_table + body sizes updated; approx_rows 3.38B→3.59B, approx_logical_bytes 3.75TB→4.00TB. CDC pre/post-change staging characterization unchanged; use logdata.cost_impression_log.
 - 2026-07-19: skeleton→enriched. No prose oracle existed for this table (net-new/undocumented; nearest prose is the stable sibling `logdata.cost_impression_log`). Resolved the SQLMesh view to a `UNION ALL` of two `sqlmesh__ber_stg` physicals (`cil_pre_change` 2.45B/2.71TB + `cil_post_change` 930M/1.04TB). Confirmed partition = `time` (DAY) empirically (one-day 0.233 GB vs full 27.07 GB on `change_id`, ~116x); cluster `[advertiser_id, change_id]`; `require_partition_filter=false`. Resolved epoch units: `epoch`=microseconds, `change_epoch`=seconds, `batch_epoch`=seconds. Documented as NON-canonical CDC/correction staging (pre_change/post_change snapshots via `batch_source`; `change_id` 1:1 with `change_time`); ~1.42x rows:impressions duplication on 2026-07-10. No prose vs schema drift to reconcile (no prior prose).
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_cost_impression_log__3037319118`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_cost_impression_log__2355034568`
 ```

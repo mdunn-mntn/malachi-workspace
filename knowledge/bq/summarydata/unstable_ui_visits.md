@@ -5,18 +5,18 @@ summary: "Non-canonical STAGING/QA view (BER-owned) that UNIONs the pre-change a
 dataset: summarydata
 table: unstable_ui_visits
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__unstable_ui_visits__153663018
+physical_table: sqlmesh__summarydata.summarydata__unstable_ui_visits__4224857791
 grain: "one row per (visit x change_id x batch_source side) — a visit snapshot as it looked before or after a specific re-attribution change"
 partition_by: time
 require_partition_filter: true
 cluster_by: [advertiser_id, change_id]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 63684282
-approx_logical_bytes: 30196513375
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 68169898
+approx_logical_bytes: 32353522667
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [visits, attribution, staging]
 keywords: [unstable_ui_visits, re-attribution, pre_change, post_change, change_id, batch_source, ber_stg, visits, ui_visits, staging, non-canonical]
 source: INFORMATION_SCHEMA+human
@@ -141,7 +141,7 @@ a given `change_id`). For any production visit query, use the stable sibling **`
 - **No safe row-level join to impression/event logs at this grain** — a visit is repeated per change batch,
   so any join multiplies. Deduplicate to one `change_id`/`batch_source` first.
 - Physical sources (for lineage only, do not query directly): `sqlmesh__ber_stg.ber_stg__unstable__visits_pre_change__3983473504`
-  (40.9M rows) and `...visits_post_change__1748979808` (22.8M rows, `requirePartitionFilter=TRUE`).
+  (42.8M rows) and `...visits_post_change__1748979808` (25.3M rows, `requirePartitionFilter=TRUE`).
 
 ## Gotchas
 - **NON-CANONICAL — never use for visit reporting or KPIs.** It is a BER re-attribution QA staging area;
@@ -165,8 +165,8 @@ a given `change_id`). For any production visit query, use the stable sibling **`
   - `SELECT *` (all 48 cols, view) → **182.9 MB** (182,864,199 bytes).
   - `SELECT advertiser_id, change_id, batch_source` (3 narrow cols) → **14.0 MB** (13,999,054 bytes) — ~13×
     cheaper; SELECT * on this wide table is the main cost trap.
-- `approx_logical_bytes` (30.2 GB) = sum of the two physicals' `numBytes` (19.30 GB pre + 10.90 GB post);
-  `approx_rows` (63.68M) = 40.88M pre + 22.81M post.
+- `approx_logical_bytes` (32.4 GB) = sum of the two physicals' `numBytes` (20.23 GB pre + 12.12 GB post);
+  `approx_rows` (68.17M) = 42.82M pre + 25.35M post.
 
 ## Example queries
 ```sql
@@ -192,10 +192,11 @@ ORDER BY batch_source, time;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (48 cols, types/order unchanged; visit_day FLOAT64, ip/ip_raw dual-IP present). bq show: SQLMesh physical rotated __153663018→__4224857791 and is still a VIEW = UNION ALL of two `sqlmesh__ber_stg` physicals `visits_pre_change__3983473504` (42.8M rows) + `visits_post_change__1748979808` (25.3M rows, requirePartitionFilter=TRUE) — base hashes unchanged, both partition DAY on `time`, cluster [advertiser_id, change_id], no TTL. Confirmed the view still requires a `time` filter (post physical rpf=TRUE). physical_table + body counts updated; approx_rows 63.68M→68.17M, approx_logical_bytes 30.2GB→32.4GB. Pre/post re-attribution QA characterization unchanged; use ui_visits.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md for `unstable_ui_visits` (undocumented/net-new); enriched from LIVE schema + empirical sampling, borrowing the stable-sibling `ui_visits` prose (data_catalog.md:856) for the carried-over visit columns. Resolved view → UNION ALL of `sqlmesh__ber_stg.ber_stg__unstable__visits_pre_change__3983473504` + `...visits_post_change__1748979808` (both real TABLEs, partition DAY on `time`, cluster `[advertiser_id, change_id]`, post_change `requirePartitionFilter=TRUE`). Confirmed partition=`time` empirically (no-time-filter query errors). Epoch units resolved: `epoch`/`impression_epoch`=microseconds, `change_epoch`/`batch_epoch`=seconds. Documented as NON-canonical staging (BER re-attribution pre/post QA); `change_id` per-advertiser; visit duplicated across change batches & sides so COUNT(*)≠visits.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_ui_visits__153663018`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_ui_visits__4224857791`
 ```

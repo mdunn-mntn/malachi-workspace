@@ -5,7 +5,7 @@ summary: "STAGING / NON-CANONICAL budget-cohort 'in-ramp' spend: hourly media/da
 dataset: summarydata
 table: unstable_spend_facts
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__unstable_spend_facts__3288737093
+physical_table: sqlmesh__summarydata.summarydata__unstable_spend_facts__594209343
 grain: "one row per hour x 17-dimension tuple (advertiser_id, campaign_group_id, campaign_id, channel_id, objective_id, group_id, creative_id, private_marketplace_id, country, metro_id, region, city, postal_code, domain, supply_vendor, device_type) x change_id — but change_id is 1:1 and stable with campaign_group_id, so effectively hour x the 17 dims within the budget-cohort subset"
 partition_by: hour
 require_partition_filter: false
@@ -14,11 +14,11 @@ cluster_by:
   - change_id
 time_unit: na
 ttl_days: null
-approx_rows: 456241302
-approx_logical_bytes: 156649483256
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 471266799
+approx_logical_bytes: 161846546417
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - spend
   - budget_cohort
@@ -168,7 +168,7 @@ dims × `change_id`, `TRUNCATE`+`INSERT`s `summarydata.unstable_spend_facts` →
 - **`hour` is DATETIME (tz-adjusted to advertiser local), not TIMESTAMP.** Partition filters are plain
   date-string comparisons: `WHERE hour >= '2026-07-10' AND hour < '2026-07-11'`.
 - **Physical hash rotates on every SQLMesh rebuild.** Query the stable view name
-  `summarydata.unstable_spend_facts`; never hardcode `...__unstable_spend_facts__3288737093`.
+  `summarydata.unstable_spend_facts`; never hardcode `...__unstable_spend_facts__594209343`.
 
 ## Cost & partitioning notes
 - **The one filter to always apply: a `hour` range** (DAY partition), confirmed empirically 2026-07-19,
@@ -183,8 +183,8 @@ dims × `change_id`, `TRUNCATE`+`INSERT`s `summarydata.unstable_spend_facts` →
     (0.163 GB). **Avoid `SELECT *`; project only the columns you need.**
 - Actual billed (post-run, for reference): a 2-column `change_id`-distribution over 1 day billed
   **0.062 GB**; a wide grain-check over 1 day (many cols + FARM_FINGERPRINT) billed **0.699 GB**.
-- Physical backing = a single TABLE (no UNION): **456,241,302 rows / 156,649,483,256 bytes (156.6 GB /
-  0.157 TB logical)** via `bq show`. ~17× smaller than `spend_facts` (7.9B rows / 2.65 TB).
+- Physical backing = a single TABLE (no UNION): **471,266,799 rows / 161,846,546,417 bytes (161.8 GB /
+  0.162 TB logical)** via `bq show`. ~17× smaller than `spend_facts` (7.9B rows / 2.65 TB).
 
 ## Example queries
 ```sql
@@ -213,11 +213,12 @@ ORDER BY total_billed DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (23 cols, types/order unchanged; hour DATETIME). bq show: single materialized TABLE, hash rotated __3288737093→__594209343 — physical_table + body reference updated. Partition DAY on `hour`, cluster [advertiser_id, change_id] (NOT campaign_id — differs from spend_facts) re-confirmed (require_partition_filter unset, no TTL). approx_rows 456.2M→471.3M, approx_logical_bytes 156.6GB→161.8GB. Budget-cohort in-ramp characterization + unlinked_spend=full-billed-total gotcha unchanged; use spend_facts for total spend.
 - 2026-07-19: skeleton→enriched. NO prose oracle existed in data_catalog.md / data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + source. Resolved purpose from source (`SteelHouse/db_repo` `lds.budget_cohort_populate_unstable_spend_facts()` + `SteelHouse/sqlmesh` archived model `summarydata_archive/unstable_spend_facts.sql`): this is the budget-cohort "in-ramp" spend table (spend attributed to campaign-group budget changes still ramping, filtered to each change's attribution window; source = `logdata.unstable_cost_impression_log` JOIN `core.v_budget_changes_in_ramp` on advertiser_id+change_id). Live-confirmed: physical single TABLE, 456,241,302 rows / 156.6 GB; partition = DAY on `hour` (hour filter prunes 14.60 GB→0.163 GB same 1-col, ~90×); cluster = advertiser_id, **change_id** (differs from spend_facts' advertiser_id, campaign_id); no BQ TTL / no require_partition_filter; rolling FULL-refresh window 2026-03-22→2026-07-20 (121 partitions ≈ the ~122-day populate lookback, NOT accumulating history). Grain confirmed unique = hour × 17 dims × change_id (4,067,809 = COUNT DISTINCT for 2026-07-10). change_id ↔ campaign_group_id is an exact 1:1 bijection (497=497), stable across days (464/464 kept the same change_id 07-09→07-10), and functionally determined by the dims. Non-canonical: 293 advs/$35.9K media vs stable spend_facts 1,517 advs/$513.4K same day. time_unit=na (`hour` native DATETIME, tz-adjusted to advertiser local; no epoch column).
 - 2026-07-19: DRIFT reconciled (schema vs behavior): `unlinked_spend` here = SUM(media+data+platform) across ALL channels (full billed total; verified 0 rows differ, SUM $90,489.27 for 2026-07-10) — OPPOSITE of stable spend_facts where unlinked_spend ≈ 0. `ctv_spend` = same total but CTV-only (channel_id=8; SUM $84,207.00, CTV = ~93% of billed). Documented the `-8`/`'-8'` NULL-dim sentinel from the populate function (none observed on 2026-07-10). Left at enriched (not verified) per cataloger pass scope; budget-changes registry partner is coredw/Greenplum, not live-queryable in BQ (prose-only).
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_spend_facts__3288737093`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_spend_facts__594209343`
 ```
