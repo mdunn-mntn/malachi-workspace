@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: seconds
 ttl_days: null
-approx_rows: 462873
-approx_logical_bytes: 17691000
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 507368
+approx_logical_bytes: 19381928
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, advertiser_metrics]
 keywords: [sales cycle, time to conversion, first page view, rolling average, trailing window, advertiser, seconds]
 source: INFORMATION_SCHEMA+human
@@ -57,13 +57,13 @@ Pre-aggregated "how long is this advertiser's sales cycle" rollup. For each adve
 - **Unit is SECONDS, fractional.** Divide by 86,400 for days. Values span from ~1e-4 s (near-instant) to ~7.77M s (≈90 days).
 - **Near-zero averages are real, not errors.** Down to ~0.0001 s — these are returning / already-known visitors whose first page view ≈ conversion event (same session). They drag some advertisers' averages toward zero. Not a data-quality bug.
 - **1-day column is not a literal one-day pooled mean** and is unverified (see Column meanings); prefer 7/30-day.
-- **Rolling ~96-day retention, no long history.** Observed range 2026-04-15 → 2026-07-19 (96 distinct days). Enforced upstream by the SQLMesh model (there is **no BQ partition-expiration TTL** on the physical table — `ttl_days: null`). For long pre-periods (e.g. 52-week CausalImpact) this table will not reach back far enough.
-- **Fresh through current day** — max(day) = today's date, unlike `sum_by_campaign/advertiser_by_day` which lag ~17 days.
+- **Rolling ~3-month retention, no long history.** Observed range 2026-04-15 → 2026-07-28 (105 distinct dated partitions on 2026-07-29); the retention floor has stayed fixed at 2026-04-15 while the window accumulates forward, so it is not a fixed 96-day window. Enforced upstream by the SQLMesh model (there is **no BQ partition-expiration TTL** on the physical table — `ttl_days: null`). For long pre-periods (e.g. 52-week CausalImpact) this table will not reach back far enough.
+- **Fresh through current day** — max(day) = 2026-07-28 on 2026-07-29 (computed a day in arrears), unlike `sum_by_campaign/advertiser_by_day` which have historically lagged.
 - **Source `sales_cycle_time` is often NULL** (conversion not matched to a first page view); those rows are excluded from the average, which is why the shorter windows go NULL.
 
 ## Cost & partitioning notes
-- Physical is a **real TABLE** (`sqlmesh__summarydata.summarydata__…__1181683363`), DAY-partitioned on `day`, **no clustering**, `require_partition_filter=false`. Tiny: 462,873 rows / **17,691,000 bytes (~16.9 MiB)** total backing storage (`bq show` numBytes).
-- **Always filter `day`.** Labeled dry-runs (same `SELECT *` column set): full table (all 96 partitions) = **17,691,000 bytes**; one day (`day = '2026-07-19'`) = **185,960 bytes** — ~95× less. Even a full scan is cheap here, but keep the day filter as habit.
+- Physical is a **real TABLE** (`sqlmesh__summarydata.summarydata__…__1181683363`), DAY-partitioned on `day`, **no clustering**, `require_partition_filter=false`. Tiny: 507,368 rows / **19,381,928 bytes (~18.5 MiB)** total backing storage (`bq show` numBytes, 2026-07-29; 105 dated partitions + 1 empty `__NULL__`).
+- **Always filter `day`.** Labeled dry-run (same `SELECT *` column set): one day (`day = '2026-07-19'`) = **185,960 bytes**, ~100× less than the ~19 MB full-table scan. Even a full scan is cheap here, but keep the day filter as habit.
 - Prefer selecting only the window column you need over `SELECT *` (5 columns, all narrow).
 
 ## Example queries
@@ -89,11 +89,10 @@ ORDER BY cycle_days DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Confirmed grain 1:1 (day,advertiser_id); partition=day (DAY), no cluster, require_partition_filter=false, no BQ TTL. Units=seconds (fractional) verified by reconstructing 30d/7d trailing pooled means exactly from source `advertiser_sales_cycle_by_day`. Flagged 1-day column as unverified (does not equal same-day pooled mean). No dedicated prose oracle in data_catalog.md — the catalog documents the SOURCE table `advertiser_sales_cycle_by_day` (line ~1117) but not this averages rollup; enriched from live schema + source reconciliation.
+- 2026-07-29: enriched→verified vs LIVE source. 5-column schema unchanged; partition confirmed `day` (DAY), require_partition_filter unset (false), no clustering, no TTL. Refreshed size 507,368 rows / 19,381,928 B (was 462,873 / 17,691,000). Retention floor stable at 2026-04-15 (105 dated partitions, max 2026-07-28) — corrected the "~96-day rolling" framing to accumulating-forward with a fixed floor. The already-flagged 1-day-column caveat stands as an accurate documented uncertainty (30d/7d units reconciliation from enrichment unchanged).
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
 SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__sales_cycle_averages_by_advertiser_id__1181683363`
 ```
-</content>
-</invoke>

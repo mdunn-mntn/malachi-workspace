@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [audience_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 11
-approx_logical_bytes: 13416
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 12
+approx_logical_bytes: 15113
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audiences, third_party_data, b2b]
 keywords: [bombora, b2beacon, third_party_audience, abm, firmographic, custom_audience, data_sources, ds51, mntn_select_b2b]
 source: INFORMATION_SCHEMA+human
@@ -32,10 +32,11 @@ segments built in the UI or via the public API. One row is written each time a u
 creates a third-party audience; the row carries the abstract targeting `criteria`, the provider it
 was sent to, the provider's assigned segment IDs, and the request/response payloads.
 
-**Net-new, pre-production table.** Created 2026-06-29; every one of the 11 rows present on
-2026-07-20 is a smoke / debug / QA / E2E test row (names like "Codex Bombora smoke…",
-"B2B Test Segment For QA Audience", "zz-abm-api-e2e-audience - safe to delete"). Do **not** treat
-current contents as real production audiences. This is the delivery-side registry for the
+**Net-new, pre-production table.** Created 2026-06-29; all 12 rows present on
+2026-07-29 are still smoke / debug / QA / E2E test rows (names like "Codex Bombora smoke…",
+"B2B Test Segment For QA Audience", "MNTN ABM Audience - 7.16.26 - US", literal "test"). Do **not**
+treat current contents as real production audiences. (Row membership churns — the 2026-07-20 snapshot
+held audience_ids 2-12; on 2026-07-29 the set is 2-11 + 18,19, so ids are neither dense nor stable.) This is the delivery-side registry for the
 AUDI Bombora B2B audience-design initiative (ElevenLabs et al.).
 
 ## Grain & keys
@@ -106,12 +107,15 @@ AUDI Bombora B2B audience-design initiative (ElevenLabs et al.).
   *own* DSL (`{"a":<attr>,"eq"|"in":…}`), `tags` (`Firmographic` / `Demographic` / `Geographic` /
   `ABM`), `platform:"mntn"`, `status:"DRAFT"`, `destinationConfig{advertiserId,externalId}`,
   `expirationDate`, and `estimatedReach` (NULL in all test rows).
-- **`create_time` / `update_time`** — Postgres row timestamps. **`update_time` is NULL on every
-  row** (no row has been updated post-insert).
+- **`create_time` / `update_time`** — Postgres row timestamps. **`update_time` is populated on rows
+  that were edited post-insert** (5 of 12 non-NULL on 2026-07-29) and **NULL on insert-only rows**
+  (7 of 12). (At the 2026-07-20 crawl no row had been updated, so it read 100% NULL then — that no
+  longer holds.) Use `create_time` for the insert timestamp.
 - **`datastream_metadata`** — Datastream CDC struct `{uuid, source_timestamp}`. `source_timestamp` =
   **milliseconds** CDC-capture epoch (`UNIX_MILLIS`), i.e. capture time not business time — but ≈
-  `create_time` for inserts. Anchor: `1784558132598` ms → 2026-07-20 14:35:32 UTC = `create_time` of
-  `audience_id=12`.
+  `create_time` for inserts. Anchor (from the 2026-07-20 snapshot, on a since-removed test row):
+  `1784558132598` ms → 2026-07-20 14:35:32 UTC matched that row's `create_time`. The ms-epoch unit is
+  stable; the specific id is not (row membership churns — see Purpose).
 
 ## Joins & relationships
 - **`data_source_id` → `integrationprod.data_sources.data_source_id`** — N:1. `data_sources` is a
@@ -126,11 +130,12 @@ AUDI Bombora B2B audience-design initiative (ElevenLabs et al.).
   is not directly joined to them in those queries.
 
 ## Gotchas
-- **Test data only (2026-07).** All 11 rows are smoke/debug/QA/E2E fixtures. Not production
+- **Test data only.** All 12 rows (2026-07-29) are smoke/debug/QA/E2E fixtures. Not production
   audiences; counts and reach are meaningless. Table went live 2026-06-29.
 - **No `deleted`/`is_test` columns** → the standard integrationprod live-row filter is N/A here.
-- **`update_time` is always NULL** — don't use it for freshness; use `create_time` (or
-  `datastream_metadata.source_timestamp`, ms).
+- **`update_time` is now populated on some rows** (5 of 12 on 2026-07-29; was 100% NULL at the
+  2026-07-20 crawl) — a NULL means "never edited post-insert," not a table-wide invariant. Use
+  `create_time` for the insert timestamp.
 - **`category_id` is NOT a `categories` FK** — it's an internal delivery-slot id that happens to run
   ~1:1 with `audience_id` in the current rows.
 - **`data_source_id=0` is a mock placeholder** with no `data_sources` row; only `provider='mock'`
@@ -140,10 +145,10 @@ AUDI Bombora B2B audience-design initiative (ElevenLabs et al.).
 
 ## Cost & partitioning notes
 - **No partition** (`timePartitioning=null`), clustered by `audience_id`. Tiny dim — physical size
-  **13,416 bytes** total (`bq show numBytes`), so there is no partition to filter and full scans are
-  effectively free.
+  **15,113 bytes** total (`bq show numBytes`, 2026-07-29; 13,416 B at the 2026-07-20 crawl of 11 rows),
+  so there is no partition to filter and full scans are effectively free.
 - Dry-run byte estimates (labeled by column set — same-column-set only comparisons):
-  - `SELECT *` → **13,416 B** (whole table).
+  - `SELECT *` → **~15,113 B** (whole table, 12 rows).
   - narrow `SELECT audience_id, provider, status` → **267 B**.
   - single JSON `SELECT provider_metadata` → **4,026 B** (the heavy JSON columns —
     `provider_metadata`, `response_metadata` — dominate storage).
@@ -181,5 +186,6 @@ WHERE data_source_id = 51;        -- Bombora
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live source: schema unchanged (17 columns), BASE TABLE unpartitioned, cluster=[audience_id]. Corrected two drifts: (1) row count 11→12 (rows churn — 2026-07-20 held ids 2-12; 2026-07-29 holds 2-11 + 18,19), numBytes 13,416→15,113; (2) **`update_time` is no longer 100% NULL** — 5 of 12 rows now carry an edit timestamp, so the old "always NULL" invariant was contradicted and is fixed. Re-confirmed: provider∈{bombora,mock}, data_source_id 51=Bombora/0=mock, status∈{created,draft}, all rows still test/QA. Generalized the datastream anchor off the since-removed audience_id=12.
 - 2026-07-19: skeleton→enriched. No prose oracle existed (net-new, in `_UNDOCUMENTED.queue`; nothing in data_catalog.md/data_knowledge.md) — enriched from live schema + full 11-row scan. Confirmed physical BASE TABLE (not a view), no partition, cluster=audience_id, 13,416 B. Resolved DS51=Bombora, DS0=mock placeholder (no data_sources row); category_id is an internal slot id NOT a categories FK; datastream source_timestamp=ms (anchored to create_time); no deleted/is_test cols; update_time always NULL; all rows are pre-prod test/QA data.
 <!-- CHANGELOG END -->

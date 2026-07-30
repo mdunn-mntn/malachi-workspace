@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: []
 time_unit: date
 ttl_days: null
-approx_rows: 174371969
-approx_logical_bytes: 273211672917
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 176379036
+approx_logical_bytes: 276371728861
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, delivery, geo, attribution]
 keywords: [sum_by_region_by_day, state geo rollup, region state name, geo-mix, yoy geo, delivery by state, not DMA, attribution variants, competing industry_standard, last_tv_touch, hll reach uniques, media_spend data_spend platform_spend]
 source: INFORMATION_SCHEMA+human
@@ -154,7 +154,7 @@ The measure set is **identical to `summarydata.sum_by_campaign_by_day`** — the
 - **`__NULL__` partition exists but is empty** (0 rows on 2026-07-19); range predicates on `day` exclude it anyway.
 
 ## Cost & partitioning notes
-- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — it is mandatory and the only pruning lever. Physical backing table: **174,371,969 rows / 273,211,672,917 bytes (~254.4 GiB)**, **932 dated partitions** (2024-01-01 -> 2026-07-20) + 1 empty `__NULL__` partition.
+- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — it is mandatory and the only pruning lever. Physical backing table (2026-07-29): **176,379,036 rows / 276,371,728,861 bytes (~257.4 GiB)** (~188 GiB long-term), **941 dated partitions** (2024-01-01 -> 2026-07-29) + 1 empty `__NULL__` partition.
 - **SELECT only the columns you need, and GROUP BY region for state rollups — the wide row + high row count make `SELECT *` ~26x costlier than a narrow projection.** Labeled dry-run figures (partition = 1 day, 2026-07-10, unless noted):
   - `SELECT *` (all 85 cols), 1 day: **306,750,403 bytes (~292.5 MB)**
   - 7 narrow cols (`advertiser_id, campaign_id, region, day, impressions, views, clicks`), 1 day: **11,847,900 bytes (~11.3 MB)** — ~25.9x cheaper than `SELECT *`
@@ -199,6 +199,7 @@ ORDER BY households DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched->verified vs LIVE source. 85-column schema unchanged (verified against INFORMATION_SCHEMA.COLUMNS; `region` STRING, `video_spend` NUMERIC here not BIGNUMERIC — confirmed); physical still real TABLE `__1316301836`, partition `day` DAY + `require_partition_filter=TRUE`, no clustering, no TTL — all confirmed. Refreshed size 176,379,036 rows / 276,371,728,861 B / 941 dated partitions (was 174.37M / 273.2G / 932); freshness re-checked = current through 20260729. STATE-not-DMA grain + region-name business logic unchanged from enrichment.
 - 2026-07-19: skeleton->enriched. No `##` section in data_catalog.md (only a one-line sibling reference at L1177, "geographic daily"); prose oracle = data_knowledge.md L797 (geo/DMA gotcha). Partition confirmed EMPIRICALLY = DAY on `day`, `require_partition_filter=TRUE`, no clustering (physical: 174,371,969 rows / 273,211,672,917 bytes / 932 dated partitions 20240101..20260720 + 1 empty __NULL__). Grain verified one row per campaign_id×region×day (202,040 rows = distinct campaign×region = distinct adv×camp×region on 2026-07-10; 12,154 campaigns × 52 regions; advertiser_id redundant). `region` = US STATE NAME + "District of Columbia" + "-1" unresolved sentinel (52 distinct); NOT DMA/Nielsen/abbreviation/location_id. HLL sketches populated (uniques non-null 191,454/202,040; MERGE(uniques)=12,357,261 households = EXACT match to sibling sum_by_campaign_by_day same-day reach -> same underlying facts). Labeled dry-runs added (SELECT * 306.75MB/day vs 7-col 11.85MB/day, ~25.9x). DRIFT reconciled: (1) prose "grain is STATE, NOT DMA" is right on geo LEVEL but the true row grain is campaign×region×day — state totals need GROUP BY region across ~12K campaigns; (2) prose ~17-day staleness (campaign-family, 2026-05-01) NO LONGER holds — region table fresh through current day (20260719=199,167 rows).
 <!-- CHANGELOG END -->
 

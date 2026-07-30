@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: integrationprod.public_publishers
-summary: "one row per publisher_id (263K) — Datastream CDC mirror of coredb Postgres public.publishers; MNTN's CTV/streaming network (channel) dimension. is_lrq = Living Room Quality premium-CTV flag (only 210 TRUE); budget_cap/user_id/publisher_type_id are entirely NULL (unused schema artifacts)"
+summary: "one row per publisher_id (263K) — Datastream CDC mirror of coredb Postgres public.publishers; MNTN's CTV/streaming network (channel) dimension. is_lrq = Living Room Quality premium-CTV flag (only 208 TRUE); budget_cap/user_id/publisher_type_id are entirely NULL (unused schema artifacts)"
 dataset: integrationprod
 table: public_publishers
 object_type: BASE TABLE
@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 262631
 approx_logical_bytes: 24403420
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [publishers, ctv, inventory, dimensions, cdc]
 keywords: [publisher_id, is_lrq, living_room_quality, lrq, publisher_type_id, ctv, network, channel, logo, datastream, cdc, postgres_mirror, public_publisher_types, ctv_ctv_sites]
 source: INFORMATION_SCHEMA+human
@@ -52,7 +52,7 @@ Note: `mntnselect_publishers` is a **different** table (the MNTN Select self-ser
 
 ## Column meanings (only the non-obvious ones)
 - **`name`** — network / channel display name (e.g. `"ESPN2"`, `"The CW"`, `"Peacock (Non-LRQ)"`, `"Paramount"`). **Not unique.** Carries inline **curation annotations** in the string itself: `"- DO NOT USE"` (retired/blocked) and `"(Non-LRQ)"` / `"(non LRQ)"` (the non-premium variant of a named network). LRQ and non-LRQ versions of the same network are stored as **separate `publisher_id` rows**.
-- **`is_lrq`** — BOOL **"Living Room Quality"** flag: TRUE = premium CTV inventory (big-screen / living-room device). Name derived from the `public_publisher_types` lookup value `1 = "CTV - Living Room Quality (LRQ)"`. Distribution (verified 2026-07-20): **210 TRUE, 262,421 FALSE, 0 NULL**. This boolean — **not** `publisher_type_id` — is where the LRQ signal actually lives in this table.
+- **`is_lrq`** — BOOL **"Living Room Quality"** flag: TRUE = premium CTV inventory (big-screen / living-room device). Name derived from the `public_publisher_types` lookup value `1 = "CTV - Living Room Quality (LRQ)"`. Distribution (re-verified 2026-07-29): **208 TRUE, 262,423 FALSE, 0 NULL** (210 TRUE at the 2026-07-20 crawl — a couple of networks flipped off). This boolean — **not** `publisher_type_id` — is where the LRQ signal actually lives in this table.
 - **`logo`** — relative storage path to the network's logo asset (e.g. `"/storage/publisherlogos/ESPN2.png"`, occasionally `.svg`). Only **233 non-NULL** (the branded/curated networks); NULL for the ~262K programmatically-added rows.
 - **`create_time` / `update_time`** — TIMESTAMP row lifecycle (UTC; no tz offset stored). Range: min `create_time` 2020-04-20, max `create_time` 2026-06-11, max `update_time` 2026-07-16 — the dim is **actively maintained**.
 - **`budget_cap`** — NUMERIC(3,2). **Entirely NULL** (0 non-NULL table-wide, verified 2026-07-20) — an unused column replicated from the Postgres source. Do not filter/aggregate on it.
@@ -112,5 +112,6 @@ WHERE datastream_metadata.source_timestamp > UNIX_MILLIS(TIMESTAMP '2026-07-19 0
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-introspected live source: schema unchanged (10 columns match), BASE TABLE unpartitioned, cluster=[publisher_id], numRows 262,631 / numBytes 24,403,420 (exact match). Grain 1:1 re-confirmed (262,631 = distinct = 0 NULL). budget_cap/user_id/publisher_type_id still 100% NULL; logo still 233 non-NULL. Only drift: is_lrq 210→208 TRUE (2 networks flipped off) — updated.
 - 2026-07-20: skeleton→enriched. No dedicated prose oracle existed in data_catalog.md/data_knowledge.md for `public_publishers` (net-new to the crawl) — enriched from live schema + empirical queries. Confirmed BASE TABLE, unpartitioned, clustered+PK on publisher_id, grain = 1 row per publisher_id (current-state snapshot, sparse ids). Established it as the CTV/streaming network dim (name = network/channel). Derived: is_lrq = Living Room Quality flag (210 TRUE) sourced from public_publisher_types type 1; budget_cap/user_id/publisher_type_id are 100% NULL (unused artifacts); logo only 233 non-NULL; name non-unique with inline curation annotations ("- DO NOT USE", "(Non-LRQ)"). source_timestamp = ms capture epoch. Join partner ctv_ctv_sites is a clean 1:N FK (1.19M rows, 11 orphans). Drift reconciled: authoritative publisher_type_id domain from public_publisher_types (1=CTV-LRQ, 2=CTV-Other, 3=Display, 4=Encrypted, 6=Mobile Tablet PC; no 5) differs from the cost_impression_log prose gloss ("1=CTV/OTT, 2=premium, 3=web/display") — noted for the impression-log doc, not changed here.
 <!-- CHANGELOG END -->

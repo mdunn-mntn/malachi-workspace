@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 65314718
-approx_logical_bytes: 215061912803
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 66154246
+approx_logical_bytes: 217456506584
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, attribution, spend]
 keywords: [campaign_group, hourly rollup, media_spend, media_cost, attribution variants, competing, last_touch, probattr, HLL reach, uniques, verified visits, ROAS, VAST]
 source: INFORMATION_SCHEMA+human
@@ -145,10 +145,12 @@ day-grain siblings (TI-832). `video_spend` (BIGNUMERIC) is the CTV/video slice o
 - **`competing_*`:** industry_standard **first-touch** variant. UI "Verified Visits" =
   `clicks + views + competing_views`; UI order value adds `competing_view_order_value`. These are
   the columns that close the reported-ROAS gap for `industry_standard` advertisers.
-- **`last_tv_touch_*` / `competing_last_tv_touch_*`:** TV-only last-touch model, distinct from the
-  display/overall last-touch — credits the *same* conversion to a *different* campaign group.
-  **Not a subset, not additive** with the default cols (adding them double-counts dual-exposed
-  conversions).
+- **`competing_last_tv_touch_*`** (`competing_last_tv_touch_views`, `_view_conversions`,
+  `_view_order_value`): the TV-only last-touch model under the competing/industry_standard lens —
+  credits the *same* conversion to a *different* campaign group. **Not a subset, not additive** with
+  the default cols (adding them double-counts dual-exposed conversions). **NOTE:** this hour table
+  carries ONLY the `competing_` TV-touch columns; the plain `last_tv_touch_*` and `last_touch_*`
+  families that exist on the day-grain sibling are **absent** here.
 - **`probattr_*`:** probabilistic attribution mirrors (`probattr_view_conversions`,
   `probattr_view_order_value`, `probattr_last_touch_*`, `probattr_competing_*`, …) — the right
   surface for probabilistically-attributed ROAS/CPA modeling.
@@ -201,8 +203,8 @@ quartile completion counts (VCR = `vast_complete / vast_start`).
   - `SELECT *` (all 66 cols): **244.7 MB/day** — **~103× the 2-column slice.** The wide BYTES HLL
     sketches dominate; project only the measures you need.
   - HLL-merge over ~12 mixed cols (ids + spend + 2 sketches), 1 day: **0.099 GB billed** actual.
-- **Backing storage** (physical `numBytes`): **~215 GB** (171 GB long-term), 65.3M rows, 932 daily
-  partitions (2024-01-01 → 2026-07-20). No table-level TTL/expiration.
+- **Backing storage** (physical `numBytes`, 2026-07-29): **~217 GB** (171 GB long-term), 66.15M rows,
+  941 dated daily partitions (2024-01-01 → 2026-07-29) + 1 empty `__NULL__`. No table-level TTL/expiration.
 
 ## Example queries
 ```sql
@@ -235,6 +237,7 @@ GROUP BY campaign_group_id;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified vs LIVE source. 67-column schema unchanged (verified against INFORMATION_SCHEMA.COLUMNS); physical still real TABLE `__3231009481`, partition `hour` DAY + `require_partition_filter=TRUE`, no clustering, no TTL — all confirmed. Refreshed size 66,154,246 rows / 217,456,506,584 B (171 GB long-term) / 941 dated partitions (was 65.3M / 215G / 932); freshness re-checked = current through 20260729. **DRIFT FIXED:** the attribution-family prose (Purpose + column meanings) described the plain `last_touch_*` / `last_tv_touch_*` and non-`competing` `*_assist_*` families as present — they are NOT in this hour table (only default + `competing_*` + `probattr_*`; the AUTO:SCHEMA 67-col list was already correct). Corrected Purpose ("reduced attribution set, 67 vs 84") and the TV-touch bullet (only `competing_last_tv_touch_*` exists).
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md for this exact table (only the day-grain sibling `sum_by_campaign_group_by_day` and `sum_by_campaign_by_day` are documented); enriched from LIVE physical + empirical sampling, borrowing column conventions from the day-grain siblings. Physical resolved to a real TABLE `summarydata__sum_by_campaign_group_by_hour__3231009481`: partition `hour` DAY (require_partition_filter=true, empirically confirmed 6.9× 1d→7d scaling), no clustering, ~215 GB / 65.3M rows / 932 partitions (2024-01-01→2026-07-20). Grain verified unique (adv×cg×hour). BYTES cols confirmed HLL sketches via HLL_COUNT.MERGE. Drift reconciled: (a) `media_cost` is RETAINED on this hour table though TI-832 dropped cost-side duplicates from the day-grain siblings; (b) this hour table is FRESH through current day, unlike the ~17-day-lag staleness noted for the day-grain rollups on 2026-05-01.
 <!-- CHANGELOG END -->
 

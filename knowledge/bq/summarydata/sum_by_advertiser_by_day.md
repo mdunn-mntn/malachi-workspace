@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: []
 time_unit: date
 ttl_days: null
-approx_rows: 4390527
-approx_logical_bytes: 117001346876
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 4461741
+approx_logical_bytes: 118521729947
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, delivery, attribution]
 keywords: [sum_by_advertiser_by_day, advertiser daily rollup, verified visits, attribution variants, competing industry_standard, last_tv_touch, probattr, raw un-attributed firehose, new_to_file, hll reach uniques, media_spend data_spend platform_spend, no first-touch column, long pre-period, causalimpact]
 source: INFORMATION_SCHEMA+human
@@ -152,7 +152,7 @@ Daily **advertiser-level** KPI rollup: delivery (impressions, video/display spli
 ## Gotchas
 - **`require_partition_filter = TRUE` (enforced on the physical table).** Any query without a `day` filter hard-errors ("Cannot query over table ... without a filter over column(s) 'day'"). Always bound `day` — this also blocks `MIN/MAX(day)` scans (use `INFORMATION_SCHEMA.PARTITIONS` instead). Verified 2026-07-19: `SELECT * ` with no filter → hard error.
 - **`raw_*` are a firehose, not attributed** — see Column meanings. `raw_visits`/`raw_conversions` run ~480×/~1,170× the attributed headline; using them as "visits"/"conversions" over-counts by ~2-3 orders of magnitude.
-- **STALENESS — historically thrashy; verify `max(day)` before recent-window use.** Prose logged a ~17-day lag on 2026-05-01. **Live 2026-07-19: resolved — data is fresh through the current day** (max dated partition `20260720`, min `20240101`). Freshness has varied, so always check `max(day)`; if lagging, fall back to the hour-grain `*_facts` tables. The downstream `agg__daily_sum_by_campaign` lags worse (empty since 2026-03-31).
+- **STALENESS — historically thrashy; verify `max(day)` before recent-window use.** Prose logged a ~17-day lag on 2026-05-01. **Re-checked 2026-07-29: fresh through the current day** (max dated partition `20260729`, min `20240101`, 941 dated partitions). Freshness has varied, so always check `max(day)`; if lagging, fall back to the hour-grain `*_facts` tables. The downstream `agg__daily_sum_by_campaign` lags worse (empty since 2026-03-31).
 - **NO first-touch column, does NOT honor `reporting_style`** — cannot reproduce a client's UI/first-touch (`industry_standard`) number from this table alone; headline ≈ last-touch. Use `all_facts` + `competing_*` to rebuild the UI. Hold attribution lens AND window constant across both years of any client YoY.
 - **Attribution variants are separate models — never SUM across families** (default / last_touch / last_tv_touch / competing / probattr / assist). Adding `last_tv_touch` to default/last_touch double-counts CTV-exposed conversions.
 - **`uniques` et al. are HLL BYTES sketches**, not integers — `HLL_COUNT.MERGE(...)`, never `SUM`.
@@ -160,7 +160,7 @@ Daily **advertiser-level** KPI rollup: delivery (impressions, video/display spli
 - **Empty `__NULL__` partition exists** (0 rows on 2026-07-19); a bounded `day` range predicate excludes any NULL-`day` rows anyway.
 
 ## Cost & partitioning notes
-- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — it is mandatory and the only pruning lever (no cluster keys). Physical backing table: **4,390,527 rows / 117,001,346,876 bytes (~109 GiB)**, **932 date partitions** (2024-01-01 -> current day, max `20260720`) + 1 empty `__NULL__` partition. `numLongTermBytes = 0`.
+- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — it is mandatory and the only pruning lever (no cluster keys). Physical backing table (2026-07-29): **4,461,741 rows / 118,521,729,947 bytes (~110.4 GiB)**, **941 dated partitions** (2024-01-01 -> `20260729`) + 1 empty `__NULL__` partition. `numLongTermBytes = 0`.
 - **SELECT only the columns you need — the row is very wide (90 cols) and the BYTES HLL sketches dominate, so `SELECT *` is ~613× costlier than a narrow projection.** Labeled dry-run figures (same partition = 1 day, 2026-04-01):
   - `SELECT *` (all 90 cols), 1 day: **142,526,144 bytes (~135.9 MB)**
   - 8 narrow cols (`advertiser_id, day, impressions, views, clicks, media_spend, data_spend, platform_spend`), 1 day: **232,512 bytes (~227 KB)** — ~613× cheaper than `SELECT *`
@@ -198,6 +198,7 @@ WHERE day BETWEEN DATE '2026-07-01' AND DATE '2026-07-10';
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched->verified vs LIVE source. 90-column schema unchanged (verified col-for-col against INFORMATION_SCHEMA.COLUMNS incl. advertiser-only `visitors`/`new_to_file`/`raw_*` block); physical still real TABLE `__1029496800`, partition `day` DAY + `require_partition_filter=TRUE`, no clustering, no TTL. Refreshed size 4,461,741 rows / 118,521,729,947 B / 941 dated partitions (was 4.39M / 117.0G / 932); freshness re-checked = current through 20260729. Attribution/HLL/raw-firehose business logic unchanged from enrichment.
 - 2026-07-19: skeleton->enriched. Physical resolved to real TABLE `summarydata__sum_by_advertiser_by_day__1029496800` (silver view = plain `SELECT *`). Partition confirmed EMPIRICALLY = DAY on `day`, `require_partition_filter=TRUE` (SELECT * w/o filter hard-errors), no clustering (physical 4,390,527 rows / 117,001,346,876 bytes / 932 date partitions 20240101..20260720 + 1 empty __NULL__). Grain verified one row per advertiser_id x day (6,711 rows = distinct adv = distinct adv×day, 2026-04-01). `uniques` HLL populated + mergeable (1,426/6,711 non-null, MERGE≈12.1M households/day). 90 columns (this table = campaign sibling's core + advertiser-only `raw_*`/`new_to_file`/`visitors`). Labeled dry-run cost: SELECT * 142,526,144 B/day vs 8-col 232,512 B/day (~613×). DRIFT reconciled: (1) prose "STALENESS ~17-day lag (verified 2026-05-01)" NO LONGER holds — live max dated partition 20260720 (fresh through current day); kept "verify max(day)" advice. (2) Added `require_partition_filter=TRUE` (absent from prose). (3) Quantified data_knowledge's "raw_* un-attributed" claim — empirically a FIREHOSE: raw_visits 319.7M vs attributed 664.5K (~481×), raw_conversions 66.9M vs 57K (~1,174×). (4) Confirmed §5c: NO first-touch column, headline ≈ last_touch (664,550 vs 664,377, <0.03%).
 <!-- CHANGELOG END -->
 

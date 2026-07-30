@@ -14,9 +14,9 @@ time_unit: none
 ttl_days: null
 approx_rows: 13
 approx_logical_bytes: 598
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [auth, platform_ui]
 keywords: [roles, rbac, permissions, role_id, user_role_id, scope, super_admin, performance_analyst, advertiser_admin, ui_roles]
 source: INFORMATION_SCHEMA+human
@@ -137,5 +137,6 @@ ORDER BY sort_order
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-introspected live source: schema unchanged (8 columns), BASE TABLE unpartitioned/unclustered, 13 rows / 598 bytes (exact match). Full 13-row dump re-confirms every claim — roles_id set {1-10,14,15,16}; scope domain {mntn,customer,reviewer}; assignable_to {NULL,'{advertiser}','{hotel}'}; default_role TRUE only for Portfolio Admin(2); unlimited_power TRUE only for Super Admin(1); hotel_id 100% NULL; Restricted sort_order=10000.
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented table) — enriched from live schema + full 13-row sample. Confirmed physical BASE TABLE (not a view), unpartitioned/unclustered, 598 B. Derived scope domain {mntn,customer,reviewer} and assignable_to domain {NULL,'{advertiser}','{hotel}'} from the complete sample. Documented FK partners (core_r2_roles_x_advertisers ~38K/role fan-out; ui_users.user_role_id; ui_users_x_advertisers all-NULL) and the identical sibling `ui_roles` (same id space; has datastream_metadata, lacks assignable_to). Flagged: no datastream_metadata/deleted/is_test columns (static seed dim, not CDC mirror); hotel_id 100% NULL (vestigial); orphan/sentinel FKs 11/99/-1/NULL won't resolve.
 <!-- CHANGELOG END -->

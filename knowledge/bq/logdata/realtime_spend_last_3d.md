@@ -14,7 +14,7 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
-schema_synced: 2026-07-17
+schema_synced: 2026-07-29
 last_verified: null
 coverage_state: enriched
 domain: [spend, pacing, billing]
@@ -208,6 +208,7 @@ ORDER BY advertiser_spend_usd DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: re-verify pass — kept at enriched (NOT promoted). View schema re-confirmed live (11 columns match AUTO:SCHEMA; schema_synced bumped to 2026-07-29). Public view still resolves to `sqlmesh__logdata.logdata__realtime_spend_last_3d__2265771416`, **still missing** (`bq show` errors); only a `logdata__realtime_spend_last_3d__1597830470` VIEW survives and it references dropped upstream snapshots, so the view remains unqueryable. No live rows / dry-run possible → grain, sentinels, and the margin-decomposition logic stay DDL-verified only; last_verified stays null.
 - 2026-07-19: skeleton→enriched. Logic verified live from the view DDL (public view →
   snapshot `...__1597830470`). Reconciled 3 prose/schema drifts vs `data_catalog.md`:
   (1) catalog pins stale physical hash `...__2690208900`; live public view points at

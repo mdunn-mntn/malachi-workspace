@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: []
 time_unit: date
 ttl_days: null
-approx_rows: 3150811
-approx_logical_bytes: 65132947975
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 3191724
+approx_logical_bytes: 65852160329
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, attribution, spend]
 keywords: [campaign_group_daily_rollup, roas, cpa, attribution_variants, hll_uniques, media_cost_pacing, competing_first_touch, probattr]
 source: INFORMATION_SCHEMA+human
@@ -155,14 +155,14 @@ This is a **terminal rollup** — it does not fan out into event/fact tables. Jo
 - **Attribution variants are NOT additive** — never SUM across default / `last_touch_*` / `last_tv_touch_*` / `competing_*` / `probattr_*` / `*_assist_*`. They are alternative models of the same conversions.
 - **`media_cost` ≠ `media_spend`** — pacing "% to cap" is in **media-cost** terms; total delivered spend is `media_spend + data_spend + platform_spend` (AUDI-1070/1089).
 - **Dropped `*_cost` / `legacy_spend` columns** (TI-832) — `SELECT *` + explicit `*_cost` projection crashes.
-- **Staleness — RESOLVED as of 2026-07-19.** The 2026-05-01 note ("~17-day lag; max=2026-04-14") no longer holds: `max(day) = 2026-07-20` while today is 2026-07-19, i.e. the rollup is now **current** (the latest partition may be a partial/UTC-forward day). Still `MAX(day)` before recent-window use and treat the newest day as possibly incomplete; for guaranteed same-day/hour-grain freshness use the `*_facts` tables.
+- **Staleness — re-checked fresh as of 2026-07-29.** The 2026-05-01 note ("~17-day lag; max=2026-04-14") no longer holds: `max(day) = 2026-07-29` = current day (941 dated partitions). The latest partition may be a partial/UTC-forward day. Still `MAX(day)` before recent-window use and treat the newest day as possibly incomplete; for guaranteed same-day/hour-grain freshness use the `*_facts` tables.
 - **`require_partition_filter=True`** — a query with no `day` filter **errors** ("Cannot query over table ... without a filter over column(s) 'day'"); this propagates through the view.
 - **BQ view vs deprecated Greenplum table.** A same-named Greenplum coreDW table exists but coreDW is EOL **2026-04-30** — use this BQ SQLMesh view.
 
 ## Cost & partitioning notes
 - **Partition:** `day` (DATE, **DAY** grain), `require_partition_filter=True`. **No clustering. No partition-expiration TTL** — full history retained back to 2024-01-01.
 - **THE one filter to always apply:** `WHERE day BETWEEN <start> AND <end>` (required — unfiltered queries error).
-- **Physical backing storage:** 3,150,811 rows / **65,132,947,975 bytes (~60.7 GiB)** — `bq show` numBytes on physical `sqlmesh__summarydata.summarydata__sum_by_campaign_group_by_day__272419159` (a real TABLE, not a nested view).
+- **Physical backing storage (2026-07-29):** 3,191,724 rows / **65,852,160,329 bytes (~61.3 GiB)** — `bq show` numBytes on physical `sqlmesh__summarydata.summarydata__sum_by_campaign_group_by_day__272419159` (a real TABLE, not a nested view); 941 dated partitions + 1 empty `__NULL__`.
 - **Dry-run scan estimates (labeled by column set — only same-column-set figures are comparable):**
   - 1 day, one narrow scalar col (`advertiser_id`): **73,120 bytes (~73 KB)**.
   - 1 day, `SELECT *`: **62,538,859 bytes (~62.5 MB)** — **~855x** the narrow col; the BYTES HLL columns are the entire difference.
@@ -201,6 +201,7 @@ GROUP BY campaign_group_id;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified vs LIVE source. 84-column schema unchanged (verified against INFORMATION_SCHEMA.COLUMNS; advertiser_id denormalized, no `campaign_id`/`funnel_level`, no `raw_*`); physical still real TABLE `__272419159`, partition `day` DAY + `require_partition_filter=TRUE`, no clustering, no TTL. Refreshed size 3,191,724 rows / 65,852,160,329 B / 941 dated partitions (was 3.15M / 65.13G / 932); freshness re-checked = current through 20260729. Dropped `*_cost`/`legacy_spend` columns confirmed still absent.
 - 2026-07-19: skeleton→enriched. Physical resolved to a real partitioned TABLE (3,150,811 rows / 65.1 GB). Partition confirmed empirically = `day` (DAY, require_partition_filter=True — no-filter dry-run errors); no clustering; no TTL. Grain verified 2026-07-15 = one row per (campaign_group_id, day); advertiser_id denormalized (1 advertiser per CG). Dry-run cost figures captured (1d/1col 73 KB vs 1d/`SELECT *` 62.5 MB — HLL BYTES columns dominate). No dedicated prose `##` section existed; enriched from LIVE schema + scattered prose oracle (sibling `sum_by_campaign_by_day` catalog entry, TI-832 column-drop note, AUDI-1070 attribution-variant + media_cost pacing notes). Drift reconciled: (1) the 2026-05-01 "~17-day staleness lag" note is now STALE — max(day)=2026-07-20 as of 2026-07-19, view is current; (2) prose listed dropped `*_cost`/`legacy_spend` columns — confirmed absent from LIVE AUTO:SCHEMA.
 <!-- CHANGELOG END -->
 

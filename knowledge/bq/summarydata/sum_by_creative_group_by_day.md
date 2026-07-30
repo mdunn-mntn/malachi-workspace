@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: []
 time_unit: date
 ttl_days: null
-approx_rows: 23392604
-approx_logical_bytes: 124155072450
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 23708431
+approx_logical_bytes: 125581541488
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, delivery, attribution, creative]
 keywords: [sum_by_creative_group_by_day, creative group daily rollup, group_id, creative-group attribution, verified visits, competing industry_standard, last_tv_touch, hll reach uniques, media_spend data_spend platform_spend, core_creative_groups]
 source: INFORMATION_SCHEMA+human
@@ -151,11 +151,11 @@ The measure set is **column-for-column identical to `sum_by_campaign_by_day`** �
 - **Attribution variants are separate models — never SUM across families** (default / last_touch / last_tv_touch / competing / probattr / assist). Adding `last_tv_touch` to default/last_touch double-counts CTV-exposed conversions.
 - **No `revenue` and no `conversions` column** — derive: visits = `views + clicks`, conversions = `view_conversions + click_conversions`, revenue = `*_order_value`.
 - **`uniques` et al. are HLL BYTES sketches**, not integers — `HLL_COUNT.MERGE(...)`, never `SUM`.
-- **Fresh through the current day** (live 2026-07-19: max dated partition `20260720`), unlike the historically-thrashy campaign sibling — but freshness across the `sum_by_*` family has varied, so check `max(day)` (via PARTITIONS) before recent-window use and fall back to the hour-grain `silver.summarydata.*_facts` tables if lagging.
+- **Fresh through the current day** (re-checked 2026-07-29: max dated partition `20260729`), unlike the historically-thrashy campaign sibling — but freshness across the `sum_by_*` family has varied, so check `max(day)` (via PARTITIONS) before recent-window use and fall back to the hour-grain `silver.summarydata.*_facts` tables if lagging.
 - **`__NULL__` partition exists but is empty** (0 rows on 2026-07-19); range predicates over `day` exclude any NULL-`day` rows anyway.
 
 ## Cost & partitioning notes
-- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — mandatory and the only pruning lever (no cluster keys). Physical backing table: **23,392,604 rows / 124,155,072,450 bytes (~115.6 GiB)**, **932 dated partitions** (`20240101` -> `20260720`) + 1 empty `__NULL__` partition (933 total).
+- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — mandatory and the only pruning lever (no cluster keys). Physical backing table (2026-07-29): **23,708,431 rows / 125,581,541,488 bytes (~117.0 GiB)**, **941 dated partitions** (`20240101` -> `20260729`) + 1 empty `__NULL__` partition (942 total).
 - **SELECT only the columns you need — the row is very wide (84 cols) so `SELECT *` is ~140x costlier than a narrow projection.** Labeled dry-run figures (same partition = 1 day, 2026-07-15):
   - `SELECT *` (all 84 cols), 1 day: **144,175,971 bytes (~137.5 MB)**
   - 4 narrow cols (`advertiser_id, group_id, day, impressions`), 1 day: **1,026,720 bytes (~1.00 MB)** — ~140x cheaper than `SELECT *`
@@ -196,6 +196,7 @@ GROUP BY group_id ORDER BY households_reached DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched->verified vs LIVE source. 84-column schema unchanged (verified against INFORMATION_SCHEMA.COLUMNS; key = advertiser_id + group_id + day, `group_id`= creative group not campaign-group); physical still real TABLE `__3293778204`, partition `day` DAY + `require_partition_filter=TRUE`, no clustering, no TTL — all confirmed. Refreshed size 23,708,431 rows / 125,581,541,488 B / 941 dated partitions (was 23.39M / 124.16G / 932); freshness re-checked = current through 20260729. `-1` sentinel + `core_creative_groups` join business logic unchanged from enrichment.
 - 2026-07-19: skeleton->enriched. NO prose oracle existed (no `sum_by_creative_group_by_day` section in data_catalog.md or data_knowledge.md) — enriched from LIVE schema + empirical queries, using the verified sibling `sum_by_campaign_by_day.md` for the shared measure-set semantics (columns are identical except key = `group_id`). Partition confirmed EMPIRICALLY = DAY on `day`, `require_partition_filter=TRUE`, no clustering, no TTL (physical `bq show`: 23,392,604 rows / 124,155,072,450 bytes; INFORMATION_SCHEMA.PARTITIONS: 932 dated 20240101..20260720 + 1 empty __NULL__). Grain verified 2026-07-15: one row per (advertiser_id, group_id) x day — group_id NOT globally unique (sentinel -1 recurs per advertiser: 32,085 rows vs 32,084 distinct group_id). Join target = `bronze.integrationprod.core_creative_groups` (PK group_id, 1:1; its campaign_id rolls a group up to its stage campaign); `core_creative_groups_x_creatives` is 1:N (fan-out). `uniques` HLL populated + mergeable (sample MERGE ~312K households). Data fresh through current day (max dated 20260720). Labeled dry-run cost: SELECT * = 144,175,971 B/day vs 4-col = 1,026,720 B/day (~140x).
 <!-- CHANGELOG END -->
 

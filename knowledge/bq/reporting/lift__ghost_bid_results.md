@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 23906
 approx_logical_bytes: 5641405
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [incrementality, experimentation, lift_measurement, reporting, ctv, prospecting]
 keywords: [reporting lift__ghost_bid_results, lift ghost_bid_results, ghost bid results, ghost bid lift, holdout lift, incrementality results, itt lift, relative lift, abs_itt, rel_itt, incremental_visits, score_band, persuadables gradient, bias flags, ghost_frac, ip_compliance, arm_imbalance_suspect, cpiv, cpia, matt brorby, ber-2250, incr, audi-1172, audi-1148, dw-main-gold, gold reporting]
 source: INFORMATION_SCHEMA+human
@@ -160,6 +160,7 @@ ORDER BY n_treatment DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live source same day: VIEW → physical `sqlmesh__reporting.reporting__lift__ghost_bid_results__3132856389` (TABLE, 23,906 rows / 5,641,405 B, unpartitioned/unclustered/no-TTL) — exact match to front-matter. All 39 columns match AUTO:SCHEMA. Grain re-confirmed (campaign_id↔campaign_group_id 1:1 = 2,710 each; 1,435 advertisers; partner_id∈{8,79}); stratum_type row counts exact (overall 2,710 / bid_count 10,827 / score_band 6,281 / score_band_ivw 2,044 / score_band_mh 2,044); derived-column arithmetic verified to the digit (see Observed facts).
 - 2026-07-29: skeleton→enriched. Cataloged net-new from live source + oracle prose (data_catalog.md §ghost-bid lift, experimentation.md §"Ghost-bid lift — bias register"). Located in the GOLD project (`dw-main-gold.reporting`), not silver/bronze. Resolved VIEW → physical `sqlmesh__reporting.reporting__lift__ghost_bid_results__3132856389` (TABLE, 23,906 rows / ~5.6 MB, unpartitioned/unclustered/no-TTL — metadata fresh, numRows>0). Grain (campaign×stratum, campaign_id↔campaign_group_id 1:1), stratum value sets, and all derived-column arithmetic verified empirically.
 <!-- CHANGELOG END -->
 

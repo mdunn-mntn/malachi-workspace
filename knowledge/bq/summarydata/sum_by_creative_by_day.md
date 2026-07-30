@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: []
 time_unit: date
 ttl_days: null
-approx_rows: 46622834
-approx_logical_bytes: 156608293143
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 47171214
+approx_logical_bytes: 158364222615
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, delivery, attribution]
 keywords: [sum_by_creative_by_day, creative daily rollup, creative performance, ad creative, verified visits, attribution variants, competing industry_standard, last_tv_touch, hll reach uniques, media_spend data_spend platform_spend, creatives dim, creative_group]
 source: INFORMATION_SCHEMA+human
@@ -155,7 +155,7 @@ Column semantics are **identical to `sum_by_campaign_by_day`** (same builder, sa
 - **`__NULL__` partition exists but is empty** (0 rows on 2026-07-19); range predicates on `day` exclude any NULL-`day` rows anyway.
 
 ## Cost & partitioning notes
-- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — mandatory and the only pruning lever (no cluster keys). Physical backing table: **46,622,834 rows / 156,608,293,143 bytes (~145.9 GiB)**, **932 date partitions** (2024-01-01 -> current day) + 1 empty `__NULL__` partition. Roughly 5x wider row-volume than `sum_by_campaign_by_day` (~55.8K rows/day vs ~12K) because there are far more creatives than campaigns.
+- **Partition:** DAY on `day`, `require_partition_filter = TRUE`. **Cluster:** none. **The one filter to always apply: a bounded `day` range** — mandatory and the only pruning lever (no cluster keys). Physical backing table (2026-07-29): **47,171,214 rows / 158,364,222,615 bytes (~147.5 GiB)**, **941 dated partitions** (2024-01-01 -> `20260729`) + 1 empty `__NULL__` partition. Roughly 5x wider row-volume than `sum_by_campaign_by_day` (~55.8K rows/day vs ~12K) because there are far more creatives than campaigns.
 - **SELECT only the columns you need — the row is very wide (84 cols) so `SELECT *` is ~66x costlier than a narrow projection.** Labeled dry-run figures (same partition = 1 day, 2026-07-17):
   - `SELECT *` (all 84 cols), 1 day: **176,536,244 bytes (~168.4 MB)**
   - 6 narrow cols (`advertiser_id, creative_id, day, impressions, views, clicks`), 1 day: **2,680,272 bytes (~2.56 MB)** — ~65.9x cheaper than `SELECT *`
@@ -197,6 +197,7 @@ WHERE day BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AND CURRENT_DATE();
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched->verified vs LIVE source. 84-column schema unchanged (verified against INFORMATION_SCHEMA.COLUMNS; key = advertiser_id + creative_id + day); physical still real TABLE `__281075590`, partition `day` DAY + `require_partition_filter=TRUE`, no clustering, no TTL — all confirmed. Refreshed size 47,171,214 rows / 158,364,222,615 B / 941 dated partitions (was 46.62M / 156.6G / 932); freshness re-checked = current through 20260729. Grain (advertiser_id part of key) + join to `silver.core.creatives` business logic unchanged from enrichment.
 - 2026-07-19: skeleton->enriched. No dedicated prose oracle existed in data_catalog.md / data_knowledge.md — enriched from LIVE schema + the verified sibling `sum_by_campaign_by_day.md` (identical 84-column set, same builder). Partition confirmed EMPIRICALLY = DAY on `day`, `require_partition_filter=TRUE`, no clustering (bq show + INFORMATION_SCHEMA.PARTITIONS: 932 dated partitions 20240101->current + 1 empty __NULL__; physical 46,622,834 rows / 156,608,293,143 bytes / ~145.9 GiB). GRAIN DRIFT vs campaign sibling documented: grain = one row per (advertiser_id, creative_id, day) — advertiser_id is NOT redundant here (2026-07-17: 55,839 rows = 55,839 distinct adv×creative but 55,838 distinct creative_id → one creative shared across two advertisers). Join target = `silver.core.creatives`, verified 1 row per creative_id (5,722,718 = distinct creative_id), safe 1:1 no fan-out; creative->group via creative_groups_x_creatives bridge can fan out. Freshness live-fresh through current day (no lag). Labeled dry-run costs: SELECT * 176,536,244 B vs 6-col 2,680,272 B (~65.9x) for 1 day.
 <!-- CHANGELOG END -->
 

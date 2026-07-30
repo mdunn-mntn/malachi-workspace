@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 235
-approx_logical_bytes: 32632
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 245
+approx_logical_bytes: 34085
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, retargeting, exclusions, audit-log]
 keywords: [audience tooling, converter exclusions, site visitor exclusions, retargeting exclusions, time window, change log, audit trail, advertiser settings, prior_value, current_value]
 source: INFORMATION_SCHEMA+human
@@ -30,7 +30,7 @@ Audit trail of changes an advertiser makes to its **Audience Tooling** retargeti
 - **Converter Exclusions** — exclude recent converters from targeting.
 - **Site Visitor Exclusions** — exclude recent site visitors from targeting.
 
-Reach for it to answer "when did advertiser X turn its exclusions on/off, or change the exclusion window?" and to line up exclusion-config changes against downstream delivery/reach shifts. It is a tiny, human-readable change feed (235 rows across 148 advertisers as of 2026-07-19), not a bulk analytics fact table.
+Reach for it to answer "when did advertiser X turn its exclusions on/off, or change the exclusion window?" and to line up exclusion-config changes against downstream delivery/reach shifts. It is a tiny, human-readable change feed (245 rows across 157 advertisers as of 2026-07-29), not a bulk analytics fact table.
 
 ## Grain & keys
 - **Grain:** one row per Audience-Tooling **setting change** — a change event for one advertiser, one setting field (`change_id`), at one `time`. A single UI save can emit **several rows sharing one timestamp** (one per field touched); e.g. advertiser 33788 emitted 4 rows all at `2026-07-10 18:59:18` (Converter on/off + window, Site Visitor on/off + window).
@@ -59,10 +59,10 @@ Reach for it to answer "when did advertiser X turn its exclusions on/off, or cha
 ## Column meanings (only the non-obvious ones)
 - **`time`** — native TIMESTAMP of the setting save (not an epoch int; no unit conversion needed). Multiple rows may share it for one multi-field save.
 - **`advertiser_id`** — the advertiser whose setting changed. Equals `entity_id` in every row.
-- **`entity_id`** — STRING copy of `advertiser_id` (identical in 235/235 rows); redundant.
+- **`entity_id`** — STRING copy of `advertiser_id` (identical in 245/245 rows); redundant.
 - **`entity_text`** — the human-readable change sentence, e.g. `"Converter Exclusions changed from On to Off"`, `"Site Visitor Time Window Changed from 30 days to 90 days"`. `prior_value`/`current_value` are the parsed before/after of this sentence.
 - **`entity_type`** — constant `"change_text"` in all rows.
-- **`entity_id_2` / `entity_text_2` / `entity_type_2`** — unused secondary-entity slot; **NULL in all 235 rows**.
+- **`entity_id_2` / `entity_text_2` / `entity_type_2`** — unused secondary-entity slot; **NULL in all 245 rows**.
 - **`change_id`** — setting-type code (4 values; a repeating category, not a key):
   - `72` = **Converter Exclusions** on/off toggle → `current_value` in {`On`,`Off`}
   - `73` = **Converter Exclusions** time window → `current_value` like `"30 days"`, `"90 days"`, `"365 days"`
@@ -70,27 +70,27 @@ Reach for it to answer "when did advertiser X turn its exclusions on/off, or cha
   - `75` = **Site Visitor** time window → `"N days"`
 - **`prior_value` / `current_value`** — before/after setting value as text: `"On"`/`"Off"` for toggles (72,74), `"N days"` for windows (73,75).
 - **`change_type`** — constant `"Audience Tooling"` in all rows (this table's only category).
-- **`user_id`** — intended actor of the change, but **NULL in 235/235 rows** (not populated). Cannot attribute changes to a person.
+- **`user_id`** — intended actor of the change, but **NULL in 245/245 rows** (not populated). Cannot attribute changes to a person.
 
 ## Joins & relationships
-- **`advertiser_id` → advertisers dim** (`bronze.integrationprod` `core_advertisers` / `silver.core.advertisers`, grain 1 row per advertiser). This is the primary join. Direction is **N:1** (many change rows per advertiser → one dim row), so joining the dim onto this log is fan-out-safe. Joining this log onto an advertiser-grain fact **fans out** ~1.6x on average (235 rows / 148 advertisers) and much more for churny advertisers — dedup or aggregate first. (Partner dims are large SQLMesh/CDC views; the fan-out warning above is the safe direction.)
+- **`advertiser_id` → advertisers dim** (`bronze.integrationprod` `core_advertisers` / `silver.core.advertisers`, grain 1 row per advertiser). This is the primary join. Direction is **N:1** (many change rows per advertiser → one dim row), so joining the dim onto this log is fan-out-safe. Joining this log onto an advertiser-grain fact **fans out** ~1.6x on average (245 rows / 157 advertisers) and much more for churny advertisers — dedup or aggregate first. (Partner dims are large SQLMesh/CDC views; the fan-out warning above is the safe direction.)
 - **`campaign_group_id` → campaign_groups** — **do not use.** Constant `1` in all 235 rows (a placeholder, not a real campaign-group reference).
 - **`user_id` → users dim** — **unusable**, NULL in all rows.
 - No time/partition join; `time` is a plain event timestamp.
 
 ## Gotchas
-- **Tiny full-refresh snapshot.** Only 235 rows total. The physical is rebuilt whole each run (`creationTime == lastModifiedTime`, both 2026-07-19), so the hash in `physical_table` (`...__3412259734`) **changes every build** — always query the clean view name `summarydata.advertiser_audience_tooling_change_log`, never the physical.
+- **Tiny full-refresh snapshot.** Only 245 rows total. The physical is rebuilt whole each run (`creationTime == lastModifiedTime`, confirmed again 2026-07-29), so the hash in `physical_table` (`...__3412259734`) can **change every build** — always query the clean view name `summarydata.advertiser_audience_tooling_change_log`, never the physical.
 - **No partition, no cluster, no TTL.** `time` is *not* a partition column (physical `timePartitioning: null`, confirmed via `bq show`).
 - **`user_id` is always NULL** — no per-user attribution.
 - **`campaign_group_id` is always `1`** — placeholder, not a join key.
 - **`change_id` is a category, not a key** — only 4 distinct values (72/73/74/75); it repeats across advertisers. Do not treat as a row id.
 - **`entity_id_2` / `entity_text_2` / `entity_type_2` are unused (NULL).**
 - **One save → multiple rows at the same `time`** (one per changed field); count changes carefully.
-- **Short history window.** Earliest row is `2026-02-27`, latest `2026-07-13` (~4.5 months). Because the model is a full refresh, history may be bounded by the upstream source's retention — treat pre-Feb-2026 absence as "not captured here," not "no changes occurred." (Source retention not independently confirmed.)
+- **Short history window.** Earliest row is `2026-02-27`, latest `2026-07-28` (~5 months). Because the model is a full refresh, history may be bounded by the upstream source's retention — treat pre-Feb-2026 absence as "not captured here," not "no changes occurred." (Source retention not independently confirmed.)
 
 ## Cost & partitioning notes
 - **Unpartitioned 32 KB table** — cost is negligible; there is no partition column to filter and none is needed.
-- `SELECT *` full scan (all 14 columns) = **32,632 bytes (~0.00003 GB)** — `bq_run.sh --dry_run`, 2026-07-19. This equals the physical `numBytes` (32,632), so `approx_logical_bytes = 32632`.
+- `SELECT *` full scan (all 14 columns) = **34,085 bytes (~0.00003 GB)** — physical `numBytes` (`bq show`, 2026-07-29; was 32,632 at 235 rows on 2026-07-19), so `approx_logical_bytes = 34085`.
 - Filter on `advertiser_id` and/or `time` only for row selection, not for cost.
 
 ## Example queries
@@ -121,6 +121,7 @@ GROUP BY advertiser_id, change_id;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-introspected live source: VIEW → physical `sqlmesh__summarydata.summarydata__advertiser_audience_tooling_change_log__3412259734` (TABLE, unpartitioned/unclustered, full-refresh creationTime==lastModifiedTime). Schema unchanged (14 columns). Every structural claim re-confirmed on the grown snapshot (n=245, 157 advertisers; user_id 100% NULL; campaign_group_id ≡1; entity_id_2/text_2/type_2 all NULL; entity_type≡change_text; change_type≡Audience Tooling; entity_id≡advertiser_id; change_id domain {72,73,74,75}). Refreshed counts (235→245 rows, 148→157 advertisers, 32,632→34,085 B, latest date 2026-07-13→2026-07-28).
 - 2026-07-19: skeleton→enriched. No prose oracle existed (no section in data_catalog.md or data_knowledge.md; grep-empty) — enriched from LIVE schema + empirical sampling alone. Confirmed physically unpartitioned/unclustered/no-TTL tiny full-refresh snapshot (235 rows, 148 advertisers, 32,632 bytes via bq show + dry-run). Mapped change_id domain 72/73/74/75 → Converter/Site-Visitor exclusion toggle+window from live data; documented always-NULL user_id/entity_*_2 and constant campaign_group_id=1 / entity_type=change_text / change_type='Audience Tooling'.
 <!-- CHANGELOG END -->
 
