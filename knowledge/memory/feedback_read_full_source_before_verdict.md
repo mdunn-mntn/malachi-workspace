@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [read the full thread, open the linked PR, ticket status lies, Done doesnt mean deployed, PR merged vs draft, truncated comments, verify before concluding, AUDI-1072, PR 1147, gh pr view, full comment thread]
 domain: [workflow, jira-process]
 lifecycle: active
-last_verified: 2026-07-29
+last_verified: 2026-07-30
 ---
 When diagnosing "what was done / was this fixed" from a Jira ticket, **read the entire comment thread and OPEN every linked PR/commit/dashboard to check its real state — before asserting a verdict.** A ticket's `Done`/`Resolved` status is not evidence the root cause shipped, and a partial (head/tail) read of the comments is not "reading the comments."
 
@@ -19,5 +19,7 @@ When diagnosing "what was done / was this fixed" from a Jira ticket, **read the 
 2. **Check the PR's actual state before citing it:** `gh pr view <n> --repo <org/repo> --json state,mergedAt,isDraft` + `gh pr diff`. Open ≠ merged; draft ≠ shipped; "fixed on their end" often means a suppression/workaround, not the model fix.
 3. Treat a ticket's `Done` as a claim to verify, not a fact — reconcile it against the PR/deploy reality.
 4. **When challenged with "are you sure / did you read it all," re-verify the primary source — don't defend the prior answer.** Revising a claim that came from an incomplete read is correcting an unevidenced assertion, NOT folding under pressure (that distinction matters vs [[feedback_hold_evidenced_verdict]]: hold a verdict only once it's genuinely sourced; if it wasn't, go read and fix it).
+
+**Positive application (2026-07-30, same aud22 saga):** Sonali (domain owner of `location_data`) pushed back with a real data trace showing my cited example ZIPs (43221, 45814) were internally consistent. Instead of defending OR folding, I re-ran the strict discriminating query (per-row, geo_version-pinned). It did both: **conceded her specifics** (43221/45814 clean, and the fired IP wasn't a location_data issue at all) AND **confirmed the core defect** on 5 other ZIPs at the current geo_version. Concede the wrong specifics, keep the sourced core, settle with the test — that is [[feedback_hold_evidenced_verdict]] and this rule working together.
 
 Related: [[feedback_hold_evidenced_verdict]] (the complement — don't fold once the verdict IS fully evidenced), [[reference_aud22_geo_reporting_sync]].
