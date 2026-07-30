@@ -13,10 +13,10 @@ cluster_by: [advertiser_id, campaign_id, funnel_mode]
 time_unit: date
 ttl_days: null
 approx_rows: null
-approx_logical_bytes: 42537927068
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_logical_bytes: 54098086880
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, funnel, attribution, visits]
 keywords: [waypoints, funnel, stage, sequential, full_volume, event_group, event_group_order, has_target_transition, transition_count, current_event_count_flag, from_verified_impression, ga_client_id, session_key, ad_served_id, conversion_funnel, stage_index]
 source: INFORMATION_SCHEMA+human
@@ -132,7 +132,7 @@ stage users, etc.). It is upstream of `waypoints_by_day`, `waypoints_funnel_by_d
 
 ## Joins & relationships
 - **`waypoints_fact`** (`summarydata`, physical TABLE, partitioned `day`, clustered
-  advertiser_id/campaign_id/funnel_mode; ~187M rows, ~42.5 GB) — the sole event source. This view IS the
+  advertiser_id/campaign_id/funnel_mode; ~232.6M rows, ~54.1 GB as of 2026-07-29) — the sole event source. This view IS the
   daily stage-shaped projection of it. Grain of the fact = one row per waypoint event (with the same
   `current_*`/`previous_*`/stage columns pre-computed). Join back to it only for raw-event detail; expect
   large fan-out (the fact is the granular layer under this rollup).
@@ -184,8 +184,9 @@ stage users, etc.). It is upstream of `waypoints_by_day`, `waypoints_funnel_by_d
   **~0.4 GB per day** scanned.
 - **Effective cluster keys** (inherited from `waypoints_fact`): `advertiser_id`, `campaign_id`,
   `funnel_mode`. Adding these to `WHERE` prunes the backing-fact scan further.
-- **`approx_logical_bytes` (42,537,927,068 ≈ 42.5 GB)** = the backing physical `waypoints_fact` `numBytes`
-  (187,051,929 rows). This view has no storage of its own; that fact is the dominant physical it reads.
+- **`approx_logical_bytes` (54,098,086,880 ≈ 54.1 GB, 2026-07-29; up from 42.5 GB at enrichment)** = the
+  backing physical `waypoints_fact` `numBytes` (232,613,083 rows). This view has no storage of its own;
+  that fact is the dominant physical it reads.
 
 ## Example queries
 ```sql
@@ -218,6 +219,7 @@ ORDER BY stage;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new table); enriched from LIVE schema + view-definition + empirical sampling of 2026-07-15. Confirmed partition=`day` (view enforces require-partition-filter; error without it), backing physical=`waypoints_fact` (partitioned day, clustered advertiser_id/campaign_id/funnel_mode, 187M rows/42.5 GB). Documented the four-contribution-kind long grain (zero-scaffold/current-user/previous-user/event-count), funnel_mode={sequential,full_volume}, from_verified_impression={NULL,TRUE} (no FALSE), event_name populated only for full_volume, event_type/*_event_name always NULL, projection-does-not-prune cost (~0.4 GB/day). Stage definitions sourced from attr_advertiser_waypoints_event_mapping via ber_stg.waypoints__event_mapping_prepared.
+- 2026-07-29: enriched→verified. Re-introspected live: 26 cols/types unchanged, view hash `__4175487051` unchanged, resolves to fact `waypoints_fact` (partition `day` require-filter, cluster [advertiser_id,campaign_id,funnel_mode]). Fact grew 187M→232.6M rows / 42.5→54.1 GB (rolling retention); refreshed `approx_logical_bytes` + prose. Re-confirmed funnel_mode {sequential,full_volume}, from_verified_impression {NULL,TRUE} (no FALSE) on 2026-07-27. No schema/partition/cluster drift.
 <!-- CHANGELOG END -->
 
 ## View definition
