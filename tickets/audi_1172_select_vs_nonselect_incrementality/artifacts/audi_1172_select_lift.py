@@ -432,18 +432,29 @@ FROM cg GROUP BY 1, 2 ORDER BY 1, n_cg DESC;
 -- Only objective_id = 1 present -> the cohort is 100% prospecting, as expected."""
 
 import re
-# CPIV/CPIA query behind the Cost per incremental tab. Strip its own leading comment block (we add one
-# short header below) and collapse its 93-AID list like the scoping query.
-CPIV_SQL = open(f"{TDIR}/queries/audi_1172_cpiv_vv_correct.sql").read().strip()
-CPIV_SQL = re.sub(r"\A(\s*--[^\n]*\n)+", "", CPIV_SQL)                       # drop the file's leading comments
-CPIV_SQL = re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([ /* the same 93 AIDs as the main query */ ])", CPIV_SQL, flags=re.S)
+def _load_sql(fname, collapse_aids=True):
+    """Read a query file for the Query tab: strip its own leading comment block (we add one short header)
+    and collapse the 93-AID UNNEST list like the scoping query."""
+    txt = open(f"{TDIR}/queries/{fname}").read().strip()
+    txt = re.sub(r"\A(\s*--[^\n]*\n)+", "", txt)
+    if collapse_aids:
+        txt = re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([ /* the same 93 AIDs as the main query */ ])", txt, flags=re.S)
+    return txt.strip()
+
+CPIV_SQL = _load_sql("audi_1172_cpiv_vv_correct.sql")
+COST_ADV_SQL = _load_sql("audi_1172_cpiv_vv_by_adv.sql")
+GROUP_SQL = _load_sql("audi_1172_aid_group_lift.sql", collapse_aids=False)  # all advertisers, no AID list
 
 # One short header per query (<=3 lines; the sql() tab enforces this cap and warns otherwise).
 QUERY_TAB = (
     "-- LIFT QUERY - drives Headline / By advertiser / All by product (one row per advertiser x product).\n\n"
     + SQL.strip() + "\n\n\n"
-    "-- COST QUERY - drives Cost per incremental (CPIV/CPIA).\n\n"
-    + CPIV_SQL.strip() + "\n\n\n"
+    "-- COST QUERY - drives Cost per incremental, pooled per product (CPIV/CPIA).\n\n"
+    + CPIV_SQL + "\n\n\n"
+    "-- COST BY ADVERTISER QUERY - drives Cost by advertiser (same, split per advertiser x product).\n\n"
+    + COST_ADV_SQL + "\n\n\n"
+    "-- AID GROUP LIFT QUERY - drives AID-level lift by group (ALL MNTN advertisers, 3 product-mix groups).\n\n"
+    + GROUP_SQL + "\n\n\n"
     + SCOPING_SQL + "\n"
 )
 
@@ -454,31 +465,25 @@ wb.notes(
     "Method & caveats",
     intro="What to trust, what not to over-read.",
     blocks=[
-        ("Headline", f"Among {N_BOTH} advertisers running both Select and non-Select prospecting, Select shows {SEL_REL:+.1f}% relative "
-            f"visit lift vs non-Select's {NS_REL:+.1f}% - roughly {RATIO:.0f}x. Both are significant. The gap holds per-advertiser: Select "
-            f"beats non-Select in {N_SEL_HI} of {N_BOTH}, median edge +{MED_GAP:.0f}pp of relative lift, so the pooled result is not driven by one large advertiser."),
+        ("Headline", f"Among {N_BOTH} advertisers running both, Select shows {SEL_REL:+.1f}% relative visit lift vs non-Select's "
+            f"{NS_REL:+.1f}% - roughly {RATIO:.0f}x, both significant. The gap holds per-advertiser: Select wins {N_SEL_HI} of {N_BOTH}, "
+            f"median edge +{MED_GAP:.0f}pp, so it's not driven by one large advertiser."),
         ("Why relative, not absolute", "Numbers are ghost-bid ITT at bid grain. Treatment bids win ~10% of auctions, so the "
             "absolute pp lift is diluted by win rate roughly equally across products. Relative lift normalizes this and is the fair comparison."),
         ("Prospecting only", "Every row is objective_id 1. The ghost-bid holdout is a prospecting mechanism (held-out IPs never "
             "win, so they never leave the prospecting pool). Retargeting is out of scope by construction."),
-        ("Date range + the 7-day window", "2026-06-22 to 2026-07-27; first day dropped upstream (left-censored). Each IP's "
-            "visits are counted over a FIXED 7-day window from its own first bid - not the full calendar period - so early and "
-            "late entrants are measured on equal footing (removes an entry-time bias). Tradeoff: visits >7 days after an IP's first "
-            "bid aren't attributed, and the trailing ~7 days are still maturing (right-censored). 'IP' ~ a household. No pre-6/22 data (no backfill)."),
+        ("Date range + the 7-day window", "2026-06-22 to 2026-07-27; first day dropped (left-censored). Each IP's visits count "
+            "over a FIXED 7-day window from its own first bid, not the full period (removes entry-time bias). Visits >7 days out "
+            "aren't attributed; the trailing ~7 days still maturing. 'IP' ~ a household. No pre-6/22 data."),
         ("Coverage", "Both bidder legs are in: Select = the MNTN (Rust) bidder, non-Select/PTV = Beeswax (the leg tracks the "
             "product). 43 of 93 requested advertisers have Select lift data, 66 have non-Select; 35 have both once campaign "
             "groups without a usable holdout are excluded, plus the 6/22 data floor (no backfill)."),
-        ("Cost per incremental (CPIV/CPIA)", "Spend / incremental, where incremental = Reporting Verified Visits (or "
-            "conversions) x lift / (1 + lift), lift = the ghost-bid relative lift (÷(1+lift) removes the organic baseline; method "
-            "confirmed by Matt Brorby, matches the customer-facing dashboard). On this client basis Select is $5.23/incr visit vs "
-            "$8.23 (1.6x) and $84 vs $256/incr conversion (3.0x) - cheaper on both, but a narrower gap than the lift ratio because "
-            "non-Select delivers far more total visits. Uses the volume-weighted lift (total-cost basis), not the IVW lift on the other tabs."),
-        ("AID-level lift by group (observational)", "The 3-group comparison (PTV-only / Select-only / Both, all MNTN "
-            "advertisers) is OBSERVATIONAL, not causal: advertisers self-select into Select, so a higher Both/Select lift shows "
-            "association, not that Select caused it. IVW pools by inverse-variance so weight rises with sample size (a few big "
-            "advertisers dominate; PTV-only lands near 0% because its largest spenders are barely incremental), while the median advertiser is higher - "
-            "read both. Test accounts + WGU (an extreme outlier) excluded. Select-only n is small (wide interval); its conversion "
-            "lift is n/a (too few advertisers with holdout conversions)."),
+        ("Cost per incremental (CPIV/CPIA)", "Spend / incremental, incremental = Reporting Verified Visits (or conversions) x "
+            "lift/(1+lift) (removes the organic baseline; Matt Brorby confirmed). Client basis: Select $5.23/incr visit vs $8.23 "
+            "(1.6x), $84 vs $256/incr conversion (3.0x). Uses the volume-weighted lift, not the IVW lift on other tabs."),
+        ("AID-level lift by group (observational)", "The 3-group comparison (PTV-only / Select-only / Both) is OBSERVATIONAL, not "
+            "causal: advertisers self-select into Select. IVW is dominated by big advertisers (PTV-only ~0%); the median advertiser "
+            "is higher, read both. Test accounts + WGU excluded; Select-only n small, conversion lift n/a."),
         ("Do not over-read", "Individual low-volume campaigns have wide intervals; a single small Select campaign is not a verdict. "
             "The pooled and paired advertiser-level reads are the defensible outputs."),
     ],
