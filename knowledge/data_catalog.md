@@ -2377,10 +2377,12 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
   `gs://mntn-data-archive-prod/ipdsc`; writes `summarydata.enriched_impressions` bucketed by `ad_served_id` (600),
   partitioned `dt,hh`, **dynamic overwrite** on a rolling 2-day window. The `data_source_id` tag = what the campaign
   **targeted** (segment history); the ipdsc join is a **35-day BACKWARD** window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`).
-  **Gotcha (PROVEN 2026-07-29):** an optional-partner ipdsc **skip day** (Bombora/DS51) → that source's impressions = **0
-  for that dt** here, because a single-source campaign goes dark at SERVING (no audience loaded), NOT because enrichment
-  drops it (the backward lookback would have backfilled). enriched DS51 ≈ the targeting campaign's served impressions 1:1.
-  See `data_knowledge.md` § IPDSC + on-call INC-001.
+  **Key fact (verified 2026-07-29):** enriched DS_x count ≈ the DS_x-targeting campaign's **served** impressions in
+  `cost_impression_log`, ~1:1 (DS51/Bombora CG 131563: 07-26 enriched 108,744 = served 108,744). So a downstream DS
+  zero means that DS's campaigns **served** ~0 that day, NOT that enrichment dropped them (the backward lookback would
+  have backfilled). **Do NOT attribute a DS zero to an ipdsc skip** — 07-27 DS51=0 was NOT the skip (07-25 was also a
+  skip and served 104K; on 07-27 the advertiser served 1.47M via other campaigns). Root cause of a serving-0 is
+  bidder/serving-side. See `data_knowledge.md` § IPDSC + on-call INC-001.
 - Scripts: `SteelHouse/bae-sql-utility/ddp/`.
 
 ### DDP file-drop batch ingestion → fpa_vendor_log + site_visit_signal (AUDI-1089)

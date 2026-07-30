@@ -38,4 +38,12 @@ mechanism. I'd conceded a correct conclusion and flip-flopped the runbook three 
    on the skip day), which RETRACTED my own interim "same-day-keyed" guess. A guessed mechanism (even a
    plausible one) is worth exactly nothing next to the actual code — read it before asserting.
 
+6. **One confirming case is NOT proof of a mechanism — actively seek the counter-case.** Same INC-001, second
+   miss (2026-07-29): after verifying enriched DS51 ≈ served impressions 1:1, I asserted "the ipdsc skip zeroed
+   serving on 07-27" from that single day. Jordan flagged DS51 should have a ~90d membership TTL (so it should
+   persist). Testing it surfaced the counter-case: **07-25 was ALSO a skip day and served 104K**, and on 07-27
+   the advertiser served 1.47M via other campaigns. The skip-correlation was a red herring. Before asserting
+   "X causes Y," find the case where X holds but Y doesn't — if it exists, X isn't the cause. Verify the
+   mechanism across the negative cases, not just the one that fits.
+
 Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]].

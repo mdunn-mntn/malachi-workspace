@@ -211,30 +211,32 @@ source `partners/bombora/segments/20260726/` **empty** → `ipdsc/dt=2026-07-27/
 partition calendar (delivery began ~07-06): **ABSENT** 07-13/15/17/19/25/27; **PRESENT** 07-06→12, 14, 16,
 18, 20→24, 26, 28. All correct/expected for the intermittent Bombora feed.
 
-**Downstream symptom — `enriched_impressions` DS51=0 for 07-27. RESOLVED: 0 IS correct / by-design (benign).**
-Jordan Piepkow (Staff SWE, #alerts) flagged `mntn-analytics-prod-01.analytics_curated.enriched_impressions`
-DS51 count for `dt=2026-07-27` reading ~110,798 one day and **0** the next. He confirmed 2026-07-29 the
-first-pass answer (**0 is correct; it's the DS51 same-day skip**) was right — he just didn't yet know the
-mechanism (why the lookback doesn't backfill it). So: a DS51 skip day genuinely produces ~0 DS51 impressions
-for that `dt`; the ~110,798 was a **preliminary/incomplete build** of the 07-27 partition that reconciled to
-the correct 0 on overnight completion.
+**Downstream symptom — `enriched_impressions` DS51=0 for 07-27. STATUS: enriched=0 correctly mirrors serving
+(0 DS51 impressions served that day); the ipdsc-skip explanation is WRONG (see 2nd correction); root cause of the
+serving-0 is OPEN (bidder/serving domain).** Jordan Piepkow (Staff SWE, #alerts) flagged
+`mntn-analytics-prod-01.analytics_curated.enriched_impressions` DS51 for `dt=2026-07-27` reading ~110,798 one day
+and **0** the next. Early framing ("0 is correct, it's the DS51 skip") got the enriched=0 right but the CAUSE
+wrong: the DS51 ipdsc skip is not why serving was 0 (a different skip day, 07-25, served 104K). Do not attribute
+a downstream DS zero to an ipdsc skip without checking whether OTHER skip days also zeroed.
 
-**Why 0 despite a ~30-35d IPDSC lookback — MECHANISM PROVEN (2026-07-29, self-serviced end-to-end). It's
-SERVING-side, not enrichment.** Pulled the actual builder (`SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`
-+ prod config: `lookback=2`, `ipdsc_lookback=35`, `dsid_block_list=[2,14,42]` — DS51 NOT blocked; output
-`summarydata.enriched_impressions` → materialized to `mntn-analytics-prod-01`). The `data_source_id` tag comes
-from **what the campaign targeted** (`v_campaign_group_segment_history`), and the ipdsc join is a **35-day
-BACKWARD** window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`) — so the enrichment WOULD have backfilled
-07-27 from the present 07-26 DS51 partition **if any DS51 impressions had been served**. They weren't. Verified
-in `cost_impression_log`: exactly one campaign group targets DS51 — **CG 131563 / adv 30506** (new campaign live
-2026-07-24, targets ONLY DS51) — and its served-impression counts are **07-25=104,177 · 07-26=108,744 · 07-27=0
-· 07-28=141,002**, matching enriched DS51 **1:1** (07-26 108,744=108,744; 07-28 141,002≈140,998). So: the DS51
-skip left the bidder with no Bombora audience on 07-27 → a campaign targeting only DS51 served **0 impressions**
-→ enriched DS51 correctly 0. The 35d lookback never applies because it enriches impressions that WERE served;
-it can't resurrect impressions that never happened. **(This RETRACTS the earlier "same-day-keyed" hypothesis —
-the join is a 35d backward window; the zero originates one layer upstream, at serving.)** The ~110,798 seen for
-07-27 the prior day = a transient during the pipeline's rolling 2-day dynamic-overwrite rebuild (the campaign
-served 0 that day, so it reconciled to 0), not real DS51 volume.
+**What's solid (verified):** `enriched_impressions.data_source_id` = what the campaign **targeted**
+(`v_campaign_group_segment_history`), enriched against a **35-day BACKWARD** ipdsc window
+(`ipdsc_dt BETWEEN to_date(time)-35d AND time`); builder `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`
+(config `lookback=2`, `ipdsc_lookback=35`, `dsid_block_list=[2,14,42]`, DS51 not blocked). So enriched DS51 ≈ the
+Bombora campaign's **served** impressions ~1:1. CG 131563 / adv 30506 ("MNTN - No ENG Testing", TEST advertiser,
+campaigns 648318-648323): served 07-25=104,177 · 07-26=108,744 (=enriched 108,744) · 07-27=0 (=enriched 0) ·
+07-28=141,002 (≈140,998). enriched=0 correctly MIRRORS serving (0 served → 0 enriched).
+
+**⚠ 2nd correction — the ipdsc skip does NOT cause the 07-27 zero (earlier "skip → serving dark" claim RETRACTED).**
+Hard counter-evidence: **07-25 was ALSO a DS51 ipdsc skip day** and the Bombora campaigns served **104,177** that day
+(membership persisted from the 07-24 drop; DS51 membership-db TTL ~90d per Jordan). And on **07-27 the advertiser served
+1.47M impressions across its OTHER campaigns**; only the 6 Bombora campaigns went to 0. So 07-27=0 is a
+**Bombora-campaign-specific serving gap on that one day**, not the skip and not a data-pipeline gap. **OPEN, bidder/serving
+domain (NOT the reporting pipeline):** likely a campaign-level pause (test advertiser) or a 07-26 DS51 membership-load
+failure into the bidder; the 90d TTL means membership *should* have persisted (as on 07-25), so a true serving-0 is
+surprising. The 110,798 seen for 07-27 the prior day = an unexplained transient (campaigns served 0). **Method lesson:**
+the skip-correlation was a red herring; I verified the 1:1 serving mirror but extrapolated the *cause* from a single
+confirming day (07-27) without checking the counter-case (07-25). One confirming case is not proof of a mechanism.
 
 **⚠ Process lesson (the real takeaway — a reasoning trap, logged so we don't repeat it):** the original
 GCS-evidenced call (0 correct, benign skip) was right. When Jordan raised a smart architectural objection
@@ -613,6 +615,8 @@ gcloud storage ls "gs://mntn-data-archive-prod/shopper_graph/product_categorizat
 - **GCS now (supersedes the 732 / 22:37Z line above):** dt=2026-07-27 results = 928 objects / 35.7GB and still trickling (newest write 07-29T22:55Z, up from 732), `results_joined` + `product_categorization` STILL absent; next cycle dt=2026-07-28 has nothing (pipeline backed up). 928 < 1101 submissions means ~173 batches never produced a result, matching the loop-abort mechanism, not a clean re-run.
 - **Fix PR: [SteelHouse/shopper_graph#296](https://github.com/SteelHouse/shopper_graph/pull/296)** (IMP-010). `download_file` returns bool and skips (does not crash on) a completed-null or not-completed batch; `fetch_results` marks `was_downloaded` only on a real download. Lets the loop finish and leaves skipped batches eligible next run. Minimal and safe (kept the existing loud-fail on systemic upload errors); not run on the cluster; owner (Sean / Victor) reviews and merges.
 - **STATUS: OBSERVED / still open.** Closes when `product_categorization/dt=2026-07-27` lands (then clear + verify keyword_ddp's sensor). The stalled cycle needs owner action now; the PR prevents recurrence, it does not un-stick this cycle.
+
+**Update (2026-07-30 ~00:2xZ — sensor now on try 2; bottleneck moved to dbt):** the sensor timed out on try 1 (6h/307 pokes) and was cleared → **try 2 re-poking** (`attempt=2.log`, 277 pokes since 21:49Z, still UP_FOR_RESCHEDULE; will re-timeout ~03:49Z = cosmetic re-alert, not a new failure). GCS re-check: `openai_batch_results/dt=2026-07-27` now **1097 objects / 42.2GiB** (up from 928; newest 22:55Z) — fetch is ~complete (1097/1101). BUT `openai_batch_results_joined` + `product_categorization` for dt=2026-07-27 **STILL absent**. So the blocker moved off `batch_fetch` (now essentially done) onto the **dbt `batch_post`** step (results → results_joined → product_categorization), which hasn't produced output. Action unchanged: **do not clear** (self-passes when the partition lands); nudge owner (Sean) that fetch completed and the remaining gap is the dbt join/post. Separate pipeline from the same-morning aud22/`ipdsc_geo` geo delay (INC-004) — do not conflate.
 
 **Logs:** `on-call/incidents/INC-006/`.
 

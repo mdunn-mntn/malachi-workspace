@@ -84,6 +84,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 ### archive
 - [`summarydata_archive.offline_conversions`](summarydata_archive/offline_conversions.md) — FROZEN CoreDW-migration snapshot of offline/CRM-uploaded conversions matched to ad exposure; the history branch of the live summarydata.offline_conversions UNION view. 2.96M rows, min time 2023-04-13, FROZEN at 2026-03-05. NON-CANONICAL — query the live view for current data.
 
+### as-of
+- [`integrationprod.archives_campaign_group_archives`](integrationprod/archives_campaign_group_archives.md) — one row per (campaign_group_id, version) snapshot — the CDC edit history behind campaign_groups for as-of-date reconstruction
+
 ### attribution
 - [`aggregates.agg__daily_sum_by_campaign`](aggregates/agg__daily_sum_by_campaign.md) — Pre-computed daily rollup at campaign x day grain: impressions, spend, video funnel, and multi-touch attribution. Cheapest table for campaign trend analysis, BUT only spans 2025-09-01..2026-04-30 (frozen/stale) and its reach/site-visitor family (uniques, site_visitors, *_users_reached) is entirely empty.
 - [`analytics_curated.icloud_guids`](analytics_curated/icloud_guids.md) — one row per Apple iCloud Private Relay IPv4 egress address mapped 1:1 to a stable synthetic guid — the identity handle for relay traffic whose real device IP is hidden
@@ -99,6 +102,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.attribution_models`](core/attribution_models.md) — Tiny static config dimension (30 rows) enumerating MNTN's attribution models — the 2x2 of {standard vs competing} x {last-touch vs last-TV-touch}, one row per identity-key variant (guid/ip/ga_client_id/household/IFA-IP/Freshpaint/offline).
 - [`core.fact__v3_conversions`](core/fact__v3_conversions.md) — Static backfill fact of verified-impression, click-through attributed conversions (CTV-heavy), Sep 2025–Feb 2026; one row per attributed conversion event, impression already joined.
 - [`integrationprod.attr_advertiser_waypoints_event_mapping`](integrationprod/attr_advertiser_waypoints_event_mapping.md) — one row per advertiser 'waypoint' mapping (surrogate id PK) — maps a site URL-path glob or GTM dataLayer string to a named funnel milestone (event_name) bucketed into an ordered stage (event_group/event_group_order); MNTN Waypoints journey config, tiny (473 rows / 15 advertisers)
+- [`integrationprod.core_attribution_models`](integrationprod/core_attribution_models.md) — 30-row lookup dim decoding attribution_model_id -> attribution logic (Last Touch / Last TV Touch, competing, identity key)
 - [`integrationprod.integrations_advertiser_integrations`](integrationprod/integrations_advertiser_integrations.md) — one row per advertiser<->third-party integration connection (id PK) — maps MNTN advertisers to external measurement/attribution/CRM vendors (AppsFlyer, Northbeam, Upwave, HubSpot, GA4, MNTN Audience…)
 - [`integrationprod.integrations_integrations`](integrationprod/integrations_integrations.md) — one row per third-party integration/connector MNTN offers (measurement, attribution, MMP, CRM/audience partners) — the catalog dim; per-advertiser connections live in integrations_advertiser_integrations
 - [`integrationprod.public_advertisers`](integrationprod/public_advertisers.md) — one row per advertiser_id — Postgres public-schema mirror of the advertiser account dim (config, contact, billing, attribution windows, feature flags); a strict superset of integrationprod.advertisers
@@ -173,6 +177,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`aggregates.tpa_membership_updates_log_insegments`](aggregates/tpa_membership_updates_log_insegments.md) — Daily snapshot of HOLDOUT-group IP memberships in MNTN Third Party (data_source_id=3) audience segments, expanded to campaign grain, with each IP's household/intent score. Current (non-legacy) of three tpa_membership rollup variants.
 - [`aggregates.tpa_membership_updates_log_insegments__legacy`](aggregates/tpa_membership_updates_log_insegments__legacy.md) — Full-history compatibility view of daily IP->segment (in-segment) TPA membership: live SQLMesh table from 2025-09-11 UNION ALL a frozen GCS-Parquet historical backfill (2025-08-31..2025-09-10). One row per IP x segment x day. Prefer the non-legacy sibling for go-forward work.
 - [`audience.campaign_segment_history`](audience/campaign_segment_history.md) — SCD-2 validity-interval history of every data-source keyword/category selected in each campaign's audience expression, positioned by AND/OR clause (and_seq/or_seq). end_time IS NULL = currently active. Unpartitioned VIEW over 9.47M rows (~558 MB) — full-scans every query. Contaminated for 'which audience is this campaign using' — use audience_segment_campaigns + audience_segments instead.
+- [`audience.mm_campaign_classifier`](audience/mm_campaign_classifier.md) — One row per active (Live) Stage-1 prospecting campaign, classified by its MNTN Matched (MM) configuration: mm_class (non_mm / mmv1 / mmv2 / mmv3 / fangorn cells), tiers_reachable, restriction_level, and DS13/DS19/DS38/DS46 + Fangorn/HHST/geo/3P/1P feature flags. Small unpartitioned VIEW (~14.6K rows, ~2 MB) — LEFT JOIN on campaign_id to label a campaign's audience setup.
 - [`core.audiences`](core/audiences.md) — LEGACY/FROZEN core-schema audience dimension (1 row per audience_id) — updates stopped 2023-12-15; the live successor is bronze.integrationprod.audience_audiences. Thin silver view over the bronze CDC replica.
 - [`core.campaign_group_x_audiences`](core/campaign_group_x_audiences.md) — Legacy junction/bridge mapping campaign_groups to audiences (frozen since 2023-12-15). Tiny ~28K-row CDC dim; superseded by integrationprod.audience_audience_x_campaign_groups.
 - [`core.campaign_x_audiences`](core/campaign_x_audiences.md) — LEGACY/FROZEN core-schema junction mapping campaigns to audiences (1 row per campaign_x_audience_id; natural key campaign_id x audience_id). Thin silver view over the bronze CDC replica; business writes stopped 2023-12-15 (same freeze as core.audiences). Live successor is the per-campaign audience_audience_segments expression.
@@ -271,6 +276,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.ttd_advertiser_channel_margins`](core/ttd_advertiser_channel_margins.md) — Tiny legacy config dim (71 rows) — one row per advertiser x channel holding a The-Trade-Desk (TTD) budget margin; frozen since 2022. SENSITIVE margin values.
 - [`core.v_campaign_group_channel_margins`](core/v_campaign_group_channel_margins.md) — Per-campaign-group, per-channel margin/pricing config (budget margin, platform fee, target & ad-buying CPM, data margin) — a small ~587-row override dimension. SENSITIVE: rate/margin values are private, document schema only.
 - [`core.v_channel_margins`](core/v_channel_margins.md) — Global platform-wide default margin/fee config per (ad channel × DSP partner) — budget margin/padding, partner margin, data margin, platform fee, target CPM. SAFE_CAST variant of channel_margins (same 8-row physical). SENSITIVE — take rates private.
+- [`external.targeted_signal`](external/targeted_signal.md) — one row per used DDP signal (uid × ip × dsc_id) — row-level DDP vendor-crediting / usage decomposition
 - [`external.vastimpression__v1`](external/vastimpression__v1.md) — one row per served CTV/VAST video impression (ad_served_id unique) — GCS-archived firehose that (UNION impression__v1) builds silver impression_log, the linking source for CIL
 - [`integrationprod.billing_billing_type_change_requests`](integrationprod/billing_billing_type_change_requests.md) — one row per advertiser billing-method change request (Stripe<->Invoice) with its Command Center approve/reject outcome
 - [`logdata.realtime_spend_last_3d`](logdata/realtime_spend_last_3d.md) — Rolling ~3-day, impression-grain realtime spend view for pacing. Recomputes the last 24h live from spend_log + impression_log + margin history, then UNIONs finalized cost_impression_log for the 24h-to-3d tail. Computed on read (view over views); not for historical analysis.
@@ -286,6 +292,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`summarydata.budget_changes_in_ramp`](summarydata/budget_changes_in_ramp.md) — Latest budget change per campaign group that is still inside its ramp (attribution) window — one live-snapshot row per campaign_group_id, with the ramp start/end window and daily/flight budget before-after.
 - [`summarydata.campaign_group_budget_change_log`](summarydata/campaign_group_budget_change_log.md) — CDC-style audit log of budget changes on campaign-group flights — one row per change event (who, when, prior→current, and a change-reason code), from 2024-01-01.
 
+### budget-pacing
+- [`integrationprod.dso_configuration_service_campaign_presets`](integrationprod/dso_configuration_service_campaign_presets.md) — one row per campaign (PK campaign_id) — DSO config-service per-campaign preset overrides: frequency cap, pacing, score/CPM thresholds, budget pace
+
 ### budgeting
 - [`core.budget_types`](core/budget_types.md) — Enum lookup dim for a campaign group's budget pacing type (1=Monthly, 2=Daily, 3=Flighted); joined via campaign_groups.budget_type_id.
 - [`integrationprod.campaign_groups`](integrationprod/campaign_groups.md) — one row per campaign_group_id — canonical coredb campaign-group dim (budget-allocation unit above campaigns); product_id, objective_id, status live here
@@ -299,6 +308,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.creative_groups`](core/creative_groups.md) — Thin silver view over the Postgres CDC replica of creative groups — one row per creative group (a set of creatives rotated / A-B-tested within a campaign). Current-state snapshot keyed on group_id (945K rows), FK campaign_id → core.campaigns.
 - [`core.objectives`](core/objectives.md) — Static 7-row ENUM lookup dim mapping objective_id → campaign objective label (Prospecting / Onsite / Retargeting / Multi-Touch / MT-Full-Funnel / Ego). FK target of campaigns.objective_id. UNRELIABLE as a stage indicator — use campaigns.funnel_level.
 - [`summarydata.tvo_prospecting_campaign_groups`](summarydata/tvo_prospecting_campaign_groups.md) — Config/routing VIEW listing the Prospecting PTV campaign groups that qualify as TVO. Consumed by ui_visits (LEFT JOIN on campaign_group_id) to route these groups into the standard visits attribution branch instead of last-TV-touch (ltvt). Not a fact table — a membership flag list; start_dt is a hardcoded constant, not a date.
+
+### campaign-group
+- [`integrationprod.archives_campaign_group_archives`](integrationprod/archives_campaign_group_archives.md) — one row per (campaign_group_id, version) snapshot — the CDC edit history behind campaign_groups for as-of-date reconstruction
 
 ### campaign-group-config
 - [`core.campaign_group_padding_overrides_vw`](core/campaign_group_padding_overrides_vw.md) — Sparse per-campaign-group override of the delivery/pacing padding multiplier; only campaign groups with a non-default padding appear (currently 31 rows). Sibling of advertiser_padding_overrides at the campaign-group grain.
@@ -342,6 +354,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.goal_types`](core/goal_types.md) — Silver view over the bronze CDC dim core_goal_types — a 16-row enum mapping goal_type_id (1-16) to a campaign optimization goal name + description (ROAS, eCPA, CPA, CostPerVisit, VisitRate, …); the decode dim for campaign_groups.goal_type_id.
 - [`integrationprod.campaign_groups`](integrationprod/campaign_groups.md) — one row per campaign_group_id — canonical coredb campaign-group dim (budget-allocation unit above campaigns); product_id, objective_id, status live here
 - [`integrationprod.campaigns`](integrationprod/campaigns.md) — one row per campaign (PK campaign_id) — the canonical campaign dimension: advertiser/group linkage, stage (funnel_level), objective, channel, status, budget, flight window
+- [`integrationprod.core_campaign_statuses`](integrationprod/core_campaign_statuses.md) — static 7-row enum, one row per campaign status — campaign_status_id -> name lookup for campaigns.campaign_status_id (3=Live delivers; 8/9 escape the deleted flag)
+- [`integrationprod.core_goal_types`](integrationprod/core_goal_types.md) — 16-row bronze CDC dim mapping goal_type_id (1-16) to a campaign optimization goal name + plain-English description (ROAS, eCPA, CPA, CostPerVisit, VisitRate, …); physical source behind the silver core.goal_types view.
+- [`integrationprod.dso_configuration_service_campaign_presets`](integrationprod/dso_configuration_service_campaign_presets.md) — one row per campaign (PK campaign_id) — DSO config-service per-campaign preset overrides: frequency cap, pacing, score/CPM thresholds, budget pace
 - [`integrationprod.objectives`](integrationprod/objectives.md) — static 7-row enum, one row per marketing objective — objective_id -> name lookup for campaigns.objective_id (NOT a stage indicator; funnel_level is authoritative for stage)
 - [`integrationprod.public_campaigns`](integrationprod/public_campaigns.md) — one row per campaign (campaign_id PK) — raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group
 - [`summarydata.campaign_group_goal_change_log`](summarydata/campaign_group_goal_change_log.md) — CDC audit log of campaign-group performance-goal (bid-goal) changes — one row per goal edit, carrying prior/current goal as strings plus the user who made it.
@@ -360,6 +375,8 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 
 ### cdc-archive
 - [`integrationprod.archives_advertiser_channel_margin_archives`](integrationprod/archives_advertiser_channel_margin_archives.md) — one row per version-snapshot of an advertiser×channel margin/pricing config — the CDC edit history behind core_advertiser_channel_margins (SENSITIVE: margin/CPM values)
+- [`integrationprod.archives_campaign_group_archives`](integrationprod/archives_campaign_group_archives.md) — one row per (campaign_group_id, version) snapshot — the CDC edit history behind campaign_groups for as-of-date reconstruction
+- [`integrationprod.archives_household_score_threshold_archives`](integrationprod/archives_household_score_threshold_archives.md) — one row per archived household-score-threshold write for a campaign — Datastream CDC mirror of Postgres archives.household_score_threshold_archives (RTC conquest-score gate history)
 
 ### cdc_audit
 - [`summarydata.budget_changes`](summarydata/budget_changes.md) — CDC audit log of advertiser budget edits — one row per campaign-group budget change with prior/new daily & flight budget and increase/decrease type; partitioned by change_time (DAY).
@@ -424,6 +441,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`ber_stg.unstable__conversions_pre_change`](ber_stg/unstable__conversions_pre_change.md) — BER staging snapshot of attributed conversions recomputed under PRE-change attribution logic, keyed by change_id; before-side of a before/after change-impact comparison. Non-canonical — canonical conversions live in summarydata.conversions.
 - [`core.attribution_models`](core/attribution_models.md) — Tiny static config dimension (30 rows) enumerating MNTN's attribution models — the 2x2 of {standard vs competing} x {last-touch vs last-TV-touch}, one row per identity-key variant (guid/ip/ga_client_id/household/IFA-IP/Freshpaint/offline).
 - [`core.fact__v3_conversions`](core/fact__v3_conversions.md) — Static backfill fact of verified-impression, click-through attributed conversions (CTV-heavy), Sep 2025–Feb 2026; one row per attributed conversion event, impression already joined.
+- [`integrationprod.core_attribution_models`](integrationprod/core_attribution_models.md) — 30-row lookup dim decoding attribution_model_id -> attribution logic (Last Touch / Last TV Touch, competing, identity key)
 - [`logdata.conversion_log`](logdata/conversion_log.md) — Pixel-fire conversion events (advertiser site conversions) — the un-attributed conversion firehose. Physical is a UNION ALL of bronze raw (rows >= 2026-01-01) + history (rows <= 2025-12-31), DAY-partitioned on `time` in BOTH branches; always filter DATE(time). order_amt = conversion value in LOCAL currency (the one to use); order_amt_usd is sparse; refires are real signal (no dedup).
 - [`logdata.conversion_signal_log`](logdata/conversion_signal_log.md) — Batch-ingested feed of offline / third-party conversion signals (mobile-app/MMP events, CRM lead lists, call-tracking) carrying a rich identity graph (hashed email/phone, device id, IP) — the pre-attribution counterpart to the pixel-based conversion_log.
 - [`summarydata.advertiser_sales_cycle_by_day`](summarydata/advertiser_sales_cycle_by_day.md) — Event-level view (NOT advertiser x day despite the name): one row per pixel-tracked conversion x matched visitor identity ((advertiser_id x ip x conversion_epoch) ~unique; guid near-unique too). sales_cycle_time = seconds from the visitor's first page view to the conversion, populated ONLY for new-visitor conversions with a matched first page view (~3% of rows; 97% NULL). day is the DAY partition, not the grain.
@@ -487,6 +505,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.media_plan_publishers`](core/media_plan_publishers.md) — Per-publisher allocation rows of a CTV media plan — one row per plan x network with budget %, rank, and badge_state. Thin CDC view over bronze.integrationprod.core_media_plan_publishers.
 - [`core.private_marketplace_deals`](core/private_marketplace_deals.md) — Small CDC dimension: one row per private-marketplace (PMP) deal config — exchange/SSP deal id, floor price, partner, pricing model, window, active flag. All rows are CTV (channel_id=8).
 - [`core.private_marketplace_families`](core/private_marketplace_families.md) — Tiny static lookup dim of 21 CTV media 'families' (parent network/brand groupings — Disney, NBC, Fox, Paramount, Warner Bros. Discovery, etc.). Tags PMP deals by the media company that owns the inventory. Thin silver view over bronze.integrationprod.core_private_marketplace_families.
+- [`enriched.lift__ghost_bid_visits`](enriched/lift__ghost_bid_visits.md) — Ghost-bid holdout lift outcomes — one row per dt × campaign × IP (ghost holdout vs submitted treatment) with 7-day visit/conversion flags. Silver source for the gold lift__ghost_bid_results/rollup incrementality reports.
 - [`external.event_types`](external/event_types.md) — 6-row VAST event-type lookup — event_type_id → event_type_raw → human name for the video playback ladder (impression → start → quartiles → complete)
 - [`external.vastimpression__v1`](external/vastimpression__v1.md) — one row per served CTV/VAST video impression (ad_served_id unique) — GCS-archived firehose that (UNION impression__v1) builds silver impression_log, the linking source for CIL
 - [`integrationprod.ctv_ctv_sites`](integrationprod/ctv_ctv_sites.md) — one row per inventory site string (site = globally unique natural key) — a manually-curated CTV/supply-quality classification + blocklist; publisher_type_id=1 (LRQ) is allowed, types 2/3/4 are blocked
@@ -504,6 +523,12 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 
 ### data-quality
 - [`summarydata.ga_client_id_x_ip_counts`](summarydata/ga_client_id_x_ip_counts.md) — Per-advertiser fan-out count of distinct IPs per GA client ID, retaining ONLY high-fanout cookies (>=45 IPs) — a toxic / shared / bot GA-cookie detector for conversion + identity-graph hygiene.
+
+### data_sources
+- [`external.targeted_signal`](external/targeted_signal.md) — one row per used DDP signal (uid × ip × dsc_id) — row-level DDP vendor-crediting / usage decomposition
+
+### ddp
+- [`external.targeted_signal`](external/targeted_signal.md) — one row per used DDP signal (uid × ip × dsc_id) — row-level DDP vendor-crediting / usage decomposition
 
 ### deals
 - [`core.private_marketplace_deals`](core/private_marketplace_deals.md) — Small CDC dimension: one row per private-marketplace (PMP) deal config — exchange/SSP deal id, floor price, partner, pricing model, window, active flag. All rows are CTV (channel_id=8).
@@ -538,6 +563,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.partner_types`](core/partner_types.md) — Tiny enum lookup dim naming the 3 partner categories (DSP / SSP / Mobile Attribution); parent of core.partners via partner_type_id.
 - [`core.private_marketplace_families`](core/private_marketplace_families.md) — Tiny static lookup dim of 21 CTV media 'families' (parent network/brand groupings — Disney, NBC, Fox, Paramount, Warner Bros. Discovery, etc.). Tags PMP deals by the media company that owns the inventory. Thin silver view over bronze.integrationprod.core_private_marketplace_families.
 - [`core.products`](core/products.md) — 3-row product-line lookup dim (1=PTV, 2=Select, 3=QuickFrame); thin silver view over bronze CDC table core_products. Join target for campaign_groups.product_id to label PTV vs Select vs QuickFrame.
+- [`geo.location_data`](geo/location_data.md) — one row per geo location_id — canonical geo hierarchy dimension (country→region→city→postal)
 - [`integrationprod.creatives`](integrationprod/creatives.md) — one row per creative (creative_id PK) — the canonical MNTN creative dimension: ad tag/adcode, format, Facebook-ad copy, and video metadata for every built creative across all advertisers
 - [`integrationprod.device_type`](integrationprod/device_type.md) — one row per device_type ENUM value (id 1-8) — canonical INT->STRING label lookup for the INT64 device_type on bronze.raw bidder_* event tables
 - [`integrationprod.public_advertisers`](integrationprod/public_advertisers.md) — one row per advertiser_id — Postgres public-schema mirror of the advertiser account dim (config, contact, billing, attribution windows, feature flags); a strict superset of integrationprod.advertisers
@@ -548,6 +574,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.pixel_integration_types`](core/pixel_integration_types.md) — Tiny enum lookup dim naming the 8 e-commerce pixel integration types (shopify, magento, gtm, manual, ...) that core.pixel_integrations rows reference.
 - [`core.private_marketplace_levels`](core/private_marketplace_levels.md) — Tiny 3-row enum dim naming the scope at which a private_marketplace_group applies (global / advertiser / campaign_group); CDC dim, no partition.
 - [`core.segmentation_defaults`](core/segmentation_defaults.md) — Tiny static lookup of MNTN's built-in default retargeting/segment presets (Auto Default, Cart, 5+ PV, Ego, etc.) — each an expression-DSL template shown in the UI; thin silver view over the bronze CDC dim.
+- [`integrationprod.core_goal_types`](integrationprod/core_goal_types.md) — 16-row bronze CDC dim mapping goal_type_id (1-16) to a campaign optimization goal name + plain-English description (ROAS, eCPA, CPA, CostPerVisit, VisitRate, …); physical source behind the silver core.goal_types view.
 - [`integrationprod.public_campaign_groups_raw`](integrationprod/public_campaign_groups_raw.md) — one row per campaign_group (129K) — Datastream CDC landing mirror of coredb Postgres public.campaign_groups; closest-to-source replica of the campaign-group dim; product_id = Select/PTV source of truth
 - [`integrationprod.public_publishers`](integrationprod/public_publishers.md) — one row per publisher_id (263K) — Datastream CDC mirror of coredb Postgres public.publishers; MNTN's CTV/streaming network (channel) dimension. is_lrq = Living Room Quality premium-CTV flag (only 210 TRUE); budget_cap/user_id/publisher_type_id are entirely NULL (unused schema artifacts)
 
@@ -557,6 +584,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 
 ### display
 - [`logdata.viewability_log`](logdata/viewability_log.md) — Display-only IAB viewability events (measurable + viewable) — the display equivalent of event_log for tracing viewable display impressions back through the pipeline.
+
+### dso
+- [`integrationprod.dso_configuration_service_campaign_presets`](integrationprod/dso_configuration_service_campaign_presets.md) — one row per campaign (PK campaign_id) — DSO config-service per-campaign preset overrides: frequency cap, pacing, score/CPM thresholds, budget pace
 
 ### dsp
 - [`integrationprod.beeswax_creative_mappings`](integrationprod/beeswax_creative_mappings.md) — one row per MNTN creative_id — bridge from each MNTN creative to its Beeswax (DSP) creative id + line-item id, with denormalized size/type/dimensions
@@ -584,6 +614,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 ### experiment
 - [`ber_stg.unstable__cil_pre_change`](ber_stg/unstable__cil_pre_change.md) — Pre-change snapshot of cost_impression_log impressions for the budget-change 'unstable' impact study — CIL rows in the pre-period lookback window of each advertiser budget change, one row per (change_id x impression). NON-CANONICAL staging; use logdata.cost_impression_log for spend/impression truth.
 - [`summarydata.unstable_ui_conversions`](summarydata/unstable_ui_conversions.md) — Non-canonical BER-staging experimental snapshot: attributed conversions captured PRE vs POST each attribution-change event (change_id), UNION of two ber_stg physicals. NOT a source of truth — use summarydata.ui_conversions for reporting.
+
+### experimentation
+- [`enriched.lift__ghost_bid_visits`](enriched/lift__ghost_bid_visits.md) — Ghost-bid holdout lift outcomes — one row per dt × campaign × IP (ghost holdout vs submitted treatment) with 7-day visit/conversion flags. Silver source for the gold lift__ghost_bid_results/rollup incrementality reports.
 
 ### export-ops
 - [`summarydata.last_tv_touch_conversions__copy_data`](summarydata/last_tv_touch_conversions__copy_data.md) — Singleton status/watermark table for the GCS Parquet export of summarydata.last_tv_touch_conversions — NOT a data copy; 1 row, last_run + status only.
@@ -629,6 +662,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`summarydata.waypoints_transition_daily`](summarydata/waypoints_transition_daily.md) — Waypoints funnel-analytics view — one row per user-session adjacent-stage step-transition (order N to N+1) per advertiser per day; each advertiser defines its own ordered funnel stages.
 
 ### geo
+- [`geo.location_data`](geo/location_data.md) — one row per geo location_id — canonical geo hierarchy dimension (country→region→city→postal)
 - [`logdata.cost_impression_log`](logdata/cost_impression_log.md) — Customer-centric, impression-grain spend enriched with geo/device/segment/score fields. THE big history+cost table (~76B rows / 62 TB, fixed floor 2023-10-01, still growing). PSAs excluded. Partition DAY on time; cluster advertiser_id, impression_id.
 - [`summarydata.metros`](summarydata/metros.md) — one row per Nielsen DMA metro_id — static geo dimension: metro_id -> name -> country; the DMA-grain lookup you join to delivery facts (CIL) for a readable market name
 - [`summarydata.sum_by_region_by_day`](summarydata/sum_by_region_by_day.md) — Daily campaign x US-state x day rollup — the same measure set as sum_by_campaign_by_day (delivery, multi-model attribution, spend, HLL reach) broken out by delivery region. STATE-level geo-mix, NOT DMA. History from 2024-01-01, fresh through current day.
@@ -640,6 +674,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`aggregates.tmul_holdout_segments`](aggregates/tmul_holdout_segments.md) — Per-IP holdout (control-group) membership roster derived from the TPA membership update log (tmul) — one row per ip x advertiser x campaign x segment per day, tagged 'holdout'.
 - [`aggregates.tpa_membership_updates_log_insegments`](aggregates/tpa_membership_updates_log_insegments.md) — Daily snapshot of HOLDOUT-group IP memberships in MNTN Third Party (data_source_id=3) audience segments, expanded to campaign grain, with each IP's household/intent score. Current (non-legacy) of three tpa_membership rollup variants.
 - [`external.tpa_membership_updates_log_insegments_by_day_historical`](external/tpa_membership_updates_log_insegments_by_day_historical.md) — Frozen GCS-Parquet historical backfill (11 days, 2025-08-31..2025-09-10) of holdout IP-in-segment TPA membership — the pre-2025-09-11 branch UNION'd into aggregates.tpa_membership_updates_log_insegments__legacy. Raw string types (date STRING, tags JSON STRING, data_source_id all-NULL); the legacy view casts them.
+
+### household-scoring
+- [`integrationprod.archives_household_score_threshold_archives`](integrationprod/archives_household_score_threshold_archives.md) — one row per archived household-score-threshold write for a campaign — Datastream CDC mirror of Postgres archives.household_score_threshold_archives (RTC conquest-score gate history)
 
 ### icloud_relay
 - [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — iCloud Private Relay verified-visit (VV) log — the clickpass_log analog for Apple iCloud Private Relay traffic. One row per attributed view-through/visit event served to an Apple relay IP, matched back to a served impression via ad_served_id. Small single-source view (~165K rows) over bronze raw.icloud_vv; NOT one of clickpass_log's UNION branches.
@@ -683,6 +720,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 ### incrementality
 - [`aggregates.tmul_holdout_segments`](aggregates/tmul_holdout_segments.md) — Per-IP holdout (control-group) membership roster derived from the TPA membership update log (tmul) — one row per ip x advertiser x campaign x segment per day, tagged 'holdout'.
 - [`aggregates.tpa_membership_updates_log_insegments`](aggregates/tpa_membership_updates_log_insegments.md) — Daily snapshot of HOLDOUT-group IP memberships in MNTN Third Party (data_source_id=3) audience segments, expanded to campaign grain, with each IP's household/intent score. Current (non-legacy) of three tpa_membership rollup variants.
+- [`enriched.lift__ghost_bid_visits`](enriched/lift__ghost_bid_visits.md) — Ghost-bid holdout lift outcomes — one row per dt × campaign × IP (ghost holdout vs submitted treatment) with 7-day visit/conversion flags. Silver source for the gold lift__ghost_bid_results/rollup incrementality reports.
 - [`external.tpa_membership_updates_log_insegments_by_day_historical`](external/tpa_membership_updates_log_insegments_by_day_historical.md) — Frozen GCS-Parquet historical backfill (11 days, 2025-08-31..2025-09-10) of holdout IP-in-segment TPA membership — the pre-2025-09-11 branch UNION'd into aggregates.tpa_membership_updates_log_insegments__legacy. Raw string types (date STRING, tags JSON STRING, data_source_id all-NULL); the legacy view casts them.
 - [`logdata.bidder_bid_events`](logdata/bidder_bid_events.md) — Every bid decision (bid attempt + no-bid/drop reason) emitted by the MNTN (Rust) bidder — the canonical BQ surface for ghost-bid holdouts, bid-eligibility failures, and incrementality cohorts. MNTN-bidder ONLY (~22 advertisers); Beeswax stream lands elsewhere.
 - [`logdata.bidder_bid_events_test_optimized`](logdata/bidder_bid_events_test_optimized.md) — Frozen, unpartitioned physical copy of ~2 hours (2026-05-28 11:35-13:40 UTC) of bidder_bid_events — a one-shot 'optimized-layout' test snapshot (~884M rows / ~4.06 TB), created 2026-06-02 and never updated. Schema identical to bidder_bid_events. Not production; use the live bidder_bid_events view for real analysis.
@@ -725,6 +763,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`integrationprod.keyword_categories`](integrationprod/keyword_categories.md) — one row per (data_source_category_id, parent_id) taxonomy edge for DS38 'MNTN UI Audience Keywords' — id to keyword-string + category-path lookup
 - [`summarydata.audience_keyword_parent_history`](summarydata/audience_keyword_parent_history.md) — Historized parent→child keyword expansion lineage per audience: self-join of audience_keyword_state pairing selected DS38 seed PARENT keywords with the selected DS19 targetable CHILD keywords expanded from them, aligned by snapshot. An edge list, NOT one-row-per-keyword.
 
+### lift_measurement
+- [`enriched.lift__ghost_bid_visits`](enriched/lift__ghost_bid_visits.md) — Ghost-bid holdout lift outcomes — one row per dt × campaign × IP (ghost holdout vs submitted treatment) with 7-day visit/conversion flags. Silver source for the gold lift__ghost_bid_results/rollup incrementality reports.
+
 ### lookup
 - [`core.products`](core/products.md) — 3-row product-line lookup dim (1=PTV, 2=Select, 3=QuickFrame); thin silver view over bronze CDC table core_products. Join target for campaign_groups.product_id to label PTV vs Select vs QuickFrame.
 
@@ -753,6 +794,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`summarydata.conversion_signal_impressions`](summarydata/conversion_signal_impressions.md) — Served CTV (Television) impressions enriched with resolved consumer identity (SHA-256 hashed email, third-party identity id, IP, geo) for offline-conversion-signal matching; one row per served impression, ~40K rows, offline_conversion_signal_data_source_id=45.
 - [`summarydata.ga_client_id_x_ip_map`](summarydata/ga_client_id_x_ip_map.md) — Rolling ~90-day map of an advertiser's Google Analytics client_id to the IPs MNTN observed for it; one deduped row per (advertiser_id, ga_client_id, ip). Bridges first-party GA identity to MNTN's IP graph.
 - [`summarydata.visits`](summarydata/visits.md) — Row-level Verified Visit (VV) records — the headline visit-rate KPI source. One row per site visit attributed to a served MNTN impression via ad_served_id (last-touch). Thin view over one physical DAY-partitioned table; full history to 2023-01-01.
+
+### media-plan
+- [`integrationprod.archives_campaign_group_archives`](integrationprod/archives_campaign_group_archives.md) — one row per (campaign_group_id, version) snapshot — the CDC edit history behind campaign_groups for as-of-date reconstruction
 
 ### media_planning
 - [`core.media_plan`](core/media_plan.md) — CTV media-plan dimension — one row per plan version (advertiser × campaign_group), carrying publisher allocations, deliverability risk, and status. Thin view over bronze.integrationprod.core_media_plan.
@@ -904,6 +948,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.partners`](core/partners.md) — 79-row reference dim of MNTN integration/platform partners — demand platforms (DSPs/social), supply exchanges (SSPs), and mobile-measurement partners; partner_id is an FK on campaigns + PMP deals. NOT the DDP data-vendor registry (that is tpa.direct_data_partners).
 
 ### prospecting
+- [`enriched.lift__ghost_bid_visits`](enriched/lift__ghost_bid_visits.md) — Ghost-bid holdout lift outcomes — one row per dt × campaign × IP (ghost holdout vs submitted treatment) with 7-day visit/conversion flags. Silver source for the gold lift__ghost_bid_results/rollup incrementality reports.
 - [`summarydata.tvo_prospecting_campaign_groups`](summarydata/tvo_prospecting_campaign_groups.md) — Config/routing VIEW listing the Prospecting PTV campaign groups that qualify as TVO. Consumed by ui_visits (LEFT JOIN on campaign_group_id) to route these groups into the standard visits attribution branch instead of last-TV-touch (ltvt). Not a fact table — a membership flag list; start_dt is a hardcoded constant, not a date.
 
 ### publisher
@@ -927,7 +972,11 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`core.partners`](core/partners.md) — 79-row reference dim of MNTN integration/platform partners — demand platforms (DSPs/social), supply exchanges (SSPs), and mobile-measurement partners; partner_id is an FK on campaigns + PMP deals. NOT the DDP data-vendor registry (that is tpa.direct_data_partners).
 - [`core.segment_types`](core/segment_types.md) — Static 13-row enum dim decoding segment_type_id (OPM, FPA, Cart, High Intent B/C, Ego, 1+ PV, Control Group Audience, …); the label lookup for core_audiences.segment_type_id.
 - [`external.event_types`](external/event_types.md) — 6-row VAST event-type lookup — event_type_id → event_type_raw → human name for the video playback ladder (impression → start → quartiles → complete)
+- [`geo.location_data`](geo/location_data.md) — one row per geo location_id — canonical geo hierarchy dimension (country→region→city→postal)
 - [`integrationprod.channels`](integrationprod/channels.md) — one row per marketing channel type (channel_id 1-10) — the channel ENUM lookup joined to campaigns.channel_id; 1=Multi-Touch/display, 8=Television/CTV
+- [`integrationprod.core_attribution_models`](integrationprod/core_attribution_models.md) — 30-row lookup dim decoding attribution_model_id -> attribution logic (Last Touch / Last TV Touch, competing, identity key)
+- [`integrationprod.core_campaign_statuses`](integrationprod/core_campaign_statuses.md) — static 7-row enum, one row per campaign status — campaign_status_id -> name lookup for campaigns.campaign_status_id (3=Live delivers; 8/9 escape the deleted flag)
+- [`integrationprod.core_goal_types`](integrationprod/core_goal_types.md) — 16-row bronze CDC dim mapping goal_type_id (1-16) to a campaign optimization goal name + plain-English description (ROAS, eCPA, CPA, CostPerVisit, VisitRate, …); physical source behind the silver core.goal_types view.
 - [`integrationprod.data_sources`](integrationprod/data_sources.md) — one row per registered data source (data_source_id) — the authoritative DSxx taxonomy: id → name → type, plus the conversion-pixel/mobile-source registry
 - [`integrationprod.device_type`](integrationprod/device_type.md) — one row per device_type ENUM value (id 1-8) — canonical INT->STRING label lookup for the INT64 device_type on bronze.raw bidder_* event tables
 - [`summarydata.metros`](summarydata/metros.md) — one row per Nielsen DMA metro_id — static geo dimension: metro_id -> name -> country; the DMA-grain lookup you join to delivery facts (CIL) for a readable market name
@@ -983,6 +1032,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 ### rtb
 - [`logdata.bid_events_log`](logdata/bid_events_log.md) — Analytics view over the Beeswax bid-price firehose (bronze.raw.bid_price_log, partner_id=8). One row per bid-price evaluation event; ~98% are FAILED bid attempts. 10-day TTL, HOUR-partitioned, ~2.9B rows/hour. The MNTN Rust-bidder branch (partner_id=79 / bidder_bid_events) was REMOVED as disabled — this is now Beeswax-only.
 
+### rtc
+- [`integrationprod.archives_household_score_threshold_archives`](integrationprod/archives_household_score_threshold_archives.md) — one row per archived household-score-threshold write for a campaign — Datastream CDC mirror of Postgres archives.household_score_threshold_archives (RTC conquest-score gate history)
+
 ### sales_ops
 - [`integrationprod.mntnselect_order_items`](integrationprod/mntnselect_order_items.md) — one row per MNTN Select order line item (PK order_item_id) — the per-line contract (offering version, target/buy CPM, contracted impressions, optional audience) hanging off a mntnselect_orders header; bridges to ad-serving campaign_groups via a junction
 
@@ -1002,6 +1054,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`summarydata.waypoints__optimizable_event_aggregated`](summarydata/waypoints__optimizable_event_aggregated.md) — Daily rollup of Waypoint site-events (URL page-paths + dataLayer events) per advertiser x campaign x event, with the Selective Performance (sp_*) optimization overlay. NEW + limited-scope beta table (data from 2026-05-01, ~16 advertisers/day).
 - [`summarydata.waypoints_sp_aggregation`](summarydata/waypoints_sp_aggregation.md) — Daily SQLMesh rollup of MNTN Selective Performance (SP) metrics from Waypoint events — grain day x campaign, splitting event/impression/user/session/spend into a base version (the row's own campaign group) and an sp_-prefixed version attributed to the linked SP companion campaign group. Currently a narrow pilot: one advertiser (34114), one optimizable event (Viewed Recommendations Page).
 - [`summarydata.waypoints_sp_impressions`](summarydata/waypoints_sp_impressions.md) — Impression-grain feed for the Waypoints Selective-Performance (SP) product: one row per served impression for SP-enrolled advertisers, carrying per-impression total advertiser spend (media+data+platform).
+
+### signals
+- [`external.targeted_signal`](external/targeted_signal.md) — one row per used DDP signal (uid × ip × dsc_id) — row-level DDP vendor-crediting / usage decomposition
 
 ### site-events
 - [`summarydata.waypoints__optimizable_events_with_spend`](summarydata/waypoints__optimizable_events_with_spend.md) — Event-level Waypoints stream: one row per site/delivery event beacon (advertiser x served-ad impression x visitor), with MNTN media spend joined on. is_optimizable_event flags the advertiser's configured optimization event; total_spend attaches to URL/pageview rows only. Limited Waypoints-enabled advertiser set (~16/day), data from 2026-05-01.
@@ -1064,6 +1119,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`aggregates.tpa_membership_updates_log_insegments__legacy`](aggregates/tpa_membership_updates_log_insegments__legacy.md) — Full-history compatibility view of daily IP->segment (in-segment) TPA membership: live SQLMesh table from 2025-09-11 UNION ALL a frozen GCS-Parquet historical backfill (2025-08-31..2025-09-10). One row per IP x segment x day. Prefer the non-legacy sibling for go-forward work.
 - [`analytics_curated.icloud_ipv4`](analytics_curated/icloud_ipv4.md) — one row per Apple iCloud Private Relay egress IPv4 (individually enumerated, not CIDR) — curated CoreDW exclusion list Targeting uses to keep relay IPs out of bidding / MembershipDB
 - [`audience.campaign_segment_history`](audience/campaign_segment_history.md) — SCD-2 validity-interval history of every data-source keyword/category selected in each campaign's audience expression, positioned by AND/OR clause (and_seq/or_seq). end_time IS NULL = currently active. Unpartitioned VIEW over 9.47M rows (~558 MB) — full-scans every query. Contaminated for 'which audience is this campaign using' — use audience_segment_campaigns + audience_segments instead.
+- [`audience.mm_campaign_classifier`](audience/mm_campaign_classifier.md) — One row per active (Live) Stage-1 prospecting campaign, classified by its MNTN Matched (MM) configuration: mm_class (non_mm / mmv1 / mmv2 / mmv3 / fangorn cells), tiers_reachable, restriction_level, and DS13/DS19/DS38/DS46 + Fangorn/HHST/geo/3P/1P feature flags. Small unpartitioned VIEW (~14.6K rows, ~2 MB) — LEFT JOIN on campaign_id to label a campaign's audience setup.
 - [`core.audiences`](core/audiences.md) — LEGACY/FROZEN core-schema audience dimension (1 row per audience_id) — updates stopped 2023-12-15; the live successor is bronze.integrationprod.audience_audiences. Thin silver view over the bronze CDC replica.
 - [`core.blocked_ip_addresses`](core/blocked_ip_addresses.md) — Advertiser IP-exclusion blocklist for fraud/known-visitor suppression; one row per (advertiser_id, ip).
 - [`core.campaign_group_x_audiences`](core/campaign_group_x_audiences.md) — Legacy junction/bridge mapping campaign_groups to audiences (frozen since 2023-12-15). Tiny ~28K-row CDC dim; superseded by integrationprod.audience_audience_x_campaign_groups.
@@ -1072,6 +1128,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`external.tpa__dstillery_categories__v1`](external/tpa__dstillery_categories__v1.md) — one row per Dstillery (DS18) 3P interest-category node — the shared, public taxonomy that decodes DS18 audience-segment category ids into human-readable paths; 11,688 nodes (2 structural roots + 11,686 leaves), 3,303 active / 8,385 deprecated
 - [`external.tpa__oracle_categories__v1`](external/tpa__oracle_categories__v1.md) — one row per Oracle Data Cloud / BlueKai audience category (unique data_source_category_id) — static taxonomy dump used to decode Oracle 3P category ids to human names/paths
 - [`integrationprod.archives_audience_keyword_state_archives`](integrationprod/archives_audience_keyword_state_archives.md) — one row per archived version of a ui.audience_keyword_state row — Datastream CDC audit trail of each audience's DS19 (MM Core) parent/child keyword targeting state
+- [`integrationprod.archives_household_score_threshold_archives`](integrationprod/archives_household_score_threshold_archives.md) — one row per archived household-score-threshold write for a campaign — Datastream CDC mirror of Postgres archives.household_score_threshold_archives (RTC conquest-score gate history)
 - [`integrationprod.audience_audience_segments`](integrationprod/audience_audience_segments.md) — one row per audience_segment_id — a compiled targeting-segment expression under one audience (audience_id) and campaign; where the Fangorn DS46 overlay lands
 - [`integrationprod.audience_audience_x_campaign_groups`](integrationprod/audience_audience_x_campaign_groups.md) — one row per campaign_group_id (unique) — junction mapping each campaign group to its single assigned targeting audience; N:1 to audience_audiences
 - [`integrationprod.audience_audiences`](integrationprod/audience_audiences.md) — one row per audience_id — LIVE named-audience objects (advertiser-level targeting templates) in the audience service; supersedes frozen core.audiences but keys on a SEPARATE audience_id sequence
@@ -1082,6 +1139,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`integrationprod.campaigns`](integrationprod/campaigns.md) — one row per campaign (PK campaign_id) — the canonical campaign dimension: advertiser/group linkage, stage (funnel_level), objective, channel, status, budget, flight window
 - [`integrationprod.categories`](integrationprod/categories.md) — one row per (data_source_id, data_source_category_id) — hierarchical category/taxonomy nodes for MNTN's internal audience data sources (DS13 verticals, DS16 per-advertiser funnel tree, DS21 converters, DS14 global root)
 - [`integrationprod.data_sources`](integrationprod/data_sources.md) — one row per registered data source (data_source_id) — the authoritative DSxx taxonomy: id → name → type, plus the conversion-pixel/mobile-source registry
+- [`integrationprod.dso_configuration_service_campaign_presets`](integrationprod/dso_configuration_service_campaign_presets.md) — one row per campaign (PK campaign_id) — DSO config-service per-campaign preset overrides: frequency cap, pacing, score/CPM thresholds, budget pace
 - [`integrationprod.fpa_advertiser_verticals`](integrationprod/fpa_advertiser_verticals.md) — two rows per advertiser (type=0 parent vertical + type=1 sub-vertical) — the source-of-truth advertiser to industry-vertical mapping; type=1 vertical_id is the RTC/Fangorn vertical anchor
 - [`integrationprod.objectives`](integrationprod/objectives.md) — static 7-row enum, one row per marketing objective — objective_id -> name lookup for campaigns.objective_id (NOT a stage indicator; funnel_level is authoritative for stage)
 - [`summarydata.audience_keyword_parent_history`](summarydata/audience_keyword_parent_history.md) — Historized parent→child keyword expansion lineage per audience: self-join of audience_keyword_state pairing selected DS38 seed PARENT keywords with the selected DS19 targetable CHILD keywords expanded from them, aligned by snapshot. An edge list, NOT one-row-per-keyword.
@@ -1098,6 +1156,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`external.tpa__dstillery_categories__v1`](external/tpa__dstillery_categories__v1.md) — one row per Dstillery (DS18) 3P interest-category node — the shared, public taxonomy that decodes DS18 audience-segment category ids into human-readable paths; 11,688 nodes (2 structural roots + 11,686 leaves), 3,303 active / 8,385 deprecated
 - [`external.tpa__mntn_matched_taxonomy__v2`](external/tpa__mntn_matched_taxonomy__v2.md) — one row per DS19 (MNTN Matched / MM Core) keyword category — the BQ id->name resolver for DS19 data_source_category_ids; flat GCS-parquet taxonomy snapshot
 - [`external.tpa__oracle_categories__v1`](external/tpa__oracle_categories__v1.md) — one row per Oracle Data Cloud / BlueKai audience category (unique data_source_category_id) — static taxonomy dump used to decode Oracle 3P category ids to human names/paths
+- [`integrationprod.core_campaign_statuses`](integrationprod/core_campaign_statuses.md) — static 7-row enum, one row per campaign status — campaign_status_id -> name lookup for campaigns.campaign_status_id (3=Live delivers; 8/9 escape the deleted flag)
 - [`integrationprod.data_sources`](integrationprod/data_sources.md) — one row per registered data source (data_source_id) — the authoritative DSxx taxonomy: id → name → type, plus the conversion-pixel/mobile-source registry
 - [`integrationprod.keyword_categories`](integrationprod/keyword_categories.md) — one row per (data_source_category_id, parent_id) taxonomy edge for DS38 'MNTN UI Audience Keywords' — id to keyword-string + category-path lookup
 - [`integrationprod.objectives`](integrationprod/objectives.md) — static 7-row enum, one row per marketing objective — objective_id -> name lookup for campaigns.objective_id (NOT a stage indicator; funnel_level is authoritative for stage)
@@ -1122,6 +1181,9 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 ### verified_visit
 - [`logdata.clickpass_log`](logdata/clickpass_log.md) — Verified-visit (VV) log — one row per MNTN-attributed visit (clicks + VVs, CTV and display), matched back to a served impression within the lookback window. 'clickpass' is the legacy term for verified visit. Now a 3-branch UNION view (raw ≥2026-01-01 + competing_vv ≥2026-01-01 + history ≤2025-12-31).
 - [`logdata.icloud_vv_log`](logdata/icloud_vv_log.md) — iCloud Private Relay verified-visit (VV) log — the clickpass_log analog for Apple iCloud Private Relay traffic. One row per attributed view-through/visit event served to an Apple relay IP, matched back to a served impression via ad_served_id. Small single-source view (~165K rows) over bronze raw.icloud_vv; NOT one of clickpass_log's UNION branches.
+
+### versioned-history
+- [`integrationprod.archives_campaign_group_archives`](integrationprod/archives_campaign_group_archives.md) — one row per (campaign_group_id, version) snapshot — the CDC edit history behind campaign_groups for as-of-date reconstruction
 
 ### vertical_taxonomy
 - [`integrationprod.fpa_advertiser_verticals`](integrationprod/fpa_advertiser_verticals.md) — two rows per advertiser (type=0 parent vertical + type=1 sub-vertical) — the source-of-truth advertiser to industry-vertical mapping; type=1 vertical_id is the RTC/Fangorn vertical anchor
@@ -1176,8 +1238,11 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`aggregates.win_rate_bq_bids_by_term_hour`](aggregates/win_rate_bq_bids_by_term_hour.md) — Bid counts by campaign x targeting-term x hour x day — the DENOMINATOR half of a win-rate pair; join its impressions sibling for win_rate = impressions/bids.
 - [`ber_stg.unstable__budget_changes`](ber_stg/unstable__budget_changes.md) — BER staging snapshot of SIGNIFICANT flight budget changes (daily + lifetime budget increases/decreases), one row per flight per change event. Non-canonical change-impact intermediate; ~4.5mo of recent data only.
 - [`ber_stg.unstable__conversions_post_change`](ber_stg/unstable__conversions_post_change.md) — BER staging snapshot of conversions attributed in the observation window AFTER a significant flight budget change — one row per attributed conversion, tagged with change_id + conversion_day. Non-canonical budget-change-impact intermediate; ~Mar 2026 → present only. Pairs with the _pre_change sibling; driven by unstable__budget_changes.
+- [`external.ipdsc__v1`](external/ipdsc__v1.md) — one row per (ip × data_source_id) per daily dt — resolved IP→data-source-category membership feeding MNTN Match scoring & audience eligibility
 - [`external.tpa__sharethis_categories__v1`](external/tpa__sharethis_categories__v1.md) — one row per ShareThis (DS17) category node — static 1,850-row 3P interest-taxonomy snapshot keyed by data_source_category_id
+- [`integrationprod.advertiser_frequency_caps`](integrationprod/advertiser_frequency_caps.md) — one row per advertiser-scoped frequency-cap rule (cap=impressions per duration_seconds) — EMPTY in prod (0 rows); advertiser-scoped fcap is an unused capability gap, real caps live at campaign_group + DSO scope
 - [`integrationprod.advertisers`](integrationprod/advertisers.md) — One row per advertiser account (PK advertiser_id) — the canonical MNTN advertiser dimension; company_name is the reliable label; filter deleted=FALSE AND is_test=FALSE for live rows.
+- [`integrationprod.dso_household_score_thresholds`](integrationprod/dso_household_score_thresholds.md) — one row per campaign — the CURRENT-STATE Household Score Threshold (HHST), the per-campaign intent gate the bidder enforces (threshold ≤0 = no gate/serve anyone; 10000 = HI-only)
 - [`integrationprod.ui_audience_keyword_state`](integrationprod/ui_audience_keyword_state.md) — Live current-state of which keywords are attached to each audience — PARENT seeds (UI-visible) + CHILD DS19 expansions (selected CHILDren = the MNTN-Matched targeting set). Superset of the history view: this is the only place is_magic/model_version live.
 - [`logdata.impression_log`](logdata/impression_log.md) — One row per served/rendered ad impression (display + CTV, won-and-served). ad_served_id = unique PK; join to visits/conversions. Partition on `time`; epoch is MICROSECONDS.
 - [`logdata.spend_log`](logdata/spend_log.md) — Won-auction / billable-impression log — MNTN bidder's realized spend (win_cost_micros_usd, micros USD). Source of truth for spend, pacing, and deliverability. One row per won auction, HOUR-partitioned on auction_timestamp.

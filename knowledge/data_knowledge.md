@@ -1616,24 +1616,28 @@ MES is the enrichment service that processes impressions and validates audience 
 the ipdsc file for the relevant data source are dropped. This is the root cause of HH discrepancy
 investigations (TI-644, MM-44) where targeting audiences appear smaller than expected.
 
-**Optional-partner skip day → that source's same-dt impressions = 0 downstream — because SERVING goes dark, NOT
-because enrichment drops it (DS51/Bombora, PROVEN end-to-end 2026-07-29).** When an optional 3P partner (currently
-only Bombora/DS51) skips its daily drop, **no `ipdsc/dt=D/data_source_id=51/` partition is written** (the
-`ipdsc_bombora` builder skips; on-call INC-001) → the bidder has no Bombora audience loaded that day → a campaign
-targeting ONLY that DS serves 0 impressions → downstream `enriched_impressions` DS51 = 0 for that dt. Confirmed
-correct for dt=2026-07-27. **The builder is `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`**
-(prod config `lookback=2`, `ipdsc_lookback=35`, `dsid_block_list=[2,14,42]`; output `summarydata.enriched_impressions`,
-materialized to `mntn-analytics-prod-01`): the `data_source_id` tag = **what the campaign targeted**
-(`v_campaign_group_segment_history`), and the ipdsc join is a **35-day BACKWARD** window
-(`ipdsc_dt BETWEEN to_date(time)-35d AND time`) — so it WOULD backfill 07-27 from the present 07-26 partition **if
-any DS51 impressions had been served**. Proof: exactly one CG targets DS51 (CG 131563 / adv 30506 = "MNTN - No ENG Testing", an INTERNAL TEST advertiser, new campaign
-live 07-24, targets only DS51); its `cost_impression_log` served counts are 07-25=104,177 · 07-26=108,744 · 07-27=0 ·
-07-28=141,002, matching enriched DS51 **1:1** (108,744=108,744; 141,002≈140,998). So enriched DS51 ≈ that campaign's
-served impressions; 0 served on 07-27 → correctly 0. **The 35d lookback never applies — it enriches impressions that
-WERE served, it can't resurrect ones that never happened.** (RETRACTS the earlier "same-day-keyed" hypothesis: the
-join is a backward window; the zero originates upstream at serving.) The 110,798 seen the prior day = a transient in
-the rolling 2-day dynamic-overwrite rebuild, not real volume. **General rule:** a single-source campaign goes fully
-dark on its DS's ipdsc skip days; multi-source campaigns only lose the skipped DS's contribution. See on-call INC-001.
+**enriched_impressions DS51 ≈ the DS51-targeting campaign's SERVED impressions, ~1:1 (DS51/Bombora, verified 2026-07-29).**
+`enriched_impressions.data_source_id` = **what the campaign targeted** (`v_campaign_group_segment_history`), enriched
+against a **35-day BACKWARD** ipdsc window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`). Builder =
+`SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py` (prod config `lookback=2`, `ipdsc_lookback=35`,
+`dsid_block_list=[2,14,42]`; output `summarydata.enriched_impressions`, materialized to `mntn-analytics-prod-01`). So DS51
+enriched count ≈ the Bombora campaigns' served-impression count in `cost_impression_log`. Verified for CG 131563 (adv
+30506 = "MNTN - No ENG Testing", an internal TEST advertiser; campaigns 648318-648323, effectively DS51-only since
+enriched DS51 = total Bombora served exactly): 07-25=104,177 · 07-26=108,744 (=enriched 108,744) · 07-27=0 (=enriched 0) ·
+07-28=141,002 (≈enriched 140,998).
+
+**⚠ The DS51 ipdsc skip does NOT cause the 07-27 zero — earlier "skip → serving dark" claim RETRACTED (2026-07-29, 2nd
+correction).** Counter-evidence: **07-25 was ALSO a DS51 ipdsc skip day** (calendar absent 07-25 AND 07-27) yet the Bombora
+campaigns served **104,177** that day (membership persisted from the 07-24 drop; DS51 membership-db TTL ~90d per Jordan
+Piepkow). And on **07-27 the advertiser served 1.47M impressions across its OTHER campaigns**; only the 6 Bombora campaigns
+went to 0. So 07-27=0 is a **Bombora-campaign-specific serving gap on that one day**, NOT the ipdsc skip and NOT a
+data-pipeline gap. enriched=0 correctly mirrors serving (0 served → 0 enriched); the 35d lookback is irrelevant (it
+enriches served impressions, can't invent unserved ones). **OPEN (bidder/serving domain, not reporting):** why those
+campaigns served 0 on 07-27 — most likely a campaign-level pause (test advertiser) or a 07-26 DS51 membership-load failure
+into the bidder; the 90d TTL means membership *should* have persisted (as on 07-25), so a true 0 is surprising. The 110,798
+seen for 07-27 the prior day is an unexplained transient (campaigns served 0, so not real DS51 volume). See on-call INC-001.
+**Method note:** the skip-correlation was a red herring — I had verified the 1:1 serving mirror but extrapolated the *cause*
+from a single confirming day (07-27) without checking the counter-case (07-25). One confirming case is not proof of a mechanism.
 
 ### Data Source (DS) Type Reference
 | DS ID | Name | Type | In IPDSC | In tmul_daily | Notes |
