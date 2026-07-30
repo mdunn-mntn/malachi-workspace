@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [audience_keyword_state_archives_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 4905105
-approx_logical_bytes: 875205217
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 5004857
+approx_logical_bytes: 893388079
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting, keywords]
 keywords: [audience_keyword_state, keyword, DS19, MM Core, MNTN Matched, parent, child, is_magic, expanded_from, archive, CDC, version history]
 source: INFORMATION_SCHEMA+human
@@ -118,4 +118,5 @@ WHERE rn = 1 AND selected = TRUE AND is_magic = FALSE
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No exact prose oracle in data_catalog.md/data_knowledge.md; enriched from LIVE schema + empirical sampling + the sibling `ui.audience_keyword_state` prose (data_catalog.md L2621). Confirmed empirically: unpartitioned (timePartitioning/rangePartitioning null), clustered on archive PK; PK `audience_keyword_state_archives_id` unique; NO `version` column (order by archive_time); `datastream_metadata.source_timestamp` = UNIX_MILLIS (== archive_time); keyword_type ∈ {PARENT,CHILD}; data_source_id ∈ {NULL(PARENT),19(CHILD DS19)}; description+feedback 100% NULL; version depth max 3.
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: all 18 columns match (no drift), unpartitioned, cluster = archive PK, no TTL — confirmed. Re-verified business logic cheaply: keyword_type ∈ {CHILD 4,015,405 @ data_source_id=19, PARENT 989,452 @ NULL}; description + feedback still 100% NULL. Row count 4,905,105→5,004,857 (organic).
 <!-- CHANGELOG END -->

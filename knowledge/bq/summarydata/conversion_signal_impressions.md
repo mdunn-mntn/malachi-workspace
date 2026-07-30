@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 39846
 approx_logical_bytes: 17251728
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [ctv, conversions, identity, measurement]
 keywords: [conversion signal, offline conversion, ctv impression, hashed email, sha256, third party identity, xdd, network site, data source 45, identity resolution]
 source: INFORMATION_SCHEMA+human
@@ -138,6 +138,7 @@ WHERE impression_time >= '2026-07-01' AND impression_time < '2026-07-02';
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical sampling alone. Confirmed partition=impression_time (require_partition_filter=TRUE; no-filter query hard-errors), cluster=[advertiser_id, third_party_identity_id, impression_time, impression_id], ~39,846 rows / 17,251,728 B, range 2026-03-02→2026-07-19. Established grain = 1 row per served CTV impression (ad_served_id/impression_id row-unique & unequal); impression_guid is a person key (not the grain). Documented constants (type=Television, ocs_ds_id=45, xdd_partner_ids="1") and inserted_at batch-load lag (~21d avg).
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__680054465` current, partition=`impression_time` (DAY, require_partition_filter=TRUE), cluster=[advertiser_id,third_party_identity_id,impression_time,impression_id], no TTL, all 25 cols + types match doc (zero drift). Re-confirmed on live data — 47,482 rows = distinct ad_served_id = distinct impression_id (grain holds), constants type='Television' / ocs_ds_id=45 / xdd_partner_ids='1' (grown from 39,846). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

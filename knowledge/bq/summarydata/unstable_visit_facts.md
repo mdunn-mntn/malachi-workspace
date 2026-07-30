@@ -5,18 +5,18 @@ summary: "NON-CANONICAL staging/experimental copy of visit_facts. Same visit/vie
 dataset: summarydata
 table: unstable_visit_facts
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__unstable_visit_facts__1678881492
+physical_table: sqlmesh__summarydata.summarydata__unstable_visit_facts__2012328492
 grain: "one row per hour x advertiser_id x campaign_group_id x campaign_id x channel_id x objective_id x group_id x creative_id x private_marketplace_id x country x metro_id x region x city x postal_code x domain x supply_vendor x device_type x pa_model_id (18 dimension keys). change_id is a per-row recompute-batch stamp, NOT part of the grain."
 partition_by: hour
 require_partition_filter: false
 cluster_by: [advertiser_id, change_id]
 time_unit: na
 ttl_days: null
-approx_rows: 7923047
-approx_logical_bytes: 5775193302
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 8657469
+approx_logical_bytes: 6298072050
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, attribution, visits, staging]
 keywords: [unstable_visit_facts, staging, non-canonical, visit_facts, change_id, recompute, batch, site_visitors, competing, probattr, HLL, pa_model_id]
 source: INFORMATION_SCHEMA+human
@@ -253,16 +253,17 @@ doc, and the staging-specific claims are all live-verified (2026-07-19).
 - **History floor = the physical build's retained window, not an absolute source floor.** Current build
   starts `MIN(hour) = 2026-03-22 07:00` (verified) and is fresh through `MAX(hour) = 2026-07-20 09:00`
   (UTC). Older data is not in this physical table.
-- **SQLMesh physical hash drifts.** Physical is `sqlmesh__summarydata.summarydata__unstable_visit_facts__1678881492`
-  today. Always query the clean view name `summarydata.unstable_visit_facts`; never hardcode the hash.
+- **SQLMesh physical hash drifts.** Physical is `sqlmesh__summarydata.summarydata__unstable_visit_facts__2012328492`
+  today (was `__1678881492` on 2026-07-19 — the hash rebuilt). Always query the clean view name
+  `summarydata.unstable_visit_facts`; never hardcode the hash.
 
 ## Cost & partitioning notes
 - **The one filter to always apply:** a `hour >= DATETIME "YYYY-MM-DD"` bound (DATETIME literal).
   Partition = **DAY on `hour`**; pruning works. Not required by the table (no `require_partition_filter`
-  — a no-filter dry-run validated fine), but omitting it scans all 121 partitions / 7.9M rows.
+  — a no-filter dry-run validated fine), but omitting it scans all partitions / ~8.7M rows.
 - **Physical backing (real storage, resolved via `bq show` on the physical TABLE):** `numRows` =
-  **7,923,047**; `numBytes` = **5,775,193,302** (~5.38 GiB) = `approx_logical_bytes`, the whole physical
-  table — NOT a query estimate. This is a small staging table (~23x smaller than `visit_facts`'s ~126 GiB).
+  **8,657,469**; `numBytes` = **6,298,072,050** (~5.87 GiB) = `approx_logical_bytes`, the whole physical
+  table — NOT a query estimate. This is a small staging table (~20x smaller than `visit_facts`'s ~126 GiB).
 - **Measured query estimates (all via `--dry_run`, 2026-07-19; labeled by exact column set):**
   - `SELECT SUM(views)` (one narrow INT col), **no filter** → **63.4 MB** (63,384,376 bytes).
   - `SELECT SUM(views)` (same one col), **`WHERE hour >= "2026-07-10"`** (~10 days) → **14.7 MB**
@@ -317,10 +318,11 @@ ORDER BY change_id DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from LIVE source. Columns (109) match AUTO:SCHEMA exactly (names/types/order). Partition DAY on `hour`, cluster [advertiser_id, change_id], require_partition_filter=false all reconfirmed on the current physical. **Physical hash drifted `__1678881492`→`__2012328492`** (SQLMesh rebuild) — updated physical_table + View-definition + gotcha. Rolling window grew: numRows 7,923,047→8,657,469, numBytes 5,775,193,302→6,298,072,050 (~5.87 GiB); updated front-matter + Cost. No schema/grain/cluster drift.
 - 2026-07-19: skeleton→enriched. **No prose oracle existed** for `unstable_visit_facts` (absent from `data_catalog.md` and `data_knowledge.md`); enriched from LIVE schema + shared-column semantics inherited from the verified `visit_facts` sibling doc. Resolved physical `sqlmesh__summarydata.summarydata__unstable_visit_facts__1678881492` (TABLE, 7,923,047 rows, 5,775,193,302 bytes ≈ 5.38 GiB). Confirmed partition = DAY on `hour` empirically (SUM(views) 63.4 MB no-filter → 14.7 MB with ~10-day `hour` filter, same col set); cluster = **[advertiser_id, change_id]** (differs from visit_facts' [advertiser_id, campaign_id]); require_partition_filter=false (no-filter dry-run validated); no TTL; history floor MIN(hour)=2026-03-22 07:00, fresh through MAX(hour)=2026-07-20 09:00 (UTC). time_unit=na (`hour` is DATETIME; NO epoch columns — unlike the `unstable_ui_visits` sibling). Grain verified = one row per 18-dim tuple (COUNT(*)=COUNT(DISTINCT 18-tuple)=COUNT(DISTINCT 18-tuple+change_id)=99,251 on 2026-07-17); change_id does not split grain. **Characterized `change_id`:** a per-advertiser recompute-batch stamp — all 1,663 change_ids map to exactly ONE advertiser (0 span multiple), monotonic sequence (~61,867–66,630 recent), one batch spans a multi-day range for its advertiser. **Documented as NON-CANONICAL staging copy → point to stable sibling `summarydata.visit_facts`.** Covers only 663 advertisers (subset). Schema drift noted vs visit_facts: (a) `pa_model_id` is INT64 here {-6,1001} vs STRING there; (b) this table has extra `change_id`; (c) this table LACKS the 6 `last_touch_site_visitors*` (arr + BYTES) columns that visit_facts has.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_visit_facts__1678881492`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__unstable_visit_facts__2012328492`
 ```

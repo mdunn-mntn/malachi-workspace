@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 243776
-approx_logical_bytes: 28002520
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 245628
+approx_logical_bytes: 28217899
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [budget, campaign_management, audit_log]
 keywords: [budget, campaign group, flight, flighted, monthly, pacing, budget amount, change log, audit, cdc, prior value, current value, budget increase, budget decrease, end date, user_id]
 source: INFORMATION_SCHEMA+human
@@ -124,6 +124,7 @@ LIMIT 100;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical sampling alone. Confirmed physical is an unpartitioned/unclustered TABLE (243,776 rows / 28 MB); grain ~unique on (time,campaign_group_id,entity_id,change_id); change_id domain 1–6 with verified semantics (1=Monthly increase, 2=Monthly decrease, 3/5=Flighted budget set/recalc w/ NULL prior/current, 4=flight date change, 6=Monthly↔Flighted mode switch); entity_type/entity_type_2/change_type constant, entity_id_2 always NULL; time is UTC; no partition prune (time filter = same bytes).
+- 2026-07-29: enriched→verified. Re-introspected live vs source: 14-col schema identical; physical TABLE still unpartitioned/unclustered (timePartitioning/clustering = None) re-confirmed; change_id domain {1,2,3,4,5,6} + change_type ≡ "Budget" re-confirmed (245,628 rows). Row/byte counts bumped (append growth). No metadata drift.
 <!-- CHANGELOG END -->
 
 ## View definition

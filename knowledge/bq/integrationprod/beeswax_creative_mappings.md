@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [creative_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 1585655
-approx_logical_bytes: 220384845
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1592002
+approx_logical_bytes: 221265966
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creatives, beeswax, dsp, bridge]
 keywords: [beeswax, creative_id, beeswax_creative_id, beeswax_line_item, media_size_id, creative_type, ctv, third_party, dsp_id_mapping, bridge_table]
 source: INFORMATION_SCHEMA+human
@@ -86,7 +86,7 @@ One of the `beeswax_*_mappings` family: `beeswax_advertiser_mappings` (advertise
 - **No date partition.** This is a BASE TABLE with no `timePartitioning` (front-matter `partition_by: none`, `require_partition_filter: false`) — there is no date column to filter and none is required. It is **clustered by `creative_id`**, so the one prune available is a filter on `creative_id` (equality or `IN`/range), which lets clustering skip blocks.
 - **The one filter to always apply:** `WHERE creative_id IN (...)` (or a `creative_id` range) — the only pruning lever. There is no date filter to apply.
 - **Whole-table scan (all 13 columns, `SELECT *`):** ~220 MB — `bq_run.sh --dry_run` upper bound = 220,383,733 bytes. Small table; a full scan is cheap, but note it still reads everything (no partition), so prefer projecting only needed columns and filtering `creative_id` when embedding in larger jobs.
-- **`approx_logical_bytes` = 220,384,845** (`bq show` numBytes, physical backing storage; grows as the table is written live).
+- **`approx_logical_bytes` = 221,265,966** (`bq show` numBytes, physical backing storage; grows as the table is written live).
 
 ## Example queries
 ```sql
@@ -117,6 +117,7 @@ WHERE m.creative_id IN (6440615, 6440614, 6440613);
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle beyond a single mapping line in data_catalog.md ("MNTN creative_id → Beeswax creative ID") — enriched from live schema + sampling. Confirmed grain 1:1 on creative_id (PK); partition_by none (base table, cluster_by creative_id only); source_timestamp = ms; media_size_id → core_creative_sizes.creative_size_id decode verified; beeswax_creative_id NOT unique; no deleted/is_test columns; history floor 2024-03-12; live-mutating.
+- 2026-07-29: enriched→verified. Re-introspected live (bq show + INFORMATION_SCHEMA): 13 cols / partition none / cluster creative_id / no TTL unchanged; grain 1:1 re-confirmed (1,592,000 rows = 1,592,000 distinct creative_id, 0 NULL PK). Refreshed approx_rows/bytes (live-mutating). No drift.
 <!-- CHANGELOG END -->
 </content>
 </invoke>

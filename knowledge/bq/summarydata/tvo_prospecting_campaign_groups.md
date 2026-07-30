@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: none
 ttl_days: null
-approx_rows: 41954
+approx_rows: 42391
 approx_logical_bytes: null
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, campaign-config, prospecting]
 keywords: [tvo, prospecting, campaign_group, ltvt, last_tv_touch, ui_visits, attribution-routing, multi-touch, ptv]
 source: INFORMATION_SCHEMA+human
@@ -109,6 +109,7 @@ JOIN `public.advertisers`      a  ON a.advertiser_id = t.advertiser_id;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived from live source. Schema exact-match (3 cols, types/order unchanged). Physical hash unchanged (__1901231145, still a view-over-views). Grain re-confirmed empirically: 42,391 rows = 42,391 distinct campaign_group_id (1:1, unique) over 11,982 advertisers; `start_dt` still the single hardcoded constant DATE('2026-03-17') (COUNT DISTINCT=1). Membership drifted 41,954→42,391 rows (live view, expected). approx_rows refreshed 41,954→42,391.
 - 2026-07-19: skeleton→enriched. NO prose oracle existed (net-new/undocumented; absent from data_catalog.md + data_knowledge.md) — enriched from LIVE schema + view SQL alone. Resolved the SQLMesh physical `__1901231145` to its view definition: a fully-derived config view over `public.campaign_groups` + two self-joins of `public.campaigns`, filtered to objective_id=1 (Prospecting) AND product_id=1 (PTV) AND {a status-7 template-15 "Multi-Touch" leg} AND {a status-7 template-23 "Multi-Touch - Plus" leg}, GROUP BY (advertiser_id, campaign_group_id). Confirmed empirically: grain = 1 row per campaign_group_id (41,954 rows = 41,954 distinct cg, 11,899 advertisers); `start_dt` is a HARDCODED constant DATE('2026-03-17'), n_distinct=1 — NOT a partition/event date, front-matter partition_by=none. Decoded campaign_status_id=7="Inactive" via core_campaign_statuses (the TVO signature is a pair of *Inactive* Multi-Touch legs). Function confirmed against ui_visits doc: this list is LEFT-JOINed by ui_visits to route TVO prospecting groups into the standard `visits` branch instead of last_tv_touch (ltvt). Cost: no partition to prune; SELECT * = 26.66 MB ≈ single col 25.63 MB (dim scan dominates). approx_logical_bytes=null (view-over-views, own numBytes=0).
 <!-- CHANGELOG END -->
 

@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 39190
-approx_logical_bytes: 5504200
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 40159
+approx_logical_bytes: 5636713
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, campaign_group, audit_log]
 keywords: [audience association, change log, cdc audit, campaign group, audience swap, entity_id, audience_id, user_id, prior_value, current_value]
 source: INFORMATION_SCHEMA+human
@@ -112,6 +112,7 @@ ORDER BY time DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + sampling alone. Confirmed physical table has NO partition and NO clustering (timePartitioning/clustering = None); date filter does not prune (dry-run). partition_by unknown→none, require_partition_filter unknown→false, time_unit unknown→timestamp, approx_rows 39190, approx_logical_bytes 5504200.
+- 2026-07-29: enriched→verified. Re-introspected live vs source: 14-col schema identical; physical TABLE still unpartitioned/unclustered (timePartitioning/clustering = None) re-confirmed; change_id ≡ 20 / change_type ≡ "Audience Association" / entity_type ≡ "audience_id" re-confirmed (40,159 rows, single value each). Row/byte counts bumped (append growth). No metadata drift.
 <!-- CHANGELOG END -->
 
 ## View definition

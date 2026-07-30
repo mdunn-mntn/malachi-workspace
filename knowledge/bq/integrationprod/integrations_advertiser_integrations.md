@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [id]
 time_unit: nanoseconds
 ttl_days: null
-approx_rows: 1246
-approx_logical_bytes: 274137
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1268
+approx_logical_bytes: 232045
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [integrations, advertiser, measurement, attribution]
 keywords: [advertiser integration, measurement vendor, attribution, conversion pixel, appsflyer, northbeam, upwave, hubspot, ga4, mntn audience, orca-integration, legacy-integration, integration_id, distribution_point, integrations_integrations]
 source: INFORMATION_SCHEMA+human
@@ -64,7 +64,7 @@ Config/junction table linking each MNTN advertiser to the third-party integratio
 <!-- AUTO:SCHEMA END -->
 
 ## Column meanings (only the non-obvious ones)
-- **integration_id** — FK → `integrationprod.integrations_integrations.id` (the vendor catalog). Verified id→name map (live, 34 vendors): 1=CallRail, 2=Google Analytics, 3=Rockerbox, 4=CDK Global, 5=Northbeam, 6=Kochava, 7=Singular, 8=AppsFlyer, 9=Adjust, 10=Google Analytics 4, 11=Freshpaint, 12=Haus, 13=HubSpot, 14=LiftLab, 15=Zapier, 19=Campaign Manager 360, 20=Funnel, 21=Triple Whale, 22=Upwave, 23=Quorum, 24=Looker, 25=Cuebiq, 26=Foursquare, 27=Precisely, 28=TapClicks, 29=DoubleVerify, 30=Tealium, 31=iSpot, 32=Innovid, 33=mParticle, 1015=OursPrivacy, 1016=WorkMagic, **1017=MNTN Audience**, 1018=Klaviyo.
+- **integration_id** — FK → `integrationprod.integrations_integrations.id` (the vendor catalog). Verified id→name map (live, 34 vendors): 1=CallRail, 2=Google Analytics, 3=Rockerbox, 4=CDK Global, 5=Northbeam, 6=Kochava, 7=Singular, 8=AppsFlyer, 9=Adjust, 10=Google Analytics 4, 11=Freshpaint, 12=Haus, 13=HubSpot, 14=LiftLab, 15=Zapier, 19=Campaign Manager 360, 20=Funnel, 21=Triple Whale, 22=Upwave, 23=Quorum, 24=Looker, 25=Cuebiq, 26=Foursquare, 27=Precisely, 28=TapClicks, 29=DoubleVerify, 30=Tealium, 31=iSpot, 32=Innovid, 33=mParticle, 1015=OursPrivacy, 1016=WorkMagic, **1017=MNTN Audience**, 1018=Klaviyo, 1019=Prescient AI (35 vendors as of 2026-07-29; id=1019 added since enrich).
 - **advertiser_id** — the MNTN advertiser (AID) that connected this vendor. FK → advertisers.
 - **active** — BOOL enable flag: 820 true / 426 false / 0 null. **Independent of soft-delete** — a row can be `active=false` without being deleted.
 - **t_created_ns / t_updated_ns / t_deleted_ns** — Unix **NANOSECONDS** (19 digits). Anchor verified: `TIMESTAMP_MICROS(t_created_ns/1000)` = `create_time` (i.e. `t_created_ns = UNIX nanos`). `t_deleted_ns` is the soft-delete tombstone: **NULL = live**; 453/1246 rows are soft-deleted. `create_time`/`update_time` are the native-TIMESTAMP mirror, but `update_time` is NULL on ~96% of rows (only 49 populated) — use `t_updated_ns` for last-modified.
@@ -77,11 +77,11 @@ Config/junction table linking each MNTN advertiser to the third-party integratio
 - **hotel_id / hotel_integration_id / integration_account_id / secondary_integration_account_id** — hospitality-vertical + external-account linkage fields; almost always NULL (`hotel_id` on 8 rows). **user_id / last_update_user_id** — creating / last-editing user (users dim); `user_id` NULL on most rows. **last_connected_at / last_disconnected_at** — connection lifecycle timestamps (mostly NULL).
 
 ## Joins & relationships
-- **integration_id → `integrationprod.integrations_integrations.id`** — vendor lookup dim (~34 rows, PK `id`). N:1 (many advertiser rows → one vendor); **fan-out safe**. `integrations_integrations` also carries `data_source_id` → `data_sources` (DSxx taxonomy) if you need the DS mapping (two hops).
+- **integration_id → `integrationprod.integrations_integrations.id`** — vendor lookup dim (~35 rows, PK `id`). N:1 (many advertiser rows → one vendor); **fan-out safe**. `integrations_integrations` also carries `data_source_id` → `data_sources` (DSxx taxonomy) if you need the DS mapping (two hops).
 - **advertiser_id → advertisers.id** (`integrationprod.advertisers` / core advertisers dim, 1 row per AID). One advertiser → many integration rows (up to N connections), so **joining advertisers → this table fans out per advertiser** — dedup/aggregate if you only want a per-advertiser flag.
 - **parent_id → self.id** — parent connection (child/secondary connections point back).
 - **user_id / last_update_user_id → users dim** — creator / last editor.
-- No partner table here is mid-SQLMesh-rebuild; `integrations_integrations` resolved live (34 vendors).
+- No partner table here is mid-SQLMesh-rebuild; `integrations_integrations` resolved live (35 vendors).
 
 ## Gotchas
 - **No `deleted` / `is_test` columns.** The standard integrationprod `deleted=FALSE AND is_test=FALSE` filter **does not apply** to this table. For live rows use `t_deleted_ns IS NULL` (453/1246 are soft-deleted). `active` is a **separate** enable flag — 426 `active=false` rows are not deleted.
@@ -120,4 +120,5 @@ ORDER BY a.advertiser_id, vendor
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical sampling alone. Confirmed: `id` PK (1246/1246 unique), no partition (physical BASE TABLE, clustered by id, 274,137 B), no `deleted`/`is_test` cols → soft-delete via `t_deleted_ns IS NULL`. Epoch units verified: `t_*_ns`=nanoseconds (TIMESTAMP_MICROS(t_created_ns/1000)=create_time), `datastream_metadata.source_timestamp`=ms CDC-capture. Mapped `integration_id`→vendor via live `integrations_integrations` (34 vendors; 1017=MNTN Audience). Set time_unit=nanoseconds, partition_by=none, require_partition_filter=false.
+- 2026-07-29: enriched→verified. Re-confirmed vs live source (bq show + INFORMATION_SCHEMA.COLUMNS): all 26 cols unchanged/no retype, no partition, cluster [id], no TTL — match doc. Row count 1,246→1,268 (live CDC dim); physical numBytes 274,137→232,045 (CDC compaction) — front-matter updated, dated dry-run prose kept as historical. No schema drift.
 <!-- CHANGELOG END -->

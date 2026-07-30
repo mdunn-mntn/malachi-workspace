@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [advertiser_channel_margin_archive_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 9779
-approx_logical_bytes: 1287930
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 9793
+approx_logical_bytes: 1289854
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pricing, margins, advertiser, cdc-archive]
 keywords: [advertiser_channel_margin, margin, cpm, platform_fee, budget_margin, data_margin, target_cpm, ad_buying_cpm, channel_id, versioned-history, datastream, cdc, ctv, display, sensitive]
 source: INFORMATION_SCHEMA+human
@@ -51,6 +51,8 @@ Versioned edit history (Postgres CDC archive via Datastream) of the per-advertis
 | ad_buying_cpm | NUMERIC(7, 4) | YES |  |  |
 | archive_time | TIMESTAMP | YES |  |  |
 | datastream_metadata | STRUCT<uuid STRING, source_timestamp INT64> | YES |  |  |
+| user_id | INT64 | YES |  |  |
+| margin_reason_id | INT64 | YES |  |  |
 <!-- AUTO:SCHEMA END -->
 
 ## Column meanings (only the non-obvious ones)
@@ -64,6 +66,8 @@ Versioned edit history (Postgres CDC archive via Datastream) of the per-advertis
 - **archive_time** — when THIS snapshot row was written = the effective as-of moment for the version. Use this (or `version`) for as-of ordering.
 - **budget_margin / platform_fee / data_margin** — NUMERIC(5,4) rate-fraction fields (margin/fee shares). **target_cpm / ad_buying_cpm** — NUMERIC(7,4) dollar CPMs. Together these are the advertiser×channel pricing/margin config. **SENSITIVE — schema only, never document actual values.**
 - **datastream_metadata** — Datastream CDC metadata STRUCT. `.source_timestamp` = CDC-capture epoch in **MILLISECONDS** (verified: ≈ `UNIX_MILLIS(archive_time)` within 0–4 ms for organically-captured rows). NOT business time.
+- **user_id** — FK to `users`; the user who made the margin edit. **Added since 2026-07-20; currently 100% NULL** (not yet backfilled).
+- **margin_reason_id** — FK to `core_margin_reasons` (why the margin was set/adjusted: -1=Unknown, 1=MNTN AID adjustment, 2=MNTN Global adjustment, 3=MNTN CGID adjustment, 4=Advanced Pricing, 5=Customer Incentive Program, 6=Account Family, 7=Exec Relationship, 8=Agency Partner Program, 9=Customer Satisfaction). **Added since 2026-07-20; currently 100% NULL.**
 
 ## Joins & relationships
 - **→ `core_advertiser_channel_margins`** on `advertiser_channel_margin_id`. Base grain = **exactly 1 row per (advertiser_id, channel_id)** = current margin state (verified: 5,866 rows = 5,866 distinct PK = 5,866 distinct advertiser×channel, 3,170 advertisers). Relationship archive:base = **N:1** (N historical versions per one live record). **Fan-out:** joining base→archive explodes to every version — dedupe to latest with `QUALIFY ROW_NUMBER() OVER (PARTITION BY advertiser_channel_margin_id ORDER BY archive_time DESC) = 1`. Only **2,907 of the archive's 3,178** acm_ids still exist in the base table (271 orphaned — deleted/superseded records the archive retains) → use **LEFT JOIN**, not INNER, when you want full history.
@@ -81,8 +85,8 @@ Versioned edit history (Postgres CDC archive via Datastream) of the per-advertis
 - **channel_id = 0** appears once (sentinel/default) — exclude it for clean CTV(8)/display(1) splits.
 
 ## Cost & partitioning notes
-- **Unpartitioned base table** (verified: `timePartitioning None`), clustered by `advertiser_channel_margin_archive_id`. TTL none (archive retains history). Tiny table — ~1.29 MB backing storage (numBytes 1,287,930 = approx_logical_bytes).
-- **Dry-run figures (labeled by column set):** `SELECT *` (all 14 cols) = **1,287,930 bytes (~1.29 MB)** = the whole table; `SELECT advertiser_id` (one INT64 col) = **78,232 bytes (~76 KB)**. No partition to prune, so **column pruning is the only lever** — `SELECT *` reads ~16× a single-column scan here.
+- **Unpartitioned base table** (verified: `timePartitioning None`), clustered by `advertiser_channel_margin_archive_id`. TTL none (archive retains history). Tiny table — ~1.29 MB backing storage (numBytes 1,289,854 = approx_logical_bytes).
+- **Dry-run figures (labeled by column set):** `SELECT *` (all 16 cols) = **~1,289,854 bytes (~1.29 MB)** = the whole table; `SELECT advertiser_id` (one INT64 col) = **~78,232 bytes (~76 KB)**. No partition to prune, so **column pruning is the only lever** — `SELECT *` reads ~16× a single-column scan here.
 - **The one filter to apply:** there's no partition; scope by `advertiser_channel_margin_id` (leverages clustering) or `advertiser_id`/`channel_id`. At ~1.3 MB a full scan is negligible regardless — just avoid `SELECT *` when you only need ids/timestamps (it drags in the sensitive NUMERIC columns too).
 
 ## Example queries
@@ -108,4 +112,5 @@ QUALIFY ROW_NUMBER() OVER (
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md for this table (net-new); enriched from LIVE schema + empirical queries. Confirmed: unpartitioned BASE table (not a view), clustered on archive_id; grain = (advertiser_channel_margin_id, version) unique = 9,779 rows / 3,178 records / 2,337 advertisers; source_timestamp = milliseconds; version monotonic-per-record here (contra audience_segment archive); base core_advertiser_channel_margins is 1-row-per-advertiser×channel with 271 archive acm_ids orphaned (LEFT JOIN). Marked SENSITIVE (margin/CPM values withheld).
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: 2 new columns since 2026-07-20 — `user_id` + `margin_reason_id` (both INT64, currently 100% NULL, not yet backfilled; margin_reason_id → core_margin_reasons dim). Re-confirmed unpartitioned BASE table, cluster = advertiser_channel_margin_archive_id, no TTL/partition filter. Row count 9,779→9,793 (organic). AUTO:SCHEMA + front-matter refreshed; grain/join/gotcha claims still hold.
 <!-- CHANGELOG END -->

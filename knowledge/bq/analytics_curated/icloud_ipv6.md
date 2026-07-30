@@ -162,5 +162,5 @@ WHERE first_16_bits = '2606:54c0'
   EXTERNAL PARQUET over `gs://mntn-analytics-curated/coredw/summarydata/icloud_ipv6/*.parquet`,
   requirePartitionFilter=false, no partition/cluster/TTL; schema unchanged (ip, prefix, first_8_bits,
   first_16_bits, network — all STRING); `ip` unique key re-confirmed (406,799 rows = 406,799 distinct ip).
-  Removed a stray malformed tail (`</content></invoke>`) left by the enrichment pass. No schema drift.
+  Removed a stray malformed XML-ish tail left by the enrichment pass. No schema drift.
 <!-- CHANGELOG END -->

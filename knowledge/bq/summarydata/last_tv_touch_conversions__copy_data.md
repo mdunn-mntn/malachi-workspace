@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 1
 approx_logical_bytes: 124
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [export-ops, tv-attribution, conversions]
 keywords: [last_tv_touch_conversions, gcs_export, parquet, watermark, export_status, staging_swap, control_table, mntn-analytics-curated]
 source: INFORMATION_SCHEMA+human
@@ -90,6 +90,7 @@ FROM `dw-main-silver.summarydata.last_tv_touch_conversions__copy_data`;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Live schema + `bq show` confirmed this is NOT a data copy: it is a 1-row export-status/watermark table (last_run TIMESTAMP + status STRING) for the GCS Parquet export of `last_tv_touch_conversions`. No partition/cluster/TTL; 124 B / 1 row. No prose oracle existed for this table (data_catalog.md documents only the stable sibling `last_tv_touch_conversions` at its `## silver.summarydata.last_tv_touch_conversions` entry); reconciled the dataset-context "staging copy of stable sibling" guess against the physical-table description, which says it's an export-job control table.
+- 2026-07-29: enriched→verified. Live re-introspect — physical `...__246359297` unchanged, schema {last_run TIMESTAMP, status STRING}, no partition, numRows=1/124B; model description still "Exports the last 3 days of last_tv_touch_conversions to GCS as Parquet using an atomic staging-prefix swap." No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 163178
 approx_logical_bytes: 33082554
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [bidding, pricing, inventory]
 keywords: [publisher, adsize, cpi, cpm, bid_price, viewability, open_market, bidder, default_fallback, publisher_performance]
 source: INFORMATION_SCHEMA+human
@@ -122,6 +122,7 @@ ORDER BY impressions DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Confirmed physical is unpartitioned/unclustered snapshot (163,178 rows / 33,082,554 bytes). Verified empirically: avg_cpi = avg_cpm*1000 (micro-dollars vs dollars/1000), viewability_rate is 0-100 percent, viewable_imps <= imps, avg_cpi within [min,max]. Reconciled schema-vs-prose drift: (a) live view carries 11 columns the prose omitted (ad_format, avg/min/max_cpm, impressions, viewable_impressions, partner_id, recommended_cpm, creative_size, video_length, last_refresh_date); (b) `score` is 100% NULL here (populated variant = logdata view); (c) `partner_id` constant 8, `video_length` always empty; (d) display rows have `duration IS NULL` not 0; (e) rolling-window prose conflict noted (3-day BP vs ~7-day Slack), authoritative source is populate_publisher_adsize_metrics.sql, not verifiable from BQ.
+- 2026-07-29: enriched→verified. Live re-introspect — physical `...__3708855718` hash unchanged, 20-col schema identical, no partition/cluster, numRows≈163.5K / ≈33.2 MB (negligible churn). Price/CPI + score-all-NULL + partner_id=8 + video_length-empty claims stable (unchanged model). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

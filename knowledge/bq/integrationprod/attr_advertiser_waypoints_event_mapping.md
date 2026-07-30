@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: integrationprod.attr_advertiser_waypoints_event_mapping
-summary: "one row per advertiser 'waypoint' mapping (surrogate id PK) — maps a site URL-path glob or GTM dataLayer string to a named funnel milestone (event_name) bucketed into an ordered stage (event_group/event_group_order); MNTN Waypoints journey config, tiny (473 rows / 15 advertisers)"
+summary: "one row per advertiser 'waypoint' mapping (surrogate id PK) — maps a site URL-path glob or GTM dataLayer string to a named funnel milestone (event_name) bucketed into an ordered stage (event_group/event_group_order); MNTN Waypoints journey config, tiny (508 rows / 17 advertisers)"
 dataset: integrationprod
 table: attr_advertiser_waypoints_event_mapping
 object_type: BASE TABLE
@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 473
-approx_logical_bytes: 70858
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 508
+approx_logical_bytes: 75550
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, pixel-config, advertiser-config]
 keywords: [waypoints, funnel, journey, event mapping, pattern_type, url, dlv, dataLayer, event_group, event_group_order, pixel config, attr, selective performance]
 source: INFORMATION_SCHEMA+human
@@ -31,17 +31,17 @@ family. Each row is one match rule that maps an advertiser's site signal (a **UR
 dataLayer variable/event string**) to a **named funnel milestone** (`event_name`), which is bucketed into an
 **ordered journey stage** (`event_group` + `event_group_order`). Reach for it to see how an advertiser has
 labeled/classified their on-site micro-conversions into a funnel; the attribution pipeline consumes this
-upstream to classify visit/event patterns. It is **config metadata, not an event log** — 473 rows total.
+upstream to classify visit/event patterns. It is **config metadata, not an event log** — 508 rows total.
 Sibling config tables: `attr_advertiser_selective_performance_config` (same `attr_` family),
 `core_pixel_integrations`(+`_types`), `ui_advertiser_pixel_infos`; see data_catalog.md §
 `core_advertiser_conversion_types` "Related pixel-config tables."
 
 ## Grain & keys
-- **Grain:** one row per **waypoint mapping**, keyed by surrogate `id` (PK — 473/473 distinct). Logical grain
-  = advertiser x (pattern -> event_name). Adoption is sparse: only **15 distinct advertisers** (do not treat
+- **Grain:** one row per **waypoint mapping**, keyed by surrogate `id` (PK — 508/508 distinct). Logical grain
+  = advertiser x (pattern -> event_name). Adoption is sparse: only **17 distinct advertisers** (do not treat
   as platform-wide).
 - **Key(s) / join columns:** PK `id`; FK `advertiser_id` -> `advertisers.advertiser_id`.
-- **`(advertiser_id, pattern)` is NOT unique** (13 duplicate pairs): the same URL/dataLayer string can map to
+- **`(advertiser_id, pattern)` is NOT unique** (14 duplicate pairs): the same URL/dataLayer string can map to
   more than one `event_name`, and a live copy can coexist with a soft-deleted one. Group/join on `id`, not on
   `(advertiser_id, pattern)`.
 - **No `is_test` column** (only `deleted`) — filter live rows with `deleted = FALSE` alone.
@@ -66,18 +66,18 @@ Sibling config tables: `attr_advertiser_selective_performance_config` (same `att
 - **`pattern`** — the match rule string. Meaning depends on `pattern_type`: when `url`, a **URL-path glob**
   with `*` wildcards (e.g. `/campaign/*/review`, `/personal-loans*`, `/myaccount/*`); when `dlv`, a **GTM
   dataLayer variable/event string** (e.g. `step_3`, `LandingPage`, `Viewed Home Page`). Not a regex — glob-style.
-- **`pattern_type`** — 2-value domain (live): **`url`** (384 rows, match on page URL path) and **`dlv`** (89
+- **`pattern_type`** — 2-value domain (live): **`url`** (419 rows, match on page URL path) and **`dlv`** (89
   rows, match on dataLayer variable/event). No other values observed.
 - **`event_name`** — free-text milestone label the pattern maps to (e.g. `Login`, `Reporting Viewed`,
-  `Personal Loans`, `view application`). **396 distinct; per-advertiser free text, NOT a controlled
+  `Personal Loans`, `view application`). **424 distinct; per-advertiser free text, NOT a controlled
   vocabulary** — can repeat across patterns and contains typos (`Application & Credit Verifcation`).
 - **`event_group`** — the funnel-stage bucket the event belongs to (e.g. `Site Entry`, `Explore & Book`,
-  `Booking Intent`, `Purchase`). **61 distinct, mostly advertiser-specific** (most appear for a single
-  advertiser; a few generic — `Site Entry` spans 7 advertisers). Free text, not an enum.
+  `Booking Intent`, `Purchase`). **72 distinct, mostly advertiser-specific** (most appear for a single
+  advertiser; a few generic — e.g. `Site Entry`). Free text, not an enum.
 - **`event_group_order`** — INT **1..5** ordinal position of the stage in the journey (1 = entry/landing ...
   5 = deepest/purchase). Ties `event_group` to a funnel step; shared across all rows of the same group for an
   advertiser.
-- **`deleted`** — soft-delete flag (BOOL, never NULL: 337 FALSE / 136 TRUE / 0 NULL). Deleted mappings are
+- **`deleted`** — soft-delete flag (BOOL, never NULL: 364 FALSE / 144 TRUE / 0 NULL). Deleted mappings are
   **retained** (flag flipped + `updated_at` bumped), so live and deleted copies of one pattern coexist.
   **Filter `deleted = FALSE`** for the live config.
 - **`inserted_at` / `updated_at`** — Postgres row create / last-modified TIMESTAMP (business time). This is a
@@ -98,9 +98,9 @@ Sibling config tables: `attr_advertiser_selective_performance_config` (same `att
   pipeline; there is no key linking a waypoint row to individual `conversion_log`/visit rows here.
 
 ## Gotchas
-- **Tiny + sparsely adopted** (473 rows, 15 advertisers) — never treat as platform-wide coverage of pixel/funnel config.
-- **Always filter `deleted = FALSE`** — 29% of rows (136/473) are soft-deleted and retained.
-- **`(advertiser_id, pattern)` is NOT unique** (13 dup pairs) — dedup/join on `id`.
+- **Tiny + sparsely adopted** (508 rows, 17 advertisers) — never treat as platform-wide coverage of pixel/funnel config.
+- **Always filter `deleted = FALSE`** — 28% of rows (144/508) are soft-deleted and retained.
+- **`(advertiser_id, pattern)` is NOT unique** (14 dup pairs) — dedup/join on `id`.
 - **`event_name` / `event_group` are per-advertiser free text, not enums** — do NOT aggregate across
   advertisers by these labels expecting a shared taxonomy; each advertiser invents its own group names and
   there are typos in the data.
@@ -114,8 +114,8 @@ Sibling config tables: `attr_advertiser_selective_performance_config` (same `att
 - **No partition** (physical `timePartitioning: null`, confirmed via `bq show`), clustered on `[id]`,
   `require_partition_filter=false`, no TTL. There is **no partition column to filter** — the skeleton's
   `partition_by: none` is a verified fact, not a gap.
-- **Whole table `SELECT *` = 70,858 bytes (~69 KiB)** (dry-run, all 11 columns). At this size scan cost is
-  negligible and `SELECT *` is fine; there is no pruning to be had. `approx_logical_bytes` = 70,858 (`bq show`
+- **Whole table `SELECT *` ≈ 75,550 bytes (~74 KiB)** (all 11 columns). At this size scan cost is
+  negligible and `SELECT *` is fine; there is no pruning to be had. `approx_logical_bytes` = 75,550 (`bq show`
   numBytes, physical BASE TABLE).
 
 ## Example queries
@@ -142,4 +142,5 @@ ORDER BY event_group_order, event_group, event_name;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Confirmed empirically: physical BASE TABLE, no partition (timePartitioning null), cluster=[id], 473 rows / 15 advertisers, id is PK (473/473 distinct), (advertiser_id,pattern) NOT unique (13 dups), no is_test col, deleted 337F/136T/0NULL. pattern_type domain = {url:384, dlv:89}; event_group_order range 1..5; 396 distinct event_name, 61 distinct event_group (per-advertiser free text). datastream_metadata.source_timestamp = MILLISECONDS (TIMESTAMP_MILLIS == updated_at). Prose oracle: only a one-line mention in data_catalog.md/data_knowledge.md ("event-name classification, deleted flag on waypoints") — no dedicated section; no drift, prose confirmed and greatly expanded from live schema.
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: all 11 columns match (no drift), no partition, cluster=[id], no TTL — confirmed. Refreshed organic-growth counts: 473→508 rows / 15→17 advertisers, PK 508/508 distinct, deleted 364F/144T/0NULL, pattern_type {url:419, dlv:89}, event_group_order 1..5, 424 event_name / 72 event_group, 14 dup (advertiser_id,pattern) pairs. All grain/gotcha claims hold.
 <!-- CHANGELOG END -->

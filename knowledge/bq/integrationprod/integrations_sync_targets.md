@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [id]
 time_unit: nanoseconds
 ttl_days: null
-approx_rows: 2987
-approx_logical_bytes: 300668
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 3023
+approx_logical_bytes: 304869
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [integrations, audience-sync, crm]
 keywords: [integrations_sync_targets, sync target, hubspot list, audience sync, connection_id, target_key, advertiser integration, integrations_advertiser_integrations, crm, datastream cdc]
 source: INFORMATION_SCHEMA+human
@@ -107,4 +107,5 @@ LIMIT 100;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical queries only. Confirmed: PK=id (2,987 unique); connection_id FK -> integrations_advertiser_integrations.id (137/137 match, 0 orphans; does NOT map to integrations_integrations); t_*_ns = nanoseconds and datastream_metadata.source_timestamp = milliseconds (both anchored to 2026-07-16); natural key (connection_id,target_key) unique among live rows only (t_deleted_ns IS NULL); 96% target_key = hubspot:list/N. Unpartitioned BASE TABLE, 300,668 B physical.
+- 2026-07-29: enriched→verified. Re-confirmed vs live source (bq show + INFORMATION_SCHEMA.COLUMNS): 8 cols unchanged/no retype, no partition, cluster [id], no TTL — all match doc. Row count grew 2,987→3,023 (live CDC dim; dated distribution counts kept as historical). No schema drift.
 <!-- CHANGELOG END -->

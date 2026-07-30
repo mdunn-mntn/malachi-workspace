@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 1208318521
 approx_logical_bytes: 333109594305
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, competitive-intelligence, conversions]
 keywords: [competing views, competing source, utm, gclid, gbraid, wbraid, site visitors, probabilistic attribution, last-touch, tracking parameter]
 source: INFORMATION_SCHEMA+human
@@ -143,6 +143,7 @@ GROUP BY value ORDER BY conversions DESC LIMIT 50;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (no section in data_catalog.md, no gotcha in data_knowledge.md) — enriched from LIVE schema + empirical sampling alone. Confirmed physical partition=`hour` (DATETIME, DAY) via dry-run diff (19.33 GB full → 0.061 GB one day, 2 cols); no clustering, no TTL; 1.21B rows / 333 GB. Established grain (unique per full dimension tuple × key,value; 0 dup rows), the key-explosion double-count gotcha, `competing_views`=distinct-IP count identity, and the sparse `probattr_*` path.
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__411286732` current, partition=`hour` (DATETIME, DAY granularity), no clustering, require_partition_filter=false, no TTL, all 27 cols + types (incl. 2 non-null ARRAY<STRING> IP columns) match doc (zero drift). numRows 1.23B / ~340 GB (grown from 1.21B / 333 GB). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

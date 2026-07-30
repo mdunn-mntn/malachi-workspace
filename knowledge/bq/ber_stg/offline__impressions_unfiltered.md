@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: microseconds
 ttl_days: null
-approx_rows: 20445
-approx_logical_bytes: 8390852
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 100565
+approx_logical_bytes: 43183455
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [offline_conversions, attribution, staging]
 keywords: [offline_conversion, hashed_value, identity_resolution, impression_match, unfiltered, ber_stg, staging, attribution, upload_id]
 source: INFORMATION_SCHEMA+human
@@ -31,7 +31,7 @@ NON-CANONICAL staging intermediate in the BER offline-conversion attribution pip
 Pipeline order (all `ber_stg.offline__*` views): `uploads_processed` → `eligible_uploads` → `hashed_value_x_ip` (identity resolution) → **`impressions_unfiltered` (this table)** → `conversion_signal_orders` → `conversions_final`.
 
 ## Grain & keys
-- **Grain:** one row per candidate impression × offline-conversion match — an impression (`ad_served_id`) served to an IP that resolved to a `hashed_value` from the upload. Pre-filter/pre-dedup, so the **whole row** is the grain: the same `ad_served_id` recurs across multiple matched conversions, and one conversion (`hashed_value`) matches many impressions. Verified: 20,445 rows > 17,620 distinct `ad_served_id` > and > 19,874 distinct `(ad_served_id, hashed_value)`.
+- **Grain:** one row per candidate impression × offline-conversion match — an impression (`ad_served_id`) served to an IP that resolved to a `hashed_value` from the upload. Pre-filter/pre-dedup, so the **whole row** is the grain: the same `ad_served_id` recurs across multiple matched conversions, and one conversion (`hashed_value`) matches many impressions. Verified (2026-07-29 snapshot): 100,565 rows > 83,990 distinct `ad_served_id` (not unique). Per-column volumes fluctuate every rebuild; the row-is-grain / not-unique structure is the stable property.
 - **Key columns:** `ad_served_id` (impression), `hashed_value` (uploaded identifier, SHA-256), `ip`/`guid` (resolved identity), `order_id`, `upload_id`. No single natural PK.
 - **Snapshot, not history:** this is a full-refresh SQLMesh table holding only the upload(s) in flight — currently exactly **1 `advertiser_id` and 1 `upload_id`**. It is not a cumulative log; contents change each pipeline run.
 
@@ -75,13 +75,13 @@ Pipeline order (all `ber_stg.offline__*` views): `uploads_processed` → `eligib
 <!-- AUTO:SCHEMA END -->
 
 ## Column meanings (only the non-obvious ones)
-- **hashed_value** — SHA-256 (64-char lowercase hex) of the customer identifier from the offline upload (email, etc.). This is what gets matched to IPs. 529 distinct in the current snapshot.
+- **hashed_value** — SHA-256 (64-char lowercase hex) of the customer identifier from the offline upload (email, etc.). This is what gets matched to IPs. 5,368 distinct in the current (2026-07-29) snapshot (volume fluctuates each rebuild).
 - **hashed_values_key**, **customer_email_hashes** — both **all-NULL** in the current snapshot; do not rely on them.
-- **guid** — identity-graph GUID resolved from `ip` (household/device). ~3,057 distinct; one IP can carry multiple.
-- **ip** — the impression's IP that matched the resolved identity (1,184 distinct). US-only here (`country = "United States"`).
+- **guid** — identity-graph GUID resolved from `ip` (household/device). One IP can carry multiple (distinct-guid volume fluctuates each rebuild).
+- **ip** — the impression's IP that matched the resolved identity (10,192 distinct as of 2026-07-29). US-only here (`country = "United States"`).
 - **partner_id_list** — JSON-array **string** of the identity/data-partner IDs that resolved the match, e.g. `"[2]"` (dominant), `"[1]"`, `"[3]"`, `"[2,3]"`, `"[1,2]"`. Parse as JSON, not a scalar.
 - **time** — pipeline processing / load timestamp (recent ~7-day window). NOT the impression time.
-- **impression_time** — actual impression timestamp (TIMESTAMP, displayed to the second; lookback ~37 days in snapshot).
+- **impression_time** — actual impression timestamp (TIMESTAMP, displayed to the second; lookback ~50 days in the 2026-07-29 snapshot, 2026-06-05 → 2026-07-25).
 - **impression_epoch** — same impression instant in **microseconds** since Unix epoch (anchor: `impression_epoch ≈ UNIX_MICROS(impression_time)`, e.g. 1784149933743000). Carries finer sub-second precision (ms resolution) than the second-truncated `impression_time`; use it when you need sub-second ordering.
 - **hour** — DATETIME hour-bucket of `time` (the processing hour), not of the impression.
 - **order_id** — STRING; can be `"0"` when the order is unknown/missing while `order_amt` is still populated.
@@ -106,8 +106,8 @@ All pipeline siblings are `dw-main-silver.ber_stg.offline__*` VIEWs; treat this 
 ## Gotchas
 - **Non-canonical + transient.** Never report from this table. It is a full-refresh SQLMesh snapshot of the offline upload(s) currently being processed (1 advertiser / 1 upload right now); rows change each run and it is not a historical accumulation.
 - **"unfiltered" = pre-attribution, pre-dedup.** Expect the same impression across many conversions and one conversion across many impressions. Row counts here overstate real conversions; the eligible/final stages downstream apply the attribution window + dedup.
-- **`ad_served_id` is not unique** (17,620 distinct vs 20,445 rows). No single-column PK.
-- **Two time columns with different meaning:** `time`/`hour` = processing/load window (~7 days); `impression_time`/`impression_epoch` = actual impression (~37-day lookback). Don't confuse them.
+- **`ad_served_id` is not unique** (83,990 distinct vs 100,565 rows, 2026-07-29). No single-column PK.
+- **Two time columns with different meaning:** `time`/`hour` = processing/load window; `impression_time`/`impression_epoch` = actual impression (~50-day lookback in the current snapshot). Don't confuse them.
 - **`impression_epoch` is microseconds** (not ms/ns) and finer than the second-truncated `impression_time`.
 - **`hashed_values_key` and `customer_email_hashes` are all-NULL** in the current snapshot.
 - **`order_id = "0"`** means unknown order; it will not join to the orders stage even though `order_amt` is populated.
@@ -115,9 +115,9 @@ All pipeline siblings are `dw-main-silver.ber_stg.offline__*` VIEWs; treat this 
 - **`objective_id` unreliable for stage** (global gotcha) — use `funnel_level` on `campaigns`.
 
 ## Cost & partitioning notes
-- **No partition, no clustering.** Physical `sqlmesh__ber_stg.ber_stg__offline__impressions_unfiltered__156727232` resolved to a small unpartitioned full-refresh TABLE: numRows 20,445 (== live COUNT, so metadata is fresh), numBytes 8,390,852. `require_partition_filter: false`.
-- **Whole table is tiny** — a full `SELECT *` dry-run measured **8,390,852 bytes (~8.0 MiB, all 34 columns)**. There is no partition to filter, so the only lever is column pruning: a single narrow column (`SELECT advertiser_id`) dry-ran at **163,560 bytes (~160 KiB)** — ~51x less. Avoid `SELECT *`; project only the columns you need.
-- `approx_logical_bytes` = 8,390,852 (physical `numBytes`).
+- **No partition, no clustering.** Physical `sqlmesh__ber_stg.ber_stg__offline__impressions_unfiltered__156727232` resolved to an unpartitioned full-refresh TABLE: numRows 100,565 (== live COUNT, so metadata is fresh), numBytes 43,183,455 (2026-07-29). `require_partition_filter: false`.
+- **Whole table is small** (fluctuates with the in-flight upload) — a full `SELECT *` dry-run measured **43,183,455 bytes (~41.2 MiB, all 34 columns)**. There is no partition to filter, so the only lever is column pruning: a single narrow column (`SELECT advertiser_id`) dry-ran at **804,520 bytes (~786 KiB)** — ~53.7x less. Avoid `SELECT *`; project only the columns you need.
+- `approx_logical_bytes` = 43,183,455 (physical `numBytes`).
 
 ## Example queries
 ```sql
@@ -142,6 +142,7 @@ ORDER BY impression_time;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md (net-new/undocumented) — enriched from LIVE schema + empirical profiling. Physical resolved to unpartitioned full-refresh TABLE (20,445 rows == live COUNT; numBytes 8,390,852) → partition_by none, require_partition_filter false. impression_epoch confirmed microseconds (anchor UNIX_MICROS(impression_time)). Grain = candidate impression×conversion match (pre-filter); snapshot holds only in-flight upload (1 advertiser/1 upload). Enums from SELECT DISTINCT: channel_id 8=CTV/1=display, device_type silver STRING enum, objective_id 4=RT/1=Prospecting, conversion_type -102, conversion_source_id 31. hashed_values_key + customer_email_hashes all-NULL in snapshot.
+- 2026-07-29: enriched→verified. Re-derived from live source. Physical hash `__156727232` unchanged; still unpartitioned/unclustered/no-TTL; 34-column schema unchanged (matches AUTO:SCHEMA). Rolling snapshot grew to 100,565 rows / 43,183,455 bytes but still holds a single in-flight upload (1 advertiser / 1 upload — present-tense claim re-confirmed); ad_served_id still non-unique (83,990 distinct). Refreshed front-matter, grain, per-column snapshot counts, lookback (~50d), and dry-run cost. No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

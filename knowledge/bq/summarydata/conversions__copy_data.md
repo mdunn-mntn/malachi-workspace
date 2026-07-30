@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 1
 approx_logical_bytes: 96
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, exports, ops, sqlmesh]
 keywords: [copy_data, export, gcs, parquet, heartbeat, job_status, last_run, atomic_swap, conversions]
 source: INFORMATION_SCHEMA+human
@@ -90,6 +90,7 @@ FROM `dw-main-silver.summarydata.conversions__copy_data`;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented table); enriched from live schema + physical metadata + single-row content. Reconciled the misleading name: this is an export-job heartbeat (last_run + status), not a copy of conversion data — source is summarydata.conversions.
+- 2026-07-29: enriched→verified. Re-introspected live — view→physical `...__607382107`, schema {last_run TIMESTAMP, status STRING}, no partition/cluster all unchanged; physical numRows=1/96B; model description still "Exports the last 3 days of conversions to GCS as Parquet using an atomic staging-prefix swap." No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

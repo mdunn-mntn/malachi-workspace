@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 57770
-approx_logical_bytes: 7310285
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 59124
+approx_logical_bytes: 7473876
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [advertiser_dim, vertical_taxonomy, targeting]
 keywords: [advertiser_verticals, vertical_id, vertical_name, type_1_subvertical, rtc, fangorn, industry_classification, advertiser_name_unreliable, bucket_lookup]
 source: INFORMATION_SCHEMA+human
@@ -138,4 +138,5 @@ WHERE v.type = 1;   -- omit type filter and advertiser rows fan out ×2
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Physical BASE TABLE, no partition (timePartitioning/rangePartitioning=None), cluster [id]. Grain verified 2× per advertiser (type 0/1; 57,772 rows / 28,886 advertisers; 37 parent + 148 sub verticals). source_timestamp confirmed = milliseconds (TIMESTAMP_MILLIS anchor). Drift reconciled vs data_catalog prose: `updated_time` is NEVER NULL (defaults to created_time; only 107 rows genuinely updated) — legacy "nearly all NULL" corrected. advertiser_name ~36% empty now. No deleted/is_test columns (standard live-row filter N/A). Labeled dry-runs: SELECT * = 7.31 MB, 3-col type=1 = 1.39 MB (saving from projection, not row pruning).
+- 2026-07-29: enriched→verified. Re-confirmed vs live source (bq show + INFORMATION_SCHEMA.COLUMNS): 9 cols unchanged/no retype, no partition, cluster [id], no TTL — all match doc. Row count grew 57,772→59,124 (live CDC dim; dated prose counts kept as historical observations). No schema drift.
 <!-- CHANGELOG END -->

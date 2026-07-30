@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 147027
 approx_logical_bytes: 14852461
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaigns, audit, status]
 keywords: [campaign_group, status_change, lifecycle, live, paused, pause_by_mntn, pause_by_advertisers, ready, deleted, change_log, audit, cdc]
 source: INFORMATION_SCHEMA+human
@@ -118,11 +118,10 @@ GROUP BY campaign_group_id;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented table) — enriched from live schema + sampling. Confirmed physical `...__3366278031` is unpartitioned/unclustered/no-TTL (~14.2 MiB, 147,027 rows, history floor 2024-01-01 UTC); grain = one row per campaign-group status change. Constants: `change_type='Status'`, `change_id=50`, `entity_type='campaign_group_status_id'`; all three `entity_*_2` slots NULL. Payload = `prior_value`/`current_value` status labels (Ready/Live/Pause By Advertisers/Pause By MNTN/Deleted); `entity_id`/`entity_text` = numeric code + label of the NEW status (1=Ready,3=Live,4=PauseByAdv,5=PauseByMNTN,8=Deleted). `prior_value IS NULL` (63,137 rows) = initial creation status. `user_id` NULL in 2,407 rows = system/automated transitions.
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__3366278031` current, unpartitioned/unclustered/no-TTL, all 14 cols + types match doc (zero drift). Re-confirmed constants on live data — `change_type='Status'`, `change_id=50`, `entity_type='campaign_group_status_id'` across all 149,139 rows (grown from 147,027). Removed stray closing-tag artifacts at EOF. schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
 SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__campaign_group_status_change_log__3366278031`
 ```
-</content>
-</invoke>

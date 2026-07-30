@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 61514
 approx_logical_bytes: 4695267
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaigns, audit, goals]
 keywords: [campaign_group, goal_change, cpv, cost_per_visit, cpa, roas, cost_per_completed_view, change_log, audit, bid_goal]
 source: INFORMATION_SCHEMA+human
@@ -107,6 +107,7 @@ GROUP BY campaign_group_id;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new table) — enriched from live schema + sampling. Confirmed physical is unpartitioned/unclustered/no-TTL (~4.5 MiB, 61,514 rows); grain = one row per campaign-group goal change; `change_type='Goal'`, `change_id=36`, and all six `entity_*` columns are constants/NULL; payload = `prior_value`/`current_value` goal strings; `time` is UTC TIMESTAMP.
+- 2026-07-29: enriched→verified. Re-introspected live source (cheap metadata + tiny full scan): physical `...__1718841263` current, unpartitioned/unclustered/no-TTL, all 14 cols + types match doc (zero drift). Re-confirmed constants on live data — `change_type='Goal'`, `change_id=36`, `entity_id` NULL across all 62,511 rows (grown from 61,514). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

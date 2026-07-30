@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 11111716
 approx_logical_bytes: 30617601777
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, attribution]
 keywords: [conversion, attribution, utm, gclid, gbraid, order_amt, revenue, last_tv_touch, verified_impression, marketing_params, conversion_source_id, referer]
 source: INFORMATION_SCHEMA+human
@@ -241,6 +241,7 @@ ORDER BY conversions DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved view→physical (partition `time` DAY, no clustering, no partition-filter req, ~11.1M rows / 30.6 GB, history from 2026-03-01). Confirmed grain empirically = one row per conversion `uuid` × marketing query-param `key` (utm/gclid/gbraid parsed from `referer`); raw SUM/COUNT over-count ~3.6x. Resolved `event_epoch`/`impression_epoch` = microseconds (`impression_epoch`=UNIX_MICROS(impression_time)); `time`=conversion timestamp (=impression_time+impression_elapsed_time). Documented `source_type` disjoint sets, `order_curr` USD/usd case bug, `-101` sentinel + junk pollution, `domain`=ad-network. **No prose oracle existed** for `summarydata.conversion_sources` — data_catalog.md line 2132 explicitly notes no `conversion_sources` table in bronze.integrationprod (that ref is about pixel-config tables, a different thing); enriched from LIVE schema + empirical sampling.
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__246965029` current, partition=`time` (DAY), no clustering, require_partition_filter=false, no TTL, all 48 cols + types (incl. 2 INTERVAL elapsed-time cols) match doc (zero drift). numRows 12.0M / ~33.2 GB (grown from 11.1M / 30.6 GB). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

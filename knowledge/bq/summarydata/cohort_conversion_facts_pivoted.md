@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 62744193
 approx_logical_bytes: 22273136152
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, conversions, reporting]
 keywords: [cohort, conversion, attribution, order_value, competing, probattr, last_touch, last_tv_touch, day_number, roas, day_lag, creative]
 source: INFORMATION_SCHEMA+human
@@ -200,6 +200,7 @@ WHERE conversion_date = '2026-07-01'
   campaign_id, day_number], no require_partition_filter, no TTL, ~62.7M rows / 22.3 GB. Verified 9-col
   grain (incl. `hour`) unique on the 2026-07-01 partition. Established `hour`=exposure-cohort hour,
   `day_number`=1–132 day-lag — this is the cohort-lag decomposition of the conversion facts.
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__2978826820` current, partition=`conversion_date` (DAY), cluster=[advertiser_id,campaign_group_id,campaign_id,day_number], require_partition_filter=false, no TTL, all 33 cols + types match doc (zero drift). numRows 63.5M / 22.5 GB (grown from 62.7M / 22.3 GB). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

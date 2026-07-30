@@ -173,4 +173,5 @@ ORDER BY city;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched (introspected view + resolved physical sqlmesh__geo.geo__location_data__182671189; grain/columns confirmed vs source).
+- 2026-07-29: verify pass — schema (15 cols), view→physical resolution, grain (709,980 = distinct location_id), and unpartitioned status all reconfirmed vs source. KEPT enriched (not promoted to verified): the location_type_id enum labels (2=country … 7=postal) remain inferred — no location_types lookup exists in silver.geo (only location_data / network_locations / geo_segments_x_locations) to confirm them from cheap metadata.
 <!-- CHANGELOG END -->

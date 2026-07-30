@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 5655525377
 approx_logical_bytes: 304941692695
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [identity, measurement, attribution]
 keywords: [ga_client_id, google_analytics, ga4, ip_map, identity_resolution, first_party, ip_enrichment]
 source: INFORMATION_SCHEMA+human
@@ -101,6 +101,7 @@ WHERE advertiser_id = 44112
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical sampling alone. Confirmed physical table is UNPARTITIONED / UNCLUSTERED (time does not prune, dry-run diff identical); grain = deduped (advertiser_id, ga_client_id, ip); time_unit=timestamp; rolling ~90d window (no TTL). physical numRows/numBytes are real (not stale).
+- 2026-07-29: enriched→verified. Live re-introspect — physical `...__616882325` hash unchanged (⇒ SQLMesh transform identical, so the empirically-derived deduped-triple grain and ~90d rolling window remain valid by construction), 4-col schema identical, no partition/cluster (timePartitioning=None on a real non-stale physical: numRows populated). Rows ~5.66B / ~305 GB (negligible churn). No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

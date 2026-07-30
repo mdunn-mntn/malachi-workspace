@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 61507823
 approx_logical_bytes: 8611095220
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [targeting, rtc, household-scoring, cdc-archive]
 keywords: [household_score_threshold, household score, threshold, RTC, realtime conquest, conquest score, score gate, archive, archives, campaign, campaign_group, advertiser, datastream, cdc, integrationprod]
 source: INFORMATION_SCHEMA+human
@@ -99,4 +99,5 @@ QUALIFY ROW_NUMBER() OVER (
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Net-new doc (doc-debt queue), no prose oracle in data_catalog.md/data_knowledge.md. Enriched from LIVE schema + metadata + empirical sampling. Confirmed: unpartitioned BASE table (Datastream CDC mirror of Postgres archives.household_score_threshold_archives), clustered on surrogate PK; grain = one row per PK (unique), many rows per campaign (append-only threshold history, order by create_time); NO version/archive_time column; threshold recent 0–10,000 (RTC conquest score) with -100/7,776,000 legacy sentinels, 67% zero; source_timestamp = milliseconds; update_time on recent rows = CDC capture time.
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: all 9 columns match (no drift), unpartitioned BASE table, cluster = household_score_threshold_archives_id, no TTL — confirmed. Row/byte counts (61,507,823 rows / 8.61 GB) stable; grain + threshold-scale gotchas verified this session.
 <!-- CHANGELOG END -->

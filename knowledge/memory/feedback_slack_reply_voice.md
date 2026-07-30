@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: b9798d39-963b-4b08-ba77-d3be373da680
 doc_type: memory
-keywords: [slack reply voice, slack thread reply, human prose not AI, no em-dashes, BLUF, conversational, not the Jira bullet shape, live channel credibility]
+keywords: [slack reply voice, slack thread reply, human prose not AI, no em-dashes, BLUF, conversational, not the Jira bullet shape, live channel credibility, state what it is not what it isnt, no negation lists, plainify analyst jargon, no regression time-travel restamped, cut redundant assertions, no appended ownership routing]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-29
@@ -25,5 +25,12 @@ Slack replies must read like a person typed them, not like an AI report. Malachi
 - Translate the detail instead of stacking it. Say "the executors keep timing out fetching data from each other," not "30s auth-bootstrap binds, not network.timeout=600s." The precise tunable version lives in the runbook (INC-NNN).
 - Offer the next step like a person would. "I can re-run it. If it walls again we'll bump the TTL."
 - Succinct, roughly 500 chars or less, but prose, not a bulleted block. Don't force it through the Jira-comment linter's bullet shape.
+
+**Extra lessons from the DS51/CIL reply (2026-07-29, took ~5 strip-down edits).** My drafts kept over-including; the reader wanted the answer and the load-bearing facts, nothing else:
+- **State what the issue IS, not what it's NOT.** Cut ruling-out / negation lists ("not the ipdsc skip, not serving, not a lag"). That's my investigation scaffolding, not what the reader needs. Lead with the cause and the numbers that show it.
+- **Plainify even precise internal/analyst terms, not just vague ones.** "regression" → "a rebuild changed them"; "time-travel" → "yesterday's copy of the table"; "re-stamped" → "labeled"; "cascade / mechanism" → say the effect plainly. If the reader wouldn't type the word in a thread, translate it.
+- **Cut assertions the numbers already prove or the reader didn't question** (e.g. "the impressions are real and billed" once you've shown the 110,792 / $904). Redundant confidence-statements get deleted.
+- **Don't append ownership / routing the reader didn't ask for.** Naming who should fix it ("Owner: BER/Sonali") reads as over-reach in a peer reply. Stating the fix location is fine; assigning it to a team is not. (Offering an action *you'll* take is still fine.)
+- **Default to much less than feels complete.** No tables, no bold headers, no "here's a summary" framing for a chat reply. First draft should already be near the stripped-down version.
 
 **Key distinction.** This is different from the Terse Comms Standard for Jira comments, which stays scaffolded (Answer line, then Done, then Next bullets, in wiki markup). Both are BLUF. Slack is human prose, Jira is structured. See [[feedback_bluf_communication]], [[feedback_terse_chat_replies]], [[feedback_terse_tickets]].

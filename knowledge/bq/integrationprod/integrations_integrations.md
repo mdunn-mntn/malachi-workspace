@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [id]
 time_unit: nanoseconds
 ttl_days: null
-approx_rows: 34
-approx_logical_bytes: 7019
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 35
+approx_logical_bytes: 7219
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [integrations, measurement, attribution]
 keywords: [integration, connector, callrail, google_analytics, klaviyo, mparticle, mntn_audience, attribution, mmp, data_source_id, integration_type_id, advertiser_integrations]
 source: INFORMATION_SCHEMA+human
@@ -39,7 +39,7 @@ data source.
 Postgres dim mirrored into BigQuery via Datastream CDC (a true BASE TABLE, not a SQLMesh view).
 
 ## Grain & keys
-- **Grain:** one row per integration partner/connector definition. 34 rows live as of 2026-07-19.
+- **Grain:** one row per integration partner/connector definition. 35 rows live as of 2026-07-29.
 - **Primary key:** `id` (INT64, Postgres serial — **non-monotonic with gaps**: ids 16–18 absent,
   jumps 15→19 and 33→1015; do not assume dense/sequential). Clustering key.
 - **Stable business key:** `key` (STRING slug, e.g. `callrail`, `google_analytics`, `mntn-audience`) —
@@ -76,21 +76,22 @@ Postgres dim mirrored into BigQuery via Datastream CDC (a true BASE TABLE, not a
   with no partner table in `integrationprod`** — there is no `integrations_integration_types` table, and
   `core_pixel_integration_types` is a different (pixel) domain. The type→label lookup is app-side. **Not
   1:1 with `id`** — many integrations share a type (e.g. ids 2/4/5 all type 2; ids 6/7/8/9 all type 5).
-- **`visible`** — whether the integration is exposed in the UI catalog. Several are `false`
-  (Google Analytics id=2, CDK Global id=4, Adjust id=9, MNTN Audience id=1017) = hidden / internal /
-  beta / deprecated-in-UI. Filter `visible = TRUE` for the customer-facing list.
+- **`visible`** — whether the integration is exposed in the UI catalog. Three are `false`
+  (Google Analytics id=2, CDK Global id=4, Adjust id=9) = hidden / internal / beta / deprecated-in-UI.
+  Filter `visible = TRUE` for the customer-facing list. (MNTN Audience id=1017 was `visible=false` at
+  2026-07-20 enrich but flipped to `visible=true` by 2026-07-29 — re-verify per-row before relying on it.)
 - **`hotel_manageable`** — whether a hotel-scoped advertiser can self-manage this integration; ties to
   `hotel_id` / `hotel_integration_id` on the child table. **Only CallRail (id=1) is `true`**; all other
-  33 rows `false`. Niche flag — usually ignorable.
+  34 rows `false`. Niche flag — usually ignorable.
 - **`data_source_id`** — FK to the DSxx taxonomy (`data_sources.data_source_id`), populated **only when
-  the integration feeds an audience/measurement data source; NULL for most rows (27 of 34 NULL)**.
-  Populated examples: AppsFlyer=61, Upwave=62, Tealium=48, mParticle=60, OursPrivacy=57, Klaviyo=55.
-  **Gotcha:** MNTN Audience (id=1017) carries `data_source_id = 3986845`, a 7-digit outlier far outside
-  the normal ≤~100 DSxx range — treat as a different id space / placeholder, not a real DSxx; verify
-  before joining.
+  the integration feeds an audience/measurement data source; NULL for most rows (27 of 35 NULL, 8 populated
+  as of 2026-07-29)**. Populated examples: Singular=66, AppsFlyer=61, Upwave=62, Tealium=48, mParticle=60,
+  OursPrivacy=57, Klaviyo=55. **Gotcha:** MNTN Audience (id=1017) carries `data_source_id = 3986845`, a
+  7-digit outlier far outside the normal ≤~100 DSxx range — treat as a different id space / placeholder,
+  not a real DSxx; verify before joining.
 - **`create_time`** — business creation timestamp (TIMESTAMP, UTC).
-- **`update_time`** — business update timestamp; **NULL for all 34 rows** (column is unused — do not rely
-  on it for change detection; use `t_updated_ns` instead).
+- **`update_time`** — business update timestamp; **NULL for 34 of 35 rows** (only 1 populated as of
+  2026-07-29; effectively unused — do not rely on it for change detection; use `t_updated_ns` instead).
 - **`t_created_ns` / `t_updated_ns` / `t_deleted_ns`** — Datastream/CDC row-materialization epochs in
   **UNIX NANOSECONDS** (verified: `t_created_ns / 1e9` = `create_time` to the second for most rows,
   e.g. id=1 `1748432602354000000` → 2025-05-28 11:43:22 = `create_time`). `t_deleted_ns` is the
@@ -115,10 +116,10 @@ Postgres dim mirrored into BigQuery via Datastream CDC (a true BASE TABLE, not a
 ## Gotchas
 - **No `deleted` / `is_test` columns.** The standard `integrationprod` live-row filter
   (`deleted=FALSE AND is_test=FALSE`) does **not** apply here. Soft-delete is via **`t_deleted_ns IS NULL`**
-  (currently all 34 rows are live). Use that for "active integrations."
+  (currently all 35 rows are live). Use that for "active integrations."
 - **`id` is sparse/non-monotonic** — gaps (16–18 missing) and a jump to the 1000s. Never assume
   contiguous ids or use `MAX(id)` as a count.
-- **`update_time` is always NULL** — dead column. Use `t_updated_ns` (nanoseconds) for change tracking.
+- **`update_time` is NULL on 34/35 rows** — effectively a dead column. Use `t_updated_ns` (nanoseconds) for change tracking.
 - **`data_source_id` mostly NULL** — inner-joining to `data_sources` drops most integrations; and
   id=1017 holds a non-DSxx outlier value (3986845). Left-join and validate.
 - **`t_*_ns` are nanoseconds**, while `datastream_metadata.source_timestamp` is milliseconds — do not
@@ -126,12 +127,12 @@ Postgres dim mirrored into BigQuery via Datastream CDC (a true BASE TABLE, not a
 - **`key` is a reserved word** — must be backticked in Standard SQL.
 
 ## Cost & partitioning notes
-- **No partition** (BASE TABLE, 34 rows / 7,019 bytes). `require_partition_filter = false`; clustered by
+- **No partition** (BASE TABLE, 35 rows / 7,219 bytes). `require_partition_filter = false`; clustered by
   `id`. There is no partition column to filter — the whole table is a rounding error to scan.
-- **Cost (dry-run, labeled by column set):** `SELECT *` over the full table = **7,019 bytes** processed
+- **Cost (dry-run, labeled by column set):** `SELECT *` over the full table = **~7,219 bytes** processed
   (BQ 10 MB on-demand billing floor applies regardless). No pruning is possible or needed; select only the
   columns you need out of habit, but cost is negligible either way.
-- `approx_logical_bytes: 7019` = real backing `numBytes` from `bq show` (base table, single physical).
+- `approx_logical_bytes: 7219` = real backing `numBytes` from `bq show` (base table, single physical).
 
 ## Example queries
 ```sql
@@ -164,4 +165,5 @@ WHERE ai.t_deleted_ns IS NULL;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-20: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + full 34-row sample. Confirmed BASE TABLE (34 rows, 7,019 bytes, no partition, cluster [id]); `t_*_ns` = UNIX nanoseconds (t_created_ns/1e9 = create_time, verified); datastream_metadata.source_timestamp = ms. Set time_unit=nanoseconds, partition_by=none, require_partition_filter=false. Documented FK to integrations_advertiser_integrations (1:N fan-out) and data_sources (N:1, mostly NULL); integration_type_id has no BQ partner table. Noted no deleted/is_test cols (use t_deleted_ns IS NULL), update_time always NULL, sparse non-monotonic id, data_source_id id=1017 outlier (3986845).
+- 2026-07-29: enriched→verified. Re-derived vs live source (15 cols unchanged/no retype, no partition, cluster [id], no TTL — all match; 0 soft-deleted). Row-count/business drift fixed: 34→35 rows (new id=1019 `prescientai` Prescient AI, visible=true); MNTN Audience id=1017 flipped visible false→true; data_source_id now 8 populated of 35 (Singular id=7 gained DS 66); update_time now 1/35 populated (was 0); hotel_manageable still only id=1 CallRail. No schema drift.
 <!-- CHANGELOG END -->

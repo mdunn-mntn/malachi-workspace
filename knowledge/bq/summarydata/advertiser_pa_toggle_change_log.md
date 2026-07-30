@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 248
-approx_logical_bytes: 50904
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 251
+approx_logical_bytes: 51493
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, audit-log, advertiser-settings]
 keywords: [probabilistic_attribution, statistical_modeling, toggle, cdc, change_log, audit, advertiser, attribution]
 source: INFORMATION_SCHEMA+human
@@ -114,6 +114,7 @@ WHERE change_id = 71 AND current_value = 'Toggled On';
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + sampling alone. Physical resolves to a plain unpartitioned TABLE (248 rows / 50,904 B); confirmed no partition/cluster/TTL. `time` is a native TIMESTAMP (time_unit=timestamp, no epoch). Domain derived from live SELECT DISTINCT: change_type constant "Probabilistic Attribution"; change_id in {70,71}; grain verified = advertiser x change event (max 2 rows/adv, On=70+71 pair, Off=single 71).
+- 2026-07-29: enriched→verified. Re-introspected live vs source: 14-col schema identical; physical still a plain unpartitioned TABLE (251 rows / 51,493 B, +3 rows append growth); change_id domain {70,71} + change_type ≡ "Probabilistic Attribution" re-confirmed. No metadata drift.
 <!-- CHANGELOG END -->
 
 ## View definition

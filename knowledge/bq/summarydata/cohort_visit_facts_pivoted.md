@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 511432854
 approx_logical_bytes: 94192763140
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, reporting, cohort]
 keywords: [cohort, day_number, visit attribution, sales cycle, days since impression, probattr, competing, last_touch, last_tv_touch, visits_assist, pivoted, visit_facts, retention curve]
 source: INFORMATION_SCHEMA+human
@@ -180,6 +180,7 @@ WHERE visit_date = '2026-07-10'
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No dedicated prose section existed in data_catalog.md/data_knowledge.md (net-new table); enriched from LIVE physical schema + column-family semantics inherited from sibling `visit_facts`/`all_facts` prose. Confirmed empirically: partition = `visit_date` (DAY, ~360× prune on one narrow col); cluster = advertiser_id/campaign_group_id/campaign_id/day_number; no require_partition_filter, no TTL (2025-01-01 → 2026-07-20, 566 partitions, 511M rows, 94.19 GB). Grain unique on (advertiser_id, campaign_group_id, campaign_id, creative_id, hour, day_number). Resolved that `hour` = impression/exposure hour (UTC, top-of-hour) and `visit_date` = attributed-visit date; `day_number` = US-local days-since-impression (1-based, ceiling ~130, off UTC datediff by 0/+1). Established `*_arr` columns are exact IPv4 visitor lists (not HLL), sparse and small.
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__4254728508` current, partition=`visit_date` (DAY), cluster=[advertiser_id,campaign_group_id,campaign_id,day_number], require_partition_filter=false, no TTL, all 28 cols + types (incl. 6 non-null ARRAY<STRING> probattr IP lists) match doc (zero drift). numRows 518.5M / ~95.5 GB (grown from 511M / 94.2 GB). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

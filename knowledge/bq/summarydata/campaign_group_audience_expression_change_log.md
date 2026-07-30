@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 63985
-approx_logical_bytes: 325050014
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 65386
+approx_logical_bytes: 330617355
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, change_log, campaign_group, targeting]
 keywords: [audience expression, targeting change, campaign group, prior value, current value, audit log, interest data_source_id, geo include, edit history, who changed targeting]
 source: INFORMATION_SCHEMA+human
@@ -117,11 +117,10 @@ WHERE rn = 1;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md — enriched from live schema + sampled data. Confirmed physical is a single TABLE (63,985 rows / 325,050,014 B), **no partition/cluster/TTL** (bq show + dry-run diff: time filter does not reduce bytes). Derived domains live: change_id/change_type/entity_type all single-valued; `*_2` cols 100% NULL; user_id ~10.4% NULL (system edits); prior_value always populated and never == current_value. History floor 2025-01-01. Flagged that entity_id does NOT cleanly resolve to core.audiences (id-space/product filtering) — verify before joining. time_unit=timestamp (native TIMESTAMP, not epoch).
+- 2026-07-29: enriched→verified. Re-introspected live vs source: 14-col schema identical; physical still a single unpartitioned/unclustered TABLE (65,386 rows / 330,617,355 B) re-confirmed; change_id ≡ 25 / change_type ≡ "Audience Expression" / entity_type ≡ "audience_id" re-confirmed (single value each). Removed stray trailing tool-artifact lines (`</content>`/`</invoke>`) left by the original write. Row/byte counts bumped (append growth). No metadata drift.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
 SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__campaign_group_audience_expression_change_log__2243460589`
 ```
-</content>
-</invoke>

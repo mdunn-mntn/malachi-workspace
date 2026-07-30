@@ -5,18 +5,18 @@ summary: "Latest budget change per campaign group that is still inside its ramp 
 dataset: summarydata
 table: budget_changes_in_ramp
 object_type: VIEW
-physical_table: sqlmesh__summarydata.summarydata__budget_changes_in_ramp__2669648371
+physical_table: sqlmesh__summarydata.summarydata__budget_changes_in_ramp__3231813980
 grain: "one row per campaign_group_id — its single most-recent budget change still within the ramp window"
 partition_by: change_time
 require_partition_filter: false
 cluster_by: []
 time_unit: seconds
 ttl_days: null
-approx_rows: 1778
-approx_logical_bytes: 9641920
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 1711
+approx_logical_bytes: 9701344
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [budget, pacing, campaign_group, ramp]
 keywords: [budget change, budget ramp, attribution window, campaign group, daily budget, flight budget, increase decrease, pacing, campaign_group_id]
 source: INFORMATION_SCHEMA+human
@@ -120,9 +120,10 @@ ORDER BY budget_ramp_end_time ASC
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table); enriched from live schema + view definition + empirical sampling. Confirmed: grain = 1 row per campaign_group_id (1778 live); base `summarydata.budget_changes` partitioned change_time DAY (no cluster/TTL); `change_epoch = UNIX_SECONDS(change_time)` (seconds); `budget_change_type` domain 1=increase/2=decrease; `flight_change_type_id` 1=new flight/2=modified (no lookup table); `budget_change_percentage` is a fraction; view scans full base (no partition pruning).
+- 2026-07-29: enriched→verified. Physical hash rotated `2669648371`→`3231813980` (SQLMesh view rebuilt) — updated `physical_table` front-matter + the View-definition SQL block. Re-read the new physical's definition: logic identical (QUALIFY ROW_NUMBER latest-per-CG, `change_time >= GREATEST(CURRENT_DATE-61d, CURRENT_DATE-attribution_window-1d)` floor, `public.timetz` local cols, `SAFE_DIVIDE` pct, INNER joins to `advertisers` + `core_budget_change_types`). 21-col schema identical. Grain re-confirmed 1 row/CG (1,711 live rows = 1,711 distinct campaign_group_id = 1,711 distinct change_id), budget_change_type_id domain {1,2}. Live-snapshot row count varies day to day.
 <!-- CHANGELOG END -->
 
 ## View definition
 ```sql
-SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__budget_changes_in_ramp__2669648371`
+SELECT * FROM `dw-main-silver`.`sqlmesh__summarydata`.`summarydata__budget_changes_in_ramp__3231813980`
 ```

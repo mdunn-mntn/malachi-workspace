@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: seconds
 ttl_days: null
-approx_rows: 66305
-approx_logical_bytes: 9641920
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 66712
+approx_logical_bytes: 9701344
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [budget, pacing, campaign_group, cdc_audit]
 keywords: [budget_change, daily_budget, flight_budget, campaign_group, budget_change_type, flight_change_type, pacing, cdc]
 source: INFORMATION_SCHEMA+human
@@ -166,6 +166,7 @@ WHERE change_time >= TIMESTAMP('2026-07-01')
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live vs source: 15-col schema identical; physical TABLE partitioned by `change_time` DAY (no cluster / no require_partition_filter / no TTL) re-confirmed off `sqlmesh__summarydata.summarydata__budget_changes__543345814`; change_id unique PK (66,712 rows = 66,712 distinct), budget_change_type_id & flight_change_type_id domains {1,2}, history floor 2024-01-01 re-confirmed. Row/byte counts bumped (append growth). No metadata drift.
 <!-- CHANGELOG END -->
 
 ## View definition

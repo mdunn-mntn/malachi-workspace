@@ -12,9 +12,9 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 19470012
-approx_logical_bytes: 4345325287
-schema_synced: 2026-07-19
+approx_rows: 23116515
+approx_logical_bytes: 5170021682
+schema_synced: 2026-07-29
 last_verified: 2026-07-19
 coverage_state: enriched
 domain: [publisher, inventory, pricing, viewability, ctv]
@@ -99,7 +99,7 @@ Publisher inventory pricing & quality reference: for each publisher **site** (CT
   - `SELECT site` (1 narrow STRING col) → **416,878,983 bytes (~397 MiB)**.
   - `SELECT site WHERE last_refresh_date > TIMESTAMP('2026-01-01')` (site + last_refresh_date, 2 cols) → **572,639,079 bytes (~546 MiB)** — the filter added the second column's bytes and pruned **nothing**, empirically confirming no partitioning.
   - Overview aggregate over 6 date/dim cols → **~0.99 GB** billed (actual run).
-- **approx_logical_bytes = 4,345,325,287** (single physical `numBytes`; ~4.05 GiB, ~19.47M rows).
+- **approx_logical_bytes = 5,170,021,682** (single physical `numBytes` as of 2026-07-29; ~4.82 GiB, ~23.12M rows). The accumulating snapshot grew ~19% since 2026-07-19 (was 4,345,325,287 B / 19.47M rows), so the dated 2026-07-19 dry-run byte figures above are now lower bounds.
 - **Always:** select only the columns you need; add `WHERE site != "default"` and/or `WHERE ad_format IS NOT NULL` to scope to real per-size publisher rows; dedup to latest `last_refresh_date` before aggregating.
 
 ## Example queries
@@ -133,6 +133,7 @@ WHERE rn = 1
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical queries alone. Confirmed physical is UNPARTITIONED / unclustered / no TTL (dry-run filter pruned nothing), ~19.47M rows / ~4.05 GiB. Established grain (accumulating per-refresh snapshot, NOT unique-keyed; ~2.7M fully-duplicate row-groups). Documented: partner_id≡8, score & video_length 100% empty, recommended_cpm≡avg_cpm, avg_cpi=avg_cpm×1000 (micro-dollars/impression), viewability_rate 0-100, valid_from≈last_refresh_date (reliable) vs valid_to inverted 9.3% (unreliable), site="default" fallback bucket, NULL ad_format⟺NULL width/height (site-level rows).
+- 2026-07-29: re-verified vs LIVE source; KEPT enriched (not promoted). Structural facts confirmed accurate: 22-column schema unchanged, physical is still a real TABLE (numRows non-sentinel), UNPARTITIONED / unclustered / no TTL. Refreshed physical size: 23,116,515 rows / 5,170,021,682 B (was 19.47M / 4.345G) — accumulating snapshot grew ~19%. Held at enriched because the point-in-time empirical claims (13.07M distinct combos, ~2.7M duplicate row-groups, partner_id≡8, recommended_cpm≡avg_cpm, score/video_length 100% empty, valid_to inverted 9.3%, 99,605 distinct sites) require full-table aggregations to re-derive and were NOT reconfirmed from cheap metadata alone; they likely hold qualitatively but the exact counts are stale.
 <!-- CHANGELOG END -->
 
 ## View definition

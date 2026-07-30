@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [campaign_group_archive_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 853623
-approx_logical_bytes: 274036479
+approx_rows: 853632
+approx_logical_bytes: 274039529
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaign-group, media-plan, cdc-archive, versioned-history, as-of]
 keywords: [campaign_group_archives, campaign_group, campaign_group_archive_id, campaign_group_id, version-history, versioned-history, audit-trail, as-of-date, datastream, cdc, budget, goal_type, objective_id, campaign_group_status_id, media-plan, integrationprod, archive]
 source: INFORMATION_SCHEMA+human
@@ -163,6 +163,5 @@ GROUP BY advertiser_id
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-29: skeleton→enriched. Re-derived from LIVE schema + one cheap grain aggregate. Confirmed unpartitioned BASE table (not a view), clustered on campaign_group_archive_id, no TTL/partition filter; grain = (campaign_group_id, version) unique = 853,619 rows / 126,648 cgs; no archive_time column (use update_time/version for as-of); datastream_metadata.source_timestamp = milliseconds. Prose oracle: data_catalog.md §"bronze.integrationprod.archives_campaign_group_archives".
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: all 54 columns match (no drift); unpartitioned BASE table, cluster = campaign_group_archive_id, no TTL/partition filter — confirmed. Removed stray `</content>`/`</invoke>` tags left in the file. Row/byte counts stable (853,632 rows).
 <!-- CHANGELOG END -->
-</content>
-</invoke>

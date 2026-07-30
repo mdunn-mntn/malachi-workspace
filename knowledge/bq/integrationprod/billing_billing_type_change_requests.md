@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [request_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 651
-approx_logical_bytes: 242678
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 661
+approx_logical_bytes: 246429
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [billing, advertiser]
 keywords: [billing type, stripe, invoice, billing change request, command center, approval workflow, advertiser billing]
 source: INFORMATION_SCHEMA+human

@@ -14,9 +14,9 @@ time_unit: "N/A — no time/epoch column; window is a baked-in TIMESTAMP filter 
 ttl_days: null
 approx_rows: 7422
 approx_logical_bytes: null
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, attribution, advertiser-rollup]
 keywords: [conversions, rolling 30 day, advertiser, order_id, dedup, conversion_log, conversion_signal_log, offline_conversions]
 source: INFORMATION_SCHEMA+human
@@ -121,6 +121,7 @@ LIMIT 100;   -- LIMIT does not reduce bytes scanned; aggregation runs over the f
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + resolved view SQL alone. Resolved the physical (itself a VIEW) to its query: UNION ALL of conversion_log + conversion_signal_log + offline_conversions filtered to a trailing 30d window (time ≥ CURRENT_DATE-30d, < CURRENT_DATE), GROUP BY advertiser_id. Confirmed grain empirically (7,422 rows = 7,422 distinct advertiser_id, raw ≥ unique for all rows). Measured full-view cost 112.8 GB billed.
+- 2026-07-29: enriched→verified. Re-pulled the physical view definition from LIVE source — confirms exactly: `raw = CAST(count(*))`, `unique = CAST(count(DISTINCT order_id))`, `FROM (conversion_log UNION ALL conversion_signal_log UNION ALL offline_conversions)` each filtered `time < timestamp(CURRENT_DATE) AND time >= timestamp(DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY))`, `GROUP BY advertiser_id`. 3-column schema unchanged; physical still a VIEW (numRows/numBytes = 0 sentinel). Core business logic re-derived from source; promoted.
 <!-- CHANGELOG END -->
 
 ## View definition

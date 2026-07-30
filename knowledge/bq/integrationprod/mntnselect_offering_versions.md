@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [offering_version_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 895
-approx_logical_bytes: 1008143
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 907
+approx_logical_bytes: 1035446
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [mntn_select, pmp, catalog]
 keywords: [mntn select, offering, offering version, private marketplace, pmp deal, cpm rate card, impression cap, ptv vendor, flash sale, request inventory, is_published]
 source: INFORMATION_SCHEMA+human
@@ -182,4 +182,5 @@ ORDER BY cpm_usd DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Live-confirmed physical BASE TABLE (no partition, cluster [offering_version_id], numBytes=1,008,143). PK offering_version_id unique 895/895; (offering_id, version_number) also unique. datastream_metadata.source_timestamp = milliseconds. cpm is STRING dollar rate ($1–$71.30); impressions is a catalog cap (1B placeholder), not delivered. is_published 705/895; PMP group on all 895, PMP deal_id + ptv_vendor_name co-populated on 331. Prose oracle: no dedicated data_catalog.md section — only a one-line mention in data_knowledge.md ("Select offering catalog: offerings, PMP deals, run windows, CPMs"), which live schema fully corroborates and extends (added versioning grain, STRING-cpm, impressions-as-cap, no deleted/is_test cols).
+- 2026-07-29: enriched→verified. Re-confirmed vs live source (bq show + INFORMATION_SCHEMA.COLUMNS): 37 cols unchanged/no retype, no partition, cluster [offering_version_id], no TTL — all match doc. Row count grew 895→907 / numBytes 1,008,143→1,035,446 (live CDC dim; dated distribution counts kept as historical). No schema drift.
 <!-- CHANGELOG END -->

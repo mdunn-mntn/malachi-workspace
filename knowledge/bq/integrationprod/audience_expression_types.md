@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 3
 approx_logical_bytes: 201
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting]
 keywords: [expression_type_id, opm, tpa, sga, audience_expression, audience_segments, lookup_dimension, is_targeted]
 source: INFORMATION_SCHEMA+human
@@ -145,4 +145,5 @@ ORDER BY expression_type_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No dedicated prose header existed (grep for `integrationprod.audience_expression_types` header returned nothing); enum was documented inline in data_catalog.md:2090 under the silver `audience.expression_types` name (1=opm/2=tpa/3=sga) plus TI-837 filter rule — reconciled that against live data. Confirmed empirically: BASE TABLE (physical self, not a view), 3 rows / 201 bytes, no partition, cluster=[expression_type_id]; `source_timestamp` = milliseconds (MILLIS→2025-12-19, MICROS→1970); `update_time` all NULL; no deleted/is_test cols. Verified type distribution across all live referencing tables (audience_segments all type 1; audience_audience_segments/audience_audiences type-2 dominant; sga=type 3 only 2 rows in audience_audiences).
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: all 5 columns match (no drift), 3 rows / 201 bytes, no partition, cluster=[expression_type_id] — confirmed. Re-dumped the dim: (1,opm)/(2,tpa)/(3,sga) unchanged.
 <!-- CHANGELOG END -->

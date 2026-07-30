@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 5
 approx_logical_bytes: 590
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [margin, integrations, cdc, dims]
 keywords: [integration_margin, margin_archive, versioned_history, data_source, oracle, mntn_pixel, datastream_cdc, sensitive_margin]
 source: INFORMATION_SCHEMA+human
@@ -56,6 +56,8 @@ schema/grain only — never surface rate values in shared docs.
 | version | INT64 | YES |  |  |
 | archive_time | TIMESTAMP | YES |  |  |
 | datastream_metadata | STRUCT<uuid STRING, source_timestamp INT64> | YES |  |  |
+| user_id | INT64 | YES |  |  |
+| margin_reason_id | INT64 | YES |  |  |
 <!-- AUTO:SCHEMA END -->
 
 ## Column meanings (only the non-obvious ones)
@@ -82,6 +84,8 @@ schema/grain only — never surface rate values in shared docs.
   capture (`TIMESTAMP_MILLIS(...)`; confirmed: 13-digit value → 2026-05-18, matching the row's
   business timestamps; MICROS/SECONDS would be wildly off). CDC-capture time, not business time —
   lands minutes-to-hours after `archive_time`. `.uuid` = CDC row uuid.
+- **user_id** — FK to `users`; the user who made the margin edit. **Added since 2026-07-20; currently 100% NULL** (not yet backfilled).
+- **margin_reason_id** — FK to `core_margin_reasons` (why the margin was set/adjusted: -1=Unknown, 1=MNTN AID adjustment … 9=Customer Satisfaction). **Added since 2026-07-20; currently 100% NULL.**
 
 ## Joins & relationships
 - **core_integration_margins** (parent, **1:N** — one live margin → many archive snapshots) on
@@ -112,7 +116,7 @@ schema/grain only — never surface rate values in shared docs.
 
 ## Cost & partitioning notes
 - **No partition**; single cluster key `integration_margin_archive_id`. Whole table is 590 bytes.
-- `SELECT *` full-table dry-run = **590 bytes** (all 9 columns, all 5 rows) — a full scan is
+- `SELECT *` full-table dry-run = **590 bytes** (all 11 columns, all 5 rows) — a full scan is
   trivially cheap; no date/partition filter is needed. To isolate one vendor's history, filter
   by `integration_margin_id` or `data_source_id`.
 
@@ -144,4 +148,5 @@ ORDER BY integration_margin_id
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical queries. Confirmed base table (no partition, cluster=integration_margin_archive_id), grain (integration_margin_id, version), parent=core_integration_margins, data_source_id map, and source_timestamp=ms epoch.
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: 2 new columns since 2026-07-20 — `user_id` + `margin_reason_id` (both INT64, currently 100% NULL; margin_reason_id → core_margin_reasons). Re-confirmed 5 rows / 590 bytes, unpartitioned BASE table, cluster/TTL unchanged. Grain/join/gotcha claims hold.
 <!-- CHANGELOG END -->

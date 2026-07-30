@@ -1,7 +1,7 @@
 ---
 doc_type: bq_table
 title: tpa.liveramp_categories_advertiser_mapping
-summary: "Maps LiveRamp (DS35/DS11) 3P audience category IDs to the MNTN advertisers that use them; ~1,917 rows, mostly one custom/private category per advertiser."
+summary: "Maps LiveRamp (DS35/DS11) 3P audience category IDs to the MNTN advertisers that use them; ~1,918 rows, mostly one custom/private category per advertiser."
 dataset: tpa
 table: liveramp_categories_advertiser_mapping
 object_type: BASE TABLE
@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: date
 ttl_days: null
-approx_rows: 1917
-approx_logical_bytes: 45041
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1918
+approx_logical_bytes: 45064
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting, third-party]
 keywords: [liveramp, ds35, ds11, third-party, 3p, audience categories, advertiser mapping, custom segments, tpa, data_source_category_id, acxiom]
 source: INFORMATION_SCHEMA+human
@@ -29,7 +29,7 @@ tags: [liveramp, 3p, dimension, mapping]
 Cross-reference linking a **LiveRamp 3P audience category** (`data_source_category_id`) to the **MNTN advertiser(s)** it belongs to / is provisioned for. 91% of categories map to exactly one advertiser, and category names are advertiser-specific ("Refuel_EMSEMT_725 > 1", "National University - Refuel - CRM Campaigns"), so this table is effectively a **custom/private LiveRamp segment → advertiser entitlement roster**, not the shared LiveRamp taxonomy (that lives in `tpa.categories`). Reach for it to answer "which advertiser owns / is allowed to use LiveRamp category X" or "which LiveRamp categories were built for advertiser Y."
 
 ## Grain & keys
-- **Grain:** one row per `(data_source_category_id, advertiser_id)` pair. 1,917 rows / **1,913 distinct pairs** — 4 exact-duplicate rows exist (all advertiser `49526`, `created_date` 2025-11-21), so treat the pair as the natural key and `SELECT DISTINCT` if an exact count matters.
+- **Grain:** one row per `(data_source_category_id, advertiser_id)` pair. 1,918 rows / **1,914 distinct pairs** — 4 exact-duplicate rows exist (all advertiser `49526`, `created_date` 2025-11-21), so treat the pair as the natural key and `SELECT DISTINCT` if an exact count matters.
 - **Key / join columns:** composite `(data_source_category_id, advertiser_id)`.
   - `data_source_category_id` (INT64) → `tpa.categories.data_source_category_id` (filter `data_source_id=35` for the current LiveRamp name/path).
   - `advertiser_id` (**STRING** in this table) → `integrationprod.advertisers.advertiser_id` (INT64) via `SAFE_CAST(advertiser_id AS INT64)`.
@@ -43,19 +43,19 @@ Cross-reference linking a **LiveRamp 3P audience category** (`data_source_catego
 | updated_date | DATE | YES |  |  |
 <!-- AUTO:SCHEMA END -->
 
-> ⚠ **The AUTO:SCHEMA block above is STALE — it describes the `integrationprod` CDC landing table, not this `tpa` table.** Verified live via `bq show --schema dw-main-bronze:tpa.liveramp_categories_advertiser_mapping` (2026-07-20): this table has **4 columns only**, `advertiser_id` is **STRING** (not INT64), and **`datastream_metadata` does not exist here**. Re-introspect the `tpa` dataset to correct it. Actual live columns: `data_source_category_id` (INT64), `advertiser_id` (STRING), `created_date` (DATE), `updated_date` (DATE).
+> The AUTO:SCHEMA block above matches the live `tpa` table (verified `bq show` 2026-07-29): **4 columns**, `advertiser_id` is **STRING**, no `datastream_metadata`. Do not confuse it with the same-named `integrationprod` CDC landing table, which has `advertiser_id` INT64 + a `datastream_metadata` STRUCT — see Gotchas.
 
 ## Column meanings (only the non-obvious ones)
 - **`data_source_category_id`** — LiveRamp audience category ID. 1,640 distinct. **Every value resolves in `tpa.categories`** under both `data_source_id=35` (LiveRamp IP, current) *and* `data_source_id=11` (LiveRamp legacy) — 2 also under `38`. Names follow the LiveRamp taxonomy ("Behavioral Audience > …", "B2B Audience > Seniority > Manager", "Event Audience > Broadway/Off-Broadway…", custom "Refuel_*"). Use the DS35 row for the live name.
 - **`advertiser_id`** — MNTN advertiser ID, stored as a **STRING**. 76 distinct. **74 resolve** in `integrationprod.advertisers`; 2 do not: sentinel `'0'` (1 row) and out-of-range `'678151'` (**954 rows ≈ 50% of the table**, `company_name` NULL — a non-standard id namespace, likely a synthetic/aggregate bucket, not a real MNTN advertiser). Of the resolved advertisers, 2 are `is_test=TRUE`, 0 are `deleted`.
-- **`created_date`** — DATE the mapping was created. Populated on 100% of rows; range **2024-05-09 → 2026-07-13**. Use for recency/recent-additions.
-- **`updated_date`** — DATE, **100% NULL** across all 1,917 rows. Carries no information — do not filter or sort on it.
+- **`created_date`** — DATE the mapping was created. Populated on 100% of rows; range **2024-05-09 → 2026-07-20**. Use for recency/recent-additions.
+- **`updated_date`** — DATE, **100% NULL** across all 1,918 rows. Carries no information — do not filter or sort on it.
 
 ## Joins & relationships
 - **→ `tpa.categories`** on `data_source_category_id` (add `AND data_source_id=35`). Partner grain: one row per `(data_source_category_id, data_source_id)`. Fan-in is safe (taxonomy side). Gives `name`, `path_from_root`, `partner_id`, `public`, `is_leaf_node`, `deprecated`. (LiveRamp category IDs live under **both** DS11 legacy and DS35 current — always pin DS35 for the live name; per zach.schoenberger 2026-04-21.)
-- **→ `integrationprod.advertisers`** on `advertiser_id = SAFE_CAST(m.advertiser_id AS INT64)`. Partner grain: one row per `advertiser_id` (PK). Apply the standard dim hygiene filter `deleted=FALSE AND is_test=FALSE`. Expect ~2/76 advertiser IDs and 955/1,917 rows to miss (the `'0'` + `'678151'` non-advertisers).
+- **→ `integrationprod.advertisers`** on `advertiser_id = SAFE_CAST(m.advertiser_id AS INT64)`. Partner grain: one row per `advertiser_id` (PK). Apply the standard dim hygiene filter `deleted=FALSE AND is_test=FALSE`. 74/76 advertiser IDs resolve; 2/76 miss (`'0'` + `'678151'`), and 955/1,918 rows miss (954 `'678151'` + 1 `'0'`). Of the 74 resolved, 2 are `is_test=TRUE` and 0 are `deleted`.
 - **Fan-out from this table:**
-  - *category → advertiser:* 1,500/1,640 categories (91%) map to exactly **1** advertiser (private/custom segments); the rest map to 2–6 (max 6). Joining `tpa.categories → this table` fans out up to 6x.
+  - *category → advertiser:* 1,501/1,641 categories (91%) map to exactly **1** advertiser (private/custom segments); the rest map to 2–6 (max 6). Joining `tpa.categories → this table` fans out up to 6x.
   - *advertiser → category:* highly skewed — `678151` carries 954 categories, then Majority Strategies (35937) 160, down to a handful. Joining `advertisers → this table` fans out up to ~954x for the outlier, typically <200.
 
 ## Gotchas

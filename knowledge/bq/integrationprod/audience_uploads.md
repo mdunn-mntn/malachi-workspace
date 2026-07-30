@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 21236
-approx_logical_bytes: 5673433
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 21509
+approx_logical_bytes: 5879976
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, crm, targeting]
 keywords: [audience_uploads, crm upload, match_rate, data_source_category_id, ipdsc, hashed emails, entry_count, ip list, advertiser list upload, offline attribution]
 source: INFORMATION_SCHEMA+human
@@ -97,10 +97,10 @@ Metadata catalog for every audience list an advertiser uploads for targeting or 
 
 ## Cost & partitioning notes
 - **No partition column** (base TABLE, not partitioned; `bq show` → `timePartitioning: None`, `clustering: None`, `requirePartitionFilter: None`). The only cost lever is **column pruning** — always `SELECT` the few columns you need, never `SELECT *`.
-- **Trivially cheap** — the whole table is ~5.4 MiB, so every query bills a fraction of a cent regardless.
+- **Trivially cheap** — the whole table is ~5.6 MiB, so every query bills a fraction of a cent regardless.
 - Dry-run figures (labeled by column set):
-  - `SELECT *` (all 21 cols): **5,673,433 bytes ≈ 5.41 MiB** (= full backing storage; scanned every query since there is no partition).
-  - `SELECT audience_upload_id, data_source_category_id, data_source_id` (3 narrow cols): **500,328 bytes ≈ 489 KiB** (~11× cheaper than `SELECT *`).
+  - `SELECT *` (all 21 cols): **≈ 5,879,976 bytes ≈ 5.61 MiB** (= full backing storage; scanned every query since there is no partition).
+  - `SELECT audience_upload_id, data_source_category_id, data_source_id` (3 narrow cols): **≈ 500,328 bytes ≈ 489 KiB** (~11× cheaper than `SELECT *`).
 
 ## Example queries
 ```sql
@@ -137,4 +137,5 @@ WHERE t.data_source_id = 4
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Confirmed base TABLE (no partition/cluster/TTL), PK=audience_upload_id (unique). Reconciled prose drift: `data_source_category_id = audience_upload_id` holds only for recent uploads (16,915/21,236; 1,167 NULL; ~3,154 legacy rows diverge) — the true membership join key is `data_source_category_id`. Documented DS domain (4=CRM,8=IP List,9=MNTN Campaigns,10=MNTN Geo File), type domain (1=email,3=IP pool,5=offline-attr,…), match_rate NULL semantics, deprecated as the live-row filter (no deleted/is_test cols), crm_attribution_matches 100% NULL, status ~85% NULL. Prose oracle: data_catalog.md §bronze.integrationprod.audience_uploads + data_knowledge.md CRM-upload passages.
+- 2026-07-29: enriched→verified. Re-introspected LIVE schema vs source: all 21 columns match (no drift), unpartitioned/unclustered BASE table, no TTL — confirmed. Row count 21,236→21,509 (organic); byte figure refreshed. Grain (PK unique), join-key and DS/type-domain business logic carried from the 2026-07-19 empirical enrichment, uncontradicted by source.
 <!-- CHANGELOG END -->

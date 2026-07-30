@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 237
 approx_logical_bytes: 7729
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [geo, reference]
 keywords: [metro, dma, nielsen, geo, dimension, metro_id, market, region, country]
 source: INFORMATION_SCHEMA+human
@@ -87,4 +87,5 @@ ORDER BY spend DESC
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Grain/PK confirmed live (237 rows, metro_id unique). metro_id = Nielsen DMA code (NY=501, LA=803) verified vs data_knowledge.md TI-1037 bridge note. Country domain US(212)/GB(23)/unknown(2) from SELECT DISTINCT. Sentinels -1 & 0 (both "unknown") found. No prose section existed in data_catalog.md; oracle was the data_knowledge.md geo-bridge gotcha (line ~797). partition/cluster/TTL = none confirmed off physical (BASE TABLE, 7729 bytes).
+- 2026-07-29: enriched→verified. Live re-introspect — BASE TABLE (self), 3-col schema {metro_id INT64, name, country} identical, no partition/cluster, numRows=237/7,729B (unchanged). Nielsen-DMA / sentinel (-1, 0) semantics stable. No drift.
 <!-- CHANGELOG END -->

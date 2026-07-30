@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: none
 ttl_days: null
-approx_rows: 61492744
-approx_logical_bytes: 14154977474
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 62958426
+approx_logical_bytes: 14497924952
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, keywords, taxonomy]
 keywords: [keyword_categories, DS38, MNTN UI Audience Keywords, data_source_category_id, keyword strings, audience keyword taxonomy, parent_id hierarchy]
 source: INFORMATION_SCHEMA+human
@@ -82,7 +82,7 @@ The keyword-string + hierarchy dimension for **data source 38 = "MNTN UI Audienc
 - **No `deleted` / `is_test` columns** (unlike most `integrationprod` dims) — the standard `deleted=FALSE AND is_test=FALSE` live-row filter does NOT apply and would error; the whole table is the live DS38 snapshot.
 - **Dead columns:** `partner_id`, `advertiser_id`, `sort_order` are all NULL; `navigation_only`, `deprecated`, `public` are all `false`. Don't design filters around them.
 - **Noisy hierarchy.** Leaf keywords frequently sit under unrelated parents (e.g. leaf `"2024 Vehicles For Sale"` under parent `"Wellness"`; `"Web services"` / GTM pollution noted in `data_knowledge.md`). Treat `path`/`names` as descriptive, not an authoritative clean taxonomy.
-- **Grown past prose.** `data_catalog.md`/`data_knowledge.md` still say "~40M rows"; the live table is **61.5M rows** as of 2026-07-20 — treat 40M as stale.
+- **Grown past prose.** `data_catalog.md`/`data_knowledge.md` still say "~40M rows"; the live table is **~63.0M rows** as of 2026-07-29 (was 61.5M on 2026-07-20) — treat 40M as stale, and the exact count as volatile (full daily truncate-reload).
 
 ## Cost & partitioning notes
 - **No partition, no clustering** (plain BASE TABLE, physical `self`). A WHERE filter does **not** prune — cost is **100% column-driven**. There is no "partition filter to apply"; the one rule is **select only the columns you need, never `SELECT *`**, and don't bother filtering `data_source_id` (constant 38).
@@ -119,4 +119,5 @@ WHERE name = 'AG 1';
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Live-verified: BASE TABLE (physical self), no partition/cluster/TTL; 61,492,744 rows all `data_source_id=38` ("MNTN UI Audience Keywords", visible=false). PK = (data_source_category_id, parent_id); bare `data_source_category_id` not unique (6.81M distinct, ~9x fan-out, DAG). partner_id/advertiser_id 100% NULL; navigation_only/deprecated/public 100% false; sort_order NULL; description mirrors name (157K distinct names). created_date/updated_date = snapshot date (full daily reload), not provenance. No deleted/is_test cols → standard live-row filter N/A. Reconciled prose drift: data_catalog.md/data_knowledge.md say "~40M rows" — live is 61.5M (stale). Cost figures per-column-set from dry-run; unpartitioned so filters don't prune.
+- 2026-07-29: enriched→verified. Re-confirmed vs live source (bq show + INFORMATION_SCHEMA.COLUMNS): 17 cols unchanged/no retype, no partition, no cluster, no TTL — all match doc. Row count 61.5M→62,958,426 / numBytes 14.15GB→14.50GB (full daily truncate-reload → count is inherently volatile; front-matter updated). Grain/NULL-distribution claims NOT re-run (a COUNT(DISTINCT) is a ~14GB scan) — they were empirically verified at enrich and are structural; schema/physical axis re-derived clean. No schema drift.
 <!-- CHANGELOG END -->

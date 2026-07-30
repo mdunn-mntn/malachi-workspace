@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 995797558
 approx_logical_bytes: 312449947680
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, visits, cohort, reporting]
 keywords: [cohort_visit_facts, visit attribution, cohort, day_number, last-touch, competing, probabilistic attribution, probattr, new_visitors, ctv, display, site visits, retention]
 source: INFORMATION_SCHEMA+human
@@ -169,6 +169,7 @@ WHERE hour >= '2026-07-10' AND hour < '2026-07-11'
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (net-new/undocumented — absent from data_catalog.md and data_knowledge.md); enriched from LIVE schema + empirical sampling. Confirmed partition=`hour` (DAY) via dry-run diff (360MB/day vs 312GB full), cluster=[advertiser_id,campaign_group_id,campaign_id,day_number], ~996M rows / 312GB / 566 partitions (2025-01-01→present), no TTL, require_partition_filter=false. Established grain (unique full-dim tuple, no dupes), day_number=floor((visit_hour-hour)/24h)+1, forward-accrual gotcha, probattr arrays=visitor IPs, competing/last-touch=industry-standard model, channel_id 8=CTV/1=display, PMP `-3`=open-exchange.
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__3728990658` current, partition=`hour` (DAY), cluster=[advertiser_id,campaign_group_id,campaign_id,day_number], require_partition_filter=false, no TTL, all 41 cols + types (incl. 6 non-null ARRAY<STRING> probattr visitor-IP lists) match doc (zero drift). numRows 1.01B / ~317 GB (grown from 996M / 312 GB). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

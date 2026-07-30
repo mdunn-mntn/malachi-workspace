@@ -15,9 +15,9 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: 9910178
 approx_logical_bytes: 1666074067
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - audience
   - targeting
@@ -128,6 +128,7 @@ ORDER BY COALESCE(archive_time, TIMESTAMP '9999-12-31') DESC, create_time DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved view: UNION ALL of live `ui.audience_keyword_state` (bronze `integrationprod.ui_audience_keyword_state`, 5.01M rows, 791.8MB, cluster=id, no partition) + `archives.audience_keyword_state_archives` (4.90M rows, 874.3MB, cluster=archive PK, no partition). Set partition_by=none, require_partition_filter=false, cluster_by=[id], time_unit=timestamp, approx_rows=9.91M, approx_logical_bytes=1.666GB. Drift reconciled: no dedicated prose section for the history view — prose oracle is `## ui.audience_keyword_state` in data_catalog.md (line 2621). Key drift: the view DROPS is_magic/model_version/description/feedback/datastream_metadata (+archive PK) that the prose emphasizes, so is_magic filtering is impossible from this view (documented — use base table). Verified live: keyword_type∈{PARENT,CHILD}; is_custom⇒PARENT-only, is_hidden⇒CHILD-only; data_source_id≈19 (DS19); archive_time NULL=live/current vs NOT NULL=superseded.
+- 2026-07-29: enriched→verified. Re-introspected live: 12-col schema identical; physical view definition re-read from source and unchanged — UNION ALL of `ui.audience_keyword_state` (with `NULL AS archive_time` literal on the live half) + `archives.audience_keyword_state_archives`. Re-confirms archive_time NULL=live/current vs NOT NULL=superseded and the 12-col projection that drops is_magic/model_version/etc. No partition/cluster on the view. No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

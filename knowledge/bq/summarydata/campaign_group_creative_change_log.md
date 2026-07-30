@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 516270
-approx_logical_bytes: 72248278
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 520324
+approx_logical_bytes: 72810315
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creative, audit_log, campaign_management]
 keywords: [creative_change_log, cdc_audit, change_type, change_id, creative_weight, click_through_url, ui_creative_group_id, before_after, campaign_group, user_id]
 source: INFORMATION_SCHEMA+human
@@ -121,6 +121,7 @@ LIMIT 100;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (no section in data_catalog.md, no mention in data_knowledge.md) — enriched from LIVE schema + empirical sampling alone. Confirmed physical is an UNPARTITIONED, UNCLUSTERED TABLE (516,270 rows / 72,248,278 bytes; time-filter dry-run = full-scan bytes → no pruning). Derived change_id domain {43=URL, 45=weight%, 47=active, 65=name}; change_type always 'Creative'; entity_type always 'ui_creative_group_id'; *_2 entity cols 100% NULL; prior_value NULL ~51% (creations); user_id NULL ~3.6% (system). `time` = native TIMESTAMP (not epoch). History from 2024-01-01, no TTL.
+- 2026-07-29: enriched→verified. Re-introspected live vs source: 14-col schema identical; physical TABLE still unpartitioned/unclustered (timePartitioning/clustering = None) re-confirmed; change_id domain {43,45,47,65} + change_type ≡ "Creative" re-confirmed (520,324 rows). Row/byte counts bumped (append growth). No metadata drift.
 <!-- CHANGELOG END -->
 
 ## View definition

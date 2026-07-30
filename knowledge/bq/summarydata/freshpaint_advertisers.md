@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 21
 approx_logical_bytes: 189
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pixel, attribution, freshpaint]
 keywords: [freshpaint, DS41, advertiser eligibility, has_visits, page_view_signal, conversion, third-party pixel, lookup dimension]
 source: INFORMATION_SCHEMA+human
@@ -121,6 +121,7 @@ GROUP BY 1 ORDER BY 2 DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new/undocumented table); enriched from live schema + physical `bq show` (desc "Track advertisers with Freshpaint visits or conversions", 21 rows/189 bytes, unpartitioned FULL model) + Freshpaint=DS41 context from page_view_signal_log & attribution_models docs. Verified `advertiser_id` unique PK (21=21 distinct, 0 NULL) and `has_visits` semantics against the DS41 visit log (all recent-window visit advertisers were has_visits=TRUE; zero has_visits=FALSE had visits). Flagged 6 test/sentinel ids.
+- 2026-07-29: enriched→verified. Live re-introspect — physical `...__3735762503` unchanged, schema {advertiser_id INT64, has_visits BOOL} identical, no partition, numRows=21/189B; model description still "Track advertisers with Freshpaint visits or conversions." No drift.
 <!-- CHANGELOG END -->
 
 ## View definition

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 2590832157
 approx_logical_bytes: 476713116888
 schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [spend, billing, pacing]
 keywords: [spend, media_spend, data_spend, platform_spend, media_cost, campaign_group, minute, hour, pacing, billing, rollup]
 source: INFORMATION_SCHEMA+human
@@ -149,6 +149,7 @@ ORDER BY total_spend DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md/data_knowledge.md (net-new table) — enriched from LIVE schema + empirical sampling. Confirmed partition=`hour` (DAY, dry-run 82.9GB→125MB), cluster=(advertiser_id,campaign_group_id), no require_partition_filter, no TTL, floor 2023-10-01, 2.59B rows / 444 GiB. Verified grain (1 row per campaign_group_id×minute), FDs (advertiser_id←campaign_group_id), identity total_spend=media_spend+data_spend+platform_spend, media_cost≤media_spend (cost-side), hour=trunc(minute), parent diverges historically (~37% on 2023-10-01, 0% on 2026-07-10).
+- 2026-07-29: enriched→verified. Re-introspected live source: physical `...__323763091` current, partition=`hour` (DAY), cluster=(advertiser_id,campaign_group_id), require_partition_filter=false, no TTL, all 10 cols + types (4 BIGNUMERIC spend + NUMERIC media_cost) match doc (zero drift). numRows 2.62B / ~482 GB (grown from 2.59B / 444 GiB). schema_synced left at 2026-07-19 (no schema drift).
 <!-- CHANGELOG END -->
 
 ## View definition

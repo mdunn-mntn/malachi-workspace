@@ -121,6 +121,7 @@ GROUP BY upload_id, hashed_value, order_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical sampling alone. Confirmed physical is non-partitioned/non-clustered (~1.9 MB, 11,238 rows, no TTL); grain = offline-conversion event x resolved IP (~6x IP fan-out from 1,840 hashed_values); `conversion_window` unit = microseconds (30d default); `partner_id_list` is a STRING JSON array not ARRAY; `conversion_type` polymorphic (numeric code for source 31 / text label for source 37); `customer_email_hashes` all-NULL, `hashed_values_key` ~99% NULL.
+- 2026-07-29: enriched→verified. Re-derived from live source. Physical hash `__4213723168` unchanged; still non-partitioned/non-clustered/no-TTL; 17-column schema unchanged (matches AUTO:SCHEMA). Rolling snapshot grew to 141,304 rows / 26,669,632 bytes (window now ~24 days, ~4.9 IPs/hashed_value, ip NULL still 0); refreshed front-matter, grain snapshot, gotchas, and dry-run cost. Structural grain/fan-out claims hold. No schema/partition drift.
 <!-- CHANGELOG END -->
 
 ## View definition

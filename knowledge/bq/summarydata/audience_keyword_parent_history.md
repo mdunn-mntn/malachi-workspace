@@ -14,9 +14,9 @@ time_unit: timestamp
 ttl_days: null
 approx_rows: 12089021
 approx_logical_bytes: 1666074067
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audiences, keywords, targeting]
 keywords: [audience_keyword_state, parent keyword, child keyword, expanded_from, keyword expansion, keyword lineage, DS19, DS38, MNTN Matched, MM Core, selected, history, snapshot]
 source: INFORMATION_SCHEMA+human
@@ -133,6 +133,7 @@ ORDER BY n_children DESC;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md for this table (net-new); enriched from live schema + view-chain resolution + empirical queries, cross-referenced to the related `ui.audience_keyword_state` prose section. Resolved chain to source physicals (`integrationprod.ui_audience_keyword_state` + `archives_audience_keyword_state_archives`, both unpartitioned dim tables clustered by id) → set partition_by: none, require_partition_filter: false, time_unit: timestamp, approx_rows/approx_logical_bytes from measurement. Documented grain as a parent↔child edge list (not one-row-per-keyword) and the archive_time snapshot-alignment history mechanic.
+- 2026-07-29: enriched→verified. Re-introspected live: 16-col schema identical; physical view definition unchanged and re-read from source — hard-coded `keyword_type='PARENT'`/`'CHILD'`, `tpa.categories` join on `data_source_id=38`, both sides `selected=TRUE`, `archive_time IS NOT DISTINCT FROM`, `parent.keyword IN UNNEST(JSON_VALUE_ARRAY(child.expanded_from))`. Confirms parent_type≡'PARENT'/parent_data_source_id≡38 directly from the view SQL. Object is a view-over-view (no partition/cluster to prune). No drift.
 <!-- CHANGELOG END -->
 
 ## View definition
