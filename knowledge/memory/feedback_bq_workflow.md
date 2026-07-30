@@ -64,6 +64,7 @@ Don't cancel a running BQ query just because it looks slow. Many hours of wall t
 **bq_perf_log.jsonl (since 2026-07-14):** compact records (per-second timeline + plan steps
 stripped — they bloated 1.5K records to 52MB); bq_run.sh auto-rotates the log at 40MB to
 `knowledge/archive/*.jsonl.gz`. Don't re-add verbose job stats to the log.
+**Concurrency artifact (2026-07-29):** with multiple sessions on the one shared tree, simultaneous `bq_run.sh` appends can interleave and split a record across two lines → occasional JSON parse errors in the log. Expected/benign; any consumer (`perf_digest.py`, ad-hoc parsing) must tolerate/skip unparseable lines, not assume one-valid-JSON-per-line. See [[feedback_shared_worktree_commits]].
 
 ## Optimization docs (added 2026-07-27)
 
