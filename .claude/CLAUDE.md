@@ -70,7 +70,8 @@ breaks the Terse Comms caps (subject ≤72, no em-dash); if it blocks, run `.cla
 then re-stage, or `git commit --no-verify` to bypass. `verify.sh` is the single "run every deterministic
 check" doctor (also whole-repo in `workflow_audit.sh §11`); `build_kit_manifest.sh` regenerates the
 component inventory `documentation/ai_workflow_kit/COMPONENTS.md` (the drift-proof source of truth for
-hook/skill/agent counts). **Self-improvement (read/append-only,
+hook/skill/agent counts); `package_kit.sh` emits a sanitized, domain-blind, cross-job-portable copy of
+the entire kit (two acceptance gates: secrets + domain-blind; see memory `reference_workflow_kit_porting`). **Self-improvement (read/append-only,
 no delete authority):** `health_scorecard.py` prints days-since-`/capture` + orphan-doc + dup-title
 signals into the SessionStart block; `request_digest.py` mines `knowledge/.request_log.jsonl` (the
 gitignored, keyword-only prompt log) for recurring work shapes and PROPOSES a `/skill` — a human decides,
@@ -113,7 +114,7 @@ workspace/
 │       ├── outputs/      ← csvs, jsons, query results
 │       ├── meetings/     ← meeting transcripts, notes
 │       └── artifacts/    ← notebooks, pdfs, scripts, deliverables
-├── slack_bot/            ← Slack knowledge extraction bot (runs on Pi 5 at midnight PST)
+├── slack_bot/            ← Slack knowledge bot, DECOMMISSIONED 2026-06-10 (security policy; see slack_bot/RECOVERY.md)
 ├── documentation/        ← reference docs, architecture diagrams, code snippets
 ├── self_review/          ← performance self-assessment (gitignored, never committed)
 ├── claude-prompts/       ← planning files and prompt templates
@@ -136,9 +137,10 @@ workspace/
 | `tickets/_template/presentation_template.md` | Copy this when starting a new ticket — external-facing narrative for sharing |
 | `.claude/scripts/bq_run.sh` | BQ query wrapper — logs performance metrics to `knowledge/bq_perf_log.jsonl` |
 | `.claude/scripts/transcribe.sh` | Meeting transcription — runs both OpenAI (whisper-1) and local mlx-whisper, merges best of both (OpenAI accuracy backbone + local coverage patches). Use `--provider openai` or `--provider local` to force one. `--keep-both` saves individual provider files. |
+| `.claude/scripts/package_kit.sh` | Port the whole kit to a fresh machine / new job. Emits a sanitized, domain-blind, generic-seeded bundle (+ `bootstrap.sh`, `PORTING.md`, a `global/` `~/.claude` layer). Two acceptance gates (secrets sweep + domain-blind sweep) must pass before it emits. Cross-job safe by construction. See memory `reference_workflow_kit_porting`. |
 | `knowledge/bq_perf_log.jsonl` | Append-only log of BQ query performance (bytes, slots, wall time, cache hits). Compact records (full timeline/plan-steps excluded since 2026-07-14); auto-rotates at 40MB to `knowledge/archive/*.jsonl.gz` |
 | `knowledge/slack_review_queue.md` | Medium-confidence Slack extractions needing manual review |
-| `slack_bot/` | Slack knowledge extraction bot — scraper, extractor, updater. Runs on Pi 5 at midnight PST. Add bot to channels via `/invite @Knowledge Extractor` |
+| `slack_bot/` | Slack knowledge bot, DECOMMISSIONED 2026-06-10 (MNTN security policy: local Slack apps / API keys no longer allowed; app deliberately deleted). Code kept as a skeleton. Migrate to a sanctioned platform. See `slack_bot/RECOVERY.md` and memory `reference_pi5_server`. |
 | `self_review/summary.md` | Self-review guide — workflow, rubric, leadership direction (Paulo/Kale/Alyson), how to write rationales |
 | `self_review/self_review_2.md` | **Active self-review** — update after every ticket (gitignored) |
 | `self_review/self_review_1.html` | Submitted review #1 (archived, do not modify) |
