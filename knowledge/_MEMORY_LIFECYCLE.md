@@ -141,7 +141,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_read_full_source_before_verdict | feedback | 2026-07-29 | [doc](memory/feedback_read_full_source_before_verdict.md) |
 | feedback_shared_worktree_commits | feedback | 2026-07-29 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_slack_reply_voice | feedback | 2026-07-29 | [doc](memory/feedback_slack_reply_voice.md) |
-| project_audi_1175_ds14_scoring_cost | project | 2026-07-29 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | project_fangorn_on_mntn_id | project | 2026-07-29 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | reference-ddp-billing-logic | reference | 2026-07-29 | [doc](memory/reference_ddp_billing_logic.md) |
 | reference_aud22_geo_reporting_sync | reference | 2026-07-29 | [doc](memory/reference_aud22_geo_reporting_sync.md) |
@@ -158,5 +157,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | sprint_ready_plan | feedback | 2026-07-29 | [doc](memory/feedback_sprint_ready_plan.md) |
 | feedback_self_qa_before_shipping | feedback | 2026-07-30 | [doc](memory/feedback_self_qa_before_shipping.md) |
 | incrementality-experiment-ber-2250 | project | 2026-07-30 | [doc](memory/project_incrementality_experiment.md) |
+| project_audi_1175_ds14_scoring_cost | project | 2026-07-30 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | reference_shopper_graph_deploy | reference | 2026-07-30 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-07-30 | [doc](memory/reference_xlsx_master_format.md) |
