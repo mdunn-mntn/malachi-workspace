@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [order_item_id, campaign_group_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 590
-approx_logical_bytes: 46612
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 608
+approx_logical_bytes: 48152
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [mntn_select, orders, campaign_groups]
 keywords: [mntnselect, order_items, campaign_groups, junction, bridge, order_item_id, campaign_group_id, product_id_2, select]
 source: INFORMATION_SCHEMA+human
@@ -96,4 +96,5 @@ WHERE j.delete_time IS NULL
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from live schema + empirical sampling. Confirmed: unpartitioned TABLE (no time partition), composite PK (order_item_id, campaign_group_id) unique (590/590), both FKs 1:1 to partner PKs (order_item_id→mntnselect_order_items, campaign_group_id→campaign_groups), all links product_id=2 (MNTN Select), soft-delete via delete_time (74/590 deleted), datastream_metadata.source_timestamp = ms CDC epoch (≈UNIX_MILLIS(update_time)). Fan-out: order_item→up to 16 CGs, CG→up to 3 order_items.
+- 2026-07-29: enriched→verified. Re-confirmed vs live source (bq show + INFORMATION_SCHEMA.COLUMNS): 6 cols unchanged/no retype, no partition, cluster [order_item_id, campaign_group_id], no TTL — all match doc. Row count grew 590→608 (live CDC dim; dated live/deleted split kept as historical). No schema drift.
 <!-- CHANGELOG END -->

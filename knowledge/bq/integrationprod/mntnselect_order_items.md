@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [order_item_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 416
-approx_logical_bytes: 90288
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 431
+approx_logical_bytes: 93438
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [mntn_select, orders, sales_ops]
 keywords: [mntnselect, order items, order_item_id, order_id, offering_version, target_cpm, ad_buying_cpm, contracted impressions, fulfillment_notify_status, campaign_groups junction, datastream cdc]
 source: INFORMATION_SCHEMA+human
@@ -61,6 +61,8 @@ Select order to the ad-serving entities (campaign groups) that fulfill it. Small
 | prediction_id | STRING | YES |  |  |
 | datastream_metadata | STRUCT<uuid STRING, source_timestamp INT64> | YES |  |  |
 | pool_id | STRING | YES |  |  |
+| flight_end_time | TIMESTAMP | YES |  |  |
+| flight_start_time | TIMESTAMP | YES |  |  |
 <!-- AUTO:SCHEMA END -->
 
 ## Column meanings (only the non-obvious ones)
@@ -76,6 +78,10 @@ Select order to the ad-serving entities (campaign groups) that fulfill it. Small
 - **audience_id** — optional targeting audience for the line; NULL 276/416 (~66%).
 - **prediction_id** — STRING UUID, NULL 373/416 (~90%); present when the line is linked to a
   delivery/pacing prediction. **pool_id** — STRING UUID, always populated; impression-pool identifier.
+- **flight_start_time / flight_end_time** — TIMESTAMP line-item flight (delivery run) window. **Added to
+  the schema after the 2026-07-20 enrich; currently 100% NULL (0/431 as of 2026-07-29)** — not yet
+  backfilled/populated. Do not build logic on them until populated; the offering's run window still lives
+  on `mntnselect_offering_versions.run_start_time/run_end_time`.
 - **create_time / update_time / delete_time** — native TIMESTAMP (UTC). `delete_time` set ⇒ soft-deleted
   (20/416). There is **no `deleted` or `is_test` column** here; the live filter is `delete_time IS NULL`.
 - **created_by / updated_by / deleted_by** — actor **user IDs**, but they do **not** resolve against
@@ -108,8 +114,8 @@ Select order to the ad-serving entities (campaign groups) that fulfill it. Small
 - **Junction fan-out:** joining `mntnselect_order_items_x_campaign_groups` inflates row counts (1:N) — dedup first.
 
 ## Cost & partitioning notes
-- **No partition** (real BASE TABLE, not a view); clustered on `order_item_id`. Tiny: 416 rows / 90,288 bytes total.
-- **SELECT \* full scan = 90,288 bytes** (measured via `--dry_run`, all 18 columns / whole table). Column pruning barely
+- **No partition** (real BASE TABLE, not a view); clustered on `order_item_id`. Tiny: 431 rows / 93,438 bytes total.
+- **SELECT \* full scan = ~93,438 bytes** (whole table, all 20 columns). Column pruning barely
   matters at this size and there is no partition to prune, so no cost filter is required.
 - **The one filter to always apply** is a correctness filter, not a cost one: `delete_time IS NULL` (live rows).
 
@@ -146,4 +152,5 @@ GROUP BY oi.order_item_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (no section in data_catalog.md / data_knowledge.md) — enriched from LIVE schema + empirical queries. Confirmed BASE TABLE (416 rows, 90,288 bytes, no partition, cluster order_item_id); PK order_item_id unique; order_id N:1 to mntnselect_orders (0 orphans, ≤7 items/order); offering_version_id N:1 (0 orphans); junction to campaign_groups 1:N (590/309). Derived impressions = budget/target_cpm*1000; target_cpm=sell/ad_buying_cpm=buy (margin-sensitive). fulfillment_notify_status domain {not_notified, processing, notified}. datastream_metadata.source_timestamp = ms (≈UNIX_MILLIS(update_time)). Live filter = delete_time IS NULL (no deleted/is_test cols). created_by/updated_by/deleted_by do NOT resolve to mntnselect_users (388/416 orphan).
+- 2026-07-29: enriched→verified. SCHEMA DRIFT FIXED: live now has 20 cols (was 18) — added `flight_end_time` + `flight_start_time` (TIMESTAMP, line-item flight window, currently 100% NULL / 0 of 431). Updated AUTO:SCHEMA + column meanings + "18 columns"/byte refs. No partition, cluster [order_item_id], no TTL — confirmed. Row count 416→431 (411 live / 20 soft-deleted). Other dated distribution counts kept as historical.
 <!-- CHANGELOG END -->

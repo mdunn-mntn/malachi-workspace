@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: timestamp
 ttl_days: null
-approx_rows: 1072
-approx_logical_bytes: 190307
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1073
+approx_logical_bytes: 190545
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [pmp, ctv, inventory, deals]
 keywords: [private_marketplace, pmp, deal, ctv, floor_price, exchange, magnite, freewheel, index_exchange, partner_deal_id, ssp, dsp]
 source: INFORMATION_SCHEMA+human
@@ -131,5 +131,6 @@ WHERE lower(name) LIKE '%nba%';
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-confirmed vs live source (bq show + INFORMATION_SCHEMA.COLUMNS): 24 cols unchanged/no retype (no datastream_metadata, no INT epoch cols → time_unit=timestamp holds), no partition, no cluster, no TTL — all match doc. Row count 1072→1073 (one deal added; dated enum distributions kept as historical). No schema drift.
 - 2026-07-19: skeleton→enriched. Confirmed genuine BASE TABLE (bq show: no partition/cluster/TTL, 1072 rows, 190,307 B). Derived enum domains live: channel_id uniformly 8 (CTV-only), deal_type_id uniformly 2, pricing_model FIXED/BIDDABLE, partnership_deal_type PUB_DIRECT/SSP/EXCLUSIVE, active 416T/656F. Reconciled prose drift: (a) advertiser_id & campaign_group_id are structurally NULL here (0/1072, 1/1072) — data_catalog.md:634 join via campaign_group_id is unusable on the bare table; deal↔group lives in core_campaign_group_x_private_marketplace_deals which keys on private_marketplace_deal_group_id (a deal-GROUP id), not deal_id. (b) No deleted/is_test/datastream_metadata cols → liveness gate is active=TRUE, not deleted=FALSE. (c) Prose "comes from Beeswax/exchanges" refined: only partner_deal_id is exchange-side; config is MNTN-maintained. Documented sibling mirror core_private_marketplace_deals (silver.core) which lacks 9 cols this table has. time_unit=timestamp (all time cols native TIMESTAMP, no INT epochs). Labeled dry-runs: SELECT * = 190,307 B, 3-col = 54,847 B.
 <!-- CHANGELOG END -->
