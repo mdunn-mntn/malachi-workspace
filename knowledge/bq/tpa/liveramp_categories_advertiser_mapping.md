@@ -46,7 +46,7 @@ Cross-reference linking a **LiveRamp 3P audience category** (`data_source_catego
 > The AUTO:SCHEMA block above matches the live `tpa` table (verified `bq show` 2026-07-29): **4 columns**, `advertiser_id` is **STRING**, no `datastream_metadata`. Do not confuse it with the same-named `integrationprod` CDC landing table, which has `advertiser_id` INT64 + a `datastream_metadata` STRUCT — see Gotchas.
 
 ## Column meanings (only the non-obvious ones)
-- **`data_source_category_id`** — LiveRamp audience category ID. 1,640 distinct. **Every value resolves in `tpa.categories`** under both `data_source_id=35` (LiveRamp IP, current) *and* `data_source_id=11` (LiveRamp legacy) — 2 also under `38`. Names follow the LiveRamp taxonomy ("Behavioral Audience > …", "B2B Audience > Seniority > Manager", "Event Audience > Broadway/Off-Broadway…", custom "Refuel_*"). Use the DS35 row for the live name.
+- **`data_source_category_id`** — LiveRamp audience category ID. 1,641 distinct. **Every value resolves in `tpa.categories`** under both `data_source_id=35` (LiveRamp IP, current) *and* `data_source_id=11` (LiveRamp legacy) — 2 also under `38`. Names follow the LiveRamp taxonomy ("Behavioral Audience > …", "B2B Audience > Seniority > Manager", "Event Audience > Broadway/Off-Broadway…", custom "Refuel_*"). Use the DS35 row for the live name.
 - **`advertiser_id`** — MNTN advertiser ID, stored as a **STRING**. 76 distinct. **74 resolve** in `integrationprod.advertisers`; 2 do not: sentinel `'0'` (1 row) and out-of-range `'678151'` (**954 rows ≈ 50% of the table**, `company_name` NULL — a non-standard id namespace, likely a synthetic/aggregate bucket, not a real MNTN advertiser). Of the resolved advertisers, 2 are `is_test=TRUE`, 0 are `deleted`.
 - **`created_date`** — DATE the mapping was created. Populated on 100% of rows; range **2024-05-09 → 2026-07-20**. Use for recency/recent-additions.
 - **`updated_date`** — DATE, **100% NULL** across all 1,918 rows. Carries no information — do not filter or sort on it.
@@ -59,14 +59,13 @@ Cross-reference linking a **LiveRamp 3P audience category** (`data_source_catego
   - *advertiser → category:* highly skewed — `678151` carries 954 categories, then Majority Strategies (35937) 160, down to a handful. Joining `advertisers → this table` fans out up to ~954x for the outlier, typically <200.
 
 ## Gotchas
-- **AUTO:SCHEMA is wrong for this table** (see boxed note above): live `tpa` schema is 4 cols, `advertiser_id` STRING, no `datastream_metadata`. Re-run `bq_introspect.sh tpa` to fix.
-- **Not a view.** This is a BASE TABLE. A *separate* base table `dw-main-bronze.integrationprod.tpa_liveramp_categories_advertiser_mapping` shares the logical name but is a **Google Datastream CDC landing** (169 rows, `advertiser_id` INT64, extra `datastream_metadata` STRUCT, clustered by `(data_source_category_id, advertiser_id)`). Row counts **diverge** (1,917 vs 169) and schemas differ — do not treat one as `SELECT *` of the other. **Query this `tpa` table** for the curated/consumed mapping.
+- **Not a view.** This is a BASE TABLE. A *separate* base table `dw-main-bronze.integrationprod.tpa_liveramp_categories_advertiser_mapping` shares the logical name but is a **Google Datastream CDC landing** (169 rows, `advertiser_id` INT64, extra `datastream_metadata` STRUCT, clustered by `(data_source_category_id, advertiser_id)`). Row counts **diverge** (1,918 vs 169) and schemas differ — do not treat one as `SELECT *` of the other. **Query this `tpa` table** for the curated/consumed mapping.
 - **`advertiser_id` is STRING** — you must `SAFE_CAST(... AS INT64)` to join to `advertisers`; sentinel `'0'` and out-of-range `'678151'` (half the rows) will not resolve.
 - **`updated_date` is always NULL.**
 - **4 exact-duplicate rows** (advertiser `49526`, 2025-11-21) — dedup with `SELECT DISTINCT` for a clean pair count.
 
 ## Cost & partitioning notes
-- **No partition, no clustering.** Tiny table — 1,917 rows / **~44 KB** logical. A full scan (incl. `SELECT *`) is effectively free (<1 MB billed); no partition filter is needed or possible.
+- **No partition, no clustering.** Tiny table — 1,918 rows / **~44 KB** logical. A full scan (incl. `SELECT *`) is effectively free (<1 MB billed); no partition filter is needed or possible.
 - Joins are cheap; cost comes from the *partner* side (`tpa.categories`, `advertisers`) — filter those normally.
 
 ## Example queries
@@ -98,6 +97,7 @@ ORDER BY m.created_date DESC;
 
 ## Changelog
 <!-- CHANGELOG START -->
+- 2026-07-29: enriched→verified. Re-derived from live source: schema unchanged (4 cols, advertiser_id STRING, no partition/cluster/TTL); AUTO:SCHEMA now correct so removed the obsolete "AUTO:SCHEMA is stale" warning box + gotcha. Confirmed grain (1,918 rows / 1,914 pairs, 4 exact dups), updated_date 100% NULL, adv 678151=954/adv '0'=1 (955 rows unresolved), 74/76 advs resolve (2 is_test, 0 deleted), all 1,641 cats resolve under both DS35 and DS11, fan-out 1,501/1,641 map-to-1 (max 6/cat, 954/adv), sibling CDC table still 169 rows/INT64+datastream_metadata. Refreshed counts (1917→1918, max_created 07-13→07-20, bytes 45041→45064).
 - 2026-07-20: skeleton→enriched (live profile). Confirmed BASE TABLE (not a view), grain = one row per category×advertiser (1,917 rows / 1,913 pairs, 4 exact dups), category IDs all LiveRamp DS35/DS11, advertiser_id STRING needs SAFE_CAST. Flagged AUTO:SCHEMA as stale (reflects the integrationprod CDC landing table: advertiser_id INT64 + datastream_metadata — neither present in the live tpa table); flagged `updated_date` 100% NULL and advertiser_id `'678151'` (~50% of rows) as unresolved.
 <!-- CHANGELOG END -->
 
