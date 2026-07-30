@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 30
 approx_logical_bytes: 3399
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, conversions, reference]
 keywords: [attribution_model_id, attribution_model_type_id, core_attribution_models, attribution_models, last_touch, last_tv_touch, competing, counterpart_attribution_model_id, lookup_dimension, conversion_attribution, visit_attribution, freshpaint, identity_key]
 source: INFORMATION_SCHEMA+human
@@ -39,8 +39,8 @@ Datastream-CDC copy of the Postgres `core.attribution_models` app table; `silver
 is a view over it.
 
 ## Grain & keys
-- **Grain:** one row per attribution model. 30 live rows. Ids run 1–34 with gaps (21–24 absent, plus a
-  few others) — do not assume ids are contiguous.
+- **Grain:** one row per attribution model. 30 live rows. Ids run 1–34 with one gap: 21–24 absent (1–20
+  and 25–34 all present) — do not assume ids are contiguous.
 - **Primary / natural key:** `attribution_model_id` (surrogate INT, also the sole cluster key).
 - **Self-referential FK:** `counterpart_attribution_model_id` → `attribution_model_id` (same table).
 - **Type FK:** `attribution_model_type_id` — a 4-value enum (no separate type-lookup table exists in
@@ -100,8 +100,8 @@ is a view over it.
 - **No `update_time`, no `deleted` / `is_test` columns.** The dataset-wide `deleted=FALSE AND
   is_test=FALSE` live filter does NOT apply here and is not needed (all 30 rows are canonical). There is
   no way to detect a soft-deleted model from this table.
-- **Ids are not contiguous.** 30 rows span ids 1–34; 21–24 (and a couple others) are absent. Never
-  `generate_array(1,34)` to enumerate — read the table.
+- **Ids are not contiguous.** 30 rows span ids 1–34; exactly one gap — 21–24 are absent (all other ids
+  1–34 present). Never `generate_array(1,34)` to enumerate — read the table.
 - **`attribution_model_type_id` has no lookup table** — the 4-value meaning lives only in `name`
   conventions (documented above). Don't expect a `*_types` dim to join to.
 - **`source_timestamp` is ms CDC-capture, not business time** (all rows re-snapshot to a single recent
@@ -148,4 +148,5 @@ LEFT JOIN `dw-main-bronze.integrationprod.core_attribution_models` tw
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. New doc from source (doc-debt queue, no prior catalog entry). Confirmed empirically: BASE TABLE (physical self, Datastream CDC, max_staleness=15m), 30 rows / 3399 bytes, no partition, cluster=[attribution_model_id]. Derived attribution_model_type_id enum (1=Last Touch, 2=Last TV Touch, 3=Last Touch Competing, 4=Last TV Touch Competing) from name patterns and counts (7/7/8/8). Confirmed counterpart_attribution_model_id is a symmetric display↔TV self-pairing; source_timestamp = milliseconds (MILLIS→2026, MICROS→1970); ids non-contiguous (1–34 with gaps); no update_time/deleted/is_test cols. silver.core.attribution_models is a VIEW over this base table.
+- 2026-07-29: enriched→verified. Re-introspected live source: type=TABLE, numRows=30, numBytes=3399, timePartitioning=None, requirePartitionFilter=None, clustering=[attribution_model_id] — all front-matter/schema claims hold. Re-verified enum counts (type 1/2/3/4 = 7/7/8/8), symmetric counterpart pairs, create_time range 2023-07-24→2026-06-01, source_timestamp=MILLIS→2026. Fixed drift: missing-id set is exactly 21–24 (doc had claimed "plus a few others"/"a couple others").
 <!-- CHANGELOG END -->

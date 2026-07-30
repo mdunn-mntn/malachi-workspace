@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 2959066
 approx_logical_bytes: 1374170480
 schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, attribution, offline, archive]
 keywords: [offline conversions, crm conversions, uploaded conversions, archive, frozen snapshot, coredw migration, order_amt, conversion_source_id, attribution_model_id, hashed_value, call conversion]
 source: INFORMATION_SCHEMA+human
@@ -142,5 +142,6 @@ ORDER BY offline_value DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-introspected live source (dw-main-silver): BASE TABLE, numRows 2,959,066 and numBytes 1,374,170,480 UNCHANGED from 2026-07-20 scan (snapshot still frozen), timePartitioning/clustering None. INFORMATION_SCHEMA.COLUMNS returns the same 41 columns, identical names/types/order as AUTO:SCHEMA — no schema drift. object_type/physical_table/partition/cluster/TTL/grain all confirmed; no `hashed_values_key`, no `order_amt_usd`. Curated distributions (epoch units, conversion_source_id 31/37/32, attribution_model_id 5/7/8, constant flags) unchanged since table is frozen.
 - 2026-07-20: skeleton→enriched. Verified against live source. This is the FROZEN CoreDW-migration snapshot and the HISTORY branch of the live `summarydata.offline_conversions` UNION view — NON-CANONICAL for current data (point to the live view / `ber_stg.offline__conversions_final`). Confirmed: BASE TABLE, UNPARTITIONED/unclustered (`bq show`), 2,959,066 rows / 143 advertisers, min time 2023-04-13, FROZEN at max time 2026-03-05 03:08:14 (run_time also frozen, max 2026-03-05). Value column = `order_amt` (NUMERIC, 100% non-null); NO `order_amt_usd`, NO `hashed_values_key` (41 cols vs 42 in the live view). Epoch: `epoch`=SECONDS (=UNIX_SECONDS(time) on 2,956,388/2,959,066 = 99.9%; 2,333-row 2023 micros sliver); `event_epoch`/`impression_epoch`=MICROSECONDS (100%). event_time=impression_time 100%; time=event_time only 2,333. conversion_source_id 31 (offline-upload, 2.96M) / 37 (call, 459) / 32 (Showroom, 36); attribution_model_id 5/7/8 (model 5 = the 5,657 hashed_value-NULL rows); channel_id 8 CTV dominant / 1 display. Constants: disputed=0, is_cross_device/from_verified_impression=TRUE, guid/ip never null. Cost (dry-run): SELECT *=1,374,170,480 B (=numBytes); SELECT time=23,672,528 B identical w/ & w/o time filter (no partition pruning; column projection prunes normally — no dedup-join floor, unlike the live view's ~419 MB).
 <!-- CHANGELOG END -->

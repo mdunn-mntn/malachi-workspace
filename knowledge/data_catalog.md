@@ -602,6 +602,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 ---
 
 ## silver.logdata.cost_impression_log
+- **⚠️ CIL can UNDER-COUNT vs its own sources (found 2026-07-29, INC-001):** CIL = `spend_log` (wins/spend, source of truth) + `win_logs` (Beeswax wins). A CIL build/reprocess can drop a (campaign × day) to **0** while BOTH sources hold the full count. Verified: Bombora campaigns (CG 131563) `dt=2026-07-27` = **0** in CIL yet spend_log 110,792 wins ($904 billed, 100% rendered) + win_logs 110,862 — a CIL completeness bug that cascaded to `enriched_impressions=0`. **For any spend/impression truth, reconcile CIL against `spend_log` — don't treat a CIL per-campaign zero as ground truth.**
 - **Retention: NOT 90 days — floor is 2023-10-01 (fixed, so the window GROWS)**: the live table (`sqlmesh__logdata.logdata__cost_impression_log__2498930125`) has 1,012 contiguous daily partitions 20231001→today, verified with row counts (2023-10-15 = 53.6M rows; 2024-09-15 = 92M) on 2026-07-08 (TI-1037). ~33 months of history today, +1 month per month. Supersedes both the old "90d TTL" note and the 2026-07-07 "floor ≈ 2025-01-01" estimate. `household_score` is NULL on ALL pre-2025-06 rows (verified same check) — IP reach is computable to Oct 2023, HI/score analysis only from Jun 2025.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical, 71 B rows / 56 TB)
 - **Partition:** DAY on `time`
@@ -2377,12 +2378,12 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
   `gs://mntn-data-archive-prod/ipdsc`; writes `summarydata.enriched_impressions` bucketed by `ad_served_id` (600),
   partitioned `dt,hh`, **dynamic overwrite** on a rolling 2-day window. The `data_source_id` tag = what the campaign
   **targeted** (segment history); the ipdsc join is a **35-day BACKWARD** window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`).
-  **Key fact (verified 2026-07-29):** enriched DS_x count ≈ the DS_x-targeting campaign's **served** impressions in
-  `cost_impression_log`, ~1:1 (DS51/Bombora CG 131563: 07-26 enriched 108,744 = served 108,744). So a downstream DS
-  zero means that DS's campaigns **served** ~0 that day, NOT that enrichment dropped them (the backward lookback would
-  have backfilled). **Do NOT attribute a DS zero to an ipdsc skip** — 07-27 DS51=0 was NOT the skip (07-25 was also a
-  skip and served 104K; on 07-27 the advertiser served 1.47M via other campaigns). Root cause of a serving-0 is
-  bidder/serving-side. See `data_knowledge.md` § IPDSC + on-call INC-001.
+  **Key fact (verified 2026-07-29):** on healthy days enriched DS_x count ≈ that DS's campaigns' **served** impressions
+  in CIL, ~1:1 (DS51/Bombora CG 131563: 07-26 enriched 108,744 = CIL 108,744 = spend_log 108,744). **But enriched inherits
+  any CIL under-count:** DS51 07-27 read 0 in CIL/enriched while spend_log (110,792 wins, $904 billed, 100% rendered) +
+  win_logs (110,862) both had the impressions → a **CIL build data-loss**, NOT the ipdsc skip, NOT serving, NOT
+  enrichment. **Reconcile a per-campaign enriched/CIL zero against spend_log before trusting it.** See
+  `data_knowledge.md` § IPDSC + on-call INC-001.
 - Scripts: `SteelHouse/bae-sql-utility/ddp/`.
 
 ### DDP file-drop batch ingestion → fpa_vendor_log + site_visit_signal (AUDI-1089)

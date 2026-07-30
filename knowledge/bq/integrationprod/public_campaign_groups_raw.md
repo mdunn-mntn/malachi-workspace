@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [campaign_group_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 129392
-approx_logical_bytes: 40071513
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 130547
+approx_logical_bytes: 40442807
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaign_groups, dimensions, cdc, mntn_select]
 keywords: [campaign_group_id, product_id, select, ptv, objective_id, goal_type, parent_campaign_group_id, datastream, cdc, postgres_mirror, coredb]
 source: INFORMATION_SCHEMA+human
@@ -167,4 +167,5 @@ WHERE datastream_metadata.source_timestamp > UNIX_MILLIS(TIMESTAMP '2026-07-19 0
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Confirmed BASE TABLE (not a view), unpartitioned, clustered+PK on campaign_group_id, grain = 1 row per campaign_group_id (current-state snapshot, no versions). source_timestamp = ms epoch (= UNIX_MILLIS at capture). Derived enum domains for product_id/objective_id/goal_type/campaign_group_status_id/pacing/delivery/publisher/platform. Prose vs schema drift reconciled: (a) prose "max_staleness=15min" — table-level metadata shows none, though source_timestamp is near-real-time; (b) raw table has NO budget/flight-window/active_flight_id/start/end columns and NO update_time_raw (those exist only on the analytical `campaign_groups` view). Prose oracle: data_knowledge.md MNTN Product Identification + data_catalog.md campaign_groups section.
+- 2026-07-29: enriched→verified. Re-introspected live source: 47 columns identical (names/types/order unchanged), still BASE TABLE, unpartitioned, requirePartitionFilter null, clustered + PK on campaign_group_id, no TTL. Grain re-confirmed empirically: n_rows = n_distinct campaign_group_id = 130,547. product_id domain unchanged (1=PTV 129,936, 2=Select 611, no others). Only drift: natural growth — approx_rows 129,392→130,547, approx_logical_bytes 40,071,513→40,442,807. No schema/partition/cluster/TTL drift.
 <!-- CHANGELOG END -->

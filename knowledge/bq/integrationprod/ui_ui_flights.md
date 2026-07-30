@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [flight_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 352868
-approx_logical_bytes: 46735160
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 354832
+approx_logical_bytes: 46995504
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [flights, campaign-management, budget]
 keywords: [flight, ui_flight, flight_id, campaign_group_id, budget, budget_type, monthly, flighted, daily, start_time, end_time, status_id, superseded, core_flights, ui_flight_id, update_time, campaign_groups, datastream, cdc]
 source: INFORMATION_SCHEMA+human
@@ -36,8 +36,8 @@ a "campaign was modified" check fire on a child-flight edit. Reach for it to see
 schedule/budget edit history, or to bridge a UI `flight_id` to the operational `core_flights` rows.
 
 ## Grain & keys
-- **Grain:** one row per **`flight_id`** — unique (352,866 rows = 352,866 distinct flight_id). Primary key + cluster key.
-- **`campaign_group_id`** is **1:N** from the CG side: 89,272 distinct CGs across the table → ~4 flights per CG.
+- **Grain:** one row per **`flight_id`** — unique (354,832 rows = 354,832 distinct flight_id). Primary key + cluster key.
+- **`campaign_group_id`** is **1:N** from the CG side: 89,768 distinct CGs across the table → ~4 flights per CG.
   Every budget/schedule edit (start/end shift, budget change, status flip) spawns a **new** flight row rather
   than mutating the old one, so a CG accumulates a stack of flight rows over its life. `campaign_group_id` is never NULL.
 - **Join columns:** `flight_id` (out to `core_flights.ui_flight_id`), `campaign_group_id` (out to `campaign_groups` / `core_flights`),
@@ -145,5 +145,6 @@ WHERE u.campaign_group_id = @cg_id;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: enriched→verified. Re-derived vs live source: schema (11 cols) + types byte-for-byte match AUTO:SCHEMA; BASE TABLE, no partition (timePartitioning null), require_partition_filter null, cluster [flight_id], no TTL — all confirmed. Grain re-verified: 354,832 rows = 354,832 distinct flight_id (unique PK), campaign_group_id 0 nulls, 89,768 distinct CGs (~4/CG). Only drift = CDC growth (352,866→354,832 rows); refreshed approx_rows/approx_logical_bytes + schema_synced.
 - 2026-07-19: skeleton→enriched. Confirmed empirically: grain = 1 row per flight_id (unique), campaign_group_id 1:N (~4/CG); partition = none, cluster [flight_id] (physical bq show); datastream_metadata.source_timestamp = milliseconds (TIMESTAMP_MILLIS = update_time); budget_type_id → core_budget_types (1=Monthly/2=Daily/3=Flighted, only 1&3 present); status_id flight-level (3=active-kept, 8=superseded, 2=rare); core_flights.ui_flight_id → flight_id N:1 (~3x). Prose oracle: no dedicated ui_ui_flights section in data_catalog.md, but reconciled the campaign_groups.update_time = GREATEST(ui_ui_flights.update_time, campaign_groups_raw.update_time) note (data_knowledge.md L3777, data_catalog.md L1790) and the core_flights status/short-flight convention (data_catalog.md L3076-3085). No deleted/is_test columns — flagged that the standard live-row filter does not apply.
 <!-- CHANGELOG END -->

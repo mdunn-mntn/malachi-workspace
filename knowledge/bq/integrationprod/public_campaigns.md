@@ -1,22 +1,22 @@
 ---
 doc_type: bq_table
 title: integrationprod.public_campaigns
-summary: "one row per campaign (campaign_id PK) — raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group"
+summary: "one row per campaign (campaign_id PK) - raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group"
 dataset: integrationprod
 table: public_campaigns
 object_type: BASE TABLE
 physical_table: self
-grain: "one row per campaign_id (PRIMARY KEY, not enforced; 548,767 rows all distinct)"
+grain: "one row per campaign_id (PRIMARY KEY, not enforced; 553,517 rows all distinct)"
 partition_by: none
 require_partition_filter: false
 cluster_by: [campaign_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 548767
-approx_logical_bytes: 136149944
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 553517
+approx_logical_bytes: 137341346
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaigns, targeting-config, dims]
 keywords: [campaign_id, campaign_group_id, funnel_level, objective_id, channel_id, stage, prospecting, retargeting, cdc, datastream, line-item, dim]
 source: INFORMATION_SCHEMA+human
@@ -36,11 +36,11 @@ analytical sibling is `integrationprod.campaigns` (see Joins). Canonical use: jo
 `objective_id` / `funnel_level` when scoping prospecting vs retargeting (e.g. the CHAPI "Performance Report" lens).
 
 ## Grain & keys
-- **Grain:** one row per **`campaign_id`** — a single line item. Verified 548,767 rows = 548,767 distinct
+- **Grain:** one row per **`campaign_id`** — a single line item. Verified 553,517 rows = 553,517 distinct
   `campaign_id` (no dupes; PK holds). This is the current-state snapshot, **not** version history (for history use
   `archives_campaign_archives`).
 - **Primary key:** `campaign_id` (declared `PRIMARY KEY … NOT ENFORCED` in DDL).
-- **Foreign keys / join columns:** `campaign_group_id` → campaign_groups (1:N, ~129k groups own ~548k campaigns),
+- **Foreign keys / join columns:** `campaign_group_id` → campaign_groups (1:N, ~129k groups own ~554k campaigns),
   `advertiser_id` → advertisers, `campaign_status_id` → core_campaign_statuses, `objective_id` → core_objectives,
   `channel_id` → channels, `partner_id` → core_partners.
 
@@ -121,8 +121,8 @@ All counts below are on **live** rows (`deleted=FALSE AND is_test=FALSE` = 474,1
   ~548k campaigns → ~129k groups). Product line (PTV/Select), flight, and the operative budget live on the **group**,
   not here. Joining group→campaigns **fans out ~4x** — dedup/aggregate to group grain when rolling up.
 - **→ `advertisers`** on `advertiser_id` — **N:1**. Use `advertisers.company_name` for advertiser labels.
-- **`integrationprod.campaigns` (SQLMesh analytical sibling)** — same grain (campaign_id PK), **80 fewer rows**
-  (548,687 vs 548,767 here) after SQLMesh filtering. Prefer the analytical `campaigns` for day-to-day analytics;
+- **`integrationprod.campaigns` (SQLMesh analytical sibling)** — same grain (campaign_id PK), **~52 fewer rows**
+  (553,465 vs 553,517 here) after SQLMesh filtering. Prefer the analytical `campaigns` for day-to-day analytics;
   use `public_campaigns` (this table) when you need the closest-to-source CDC row or CDC-incremental reads via
   `datastream_metadata.source_timestamp`. Both are 1:1 on `campaign_id`.
 - **Reference dims (all N:1, small):** `objective_id`→core_objectives, `channel_id`→channels,
@@ -145,7 +145,7 @@ All counts below are on **live** rows (`deleted=FALSE AND is_test=FALSE` = 474,1
   (~2026-04) is a re-snapshot artifact — never use it to reason about how old a campaign is; use `create_time`.
 - **This is current-state, single-version** (no `version` column). For "what did this campaign look like on day D"
   go to `archives_campaign_archives`.
-- **`public_campaigns` (this, raw CDC) has 80 more rows than the analytical `campaigns`** — pick deliberately; results
+- **`public_campaigns` (this, raw CDC) has ~52 more rows than the analytical `campaigns`** — pick deliberately; results
   can differ slightly at the margins.
 - **`objective_id` is a weak stage separator** (some `objective_id=4` retargeting rows are `funnel_level=1`); use
   `funnel_level` for stage, but use `objective_id IN (1,5,6)` when reproducing CHAPI's prospecting scope.
@@ -155,13 +155,13 @@ All counts below are on **live** rows (`deleted=FALSE AND is_test=FALSE` = 474,1
 - **No partition** (base table, no `PARTITION BY`); clustered by `campaign_id`. **The always-apply filter is
   `deleted=FALSE AND is_test=FALSE`** (there is no time partition to filter). It's a tiny dim (~130 MiB) so cost is
   negligible, but the levers, all from `bash .claude/scripts/bq_run.sh --dry_run`:
-  - `SELECT *` full table = **136,149,944 B (~130 MiB)** — the whole table.
-  - `SELECT campaign_id, objective_id, funnel_level` full = **12,773,096 B (~12 MiB)** — same rows, **~10.7× cheaper**;
+  - `SELECT *` full table = **137,341,346 B (~131 MiB)** — the whole table.
+  - `SELECT campaign_id, objective_id, funnel_level` full = **12,887,096 B (~12 MiB)** — same rows, **~10.7× cheaper**;
     **column selection is the real prune lever** — avoid `SELECT *`.
-  - `SELECT * WHERE campaign_id = 259556` = **136,149,944 B** (same as full in the *estimate*) — clustering prunes
+  - `SELECT * WHERE campaign_id = 259556` = **137,341,346 B** (same as full in the *estimate*) — clustering prunes
     only at **runtime**, so the dry-run upper bound never reflects the `campaign_id` filter. Still, filter/order by
     `campaign_id` for cheaper actual execution.
-- `approx_logical_bytes` = 136,149,944 (bq show `numBytes`, the physical backing store).
+- `approx_logical_bytes` = 137,341,346 (bq show `numBytes`, the physical backing store).
 
 ## Example queries
 ```sql
@@ -190,4 +190,5 @@ WHERE objective_id IN (1,5,6) AND deleted = FALSE AND is_test = FALSE;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Confirmed BASE TABLE (raw Datastream CDC mirror of Postgres public.campaigns; PK campaign_id, CLUSTER BY campaign_id, no partition, max_staleness=15min) — not a view. Grain verified 1:1 on campaign_id (548,767 rows, all distinct). Resolved domains live: objective_id (core_objectives: 1/3=Prospecting, 4=Retargeting, 5=Multi-Touch, 6=MT Full Funnel, 7=Ego, 2=Onsite), funnel_level (~8.5% NULL), channel_id (8=CTV/1=display), campaign_status_id (8="Deleted" ≠ deleted BOOL). Confirmed datastream_metadata.source_timestamp = milliseconds CDC-capture (≤15min behind now). budget_floor/ceiling = fractional pacing bounds (0–1.1), not $. Cost: SELECT* 136MB vs 3 cols 12.8MB (dry-run). Prose oracle: no public_campaigns section in data_catalog.md — reconciled against the `bronze.integrationprod.campaigns` (analytical sibling) section instead; noted this raw table has 80 MORE rows than analytical campaigns (548,767 vs 548,687).
+- 2026-07-29: enriched→verified. Re-introspected live vs source: schema unchanged (33 cols, identical types) — AUTO:SCHEMA untouched. object_type=TABLE, no partition, requirePartitionFilter=none, CLUSTER BY campaign_id, no TTL — all still correct. Grain re-verified 1:1 (COUNT=COUNT(DISTINCT campaign_id)=553,517). Drift = CDC row growth only: rows 548,767→553,517, numBytes 136,149,944→137,341,346; analytical sibling `campaigns` now 553,465 (raw has ~52 more, was 80). Refreshed dry-run levers (SELECT* 137,341,346 B / 3 cols 12,887,096 B). Updated approx_rows, approx_logical_bytes, grain counts, sibling-delta, cost figures; schema_synced+last_verified→2026-07-29.
 <!-- CHANGELOG END -->

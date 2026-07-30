@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [advertiser_id, campaign_id]
 time_unit: datetime
 ttl_days: null
-approx_rows: 107123397631
-approx_logical_bytes: 76241298163163
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 107750296651
+approx_logical_bytes: 76934110216984
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reporting, attribution, spend]
 keywords: [all_facts, unified fact, reporting view, media_spend, impressions, visits, conversions, uniques, HLL, competing, industry_standard, ROAS, CHAPI, graph, usersreached]
 source: INFORMATION_SCHEMA+human
@@ -359,7 +359,7 @@ physical table (below), not a query-time join.
   independently confirmed here (an earlier "represents UTC" note was unsourced). Treat the timezone as
   **unverified** and confirm against the SQLMesh model / a known-tz anchor before bucketing to local days.
 - **Freshness:** this table stays fresh through the current day (hourly SQLMesh; max partition on
-  2026-07-19 = `20260719`). This is UNLIKE the `sum_by_*_by_day` rollups, which lagged ~17 days — for
+  2026-07-29 = `20260729`). This is UNLIKE the `sum_by_*_by_day` rollups, which lagged ~17 days — for
   recent-window analysis prefer `all_facts` / the base `*_facts` tables over the rollups.
 - **Owner = Backend Reporting (`ber`).** Route metric-definition / model changes there; a new `graph`
   reach metric is a coordinated change across sqlmesh + chapi (ClickHouse DDL/MV) + airflow-reporting
@@ -379,9 +379,9 @@ physical table (below), not a query-time join.
   **3.33 GB** (actual run 2026-07-19); adding the three BIGNUMERIC spend columns pushes it to **~7.58 GB**
   (dry-run); a single BIGNUMERIC (`media_spend`) alone = **2.23 GB/day**, and a 3-column NOT-NULL
   discriminator probe = **0.83 GB** (actual). Scan the fewest columns you need.
-- **Physical size:** 107,123,397,631 rows, numBytes 76,241,298,163,163 (~76.2 TB / 69.3 TiB backing
-  storage), **2,111 daily partitions** spanning **2020-10-01 → 2026-07-19** (plus one empty `__NULL__`
-  partition ⇒ 2,112 INFORMATION_SCHEMA rows, 0 rows in the NULL partition).
+- **Physical size:** 107,750,296,651 rows, numBytes 76,934,110,216,984 (~76.9 TB / 70.0 TiB backing
+  storage), **2,121 daily partitions** spanning **2020-10-01 → 2026-07-29** (plus one empty `__NULL__`
+  partition ⇒ 2,122 INFORMATION_SCHEMA rows, 0 rows in the NULL partition). (Re-verified 2026-07-29.)
 
 ## Example queries
 ```sql
@@ -419,6 +419,7 @@ WHERE hour >= '2025-01-01' AND hour < '2025-06-01'
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Live-verified: physical is a materialized TABLE (107.1B rows, ~76.2 TB, 2,111 daily partitions + 1 empty NULL, 2020-10-01→2026-07-19), partition=hour (DATETIME) confirmed empirically via dry-run diff (full scan of media_spend 3.40 TB vs 1 day 2.23 GB, ~1527x), cluster=[advertiser_id, campaign_id], require_partition_filter=false. Fact-type discriminator confirmed on one day (55.69M rows): measures are 0-filled (not NULL) across UNION legs; conversion_source_id/conversion_type NOT NULL marks conversion+site legs. Reconciled drift vs data_catalog.md: (a) physical is a TABLE not "a VIEW that joins facts"; (b) physical hash rolled …__2291495033 → …__3194417682; (c) hour is DATETIME (catalog line ~2913 said TIMESTAMP). Prose oracle = data_catalog.md §silver.summarydata.all_facts + data_knowledge.md §all_facts/§CHAPI-reporting-graph.
 - 2026-07-19 (fixer, 2-reviewer pass): CORRECTED the `pa_model_id` discriminator claim — `pa_model_id` NULL is NOT a clean leg discriminator (verified 2026-07-10: 85,493/145,274=59% of conversion/site rows have non-null pa_model_id; 129,315/189,096=68% of pa-null rows are main-leg). Only conversion_source_id/conversion_type NOT NULL discriminates. Grain re-verified: exactly 1:1 on 2026-07-10 (55,544,968 rows = distinct) but rare duplicate-grain rows exist (11 in hour 2026-07-18 12:00 = 3,030,075 vs 3,030,064, ~0.0004%) — don't use the 18-tuple as a key. Fixed "18 dims + hour" double-count → 18 columns (hour + 17 dims); prose oracle's "19 keys" mislabels the 18 it lists. Partition count corrected 2,112→2,111 daily (+1 empty NULL). Cost anchor corrected: 9-flag probe bills 3.33 GB actual (dry-run 3.58 GB), 9 cols incl BIGNUMERIC spend 7.58 GB — NOT 0.415 GB. Softened unsourced hour=UTC to tz-unverified. coverage_state stays enriched (hour tz still unconfirmed).
+- 2026-07-29: enriched→verified. Re-introspected live vs source: view query unchanged (physical = sqlmesh__summarydata.summarydata__all_facts__3194417682, a materialized TABLE); partition=hour DAY, requirePartitionFilter=None(false), clustering=[advertiser_id, campaign_id], no partitionExpirationMs (ttl null) — all confirmed off `bq show` of the physical. Schema exact match: 180 live cols vs 180 doc AUTO:SCHEMA rows, identical names/types/nullable/order (zero adds/removes/retypes). Counts refreshed for +10 days of hourly loads: 107.75B rows (was 107.12B), 76.93 TB (was 76.24 TB), 2,121 daily partitions (was 2,111), max partition advanced 20260719→20260729 (freshness-through-current-day claim reconfirmed). `hour` timezone remains the only unverified item and is honestly flagged as such in-doc — not a schema/partition drift; verified promotion stands.
 <!-- CHANGELOG END -->
 
 ## View definition

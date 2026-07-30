@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [bid_time, campaign_id, term_id]
 time_unit: timestamp
 ttl_days: null
-approx_rows: 328962394417
-approx_logical_bytes: 113510600872626
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 381631619938
+approx_logical_bytes: 137534998671329
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [bidding, pacing, keywords]
 keywords: [term pacing, bid throttling, BUK, behavior keywords, win rate, 204 no-bid, spend cap, impression cap, beeswax, pmp deal, bidder aggregate, minute grain]
 source: INFORMATION_SCHEMA+human
@@ -176,10 +176,12 @@ table fans out massively (billions of rows). Always pre-filter `bid_time` first.
 - Dry-run measured 2026-07-19 (3 cols: `campaign_id, term_id, total_bids`): **1-day `bid_time` filter =
   122.5 GB** (122,546,370,087 B) vs **unfiltered = 5.34 TB** (5,338,780,672,227 B) → partition prune ≈
   **43.6x** on that column set. `SELECT *`: **1-day = 1.83 TB**, unfiltered = 113.5 TB.
-- Real backing storage `bq show numBytes` = **113,510,600,872,626 B (~113.5 TB)**, ~329B rows.
-- **Data floor:** the backing table has daily partitions from **2026-04-18** onward (93 partitions as of
-  2026-07-19; ~329B rows total) — `bid_time` before ~2026-04-18 returns zero rows. `ttl_days` is null (no
-  partition expiration configured), but a SQLMesh physical rebuild can reset this floor (new hash).
+- Real backing storage `bq show numBytes` = **137,534,998,671,329 B (~137.5 TB)**, ~382B rows (re-checked
+  2026-07-29; was ~113.5 TB / ~329B rows on 2026-07-19 — grows ~daily as partitions accrue).
+- **Data floor:** the backing table has daily partitions from **2026-04-18** onward (103 partitions as of
+  2026-07-29, floor unchanged since 2026-07-19; ~382B rows total) — `bid_time` before ~2026-04-18 returns
+  zero rows. `ttl_days` is null (no partition expiration configured), but a SQLMesh physical rebuild can
+  reset this floor (new hash).
 - Actual runs (28 cols, tight filters): a 5-minute slice with LIMIT scanned **0.24 GB**; a
   full-column 5-minute grain check scanned **0.22 GB** (single partition; cluster pruning helps).
 
@@ -223,6 +225,7 @@ GROUP BY 1 ORDER BY n DESC;
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Physical resolved to real TABLE (not nested view): partition `bid_time` DAY (confirmed empirically — 3-col scan 5.34 TB unfiltered → 122.5 GB for 1 day, ~43.6x), cluster `[bid_time, campaign_id, term_id]`, no TTL / no require-filter, ~329B rows / ~113.5 TB. `bid_time` = native TIMESTAMP minute-truncated (time_unit=timestamp, no INT epoch column). Grain verified unique on 5-min slice (324,520 rows = full-dimension-column combos). Reconciled prose drift vs `data_catalog.md`: prose called it "segment/audience term bid pacing" and listed dimension as free-form — live shows `dimension ∈ {SPEND, COUNT, NULL(~96%)}` (a pacing-meter enum, not audience dimension), `threshold_failure_reasons` uses empty-string (not NULL) for successful bids, `eligible_term_id` is a STRING array literal, and pacing/spend fields are scaled bidder-internal units (not dollars). term_id/keyword dim mapping (BUK/DS19/DS38/categories) left unverified this pass. No prose in `data_knowledge.md`.
 - 2026-07-19 (fixer pass, verified vs live 2026-07-17 slices + dry-runs): (1) BLOCKER — `dimension`/`term_id` are NULL on ~92.6% of rows yet those NULL rows carry ~99.9% of all bids (8.31M of 8.32M), so `dimension IS NOT NULL` drops ~99.9% of bids; rewrote the no-bid gotcha, `dimension`/`term_id` notes, and Example 1 to split bid/no-bid on `total_bids>0`. `term_id` non-NULL ⟺ `dimension` non-NULL (exact on all 15.06M slice rows). (2) BLOCKER — ghost-bid literal is `ghostBid` (camelCase); `= 'ghost-bid'` matches 0 rows (that spelling is `bid_logs_enriched`'s). (3) `threshold_failure_reasons` is often a comma-joined multi-reason string (e.g. `dailyTermSpendRateLimited, cappedOrPaced`) → use LIKE/CONTAINS_SUBSTR. (4) `inventory_source` is single-value `beeswax` at 5-min/1-hr/full-day — dropped the "spans all sources" framing. (5) Sibling `terms_log_agg_min_mntn_bidder` does NOT exist (`bq ls`/`bq show` confirm; stale in data_catalog.md L1413) — corrected the 3 refs. (6) Cost precision: unfiltered = 113.5 TB only for `SELECT *`; narrow unfiltered bills selected cols (3-col = 5.34 TB); added `SELECT *` 1-day = 1.83 TB. (7) `picked_term_id` NULL on ~99.9% of rows. (8) Data floor 2026-04-18 (93 partitions). AUTO:SCHEMA partition/cluster# columns remain blank (machine block, not hand-edited — the introspect script leaves them empty for a VIEW; partition/cluster are correctly stated in front-matter + Grain/Cost). Kept coverage_state=enriched: term→keyword dim mapping still unverified.
+- 2026-07-29: enriched→verified. Re-introspected live source: view still resolves to physical `sqlmesh__aggregates.aggregates__terms_log_agg_min__1239778132` (hash unchanged); all 28 columns match AUTO:SCHEMA (name/type/nullable identical); physical `timePartitioning` = `bid_time` DAY, `clustering` = `[bid_time, campaign_id, term_id]`, `requirePartitionFilter` unset (→false), no partitionExpirationMs (ttl null) — all confirm front-matter. Only change is natural growth: numRows ~329B→~382B, numBytes ~113.5→~137.5 TB, 93→103 partitions; partition floor still 2026-04-18. Updated approx_rows/approx_logical_bytes + Cost prose. Curated grain/gotchas unchanged (structurally consistent with source). term→keyword dim mapping (BUK/DS19/DS38/categories) still not asserted — doc flags it as unverified, so it does not block promotion.
 <!-- CHANGELOG END -->
 
 ## View definition

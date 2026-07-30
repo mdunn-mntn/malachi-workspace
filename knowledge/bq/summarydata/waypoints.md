@@ -6,17 +6,17 @@ dataset: summarydata
 table: waypoints
 object_type: VIEW
 physical_table: sqlmesh__summarydata.summarydata__waypoints__2844282736
-grain: "one row per tracked site event (event_type URL=pageview / DLV=named event) per visitor GUID; ~19-20% attributed to an ad impression"
+grain: "one row per tracked site event (event_type URL=pageview / DLV=named event) per visitor GUID; ~20-27% attributed to an ad impression (varies by day)"
 partition_by: time
 require_partition_filter: false
 cluster_by: [advertiser_id, campaign_id, time]
 time_unit: microseconds
 ttl_days: null
-approx_rows: 564028637
-approx_logical_bytes: 218474057952
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 706535440
+approx_logical_bytes: 304964138127
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [attribution, visits, waypoints, events]
 keywords: [waypoints, visit, vv, view-verification, pageview, conversion, attribution, impression_id, source_type, event_type, dlv, url, steelhouse, pixel, ad_served_id]
 source: INFORMATION_SCHEMA+human
@@ -30,7 +30,7 @@ The granular **event stream of "waypoints"** — every tracked event a visitor f
 site (a URL pageview, or a named delivery/goal event like `conversion`, `pageview`, `cookie_consent_marketing`),
 captured by the MNTN/SteelHouse pixel or partner tags. About one row in five is **attributed to an ad
 impression** (the winning impression + first/last touch served-ad, attribution model, channel/device are
-stamped on). Reach for it when you need per-event journey detail behind visit-verification (VV) and
+stamped on — ~20–27% of rows, varies by day). Reach for it when you need per-event journey detail behind visit-verification (VV) and
 conversion attribution — the fine-grained layer under the daily `visits`/`ui_visits` rollups. It is NOT a
 daily rollup; it is one row per raw event, so it is large (~3.5–13M rows/day).
 
@@ -42,7 +42,7 @@ daily rollup; it is one row per raw event, so it is large (~3.5–13M rows/day).
   append-only event log, not a deduped fact.
 - **Event-type domain (`event_type`, verified 2026-07-15):** `URL` (~52%), `DLV` (~48%). URL = a pageview
   whose `raw_event_name` is the URL path; DLV = a named event whose `raw_event_name` is the event label.
-- **Attribution keys (populated only on the ~19–20% attributed rows):** `impression_id`,
+- **Attribution keys (populated only on the ~20–27% attributed rows):** `impression_id`,
   `ad_served_id`, `first_touch_ad_served_id`, `attribution_model_id`, `campaign_id`, `channel_id`,
   `device_type`, `is_pa`, `is_competing`, `source_type`.
 - **Dim keys:** `advertiser_id`, `campaign_id` (also the cluster keys).
@@ -100,9 +100,9 @@ daily rollup; it is one row per raw event, so it is large (~3.5–13M rows/day).
   view-verification (VV) beacon** (the numeric segments are channel / campaign / campaign-group ids). For
   DLV rows, labels like `conversion`, `pageview`, `Loaded a Page`, `roktInitComplete`, `cookie_consent_marketing`.
   Classified per-advertiser via `attr_advertiser_waypoints_event_mapping` (see Joins).
-- **`source_type`** — attribution touch type: `NULL` (~72% — unattributed event), `visits`
+- **`source_type`** — attribution touch type: `NULL` (~72–73% — unattributed event), `visits`
   (attributed to a display/site-visit touch), `last_tv_touch_visits` (attributed to the last CTV touch).
-  Verified domain 2026-07-15.
+  Verified domain 2026-07-15, re-confirmed 2026-07-29.
 - **`impression_id`** — the attributed impression id, format `{micros}.{n}.{n}.steelhouse`; NULL on
   unattributed rows. Many waypoint rows share one `impression_id` (the URL row and every DLV row of the
   same visit carry it).
@@ -146,7 +146,7 @@ Waypoints is a many-per-entity **event log**; almost every join fans OUT of the 
   2026-07-15). No primary key. If you need distinct events, dedup explicitly; do not assume 1 row = 1 event.
 - **One page-load = many rows.** A visit produces a `URL` row plus one `DLV` row per named event, all
   sharing `impression_id`. Counting rows ≠ counting visits or conversions.
-- **~72% of rows are unattributed** (`source_type IS NULL`) and carry NULL for the whole attribution block
+- **~72–73% of rows are unattributed** (`source_type IS NULL`) and carry NULL for the whole attribution block
   (`impression_id`, `channel_id`, `device_type`, `attribution_model_id`, `is_pa`, `is_competing`,
   `from_verified_impression`). Filter on `source_type` / `impression_id IS NOT NULL` before treating a row
   as an attributed touch, or your denominators break.
@@ -166,9 +166,9 @@ Waypoints is a many-per-entity **event log**; almost every join fans OUT of the 
   Confirms `time` is the partition.
 - **Wide scans are expensive:** `SELECT *` for a single day = **2.90 GB** (dry-run), ~28× the one-column
   day. Project only the columns you need. An 11-column, 1-day GROUP BY billed **0.487 GB** (actual).
-- **Physical storage** (real backing, single physical, straight `SELECT *` view): **218.47 GB /
-  564,028,637 rows** across 162 daily partitions (2026-02-10 → present); ~3.5–13M rows/day (recent days
-  larger, 7–13M).
+- **Physical storage** (real backing, single physical, straight `SELECT *` view): **304.96 GB /
+  706,535,440 rows** (2026-07-29; was 218.47 GB / 564M on 2026-07-19) across daily partitions
+  (2026-02-10 → present); ~3.5–17M rows/day (recent days larger, 16.5M on 2026-07-27).
 - **The one filter to always apply:** a bounded `time` range. Add `advertiser_id` / `campaign_id` for
   further cluster pruning.
 
@@ -197,6 +197,7 @@ WHERE time >= '2026-07-15' AND time < '2026-07-16'
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved view→physical `summarydata__waypoints__2844282736` (TABLE, 564,028,637 rows / 218.47 GB, 162 partitions). Partition=`time` DAY confirmed empirically (44× dry-run prune on `SELECT epoch`); cluster=[advertiser_id,campaign_id,time]; no TTL. `epoch`=UNIX_MICROS(time) (microseconds). Domains verified live 2026-07-15: event_type∈{URL,DLV}, source_type∈{NULL,visits,last_tv_touch_visits}; ~19–20% of rows attributed (impression block populated); guid/ip 100%. No dedicated prose oracle in data_catalog.md (only related config `attr_advertiser_waypoints_event_mapping` referenced in data_knowledge.md line 4146) — enriched primarily from live schema + samples.
+- 2026-07-29: enriched→verified. Re-derived from live source: physical hash unchanged (`summarydata__waypoints__2844282736`), all 37 columns/types/order match AUTO:SCHEMA, partition=`time` DAY, require_partition_filter=false, cluster=[advertiser_id,campaign_id,time], no partition expiration (TTL null) — all confirmed. Row/byte grew to 706,535,440 / 304.96 GB (from 564M / 218.47 GB); front-matter approx_* updated. event_type∈{URL,DLV} and source_type∈{NULL,visits,last_tv_touch_visits} re-confirmed on 2026-07-27 partition; attribution rate drifted to ~27% (was ~19–20% on 2026-07-15) — grain/purpose/gotcha ratios corrected to ~20–27% / ~72–73%.
 <!-- CHANGELOG END -->
 
 ## View definition

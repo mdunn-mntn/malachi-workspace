@@ -46,4 +46,14 @@ mechanism. I'd conceded a correct conclusion and flip-flopped the runbook three 
    "X causes Y," find the case where X holds but Y doesn't — if it exists, X isn't the cause. Verify the
    mechanism across the negative cases, not just the one that fits.
 
-Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]].
+7. **Check the SOURCE OF TRUTH before rationalizing why a derived-table number is "correct."** Same
+   INC-001, final twist (2026-07-29): the whole thread assumed `enriched_impressions`/`cost_impression_log`
+   DS51=0 for 07-27 was *correct* and spent FOUR rounds theorizing the mechanism (same-day-keyed, serving
+   dark, campaign pause). One `spend_log` query ended it: the campaigns won **110,792** auctions that day,
+   **$904 billed, 100% rendered** — the impressions were REAL, and **CIL (a derived table) had dropped
+   them**. enriched just mirrored the broken CIL. The trap: I kept asking "why is 0 correct?" instead of
+   "is 0 even TRUE?" For any reporting/derived table (CIL, enriched, a rollup), reconcile an anomalous 0
+   against the spend/event source of truth (`spend_log`, `win_logs`) FIRST. Don't build a mechanism to
+   explain a number you haven't confirmed is real. (Even the owner's mid-thread "0 is correct" was wrong.)
+
+Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[feedback_source_table_ips]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]].

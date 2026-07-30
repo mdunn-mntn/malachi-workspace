@@ -1616,28 +1616,29 @@ MES is the enrichment service that processes impressions and validates audience 
 the ipdsc file for the relevant data source are dropped. This is the root cause of HH discrepancy
 investigations (TI-644, MM-44) where targeting audiences appear smaller than expected.
 
-**enriched_impressions DS51 ≈ the DS51-targeting campaign's SERVED impressions, ~1:1 (DS51/Bombora, verified 2026-07-29).**
-`enriched_impressions.data_source_id` = **what the campaign targeted** (`v_campaign_group_segment_history`), enriched
-against a **35-day BACKWARD** ipdsc window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`). Builder =
-`SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py` (prod config `lookback=2`, `ipdsc_lookback=35`,
-`dsid_block_list=[2,14,42]`; output `summarydata.enriched_impressions`, materialized to `mntn-analytics-prod-01`). So DS51
-enriched count ≈ the Bombora campaigns' served-impression count in `cost_impression_log`. Verified for CG 131563 (adv
-30506 = "MNTN - No ENG Testing", an internal TEST advertiser; campaigns 648318-648323, effectively DS51-only since
-enriched DS51 = total Bombora served exactly): 07-25=104,177 · 07-26=108,744 (=enriched 108,744) · 07-27=0 (=enriched 0) ·
-07-28=141,002 (≈enriched 140,998).
+**`cost_impression_log` (CIL) can DROP real impressions its own source tables have — a CIL build gap (found 2026-07-29).**
+CIL is built from **spend_log** (won auctions/spend, source of truth) + **win_logs** (Beeswax win feed). It is possible for
+CIL (and therefore its downstream `enriched_impressions`) to read **0** for a (campaign × day) while BOTH sources carry the
+full impression count. Verified case: DS51/Bombora campaigns (CG 131563 / adv 30506 "MNTN - No ENG Testing", campaigns
+648318-648323) on `dt=2026-07-27`:
+- spend_log = **110,792** won auctions, **$903.83 billed, 100% production (test=0), 100% rendered**, partner_id=8 (Beeswax)
+- win_logs = **110,862** wins
+- cost_impression_log = **0** (yet the advertiser's OTHER campaigns logged **1.47M** in CIL that day)
+- enriched_impressions = 0 (correctly mirrors the broken CIL)
 
-**⚠ The DS51 ipdsc skip does NOT cause the 07-27 zero — earlier "skip → serving dark" claim RETRACTED (2026-07-29, 2nd
-correction).** Counter-evidence: **07-25 was ALSO a DS51 ipdsc skip day** (calendar absent 07-25 AND 07-27) yet the Bombora
-campaigns served **104,177** that day (membership persisted from the 07-24 drop; DS51 membership-db TTL ~90d per Jordan
-Piepkow). And on **07-27 the advertiser served 1.47M impressions across its OTHER campaigns**; only the 6 Bombora campaigns
-went to 0. So 07-27=0 is a **Bombora-campaign-specific serving gap on that one day**, NOT the ipdsc skip and NOT a
-data-pipeline gap. enriched=0 correctly mirrors serving (0 served → 0 enriched); the 35d lookback is irrelevant (it
-enriches served impressions, can't invent unserved ones). **OPEN (bidder/serving domain, not reporting):** why those
-campaigns served 0 on 07-27 — most likely a campaign-level pause (test advertiser) or a 07-26 DS51 membership-load failure
-into the bidder; the 90d TTL means membership *should* have persisted (as on 07-25), so a true 0 is surprising. The 110,798
-seen for 07-27 the prior day is an unexplained transient (campaigns served 0, so not real DS51 volume). See on-call INC-001.
-**Method note:** the skip-correlation was a red herring — I had verified the 1:1 serving mirror but extrapolated the *cause*
-from a single confirming day (07-27) without checking the counter-case (07-25). One confirming case is not proof of a mechanism.
+So the impressions are REAL and the **CIL build dropped them** for these campaigns on 07-27; enriched followed. The 110K
+matches the 110,798 the owner saw the prior day (present in CIL/enriched yesterday, removed by a CIL reprocess of the 07-27
+partition). **Lesson: when CIL / enriched shows an anomalous per-campaign 0, reconcile against spend_log (spend source of
+truth) before concluding it is correct — CIL is a derived table and can under-count.** Routed to the CIL SQLMesh-model owner
+(BER/data-platform); tracked in `improvements_backlog.md`. **RETRACTED (both were wrong):** the DS51 ipdsc skip did NOT cause
+this (07-25 was also a skip and served 104K), and it was NOT a serving gap (the campaigns served 110,792, $904 billed).
+
+**Also verified (still true):** `enriched_impressions.data_source_id` = what the campaign **targeted**
+(`v_campaign_group_segment_history`); enriched against a **35-day BACKWARD** ipdsc window
+(`ipdsc_dt BETWEEN to_date(time)-35d AND time`); builder `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`
+(`lookback=2`, `ipdsc_lookback=35`, `dsid_block_list=[2,14,42]`, DS51 not blocked; output `summarydata.enriched_impressions`
+→ `mntn-analytics-prod-01`). On healthy days enriched DS_x ≈ that DS's campaigns' served impressions in CIL (07-26 DS51:
+enriched 108,744 = CIL 108,744 = spend_log 108,744). See on-call INC-001.
 
 ### Data Source (DS) Type Reference
 | DS ID | Name | Type | In IPDSC | In tmul_daily | Notes |

@@ -358,7 +358,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`integrationprod.core_goal_types`](integrationprod/core_goal_types.md) — 16-row bronze CDC dim mapping goal_type_id (1-16) to a campaign optimization goal name + plain-English description (ROAS, eCPA, CPA, CostPerVisit, VisitRate, …); physical source behind the silver core.goal_types view.
 - [`integrationprod.dso_configuration_service_campaign_presets`](integrationprod/dso_configuration_service_campaign_presets.md) — one row per campaign (PK campaign_id) — DSO config-service per-campaign preset overrides: frequency cap, pacing, score/CPM thresholds, budget pace
 - [`integrationprod.objectives`](integrationprod/objectives.md) — static 7-row enum, one row per marketing objective — objective_id -> name lookup for campaigns.objective_id (NOT a stage indicator; funnel_level is authoritative for stage)
-- [`integrationprod.public_campaigns`](integrationprod/public_campaigns.md) — one row per campaign (campaign_id PK) — raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group
+- [`integrationprod.public_campaigns`](integrationprod/public_campaigns.md) — one row per campaign (campaign_id PK) - raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group
 - [`summarydata.campaign_group_goal_change_log`](summarydata/campaign_group_goal_change_log.md) — CDC audit log of campaign-group performance-goal (bid-goal) changes — one row per goal edit, carrying prior/current goal as strings plus the user who made it.
 - [`summarydata.campaign_group_status_change_log`](summarydata/campaign_group_status_change_log.md) — CDC audit log of campaign-group status (lifecycle state) changes — one row per status transition, carrying prior/current status label, the id of the new status, and the user who changed it.
 - [`summarydata.waypoints_sp_aggregation`](summarydata/waypoints_sp_aggregation.md) — Daily SQLMesh rollup of MNTN Selective Performance (SP) metrics from Waypoint events — grain day x campaign, splitting event/impression/user/session/spend into a base version (the row's own campaign group) and an sp_-prefixed version attributed to the linked SP companion campaign group. Currently a narrow pilot: one advertiser (34114), one optimizable event (Viewed Recommendations Page).
@@ -581,7 +581,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 
 ### dims
 - [`integrationprod.archives_integration_margin_archives`](integrationprod/archives_integration_margin_archives.md) — one row per (integration_margin_id, version) snapshot — append-only version history of core_integration_margins (per-data-source integration margins); SENSITIVE margin table, schema/grain only
-- [`integrationprod.public_campaigns`](integrationprod/public_campaigns.md) — one row per campaign (campaign_id PK) — raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group
+- [`integrationprod.public_campaigns`](integrationprod/public_campaigns.md) — one row per campaign (campaign_id PK) - raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group
 
 ### display
 - [`logdata.viewability_log`](logdata/viewability_log.md) — Display-only IAB viewability events (measurable + viewable) — the display equivalent of event_log for tracing viewable display impressions back through the pipeline.
@@ -1156,7 +1156,7 @@ Grouped by each table's `domain:` front-matter. `(unassigned)` = still needs a d
 - [`tpa.liveramp_categories_advertiser_mapping`](tpa/liveramp_categories_advertiser_mapping.md) — Maps LiveRamp (DS35/DS11) 3P audience category IDs to the MNTN advertisers that use them; ~1,917 rows, mostly one custom/private category per advertiser.
 
 ### targeting-config
-- [`integrationprod.public_campaigns`](integrationprod/public_campaigns.md) — one row per campaign (campaign_id PK) — raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group
+- [`integrationprod.public_campaigns`](integrationprod/public_campaigns.md) — one row per campaign (campaign_id PK) - raw Datastream CDC mirror of Postgres public.campaigns; the line-item config dim (stage, channel, objective) under a campaign_group
 
 ### taxonomy
 - [`external.tpa__dstillery_categories__v1`](external/tpa__dstillery_categories__v1.md) — one row per Dstillery (DS18) 3P interest-category node — the shared, public taxonomy that decodes DS18 audience-segment category ids into human-readable paths; 11,688 nodes (2 structural roots + 11,686 leaves), 3,303 active / 8,385 deprecated

@@ -12,9 +12,9 @@ require_partition_filter: false
 cluster_by: [bid_time, advertiser_id, campaign_group_id]
 time_unit: timestamp
 ttl_days: null
-approx_rows: 429955173
-approx_logical_bytes: 53858734912
-schema_synced: 2026-07-19
+approx_rows: 471906543
+approx_logical_bytes: 59110370000
+schema_synced: 2026-07-29
 last_verified: 2026-07-19
 coverage_state: enriched
 domain: [bidding, pacing]
@@ -132,7 +132,7 @@ bronze dims). In every case this table is the **N** side (many minute rows per e
 - **Scaled money:** spend/cap are micro-currency (÷1e6 ≈ USD, inferred). Prefer the spend/cap **ratio** for
   pacing rather than resolving absolutes.
 - **No partition-filter enforcement:** `require_partition_filter = false`, so an accidental unfiltered query
-  scans the whole ~53.9 GB table — always add a `bid_time` range yourself.
+  scans the whole ~59.1 GB table — always add a `bid_time` range yourself.
 - **Partition timezone:** DAY partitioning is on the `bid_time` TIMESTAMP (UTC); day boundaries are UTC.
 
 ## Cost & partitioning notes
@@ -140,8 +140,10 @@ bronze dims). In every case this table is the **N** side (many minute rows per e
   `bid_time, advertiser_id, campaign_group_id` (add advertiser/campaign-group predicates to prune further).
   `require_partition_filter` is **false**, so nothing stops a full scan — you must add the filter.
 - Physical backing: `sqlmesh__aggregates.aggregates__campaign_group_log_agg_min__1828378980` — a real
-  partitioned **TABLE** (~429.96M rows, numBytes 53,858,734,912). The clean name is a VIEW `SELECT *` over it.
-- Dry-run figures (2026-07-19, labeled by column set — only compare like-for-like):
+  partitioned **TABLE** (~471.91M rows, numBytes 59,110,370,000 as of 2026-07-29; was ~429.96M / 53.86 GB on
+  2026-07-19 — natural growth). The clean name is a VIEW `SELECT *` over it.
+- Dry-run figures (2026-07-19, labeled by column set — only compare like-for-like; absolute bytes now higher
+  with table growth, per-day multipliers hold):
   - `SELECT *`, **one day** (2026-07-17): **525,026,608 B (~0.53 GB)**.
   - `SELECT *`, **no partition filter (all-time)**: **53,858,734,912 B (~53.86 GB)** — equals full storage;
     the day filter is **~102x** cheaper.
@@ -175,6 +177,7 @@ ORDER BY bid_time;
 ## Changelog
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
+- 2026-07-29: verification pass vs live source. Structural metadata all CONFIRMS: VIEW over the same physical `sqlmesh__aggregates.aggregates__campaign_group_log_agg_min__1828378980`; partition=`bid_time` DAY, requirePartitionFilter=None(false), clustering=[bid_time, advertiser_id, campaign_group_id], no partition/table expiration (ttl_days=null). All 16 columns match AUTO:SCHEMA exactly (INFORMATION_SCHEMA.COLUMNS, same types/order/nullability). Minute grain re-confirmed (bid_time seconds=00, LIMIT 5 on 2026-07-27). **Drift fixed:** natural growth — approx_rows 429,955,173→471,906,543, numBytes 53,858,734,912→59,110,370,000; updated front-matter + physical-backing + ~GB gotcha; schema_synced→2026-07-29. **Kept coverage_state=enriched:** two curated inference-labeled claims — micro-currency ÷1e6≈USD spend scale, and flight_id→flight dim join — remain not source-traceable via cheap metadata this pass (require external spend grounding / an unconfirmed flight dim), so not promoted to verified.
 - 2026-07-19: skeleton→enriched. Resolved VIEW to physical TABLE (~429.96M rows, 53.86 GB): partition=`bid_time` DAY (require_partition_filter=false), cluster=[bid_time, advertiser_id, campaign_group_id], no TTL. Confirmed minute grain (bid_time seconds always 00) and the identity total_bid_requests = total_bids + total_204_bids. **Prose vs schema drift:** data_catalog.md listed `total_200_bids`; live column is `total_bids` (same meaning, HTTP-200 bids) — doc follows live schema. Documented spend/cap as micro-currency (÷1e6≈USD, inferred from cap↔flight-length consistency) with spend/cap ratio as the unit-free pacing metric; impression cols as cumulative counts (cap 0.0 = uncapped).
 - 2026-07-19: fixer pass (2 adversarial reviews). **Corrected `bid_price_per_hour`** — the prior "near-constant fixed rate ~15–16e9, do not sum" claim was WRONG. Live 2026-07-17 (4,208,992 rows): p50=2,129,336, p95=375,667,720, max=15,966,958,153, only 35 rows in [15e9,16e9]; within-flight median CV=0.79, 0/3476 flights near-constant (<2%), 3476/3476 CV>10%. Trace cg 67765/flight 1031143 = 1,347 distinct values over 1,347 minutes (min 206,684 → max 15.97e9), bid_price_per_hour ≈ 8,000 × total_bid_requests every minute → it is a per-minute volume-proportional total, not a fixed rate. **Softened monotonicity** (max_* spend/impression) from absolute to near-monotonic: 126/127/126 decreases per 4,000,163 minute transitions (~99.997%); added clamp-at-0 caveat for diffed increments. **Fixed sibling cross-ref:** `campaign_group_log_aggregation_mntn_bidder` is the coarser `*_log_aggregation` family (per data_catalog.md L1398-1400), not a same-minute-grain `_agg_min` sibling — moved out of that list. Cost dry-runs re-derived byte-exact (525,026,608 / 33,671,936 / 53,858,734,912 B). Left coverage_state=enriched (micro-currency ÷1e6 scale and flight_id→flight dim remain inferred/unverified, not source-traced).
 <!-- CHANGELOG END -->

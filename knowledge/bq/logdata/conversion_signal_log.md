@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 2602175
-approx_logical_bytes: 1226811038
-schema_synced: 2026-07-17
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 76313558
+approx_logical_bytes: 127457436969
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, attribution, offline]
 keywords: [conversion_signal, offline_conversion, mobile_measurement, appsflyer, crm_lead, call_tracking, identity_graph, data_source_id, hashed_email, hashed_phone]
 source: INFORMATION_SCHEMA+human
@@ -26,7 +26,7 @@ tags: [offline-conversions]
 # logdata.conversion_signal_log
 
 ## Purpose
-The append-only landing feed for **offline / third-party conversion signals** — conversions MNTN receives from integrations rather than from its own web pixel. Three integration families dominate (see `data_source_id` below): **mobile-app / MMP events** (AppsFlyer — Install, purchase, account_created…), **CRM lead lists** (HubSpot-style list uploads — the raw `client_conversion_type` is the list name), and **call-tracking** (Answered/Missed/Abandoned Call, Text/Voicemail). Reach for it when you need the *raw* offline-conversion signal with its full identity graph (hashed email/phone, device id, IP) **before** attribution — it is the upstream counterpart of the attributed `summarydata.offline_conversions` and is a different beast from the pixel firehose `logdata.conversion_log` (client-side JS GET params, ~25 TB). This table is tiny (~1.2 GB) by comparison.
+The append-only landing feed for **offline / third-party conversion signals** — conversions MNTN receives from integrations rather than from its own web pixel. Three integration families dominate (see `data_source_id` below): **mobile-app / MMP events** (AppsFlyer — Install, purchase, account_created…), **CRM lead lists** (HubSpot-style list uploads — the raw `client_conversion_type` is the list name), and **call-tracking** (Answered/Missed/Abandoned Call, Text/Voicemail). Reach for it when you need the *raw* offline-conversion signal with its full identity graph (hashed email/phone, device id, IP) **before** attribution — it is the upstream counterpart of the attributed `summarydata.offline_conversions` and is a different beast from the pixel firehose `logdata.conversion_log` (client-side JS GET params, ~25 TB). This table is still small vs `conversion_log` but is **no longer tiny**: as of 2026-07-29 it holds **76.3M rows / ~127 GB** — up from ~2.6M / ~1.2 GB on 2026-07-19, because a large **Mobile backfill on 2026-07-27/28** dumped ~71.8M rows into two partitions (see Cost & partitioning). Normal daily grain is still tens of thousands of rows.
 
 ## Grain & keys
 - **Grain:** one row per **ingested conversion-signal event**. Append-only; batch-loaded (ingestion lag is **source-dependent** — Mobile near-real-time, Lead/CRM up to ~2–3 days; see Gotchas).
@@ -60,8 +60,8 @@ The append-only landing feed for **offline / third-party conversion signals** �
 - **`ingestion_timestamp`** (TIMESTAMP) — when the row was **loaded** into the feed (batch). Lag is source-dependent: ~0 for Mobile/Call/Text, up to ~2–3 days for Lead/CRM (see Gotchas).
 - **`ingestion_epoch`** (INT64) — `ingestion_timestamp` in **milliseconds**: exactly `UNIX_MILLIS(ingestion_timestamp)`.
 - **`file_available_ts`** (TIMESTAMP) — when the source batch **file** became available (drives ingestion; observed rounded to the hour). ≈ `ingestion_timestamp` for MMP feeds.
-- **`data_source_id`** (INT64, never NULL) — the integration/source. **Four distinct values** across full history: **61 = Mobile** (AppsFlyer / MMP app events; 330,289 rows), **45 = Lead** (CRM list uploads, e.g. HubSpot; 2,227,264), **37 = call-tracking** (43,000 `Call` + 1,503 `Text`), **50 = Purchase** (value-bearing; only 119 rows). **NOT 1:1 with `mntn_conversion_type`:** `data_source_id=37` covers **both** `Call` and `Text`, so `mntn_conversion_type` (5 values) is strictly finer — use it, not `data_source_id`, to split Call from Text.
-- **`mntn_conversion_type`** (STRING) — MNTN-normalized bucket, **five values**: `Mobile` / `Lead` / `Call` / `Text` / `Purchase`. This is the **authoritative conversion-class key** — each type maps to exactly one `data_source_id`, but `data_source_id=37` yields **both** `Call` and `Text`, so this column is finer than `data_source_id`. Filter conversions on `mntn_conversion_type` (not on a `data_source_id IN (…)` list) so you don't silently drop `Purchase` (dsid 50) or merge Call/Text.
+- **`data_source_id`** (INT64, never NULL) — the integration/source. **Five distinct values** across full history (re-derived 2026-07-29): **61 = Mobile** (AppsFlyer / MMP app events; **73,969,482 rows** — now 97% of the table after the 2026-07-27/28 backfill; was only 330,289 on 2026-07-19), **45 = Lead** (CRM list uploads, e.g. HubSpot; 2,290,152), **37 = call-tracking** (49,403 `Call` + 1,665 `Text`), **57 = page-view** (2,737 rows: 1,408 `page_view` + 1,329 empty-string `mntn_conversion_type` — NEW source, first seen since 2026-07-19), **50 = Purchase** (value-bearing; only 119 rows). **NOT 1:1 with `mntn_conversion_type`:** `data_source_id=37` covers **both** `Call` and `Text`, and `data_source_id=57` covers both `page_view` and the empty type — so `mntn_conversion_type` (7 values) is strictly finer — use it, not `data_source_id`, to split Call from Text.
+- **`mntn_conversion_type`** (STRING) — MNTN-normalized bucket, **seven values** (re-derived 2026-07-29): `Mobile` / `Lead` / `Call` / `Text` / `Purchase` / `page_view` / `""` (empty). This is the **authoritative conversion-class key** — each named type maps to exactly one `data_source_id`, but `data_source_id=37` yields **both** `Call` and `Text` and `data_source_id=57` yields both `page_view` and `""`, so this column is finer than `data_source_id`. Filter conversions on `mntn_conversion_type` (not on a `data_source_id IN (…)` list) so you don't silently drop `Purchase` (dsid 50) or merge Call/Text.
 - **`client_conversion_type`** (STRING, can be NULL) — the **raw** label from the client's source system: a mobile event name (`purchase`, `Install`, `account_created`), a CRM **list name** ("Find a Class & Open Registration | Summer/Fall 2026 | List"), or a call outcome ("Answered Call"). High-cardinality free text — do not treat as a controlled vocabulary.
 - **`order_amt`** (FLOAT64, never NULL) — conversion value; **defaults to 0.0**. Leads / calls / most mobile events are 0; only genuine purchases carry a positive amount (the `Purchase` class — `data_source_id=50` / `mntn_conversion_type='Purchase'`). No negatives observed. (Contrast `conversion_log`, whose silver view NULLs ≥$100M corruption — no such wrapper here.)
 - **`order_curr`** (STRING) — currency code when there's a value (`USD` dominant, plus GBP/CAD/AUD/EUR…); **`"N/A"` or empty string** when `order_amt=0`; can also be NULL.
@@ -70,7 +70,7 @@ The append-only landing feed for **offline / third-party conversion signals** �
 - **`ip`** (STRING) — top-level convenience copy of the IP identifier; **~25% empty**. This is the plain IP (not `ip_raw`).
 - **`identity`** (STRUCT<identifiers ARRAY<STRUCT<kind, value>>>) — the conversion's identity graph, one row → many identifiers. Observed `kind` values: **`IP`**, **`SHA256_EMAIL`** (hashed email), **`SHA256_PHONE`** (hashed phone), and undecoded enums **`UNKNOWN_ENUM_VALUE_IdentityType_9`** (device / MAID-type id — values match the AppsFlyer/device UUIDs in `customer_properties`) and **`_8`** (low volume). UNNEST to use.
 - **`customer_properties`** (STRING) — source-specific metadata as a **JSON array** of `{"name":…,"value_0":{"strval":…}}` objects (e.g. `app_id`, `app_name`, `appsflyer_advertiser_id`, `device_appsflyer_id`, `device_ip`, `device_model`, `carrier`). Parse with JSON functions; schema varies by `data_source_id`.
-- **`advertiser_id`** (INT64, never NULL) — MNTN advertiser. Only ~41 advertisers present across full history (this is a small, integration-gated feed).
+- **`advertiser_id`** (INT64, never NULL) — MNTN advertiser. Only **47** advertisers present across full history (re-derived 2026-07-29; was ~41 on 2026-07-19) — a small, integration-gated feed.
 
 ## Joins & relationships
 - **`advertiser_id` → advertiser dim** (`bronze.integrationprod.advertisers.id`, or `campaigns`/`advertisers` via `company_name`): **N:1**, dim side unique on `id` — **no fan-out**. Filter the dim `deleted=FALSE AND is_test=FALSE`. (Live-unverified here — standard canonical dim; safe direction only.)
@@ -84,16 +84,18 @@ The append-only landing feed for **offline / third-party conversion signals** �
 - **Ingestion lag is source-dependent.** On event-day 2026-07-15: the **Mobile** feed (≈75% of daily volume) is near-real-time (median lag ~0h, max ~4h); **Lead/CRM** lags most (median ~19h, max ~62h ≈ 2.6 days); Call/Text near-real-time. Don't treat the latest `time` partition as complete for the **Lead** family, but Mobile is effectively current-day. Live `MAX(time)` reaches today.
 - **No single primary key.** `event_id` ~75% empty, `order_id` ~43% empty & non-unique. Dedup on a composite if uniqueness matters (see Grain & keys).
 - **`order_amt` defaults to 0, never NULL.** `SUM(order_amt)` is dominated by the handful of real purchases; most rows contribute 0. `order_curr` mixes real codes with `"N/A"`/empty/NULL for the zero-value rows — filter before summing across currencies.
-- **`epoch`/`time` and `ingestion_epoch`/`ingestion_timestamp` are redundant** — pick one of each pair. **But `mntn_conversion_type` and `data_source_id` are NOT interchangeable:** `data_source_id=37` maps to both `Call` and `Text`, so `mntn_conversion_type` (5 values) is strictly finer. Keep `mntn_conversion_type` if you need the Call/Text split, and never filter conversions on a `data_source_id` list that omits 50 (`Purchase`).
+- **`epoch`/`time` and `ingestion_epoch`/`ingestion_timestamp` are redundant** — pick one of each pair. **But `mntn_conversion_type` and `data_source_id` are NOT interchangeable:** `data_source_id=37` maps to both `Call` and `Text` and `data_source_id=57` maps to both `page_view` and `""`, so `mntn_conversion_type` (7 values) is strictly finer. Keep `mntn_conversion_type` if you need those splits, and never filter conversions on a `data_source_id` list that omits 50 (`Purchase`) or 57 (`page_view`).
+- **Recent backfill skews the class mix.** Full-history counts are dominated by the 2026-07-27/28 Mobile backfill (dsid 61 = 74M of 76.3M rows = 97%). Before that spike, `Lead` (dsid 45) was the largest class. Any "share of conversions by type" over full history will read ~97% Mobile purely because of this reload — bound your window to a normal date range if you want representative mix.
 - **`identity` fan-out.** UNNEST(identity.identifiers) multiplies rows by the number of identifiers (avg **~1.8**, max 3 on 2026-07-15; never NULL/empty); aggregate carefully.
 
 ## Cost & partitioning notes
 - **The one filter to always apply:** `WHERE time >= '<start>' AND time < '<end>'`. `time` is the DAY partition (empirically confirmed) — `require_partition_filter` is **false** so an unfiltered query silently full-scans.
-- Physical backing table `sqlmesh__logdata.logdata__conversion_signal_log__1568565905`: **2,602,175 rows / ~1.23 GB** (`bq show` numBytes), DAY-partitioned on `time`, **no clustering, no partition expiration (no TTL)**. Small table — full scans are cheap in absolute terms but still filter for good hygiene.
-- **Dry-run figures (labeled by column set; re-derived 2026-07-19 on sample day 2026-07-15):**
-  - `SELECT event_id, time` one day (`time` filtered) → **242 KB** (242,527 B); same two cols unfiltered → **44.7 MB** (44,691,362 B) (**~184× prune** — this is how `time` was confirmed as the partition).
-  - `SELECT *` one day → **25.8 MB** (25,756,932 B).
-  - `MIN/MAX(time)` unbounded full history → **~20.8 MB** (20,817,400 B ≈ 0.021 GB; scans only the `time` column across all 1,368 partitions). *(A 3-column `advertiser_id`+`order_amt`+`time` full scan bills ~0.058 GiB (62,452,200 B) — the figure previously mis-attached to `MIN/MAX(time)` here.)*
+- Physical backing table `sqlmesh__logdata.logdata__conversion_signal_log__1568565905` (confirmed 2026-07-29 via `INFORMATION_SCHEMA.PARTITIONS`): **76,313,558 rows / ~127 GB** (127,457,436,969 logical bytes) across **1,378 partitions** (min `20200617`, plus a `__NULL__` partition), DAY-partitioned on `time`, **no clustering, no partition expiration (no TTL)**. This is a ~30× row / ~100× byte jump from the 2.6M / 1.23 GB recorded on 2026-07-19 — **not a tiny table anymore**; a full `SELECT *` now bills ~127 GB. Always filter `time`.
+- **Backfill hotspot (2026-07-29):** ~71.8M of the 76.3M rows sit in just two partitions — **`20260728` = 52.5M rows** and **`20260727` = 19.2M rows** (a large Mobile/AppsFlyer reload). Every other partition is tens of thousands of rows. A per-day `SELECT *` on `20260727`/`20260728` scans orders of magnitude more than a normal day, so scope those partitions out unless you specifically want the reload.
+- **Dry-run figures for a NORMAL day (labeled by column set; measured 2026-07-19 on sample day 2026-07-15, ~19K rows — still representative of a non-spike partition):**
+  - `SELECT event_id, time` one day (`time` filtered) → **242 KB** (242,527 B); same two cols unfiltered → **44.7 MB** (44,691,362 B) at the time (**~184× prune** — this is how `time` was confirmed as the partition; the unfiltered figure now scales with the 76.3M-row table).
+  - `SELECT *` one normal day → **25.8 MB** (25,756,932 B).
+- **Full-history column scans now bill ~1–2 GB, not ~20 MB (measured 2026-07-29):** a `data_source_id`+`mntn_conversion_type` GROUP BY over all history billed **1.13 GB**; a 5-column `COUNT(DISTINCT)`+`MIN/MAX(time)` billed **2.27 GB**. Bytes scale with the 76.3M-row count, so the old ~20 MB `MIN/MAX(time)` figure is obsolete.
 
 ## Example queries
 ```sql
@@ -121,6 +123,7 @@ WHERE time >= '2026-07-15' AND time < '2026-07-16'
 ## Observed facts
 <!-- OBSERVED:FACTS START -->
 <!-- capture/curator appends tribal findings here: `- YYYY-MM-DD: <fact verified against source>` -->
+- 2026-07-29: verification pass. Physical table 76,313,558 rows / 127,457,436,969 B / 1,378 partitions (INFORMATION_SCHEMA.PARTITIONS). ~71.8M rows are in partitions 20260728 (52.5M) + 20260727 (19.2M) — a Mobile/AppsFlyer backfill. 5 distinct data_source_id {37,45,50,57,61}, 7 distinct mntn_conversion_type {Mobile,Lead,Call,Text,Purchase,page_view,""}, 47 advertisers, span 2020-06-17 → 2026-07-29. NEW dsid 57 = page_view (1,408) + empty type (1,329).
 <!-- OBSERVED:FACTS END -->
 
 ## Changelog
