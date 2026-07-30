@@ -14,9 +14,9 @@ time_unit: date
 ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, funnel_analytics, conversion_events, pixel]
 keywords: [waypoints, funnel, event_group, full_volume, current_event_count_flag, from_verified_impression, current_ga_client_id, current_session_key, current_ad_served_id, waypoints_fact, event_mapping]
 source: INFORMATION_SCHEMA+human
@@ -143,8 +143,8 @@ different view over the same fact) when you need step-to-step **transition** cou
 - **Always filter `day`** (DATE, `require_partition_filter=TRUE` — propagates from the base fact; an unfiltered
   query errors "Cannot query over table … without a filter over column(s) 'day'"). `day` is the sole
   partition; confirmed empirically (dry-run bytes scale linearly with the day range).
-- **Backing physical:** base fact `sqlmesh__summarydata.summarydata__waypoints_fact__2720337691` = **~42.5 GB /
-  187,051,929 rows** (bq show numBytes, ALL funnel_modes + all base columns + 160 partitions). Clustered on
+- **Backing physical:** base fact `sqlmesh__summarydata.summarydata__waypoints_fact__2720337691` = **~54.1 GB /
+  232,613,083 rows** (bq show numBytes, 2026-07-29; up from 42.5 GB / 187M at enrichment; ALL funnel_modes + all base columns). Clustered on
   `advertiser_id, campaign_id, funnel_mode` — so within this view (funnel_mode pinned), the useful cluster
   keys are `advertiser_id` then `campaign_id`; add them to prune further.
 - **Dry-run cost, labeled by column set (2026-07-15 one partition):**
@@ -184,6 +184,7 @@ ORDER BY day, event_group_order;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md for this table (only related pixel-config table `attr_advertiser_waypoints_event_mapping` is mentioned); enriched from LIVE schema + empirical sampling. Resolved view chain to base fact `waypoints_fact` (187M rows / 42.5 GB, partition=day require_filter=TRUE, cluster=advertiser_id,campaign_id,funnel_mode). Confirmed partition empirically (byte estimate linear in day range). Documented that in the full_volume slice, funnel_mode='full_volume' constant, event_type + all previous_/source_/target_/transition columns are NULL/0 by construction, from_verified_impression is TRUE-or-NULL, and current_event_count_flag is a SUM measure not a flag.
+- 2026-07-29: enriched→verified. Re-introspected live: 26 cols/types unchanged, view hash `__3346215153` unchanged, resolves through `waypoints_stage_daily` to fact `waypoints_fact` (partition=day require-filter, cluster [advertiser_id,campaign_id,funnel_mode]). Fact grew 187M→232.6M rows / 42.5→54.1 GB (rolling retention); refreshed backing-physical figure. No schema/partition/cluster drift.
 <!-- CHANGELOG END -->
 
 ## View definition
