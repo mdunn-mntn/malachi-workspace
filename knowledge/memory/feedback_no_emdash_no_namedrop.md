@@ -1,17 +1,19 @@
 ---
 name: feedback_no_emdash_no_namedrop
-description: "Deliverables/summaries: no em-dashes, no name-dropping people; plain factual writing"
+description: "Deliverables/summaries: no em-dashes, no name-dropping people, plain factual writing; and don't call issues/alerts 'fires' (the noun)"
 metadata: 
   node_type: memory
   type: feedback
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [no_emdash_no_namedrop, em-dash, en-dash, name-dropping, plain factual writing, mntn_xlsx.py demdash, attribute to tickets, house style, author credit line]
+keywords: [no_emdash_no_namedrop, em-dash, en-dash, name-dropping, plain factual writing, mntn_xlsx.py demdash, attribute to tickets, house style, author credit line, dont say fires, jargon word choice]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-22
 ---
 In summaries, ticket docs, and shareable deliverables: **do not use em-dashes (—) or en-dashes (–)**, and **do not name-drop people** (colleagues, requesters, sources). Just factual information.
+
+**Don't refer to an issue/incident/alert as a "fire" (the noun)** (2026-07-29). Say "the alert", "the issue", "the 07-28 trigger". The verb is fine ("the audit fired / re-fired"); just don't call the problem itself "a fire" or "the fires".
 
 **Why:** the user's house style is plain and factual. Em-dashes read as LLM-generated; naming people is unnecessary attribution and can be sensitive when shared.
 
