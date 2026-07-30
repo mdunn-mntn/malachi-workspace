@@ -204,6 +204,27 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-30 · v15** — Build-time ENFORCEMENT (mistakes fail the build, not the reviewer). `save_local`/
+  `save_drive` now RAISE on collected rule violations, so a broken workbook is never written: **notes block >
+  320 chars** and **glossary def > 220 chars** are hard fails (were warn-only / unguarded). **Header rows
+  auto-height** to their wrapped text (`_fit_header_height`) so a column title can never clip — the old fixed
+  30pt row was the root cause. **Heat ramps are floored** to a visible light green (`HEAT["FLOOR"]`), so every
+  heat cell reads as a tint (a 2-row heat no longer looks like only one row is highlighted). **Query-tab
+  completeness:** `check_queries_covered(query_text, dir, ignore=[…])` hard-fails if a `.sql` file isn't on the
+  Query tab; `sql_dir(name, dir, …)` auto-includes every query so a new one can't be forgotten. **The
+  judgment-call layer is a process, not code:** before declaring a workbook done, RE-RENDER it and scan the
+  pre-ship checklist below — color density, editorializing, subtitle length, cover freshness — because taste
+  can't be linted. Ship after that pass, not after the user catches it.
+
+#### Pre-ship checklist (run every time, before saying "done")
+1. **Open the rebuilt file / read each new tab.** Don't ship a tab you haven't looked at rendered.
+2. **Color is signal, not decoration.** Heat/gradient on summaries (few rows); plain on many-row lookup tables.
+   Diverging red/green ONLY where one direction is genuinely good/bad — a neutral two-product diff is a signed
+   number, not red/green.
+3. **Titles/subtitles:** finding = a Power Line; subtitle = ONE line (definitions live on Read me / Method).
+4. **Overview + Read me + Method + Query all updated for every new tab** — a takeaway, a glossary row, a caveat,
+   and the query. Result numbers are f-string DYNAMIC (never hardcoded — they drift as data accumulates).
+5. **Rebuild is idempotent + clean:** no `BUILD BLOCKED`, no terseness warnings.
 - **2026-07-29 · v14** — SQL comment headers hard-capped. `sql()` trims any run of `--` comment lines
   (blank-separated blocks merged) to `max_comment_run` (default 3) and warns, so the Query tab never
   becomes a wall of grey. A query header is a 1-line label (what it drives + source), not prose. When

@@ -106,7 +106,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | DAG / task key | Alert signature | Root cause | Verdict | Protocol |
 |---|---|---|---|---|
 | `ipdsc_monitor / precondition_<partner>` | GCS sensor **18h timeout** (e.g. `precondition_bombora`, DS51) `AirflowSensorTimeout` | Optional 3P partner didn't deliver source files that day → producer skips it silently → monitor pages on the absent `ipdsc/dt=.../data_source_id=<id>/` partition | **Benign / expected** on partner-skip days (verify source absence first) | INC-001 |
-| `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted) | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even in QA / a challenger run — starves `create-dataproc-cluster` → code 9. Resource contention, NOT stockout or config. | **Resource contention** — confirm no other Dataproc job is running, let the concurrent/challenger job FINISH, then manually re-trigger the champion. Blind re-run fails while a job still runs. | INC-002 |
+| `fangorn_inference_pipeline_run / inference_pipeline` | `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (PagerDuty page, retries exhausted). Inner Dataproc error is EITHER a quota error OR (INC-008) a GCE **zonal `code 14 UNAVAILABLE` stockout** — both are the same class when a concurrent 290-worker Fangorn cluster exists. | Fangorn (or any Fangorn-like) inference pipeline saturates Dataproc at ~94%; ANY concurrent Dataproc job — even a QA / **challenger** run — starves `create-dataproc-cluster` → code 9, surfacing as quota OR a zonal stockout on the losing 290-worker create. Resource contention, NOT config. | **Resource contention** — confirm no other Dataproc job is running (esp. a concurrent 290-worker `fangorn-challenger-*` cluster), let it FINISH, then manually re-trigger the champion. Blind re-run fails while a job still holds the zone. Get the REAL error via `dataproc operations describe <failed-create>` (Airflow log only says "create failed"). | INC-002, **INC-008** (2nd firing 07-30) |
 | `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the drift template declares `run_date` (its KFP source `fangorn_daily_feature_drift_pipeline.py:393` uses `run_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch. | **DAG bug** — route to owner (Brian/ML). **PR #1158 (airflow-ti) does NOT fix it** (confirmed: re-run on the fixed bundle re-failed identically); the operator-injected `reference_date` is the failing param. Real fix = rename the KFP pipeline param `run_date`→`reference_date` in **`targeting-infra-ml`** + recompile/redeploy the template. Do NOT blind-re-run until that ships. **RESOLVED 2026-07-28** (Brian redeployed template, green on try 5). | INC-003 |
 | `audience_intent / fangorn_score_monitor` | Airflow log = boilerplate `AirflowException: … Dataproc Agent reports job failure`; **batch driver output** = `AnalysisException [PATH_NOT_FOUND]: gs://mntn-data-archive-prod/ipdsc_geo/dt=<run_date>`. PagerDuty, retries exhausted. | Consumer `ModelPysparkBatchOperator` reads `ipdsc_geo/dt=<run_date>`, which lands on D+1 with ~3.5h-variable timing (tpa_export `run_geo`); monitor has only `retries=2×10min` + no cross-DAG sensor → races the producer, pages when it slips past ~07:45Z. | **Late data** (this case) — pull the driver output for the real error (Airflow log is boilerplate), confirm `ipdsc_geo/dt=<run_date>/_SUCCESS` is present, then clear+re-run the monitor. If partition still absent → real upstream failure, re-run tpa_export `run_geo`. **RESOLVED 2026-07-29.** | INC-004 |
 | `tpa_mntn_id_export / tpa_mntn_id_export` | Airflow log = boilerplate `AirflowException: Batch job <id> was cancelled`; **batch `stateHistory`** = `Cancelling batch as ttl exceeded` (ran the full `ttl=10800s`=3h); **event log** = the final `.write.json()` shuffle stage recomputed 7-9× (same `json at ...` call site, ~1900GB each), 29TB memory + 14TB disk spill, `shuffle.partitions=1000`, 150 executors 0 removed. All retries exhausted. | **DAG_BUG (Spark perf), verified from the event log.** The `mntn_df` lineage is never cached, so the ~1.9TB `mntn_id` shuffle is recomputed 7-9× per action + FetchFailed resubmit; `shuffle.partitions=1000` → ~1.9GB partitions → 29TB spill → I/O-bound tasks (70-97% fetch-wait, 8-10% CPU) → past 3h. NOT infra (0 executor loss), NOT data volume (inputs identical to last good day), NOT contention. | **dag_bug (perf)** — get the TTL reason from `batches describe` stateHistory; then download+parse the Spark **event log** (`eventlog_profiler.py`) for the real profile (driver output alone is not enough). Fix is owner-side: **cache `mntn_df`** + raise `shuffle.partitions` 1000→~6000 + collapse the 14 crossJoins, then a modest TTL bump. A re-run may pass (spiral is timing-dependent) but does NOT fix it. Do NOT hot-patch. **RESOLVED 2026-07-29 — PR #1161 merged by owner Nivas Nalla; confirm on next run, 07-28 backfill optional.** | INC-005 |
@@ -755,6 +755,50 @@ Deterministic 400 → all 4 `batch_submit` tries failed identically (retries can
 - **Recovery action:** mark/clear the red `keyword_ddp_reporting` logical-07-29 run (accept the one-day dt=07-28 hole); it self-recovers on dt=07-29. No backfill.
 
 **Logs:** `on-call/incidents/INC-007/` — `batch_submit` try4 (submit quota fail), `batch_transition` try8 (fetch FileNotFoundError), `wait_for_product_categorization` try2 (sensor fast-fail), + the 07-30 owner-meeting transcript.
+
+---
+
+### INC-008 — `fangorn_inference_pipeline_run` `inference_pipeline` — Dataproc create failed (2nd firing of the INC-002 contention class; surfaced as a us-central1-a zonal stockout)
+**Date:** 2026-07-30 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [fangorn_inference_pipeline_run/inference_pipeline] at 2026-07-29 11:00 PT`, run `scheduled__2026-07-29T18:00:00+00:00`, `try_number=2` (`max_tries=1` → exhausted → PagerDuty).
+**Error (Airflow log tail):** `RuntimeError: Job failed with: code: 9 … failed tasks are: [create-dataproc-cluster]` (identical to INC-002).
+**Underlying Dataproc error (the real cause — from the failed CREATE operation, NOT the Airflow log):**
+```
+code: 14  UNAVAILABLE, errorSource: COMPUTE_ENGINE
+The zone 'projects/mntn-targeting-prj-prod/zones/us-central1-a' does not have enough resources
+available to fulfill the request. '(resource type:compute)'
+```
+(The `Failed to validate permissions … custom service account` line in the op warnings is boilerplate noise, present on healthy creates too — ignore it.)
+
+**STATUS: OBSERVED — root cause CONFIRMED (resource contention → zonal stockout); champion re-trigger PENDING.** This is the **second confirmed firing of the INC-002 class in 4 days** (07-27, 07-30). Follow the **INC-002 decision tree** for the full protocol; this entry records the new empirical evidence + the one new wrinkle.
+
+**Verdict: RESOURCE CONTENTION (INC-002 class) — this time manifesting as a GCE zonal compute stockout, not a Dataproc quota error.** Hard evidence (Dataproc ops/clusters, `mntn-targeting-prj-prod` / `us-central1`):
+- **Challenger** `fangorn-challenger-62e32a7e` (290 workers) created cleanly **18:40:33Z** and was still up at the 20:21Z page (screenshot shows `challenger_inference_pipeline` running).
+- **Champion** `fangorn-inference-445fba60` (290 workers, autozone → placed us-central1-a) create `PENDING 19:55:44Z → FAILED 20:02:39Z` with the zonal `UNAVAILABLE` above; cluster left in `ERROR`.
+- Two concurrent **290-worker** Fangorn clusters (~580) don't fit us-central1-a → the "~94% Dataproc cap" from INC-002, empirically surfaced as a zonal stockout on the second cluster.
+
+**NEW WRINKLE (record so the next on-call recognizes the form):** INC-002 wrote "resource contention, NOT stockout." This occurrence proves the contention CAN present as a GCE zonal `UNAVAILABLE` (grpc `code 14`, `errorSource: COMPUTE_ENGINE`) on the losing create — the zone is drained (partly by our own concurrent challenger, partly by external tenants). Treat "create-dataproc-cluster code 9" **whenever a concurrent 290-worker Fangorn cluster exists** as the same contention class regardless of whether the inner Dataproc error reads "quota" or "zone UNAVAILABLE."
+
+**Action (per INC-002 tree, step 2):** the blocking challenger has **finished** — as of 2026-07-30 20:29Z no RUNNING/PENDING clusters or Dataproc ops remain (only the champion's `ERROR` cluster, which has no running VMs and won't block a re-run). Contention cleared → **clear + re-run the champion `inference_pipeline`** (Astronomer UI → Clear Task Instance). Autozone re-picks a zone at create time, so the us-central1-a stockout likely won't recur. If it re-fails with **nothing else running** → genuine regional capacity → drill the create op / escalate to owner+infra (INC-002 step 3). Flip this to RESOLVED once the re-run is green.
+
+**Diagnosis run (copy-paste — this is what distinguishes contention from a true stockout):**
+```bash
+# 1. Real error (Airflow log only says "create-dataproc-cluster failed"): find the FAILED create op + its error
+gcloud dataproc clusters list  --project=mntn-targeting-prj-prod --region=us-central1 \
+  --format="table(clusterName,status.state,config.gceClusterConfig.zoneUri.scope(zones))"
+gcloud dataproc operations list --project=mntn-targeting-prj-prod --region=us-central1 \
+  --format="table(name.scope(operations),operationType,status.innerState,metadata.description)" | head
+gcloud dataproc operations describe <FAILED_CREATE_OP> --project=mntn-targeting-prj-prod --region=us-central1 \
+  --format="value(error)"          # -> code 14 zone UNAVAILABLE = the real cause
+# 2. Contention test: was another 290-worker Fangorn cluster (challenger/QA) up concurrently?
+#    describe the SUCCESSFUL 290-worker create -> compare its up-time window to the champion create window.
+# 3. Safe-to-rerun gate: nothing in flight now?
+gcloud dataproc clusters list --project=mntn-targeting-prj-prod --region=us-central1 \
+  --format="table(clusterName,status.state)"   # only ERROR/DELETING left = safe
+```
+
+**Durable fix (this is the 2nd firing → promote):** champion/challenger routinely overlap on 290-worker clusters and collide. Fix = stagger the champion vs challenger schedules, pin them to different zones, or raise the Dataproc/GCE ceiling — owner = Fangorn/ML + infra (template in `targeting-infra`, not `airflow-ti`). Strengthens **IMP-002** in `improvements_backlog.md` (was 1 firing, now 2 in 4 days). Do NOT hot-patch.
+
+**Logs:** `on-call/incidents/INC-008/`.
 
 ---
 
