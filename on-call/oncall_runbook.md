@@ -211,31 +211,34 @@ source `partners/bombora/segments/20260726/` **empty** → `ipdsc/dt=2026-07-27/
 partition calendar (delivery began ~07-06): **ABSENT** 07-13/15/17/19/25/27; **PRESENT** 07-06→12, 14, 16,
 18, 20→24, 26, 28. All correct/expected for the intermittent Bombora feed.
 
-**Downstream symptom — `enriched_impressions` DS51=0 for 07-27. RESOLVED (3rd + final, verified end-to-end
-2026-07-29): the 0 is WRONG — a `cost_impression_log` (CIL) build data-loss. The ~110K impressions are REAL.**
-Jordan Piepkow (Staff SWE) flagged `mntn-analytics-prod-01.analytics_curated.enriched_impressions` DS51 for
-`dt=2026-07-27` reading ~110,798 one day and **0** the next. Traced the full auction funnel for the 6 Bombora
-campaigns (CG 131563 / adv 30506 "MNTN - No ENG Testing"; campaigns 648318-648323):
-- **spend_log** (won auctions, spend source of truth): **110,792** wins, **$903.83 billed, 100% production
-  (test=0), 100% rendered** (impression_timestamp populated), partner_id=8 (Beeswax).
-- **win_logs** (Beeswax win feed): **110,862** wins.
-- **cost_impression_log**: **0** for these campaigns on 07-27 (the advertiser's OTHER campaigns logged **1.47M**
-  in CIL that day, fine) ← **the data is dropped HERE.**
-- **enriched_impressions**: 0 (correctly mirrors the broken CIL).
+**Downstream symptom — `enriched_impressions` DS51=0 for 07-27. RESOLVED + PROVEN (verified end-to-end + time-travel
+2026-07-29): a `cost_impression_log` CAMPAIGN-ID RESOLUTION regression — the real impressions were re-stamped
+`campaign_id = -3` (the unresolved-campaign sentinel), NOT dropped.** Jordan Piepkow (Staff SWE) flagged
+`enriched_impressions` DS51 for `dt=2026-07-27` reading ~110,798 one day and **0** the next. Proof chain (6+ verified
+queries) for the 6 Bombora campaigns (CG 131563 / adv 30506 "MNTN - No ENG Testing"; campaigns 648318-648323):
+1. **Real, billed:** spend_log = **110,792** wins on 07-27, **$903.83 billed, 100% production (test=0), 100% rendered**,
+   partner_id=8 (Beeswax); win_logs = **110,862**.
+2. **Present in CIL, mis-stamped:** CIL 07-27 for these campaigns = **0 under 648318-648323**, but **110,750 under
+   `campaign_id = -3`**. NOT missing rows — the rows are there, the campaign attribution is wrong.
+3. **`-3` = the Bombora bucket (the swap):** `-3` is **0** on every day the campaigns resolve (07-24/25/26/29 =
+   17.5k/104k/108k/146k resolved, 0 as -3) and **spikes to exactly 110,750** on 07-27 (0 resolved). 07-28 is a PARTIAL
+   hit: 141,002 resolved + 102,456 as -3 = 243,458 ≈ spend_log 243,961 (this also explains the 07-28 spend_log>CIL gap).
+4. **Regression PROVEN via CIL physical time-travel:** 47h ago 07-27 Bombora = **109,530 correctly attributed, 0 as -3**;
+   now = **0 attributed, 110,750 as -3**. A CIL reprocess of the 07-27 partition (between ~47h and ~26h ago) re-stamped
+   resolved campaign_ids → `-3`. That IS Jordan's "110,798 yesterday → 0 today".
+5. **Cascade:** `enriched_impressions` resolves `data_source_id` via campaign → `v_campaign_group_segment_history`;
+   `campaign_id=-3` matches no campaign/segment → no DS51 tag → enriched DS51 = 0.
 
-So **both** CIL source tables carry ~110K real/rendered/billed impressions, but the **CIL build dropped them** for
-these campaigns on 07-27; enriched followed to 0. The ~110K = the 110,798 Jordan saw (it was in CIL/enriched
-yesterday, a CIL reprocess of the 07-27 partition removed it). **Route to the CIL SQLMesh-model owner
-(BER/data-platform):** CIL under-counts 07-27 for these campaigns despite spend_log + win_logs both having the data.
-Logged in `improvements_backlog.md`.
+**Route to the CIL SQLMesh-model owner (BER/data-platform):** the campaign-id resolution step re-stamps resolved
+impressions to `-3` on reprocess (regression), for very new campaigns (created 07-24). Tracked as IMP-012.
 
-**⚠ RETRACTED (both prior explanations were WRONG):** (1) "DS51 ipdsc skip → 0" — dead (07-25 was also a skip and
-served 104K). (2) "Bombora-campaign serving gap / bidder-side" — dead (the campaigns DID serve 110,792 on 07-27,
-$904 billed). Nothing here is about DS51/ipdsc/serving/the enrichment lookback/test traffic. It is a CIL completeness
-bug. **Method lesson (the big one): when a DERIVED/reporting table (CIL, enriched) shows an anomalous 0, check the
-SOURCE OF TRUTH (spend_log) BEFORE theorizing why the 0 is "correct."** I spent four rounds rationalizing why 0 was
-right; one spend_log query showed the impressions were real. Test whether the number is TRUE before explaining why
-it's expected.
+**⚠ RETRACTED (ALL prior framings were wrong, in order):** (1) "DS51 ipdsc skip → 0" — dead (07-25 was also a skip,
+served 104K). (2) "serving gap / bidder-side" — dead (won 110,792, $904 billed). (3) "CIL dropped/lost the impressions"
+— dead (they're IN CIL as `-3`, not missing). The true bug is campaign_id RESOLUTION. **Method lesson (the big one):
+for a DERIVED table's anomalous 0, (a) check the SOURCE OF TRUTH (spend_log) before theorizing why 0 is "correct", and
+(b) check WHERE the data actually is (group by the id, time-travel the partition) before saying it was "dropped".** I
+spent four rounds rationalizing why 0 was right, then a fifth claiming "data loss" — the rows were present all along
+under `-3`. Confirm the number is real, then find the rows, before naming the mechanism.
 
 **⚠ Process lesson (the real takeaway — a reasoning trap, logged so we don't repeat it):** the original
 GCS-evidenced call (0 correct, benign skip) was right. When Jordan raised a smart architectural objection

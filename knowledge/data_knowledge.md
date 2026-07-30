@@ -1616,22 +1616,24 @@ MES is the enrichment service that processes impressions and validates audience 
 the ipdsc file for the relevant data source are dropped. This is the root cause of HH discrepancy
 investigations (TI-644, MM-44) where targeting audiences appear smaller than expected.
 
-**`cost_impression_log` (CIL) can DROP real impressions its own source tables have — a CIL build gap (found 2026-07-29).**
-CIL is built from **spend_log** (won auctions/spend, source of truth) + **win_logs** (Beeswax win feed). It is possible for
-CIL (and therefore its downstream `enriched_impressions`) to read **0** for a (campaign × day) while BOTH sources carry the
-full impression count. Verified case: DS51/Bombora campaigns (CG 131563 / adv 30506 "MNTN - No ENG Testing", campaigns
-648318-648323) on `dt=2026-07-27`:
-- spend_log = **110,792** won auctions, **$903.83 billed, 100% production (test=0), 100% rendered**, partner_id=8 (Beeswax)
-- win_logs = **110,862** wins
-- cost_impression_log = **0** (yet the advertiser's OTHER campaigns logged **1.47M** in CIL that day)
-- enriched_impressions = 0 (correctly mirrors the broken CIL)
+**`cost_impression_log` (CIL) can re-stamp real impressions to `campaign_id = -3` (the unresolved-campaign sentinel) — a
+campaign-resolution regression in the CIL build (PROVEN 2026-07-29, INC-001).** CIL is built from **spend_log** (won
+auctions/spend, source of truth) + **win_logs** (Beeswax win feed), and resolves `campaign_id` via a dim join; when that
+resolution fails, the row keeps its impression but is stamped **`campaign_id = -3`**. So a (campaign × day) can read **0**
+under its real id while the rows sit under `-3` — and downstream `enriched_impressions` (which maps campaign → segment →
+`data_source_id`) can't attribute `-3`, so its DS tag drops to 0 too. **The rows are NOT lost; only the attribution is
+wrong.** Proven case: DS51/Bombora campaigns (CG 131563 / adv 30506 "MNTN - No ENG Testing", campaigns 648318-648323) on
+`dt=2026-07-27`:
+- spend_log = **110,792** wins, **$903.83 billed, 100% production (test=0), 100% rendered**, partner_id=8 (Beeswax); win_logs = **110,862**
+- CIL 07-27 = **0** under 648318-648323 but **110,750 under `campaign_id = -3`** (the swap: `-3` is 0 on every day the campaigns resolve, spikes to 110,750 on 07-27; 07-28 partial = 141,002 resolved + 102,456 as `-3` ≈ spend_log 243,961)
+- **Regression proven by CIL physical time-travel:** 47h ago = **109,530 correctly attributed, 0 as -3**; now = **0 attributed, 110,750 as -3** → a 07-27-partition reprocess re-stamped resolved → `-3` (this IS the owner's "110,798 yesterday → 0 today")
 
-So the impressions are REAL and the **CIL build dropped them** for these campaigns on 07-27; enriched followed. The 110K
-matches the 110,798 the owner saw the prior day (present in CIL/enriched yesterday, removed by a CIL reprocess of the 07-27
-partition). **Lesson: when CIL / enriched shows an anomalous per-campaign 0, reconcile against spend_log (spend source of
-truth) before concluding it is correct — CIL is a derived table and can under-count.** Routed to the CIL SQLMesh-model owner
-(BER/data-platform); tracked in `improvements_backlog.md`. **RETRACTED (both were wrong):** the DS51 ipdsc skip did NOT cause
-this (07-25 was also a skip and served 104K), and it was NOT a serving gap (the campaigns served 110,792, $904 billed).
+**Lessons:** (1) for a CIL/enriched anomalous per-campaign 0, reconcile against `spend_log` (spend source of truth) before
+concluding it's correct; (2) then GROUP BY the id (and time-travel the physical) to find WHERE the rows went before saying
+they were "dropped" — here they were present under `-3` the whole time. **`campaign_id = -3` in CIL = unresolved campaign
+(dim-join miss); real campaign_ids are positive.** Routed to the CIL SQLMesh-model owner (BER/data-platform); IMP-012.
+**RETRACTED (all three prior framings wrong):** not the DS51 ipdsc skip (07-25 was also a skip, served 104K), not a serving
+gap (won 110,792, $904 billed), not a data-drop (rows present as `-3`).
 
 **Also verified (still true):** `enriched_impressions.data_source_id` = what the campaign **targeted**
 (`v_campaign_group_segment_history`); enriched against a **35-day BACKWARD** ipdsc window

@@ -46,14 +46,17 @@ mechanism. I'd conceded a correct conclusion and flip-flopped the runbook three 
    "X causes Y," find the case where X holds but Y doesn't — if it exists, X isn't the cause. Verify the
    mechanism across the negative cases, not just the one that fits.
 
-7. **Check the SOURCE OF TRUTH before rationalizing why a derived-table number is "correct."** Same
-   INC-001, final twist (2026-07-29): the whole thread assumed `enriched_impressions`/`cost_impression_log`
-   DS51=0 for 07-27 was *correct* and spent FOUR rounds theorizing the mechanism (same-day-keyed, serving
-   dark, campaign pause). One `spend_log` query ended it: the campaigns won **110,792** auctions that day,
-   **$904 billed, 100% rendered** — the impressions were REAL, and **CIL (a derived table) had dropped
-   them**. enriched just mirrored the broken CIL. The trap: I kept asking "why is 0 correct?" instead of
-   "is 0 even TRUE?" For any reporting/derived table (CIL, enriched, a rollup), reconcile an anomalous 0
-   against the spend/event source of truth (`spend_log`, `win_logs`) FIRST. Don't build a mechanism to
-   explain a number you haven't confirmed is real. (Even the owner's mid-thread "0 is correct" was wrong.)
+7. **Two-step verification for a derived-table anomaly: (a) is the number TRUE? (b) WHERE did the rows go?**
+   Same INC-001, final resolution (2026-07-29): the thread spent FOUR rounds theorizing why
+   `enriched`/`cost_impression_log` DS51=0 for 07-27 was *correct* (same-day-keyed, serving-dark, campaign
+   pause). Step (a) — one `spend_log` query — ended that: the campaigns won **110,792** auctions, **$904
+   billed, 100% rendered**, so the impressions were REAL and 0 was wrong. But then I over-claimed a FIFTH
+   framing ("CIL dropped/lost the rows"). Step (b) — `GROUP BY campaign_id` + physical-table time-travel —
+   corrected THAT too: the rows were in CIL all along under **`campaign_id = -3`** (unresolved sentinel);
+   a reprocess had re-stamped resolved→`-3` (109,530 attributed 47h ago → 0 now). So it was a
+   campaign-RESOLUTION regression, not data-loss. Lesson: reconcile an anomalous 0 against the spend/event
+   source of truth (`spend_log`/`win_logs`) FIRST, THEN find where the rows actually are (group by the id,
+   time-travel the partition) BEFORE naming the mechanism. Don't say "dropped" until you've looked for the
+   rows under other keys. (Even the owner's mid-thread "0 is correct" was wrong.)
 
 Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[feedback_source_table_ips]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]].

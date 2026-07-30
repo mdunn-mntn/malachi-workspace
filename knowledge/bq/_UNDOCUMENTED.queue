@@ -1,2 +1,8 @@
 analytics_curated.static_combined_lat_long_data
 geo.archive_network_locations
+integrationprod.core_budget_types
+integrationprod.core_campaign_group_padding_overrides
+integrationprod.core_hotels
+integrationprod.core_partners
+integrationprod.core_pixel_integration_types
+integrationprod.core_private_marketplace_families
