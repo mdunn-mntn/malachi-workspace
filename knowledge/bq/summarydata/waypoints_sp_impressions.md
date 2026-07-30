@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [ip, guid]
 time_unit: timestamp
 ttl_days: 130
-approx_rows: 26067209
-approx_logical_bytes: 3830518346
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 29962902
+approx_logical_bytes: 4403420453
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, selective_performance, impressions]
 keywords: [waypoints, selective_performance, sp, impressions, total_spend, ad_served_id, guid, cost_impression_log, attribution]
 source: INFORMATION_SCHEMA+human
@@ -89,14 +89,15 @@ Rows are derived from `logdata.cost_impression_log` (same `ad_served_id`, `guid`
   (external only). Treat `ip`/`guid` as clustering/filter keys, not clean join keys to identity tables.
 
 ## Gotchas
-- **Scoped to Selective-Performance advertisers only — currently a SINGLE advertiser.** Over 2026-07-09→15
-  the entire table is advertiser **34114 = Taskrabbit**, 3 campaign groups (`US_MNTN_Web_CorMom_PRS`
-  prospecting, `US_MNTN_Web_CorMom_RT` retargeting, `US_MNTN_Web_SF_PRS`), all `product_id = 1` (PTV).
-  Do **not** use this for platform-wide impression/spend analysis — use `logdata.cost_impression_log`.
+- **Scoped to Selective-Performance advertisers only — currently a SINGLE advertiser.** Still advertiser
+  **34114 = Taskrabbit** (re-verified 2026-07-29); the group set grew to **4 campaign groups** on
+  2026-07-27 (`US_MNTN_Web_CorMom_PRS` prospecting, `US_MNTN_Web_CorMom_RT` retargeting, `US_MNTN_Web_SF_PRS`,
+  and new `US_MNTN_Web_Emerging_PRS`=`130994`), all `product_id = 1` (PTV). Do **not** use this for
+  platform-wide impression/spend analysis — use `logdata.cost_impression_log`.
 - **`require_partition_filter = TRUE` on `time`.** Any query without a `time` filter errors
   (`Cannot query … without a filter over column(s) 'time'`). Always bound `time`.
 - **TTL = 130 days** (partition expiration `11232000000` ms). Populated from **2026-04-01** to today
-  (110 daily partitions, 26,067,209 rows as of 2026-07-19); older partitions age out.
+  (29,962,902 rows as of 2026-07-29; fresh through 2026-07-27); older partitions age out.
 - **`total_spend` is gross (media+data+platform), not media_cost.** Don't treat it as the raw media buy;
   it embeds MNTN margin. Take-rate-sensitive.
 - **SQLMesh view** → versioned physical hash. Query the clean name `summarydata.waypoints_sp_impressions`;
@@ -109,8 +110,8 @@ Rows are derived from `logdata.cost_impression_log` (same `ad_served_id`, `guid`
   - `SELECT *` (all 7 cols), 1 day → **41.0 MB** (upper bound).
   - `SELECT ip` (1 col), 1 day → **6.4 MB**.
   - No `time` filter → **error** (partition filter required).
-- Physical backing storage: **~3.83 GB** (`numBytes` 3,830,518,346; 26,067,209 rows; single physical
-  table, not a UNION).
+- Physical backing storage: **~4.40 GB** (`numBytes` 4,403,420,453; 29,962,902 rows, 2026-07-29; single
+  physical table, not a UNION).
 - **Joining to `cost_impression_log` is expensive** on the cil side — a 2-partition day-span join (a few
   cols) billed **≈ 12.2 GB** (64M cil rows scanned). Since this feed already carries `total_spend`,
   avoid the cil join unless you need columns cil has and this table lacks.
@@ -144,6 +145,11 @@ ORDER BY gross_spend DESC;
   `waypoints__selective_performance`), source = `logdata.cost_impression_log`, and
   `total_spend = media_spend + data_spend + platform_spend` (exact). Scope = single advertiser 34114
   (Taskrabbit), 3 campaign groups.
+- 2026-07-29: enriched→verified. Re-introspected live: 7 cols/types unchanged, view hash `__3277888085`
+  unchanged, physical TABLE partition `time` require-filter + cluster [ip, guid] intact, TTL expirationMs
+  11232000000 = 130d confirmed. Grew 26.07M→29.96M rows / 3.83→4.40 GB (rolling retention); still
+  advertiser 34114 (all campaign groups map to it), group set 3→4 (added 130994). No schema/partition/
+  cluster/TTL drift.
 <!-- CHANGELOG END -->
 
 ## View definition
