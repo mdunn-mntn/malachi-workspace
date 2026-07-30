@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [creative_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 5722718
-approx_logical_bytes: 19555701313
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 5730607
+approx_logical_bytes: 19566761378
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creative, campaign-setup, dimension]
 keywords: [creative_id, adcode, adserver_payload, media_type_id, creative_size_id, caas_video_id, is_control_creative, advertiser_id]
 source: INFORMATION_SCHEMA+human
@@ -148,6 +148,7 @@ WHERE is_control_creative = TRUE;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Resolved physical `integrationprod.core_creatives` (non-partitioned TABLE, clustered `creative_id`, ~5.72M rows / ~19.56 GB, no TTL). Confirmed grain 1:1 on `creative_id`. Resolved `datastream_metadata.source_timestamp` = milliseconds. Empirical finds not in prose: `deleted` always FALSE + no `is_test` column; `creative_hash_id` 100% NULL; `update_time` NULL on ~0.37% legacy rows (ties to Apr-2026 PSA incident); `media_type_id` has no `integrationprod` lookup table (domain dominated by value 2 ≈ 88%); `adcode`+`adserver_payload` ≈ 92% of table bytes. Prose oracle (data_catalog §bronze.integrationprod.core_creatives) confirmed — no contradictions, only additions.
+- 2026-07-29: enriched→verified. Live re-introspection: 32-col schema, unpartitioned, cluster=creative_id, no TTL — all unchanged. Rows 5,722,718→5,730,607. Re-confirmed deleted always FALSE (0 rows), creative_hash_id 100% NULL, is_control_creative on 2,424 rows.
 <!-- CHANGELOG END -->
 
 ## View definition

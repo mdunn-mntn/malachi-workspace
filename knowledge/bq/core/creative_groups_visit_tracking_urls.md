@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [visit_tracking_url_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 2169
-approx_logical_bytes: 502123
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 2189
+approx_logical_bytes: 505863
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creative, tracking]
 keywords: [creative_group, visit_tracking_url, tracking_pixel, cdc_dim, creative_groups]
 source: INFORMATION_SCHEMA+human
@@ -98,6 +98,7 @@ LEFT JOIN `dw-main-silver.core.creative_groups_visit_tracking_urls` v
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md (net-new/undocumented table); enriched from LIVE schema + empirical sampling alone. Resolved physical = bronze.integrationprod.core_creative_groups_visit_tracking_urls (unpartitioned, cluster=visit_tracking_url_id, PK=visit_tracking_url_id, ~2,169 rows / ~502 KB, no deleted/is_test cols). source_timestamp epoch = milliseconds (verified). Found is_post/request_body 100% dormant (all false/NULL); creative_group_id N:1 → core.creative_groups.group_id, non-unique (0-2 URLs/group).
+- 2026-07-29: enriched→verified. Live re-introspection: 8-col schema, unpartitioned, cluster=visit_tracking_url_id, no TTL — all unchanged. Rows 2,169→2,189, bytes refreshed.
 <!-- CHANGELOG END -->
 
 ## View definition

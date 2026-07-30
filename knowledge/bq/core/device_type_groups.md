@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 5
 approx_logical_bytes: 399
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [core, dimension, targeting, pacing]
 keywords: [device type group, device type, mobile, computer, connected_tv, ctv, tablet, budget allocation, optimization_default_ratio, pacing, cdc dimension]
 source: INFORMATION_SCHEMA+human
@@ -94,6 +94,7 @@ GROUP BY g.device_type_group_name;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle existed (table only appeared in the `core.*` inventory list at data_catalog.md:1263); enriched from LIVE schema + sampled rows. Confirmed physical is a real TABLE (5 rows/399 B), no partition, clustered by device_type_group_id, no deleted/is_test cols. Resolved `datastream_metadata.source_timestamp` = milliseconds (2025-12-19 snapshot). Domain + optimization_default_ratio weights (sum=1.00, CTV 0.70) captured. Join partner core.device_types = child (1:N).
+- 2026-07-29: enriched→verified. Live re-introspection: 6-col schema, unpartitioned, cluster=device_type_group_id, 5 rows/399 B — all unchanged. Re-confirmed optimization_default_ratio weights (MOBILE 0.15 / COMPUTER 0.05 / CONNECTED_TV 0.70 / TABLET 0.10, UNKNOWN 0; sum=1.00), budget_floor/ceiling all NULL.
 <!-- CHANGELOG END -->
 
 ## View definition

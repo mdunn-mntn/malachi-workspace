@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [group_id, creative_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 5680119
-approx_logical_bytes: 359957000
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 5688008
+approx_logical_bytes: 360454007
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creative, campaign-setup]
 keywords: [creative_groups, creatives, junction, bridge, group_id, creative_id, click_url, dpp, creative-to-group-mapping, active]
 source: INFORMATION_SCHEMA+human
@@ -106,6 +106,7 @@ GROUP BY group_id;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No dedicated prose oracle existed (table only listed in data_catalog.md silver.core inventory + appears in data_knowledge.md entity hierarchy as the creative_groups↔creatives junction); enriched from LIVE schema + empirical queries. Confirmed: physical = unpartitioned bronze TABLE (5,680,119 rows, ~343 MiB), clustered (group_id, creative_id); grain = clean composite PK (group_id, creative_id); `active` is the soft-delete flag (no deleted/is_test cols, 279 FALSE); source_timestamp = UNIX MILLISECONDS CDC capture; dpp_filter & user_id are 100% NULL dead columns; click_url/url_prefix/url_suffix/impression_tracking/dpp_id are near-100%-NULL per-mapping overrides. Fan-out: creative_groups→bridge ~6x, bridge→creatives 1:1.
+- 2026-07-29: enriched→verified. Live re-introspection: 11-col schema, unpartitioned, cluster=(group_id, creative_id), no TTL — all unchanged. Rows 5,680,119→5,688,008. Re-confirmed active=FALSE on 279 rows; dpp_filter & user_id 100% NULL (dead cols).
 <!-- CHANGELOG END -->
 
 ## View definition

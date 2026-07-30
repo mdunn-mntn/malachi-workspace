@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [impression_tracking_url_id]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 83425
-approx_logical_bytes: 22737881
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 83572
+approx_logical_bytes: 22778192
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creative, measurement, tracking]
 keywords: [impression tracking, tracking pixel, creative group, innovid, ispot, server-side pixel, third-party verification, impression_tracking_url]
 source: INFORMATION_SCHEMA+human
@@ -107,6 +107,7 @@ GROUP BY creative_group_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical queries alone. Resolved physical to `dw-main-bronze.integrationprod.core_creative_groups_impression_tracking_urls` (real TABLE, 83,425 rows, ~22.7MB, unpartitioned, clustered by impression_tracking_url_id, no TTL). Grain confirmed = one row per impression_tracking_url_id. FK creative_group_id → creative_groups.group_id (N:1; reverse fans out ≤22×). datastream_metadata.source_timestamp confirmed UNIX_MILLIS (→2025-12-19 backfill, not business time). Noted no deleted/is_test/active columns; is_post/request_body empirically dead (always FALSE/NULL).
+- 2026-07-29: enriched→verified. Live re-introspection: 9-col schema, unpartitioned, cluster=impression_tracking_url_id, no TTL — all unchanged. Rows 83,425→83,572, bytes refreshed. Re-confirmed is_post always FALSE (0 rows), server_side ~86% TRUE (71,956/83,572).
 <!-- CHANGELOG END -->
 
 ## View definition

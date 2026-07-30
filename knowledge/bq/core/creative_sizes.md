@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 29
 approx_logical_bytes: 2610
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creative, reference]
 keywords: [creative_size_id, width, height, ctv, video, web, mobile, banner, dimensions, ad_size]
 source: INFORMATION_SCHEMA+human
@@ -142,6 +142,7 @@ FROM `dw-main-silver`.core.creative_sizes;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. Resolved physical to dw-main-bronze.integrationprod.core_creative_sizes (TABLE, 29 rows, 2610 bytes, no partition, cluster=creative_size_id). Live-verified full 29-row domain: creative_size_id is a bitmask (non-sequential); approve=TRUE for all rows; ctv=TRUE only for ids 39/93; video superset of ctv (id 80 video-not-ctv). Resolved datastream_metadata.source_timestamp epoch = MILLISECONDS (1766121466544 -> 2025-12-19). Reconciled prose drift: data_catalog.md has two headers (creative_sizes / core_creative_sizes) — view resolves to core_creative_sizes; prose omitted the approve column.
+- 2026-07-29: enriched→verified. Live re-introspection: 10-col schema, unpartitioned, cluster=creative_size_id, 29 rows/2610 B — all unchanged. Re-confirmed approve=TRUE on all 29, ctv=TRUE on 2, video=TRUE on 3.
 <!-- CHANGELOG END -->
 
 ## View definition

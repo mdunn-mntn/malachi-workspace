@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 777461
 approx_logical_bytes: 181201413
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [creative, video, transcode]
 keywords: [creative_id, bitrate, transcode, rendition, video, 1080p, abr_ladder, duration_in_sec, fps, steelhouse_cdn]
 source: INFORMATION_SCHEMA+human
@@ -123,6 +123,7 @@ GROUP BY creative_id;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (table appears only in the data_catalog.md core view-inventory list, no dedicated section; no data_knowledge.md mention) — enriched from LIVE schema + empirical sampling. Confirmed: physical is an unpartitioned TABLE clustered on PK (777,461 rows / ~181 MB); grain = one row per (creative_id × bitrate rung, 7-rung ABR ladder), ~7× fan-out per creative; `datastream_metadata.source_timestamp` = milliseconds and is a single 2025-12-19 snapshot; table FROZEN since 2024-03-29; `status` never TRUE, `duration` STRING 99.7% NULL, no deleted/is_test cols.
+- 2026-07-29: enriched→verified. Live re-introspection: 16-col schema, unpartitioned, cluster=PK creative_video_meta_information_id, 777,461 rows/181 MB — all unchanged. Re-confirmed FROZEN (max created_at 2024-03-29 23:56:15), status never TRUE.
 <!-- CHANGELOG END -->
 
 ## View definition

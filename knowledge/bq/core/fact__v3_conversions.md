@@ -14,9 +14,9 @@ time_unit: microseconds
 ttl_days: null
 approx_rows: 17076596
 approx_logical_bytes: 4886360285
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [conversions, attribution, ctv]
 keywords: [conversions, attribution, verified_impression, click_through, ctv, order_amt, conversion_type, impression_epoch, v3, backfill]
 source: INFORMATION_SCHEMA+human
@@ -151,6 +151,7 @@ ORDER BY conv_day;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed (table appears only in the data_catalog.md core inventory list, no `##` section). All core claims live-verified against physical `sqlmesh__core.core__fact__v3_conversions__4225468191`: partition=`time` DAY (empirical prune diff), cluster=[advertiser_id,guid], 17,076,596 rows / 4.886 GB, no TTL/require-filter. Frozen window `time` 2025-09-01→2026-02-28. `impression_epoch`=microseconds (anchored to impression_time). Definitional constants confirmed table-wide: from_verified_impression=TRUE, click_through=TRUE, disputed=FALSE, exchange_id=NULL. conversion_type `-101` sentinel + pentest caveats carried from data_knowledge.md conversion-pixel sections.
+- 2026-07-29: enriched→verified. Live re-introspection: view→physical hash `4225468191` unchanged; 31-col schema, partition=time DAY, cluster=(advertiser_id, guid), 17,076,596 rows/4.886 GB, no TTL — all unchanged. Exact row/byte match confirms the static backfill has not moved.
 <!-- CHANGELOG END -->
 
 ## View definition

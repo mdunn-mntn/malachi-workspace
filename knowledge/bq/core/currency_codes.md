@@ -14,9 +14,9 @@ time_unit: milliseconds
 ttl_days: null
 approx_rows: 167
 approx_logical_bytes: 11994
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [reference, billing]
 keywords: [currency, iso-4217, currency-code, billing-threshold, advertiser-currency, invoice-currency, lookup, dimension]
 source: INFORMATION_SCHEMA+human
@@ -93,6 +93,7 @@ LEFT JOIN `dw-main-silver.core.currency_codes` c ON a.currency = c.currency;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md (only listed in the silver.core inventory at line 1263) or data_knowledge.md — enriched from LIVE schema + samples alone. Resolved physical to dw-main-bronze.integrationprod.core_currency_codes (real base TABLE, 167 rows / 11994 bytes, unpartitioned, clustered on `currency`). Confirmed grain (1 row per ISO 4217 code, PK=currency), documented billing_threshold (numeric STRING — cast before math) and datastream_metadata.source_timestamp epoch = MILLISECONDS (uniform bulk-CDC snapshot, not business time). Named join partners advertisers.currency/display_currency + invoice_* (all many-fact:1-dim, no fan-out).
+- 2026-07-29: enriched→verified. Live re-introspection: 4-col schema, unpartitioned, cluster=currency, 167 rows/11994 B — all unchanged. Re-confirmed currency_name NULL on 6 rows, billing_threshold 0 non-numeric (numeric STRING).
 <!-- CHANGELOG END -->
 
 ## View definition
