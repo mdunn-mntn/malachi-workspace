@@ -2033,7 +2033,7 @@ Question: does MNTN score/store more IPs than it can ever bid on? **Verdict: yes
   L16-21: `augmentor_log_lookback_days = 1`, `guid_log_lookback_days = 4`; tags `data_source_id=14, data_source_category_id=1`
   (L46-55). Migrated GCS/Dataproc twin `SteelHouse/airflow-ti` · `spark/create_mntn_global_data_pyspark.py` (blob b4ec1fd) adds
   `bidder_auction_events` (1d) and keeps guid 4d (`guid_dates = [run_date.date() - timedelta(days=d) for d in range(4)]`),
-  fanning categories by `exchange_id`. (Which twin is prod-live is the one runtime item still to confirm — Compass/Airflow UI.)
+  fanning categories by `exchange_id`. (Which twin is prod-live is the one runtime item still to confirm — Compass/Airflow UI; the legacy S3 `mntn_global_data` builder's last commit is 2024-03-05, so the airflow-ti twin is the likely live path, but unverified.)
 - **Materialization → IPDSC `data_source_id=14`:** `SteelHouse/airflow-ti` · `spark/data_source/populate_data_source.py`
   (blob 83fcaab) L933-953 `_get_data_source_14_df` (reads only `dt=<today>` of `mntn_global_data` — no extra lookback; the
   windowing already happened in the builder), DAG `models/ipdsc/ipdsc_ds_14.py`. Legacy twin `SteelHouse/airflow` ·
