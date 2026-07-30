@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [hold the evidenced verdict, dont fold to pushback, domain owner objection, hypothesis not refutation, discriminating test, read the deployed source, github org code-search, correct answer vs known mechanism, DS51 enriched_impressions, INC-001]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-07-29
+last_verified: 2026-07-30
 ---
 When I've reached a conclusion backed by direct evidence and someone (even the domain owner / a senior
 engineer) pushes back with a plausible architectural objection — especially one hedged with "who knows" /
@@ -59,4 +59,21 @@ mechanism. I'd conceded a correct conclusion and flip-flopped the runbook three 
    time-travel the partition) BEFORE naming the mechanism. Don't say "dropped" until you've looked for the
    rows under other keys. (Even the owner's mid-thread "0 is correct" was wrong.)
 
-Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[feedback_source_table_ips]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]].
+8. **The mirror failure — don't NAME a root cause from one surface, then thrash the verdict.** INC-008
+   (2026-07-30, Fangorn inference Dataproc create failing): I named the cause **three times** from partial
+   evidence — champion/challenger contention (from a grid screenshot), then external zonal stockout (from the
+   Dataproc op error), then "quota ceiling" (from the owner's worker-pool log) — before the owner + the re-run
+   self-recovering settled it as a **transient external stockout**. Each call was premature: I published a
+   verdict before pulling ALL the evidence surfaces and before ground truth. For a multi-surface infra failure,
+   the discipline is symmetric with the hold rule: **gather every surface and run the discriminating test BEFORE
+   naming a cause**, THEN hold it against hedged pushback but update on genuine new ground-truth. Concretely for
+   a Dataproc `create-dataproc-cluster` code-9: pull the failed-op error (zonal), the Vertex worker-pool/`service`
+   log (quota), AND `gcloud compute regions describe <region>` quota-vs-usage — and reconcile — before you call
+   it; and run the actual discriminating test (here: challenger cluster DELETE-time vs champion CREATE-time, which
+   refuted the contention theory outright — 62-min gap, plus the champion is UPSTREAM of the challenger so they're
+   never concurrent). **On a live/evolving incident, prefer waiting for self-recovery or owner confirmation over
+   publishing a verdict you'll rewrite in 20 minutes.** Under-updating (point 1, folding) and over-updating
+   (this, thrashing) are the two failure modes of the same skill — the fix for both is: test first, name once,
+   then hold-with-updating. See [[reference_fangorn_inference_dataproc]].
+
+Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[feedback_source_table_ips]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]], [[reference_fangorn_inference_dataproc]], [[feedback_read_full_source_before_verdict]].
