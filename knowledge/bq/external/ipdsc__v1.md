@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - audience
   - prospecting
@@ -185,6 +185,5 @@ WHERE dt BETWEEN '2026-07-26' AND '2026-07-28'
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Introspected LIVE (bq show + INFORMATION_SCHEMA.COLUMNS + GCS layout + 1 LIMIT-5 sample). Enriched from schema + data_catalog.md (IPDSC as MM scoring surface, tmul_daily→ipdsc CRM resolution, audience_data_sources registry, ipdsc_lookback=35, impression↔audience↔IPDSC 30-day match) + data_knowledge.md/ds_catalog.md (DS decode: DS13 Vertical Categorization/Peak Performance, DS14 freshness ~149M IPs/day 8-day TTL, DS16 funnel tags, DS17/18/35 3P, DS46 Fangorn, DS47 CRM exclusions, DS51 Bombora, Oracle DS1 not in IPDSC).
+- 2026-07-29: enriched→verified. Re-introspected LIVE `bq show`: EXTERNAL PARQUET, schema unchanged (4 cols; `data_source_category_ids` RECORD mode REQUIRED, `dt` STRING, `data_source_id` INT), hive partitions `dt`+`data_source_id` (mode CUSTOM), sourceUriPrefix `gs://mntn-data-archive-prod/ipdsc/` — all match doc. Retention window + DS-set growth verified same-day (see Observed facts). Removed stray closing tags left below the changelog.
 <!-- CHANGELOG END -->
-</content>
-</invoke>
