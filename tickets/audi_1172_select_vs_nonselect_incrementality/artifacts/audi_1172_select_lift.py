@@ -333,11 +333,11 @@ wb.table(
     "Cost by advertiser", cost_adv_df,
     finding="Cost per incremental visit and conversion, per advertiser (filter Sig to Yes)",
     method="Per advertiser x product, same method as Cost per incremental. Edge = non-Select minus Select "
-           "(positive/green = Select is cheaper). Filter the Sig columns; 'n/a' = lift not net-incremental / too small.",
-    formats={"Select CPIV": FMT.USD, "non-Sel CPIV": FMT.USD, "CPIV edge": FMT.USD,
-             "Select CPIA": FMT.USD0, "non-Sel CPIA": FMT.USD0, "CPIA edge": FMT.USD0},
+           "(positive = Select cheaper). Filter the Sig columns; 'n/a' = lift not net-incremental / too small.",
+    formats={"Select CPIV": FMT.USD, "non-Sel CPIV": FMT.USD, "CPIV edge": '"+$"#,##0.00;"-$"#,##0.00',
+             "Select CPIA": FMT.USD0, "non-Sel CPIA": FMT.USD0, "CPIA edge": '"+$"#,##0;"-$"#,##0'},
     heat={"Select CPIV": "low", "non-Sel CPIV": "low", "Select CPIA": "low", "non-Sel CPIA": "low"},
-    signal={"CPIV edge": {}, "CPIA edge": {}},   # signed: Select-cheaper green, Select-pricier red
+    # edge is a neutral 2-product difference, not a good/bad verdict -> signed number, no red/green
     kind="data", first_col_width=30,
     toc="CPIV/CPIA per advertiser (both cohort) + Select-vs-non-Select edge; filter the Sig columns.",
 )
@@ -364,12 +364,11 @@ wb.table(
     finding=(f"Select-running advertisers are more incremental overall than PTV-only "
              f"(IVW {_b.vis_ivw*100:+.1f}% vs {_p.vis_ivw*100:+.1f}%; "
              f"median advertiser {_b.vis_ew_med*100:+.0f}% vs {_p.vis_ew_med*100:+.0f}%)"),
-    method="Overall advertiser-level visit lift (all of an advertiser's prospecting, both products), across ALL "
-           "MNTN advertisers. IVW = inverse-variance weighted (precision-pooled; weight rises with sample size, so "
-           "the largest advertisers dominate); median = the median advertiser. Observational, not causal. Test "
-           "accounts + WGU excluded. See Read me / Method.",
+    method="Overall advertiser-level visit lift, all MNTN advertisers, by product mix. Observational, not causal. "
+           "See Read me / Method for IVW vs median and exclusions.",
     formats={"Visit lift (IVW)": FMT.PCT1, "Visit lift (median)": FMT.PCT1,
              "Conv lift (IVW)": FMT.PCT1, "Advertisers": FMT.INT, "# w/ conv": FMT.INT},
+    signal={"Visit lift (IVW)": {"sig": "Vis sig"}, "Visit lift (median)": {}},
     widths={"Visit lift (IVW)": 15, "Visit lift (median)": 16, "Conv lift (IVW)": 15,
             "Advertisers": 14, "Vis sig": 8, "# w/ conv": 10},
     kind="data", first_col_width=14,
