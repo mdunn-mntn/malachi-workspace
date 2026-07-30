@@ -12,11 +12,11 @@ require_partition_filter: true
 cluster_by: [advertiser_id, campaign_group_id]
 time_unit: "n/a — DATE day column, no epoch/timestamp column"
 ttl_days: 90
-approx_rows: 477
-approx_logical_bytes: 120198
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_rows: 501
+approx_logical_bytes: 126294
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, selective_performance, attribution, campaigns]
 keywords: [selective_performance, sp, waypoints, optimizable_event, campaign_group, sp_campaign_group_id, viewed_recommendations_page, daily_rollup, sqlmesh, from_verified_impression]
 source: INFORMATION_SCHEMA+human
@@ -38,9 +38,11 @@ toward that event, alongside the advertiser's standard campaign groups. This tab
 aggregation of the per-event `waypoints__selective_performance` view — it collapses individual waypoint
 events (ad_served_id / user_key / session_key grain) into daily counts and fractional-spend sums.
 
-**Scope caveat (verified 2026-07-19):** this is a narrow pilot — a single advertiser (34114), a single
-optimizable event, 4 campaign groups (1 SP + 3 standard), 60 days present. Do **not** read volumes as
-platform-wide; treat every enum domain below as open and re-derive via `SELECT DISTINCT` as SP rolls out.
+**Scope caveat (re-verified 2026-07-29):** this is a narrow pilot — still a single advertiser (34114 =
+Taskrabbit), a single optimizable event, now **5 campaign groups** (1 SP + 4 standard; up from 4 at
+enrichment — added `130994` "US_MNTN_Web_Emerging_PRS"), ~60 days present (rolling). Do **not** read
+volumes as platform-wide; treat every enum domain below as open and re-derive via `SELECT DISTINCT` as SP
+rolls out — the group set grows.
 
 ## Grain & keys
 - **Grain:** **one row per `day` × `campaign_id`** (× the event-classification tuple `raw_event_name`,
@@ -85,7 +87,7 @@ platform-wide; treat every enum domain below as open and re-derive via `SELECT D
   archetypes result (verified):
   - **SP-group row** — `campaign_group_id` = the SP group (e.g. `67999`), `sp_campaign_group_id` **NULL**.
     Carries the SP group's own delivery in the **base** measures; all `sp_*` measures = 0.
-  - **Standard-group row** — `campaign_group_id` = a standard group (`78204`, `79558`, `127534`),
+  - **Standard-group row** — `campaign_group_id` = a standard group (`78204`, `79558`, `127534`, `130994`),
     `sp_campaign_group_id` = its SP group (`67999`). Carries SP-attributed metrics in the `sp_*` measures;
     `event_count` / `user_count` / `total_spend` = 0.
 - **`raw_event_name`** — event name exactly as fired by the pixel ("Viewed Recommendations Page").
@@ -128,8 +130,8 @@ platform-wide; treat every enum domain below as open and re-derive via `SELECT D
   unresolved here) — join via a permitted advertiser view if you need the name.
 
 ## Gotchas
-- **Narrow pilot (verified 2026-07-19):** only advertiser **34114**, one optimizable event, and 4 campaign
-  groups exist. Volumes are not representative of the platform.
+- **Narrow pilot (re-verified 2026-07-29):** only advertiser **34114**, one optimizable event, and 5
+  campaign groups exist (was 4). Volumes are not representative of the platform.
 - **`require_partition_filter = true`:** every query MUST filter `day` or it errors.
 - **Base vs SP measures don't add:** `event_count` (SP-group rows only) and
   `selective_performance_event_count` (standard rows only) count different populations. Summing both, or
@@ -190,6 +192,7 @@ GROUP BY day, campaign_group_id, sp_campaign_group_id ORDER BY day;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (only tangential `attr_advertiser_selective_performance_config` pixel-config mention); enriched from LIVE schema + empirical sampling. Resolved view→physical: PARTITION BY day, CLUSTER BY (advertiser_id, campaign_group_id), TTL 90d, require_partition_filter=true, desc "Calculate Selective Performance (SP) using Waypoints". Confirmed grain = (day, campaign_id) [477 rows = 477 distinct keys]; no epoch column (DATE-only, time_unit n/a). Established source = daily agg of waypoints__selective_performance, and the SP-group-row vs standard-group-row base/sp_ measure split. Pilot scope: advertiser 34114, event_type "DLV", 1 optimizable event, 4 campaign groups.
+- 2026-07-29: enriched→verified. Re-introspected live: 20 cols/types unchanged, view hash `__2103773377` unchanged, physical TABLE partition `day` require-filter + cluster [advertiser_id, campaign_group_id] intact, TTL expirationMs 7776000000 = 90d confirmed. Pilot grew: 477→501 rows / 120198→126294 bytes; still single advertiser 34114 (all 5 campaign groups map to it per campaign_groups dim), event_type still DLV, is_optimizable/from_verified_impression still all TRUE. Campaign-group count 4→5 (added 130994). No schema/partition/cluster/TTL drift.
 <!-- CHANGELOG END -->
 
 ## View definition
