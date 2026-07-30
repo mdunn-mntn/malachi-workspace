@@ -5,8 +5,8 @@ type: project
 doc_type: memory
 keywords: [bidstream initiative, ti-789, feature store, audience augmentation, ds13, ds19, fangorn, augmentor_log, bidder_auction_events, alex knorr, ryan kleck]
 domain: [project, audience-scoring, bidding]
-lifecycle: active
-last_verified: 2026-03-30
+lifecycle: archived
+last_verified: 2026-07-29
 ---
 Epic TI-789: Bidstream Feature Extraction & Audience Augmentation. Team: Malachi, Alex Knorr, Ryan Kleck.
 

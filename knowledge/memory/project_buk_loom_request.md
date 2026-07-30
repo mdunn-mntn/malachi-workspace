@@ -5,8 +5,8 @@ type: project
 doc_type: memory
 keywords: [buk loom, behavior keywords, ti-813, kale, paulo black, richard girges, revealjs deck, dpl, async feedback]
 domain: [project, leadership]
-lifecycle: active
-last_verified: 2026-04-03
+lifecycle: archived
+last_verified: 2026-07-29
 ---
 ## Kale's Request (2026-04-03)
 

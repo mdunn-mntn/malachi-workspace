@@ -5,8 +5,8 @@ type: project
 doc_type: memory
 keywords: [ti810_ryan_answers, ryan, feature store backfill, dag changes, dev to prod, gsutil cp, aug_log hourly, PR #962]
 domain: [project, repos]
-lifecycle: active
-last_verified: 2026-04-02
+lifecycle: archived
+last_verified: 2026-07-29
 ---
 Ryan's answers on TI-810 deployment (2026-04-02):
 

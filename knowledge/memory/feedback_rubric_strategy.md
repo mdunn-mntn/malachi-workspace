@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [rubric strategy, self-review, all 4s, promotion tradeoff, speed craft adaptability, compensation, current level]
 domain: [workflow, leadership]
 lifecycle: active
-last_verified: 2026-04-08
+last_verified: 2026-07-29
 ---
 Self-review goal is all 4s at current level. The rubric resets after promotion (you'd score 3s at the new level), so there's a real tradeoff between promotion and staying put with consistent top scores.
 

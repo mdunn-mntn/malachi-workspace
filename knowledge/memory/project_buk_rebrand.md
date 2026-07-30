@@ -7,7 +7,7 @@ doc_type: memory
 keywords: [buk rebrand, behavior keywords, bottoms-up keywords, mike dolt, exec-facing, ti-887, keyword branding]
 domain: [project, business]
 lifecycle: active
-last_verified: 2026-04-20
+last_verified: 2026-07-29
 ---
 BUK (Bottoms-Up Keywords) is renamed to **Behavior Keywords** for all exec-facing, buyer-facing, and marketing language. BUK remains the internal engineering shorthand only.
 

@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [q2 ceremonies, backlog grooming, bryce wagg, mike, standups, project syncs, sprint, planning]
 domain: [jira-process, project]
 lifecycle: active
-last_verified: 2026-04-07
+last_verified: 2026-07-29
 ---
 **Q2 ceremony changes (Bryce Wagg, 2026-04-07):**
 

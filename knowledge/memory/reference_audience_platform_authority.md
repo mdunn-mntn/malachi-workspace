@@ -7,7 +7,7 @@ doc_type: memory
 keywords: [audience platform authority, Zach Schoenberger, holdout enforcement, audience expression, retargeting vs prospecting, CRM lists, Jordan Piepkow, SegmentExpressionService]
 domain: [routing-people, audience-scoring]
 lifecycle: active
-last_verified: 2026-04-30
+last_verified: 2026-07-29
 ---
 **Authority:** Zach Schoenberger — Sr Principal Architect, primary owner of the audience platform + bidder evaluation logic.
 

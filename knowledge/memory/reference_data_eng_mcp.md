@@ -6,7 +6,7 @@ doc_type: memory
 keywords: [data engineering mcp, data-eng-ai.in.mountain.com, harvey yau, scotty, internal ai service, de team tooling]
 domain: [infra, routing-people]
 lifecycle: active
-last_verified: 2026-04-07
+last_verified: 2026-07-29
 ---
 MNTN Data Engineering team runs an AI/MCP service at `https://data-eng-ai.in.mountain.com/`.
 
