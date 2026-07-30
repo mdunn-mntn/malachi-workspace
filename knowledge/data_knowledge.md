@@ -3760,6 +3760,15 @@ When RabbitMQ consumers stop processing messages (due to acknowledgment timeout 
 ### What HHST Does
 HHST controls the minimum intent score required for a household to be targeted. Lowering the threshold expands the audience pool; raising it restricts to higher-intent households. The system reacts to campaign pacing: underspending campaigns trigger HHST decreases to expand reach.
 
+### How CIL resolves an impression's geo (two sources, keyed on campaign template)
+
+Authoritative, via lizz (CIL owner, aud22 thread 2026-07-02):
+
+- **`campaign_template_id = 55` → geo comes from `win_logs`** (joined on `auction_id`).
+- **All other campaigns → geo comes from `dw-main-bronze.geo.network_locations`** (via the silver view). Mechanism: take the impression IP (`bid_ip` from `impression_log`), convert to comparable network prefixes, join to network blocks **by geo_version**, pick the **most-specific** matching network, output its geo fields.
+
+This is why aud22 (Geo Includes/Excludes) can flag a false violation: the impression side (CIL → network_locations, for non-template-55 CGs) and the audience/TPA side (which reads the `location_data` **hierarchy**) can resolve the same IP to different DMAs when the `location_data` metro_id/hierarchy are internally inconsistent. See `data_catalog.md` "Geo Location Mapping Discrepancy" + memory `reference_aud22_geo_reporting_sync`.
+
 ### March 2026 Change — Switch from Beeswax Win Notifications to CIL
 On approximately March 16, 2026, the HHST DAG was changed to use the Cost Impression Log (CIL) as the pacing signal instead of Beeswax (Bx) win notifications. Previously, Bx win notifications caused HHST to not properly adjust for some campaigns. The CIL-based approach reduced instances of HHST failing to respond to underspending campaigns.
 

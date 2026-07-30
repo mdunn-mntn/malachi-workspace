@@ -172,7 +172,7 @@ Paulo announced a reorg merging big pieces of the **reporting world** under **Ka
 
 **Client-side pixel QA chain (observed 2026-07-08, WGU thread):** **Jessica DeLeon** (CS) runs the customer-facing "Conversion Pixel QA" docs — convention: content *below the green highlight* in the PIXEL QA doc tab is customer-facing; ticket-summary tabs and internal notes are not. **Kevin Cipriani** owns the pixel ticket summaries / internal QA notes. **Imani Clark** = Senior Director, Platform (owns the client conversion-pixel-strategy conversation). Kevin's framing: tag changes happen in client tag managers we can't access — true for *rules*, but our logs reconstruct *what/when* (see data_knowledge § "Detecting an advertiser pixel/tag change").
 
-**Measurement** = the former **BER** team merged with **ATTR** (attribution). BER-2250 (incrementality) work therefore now lives under the Measurement team.
+**Measurement** = the former **BER** team merged with **ATTR** (attribution). BER-2250 (incrementality) work therefore now lives under the Measurement team. **The geo pipeline (`geo.location_data` sqlmesh model) is also owned by Measurement now** (Nivas, 2026-07-29). Nivas Nalla moved off it and no longer has deploy perms; **Sonali Vengurlekar owns the `location_data` logic**. Deploys (e.g. the pending AUDI-1072 fix PR #1147) need someone on Measurement.
 
 **Reporting directly to Paulo Black:**
 - **Karen / BAE** — with continued support from Mike Dolzer.
