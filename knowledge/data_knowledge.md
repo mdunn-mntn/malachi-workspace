@@ -2028,6 +2028,19 @@ Question: does MNTN score/store more IPs than it can ever bid on? **Verdict: yes
    NO recent pageview/recency. DS14 is a separate DAG, ANDed only at bid time. So the full 31-day universe is scored and
    emitted; only the ~8-day addressable slice is ever biddable.
 
+**Source code (verified via GitHub, SteelHouse org, 2026-07-30 — exact lines to hand owners):**
+- **Build + lookback constants:** `SteelHouse/mntn_global_data` · `spark/create_mntn_global_data_pyspark.py` (blob 386478b)
+  L16-21: `augmentor_log_lookback_days = 1`, `guid_log_lookback_days = 4`; tags `data_source_id=14, data_source_category_id=1`
+  (L46-55). Migrated GCS/Dataproc twin `SteelHouse/airflow-ti` · `spark/create_mntn_global_data_pyspark.py` (blob b4ec1fd) adds
+  `bidder_auction_events` (1d) and keeps guid 4d (`guid_dates = [run_date.date() - timedelta(days=d) for d in range(4)]`),
+  fanning categories by `exchange_id`. (Which twin is prod-live is the one runtime item still to confirm — Compass/Airflow UI.)
+- **Materialization → IPDSC `data_source_id=14`:** `SteelHouse/airflow-ti` · `spark/data_source/populate_data_source.py`
+  (blob 83fcaab) L933-953 `_get_data_source_14_df` (reads only `dt=<today>` of `mntn_global_data` — no extra lookback; the
+  windowing already happened in the builder), DAG `models/ipdsc/ipdsc_ds_14.py`. Legacy twin `SteelHouse/airflow` ·
+  `dags/tpa_export/spark/data_source/populate_data_source.py`.
+- **8-day serving TTL:** `SteelHouse/membership-db` · `server/config/config.yml` (blob 32c79d6) `data_source_ttls: '14': 8`;
+  enforced in `server/src/config/mod.rs` `AudienceTypeTtlConfig::get_data_source_ttl()` (`cur_epoch - Duration::days(ttl_days)`).
+
 **Sizing (HLL distinct-IP on `ipdsc__v1`, ~1.5% err; scored = 31d [2026-06-27..07-27], addressable = DS14 8d [07-20..27]):**
 
 | Source | Scored (31d) | Addressable ∩ (8d) | Not addressable | % waste |
