@@ -170,6 +170,7 @@ WHERE DATE(time) = '2025-05-20' AND advertiser_id = 31357;
 ## Observed facts
 <!-- OBSERVED:FACTS START -->
 <!-- capture/curator appends tribal findings here: `- YYYY-MM-DD: <fact verified against source>` -->
+- 2026-07-30: the campaign-id RESOLUTION regression (INC-001) blanks `campaign_id`, `group_id`, AND `creative_id` together to `-3` (the whole campaign→group→creative hierarchy), leaving only `advertiser_id` + `partner_id` real — so a `-3` row is attributable ONLY by `advertiser_id` (Bombora 07-27 = adv 30506, 110,750 rows). `media_spend`/`data_spend`/`platform_spend` are NULL on `-3` rows while `media_cost` stays populated. Verified via ADC row sample on `dt=2026-07-27`.
 <!-- OBSERVED:FACTS END -->
 
 ## Changelog

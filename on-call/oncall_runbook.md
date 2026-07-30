@@ -248,6 +248,22 @@ benign" reframe — abandoning a well-evidenced conclusion instead of holding it
 test. Correct move: **acknowledge the objection, keep the evidenced verdict, and settle it with the test** —
 not concede. A domain owner's plausible pushback is a hypothesis to check, not an authority to fold to.
 
+**Update 2026-07-30 (owner handoff + backfill query).** Sonali (CIL / category-facts owner, BER) is manually
+backfilling the 07-27 partition; her working hypothesis is the category-facts job's **2-day lookback** missed
+07-27 (compatible with the regression: a reprocess un-resolved the rows and a 2-day window won't self-heal them).
+Shared the isolation query + example rows. **Key for the backfill:** the `-3` re-stamp blanks `campaign_id`,
+`group_id`, AND `creative_id` together, so `-3` rows are identifiable ONLY by `advertiser_id` (Bombora = adv 30506,
+which normally sits at **0** unresolved) — not by campaign or campaign-group:
+```sql
+SELECT impression_id, time, advertiser_id, campaign_id, group_id, creative_id, ip, partner_id, media_cost
+FROM `dw-main-silver.logdata.cost_impression_log`
+WHERE time >= TIMESTAMP('2026-07-27') AND time < TIMESTAMP('2026-07-28')
+  AND advertiser_id = 30506 AND campaign_id = -3;   -- 110,750 rows
+```
+**07-28 also needs backfilling** (still 102,456 under `-3` alongside 141,002 resolved). Spend-breakdown columns are
+NULL on `-3` rows (`media_cost` populated). Re-confirmed the daily swap holds stable 2026-07-30
+(07-24/25/26 = 0 `-3`; 07-27 = 110,750 `-3`/0 resolved; 07-28 = 102,456 `-3`/141,002 resolved; 07-29 = 0 `-3`).
+
 ---
 
 ### INC-002 — `fangorn_inference_pipeline_run` `inference_pipeline` — Dataproc cluster-create failure

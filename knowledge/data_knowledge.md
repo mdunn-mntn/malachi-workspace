@@ -1631,7 +1631,10 @@ wrong.** Proven case: DS51/Bombora campaigns (CG 131563 / adv 30506 "MNTN - No E
 **Lessons:** (1) for a CIL/enriched anomalous per-campaign 0, reconcile against `spend_log` (spend source of truth) before
 concluding it's correct; (2) then GROUP BY the id (and time-travel the physical) to find WHERE the rows went before saying
 they were "dropped" — here they were present under `-3` the whole time. **`campaign_id = -3` in CIL = unresolved campaign
-(dim-join miss); real campaign_ids are positive.** Routed to the CIL SQLMesh-model owner (BER/data-platform); IMP-012.
+(dim-join miss); real campaign_ids are positive. The re-stamp blanks `campaign_id`, `group_id`, AND `creative_id`
+together — only `advertiser_id`/`partner_id` survive, so `-3` rows are isolable/backfillable ONLY by `advertiser_id`
+(Bombora = adv 30506); spend breakdown (`media_spend`/`data_spend`/`platform_spend`) is NULL on `-3` rows while
+`media_cost` stays populated (verified 2026-07-30).** Routed to the CIL SQLMesh-model owner (BER/data-platform); IMP-012.
 **RETRACTED (all three prior framings wrong):** not the DS51 ipdsc skip (07-25 was also a skip, served 104K), not a serving
 gap (won 110,792, $904 billed), not a data-drop (rows present as `-3`).
 
