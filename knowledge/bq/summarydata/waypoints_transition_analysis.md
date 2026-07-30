@@ -13,10 +13,10 @@ cluster_by: [advertiser_id, campaign_id, funnel_mode]
 time_unit: date
 ttl_days: null
 approx_rows: null
-approx_logical_bytes: 42537927068
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+approx_logical_bytes: 54098086880
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, conversion-funnel, attribution]
 keywords: [waypoints, funnel, transition, step, conversion, event_group, sequential, ga_client_id, session_key, ad_served_id, drop-off]
 source: INFORMATION_SCHEMA+human
@@ -93,7 +93,7 @@ Powers **Waypoints sequential-funnel analytics**: the stage-to-stage advancement
 - **Column-set matters (dry-run, 1 day = 2026-07-15):** 3 narrow cols = **172 MB**; `SELECT *` = **330 MB** (~2×). Avoid `SELECT *`.
 - **Actual billed (from perf log):** 14-day 8-col aggregate = **1.49 GB / 14 partitions**; single-day narrow aggregates ~**0.13–0.27 GB**.
 - **Volume:** ~**46–48K rows/day** (2026-07-15 = 46,566; 2026-07-01..14 = 672,157). ~14 advertisers, ~71 campaigns per day in the sample.
-- **Backing physical:** `waypoints_fact` = **42.5 GB / 187M rows** (the FULL fact; this view reads a filtered ~4% projected subset — `approx_logical_bytes` above is that base-fact storage, not this view's footprint).
+- **Backing physical:** `waypoints_fact` = **54.1 GB / 232.6M rows** (2026-07-29; up from 42.5 GB/187M at enrichment; the FULL fact; this view reads a filtered ~4% projected subset — `approx_logical_bytes` above is that base-fact storage, not this view's footprint).
 
 ## Example queries
 ```sql
@@ -121,6 +121,7 @@ ORDER BY target_event_group_order, total_transitions DESC;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md/data_knowledge.md (net-new table; only a passing `attr_advertiser_waypoints_event_mapping` mention). Enriched from LIVE schema + empirical sampling. Resolved 3-level view chain to physical base `waypoints_fact` (day-partitioned, cluster advertiser_id/campaign_id/funnel_mode, 187M rows / 42.5 GB). Confirmed partition=`day` empirically (16.05 GB→172 MB with day filter). Verified `is_ordered`≡1, `transition_count`≡1, `target_order=source_order+1` invariant (0 exceptions/14d), `from_verified_impression` never FALSE (TRUE/NULL only), `group_id`≡0 sentinel. Set require_partition_filter=false (view bakes in day>=2026-02-10 floor, so unfiltered queries validate + scan all history).
+- 2026-07-29: enriched→verified. Re-introspected live: 17 cols/types unchanged, view hash `__3828362906` unchanged, resolves to fact `waypoints_fact` (partition `day` require-filter, cluster [advertiser_id,campaign_id,funnel_mode]). Fact grew 187M→232.6M rows / 42.5→54.1 GB (rolling retention); refreshed `approx_logical_bytes` + prose. No schema/partition/cluster drift; require_partition_filter=false at view surface still holds (baked day floor).
 <!-- CHANGELOG END -->
 
 ## View definition
