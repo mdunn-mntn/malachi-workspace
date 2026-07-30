@@ -147,6 +147,25 @@ wrong column (`first_day..seventh_day_visits` = last-touch day-buckets, NOT the 
 shipped wrong; reproducing the exact dashboard definition caught it. See ticket `audi_1172_*` §8 +
 [[reference_select_vs_nonselect_incrementality]].
 
+## ⭐ Comparing self-selected groups is OBSERVATIONAL — and weighting can flip the story (AUDI-1172, 2026-07-30)
+
+**Two traps when you compare outcome across groups that chose their own treatment** (e.g. "advertisers who
+run Select vs those who don't", "accounts on feature X vs not"):
+
+1. **It is associational, not causal — label it.** Advertisers self-select into Select, so a higher lift for
+   Select-runners shows correlation, not that Select *caused* it (they may be bigger, more sophisticated,
+   different verticals). The only causal quantity here is the *within*-advertiser holdout lift; the
+   *across-group* comparison is a descriptive cut. Always state "observational, not causal" on the deliverable.
+
+2. **The pooling weight can invert the finding when the group has a heavy tail.** On AUDI-1172, PTV-only
+   advertisers pooled to **+0.2% IVW** (precision/volume-weighted → a few huge spenders, who are barely
+   incremental, dominate) but **+12.4% for the median advertiser**. Same group, 60× apart. With a heavy tail
+   (one advertiser 294× the median), **report BOTH a volume-weighted and an equal-weight/median number** — they
+   answer different questions ("where does the incremental volume sit" vs "what is the typical advertiser"),
+   and showing both is the honest, robust read for leadership. Prefer the **median** over the mean for the
+   equal-weight number — per-unit relative lifts explode when a denominator (holdout rate) is tiny, which
+   skews a mean but not a median. Exclude internal/test accounts and the single most extreme outlier up front.
+
 ## Experiment results archive (TI-1003 / TI-1033)
 
 Every completed TI experiment is cataloged in the **TI experiment archive** — a manifest-driven internal static site that anyone can browse: a master "what TI has moved" view grouped by KPI (IVR, CVR, incrementality, …) plus one page per experiment (intention → big bold movement → every KPI moved → method → chart).

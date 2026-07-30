@@ -35,6 +35,7 @@ For a table's schema/grain/cost, start at [`bq/_CATALOG_INDEX.md`](bq/_CATALOG_I
 ## Audience, targeting & scoring
 - **DS (data_source_id)** — the audience/data-source taxonomy (DSxx). Full catalog → [`ds_catalog.md`](ds_catalog.md); live graph → [`bq/integrationprod/audience_data_sources.md`](bq/integrationprod/audience_data_sources.md)
 - **MM (Model Match)** — MNTN-derived, scored audience. Components: **DS19 = MM Core, DS13 = PP v1, DS46 = PP v2** (one slot). → `data_knowledge.md` § Audience System, MEMORY `reference_mm_component_taxonomy`
+- **Shopper Graph** — original name for **MNTN Matched** (confirmed Alyson Lefkowitz + Brian McAdams). The `SteelHouse/shopper_graph` service backs the ENTIRE MNTN Match backend (building an MM campaign hits it directly); DS-team owned (Alyson); deployed **manually** (merge to main does nothing until a deploy workflow runs). → `data_knowledge.md` § Shopper Graph API, MEMORY `reference_shopper_graph_deploy`
 - **1P / 3P / MM** — 1P (uploaded) + 3P (bought interest) are unscored; MM (MNTN-derived) is scored. → `data_knowledge.md` § Advertising Concepts
 - **HI (High Intent) / PP (Purchase Propensity) / MI (Mid Intent)** — Fangorn intent tiers from the household scoring pass. → `data_knowledge.md` § Intent Scoring Architecture
 - **HHST (household_score threshold)** — the intent gate; a **pacing lever** thrashed daily that drives delivery composition. RTC bypasses it. `household_score` is BINARY (10000 or unscored). → `data_knowledge.md` § Intent Scoring, § HHST intent gate

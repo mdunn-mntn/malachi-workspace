@@ -367,10 +367,10 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 - [0002 — funnel_level is authoritative for campaign stage, not objective_id](decisions/0002_funnel_level_authoritative_for_stage.md) — Use campaigns.funnel_level for stage; objective_id is unreliable for stage (use it only for prospecting = IN (1,5,6))  ·  _verified 2026-07-19_
 
 ## Runbooks
-- [On-Call Runbook — Master](../on-call/oncall_runbook.md) — Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here.  ·  _verified 2026-07-28_
+- [On-Call Runbook — Master](../on-call/oncall_runbook.md) — Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here.  ·  _verified 2026-07-30_
 
 ## backlog
-- [Improvements Backlog](../improvements_backlog.md) — Single lightweight tracker for improvement ideas / durable fixes / tech-debt we want to remember but not put on the Jira board yet. On-call durable-fixes feed it; so can anything. Promote a row to Jira only when it's actually prioritized.  ·  _verified 2026-07-28_
+- [Improvements Backlog](../improvements_backlog.md) — Single lightweight tracker for improvement ideas / durable fixes / tech-debt we want to remember but not put on the Jira board yet. On-call durable-fixes feed it; so can anything. Promote a row to Jira only when it's actually prioritized.  ·  _verified 2026-07-30_
 
 ## reference
 - [Retrieval Eval Probes — cold-start regression suite](eval_probes.md) — Cold-start retrieval probes: a fresh chat using only START_HERE + _ROUTING + tickets/INDEX must reach each probe's targets. Every real cold-start miss becomes a new probe here.
