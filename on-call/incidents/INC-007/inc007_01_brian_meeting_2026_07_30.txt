@@ -1,0 +1,314 @@
+[00:00] So, okay, cool.
+[00:02] Let me show you something real quick.
+[00:04] So this came up today.
+[00:07] Oh, let's see if I can just share.
+[00:10] Tell me if this is too small.
+[00:12] If it's too small, I can just share the window.
+[00:16] I think this is fine.
+[00:17] Okay, I'll try to make it.
+[00:18] I can see if I can make it a little bit bigger.
+[00:20] Yeah, okay.
+[00:21] So this task today, wait for product categorization, failed.
+[00:28] And it failed because the upstream failed.
+[00:30] And the upstream is this batch submit.
+[00:34] And I believe this is the open AI, like, big batch task.
+[00:42] And anyways, I'm trying to resolve this.
+[00:46] But I think that I think it's because it failed yesterday.
+[00:51] And I don't know if we can just have a day that didn't run.
+[00:56] because I think I would have to resubmit batch submit,
+[00:59] which is a pretty large task in order for this one to clear.
+[01:04] So I don't know if you're familiar with these.
+[01:05] I'm learning about them.
+[01:06] I'm not super familiar with them.
+[01:09] Vaguely.
+[01:10] Okay.
+[01:15] What's basically what I've been noticing that's been going on,
+[01:18] and there's a lot of failures that could change,
+[01:21] is we have a lot of async issues going on.
+[01:24] So a lot of times things fail because some data gets loaded late or all of these different things.
+[01:30] And I think that we could fix some of those.
+[01:32] So like just a small example yesterday, I did a PR for a similar issue where the upstream task failed.
+[01:40] But there was nothing in the downstream task that would just fail automatically if the number of retries of the upstream had already been done.
+[01:50] so basically what had happened is the upstream had already done three retries
+[01:54] um and but we had a sensor on the downstream task that was just waiting for the file to be loaded
+[02:02] rather than and so basically i added a little pr that says if the upstream has already had three
+[02:07] failures immediately fail don't wait six hours for the sensor because that's stupid so that one
+[02:14] is fixed just in like they didn't really fix the upstream issue it just more like made it to
+[02:20] where if the upstream fails, the downstream will fail immediately.
+[02:24] And so we can get to it quicker rather than wait, you know,
+[02:27] the six hours for the sensor to finally turn out. So anyways,
+[02:32] that being said I, yeah,
+[02:34] the big thing for here is I was going to ask if you're familiar with batch
+[02:37] cement, cause I'm not familiar with it. So I didn't know if you knew.
+[02:39] Let me look at the.
+[02:40] year. So the reason it's also async to is that this wait for product categorization downstream
+[02:52] task and keyword DDP reporting waits for the previous days. So that's why that it looks like,
+[03:00] oh, well, it's the opposite day. It's done intentionally. It's a one day lag.
+[03:04] So the next day will fail if the previous day failed. So
+[03:07] Yeah, I've fixed this one before.
+[03:37] Thank you.
+[04:07] yeah and I'm not trying to break your train of thought here but this seems a little bit off
+[04:26] like I don't know if we should do something the same day because if it takes a whole day
+[04:32] well i don't know i didn't see this failure yesterday not matching in the batch submit
+[04:39] failure yesterday um i don't know if it's not being logged or not um but this is what failed
+[04:46] so the only thing is i'm wondering if it makes sense for us to basically have a 24 hour
+[04:52] time before we can we know that the previous days failed um that's i think something to flag here
+[05:01] because I think the batch submit takes a decent amount of time to run. Yeah, it is.
+[05:09] No, no. So, the error in this is a file storage quota size error. Batch submit
+[05:23] failed because it tried to store files that were too big.
+[05:32] Yeah, line here.
+[05:38] Okay.
+[05:41] Where are you seeing that? I'm curious to know your troubleshoot. Because I see
+[05:45] the top level error here. Let me shrink this.
+[05:53] I might catch something. One second.
+[05:55] All good.
+[05:57] So, if you search for
+[06:25] There's a batch submitter portion. If you search client.files.create.
+[06:46] Okay. There's only one match. Is that the one you're talking about?
+[06:59] I think so.
+[07:01] Oh, that's annoying. It will only show it if it I don't know why they don't have
+[07:07] a search function.
+[07:08] What I usually do with those huge ones is I hit the download button and just download
+[07:14] the logs.
+[07:15] Yeah, I did that.
+[07:18] I'll pull them up.
+[07:20] It's saying, OpenAI bad request error.
+[07:22] Error code 400.
+[07:24] You exceeded your file storage quota.
+[07:27] Projects are limited to 2.5 terabytes of files.
+[07:30] Please delete old files or attempt with a smaller file size.
+[07:38] Which is weird.
+[07:39] Yeah, the submit batch, which calls client files create.
+[07:45] Tries to upload a file to OpenAI.
+[07:49] OpenAI rejected the upload with 400
+[07:51] because project has hit the 2.5 file storage cap.
+[08:01] Which is weird because it ran today.
+[08:03] So why would it fail yesterday and be too large?
+[08:06] Yeah, it's just that the batch size
+[08:07] for that specific day was too big.
+[08:09] um yeah i don't know okay um well hold on i guess i'm just trying to think about how we should
+[08:27] remedy this um because we could rerun it but i don't know if it's necessary for us to rerun it
+[08:37] if we already have two days or if we really
+[08:38] need to have that day's worth of data,
+[08:40] because it's a pretty long run.
+[08:43] Also, we don't obviously want to rerun it, and it just failed.
+[08:49] Give me a second.
+[08:51] Yeah, I'm good.
+[09:07] Thank you.
+[09:37] Who has access to purge the files?
+[09:48] This is a Clek job, certainly.
+[09:53] So he would probably be the person who,
+[09:59] it was either Victor or Ryan,
+[10:03] but one of them would probably be the person
+[10:05] to understand better how these midjobs work.
+[10:10] All I know.
+[10:35] No.
+[11:01] Get down.
+[11:03] Get down.
+[11:05] You said that with such passion.
+[11:06] I thought I had to get down.
+[11:09] I was...
+[11:10] My cat wants to be up on my computer desk,
+[11:14] and she's hitting buttons and knocking things off.
+[11:18] Yeah.
+[11:19] Ryan said he'll jump in real quick.
+[11:21] Let me show the meeting with him.
+[11:23] Share.
+[11:24] Where's the meeting invite?
+[11:26] I don't have access.
+[11:36] Hold on.
+[11:48] I can pull it up.
+[11:50] Oh, there it is.
+[11:52] Okay.
+[11:53] It just says Zoom meeting.
+[11:54] Copy invitation.
+[11:55] So, yeah, so the batch cleanup is supposed to delete the files.
+[12:12] Hey, Ryan.
+[12:17] Hey.
+[12:19] What's going on?
+[12:25] Not much, yeah
+[12:27] I don't know, Mountain Match
+[12:29] What is this?
+[12:29] Yeah, was this a you or a Victor one?
+[12:34] A little bit of both
+[12:36] Okay
+[12:36] So basically it's failing
+[12:38] It failed for all four runs
+[12:41] Because it said that it was trying to upload
+[12:43] Too large of a file
+[12:44] It has a 2.5 terabyte
+[12:46] Hat for the amount of files that are stored
+[12:49] In OpenAI
+[12:52] The batch cleanup is supposed to
+[12:54] clean up the files that are
+[12:56] prepped for
+[12:58] load, right? So I don't know
+[13:00] if
+[13:00] rerunning it for that specific date
+[13:04] will work or not.
+[13:06] Usually we didn't
+[13:08] rerun it.
+[13:10] Alright, so this is submit
+[13:12] and there's the fetch.
+[13:14] Alright, so this is where we submit.
+[13:16] Yeah, the fetch has been failing the last
+[13:18] couple of days too.
+[13:21] Why?
+[13:22] Oh man.
+[13:24] sucky one
+[13:27] pretty sure
+[13:29] Victor destroyed things on his way out
+[13:32] yeah probably
+[13:34] now
+[13:34] the way we fixed this in the past
+[13:38] is to have I don't know who runs our opening
+[13:39] AI but just ask opening AI to give us
+[13:41] more space
+[13:42] because like if you
+[13:46] let me see if I could
+[13:48] let me see if I could show you opening
+[13:51] AI
+[13:52] Because I'm having trouble.
+[13:55] Yeah.
+[13:56] This one...
+[13:57] Go ahead.
+[13:59] The DAG is also failing, but it's not showing up in our TPA failure.
+[14:08] Yeah, because we didn't know until today. Because this one failed. And this is basically
+[14:13] just waiting for the upstream. But it's one day delayed.
+[14:17] No, this one. I'm talking about a different one.
+[14:20] Oh, my bad.
+[14:21] All right.
+[14:22] Ryan, you can share.
+[14:23] I sent it to you in Slack.
+[14:25] Oh, okay.
+[14:27] Okay.
+[14:28] Let's see.
+[14:31] Those two DAGs go hand in hand.
+[14:35] Yeah.
+[14:38] Incremental submit and the incremental fetch.
+[14:40] Okay.
+[14:41] That makes sense.
+[14:42] Yeah.
+[14:43] Yeah, if you log into OpenAI,
+[14:45] I think this is ours.
+[14:50] So we use their batch API.
+[14:54] Okay, so we did submit some stuff.
+[14:58] Looks like today.
+[14:59] Yeah, today's ran.
+[15:00] The batch submit for today ran.
+[15:04] But the...
+[15:07] Okay, we'll look at the fetch failure.
+[15:09] And then...
+[15:11] Yeah, so if you get into the API platform,
+[15:15] And then there's a storage.
+[15:19] Because, see, we upload the files.
+[15:22] This is a painful API to deal with.
+[15:25] We upload files to their storage.
+[15:30] And then it does the batch.
+[15:34] I forget how the code works, but you tell it, oh, here's a file.
+[15:38] start working on
+[15:41] doing the prompts or whatever that are in it.
+[15:46] These are all outputs.
+[15:49] You can come in here and sometimes
+[15:53] I can come in here to clear up space. You can scroll all the way down.
+[15:59] I don't know how to filter these or sort them,
+[16:04] but if you scroll all the way down to yesterdays,
+[16:08] And you can hit this delete button and manually delete them.
+[16:15] But it's so painful.
+[16:16] So isn't the batch cleanup job supposed to be doing that?
+[16:20] Yeah, it is.
+[16:23] So I don't know why.
+[16:26] It looks like we must be sending a lot more than what we used to.
+[16:30] Or like, I don't know if site business signal grew a lot or what.
+[16:40] But to mitigate this, the main thing I would do is just ask,
+[16:44] I'm still scrolling here, ask OpenAI,
+[16:47] or find out who owns our OpenAI account,
+[16:49] or ask OpenAI if they could give us more storage for free.
+[16:53] Because they've done that before.
+[16:57] Yeah, maybe ping Allison.
+[16:58] Yeah, I will ping Allison in that thread.
+[17:02] And I'll just say the issue.
+[17:07] Here's, oh man, I haven't talked.
+[17:13] Here's.
+[17:19] Just the one right here.
+[17:20] and I guess maybe support at open AI.
+[17:34] I'll give you the, I don't know.
+[17:36] That's I guess that's the email you would maybe send,
+[17:41] or maybe Allison knows who.
+[17:45] So anyway, so that's,
+[17:46] that's
+[17:53] okay yeah let's look at the
+[17:55] I don't know where that went
+[17:58] okay let's look at a batch failure
+[18:04] or the fetch
+[18:16] And like, worst case, I guess, this is for like keywords for DS19, you know, so.
+[18:26] Worst case, if it fails, wouldn't have keywords for a day, I guess, or new keywords.
+[18:37] But like when we load it up into IPDSC, it goes back 30 days.
+[18:42] So, well, okay.
+[18:50] So why?
+[18:51] Yeah.
+[18:51] So, so wait, why is this?
+[18:59] Okay.
+[19:00] Why is this failing?
+[19:01] can I sign
+[19:13] requested
+[19:14] sending
+[19:18] email
+[19:19] what line
+[19:27] is this even
+[19:28] task
+[19:28] this looks like it's trying to oh
+[19:35] send us an email what the heck batch transition
+[19:51] she's pg read part k
+[19:54] Ryan, just what I do is I just download the log and
+[20:00] And then his F-bomb pointed at the log flag.
+[20:03] Yeah.
+[20:05] Okay.
+[20:05] I think this is it.
+[20:07] It confined this.
+[20:10] So let's go look at it.
+[20:11] Which is the one that failed.
+[20:14] I see.
+[20:16] So since, yeah.
+[20:17] They can't fetch yesterday's because yesterday's failed.
+[20:20] So that's what you're saying.
+[20:22] I would honestly, dude, I would just, I mean,
+[20:23] for now, I would just mark this as,
+[20:27] or just ignore this
+[20:30] honestly
+[20:31] this job is
+[20:34] brittle
+[20:35] the brittleness with this job is because
+[20:38] they maybe run batch cleanup
+[20:42] again later or
+[20:44] oh man
+[20:45] the batch cleanup is completed
+[20:48] on the other end a couple of times
+[20:52] so
+[20:53] I still did ping Allison
+[20:56] about increasing the file size.
+[20:59] Should we still do that?
+[21:00] Yeah, might as well.
+[21:02] Otherwise, it's going to keep happening.
+[21:04] Okay.
+[21:05] Yeah, if it's free to do, yeah, for sure.
+[21:09] Local number of files.
+[21:14] Yeah, Victor and I wanted to harden this,
+[21:18] but man, it's painful because there's a lot of...
+[21:22] Working with OpenAI's batch API is painful.
+[21:26] Where is that stupid?
+[21:32] Yeah, I can, I don't know.
+[21:34] If you guys have time, we could talk about it more.
+[21:37] We'll find it again.
+[21:39] No, it's totally fine.
+[21:42] Brian, the only other thing Brian and I were going to talk about
+[21:44] was something related to Shopper Graph
+[21:46] because I hadn't deployed to it yet,
+[21:48] and I had a PR that I merged,
+[21:50] so that's the only other thing we need to discuss besides that.
+[21:52] Yeah, I can show them that.
+[21:54] Yeah, that's cool.
+[21:56] have you done yeah ryan you can take off if you want we can we're just redeploying
+[22:02] cool sweet thank you ryan appreciate it yep no problem talk to you guys later okay later bye
+[22:09] hey brian can be annoying and uh us join a new zoom so i can separate these recordings
+[22:18] no that's fine okay cool all right i'll send you another zoom link
