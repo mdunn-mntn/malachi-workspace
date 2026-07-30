@@ -3,7 +3,7 @@ doc_type: runbook
 title: On-Call Runbook — Master
 summary: "Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here."
 last_verified: 2026-07-28
-keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, audience_intent, fangorn_score_monitor, ipdsc_geo, ModelPysparkBatchOperator, dataproc serverless, dataproc batch, batches wait, driver output, AnalysisException, PATH_NOT_FOUND, path does not exist, producer consumer race, PAM, privileged access manager, storage.objects.get, INC-001, INC-002, INC-003, INC-004, enriched_impressions, analytics_curated, bombora skip downstream, ds51 zero, ds51 disappeared, tpa_mntn_id_export, mntn id export, mntn_id_data, tpa export, ttl exceeded, batch cancelled, batch was cancelled, cancelling batch as ttl exceeded, dataproc serverless ttl, ModelPysparkBatchOperator ttl, FetchFailedException, FetchFailed storm, shuffle fetch, shuffle fetch failure, auth bootstrap timeout, doSparkAuth, SettableFuture timeout, maxExecutors, zero ttl headroom, sh-dw-external-tables, INC-005, recomputation spiral, uncached lineage, shuffle spill, memory bytes spilled, disk spill, spark.sql.shuffle.partitions, shuffle partitions too few, spark event log, eventlog profiler, cache mntn_df, persist dataframe, dataproc temp bucket, spark-job-history, zstd event log, gcloud-crc32c gatekeeper, storage api download, keyword_ddp_reporting, wait_for_product_categorization, product_categorization, mntn_match_incrementals_fetch, ExternalTaskSensor, external task sensor timeout, execution_delta, allowed_states, openai batch, openai batch runner, batch_fetch, batch_transition, shopper_graph, mntn matched, DS19 keyword pipeline, reschedule sensor, INC-006]
+keywords: [on-call, oncall, on call, incident, pager, pagerduty, alert triage, airflow failure, airflow alert, pipeline failure, dag failure, task failed, sensor timeout, AirflowSensorTimeout, precondition_bombora, ipdsc_monitor, tpa_ipdsc_export, ipdsc, bombora, DS51, optional partner skip, fangorn_inference_pipeline, inference_pipeline, create-dataproc-cluster, dataproc, dataproc saturation, resource contention, champion challenger, 94% cap, vertex pipeline, benign expected, late data, batch-id trap, force_export, prod safety, escalation, runbook, daily_drift_pipeline, feature drift, fangorn_daily_feature_drift_pipeline, reference_date, run_date, parameter not found, input definitions, ValueError, param mismatch, param contract, TiVertexPipelineOperator, PipelineJob, latest bundled version, audience_intent, fangorn_score_monitor, ipdsc_geo, ModelPysparkBatchOperator, dataproc serverless, dataproc batch, batches wait, driver output, AnalysisException, PATH_NOT_FOUND, path does not exist, producer consumer race, PAM, privileged access manager, storage.objects.get, INC-001, INC-002, INC-003, INC-004, enriched_impressions, analytics_curated, bombora skip downstream, ds51 zero, ds51 disappeared, tpa_mntn_id_export, mntn id export, mntn_id_data, tpa export, ttl exceeded, batch cancelled, batch was cancelled, cancelling batch as ttl exceeded, dataproc serverless ttl, ModelPysparkBatchOperator ttl, FetchFailedException, FetchFailed storm, shuffle fetch, shuffle fetch failure, auth bootstrap timeout, doSparkAuth, SettableFuture timeout, maxExecutors, zero ttl headroom, sh-dw-external-tables, INC-005, recomputation spiral, uncached lineage, shuffle spill, memory bytes spilled, disk spill, spark.sql.shuffle.partitions, shuffle partitions too few, spark event log, eventlog profiler, cache mntn_df, persist dataframe, dataproc temp bucket, spark-job-history, zstd event log, gcloud-crc32c gatekeeper, storage api download, keyword_ddp_reporting, wait_for_product_categorization, product_categorization, mntn_match_incrementals_fetch, ExternalTaskSensor, external task sensor timeout, execution_delta, allowed_states, openai batch, openai batch runner, batch_fetch, batch_transition, shopper_graph, mntn matched, DS19 keyword pipeline, reschedule sensor, INC-006, INC-007, mntn_match_incrementals_submit, batch_submit, openai file storage quota, 2.5TB file quota, file storage quota exceeded, client.files.create, openai batch quota, exceeded your file storage quota, ExternalTaskFailedError, sensor fast-fail, upstream_failed, batch_submitter, openai_batch_submissions, submit dag failed, product categorization missing]
 tags: [on-call, airflow, incident-response]
 ---
 
@@ -110,7 +110,8 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | `fangorn_inference_pipeline_run / daily_drift_pipeline` | `ValueError: The pipeline parameter reference_date is not found in the pipeline job input definitions` (retries exhausted → PagerDuty). **Different task + signature from INC-002 — not resource contention.** | `TiVertexPipelineOperator` ALWAYS injects `reference_date` into the Vertex `parameter_values`, but the drift template declares `run_date` (its KFP source `fangorn_daily_feature_drift_pipeline.py:393` uses `run_date`) → `PipelineJob.__init__` rejects the unknown param before submission. Param-contract mismatch. | **DAG bug** — route to owner (Brian/ML). **PR #1158 (airflow-ti) does NOT fix it** (confirmed: re-run on the fixed bundle re-failed identically); the operator-injected `reference_date` is the failing param. Real fix = rename the KFP pipeline param `run_date`→`reference_date` in **`targeting-infra-ml`** + recompile/redeploy the template. Do NOT blind-re-run until that ships. **RESOLVED 2026-07-28** (Brian redeployed template, green on try 5). | INC-003 |
 | `audience_intent / fangorn_score_monitor` | Airflow log = boilerplate `AirflowException: … Dataproc Agent reports job failure`; **batch driver output** = `AnalysisException [PATH_NOT_FOUND]: gs://mntn-data-archive-prod/ipdsc_geo/dt=<run_date>`. PagerDuty, retries exhausted. | Consumer `ModelPysparkBatchOperator` reads `ipdsc_geo/dt=<run_date>`, which lands on D+1 with ~3.5h-variable timing (tpa_export `run_geo`); monitor has only `retries=2×10min` + no cross-DAG sensor → races the producer, pages when it slips past ~07:45Z. | **Late data** (this case) — pull the driver output for the real error (Airflow log is boilerplate), confirm `ipdsc_geo/dt=<run_date>/_SUCCESS` is present, then clear+re-run the monitor. If partition still absent → real upstream failure, re-run tpa_export `run_geo`. **RESOLVED 2026-07-29.** | INC-004 |
 | `tpa_mntn_id_export / tpa_mntn_id_export` | Airflow log = boilerplate `AirflowException: Batch job <id> was cancelled`; **batch `stateHistory`** = `Cancelling batch as ttl exceeded` (ran the full `ttl=10800s`=3h); **event log** = the final `.write.json()` shuffle stage recomputed 7-9× (same `json at ...` call site, ~1900GB each), 29TB memory + 14TB disk spill, `shuffle.partitions=1000`, 150 executors 0 removed. All retries exhausted. | **DAG_BUG (Spark perf), verified from the event log.** The `mntn_df` lineage is never cached, so the ~1.9TB `mntn_id` shuffle is recomputed 7-9× per action + FetchFailed resubmit; `shuffle.partitions=1000` → ~1.9GB partitions → 29TB spill → I/O-bound tasks (70-97% fetch-wait, 8-10% CPU) → past 3h. NOT infra (0 executor loss), NOT data volume (inputs identical to last good day), NOT contention. | **dag_bug (perf)** — get the TTL reason from `batches describe` stateHistory; then download+parse the Spark **event log** (`eventlog_profiler.py`) for the real profile (driver output alone is not enough). Fix is owner-side: **cache `mntn_df`** + raise `shuffle.partitions` 1000→~6000 + collapse the 14 crossJoins, then a modest TTL bump. A re-run may pass (spiral is timing-dependent) but does NOT fix it. Do NOT hot-patch. **RESOLVED 2026-07-29 — PR #1161 merged by owner Nivas Nalla; confirm on next run, 07-28 backfill optional.** | INC-005 |
-| `keyword_ddp_reporting / wait_for_product_categorization` | `AirflowSensorTimeout: run duration … exceeds timeout 21600` (6h; `ExternalTaskSensor`, `mode=reschedule`, 307 pokes) waiting for `mntn_match_incrementals_fetch.batch_post.product_categorization` = success at logical `−6h` | Upstream OpenAI-batch keyword pipeline (DS13/DS19 MNTN Matched) didn't reach success in the window: expected GCS partition `shopper_graph/product_categorization/dt=<logical−2d>` **absent**, ~7.5h past the normal ~13:34Z completion. Sensor alignment CORRECT (`0 9 * * *` + 6h delta); timing normally fine → a bad upstream cycle, not a race. | **real_upstream_failure / late_data (OBSERVED)** — confirm via the GCS `dt=` partition + Astronomer upstream state; do NOT clear the sensor until `product_categorization` lands; if upstream failed re-run it (OpenAI batch re-submit = cost/24h) or route to owner, then clear; if just slow, wait then clear. | INC-006 |
+| `keyword_ddp_reporting / wait_for_product_categorization` | Two variants of the SAME sensor: **(a)** 6h `AirflowSensorTimeout` (307 pokes) = upstream still running/not-ready (INC-006); **(b)** fast-fail `ExternalTaskFailedError` in ~9s (single poke) = upstream `product_categorization` in `failed`/`skipped`/**`upstream_failed`** (post-PR #1162, INC-007). Both waiting for `mntn_match_incrementals_fetch.batch_post.product_categorization` = success at logical `−6h`. | Downstream **symptom** — real cause is upstream in the DS13/DS19 MNTN Matched OpenAI pipeline. GCS `dt=` partition **absent**. INC-006 = `batch_fetch` loop-abort (fix shopper_graph#296). INC-007 = `batch_submit` failed 3 levels up on the OpenAI file-quota (see next row). | **real_upstream_failure** — audit the GCS chain `openai_batch_submissions→results→results_joined→product_categorization` for the missing `dt` to find WHICH stage broke (a missing `submissions/dt` means it failed at *submit*, not fetch). Do NOT clear the sensor until `product_categorization/dt` lands (clear just re-fails fast / re-waits). PR #1162 makes it fail fast; #296 fixes the fetch bug. | INC-006, INC-007 |
+| `mntn_match_incrementals_submit / batch_submit` | `batch_submit` (MntnKubePodOperator, `openai_batch_runner`) fails ALL retries; pod traceback `submit_batch.py → batch_submitter.create_batch → client.files.create` → **OpenAI 400 `invalid_request_error`: "You have exceeded your file storage quota. Projects are limited to 2.5TB of files."** | OpenAI project ≥ 2.5TB file-storage quota → batch-input upload rejected → NO `openai_batch_submissions/dt=<D>` written → next-day fetch DAG has no batch → `product_categorization/dt=<D>` upstream_failed → keyword_ddp sensor pages a day later. Deterministic 400 (retries can't fix a quota wall). Likely aggravated by INC-006 leaked/undeleted OpenAI files. | **real_upstream_failure (OpenAI resource/quota exhaustion)** — free OpenAI file storage (purge old files); quota can self-clear via old-file expiry (07-29 submit succeeded on its own). Re-run `batch_submit` for the missed cycle only if that day is needed (new batch = cost + ~24h). Do NOT rebuild the image / re-run the FETCH DAG (no batch to fetch; #296 irrelevant). | INC-007 |
 
 ---
 
@@ -662,6 +663,68 @@ gcloud storage ls "gs://mntn-data-archive-prod/shopper_graph/product_categorizat
 
 ---
 
+### INC-007 — `keyword_ddp_reporting` `wait_for_product_categorization` FAST-FAIL — upstream `batch_submit` hit the OpenAI 2.5TB file-storage quota (recurrence of the INC-006 symptom, NEW root cause 3 levels up)
+**Date:** 2026-07-30 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [keyword_ddp_reporting/wait_for_product_categorization] at 2026-07-29 08:00 PT`, run `scheduled__2026-07-29T15:00:00+00:00`, try 2/2. **`ExternalTaskFailedError: Some of the external tasks ['batch_post.product_categorization'] in DAG mntn_match_incrementals_fetch failed`** — fast-fail in **8.9s** (single poke), NOT a 6h timeout.
+
+**STATUS: DIAGNOSED, root cause CONFIRMED from the submit-DAG pod log; recovery = accept the 1-day gap (self-recovers next cycle) unless a downstream consumer needs dt=07-28.** Not a code regression; not the INC-006 fetch bug.
+
+**Verdict: real_upstream_failure (OpenAI account resource/quota exhaustion) — three levels up from the alert.** The alert is a downstream symptom. The chain, confirmed end-to-end:
+```
+OpenAI project ≥ 2.5TB file-storage quota
+  → mntn_match_incrementals_SUBMIT.batch_submit (logical 07-28, exec 07-29 10:43Z) 400 on client.files.create ×4 tries ❌
+    → NO openai_batch_submissions/dt=2026-07-28  (0 objects at EVERY stage: submissions, results, joined, categorization, submissions_errored)
+      → mntn_match_incrementals_FETCH (logical 07-29) has no batch to transition/fetch → product_categorization/dt=2026-07-28 = upstream_failed
+        → keyword_ddp_reporting wait_for_product_categorization fast-fails (PR #1162 working as designed) → ALERT
+```
+
+**The real error (submit-DAG pod traceback — the fetch/sensor logs never show it):**
+```
+File "/app/submit_batch.py", line 9, in <module>            openai.create_batch(file)
+File "/app/openai_wrapper/batch_submitter.py", line 23,      batch_input_file = self.client.files.create(
+File ".../openai/resources/files.py", line 122, in create
+Error code: 400 - {'error': {'message': 'You have exceeded your file storage quota.
+  Projects are limited to 2.5TB of files. Please delete old files or attempt with a
+  smaller file size.', 'type': 'invalid_request_error'}}
+```
+Deterministic 400 → all 4 `batch_submit` tries failed identically (retries can't clear a quota wall).
+
+**Two DAGs, both team ML/`airflow-ti`, both `0 9 * * *`:**
+- **Producer of the submission** `mntn_match_incrementals_submit` (severity 1, retries 3): `batch_cleanup_1 >> batch_prep{product_uniques >> openai_batch_input_raw >> openai_batch_input_formatted} >> batch_validate >> **batch_submit** >> batch_cleanup_2`. `batch_submit` = `MntnKubePodOperator` (`openai_batch_runner` image) → uploads the batch input file + creates the OpenAI batch → writes `openai_batch_submissions/dt=<logical>`. **This is where it broke.**
+- **Consumer** `mntn_match_incrementals_fetch` (severity 5): `batch_transition >> batch_fetch >> batch_post{… >> product_categorization}` — fetches YESTERDAY's submitted batch and categorizes it. product_categorization dt = fetch-run logical − 1.
+
+**Empirical GCS proof (2026-07-30, verified live):**
+
+| dt | submissions | results | joined | product_categorization | note |
+|---|---|---|---|---|---|
+| 07-27 | 1101 | 1101 | 118 | 53 ✓ `_SUCCESS` @07-30 02:35Z | INC-006 cycle **self-healed** |
+| **07-28** | **0** | **0** | **0** | **0** (+ `submissions_errored`=0) | **never submitted — this incident** |
+| 07-29 | 1073 @07-30 10:44→12:45Z | 0 | 0 | 0 | submit **succeeded** → quota already cleared; in flight |
+
+**Quota SELF-CLEARED between 07-29 10:43Z (fail) and 07-30 10:44Z (07-29 submit start)** — old-file expiry or a cleanup ran. So continuity is restored (07-29 onward flows); only the **dt=07-28 slice is a permanent one-day hole** (its submit failed and was never re-run after the quota freed). keyword_ddp's logical-07-29 report is the only broken cycle; logical-07-30 (waits on dt=07-29, coming) self-recovers.
+
+**Likely aggravator (plausible, not proven):** INC-006's `batch_fetcher.download_file` bug (fix shopper_graph#296) left errored/undownloaded OpenAI files undeleted (`client.files.delete` only ran after a successful download+upload); multi-day INC-006 stalls compounded the accumulation → pushed the project over 2.5TB. #296 slows the leak but doesn't purge the backlog or add headroom.
+
+**Decision tree — `wait_for_product_categorization` fast-fail (`ExternalTaskFailedError`, ~9s):**
+1. It's a downstream symptom. **Audit the GCS chain for the missing `dt`** (below) to find WHICH stage broke — do not assume it's `batch_fetch`.
+   ```bash
+   B=gs://mntn-data-archive-prod/shopper_graph
+   for s in openai_batch_submissions openai_batch_results openai_batch_results_joined product_categorization; do \
+     echo "$s: $(gcloud storage ls "$B/$s/dt=<D>/" 2>/dev/null | grep -c gs://)"; done
+   ```
+2. **`submissions/dt=<D>` = 0** → it failed at **SUBMIT**, not fetch → pull `mntn_match_incrementals_submit` run logical `<D>` (exec `<D>+1` 09:00Z), task `batch_submit` pod log. `client.files.create` 400 "file storage quota" = OpenAI 2.5TB quota (this incident). Do NOT rebuild the image / re-run the fetch DAG — there's no batch to fetch, #296 is irrelevant.
+3. **`submissions/dt` present but `results/dt` partial** → INC-006 `batch_fetch` loop-abort (fix #296).
+4. **Recovery:** quota can self-clear (old-file expiry). To fill a specific missing day, re-run `mntn_match_incrementals_submit` `batch_submit` for that logical date after storage is freed (new OpenAI batch = cost + ~24h), then the fetch, then clear the sensor. keyword_ddp is a reporting DAG (no serving) → accepting the one-day gap is usually correct; confirm `product_categorization` consumers (`tpa_export`, `audience_sizes`, `mntn_matched_taxonomy_bq`) don't need that exact day.
+
+**Severity: LOW-MEDIUM.** Reporting DAG, no serving path. Impact = one missed DS19 keyword-DDP report cycle (dt=07-28 categorization gap). Pipeline continuity already restored.
+
+**PRs / durable fix:**
+- **NOT covered by the merged pair.** PR #1162 (fail-fast, merged 07-29 22:37Z — working here) and PR #296 (batch_fetch hardening, merged 07-30 15:12Z, 7 min AFTER this alert) address the INC-006 fetch path, not the submit quota.
+- **Durable fix → IMP-013** (OpenAI file-storage hygiene, `SteelHouse/shopper_graph` `openai_batch_runner`): (a) purge old OpenAI input+result files every cycle regardless of batch outcome so storage doesn't creep to 2.5TB; (b) a quota-headroom guard/monitor before `batch_submit` that alerts (or self-purges) at ~2.0TB so this pages proactively, not via a downstream sensor a day later; (c) surface `batch_submit`'s failure as an explicit "OpenAI file quota" alert. Route to the ML owner; do NOT hot-patch.
+
+**Logs:** `on-call/incidents/INC-007/` (keyword_ddp sensor try2 + submit `batch_submit` try4).
+
+---
+
 ## 4. System reference (producer → consumer maps as we learn them)
 
 **IPDSC / TPA export chain (team TPA_EXPORT, `airflow-ti`)**
@@ -721,6 +784,29 @@ inference on Dataproc ──▶ Fangorn scores  (project mntn-targeting-prj-prod
   `reference_date` in its `inputDefinitions` or the task hard-fails at exec with
   `ValueError: … parameter reference_date not found …` (INC-003 — drift template declared `run_date`).
 - Fangorn context: see `[[fangorn_tier_assignment]]`, `[[fangorn_two_model_passes]]`, `[[fangorn_detection]]` in memory.
+
+**MNTN Matched keyword pipeline (DS13/DS19, OpenAI Batch API, team ML, `airflow-ti`)** — hit by INC-006 + INC-007
+```
+mntn_match_incrementals_submit  [0 9 * * *, sev 1]
+  batch_prep(dbt) >> batch_validate >> batch_submit(openai_batch_runner pod)
+    └─ client.files.create(input) + create OpenAI batch ──▶ gs://…/shopper_graph/openai_batch_submissions/dt=<L>
+        ⚠ INC-007 failed HERE: OpenAI 400 "file storage quota (2.5TB) exceeded"  → no submission written
+            │ (OpenAI Batch API runs async, up to 24h SLA)
+            ▼  next day
+mntn_match_incrementals_fetch  [0 9 * * *, sev 5]
+  batch_transition >> batch_fetch(openai_batch_runner: fetch_results.py) ──▶ openai_batch_results/dt=<L>
+     ⚠ INC-006 failed HERE: download_file loop-abort on a null-output errored batch (fix shopper_graph#296)
+  >> batch_post(dbt): openai_batch_joined ──▶ results_joined/dt >> categorization_temp >> mm_taxonomy_update
+     >> product_categorization ──▶ product_categorization/dt=<L−1>  (+ mm_taxonomy_update_bq ──▶ BQ)
+            │  (ExternalTaskSensor, execution_delta 6h, mode=reschedule, failed_states incl upstream_failed via #1162)
+            ▼
+keyword_ddp_reporting  [0 15 * * *, sev 5]  wait_for_product_categorization ← ALERTS here (INC-006 timeout / INC-007 fast-fail)
+  >> write_targeted_signal_ds_19 >> ds_13 >> ds_19_domain  (DS19 keyword DDP report; no serving path)
+downstream of product_categorization: tpa_export, audience_sizes, mntn_matched_taxonomy_bq
+```
+- **dt convention:** all stages share one `dt`; `product_categorization/dt=D` is fed by `submissions/dt=D`. A fetch-run logical `L` produces `product_categorization/dt=L−1` (and submits `dt=L`). **A missing `submissions/dt` ⇒ the SUBMIT failed, not the fetch** (INC-007 diagnostic).
+- **Where each incident's failure lives:** submit-side OpenAI file quota = INC-007 (durable fix IMP-013); fetch-side download loop-abort = INC-006 (fix #296); downstream sensor hygiene = PR #1162 (fail-fast). The keyword_ddp sensor is only ever a *lagging* symptom of an upstream break.
+- Alerts are Slack-only (sev 1/5, no PagerDuty); an upstream failure surfaces on-call ~a day later via keyword_ddp. Direct upstream alerting / data-aware scheduling = IMP-009.
 
 ---
 

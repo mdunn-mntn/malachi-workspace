@@ -1,0 +1,537 @@
+::group::Log message source detailssources=["gs://airflow-logs-cmcv0v0ae01bk01ngimis9kjy/cmd6bd10c0gl901rfuokgryiq/dag_id=mntn_match_incrementals_submit/run_id=scheduled__2026-07-28T09:00:00+00:00/task_id=batch_submit/attempt=4.log"] 
+::endgroup::
+[2026-07-29T10:43:30.403417Z] INFO - DAG bundles loaded: mainsource=airflow.dag_processing.bundles.manager.DagBundlesManager loc=manager.py:179 
+[2026-07-29T10:43:30.700642Z] INFO - Filling up the DagBag from /tmp/airflow/dag_bundles/astro/main/dags/2026-07-28T21:55:33.4005448Z/dags/machine_learning/mntn_match_incrementals_submit.pysource=airflow.models.dagbag.DagBag loc=dagbag.py:593 
+[2026-07-29T10:43:31.430806Z] WARNING - Skipping masking for a secret as it's too short (<5 chars)source=airflow.sdk._shared.secrets_masker.secrets_masker loc=secrets_masker.py:555 
+[2026-07-29T10:43:31.437046Z] WARNING - Skipping masking for a secret as it's too short (<5 chars)source=airflow._shared.secrets_masker.secrets_masker loc=secrets_masker.py:555 
+[2026-07-29T10:43:31.444775Z] WARNING - The `airflow.utils.task_group.TaskGroup` attribute is deprecated. Please use `'airflow.sdk.TaskGroup'`.category=DeprecatedImportWarning source=py.warnings loc=/tmp/airflow/dag_bundles/astro/main/dags/2026-07-28T21:55:33.4005448Z/dags/machine_learning/mntn_match_incrementals_submit.py:10 
+[2026-07-29T10:43:31.611108Z] WARNING - This process (pid=98) is multi-threaded, use of fork() may lead to deadlocks in the child.category=DeprecationWarning source=py.warnings loc=/usr/local/lib/python3.12/site-packages/airflow/providers/openlineage/plugins/listener.py:599 
+[2026-07-29T10:43:32.911357Z] INFO - DEFAULT_HTTP already found in environment variables, skipping aliasing OPENLINEAGE_URLsource=openlineage.client.client loc=client.py:345 
+[2026-07-29T10:43:32.912971Z] INFO - OpenLineageClient will use `composite` transportsource=openlineage.client.client loc=client.py:116 
+[2026-07-29T10:43:33.116752Z] INFO - Stopping OpenLineage CompositeTransport emission after the first successful delivery because `continue_on_success=False`. Transport that emitted the event: <HttpTransport(name=astro_primary, kind=http, priority=2)>source=openlineage.client.transport.composite loc=composite.py:135 
+[2026-07-29T10:43:33.116970Z] INFO - Successfully emitted OpenLineage `START` event of id `019fa7f3-ca80-7c55-bca1-77f527c3081d`source=airflow.providers.openlineage.plugins.adapter.OpenLineageAdapter loc=adapter.py:167 
+[2026-07-29T10:43:33.149446Z] INFO - TaskInstance Details: dag_id=mntn_match_incrementals_submit task_id=batch_submit dagrun_id=scheduled__2026-07-28T09:00:00+00:00 map_index=-1 run_start_date=2026-07-29T10:43:28.326886Z try_number=4 op_classpath=["include.dbx.kube_operators.MntnKubePodOperator","airflow.providers.cncf.kubernetes.operators.pod.KubernetesPodOperator"] source=astronomer.runtime.listener loc=listener.py:23 
+[2026-07-29T10:43:33.157411Z] INFO - Building pod openai-batch-runner-ni6xcuu4 with labels: {'dag_id': 'mntn_match_incrementals_submit', 'task_id': 'batch_submit', 'run_id': 'scheduled__2026-07-28T0900000000-b6145f9b7', 'kubernetes_pod_operator': 'True', 'try_number': '4'}source=airflow.task.operators.include.dbx.kube_operators.MntnKubePodOperator loc=pod.py:1666 
+[2026-07-29T10:43:33.476342Z] INFO - Found matching pod openai-batch-runner-ni6xcuu4 with labels {'airflow_kpo_in_cluster': 'True', 'airflow_version': '3.1.5-astro.1', 'app': 'airflow', 'astronomer.io/cloud_provider': 'gcp', 'astronomer.io/cloud_region': 'us-central1', 'astronomer.io/deploymentId': 'cmd6bd10c0gl901rfuokgryiq', 'astronomer.io/organizationId': 'cmc0puu8s28z401iybhqnvf7y', 'astronomer.io/workspaceId': 'cmcvca5ia048y01ngw8y36qeq', 'dag_id': 'mntn_match_incrementals_submit', 'kubernetes_pod_operator': 'True', 'run_id': 'scheduled__2026-07-28T0900000000-b6145f9b7', 'task_id': 'batch_submit', 'try_number': '4'}source=airflow.task.operators.include.dbx.kube_operators.MntnKubePodOperator loc=pod.py:642 
+[2026-07-29T10:43:33.476507Z] INFO - `try_number` of task_instance: 4source=airflow.task.operators.include.dbx.kube_operators.MntnKubePodOperator loc=pod.py:643 
+[2026-07-29T10:43:33.476646Z] INFO - `try_number` of pod: 4source=airflow.task.operators.include.dbx.kube_operators.MntnKubePodOperator loc=pod.py:644 
+[2026-07-29T10:43:33.477588Z] INFO - ::group::Waiting up to 120s to get the POD scheduled...source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:167 
+[2026-07-29T10:43:38.526705Z] INFO - Pod has reached Running phase before launch timeoutsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:185 
+[2026-07-29T10:43:38.526860Z] INFO - ::endgroup::source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:186 
+[2026-07-29T10:43:48.347878Z] INFO - [base] Traceback (most recent call last):source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348180Z] INFO - [base]   File "/app/submit_batch.py", line 9, in <module>source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348297Z] INFO - [base]     openai.create_batch(file)source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348387Z] INFO - [base]   File "/app/openai_wrapper/batch_submitter.py", line 62, in create_batchsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348453Z] INFO - [base]     raise esource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348515Z] INFO - [base]   File "/app/openai_wrapper/batch_submitter.py", line 23, in create_batchsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348570Z] INFO - [base]     batch_input_file = self.client.files.create(source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348629Z] INFO - [base]                        ^^^^^^^^^^^^^^^^^^^^^^^^^source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348689Z] INFO - [base]   File "/usr/local/lib/python3.11/site-packages/openai/resources/files.py", line 122, in createsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348763Z] INFO - [base] caught an exception:  Error code: 400 - {'error': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'type': 'invalid_request_error', 'param': None, 'code': None}, 'detail': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'code': None}}source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348821Z] INFO - [base]     return self._post(source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348874Z] INFO - [base]            ^^^^^^^^^^^source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.348976Z] INFO - [base]   File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1259, in postsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.349066Z] INFO - [base]     return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.349130Z] INFO - [base]                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.349196Z] INFO - [base]   File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1047, in requestsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:48.349261Z] INFO - [base]     raise self._make_status_error_from_response(err.response) from Nonesource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:51.360628Z] INFO - [base] openai.BadRequestError: Error code: 400 - {'error': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'type': 'invalid_request_error', 'param': None, 'code': None}, 'detail': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'code': None}}
+source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:51.379590Z] WARNING - Pod openai-batch-runner-ni6xcuu4 log read interrupted but container base still running. Logs generated in the last one second might get duplicated.source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:665 
+[2026-07-29T10:43:52.426289Z] INFO - [base] Traceback (most recent call last):source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.426485Z] INFO - [base]   File "/app/submit_batch.py", line 9, in <module>source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.426662Z] INFO - [base]     openai.create_batch(file)source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.426751Z] INFO - [base]   File "/app/openai_wrapper/batch_submitter.py", line 62, in create_batchsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.426819Z] INFO - [base]     raise esource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.426969Z] INFO - [base]   File "/app/openai_wrapper/batch_submitter.py", line 23, in create_batchsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427040Z] INFO - [base]     batch_input_file = self.client.files.create(source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427100Z] INFO - [base]                        ^^^^^^^^^^^^^^^^^^^^^^^^^source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427157Z] INFO - [base]   File "/usr/local/lib/python3.11/site-packages/openai/resources/files.py", line 122, in createsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427269Z] INFO - [base] caught an exception:  Error code: 400 - {'error': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'type': 'invalid_request_error', 'param': None, 'code': None}, 'detail': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'code': None}}source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427334Z] INFO - [base]     return self._post(source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427391Z] INFO - [base]            ^^^^^^^^^^^source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427453Z] INFO - [base]   File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1259, in postsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427508Z] INFO - [base]     return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427564Z] INFO - [base]                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427617Z] INFO - [base]   File "/usr/local/lib/python3.11/site-packages/openai/_base_client.py", line 1047, in requestsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427672Z] INFO - [base]     raise self._make_status_error_from_response(err.response) from Nonesource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.427851Z] INFO - [base] openai.BadRequestError: Error code: 400 - {'error': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'type': 'invalid_request_error', 'param': None, 'code': None}, 'detail': {'message': 'You have exceeded your file storage quota. Projects are limited to 2.5TB of files. Please delete old files or attempt with a smaller file size.', 'code': None}}
+source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-29T10:43:52.494564Z] INFO - Pod openai-batch-runner-ni6xcuu4 has phase Runningsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:838 
+[2026-07-29T10:43:54.572154Z] INFO - Deleting pod: openai-batch-runner-ni6xcuu4source=airflow.task.operators.include.dbx.kube_operators.MntnKubePodOperator loc=pod.py:1490 
+[2026-07-29T10:43:54.682274Z] ERROR - Task failed with exceptionsource=task loc=task_runner.py:986 AirflowException: Pod openai-batch-runner-ni6xcuu4 returned a failure.
+remote_pod: {'api_version': 'v1',
+ 'kind': 'Pod',
+ 'metadata': {'annotations': {'cni.projectcalico.org/containerID': '01a6eec94903bffd1ae48f9773e376ba16dc290b30f3f1f9bd2ed0dae2eb76cb',
+                              'cni.projectcalico.org/podIP': '',
+                              'cni.projectcalico.org/podIPs': ''},
+              'creation_timestamp': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal()),
+              'deletion_grace_period_seconds': None,
+              'deletion_timestamp': None,
+              'finalizers': None,
+              'generate_name': None,
+              'generation': 1,
+              'labels': {'airflow_kpo_in_cluster': 'True',
+                         'airflow_version': '3.1.5-astro.1',
+                         'app': 'airflow',
+                         'astronomer.io/cloud_provider': 'gcp',
+                         'astronomer.io/cloud_region': 'us-central1',
+                         'astronomer.io/deploymentId': 'cmd6bd10c0gl901rfuokgryiq',
+                         'astronomer.io/organizationId': 'cmc0puu8s28z401iybhqnvf7y',
+                         'astronomer.io/workspaceId': 'cmcvca5ia048y01ngw8y36qeq',
+                         'dag_id': 'mntn_match_incrementals_submit',
+                         'kubernetes_pod_operator': 'True',
+                         'run_id': 'scheduled__2026-07-28T0900000000-b6145f9b7',
+                         'task_id': 'batch_submit',
+                         'topology.kubernetes.io/region': 'us-central1',
+                         'topology.kubernetes.io/zone': 'us-central1-a',
+                         'try_number': '4'},
+              'managed_fields': [{'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:labels': {'.': {},
+                                                                            'f:airflow_kpo_in_cluster': {},
+                                                                            'f:airflow_version': {},
+                                                                            'f:app': {},
+                                                                            'f:astronomer.io/cloud_provider': {},
+                                                                            'f:astronomer.io/cloud_region': {},
+                                                                            'f:astronomer.io/deploymentId': {},
+                                                                            'f:astronomer.io/organizationId': {},
+                                                                            'f:astronomer.io/workspaceId': {},
+                                                                            'f:dag_id': {},
+                                                                            'f:kubernetes_pod_operator': {},
+                                                                            'f:run_id': {},
+                                                                            'f:task_id': {},
+                                                                            'f:try_number': {}},
+                                                               'f:ownerReferences': {'.': {},
+                                                                                     'k:{"uid":"8182d1ef-f087-4ed5-91ad-f2ef1cad9534"}': {}}},
+                                                'f:spec': {'f:affinity': {},
+                                                           'f:containers': {'k:{"name":"base"}': {'.': {},
+                                                                                                  'f:command': {},
+                                                                                                  'f:env': {'.': {},
+                                                                                                            'k:{"name":"OPENAI_API_KEY"}': {'.': {},
+                                                                                                                                            'f:name': {},
+                                                                                                                                            'f:valueFrom': {'.': {},
+                                                                                                                                                            'f:secretKeyRef': {}}},
+                                                                                                            'k:{"name":"env"}': {'.': {},
+                                                                                                                                 'f:name': {},
+                                                                                                                                 'f:value': {}},
+                                                                                                            'k:{"name":"run_date"}': {'.': {},
+                                                                                                                                      'f:name': {},
+                                                                                                                                      'f:value': {}},
+                                                                                                            'k:{"name":"yesterday"}': {'.': {},
+                                                                                                                                       'f:name': {},
+                                                                                                                                       'f:value': {}}},
+                                                                                                  'f:image': {},
+                                                                                                  'f:imagePullPolicy': {},
+                                                                                                  'f:name': {},
+                                                                                                  'f:resources': {'.': {},
+                                                                                                                  'f:limits': {'.': {},
+                                                                                                                               'f:cpu': {},
+                                                                                                                               'f:ephemeral-storage': {},
+                                                                                                                               'f:memory': {}},
+                                                                                                                  'f:requests': {'.': {},
+                                                                                                                                 'f:cpu': {},
+                                                                                                                                 'f:ephemeral-storage': {},
+                                                                                                                                 'f:memory': {}}},
+                                                                                                  'f:terminationMessagePath': {},
+                                                                                                  'f:terminationMessagePolicy': {}}},
+                                                           'f:dnsConfig': {'.': {},
+                                                                           'f:options': {}},
+                                                           'f:dnsPolicy': {},
+                                                           'f:enableServiceLinks': {},
+                                                           'f:imagePullSecrets': {'.': {},
+                                                                                  'k:{"name":"meteoric-conservation-7520-private-registry"}': {}},
+                                                           'f:nodeSelector': {},
+                                                           'f:priorityClassName': {},
+                                                           'f:restartPolicy': {},
+                                                           'f:schedulerName': {},
+                                                           'f:securityContext': {},
+                                                           'f:serviceAccount': {},
+                                                           'f:serviceAccountName': {},
+                                                           'f:terminationGracePeriodSeconds': {},
+                                                           'f:tolerations': {}}},
+                                  'manager': 'OpenAPI-Generator',
+                                  'operation': 'Update',
+                                  'subresource': None,
+                                  'time': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal())},
+                                 {'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:annotations': {'.': {},
+                                                                                 'f:cni.projectcalico.org/containerID': {},
+                                                                                 'f:cni.projectcalico.org/podIP': {},
+                                                                                 'f:cni.projectcalico.org/podIPs': {}}}},
+                                  'manager': 'calico',
+                                  'operation': 'Update',
+                                  'subresource': 'status',
+                                  'time': datetime.datetime(2026, 7, 29, 10, 43, 52, tzinfo=tzlocal())},
+                                 {'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:status': {'f:conditions': {'k:{"type":"ContainersReady"}': {'.': {},
+                                                                                                               'f:lastProbeTime': {},
+                                                                                                               'f:lastTransitionTime': {},
+                                                                                                               'f:observedGeneration': {},
+                                                                                                               'f:reason': {},
+                                                                                                               'f:status': {},
+                                                                                                               'f:type': {}},
+                                                                              'k:{"type":"Initialized"}': {'.': {},
+                                                                                                           'f:lastProbeTime': {},
+                                                                                                           'f:lastTransitionTime': {},
+                                                                                                           'f:observedGeneration': {},
+                                                                                                           'f:status': {},
+                                                                                                           'f:type': {}},
+                                                                              'k:{"type":"PodReadyToStartContainers"}': {'.': {},
+                                                                                                                         'f:lastProbeTime': {},
+                                                                                                                         'f:lastTransitionTime': {},
+                                                                                                                         'f:observedGeneration': {},
+                                                                                                                         'f:status': {},
+                                                                                                                         'f:type': {}},
+                                                                              'k:{"type":"PodScheduled"}': {'f:observedGeneration': {}},
+                                                                              'k:{"type":"Ready"}': {'.': {},
+                                                                                                     'f:lastProbeTime': {},
+                                                                                                     'f:lastTransitionTime': {},
+                                                                                                     'f:observedGeneration': {},
+                                                                                                     'f:reason': {},
+                                                                                                     'f:status': {},
+                                                                                                     'f:type': {}}},
+                                                             'f:containerStatuses': {},
+                                                             'f:hostIP': {},
+                                                             'f:hostIPs': {},
+                                                             'f:observedGeneration': {},
+                                                             'f:phase': {},
+                                                             'f:podIP': {},
+                                                             'f:podIPs': {'.': {},
+                                                                          'k:{"ip":"100.64.6.72"}': {'.': {},
+                                                                                                     'f:ip': {}}},
+                                                             'f:startTime': {}}},
+                                  'manager': 'kubelet',
+                                  'operation': 'Update',
+                                  'subresource': 'status',
+                                  'time': datetime.datetime(2026, 7, 29, 10, 43, 52, tzinfo=tzlocal())}],
+              'name': 'openai-batch-runner-ni6xcuu4',
+              'namespace': 'meteoric-conservation-7520',
+              'owner_references': [{'api_version': 'v1',
+                                    'block_owner_deletion': False,
+                                    'controller': True,
+                                    'kind': 'ServiceAccount',
+                                    'name': 'meteoric-conservation-7520-worker-serviceaccount',
+                                    'uid': '8182d1ef-f087-4ed5-91ad-f2ef1cad9534'}],
+              'resource_version': '1785321832773519016',
+              'self_link': None,
+              'uid': '387998a9-5f5d-4032-8fa2-5dfb3450b8ed'},
+ 'spec': {'active_deadline_seconds': None,
+          'affinity': {'node_affinity': None,
+                       'pod_affinity': None,
+                       'pod_anti_affinity': None},
+          'automount_service_account_token': None,
+          'containers': [{'args': None,
+                          'command': ['python', 'submit_batch.py'],
+                          'env': [{'name': 'run_date',
+                                   'value': '2026-07-28',
+                                   'value_from': None},
+                                  {'name': 'env',
+                                   'value': 'prod',
+                                   'value_from': None},
+                                  {'name': 'yesterday',
+                                   'value': '2026-07-27',
+                                   'value_from': None},
+                                  {'name': 'OPENAI_API_KEY',
+                                   'value': None,
+                                   'value_from': {'config_map_key_ref': None,
+                                                  'field_ref': None,
+                                                  'file_key_ref': None,
+                                                  'resource_field_ref': None,
+                                                  'secret_key_ref': {'key': 'OPENAI_API_KEY',
+                                                                     'name': 'env-secrets',
+                                                                     'optional': None}}}],
+                          'env_from': None,
+                          'image': 'steelhousedev/openai_batch_runner:gcp-prod',
+                          'image_pull_policy': 'Always',
+                          'lifecycle': None,
+                          'liveness_probe': None,
+                          'name': 'base',
+                          'ports': None,
+                          'readiness_probe': None,
+                          'resize_policy': None,
+                          'resources': {'claims': None,
+                                        'limits': {'cpu': '250m',
+                                                   'ephemeral-storage': '256Mi',
+                                                   'memory': '512Mi'},
+                                        'requests': {'cpu': '250m',
+                                                     'ephemeral-storage': '256Mi',
+                                                     'memory': '512Mi'}},
+                          'restart_policy': None,
+                          'restart_policy_rules': None,
+                          'security_context': None,
+                          'startup_probe': None,
+                          'stdin': None,
+                          'stdin_once': None,
+                          'termination_message_path': '/dev/termination-log',
+                          'termination_message_policy': 'File',
+                          'tty': None,
+                          'volume_devices': None,
+                          'volume_mounts': [{'mount_path': '/var/run/secrets/kubernetes.io/serviceaccount',
+                                             'mount_propagation': None,
+                                             'name': 'kube-api-access-5cjlb',
+                                             'read_only': True,
+                                             'recursive_read_only': None,
+                                             'sub_path': None,
+                                             'sub_path_expr': None}],
+                          'working_dir': None}],
+          'dns_config': {'nameservers': None,
+                         'options': [{'name': 'ndots', 'value': '4'}],
+                         'searches': None},
+          'dns_policy': 'ClusterFirst',
+          'enable_service_links': True,
+          'ephemeral_containers': None,
+          'host_aliases': None,
+          'host_ipc': None,
+          'host_network': None,
+          'host_pid': None,
+          'host_users': None,
+          'hostname': None,
+          'hostname_override': None,
+          'image_pull_secrets': [{'name': 'meteoric-conservation-7520-private-registry'}],
+          'init_containers': None,
+          'node_name': 'gke-cmcv0v0ae01bk01n-n2dcustom1632768-af58f12c-t5q6',
+          'node_selector': {'astronomer.io/worker-node': 'True'},
+          'os': None,
+          'overhead': None,
+          'preemption_policy': 'Never',
+          'priority': 0,
+          'priority_class_name': 'meteoric-conservation-7520-default',
+          'readiness_gates': None,
+          'resource_claims': None,
+          'resources': None,
+          'restart_policy': 'Never',
+          'runtime_class_name': None,
+          'scheduler_name': 'gke.io/optimize-utilization-scheduler',
+          'scheduling_gates': None,
+          'security_context': {'app_armor_profile': None,
+                               'fs_group': None,
+                               'fs_group_change_policy': None,
+                               'run_as_group': None,
+                               'run_as_non_root': None,
+                               'run_as_user': None,
+                               'se_linux_change_policy': None,
+                               'se_linux_options': None,
+                               'seccomp_profile': None,
+                               'supplemental_groups': None,
+                               'supplemental_groups_policy': None,
+                               'sysctls': None,
+                               'windows_options': None},
+          'service_account': 'meteoric-conservation-7520-kpo',
+          'service_account_name': 'meteoric-conservation-7520-kpo',
+          'set_hostname_as_fqdn': None,
+          'share_process_namespace': None,
+          'subdomain': None,
+          'termination_grace_period_seconds': 30,
+          'tolerations': [{'effect': 'NoSchedule',
+                           'key': 'astronomer.io/node-group',
+                           'operator': 'Equal',
+                           'toleration_seconds': None,
+                           'value': 'airflow-worker'},
+                          {'effect': 'NoExecute',
+                           'key': 'node.kubernetes.io/not-ready',
+                           'operator': 'Exists',
+                           'toleration_seconds': 300,
+                           'value': None},
+                          {'effect': 'NoExecute',
+                           'key': 'node.kubernetes.io/unreachable',
+                           'operator': 'Exists',
+                           'toleration_seconds': 300,
+                           'value': None}],
+          'topology_spread_constraints': None,
+          'volumes': [{'aws_elastic_block_store': None,
+                       'azure_disk': None,
+                       'azure_file': None,
+                       'cephfs': None,
+                       'cinder': None,
+                       'config_map': None,
+                       'csi': None,
+                       'downward_api': None,
+                       'empty_dir': None,
+                       'ephemeral': None,
+                       'fc': None,
+                       'flex_volume': None,
+                       'flocker': None,
+                       'gce_persistent_disk': None,
+                       'git_repo': None,
+                       'glusterfs': None,
+                       'host_path': None,
+                       'image': None,
+                       'iscsi': None,
+                       'name': 'kube-api-access-5cjlb',
+                       'nfs': None,
+                       'persistent_volume_claim': None,
+                       'photon_persistent_disk': None,
+                       'portworx_volume': None,
+                       'projected': {'default_mode': 420,
+                                     'sources': [{'cluster_trust_bundle': None,
+                                                  'config_map': None,
+                                                  'downward_api': None,
+                                                  'pod_certificate': None,
+                                                  'secret': None,
+                                                  'service_account_token': {'audience': None,
+                                                                            'expiration_seconds': 3607,
+                                                                            'path': 'token'}},
+                                                 {'cluster_trust_bundle': None,
+                                                  'config_map': {'items': [{'key': 'ca.crt',
+                                                                            'mode': None,
+                                                                            'path': 'ca.crt'}],
+                                                                 'name': 'kube-root-ca.crt',
+                                                                 'optional': None},
+                                                  'downward_api': None,
+                                                  'pod_certificate': None,
+                                                  'secret': None,
+                                                  'service_account_token': None},
+                                                 {'cluster_trust_bundle': None,
+                                                  'config_map': None,
+                                                  'downward_api': {'items': [{'field_ref': {'api_version': 'v1',
+                                                                                            'field_path': 'metadata.namespace'},
+                                                                              'mode': None,
+                                                                              'path': 'namespace',
+                                                                              'resource_field_ref': None}]},
+                                                  'pod_certificate': None,
+                                                  'secret': None,
+                                                  'service_account_token': None}]},
+                       'quobyte': None,
+                       'rbd': None,
+                       'scale_io': None,
+                       'secret': None,
+                       'storageos': None,
+                       'vsphere_volume': None}],
+          'workload_ref': None},
+ 'status': {'allocated_resources': None,
+            'conditions': [{'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 29, 10, 43, 52, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'False',
+                            'type': 'PodReadyToStartContainers'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'True',
+                            'type': 'Initialized'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 29, 10, 43, 51, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': 'PodFailed',
+                            'status': 'False',
+                            'type': 'Ready'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 29, 10, 43, 51, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': 'PodFailed',
+                            'status': 'False',
+                            'type': 'ContainersReady'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'True',
+                            'type': 'PodScheduled'}],
+            'container_statuses': [{'allocated_resources': {'cpu': '250m',
+                                                            'ephemeral-storage': '256Mi',
+                                                            'memory': '512Mi'},
+                                    'allocated_resources_status': None,
+                                    'container_id': 'containerd://2ed27b992b3be06e33daddbd6a85eed2d0c59f79424fbeb5c6c11e773b3383ac',
+                                    'image': 'docker.io/steelhousedev/openai_batch_runner:gcp-prod',
+                                    'image_id': 'docker.io/steelhousedev/openai_batch_runner@sha256:efa473df11104accf4d59b7ba3371b4e9921447de2aceff794362bd3025d4cf4',
+                                    'last_state': {'running': None,
+                                                   'terminated': None,
+                                                   'waiting': None},
+                                    'name': 'base',
+                                    'ready': False,
+                                    'resources': {'claims': None,
+                                                  'limits': {'cpu': '250m',
+                                                             'ephemeral-storage': '256Mi',
+                                                             'memory': '512Mi'},
+                                                  'requests': {'cpu': '250m',
+                                                               'ephemeral-storage': '256Mi',
+                                                               'memory': '512Mi'}},
+                                    'restart_count': 0,
+                                    'started': False,
+                                    'state': {'running': None,
+                                              'terminated': {'container_id': 'containerd://2ed27b992b3be06e33daddbd6a85eed2d0c59f79424fbeb5c6c11e773b3383ac',
+                                                             'exit_code': 1,
+                                                             'finished_at': datetime.datetime(2026, 7, 29, 10, 43, 50, tzinfo=tzlocal()),
+                                                             'message': None,
+                                                             'reason': 'Error',
+                                                             'signal': None,
+                                                             'started_at': datetime.datetime(2026, 7, 29, 10, 43, 34, tzinfo=tzlocal())},
+                                              'waiting': None},
+                                    'stop_signal': None,
+                                    'user': {'linux': {'gid': 0,
+                                                       'supplemental_groups': [0],
+                                                       'uid': 0}},
+                                    'volume_mounts': [{'mount_path': '/var/run/secrets/kubernetes.io/serviceaccount',
+                                                       'name': 'kube-api-access-5cjlb',
+                                                       'read_only': True,
+                                                       'recursive_read_only': 'Disabled'}]}],
+            'ephemeral_container_statuses': None,
+            'extended_resource_claim_status': None,
+            'host_i_ps': [{'ip': '172.20.0.102'}],
+            'host_ip': '172.20.0.102',
+            'init_container_statuses': None,
+            'message': None,
+            'nominated_node_name': None,
+            'observed_generation': 1,
+            'phase': 'Failed',
+            'pod_i_ps': [{'ip': '100.64.6.72'}],
+            'pod_ip': '100.64.6.72',
+            'qos_class': 'Guaranteed',
+            'reason': None,
+            'resize': None,
+            'resource_claim_statuses': None,
+            'resources': None,
+            'start_time': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal())}}
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 934 in run
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 1325 in _execute_task
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py, line 417 in wrapper
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 779 in execute
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 860 in execute_sync
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 1292 in post_complete_action
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 1366 in cleanup
+
+[2026-07-29T10:43:54.987207Z] INFO - {'dag': <DAG: mntn_match_incrementals_submit>, 'inlets': [], 'map_index_template': None, 'outlets': [], 'run_id': 'scheduled__2026-07-28T09:00:00+00:00', 'task': <Task(MntnKubePodOperator): batch_submit>, 'task_instance': RuntimeTaskInstance(id=UUID('019fad74-468d-71b2-92f1-d33e86842ae6'), task_id='batch_submit', dag_id='mntn_match_incrementals_submit', run_id='scheduled__2026-07-28T09:00:00+00:00', try_number=4, dag_version_id=UUID('019b9e7b-617e-792f-8700-8a5420d72b3e'), map_index=-1, hostname='100.64.6.69', context_carrier=None, task=<Task(MntnKubePodOperator): batch_submit>, bundle_instance=AstroBundleBackend(name=main), max_tries=3, start_date=datetime.datetime(2026, 7, 29, 10, 43, 28, 326886, tzinfo=datetime.timezone.utc), end_date=datetime.datetime(2026, 7, 29, 10, 43, 54, 682682, tzinfo=datetime.timezone.utc), state=<TaskInstanceState.FAILED: 'failed'>, is_mapped=False, rendered_map_index=None), 'ti': RuntimeTaskInstance(id=UUID('019fad74-468d-71b2-92f1-d33e86842ae6'), task_id='batch_submit', dag_id='mntn_match_incrementals_submit', run_id='scheduled__2026-07-28T09:00:00+00:00', try_number=4, dag_version_id=UUID('019b9e7b-617e-792f-8700-8a5420d72b3e'), map_index=-1, hostname='100.64.6.69', context_carrier=None, task=<Task(MntnKubePodOperator): batch_submit>, bundle_instance=AstroBundleBackend(name=main), max_tries=3, start_date=datetime.datetime(2026, 7, 29, 10, 43, 28, 326886, tzinfo=datetime.timezone.utc), end_date=datetime.datetime(2026, 7, 29, 10, 43, 54, 682682, tzinfo=datetime.timezone.utc), state=<TaskInstanceState.FAILED: 'failed'>, is_mapped=False, rendered_map_index=None), 'outlet_events': <airflow.sdk.execution_time.context.OutletEventAccessors object at 0x7dfbc2172540>, 'inlet_events': InletEventsAccessors(_inlets=[], _assets={}, _asset_aliases={}), 'macros': <MacrosAccessor (dynamic access to macros)>, 'params': {}, 'var': {'json': <VariableAccessor (dynamic access)>, 'value': <VariableAccessor (dynamic access)>}, 'conn': <ConnectionAccessor (dynamic access)>, 'dag_run': DagRun(dag_id='mntn_match_incrementals_submit', run_id='scheduled__2026-07-28T09:00:00+00:00', logical_date=datetime.datetime(2026, 7, 28, 9, 0, tzinfo=datetime.timezone.utc), data_interval_start=datetime.datetime(2026, 7, 28, 9, 0, tzinfo=datetime.timezone.utc), data_interval_end=datetime.datetime(2026, 7, 29, 9, 0, tzinfo=datetime.timezone.utc), run_after=datetime.datetime(2026, 7, 29, 9, 0, tzinfo=datetime.timezone.utc), start_date=datetime.datetime(2026, 7, 29, 9, 0, 0, 709741, tzinfo=datetime.timezone.utc), end_date=None, clear_number=0, run_type=<DagRunType.SCHEDULED: 'scheduled'>, state=<DagRunState.RUNNING: 'running'>, conf={}, triggering_user_name=None, consumed_asset_events=[]), 'triggering_asset_events': TriggeringAssetEventsAccessor(_events=defaultdict(<class 'list'>, {})), 'task_instance_key_str': 'mntn_match_incrementals_submit__batch_submit__20260728', 'task_reschedule_count': 0, 'prev_start_date_success': <Proxy at 0x7dfbc0e51b00 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x7dfbc0b1af20>>, 'prev_end_date_success': <Proxy at 0x7dfbc0c18dc0 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x7dfbc0b1afc0>>, 'logical_date': DateTime(2026, 7, 28, 9, 0, 0, tzinfo=Timezone('UTC')), 'ds': '2026-07-28', 'ds_nodash': '20260728', 'ts': '2026-07-28T09:00:00+00:00', 'ts_nodash': '20260728T090000', 'ts_nodash_with_tz': '20260728T090000+0000', 'data_interval_end': DateTime(2026, 7, 29, 9, 0, 0, tzinfo=Timezone('UTC')), 'data_interval_start': DateTime(2026, 7, 28, 9, 0, 0, tzinfo=Timezone('UTC')), 'prev_data_interval_start_success': <Proxy at 0x7dfbc0b668c0 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x7dfbc0aee8e0>>, 'prev_data_interval_end_success': <Proxy at 0x7dfbc0a90180 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x7dfbc0aeeac0>>, 'exception': AirflowException('Pod openai-batch-runner-ni6xcuu4 returned a failure.\nremote_pod: {\'api_version\': \'v1\',\n \'kind\': \'Pod\',\n \'metadata\': {\'annotations\': {\'cni.projectcalico.org/containerID\': \'01a6eec94903bffd1ae48f9773e376ba16dc290b30f3f1f9bd2ed0dae2eb76cb\',\n                              \'cni.projectcalico.org/podIP\': \'\',\n                              \'cni.projectcalico.org/podIPs\': \'\'},\n              \'creation_timestamp\': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal()),\n              \'deletion_grace_period_seconds\': None,\n              \'deletion_timestamp\': None,\n              \'finalizers\': None,\n              \'generate_name\': None,\n              \'generation\': 1,\n              \'labels\': {\'airflow_kpo_in_cluster\': \'True\',\n                         \'airflow_version\': \'3.1.5-astro.1\',\n                         \'app\': \'airflow\',\n                         \'astronomer.io/cloud_provider\': \'gcp\',\n                         \'astronomer.io/cloud_region\': \'us-central1\',\n                         \'astronomer.io/deploymentId\': \'cmd6bd10c0gl901rfuokgryiq\',\n                         \'astronomer.io/organizationId\': \'cmc0puu8s28z401iybhqnvf7y\',\n                         \'astronomer.io/workspaceId\': \'cmcvca5ia048y01ngw8y36qeq\',\n                         \'dag_id\': \'mntn_match_incrementals_submit\',\n                         \'kubernetes_pod_operator\': \'True\',\n                         \'run_id\': \'scheduled__2026-07-28T0900000000-b6145f9b7\',\n                         \'task_id\': \'batch_submit\',\n                         \'topology.kubernetes.io/region\': \'us-central1\',\n                         \'topology.kubernetes.io/zone\': \'us-central1-a\',\n                         \'try_number\': \'4\'},\n              \'managed_fields\': [{\'api_version\': \'v1\',\n                                  \'fields_type\': \'FieldsV1\',\n                                  \'fields_v1\': {\'f:metadata\': {\'f:labels\': {\'.\': {},\n                                                                            \'f:airflow_kpo_in_cluster\': {},\n                                                                            \'f:airflow_version\': {},\n                                                                            \'f:app\': {},\n                                                                            \'f:astronomer.io/cloud_provider\': {},\n                                                                            \'f:astronomer.io/cloud_region\': {},\n                                                                            \'f:astronomer.io/deploymentId\': {},\n                                                                            \'f:astronomer.io/organizationId\': {},\n                                                                            \'f:astronomer.io/workspaceId\': {},\n                                                                            \'f:dag_id\': {},\n                                                                            \'f:kubernetes_pod_operator\': {},\n                                                                            \'f:run_id\': {},\n                                                                            \'f:task_id\': {},\n                                                                            \'f:try_number\': {}},\n                                                               \'f:ownerReferences\': {\'.\': {},\n                                                                                     \'k:{"uid":"8182d1ef-f087-4ed5-91ad-f2ef1cad9534"}\': {}}},\n                                                \'f:spec\': {\'f:affinity\': {},\n                                                           \'f:containers\': {\'k:{"name":"base"}\': {\'.\': {},\n                                                                                                  \'f:command\': {},\n                                                                                                  \'f:env\': {\'.\': {},\n                                                                                                            \'k:{"name":"OPENAI_API_KEY"}\': {\'.\': {},\n                                                                                                                                            \'f:name\': {},\n                                                                                                                                            \'f:valueFrom\': {\'.\': {},\n                                                                                                                                                            \'f:secretKeyRef\': {}}},\n                                                                                                            \'k:{"name":"env"}\': {\'.\': {},\n                                                                                                                                 \'f:name\': {},\n                                                                                                                                 \'f:value\': {}},\n                                                                                                            \'k:{"name":"run_date"}\': {\'.\': {},\n                                                                                                                                      \'f:name\': {},\n                                                                                                                                      \'f:value\': {}},\n                                                                                                            \'k:{"name":"yesterday"}\': {\'.\': {},\n                                                                                                                                       \'f:name\': {},\n                                                                                                                                       \'f:value\': {}}},\n                                                                                                  \'f:image\': {},\n                                                                                                  \'f:imagePullPolicy\': {},\n                                                                                                  \'f:name\': {},\n                                                                                                  \'f:resources\': {\'.\': {},\n                                                                                                                  \'f:limits\': {\'.\': {},\n                                                                                                                               \'f:cpu\': {},\n                                                                                                                               \'f:ephemeral-storage\': {},\n                                                                                                                               \'f:memory\': {}},\n                                                                                                                  \'f:requests\': {\'.\': {},\n                                                                                                                                 \'f:cpu\': {},\n                                                                                                                                 \'f:ephemeral-storage\': {},\n                                                                                                                                 \'f:memory\': {}}},\n                                                                                                  \'f:terminationMessagePath\': {},\n                                                                                                  \'f:terminationMessagePolicy\': {}}},\n                                                           \'f:dnsConfig\': {\'.\': {},\n                                                                           \'f:options\': {}},\n                                                           \'f:dnsPolicy\': {},\n                                                           \'f:enableServiceLinks\': {},\n                                                           \'f:imagePullSecrets\': {\'.\': {},\n                                                                                  \'k:{"name":"meteoric-conservation-7520-private-registry"}\': {}},\n                                                           \'f:nodeSelector\': {},\n                                                           \'f:priorityClassName\': {},\n                                                           \'f:restartPolicy\': {},\n                                                           \'f:schedulerName\': {},\n                                                           \'f:securityContext\': {},\n                                                           \'f:serviceAccount\': {},\n                                                           \'f:serviceAccountName\': {},\n                                                           \'f:terminationGracePeriodSeconds\': {},\n                                                           \'f:tolerations\': {}}},\n                                  \'manager\': \'OpenAPI-Generator\',\n                                  \'operation\': \'Update\',\n                                  \'subresource\': None,\n                                  \'time\': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal())},\n                                 {\'api_version\': \'v1\',\n                                  \'fields_type\': \'FieldsV1\',\n                                  \'fields_v1\': {\'f:metadata\': {\'f:annotations\': {\'.\': {},\n                                                                                 \'f:cni.projectcalico.org/containerID\': {},\n                                                                                 \'f:cni.projectcalico.org/podIP\': {},\n                                                                                 \'f:cni.projectcalico.org/podIPs\': {}}}},\n                                  \'manager\': \'calico\',\n                                  \'operation\': \'Update\',\n                                  \'subresource\': \'status\',\n                                  \'time\': datetime.datetime(2026, 7, 29, 10, 43, 52, tzinfo=tzlocal())},\n                                 {\'api_version\': \'v1\',\n                                  \'fields_type\': \'FieldsV1\',\n                                  \'fields_v1\': {\'f:status\': {\'f:conditions\': {\'k:{"type":"ContainersReady"}\': {\'.\': {},\n                                                                                                               \'f:lastProbeTime\': {},\n                                                                                                               \'f:lastTransitionTime\': {},\n                                                                                                               \'f:observedGeneration\': {},\n                                                                                                               \'f:reason\': {},\n                                                                                                               \'f:status\': {},\n                                                                                                               \'f:type\': {}},\n                                                                              \'k:{"type":"Initialized"}\': {\'.\': {},\n                                                                                                           \'f:lastProbeTime\': {},\n                                                                                                           \'f:lastTransitionTime\': {},\n                                                                                                           \'f:observedGeneration\': {},\n                                                                                                           \'f:status\': {},\n                                                                                                           \'f:type\': {}},\n                                                                              \'k:{"type":"PodReadyToStartContainers"}\': {\'.\': {},\n                                                                                                                         \'f:lastProbeTime\': {},\n                                                                                                                         \'f:lastTransitionTime\': {},\n                                                                                                                         \'f:observedGeneration\': {},\n                                                                                                                         \'f:status\': {},\n                                                                                                                         \'f:type\': {}},\n                                                                              \'k:{"type":"PodScheduled"}\': {\'f:observedGeneration\': {}},\n                                                                              \'k:{"type":"Ready"}\': {\'.\': {},\n                                                                                                     \'f:lastProbeTime\': {},\n                                                                                                     \'f:lastTransitionTime\': {},\n                                                                                                     \'f:observedGeneration\': {},\n                                                                                                     \'f:reason\': {},\n                                                                                                     \'f:status\': {},\n                                                                                                     \'f:type\': {}}},\n                                                             \'f:containerStatuses\': {},\n                                                             \'f:hostIP\': {},\n                                                             \'f:hostIPs\': {},\n                                                             \'f:observedGeneration\': {},\n                                                             \'f:phase\': {},\n                                                             \'f:podIP\': {},\n                                                             \'f:podIPs\': {\'.\': {},\n                                                                          \'k:{"ip":"100.64.6.72"}\': {\'.\': {},\n                                                                                                     \'f:ip\': {}}},\n                                                             \'f:startTime\': {}}},\n                                  \'manager\': \'kubelet\',\n                                  \'operation\': \'Update\',\n                                  \'subresource\': \'status\',\n                                  \'time\': datetime.datetime(2026, 7, 29, 10, 43, 52, tzinfo=tzlocal())}],\n              \'name\': \'openai-batch-runner-ni6xcuu4\',\n              \'namespace\': \'meteoric-conservation-7520\',\n              \'owner_references\': [{\'api_version\': \'v1\',\n                                    \'block_owner_deletion\': False,\n                                    \'controller\': True,\n                                    \'kind\': \'ServiceAccount\',\n                                    \'name\': \'meteoric-conservation-7520-worker-serviceaccount\',\n                                    \'uid\': \'8182d1ef-f087-4ed5-91ad-f2ef1cad9534\'}],\n              \'resource_version\': \'1785321832773519016\',\n              \'self_link\': None,\n              \'uid\': \'387998a9-5f5d-4032-8fa2-5dfb3450b8ed\'},\n \'spec\': {\'active_deadline_seconds\': None,\n          \'affinity\': {\'node_affinity\': None,\n                       \'pod_affinity\': None,\n                       \'pod_anti_affinity\': None},\n          \'automount_service_account_token\': None,\n          \'containers\': [{\'args\': None,\n                          \'command\': [\'python\', \'submit_batch.py\'],\n                          \'env\': [{\'name\': \'run_date\',\n                                   \'value\': \'2026-07-28\',\n                                   \'value_from\': None},\n                                  {\'name\': \'env\',\n                                   \'value\': \'prod\',\n                                   \'value_from\': None},\n                                  {\'name\': \'yesterday\',\n                                   \'value\': \'2026-07-27\',\n                                   \'value_from\': None},\n                                  {\'name\': \'OPENAI_API_KEY\',\n                                   \'value\': None,\n                                   \'value_from\': {\'config_map_key_ref\': None,\n                                                  \'field_ref\': None,\n                                                  \'file_key_ref\': None,\n                                                  \'resource_field_ref\': None,\n                                                  \'secret_key_ref\': {\'key\': \'OPENAI_API_KEY\',\n                                                                     \'name\': \'env-secrets\',\n                                                                     \'optional\': None}}}],\n                          \'env_from\': None,\n                          \'image\': \'steelhousedev/openai_batch_runner:gcp-prod\',\n                          \'image_pull_policy\': \'Always\',\n                          \'lifecycle\': None,\n                          \'liveness_probe\': None,\n                          \'name\': \'base\',\n                          \'ports\': None,\n                          \'readiness_probe\': None,\n                          \'resize_policy\': None,\n                          \'resources\': {\'claims\': None,\n                                        \'limits\': {\'cpu\': \'250m\',\n                                                   \'ephemeral-storage\': \'256Mi\',\n                                                   \'memory\': \'512Mi\'},\n                                        \'requests\': {\'cpu\': \'250m\',\n                                                     \'ephemeral-storage\': \'256Mi\',\n                                                     \'memory\': \'512Mi\'}},\n                          \'restart_policy\': None,\n                          \'restart_policy_rules\': None,\n                          \'security_context\': None,\n                          \'startup_probe\': None,\n                          \'stdin\': None,\n                          \'stdin_once\': None,\n                          \'termination_message_path\': \'/dev/termination-log\',\n                          \'termination_message_policy\': \'File\',\n                          \'tty\': None,\n                          \'volume_devices\': None,\n                          \'volume_mounts\': [{\'mount_path\': \'/var/run/secrets/kubernetes.io/serviceaccount\',\n                                             \'mount_propagation\': None,\n                                             \'name\': \'kube-api-access-5cjlb\',\n                                             \'read_only\': True,\n                                             \'recursive_read_only\': None,\n                                             \'sub_path\': None,\n                                             \'sub_path_expr\': None}],\n                          \'working_dir\': None}],\n          \'dns_config\': {\'nameservers\': None,\n                         \'options\': [{\'name\': \'ndots\', \'value\': \'4\'}],\n                         \'searches\': None},\n          \'dns_policy\': \'ClusterFirst\',\n          \'enable_service_links\': True,\n          \'ephemeral_containers\': None,\n          \'host_aliases\': None,\n          \'host_ipc\': None,\n          \'host_network\': None,\n          \'host_pid\': None,\n          \'host_users\': None,\n          \'hostname\': None,\n          \'hostname_override\': None,\n          \'image_pull_secrets\': [{\'name\': \'meteoric-conservation-7520-private-registry\'}],\n          \'init_containers\': None,\n          \'node_name\': \'gke-cmcv0v0ae01bk01n-n2dcustom1632768-af58f12c-t5q6\',\n          \'node_selector\': {\'astronomer.io/worker-node\': \'True\'},\n          \'os\': None,\n          \'overhead\': None,\n          \'preemption_policy\': \'Never\',\n          \'priority\': 0,\n          \'priority_class_name\': \'meteoric-conservation-7520-default\',\n          \'readiness_gates\': None,\n          \'resource_claims\': None,\n          \'resources\': None,\n          \'restart_policy\': \'Never\',\n          \'runtime_class_name\': None,\n          \'scheduler_name\': \'gke.io/optimize-utilization-scheduler\',\n          \'scheduling_gates\': None,\n          \'security_context\': {\'app_armor_profile\': None,\n                               \'fs_group\': None,\n                               \'fs_group_change_policy\': None,\n                               \'run_as_group\': None,\n                               \'run_as_non_root\': None,\n                               \'run_as_user\': None,\n                               \'se_linux_change_policy\': None,\n                               \'se_linux_options\': None,\n                               \'seccomp_profile\': None,\n                               \'supplemental_groups\': None,\n                               \'supplemental_groups_policy\': None,\n                               \'sysctls\': None,\n                               \'windows_options\': None},\n          \'service_account\': \'meteoric-conservation-7520-kpo\',\n          \'service_account_name\': \'meteoric-conservation-7520-kpo\',\n          \'set_hostname_as_fqdn\': None,\n          \'share_process_namespace\': None,\n          \'subdomain\': None,\n          \'termination_grace_period_seconds\': 30,\n          \'tolerations\': [{\'effect\': \'NoSchedule\',\n                           \'key\': \'astronomer.io/node-group\',\n                           \'operator\': \'Equal\',\n                           \'toleration_seconds\': None,\n                           \'value\': \'airflow-worker\'},\n                          {\'effect\': \'NoExecute\',\n                           \'key\': \'node.kubernetes.io/not-ready\',\n                           \'operator\': \'Exists\',\n                           \'toleration_seconds\': 300,\n                           \'value\': None},\n                          {\'effect\': \'NoExecute\',\n                           \'key\': \'node.kubernetes.io/unreachable\',\n                           \'operator\': \'Exists\',\n                           \'toleration_seconds\': 300,\n                           \'value\': None}],\n          \'topology_spread_constraints\': None,\n          \'volumes\': [{\'aws_elastic_block_store\': None,\n                       \'azure_disk\': None,\n                       \'azure_file\': None,\n                       \'cephfs\': None,\n                       \'cinder\': None,\n                       \'config_map\': None,\n                       \'csi\': None,\n                       \'downward_api\': None,\n                       \'empty_dir\': None,\n                       \'ephemeral\': None,\n                       \'fc\': None,\n                       \'flex_volume\': None,\n                       \'flocker\': None,\n                       \'gce_persistent_disk\': None,\n                       \'git_repo\': None,\n                       \'glusterfs\': None,\n                       \'host_path\': None,\n                       \'image\': None,\n                       \'iscsi\': None,\n                       \'name\': \'kube-api-access-5cjlb\',\n                       \'nfs\': None,\n                       \'persistent_volume_claim\': None,\n                       \'photon_persistent_disk\': None,\n                       \'portworx_volume\': None,\n                       \'projected\': {\'default_mode\': 420,\n                                     \'sources\': [{\'cluster_trust_bundle\': None,\n                                                  \'config_map\': None,\n                                                  \'downward_api\': None,\n                                                  \'pod_certificate\': None,\n                                                  \'secret\': None,\n                                                  \'service_account_token\': {\'audience\': None,\n                                                                            \'expiration_seconds\': 3607,\n                                                                            \'path\': \'token\'}},\n                                                 {\'cluster_trust_bundle\': None,\n                                                  \'config_map\': {\'items\': [{\'key\': \'ca.crt\',\n                                                                            \'mode\': None,\n                                                                            \'path\': \'ca.crt\'}],\n                                                                 \'name\': \'kube-root-ca.crt\',\n                                                                 \'optional\': None},\n                                                  \'downward_api\': None,\n                                                  \'pod_certificate\': None,\n                                                  \'secret\': None,\n                                                  \'service_account_token\': None},\n                                                 {\'cluster_trust_bundle\': None,\n                                                  \'config_map\': None,\n                                                  \'downward_api\': {\'items\': [{\'field_ref\': {\'api_version\': \'v1\',\n                                                                                            \'field_path\': \'metadata.namespace\'},\n                                                                              \'mode\': None,\n                                                                              \'path\': \'namespace\',\n                                                                              \'resource_field_ref\': None}]},\n                                                  \'pod_certificate\': None,\n                                                  \'secret\': None,\n                                                  \'service_account_token\': None}]},\n                       \'quobyte\': None,\n                       \'rbd\': None,\n                       \'scale_io\': None,\n                       \'secret\': None,\n                       \'storageos\': None,\n                       \'vsphere_volume\': None}],\n          \'workload_ref\': None},\n \'status\': {\'allocated_resources\': None,\n            \'conditions\': [{\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 29, 10, 43, 52, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'False\',\n                            \'type\': \'PodReadyToStartContainers\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'True\',\n                            \'type\': \'Initialized\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 29, 10, 43, 51, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': \'PodFailed\',\n                            \'status\': \'False\',\n                            \'type\': \'Ready\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 29, 10, 43, 51, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': \'PodFailed\',\n                            \'status\': \'False\',\n                            \'type\': \'ContainersReady\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'True\',\n                            \'type\': \'PodScheduled\'}],\n            \'container_statuses\': [{\'allocated_resources\': {\'cpu\': \'250m\',\n                                                            \'ephemeral-storage\': \'256Mi\',\n                                                            \'memory\': \'512Mi\'},\n                                    \'allocated_resources_status\': None,\n                                    \'container_id\': \'containerd://2ed27b992b3be06e33daddbd6a85eed2d0c59f79424fbeb5c6c11e773b3383ac\',\n                                    \'image\': \'docker.io/steelhousedev/openai_batch_runner:gcp-prod\',\n                                    \'image_id\': \'docker.io/steelhousedev/openai_batch_runner@sha256:efa473df11104accf4d59b7ba3371b4e9921447de2aceff794362bd3025d4cf4\',\n                                    \'last_state\': {\'running\': None,\n                                                   \'terminated\': None,\n                                                   \'waiting\': None},\n                                    \'name\': \'base\',\n                                    \'ready\': False,\n                                    \'resources\': {\'claims\': None,\n                                                  \'limits\': {\'cpu\': \'250m\',\n                                                             \'ephemeral-storage\': \'256Mi\',\n                                                             \'memory\': \'512Mi\'},\n                                                  \'requests\': {\'cpu\': \'250m\',\n                                                               \'ephemeral-storage\': \'256Mi\',\n                                                               \'memory\': \'512Mi\'}},\n                                    \'restart_count\': 0,\n                                    \'started\': False,\n                                    \'state\': {\'running\': None,\n                                              \'terminated\': {\'container_id\': \'containerd://2ed27b992b3be06e33daddbd6a85eed2d0c59f79424fbeb5c6c11e773b3383ac\',\n                                                             \'exit_code\': 1,\n                                                             \'finished_at\': datetime.datetime(2026, 7, 29, 10, 43, 50, tzinfo=tzlocal()),\n                                                             \'message\': None,\n                                                             \'reason\': \'Error\',\n                                                             \'signal\': None,\n                                                             \'started_at\': datetime.datetime(2026, 7, 29, 10, 43, 34, tzinfo=tzlocal())},\n                                              \'waiting\': None},\n                                    \'stop_signal\': None,\n                                    \'user\': {\'linux\': {\'gid\': 0,\n                                                       \'supplemental_groups\': [0],\n                                                       \'uid\': 0}},\n                                    \'volume_mounts\': [{\'mount_path\': \'/var/run/secrets/kubernetes.io/serviceaccount\',\n                                                       \'name\': \'kube-api-access-5cjlb\',\n                                                       \'read_only\': True,\n                                                       \'recursive_read_only\': \'Disabled\'}]}],\n            \'ephemeral_container_statuses\': None,\n            \'extended_resource_claim_status\': None,\n            \'host_i_ps\': [{\'ip\': \'172.20.0.102\'}],\n            \'host_ip\': \'172.20.0.102\',\n            \'init_container_statuses\': None,\n            \'message\': None,\n            \'nominated_node_name\': None,\n            \'observed_generation\': 1,\n            \'phase\': \'Failed\',\n            \'pod_i_ps\': [{\'ip\': \'100.64.6.72\'}],\n            \'pod_ip\': \'100.64.6.72\',\n            \'qos_class\': \'Guaranteed\',\n            \'reason\': None,\n            \'resize\': None,\n            \'resource_claim_statuses\': None,\n            \'resources\': None,\n            \'start_time\': datetime.datetime(2026, 7, 29, 10, 43, 33, tzinfo=tzlocal())}}')}source=include.job_config.slack_messages loc=slack_messages.py:132 
+[2026-07-29T10:43:54.987575Z] INFO - id=UUID('019fad74-468d-71b2-92f1-d33e86842ae6') task_id='batch_submit' dag_id='mntn_match_incrementals_submit' run_id='scheduled__2026-07-28T09:00:00+00:00' try_number=4 dag_version_id=UUID('019b9e7b-617e-792f-8700-8a5420d72b3e') map_index=-1 hostname='100.64.6.69' context_carrier=None task=<Task(MntnKubePodOperator): batch_submit> bundle_instance=AstroBundleBackend(name=main) max_tries=3 start_date=datetime.datetime(2026, 7, 29, 10, 43, 28, 326886, tzinfo=datetime.timezone.utc) end_date=datetime.datetime(2026, 7, 29, 10, 43, 54, 682682, tzinfo=datetime.timezone.utc) state=<TaskInstanceState.FAILED: 'failed'> is_mapped=False rendered_map_index=Nonesource=include.job_config.slack_messages loc=slack_messages.py:134 
+[2026-07-29T10:43:56.961745Z] INFO - DEFAULT_HTTP already found in environment variables, skipping aliasing OPENLINEAGE_URLsource=openlineage.client.client loc=client.py:345 
+[2026-07-29T10:43:56.963234Z] INFO - OpenLineageClient will use `composite` transportsource=openlineage.client.client loc=client.py:116 
+[2026-07-29T10:43:57.139426Z] INFO - Stopping OpenLineage CompositeTransport emission after the first successful delivery because `continue_on_success=False`. Transport that emitted the event: <HttpTransport(name=astro_primary, kind=http, priority=2)>source=openlineage.client.transport.composite loc=composite.py:135 
+[2026-07-29T10:43:57.139737Z] INFO - Successfully emitted OpenLineage `FAIL` event of id `019fa7f3-ca80-7c55-bca1-77f527c3081d`source=airflow.providers.openlineage.plugins.adapter.OpenLineageAdapter loc=adapter.py:167 
+[2026-07-29T10:43:57.207046Z] WARNING - Using Connection.get_connection_from_secrets from `airflow.models` is deprecated.Please use `get` on Connection from sdk(`airflow.sdk.Connection`) insteadcategory=DeprecationWarning source=py.warnings loc=/usr/local/lib/python3.12/site-packages/airflow/models/connection.py:486 
+[2026-07-29T10:43:57.229065Z] INFO - Email alerting: attempt 1source=airflow.utils.email loc=email.py:261 
+[2026-07-29T10:43:57.253105Z] INFO - Email alerting: attempt 1source=airflow.utils.email loc=email.py:261 
+[2026-07-29T10:43:57.253767Z] ERROR - Top level errorsource=task loc=task_runner.py:1482 OSError: [Errno 99] Cannot assign requested address
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 1477 in main
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 1455 in finalize
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 1277 in _send_task_error_email
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 79 in send_email
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 154 in send_email_smtp
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 263 in send_mime_email
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 306 in _get_smtp_connection
+    File /usr/local/lib/python3.12/smtplib.py, line 255 in __init__
+    File /usr/local/lib/python3.12/smtplib.py, line 341 in connect
+    File /usr/local/lib/python3.12/smtplib.py, line 312 in _get_socket
+    File /usr/local/lib/python3.12/socket.py, line 865 in create_connection
+    File /usr/local/lib/python3.12/socket.py, line 850 in create_connection
+,OSError: [Errno 99] Cannot assign requested address
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 1275 in _send_task_error_email
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 79 in send_email
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 154 in send_email_smtp
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 263 in send_mime_email
+    File /usr/local/lib/python3.12/site-packages/airflow/utils/email.py, line 306 in _get_smtp_connection
+    File /usr/local/lib/python3.12/smtplib.py, line 255 in __init__
+    File /usr/local/lib/python3.12/smtplib.py, line 341 in connect
+    File /usr/local/lib/python3.12/smtplib.py, line 312 in _get_socket
+    File /usr/local/lib/python3.12/socket.py, line 865 in create_connection
+    File /usr/local/lib/python3.12/socket.py, line 850 in create_connection
+
+[2026-07-29T10:43:57.282586Z] WARNING - Process exited abnormallyexit_code=1 source=task 
