@@ -160,6 +160,8 @@ TAR team Jira best practices: `documentation/architecture/TAR-JIRA Best Practice
 **Field ID:** `customfield_10012` (Story Points)
 **Estimate field:** `customfield_15521` (Story point estimate)
 
+**Scope grew on an already-Done ticket → re-estimate SP + document the added ask, keep it Done (user pref, AUDI-1172 2026-07-29).** When a completed ticket's real scope ends up materially larger than its original estimate (a follow-up ask, an extra deliverable), bump `customfield_10012` to the true effort and post a short `*[Scope update | <date>]*` comment listing what was added beyond the original delivery — do NOT reopen it. So the board reflects actual effort and the ticket self-documents the growth. (AUDI-1172: 1→3 SP after the CPIV/CPIA follow-up + Matt reconciliation + explainer.)
+
 **Ticket types:** Task preferred. Stories for multi-team work (FE+BE+Design). Avoid subtasks.
 **Linking:** Use "Included in Master Package" to link related tasks.
 
