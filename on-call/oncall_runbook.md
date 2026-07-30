@@ -264,6 +264,21 @@ WHERE time >= TIMESTAMP('2026-07-27') AND time < TIMESTAMP('2026-07-28')
 NULL on `-3` rows (`media_cost` populated). Re-confirmed the daily swap holds stable 2026-07-30
 (07-24/25/26 = 0 `-3`; 07-27 = 110,750 `-3`/0 resolved; 07-28 = 102,456 `-3`/141,002 resolved; 07-29 = 0 `-3`).
 
+**How we PROVE the `-3` rows are Bombora (row-level, since the advertiser filter alone isn't proof — Sonali's Q):**
+join `CIL.impression_id = spend_log.auction_id` (the `<micros>.<rand>.<n>.steelhouse` id; **NOT** `spend_log.impression_id`,
+which is a separate UUID → 0 matches). Result: **110,735 of 110,750 `-3` rows matched spend_log, 110,732 carried
+CG 131563 / campaign 648323 (Bombora)**. spend_log (CIL's input) had the correct campaign, so the resolution break is
+inside the CIL build, not the input.
+```sql
+SELECT s.campaign_group_id, s.campaign_id, COUNT(*) AS n
+FROM `dw-main-silver.logdata.cost_impression_log` c
+JOIN `dw-main-silver.logdata.spend_log` s ON s.auction_id = c.impression_id
+WHERE c.time >= TIMESTAMP('2026-07-27') AND c.time < TIMESTAMP('2026-07-28')
+  AND c.advertiser_id = 30506 AND c.campaign_id = -3
+  AND s.auction_timestamp >= TIMESTAMP('2026-07-26') AND s.auction_timestamp < TIMESTAMP('2026-07-29')
+GROUP BY 1,2 ORDER BY n DESC;   -- 110,732 -> CG 131563 / campaign 648323
+```
+
 ---
 
 ### INC-002 — `fangorn_inference_pipeline_run` `inference_pipeline` — Dataproc cluster-create failure

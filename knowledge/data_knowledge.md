@@ -1627,6 +1627,7 @@ wrong.** Proven case: DS51/Bombora campaigns (CG 131563 / adv 30506 "MNTN - No E
 - spend_log = **110,792** wins, **$903.83 billed, 100% production (test=0), 100% rendered**, partner_id=8 (Beeswax); win_logs = **110,862**
 - CIL 07-27 = **0** under 648318-648323 but **110,750 under `campaign_id = -3`** (the swap: `-3` is 0 on every day the campaigns resolve, spikes to 110,750 on 07-27; 07-28 partial = 141,002 resolved + 102,456 as `-3` ≈ spend_log 243,961)
 - **Regression proven by CIL physical time-travel:** 47h ago = **109,530 correctly attributed, 0 as -3**; now = **0 attributed, 110,750 as -3** → a 07-27-partition reprocess re-stamped resolved → `-3` (this IS the owner's "110,798 yesterday → 0 today")
+- **Row-level proof they're Bombora (2026-07-30, answers "how do we know they're Bombora?"):** the `-3` row itself can't say (campaign/group/creative blanked) — join `CIL.impression_id = spend_log.auction_id` (the `.steelhouse` id; **NOT** `spend_log.impression_id`, a separate UUID → 0 matches). **110,735 of 110,750 `-3` rows matched spend_log; 110,732 carried CG 131563 / campaign 648323 (Bombora).** spend_log (CIL's input) had the correct campaign, so the resolution break is inside the CIL build, not the input.
 
 **Lessons:** (1) for a CIL/enriched anomalous per-campaign 0, reconcile against `spend_log` (spend source of truth) before
 concluding it's correct; (2) then GROUP BY the id (and time-travel the physical) to find WHERE the rows went before saying
