@@ -5,11 +5,13 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [aud22, audit 22, audit #22, FA022, geo includes excludes, AUDI-1072, PR 1147, DEV-8264, dw-main-gold, network_locations, location_data, v_location_data_lat_long, geo_version, DMA 638, metro_id, hierarchy, template 55, win_logs, unapproved audience leak, exclusion list, DM audit logic, false positive, mission control, measurement team, Sonali Vengurlekar, Nivas Nalla, Nate Gardner, Brian Teller, Sean Yang, ipdata, geo violation, criticality]
+keywords: [aud22, audit 22, audit #22, FA022, geo includes excludes, AUDI-1072, AUDI-1189, spike ticket, PR 1147, DEV-8264, dw-main-gold, network_locations, location_data, v_location_data_lat_long, geo_version, DMA 638, metro_id, hierarchy, template 55, win_logs, unapproved audience leak, exclusion list, DM audit logic, false positive, mission control, measurement team, Sonali Vengurlekar, Nivas Nalla, Nate Gardner, Brian Teller, Sean Yang, ipdata, geo violation, criticality]
 domain: [data-catalog, infra, routing-people]
 lifecycle: active
 last_verified: 2026-07-30
 ---
+
+Tracking spike (Malachi): **AUDI-1189** (this sprint). Sean's investigation: **AUDI-1072**.
 
 Mission-control **audit 22 "Geo Includes / Excludes" (FA022)** reconciles the last 24h of impressions against the audience Geo expressions and flags IPs served outside the targeted geo. It is a **recurring** violation class, not a one-off.
 
