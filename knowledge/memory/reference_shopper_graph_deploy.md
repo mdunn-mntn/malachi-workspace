@@ -50,7 +50,7 @@ FOLLOWING day's run unless manually triggered.
 
 ## Access
 - **Argo:** request via the **IT service desk** (HR → IT support). In the ticket comment ask for
-  **"Argo CD prod and non-prod"** (need BOTH prod and non-prod/QA). Malachi is requesting this.
+  **"Argo CD prod and non-prod"** (need BOTH prod and non-prod/QA). Malachi HAS this (prod + non-prod), granted 2026-07-30.
 - **OpenAI:** all API keys are linked to **Brian McAdams' account** (he holds the OpenAI admin dashboard).
 - **Repo:** Malachi's `SteelHouse/shopper_graph` access = **`push`** — can `workflow_dispatch` a deploy;
   cannot self-merge protected `main` (route to the owning team, see [[reference_github_pr_no_clone]]).
