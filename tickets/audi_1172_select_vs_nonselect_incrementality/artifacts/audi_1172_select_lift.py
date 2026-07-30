@@ -460,6 +460,10 @@ QUERY_TAB = (
 
 wb.sql("Query", QUERY_TAB, note="The SQL behind every number, kept for validation. "
                                 "Sources: lift__ghost_bid_rollup, campaign_groups, all_facts.")
+# Build fails if a query file exists but isn't on the Query tab (so a new query can never be forgotten).
+wb.check_queries_covered(QUERY_TAB, f"{TDIR}/queries",
+                         ignore=["audi_1172_cpiv_reconcile.sql",     # superseded (pre-VV-basis first pass)
+                                 "audi_1172_spend_by_objective.sql"])  # one-off scope diagnostic
 
 wb.notes(
     "Method & caveats",

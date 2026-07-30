@@ -130,6 +130,11 @@ HEAT = {
     "LIGHT": "E4F7F2",   # near-white Mountain Green tint (smallest values)
     "MID":   "8CE0CE",   # mid Mountain Green
     "DARK":  "1AC9AA",   # Mountain Green (largest / "best" values)
+    # The pale END of a heat RAMP is floored here (not LIGHT) so EVERY cell in a heat column reads as a
+    # visible tint — never near-white. Otherwise a 2-row heat (e.g. Cost per incremental) puts one row dark
+    # and the other near-white, which looks like only one row is highlighted. "If we highlight one, highlight
+    # all." Also keeps the palest heat cell distinct from the zebra BAND (E4F7F2).
+    "FLOOR": "A7E9DC",   # visible light Mountain Green — the palest a ramp cell ever gets
 }
 
 TAB = {
@@ -226,6 +231,7 @@ class MntnWorkbook:
         self.generated = generated  # 'YYYY-MM-DD' string; pass one for reproducible files
         self.status = status
         self._toc = []  # (sheet_name, one-line description, role)
+        self._issues = []  # build-time violations; save_*() prints them and RAISES so a broken workbook can't ship
 
         self.wb = Workbook()
         self.wb.remove(self.wb.active)  # start empty; cover() is added last and moved to front
@@ -310,6 +316,45 @@ class MntnWorkbook:
         cpl = max(int(total_width_chars * 0.92), 24)   # ~chars per line across the merged span
         lines = max(1, -(-len(_demdash(text)) // cpl))
         ws.row_dimensions[row].height = max(16.0, min(lines, maxlines) * per_line + pad)
+
+    @staticmethod
+    def _wrap_lines(text, width_chars):
+        """Word-aware line count for `text` wrapped to `width_chars`. Returns a large number if any single
+        word is wider than the column (unbreakable overflow -> guaranteed clip)."""
+        words, lines, cur = str(text).split(), 0, 0
+        for w in words:
+            if len(w) > width_chars:
+                return 99
+            if cur == 0:
+                cur = len(w)
+            elif cur + 1 + len(w) <= width_chars:
+                cur += 1 + len(w)
+            else:
+                lines += 1
+                cur = len(w)
+        return lines + (1 if cur else 0)
+
+    def _fit_header_height(self, ws, df, start_row, colw, per_line=15.0, pad=8.0, base=30.0):
+        """Size the HEADER row to the TALLEST wrapped header at its column width, so a column title never
+        clips (the old fixed 30pt row was the root cause of clipped headers). Bold ~11pt -> ~0.85 chars/unit."""
+        maxlines = 1
+        for col in df.columns:
+            w = max(int(colw.get(col, 12) * 0.85), 4)
+            maxlines = max(maxlines, self._wrap_lines(col, w))
+        ws.row_dimensions[start_row].height = max(base, min(maxlines, 4) * per_line + pad)
+
+    def _issue(self, sheet, msg):
+        """Record a build-time violation. save_*() prints all of them and RAISES, so a workbook that breaks
+        a hard rule (char cap, etc.) cannot be produced -- the mistake fails the build instead of shipping."""
+        self._issues.append(f"[{sheet}] {msg}")
+
+    def _raise_if_issues(self):
+        if self._issues:
+            import sys
+            report = "\n  - ".join(self._issues)
+            print(f"[mntn_xlsx] BUILD BLOCKED — {len(self._issues)} rule violation(s):\n  - {report}", file=sys.stderr)
+            raise ValueError(f"mntn_xlsx: {len(self._issues)} workbook rule violation(s) — see stderr. "
+                             f"Fix them (trim text / widen columns), the file was NOT written.")
 
     def _footnote(self, ws, text, row, ncols):
         if not text:
@@ -457,10 +502,11 @@ class MntnWorkbook:
                 # SEQUENTIAL single-hue ramp (Mountain Blue), light->saturated. Magnitude gets one hue,
                 # never a red-yellow-green rainbow (that painted the lowest positive value red). 'high':
                 # bigger = darker; 'low' (cost): smaller = darker. So darker always reads "better".
+                # pale end floored to HEAT["FLOOR"] (not near-white LIGHT) so every cell reads as tinted
                 if direction == "high":
-                    s, m, e = HEAT["LIGHT"], HEAT["MID"], HEAT["DARK"]
+                    s, m, e = HEAT["FLOOR"], HEAT["MID"], HEAT["DARK"]
                 else:
-                    s, m, e = HEAT["DARK"], HEAT["MID"], HEAT["LIGHT"]
+                    s, m, e = HEAT["DARK"], HEAT["MID"], HEAT["FLOOR"]
                 rule = ColorScaleRule(start_type="min", start_color=s,
                                       mid_type="percentile", mid_value=50, mid_color=m,
                                       end_type="max", end_color=e)
@@ -505,6 +551,7 @@ class MntnWorkbook:
         ws.auto_filter.ref = f"A{start}:{last_col}{start+n}"
         colw = self._autosize(ws, df, widths=widths, first_col=first_col_width)
         self._fit_row_heights(ws, df, start, colw)
+        self._fit_header_height(ws, df, start, colw)   # size the header row to its wrapped headers -> never clips
         # rows 1 (title) and 2 (subtitle) are merged across the table; size heights to the wrapped
         # text at table width so a long finding/method wraps in place instead of running off the edge.
         table_width = sum(colw.get(c, 12) for c in df.columns)
@@ -530,12 +577,14 @@ class MntnWorkbook:
         don't truncate; raise the caps explicitly per-call if a deliverable genuinely needs it."""
         ents = [(k, v) for k, v in rows if k and v]
         over = [(k, len(v)) for k, v in ents if len(v) > max_def_chars]
-        if over or len(ents) > max_entries:
+        # a too-long definition is a HARD fail (exact rule) so it can't ship; too-many-entries stays a warn
+        # because max_entries is a deliberate per-call knob (a workbook with more tabs legitimately needs more).
+        for k, nch in over:
+            self._issue(name, f"glossary def '{k}' is {nch} chars (cap {max_def_chars}) — trim to 1-2 sentences, move why/how to the Method tab")
+        if len(ents) > max_entries:
             import sys
-            parts = ([f"{len(ents)} entries > {max_entries}"] if len(ents) > max_entries else []) \
-                + [f"'{k}' {n}ch > {max_def_chars}" for k, n in over]
-            print(f"[mntn_xlsx] Read me '{name}' over terseness caps: " + "; ".join(parts)
-                  + " - trim to 1-2 sentences; move why/how to the Method tab.", file=sys.stderr)
+            print(f"[mntn_xlsx] Read me '{name}': {len(ents)} entries > {max_entries} "
+                  "(raise max_entries only if the tab count genuinely warrants it).", file=sys.stderr)
         ws = self._new_sheet(name, "glossary")
         self._sheet_title(ws, self.title)
         sub = f"{self.ticket}." + (f"  {_demdash(intro)}" if intro else "")
@@ -625,9 +674,66 @@ class MntnWorkbook:
             self._toc.append((ws.title, toc, "sql"))
         return ws
 
+    def sql_dir(self, name, directory, order=None, ignore=None, headers=None, note="",
+                collapse_aids=True, aid_placeholder="/* the AID list, same as the main query */"):
+        """Build the Query tab from EVERY .sql file in `directory` (minus `ignore`), so a newly-added query
+        can never be forgotten — the default is 'included', not 'you remembered to add it'.
+
+        order:   list of filenames to lead with (the rest follow, sorted). ignore: filenames to omit
+        (superseded / one-off diagnostic queries — omitting requires a deliberate act). headers: {filename:
+        one-line header}; otherwise the file's first `-- ...` line, else the filename. AID UNNEST lists are
+        collapsed to a placeholder. The whole thing reuses sql() (comment-cap + styling)."""
+        import glob as _glob, re as _re
+        files = sorted(_glob.glob(os.path.join(directory, "*.sql")))
+        ignore = set(ignore or [])
+        chosen = [f for f in files if os.path.basename(f) not in ignore]
+        if order:
+            rank = {n: i for i, n in enumerate(order)}
+            chosen.sort(key=lambda f: (rank.get(os.path.basename(f), len(order)), os.path.basename(f)))
+        headers = headers or {}
+        parts = []
+        for f in chosen:
+            base = os.path.basename(f)
+            raw = open(f).read().strip()
+            first_comment = next((ln.strip() for ln in raw.splitlines() if ln.strip().startswith("--")), None)
+            hdr = headers.get(base) or first_comment or f"-- {base}"
+            if not hdr.lstrip().startswith("--"):
+                hdr = "-- " + hdr
+            body = _re.sub(r"\A(\s*--[^\n]*\n)+", "", raw)                     # strip the file's own comment block
+            if collapse_aids:
+                body = _re.sub(r"UNNEST\(\[.*?\]\)", f"UNNEST([ {aid_placeholder} ])", body, flags=_re.S)
+            parts.append(hdr.split("\n")[0].strip() + "\n\n" + body.strip())
+        return self.sql(name, "\n\n\n".join(parts) + "\n", note=note)
+
+    def check_queries_covered(self, query_text, directory, ignore=None):
+        """HARD-fail the build if a .sql file in `directory` is NOT present in the Query tab text — so a
+        newly-added query can't be forgotten. Use with a hand-curated sql() Query tab (sql_dir() already
+        guarantees coverage). `ignore` = filenames deliberately kept out (superseded / one-off diagnostics)."""
+        import glob as _glob, re as _re
+        def norm(s):
+            s = _re.sub(r"--[^\n]*", "", s)                                   # strip comments
+            s = _re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([])", s, flags=_re.S)   # neutralize AID lists
+            return _re.sub(r"\s+", " ", s).strip().lower()
+        tab = norm(query_text)
+        ignore = set(ignore or [])
+        for f in sorted(_glob.glob(os.path.join(directory, "*.sql"))):
+            base = os.path.basename(f)
+            if base in ignore:
+                continue
+            body = norm(open(f).read())
+            if body and body not in tab:
+                self._issue("Query", f"'{base}' is NOT in the Query tab — add it (or list it in ignore= if superseded/diagnostic)")
+
     # -- public: long-form notes / method -----------------------------------
-    def notes(self, name, blocks, intro="", toc="Method & caveats", body_width=110):
-        """blocks = list of (heading, body). heading '' -> continuation paragraph."""
+    def notes(self, name, blocks, intro="", toc="Method & caveats", body_width=110, max_block_chars=320):
+        """blocks = list of (heading, body). heading '' -> continuation paragraph.
+
+        Each block body leads with its answer and stays <= max_block_chars (the narrative-explainer cap);
+        a longer block is a HARD build failure (move detail to a linked tab or cut it). Same discipline as
+        the glossary terseness guard, for the Method/caveats prose."""
+        for head, body in blocks:
+            if body and len(str(body)) > max_block_chars:
+                self._issue(name, f"block '{head or body[:30]}' is {len(str(body))} chars (cap {max_block_chars}) — trim it or split")
         ws = self._new_sheet(name, "notes")
         self._sheet_title(ws, name)
         if intro:
@@ -785,12 +891,14 @@ class MntnWorkbook:
 
     # -- save ---------------------------------------------------------------
     def save_local(self, path):
+        self._raise_if_issues()   # a rule violation fails the build here -> no broken file is ever written
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.wb.save(path)
         return path
 
     def save_drive(self, ticket_key, filename_desc, drive_root=None):
         """Write straight into the mounted Google Drive: My Drive/Tickets/<KEY>/<KEY> <Desc>.xlsx"""
+        self._raise_if_issues()   # broken workbook cannot reach Drive
         root = drive_root or os.path.expanduser(
             "~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/Tickets")
         folder = os.path.join(root, ticket_key.upper().strip())
