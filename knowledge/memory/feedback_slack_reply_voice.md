@@ -33,4 +33,9 @@ Slack replies must read like a person typed them, not like an AI report. Malachi
 - **Don't append ownership / routing the reader didn't ask for.** Naming who should fix it ("Owner: BER/Sonali") reads as over-reach in a peer reply. Stating the fix location is fine; assigning it to a team is not. (Offering an action *you'll* take is still fine.)
 - **Default to much less than feels complete.** No tables, no bold headers, no "here's a summary" framing for a chat reply. First draft should already be near the stripped-down version.
 
+**Extra lessons from the DS14 code-link reply (2026-07-30).**
+- **Links for Slack = raw URLs, never markdown `[label](url)`.** Slack renders `[text](url)` literally, which looks broken. Put the bare URL on its own line under a one-line plain-text label, with a blank line above it so it's copy/paste clean. My first two drafts used markdown links and clustered spacing; the reader had to reformat both times.
+- **When the ask is "the answer + a link," send exactly that.** One BLUF line, then the labeled raw link(s). Don't ship the full paste-ready doc + Compass prompt + capture summary unless asked. The reader called an earlier full version "the most massive reply I've ever seen."
+- **Concept explanations stay plain prose too.** For "what does the 8-day TTL mean," the version that landed was: what triggers the add, what the TTL does, the per-IP reset, the net effect. No analogy (I offered a guest-list one, it got cut), no "these are two different things" scaffolding, no bullets. Mechanism then consequence, in a short paragraph.
+
 **Key distinction.** This is different from the Terse Comms Standard for Jira comments, which stays scaffolded (Answer line, then Done, then Next bullets, in wiki markup). Both are BLUF. Slack is human prose, Jira is structured. See [[feedback_bluf_communication]], [[feedback_terse_chat_replies]], [[feedback_terse_tickets]].
