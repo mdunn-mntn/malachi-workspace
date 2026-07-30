@@ -229,6 +229,15 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-07-30 · v17** — `table(query="<file>.sql")` names each sheet's source query inline in the bottom
+  Source line and **deep-links** it to that query's block on the Query tab. The Source footnote becomes
+  `Source: <ticket> · Query: <file>.sql · Period: … · Generated …` (middot separators) and the whole grey
+  line is clickable, jumping to the exact `-- <file>.sql …` header (not just the tab top). Mechanism:
+  `table()` registers a pending link; `save_*` runs `_resolve_query_links()`, which scans the Query tab for
+  the header naming that file and sets the hyperlink. **A `query=` naming a file with no matching header on
+  the Query tab HARD-FAILS the build** (so a renamed/missing query can't ship a dead reference — serves the
+  "not missing anything" criterion). For the link to resolve, each query's header comment on the Query tab
+  must contain the filename (e.g. `-- audi_1172_cost.sql - drives Cost by advertiser`).
 - **2026-07-30 · v16** — The paint rule written down (see "What to highlight" in §3). Color lands on the
   **answer** column only — the quotable number the tab exists to deliver; labels, scale/provenance,
   baseline, and uncertainty stay unpainted. `signal` for signed verdicts (lift), `heat` for one-directional
@@ -257,6 +266,8 @@ Every existing builder re-run picks up the new look automatically. That is the p
 3. **Titles/subtitles:** finding = a Power Line; subtitle = ONE line (definitions live on Read me / Method).
 4. **Overview + Read me + Method + Query all updated for every new tab** — a takeaway, a glossary row, a caveat,
    and the query. Result numbers are f-string DYNAMIC (never hardcoded — they drift as data accumulates).
+   **Every data sheet passes `query="<file>.sql"`** so its Source line names + deep-links the query that built
+   it (build hard-fails if the file isn't on the Query tab).
 5. **Rebuild is idempotent + clean:** no `BUILD BLOCKED`, no terseness warnings.
 - **2026-07-29 · v14** — SQL comment headers hard-capped. `sql()` trims any run of `--` comment lines
   (blank-separated blocks merged) to `max_comment_run` (default 3) and warns, so the Query tab never

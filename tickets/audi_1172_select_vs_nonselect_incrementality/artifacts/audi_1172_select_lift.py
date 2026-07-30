@@ -230,6 +230,7 @@ wb.table(
     signal={"Rel lift": {"sig": "Sig 95%"}, "Abs lift": {"sig": "Sig 95%"}},
     kind="headline",
     toc="The headline: pooled Select vs non-Select visit lift for advertisers running both.",
+    query="audi_1172_select_lift.sql",
 )
 
 wb.table(
@@ -244,6 +245,7 @@ wb.table(
             "Select edge": {}},
     kind="data", first_col_width=30,
     toc="Per-advertiser Select vs non-Select, side by side, ranked by Select's edge.",
+    query="audi_1172_select_lift.sql",
 )
 
 wb.table(
@@ -256,6 +258,7 @@ wb.table(
     signal={"Rel lift": {"sig": "Sig 95%"}},
     kind="detail", first_col_width=30,
     toc="Every advertiser x product row behind the pooled and paired numbers.",
+    query="audi_1172_select_lift.sql",
 )
 
 # --- Sheet: cost per incremental (client Verified-Visit basis) ---
@@ -282,6 +285,7 @@ wb.table(
     heat={"CPIV": "low", "CPIA": "low"},   # cost: lower is greener
     kind="data", first_col_width=18,
     toc="Cost per incremental visit and conversion, on the basis advertisers see in Reporting.",
+    query="audi_1172_cpiv_vv_correct.sql",
 )
 
 # --- Sheet: Cost by advertiser (per advertiser x product, both cohort) ---
@@ -340,6 +344,7 @@ wb.table(
     # edge is a neutral 2-product difference, not a good/bad verdict -> signed number, no red/green
     kind="data", first_col_width=30,
     toc="CPIV/CPIA per advertiser (both cohort) + Select-vs-non-Select edge; filter the Sig columns.",
+    query="audi_1172_cpiv_vv_by_adv.sql",
 )
 
 # --- Sheet: AID-level overall incrementality, 3 product-mix groups (all MNTN advertisers) ---
@@ -377,6 +382,7 @@ wb.table(
             "Conv lift (median)": 16, "Advertisers": 14, "Vis sig": 8, "# w/ conv": 10},
     kind="data", first_col_width=14,
     toc="Overall incrementality by product mix: Both / Select-only / PTV-only (all advertisers).",
+    query="audi_1172_aid_group_lift.sql",
 )
 
 wb.glossary(
@@ -447,13 +453,13 @@ GROUP_SQL = _load_sql("audi_1172_aid_group_lift.sql", collapse_aids=False)  # al
 
 # One short header per query (<=3 lines; the sql() tab enforces this cap and warns otherwise).
 QUERY_TAB = (
-    "-- LIFT QUERY - drives Headline / By advertiser / All by product (one row per advertiser x product).\n\n"
+    "-- audi_1172_select_lift.sql - drives Headline / By advertiser / All by product (one row per advertiser x product).\n\n"
     + SQL.strip() + "\n\n\n"
-    "-- COST QUERY - drives Cost per incremental, pooled per product (CPIV/CPIA).\n\n"
+    "-- audi_1172_cpiv_vv_correct.sql - drives Cost per incremental, pooled per product (CPIV/CPIA).\n\n"
     + CPIV_SQL + "\n\n\n"
-    "-- COST BY ADVERTISER QUERY - drives Cost by advertiser (same, split per advertiser x product).\n\n"
+    "-- audi_1172_cpiv_vv_by_adv.sql - drives Cost by advertiser (same, split per advertiser x product).\n\n"
     + COST_ADV_SQL + "\n\n\n"
-    "-- AID GROUP LIFT QUERY - drives AID-level lift by group (ALL MNTN advertisers, 3 product-mix groups).\n\n"
+    "-- audi_1172_aid_group_lift.sql - drives AID-level lift by group (ALL MNTN advertisers, 3 product-mix groups).\n\n"
     + GROUP_SQL + "\n\n\n"
     + SCOPING_SQL + "\n"
 )

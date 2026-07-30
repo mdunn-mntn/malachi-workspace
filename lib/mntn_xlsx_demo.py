@@ -91,6 +91,7 @@ wb.table(
     rag={"IVR advantage": rag_threshold(good_above=4.0, bad_below=2.0)},
     kind="headline", widths={"Sales vertical": 22},
     toc="The headline — MM vs 3P visit rate, cost per visit and ROAS by vertical",
+    query="sample_cohort.sql",  # names + deep-links this sheet's source query on the Queries tab
 )
 
 wb.table(
@@ -137,7 +138,7 @@ wb.glossary(
 
 wb.sql(
     "Queries",
-    "-- SAMPLE cohort SQL (illustrative)\n"
+    "-- sample_cohort.sql - SAMPLE cohort SQL (illustrative)\n"
     "SELECT\n"
     "  sales_vertical,\n"
     "  audience_group,\n"

@@ -232,6 +232,8 @@ class MntnWorkbook:
         self.status = status
         self._toc = []  # (sheet_name, one-line description, role)
         self._issues = []  # build-time violations; save_*() prints them and RAISES so a broken workbook can't ship
+        self._query_tabs = []  # titles of sql() tabs, so a table's query= can deep-link into one
+        self._pending_query_links = []  # (data_sheet_title, footnote_row, query_filename); resolved at save
 
         self.wb = Workbook()
         self.wb.remove(self.wb.active)  # start empty; cover() is added last and moved to front
@@ -356,6 +358,28 @@ class MntnWorkbook:
             raise ValueError(f"mntn_xlsx: {len(self._issues)} workbook rule violation(s) — see stderr. "
                              f"Fix them (trim text / widen columns), the file was NOT written.")
 
+    def _resolve_query_links(self):
+        """Deep-link each table's Source footnote to its query= block on the Query tab. Runs at save (after
+        every sheet exists). A query= naming a file that isn't on the Query tab fails the build."""
+        for sheet_title, foot_row, fname in self._pending_query_links:
+            target = None
+            for qtab in self._query_tabs:
+                wq = self.wb[qtab]
+                for cell in wq["A"]:
+                    v = cell.value
+                    if isinstance(v, str) and v.lstrip().startswith("--") and fname in v:
+                        target = (qtab, cell.row)
+                        break
+                if target:
+                    break
+            if not target:
+                self._issue(sheet_title, f"query '{fname}' referenced (query=) but no header naming it is on "
+                                         f"the Query tab -- add the filename to that query's header comment")
+                continue
+            qtab, qrow = target
+            fc = self.wb[sheet_title].cell(row=foot_row, column=1)  # merged footnote anchor cell
+            fc.hyperlink = Hyperlink(ref=f"A{foot_row}", location=f"'{qtab}'!A{qrow}", display=fname)
+
     def _footnote(self, ws, text, row, ncols):
         if not text:
             return
@@ -431,7 +455,8 @@ class MntnWorkbook:
 
     # -- public: table sheet -------------------------------------------------
     def table(self, name, df, finding, method="", formats=None, heat=None, rag=None,
-              signal=None, band=True, kind="data", toc="", widths=None, first_col_width=None, freeze="A"):
+              signal=None, band=True, kind="data", toc="", widths=None, first_col_width=None, freeze="A",
+              query=""):
         """Add a styled table sheet.
 
         finding  : sheet title that STATES THE FINDING (not the metric).
@@ -446,6 +471,8 @@ class MntnWorkbook:
                    the same column.
         rag      : {column_name: fn(value)->'POS'|'NEG'|'WARN'|None} -> traffic-light cell fills.
         kind     : 'headline' | 'data' | 'detail' (drives tab color).
+        query    : source .sql filename. Named inline in the bottom Source line and deep-linked to that
+                   query's block on the Query tab (resolved at save; a query not on the tab fails the build).
         """
         formats = formats or {}
         heat = heat or {}
@@ -557,10 +584,14 @@ class MntnWorkbook:
         table_width = sum(colw.get(c, 12) for c in df.columns)
         self._fit_title_height(ws, finding, table_width)
         self._fit_subtitle_height(ws, 2, method, table_width)
-        self._footnote(ws, f"Source: {self.ticket}."
-                       + (f"  Period: {self.period}." if self.period else "")
-                       + (f"  Generated {self.generated}." if self.generated else ""),
-                       start + n + 2, ncols)
+        foot_row = start + n + 2
+        self._footnote(ws, f"Source: {self.ticket}"
+                       + (f"  ·  Query: {query}" if query else "")
+                       + (f"  ·  Period: {self.period}" if self.period else "")
+                       + (f"  ·  Generated {self.generated}" if self.generated else ""),
+                       foot_row, ncols)
+        if query:
+            self._pending_query_links.append((ws.title, foot_row, query))
         if toc:
             self._toc.append((ws.title, toc, kind))
         return ws
@@ -647,6 +678,7 @@ class MntnWorkbook:
     # -- public: SQL / queries ----------------------------------------------
     def sql(self, name, sql_text, note="", toc="The SQL behind the numbers", width=120, max_comment_run=3):
         ws = self._new_sheet(name, "sql")
+        self._query_tabs.append(ws.title)  # a table()'s query= can deep-link into this tab
         self._sheet_title(ws, "Queries used (for validation)")
         if note:
             nc = ws.cell(row=2, column=1, value=_demdash(note))
@@ -891,6 +923,7 @@ class MntnWorkbook:
 
     # -- save ---------------------------------------------------------------
     def save_local(self, path):
+        self._resolve_query_links()   # deep-link each Source footnote to its query block (may add issues)
         self._raise_if_issues()   # a rule violation fails the build here -> no broken file is ever written
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.wb.save(path)
@@ -898,6 +931,7 @@ class MntnWorkbook:
 
     def save_drive(self, ticket_key, filename_desc, drive_root=None):
         """Write straight into the mounted Google Drive: My Drive/Tickets/<KEY>/<KEY> <Desc>.xlsx"""
+        self._resolve_query_links()   # deep-link each Source footnote to its query block (may add issues)
         self._raise_if_issues()   # broken workbook cannot reach Drive
         root = drive_root or os.path.expanduser(
             "~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/Tickets")
