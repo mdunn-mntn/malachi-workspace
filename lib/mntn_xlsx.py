@@ -378,7 +378,9 @@ class MntnWorkbook:
                 continue
             qtab, qrow = target
             fc = self.wb[sheet_title].cell(row=foot_row, column=1)  # merged footnote anchor cell
-            fc.hyperlink = Hyperlink(ref=f"A{foot_row}", location=f"'{qtab}'!A{qrow}", display=fname)
+            # display MUST be the full footnote text: Google Sheets renders a hyperlink's display over the
+            # cell value, so display=fname alone would hide Source/Period/Generated. Whole line stays clickable.
+            fc.hyperlink = Hyperlink(ref=f"A{foot_row}", location=f"'{qtab}'!A{qrow}", display=str(fc.value))
 
     def _footnote(self, ws, text, row, ncols):
         if not text:

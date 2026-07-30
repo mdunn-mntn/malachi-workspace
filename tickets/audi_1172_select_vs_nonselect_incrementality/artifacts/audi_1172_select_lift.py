@@ -244,7 +244,7 @@ wb.table(
     signal={"Select rel lift": {"sig": "Select sig"}, "non-Sel rel lift": {"sig": "non-Sel sig"},
             "Select edge": {}},
     kind="data", first_col_width=30,
-    toc="Per-advertiser Select vs non-Select, side by side, ranked by Select's edge.",
+    toc="Per-advertiser Select vs non-Select, side by side, ranked by Select bid volume.",
     query="audi_1172_select_lift.sql",
 )
 
@@ -278,8 +278,7 @@ cpiv_df = pd.DataFrame({
 wb.table(
     "Cost per incremental", cpiv_df,
     finding="Select is cheaper per incremental outcome: ~1.6x per visit, ~3x per conversion",
-    method="Spend (metered, prospecting) / incremental, where incremental = Reporting Verified Visits (or "
-           "conversions) x lift / (1 + lift), lift = the ghost-bid relative lift. See Read me for the method.",
+    method="Spend (metered, prospecting) per incremental outcome. See Read me / Method for the formula.",
     formats={"Spend": FMT.USD0, "Verified visits": FMT.INT, "Incr. visits": FMT.INT,
              "CPIV": FMT.USD, "Incr. conv": FMT.INT, "CPIA": FMT.USD0},
     heat={"CPIV": "low", "CPIA": "low"},   # cost: lower is greener
@@ -379,7 +378,7 @@ wb.table(
     signal={"Visit lift (IVW)": {"sig": "Vis sig"}, "Visit lift (median)": {},
             "Conv lift (IVW)": {}, "Conv lift (median)": {}},
     widths={"Visit lift (IVW)": 15, "Visit lift (median)": 16, "Conv lift (IVW)": 15,
-            "Conv lift (median)": 16, "Advertisers": 14, "Vis sig": 8, "# w/ conv": 10},
+            "Conv lift (median)": 16, "Advertisers": 17, "Vis sig": 8, "# w/ conv": 10},
     kind="data", first_col_width=14,
     toc="Overall incrementality by product mix: Both / Select-only / PTV-only (all advertisers).",
     query="audi_1172_aid_group_lift.sql",
@@ -407,7 +406,7 @@ wb.glossary(
         ("Cost (CPIV/CPIA)", "Spend / incremental. Incremental = Reporting Verified Visits (view+click+competing visits, the "
             "client-UI number) x lift / (1 + lift), lift = the ghost-bid relative lift (÷(1+lift) strips out the organic baseline)."),
         ("Why the lift looks bigger there", "CPIV uses the volume-weighted lift (right for a total-cost metric); the lift tabs "
-            "use the average-campaign lift (IVW). Same data, different question."),
+            "use the inverse-variance-weighted lift (IVW). Same data, different question."),
         ("Cost by advertiser", "Per-customer CPIV/CPIA (both cohort). Filter the Sig columns to Yes; 'n/a' = that advertiser's "
             "lift was not net-incremental or too small to measure (tiny holdout)."),
         ("AID-level lift by group", "Overall advertiser incrementality, all MNTN advertisers, split PTV-only / Select-only / "
@@ -489,7 +488,7 @@ wb.notes(
             "product). 43 of 93 requested advertisers have Select lift data, 66 have non-Select; 35 have both once campaign "
             "groups without a usable holdout are excluded, plus the 6/22 data floor (no backfill)."),
         ("Cost per incremental (CPIV/CPIA)", "Spend / incremental, incremental = Reporting Verified Visits (or conversions) x "
-            "lift/(1+lift) (removes the organic baseline; Matt Brorby confirmed). Client basis: Select $5.23/incr visit vs $8.23 "
+            "lift/(1+lift) (removes the organic baseline). Client basis: Select $5.23/incr visit vs $8.23 "
             "(1.6x), $84 vs $256/incr conversion (3.0x). Uses the volume-weighted lift, not the IVW lift on other tabs."),
         ("AID-level lift by group (observational)", "The 3-group comparison (PTV-only / Select-only / Both) is OBSERVATIONAL, not "
             "causal: advertisers self-select into Select. IVW is dominated by big advertisers (PTV-only ~0%); the median advertiser "

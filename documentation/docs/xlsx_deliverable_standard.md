@@ -237,7 +237,9 @@ Every existing builder re-run picks up the new look automatically. That is the p
   the header naming that file and sets the hyperlink. **A `query=` naming a file with no matching header on
   the Query tab HARD-FAILS the build** (so a renamed/missing query can't ship a dead reference — serves the
   "not missing anything" criterion). For the link to resolve, each query's header comment on the Query tab
-  must contain the filename (e.g. `-- audi_1172_cost.sql - drives Cost by advertiser`).
+  must contain the filename (e.g. `-- audi_1172_cost.sql - drives Cost by advertiser`). GOTCHA: the
+  hyperlink `display` must be the FULL footnote text — Google Sheets renders a hyperlink's `display` over
+  the cell value, so `display=<filename>` alone hides the Source/Period/Generated line (fixed post-review).
 - **2026-07-30 · v16** — The paint rule written down (see "What to highlight" in §3). Color lands on the
   **answer** column only — the quotable number the tab exists to deliver; labels, scale/provenance,
   baseline, and uncertainty stay unpainted. `signal` for signed verdicts (lift), `heat` for one-directional
