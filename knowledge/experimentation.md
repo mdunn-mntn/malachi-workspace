@@ -163,8 +163,10 @@ run Select vs those who don't", "accounts on feature X vs not"):
    group, 60× apart. With a heavy tail (one advertiser 294× the median), **report BOTH the IVW-pooled and a
    median-advertiser number** — they answer different questions ("where does the incremental volume sit" vs
    "what is the median advertiser"), and showing both is the honest, robust read for leadership. **Label it
-   IVW / inverse-variance, not "volume-weighted"** — the two coincide for proportions but the method is
-   inverse-variance, and a reviewer will (correctly) call out the loose label. Prefer the **median** over the
+   IVW / inverse-variance — NOT "volume-weighted" (loose) and NOT "average-campaign" (implies equal weight
+   per campaign, which is wrong: IVW is dominated by big/low-variance units, so "average" conflicts with
+   "big spenders dominate" in the same doc — AUDI-1172, relabeled in review 2026-07-30)** — the two coincide
+   for proportions but the method is inverse-variance, and a reviewer will (correctly) call out the loose label. Prefer the **median** over the
    mean for the per-advertiser number — per-unit relative lifts explode when a denominator (holdout rate) is
    tiny, which skews a mean but not a median. Exclude internal/test accounts and the single most extreme outlier.
 

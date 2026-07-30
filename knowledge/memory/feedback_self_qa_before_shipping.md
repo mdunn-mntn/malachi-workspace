@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
 doc_type: memory
-keywords: [self-qa, pre-ship checklist, render before done, dont make user qa, build enforcement, never again, recurring mistake, xlsx review, deliverable quality, hard fail build]
+keywords: [self-qa, pre-ship checklist, render before done, dont make user qa, build enforcement, never again, recurring mistake, xlsx review, deliverable quality, hard fail build, verify render not object, unit test proxy, google sheets rendering]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-30
@@ -17,5 +17,6 @@ last_verified: 2026-07-30
 **How to apply:**
 - **Mechanize what's mechanizable — a build-time HARD FAIL, not a warning.** Warnings get bypassed (I'd bumped `max_entries` past the glossary warn). If a rule is exact (a char cap, a missing query, a clipped header), make the build RAISE so a broken deliverable can't be produced. For `.xlsx` this is the v15 enforcement in `lib/mntn_xlsx.py` (`_raise_if_issues` on save): notes>320 / glossary-def>220 hard-fail, headers auto-height so they can't clip, `check_queries_covered()` fails if a `.sql` isn't on the Query tab. See [[reference_xlsx_master_format]] v15.
 - **For judgment/taste that CAN'T be linted (color density, editorializing, subtitle length, cover freshness), RE-RENDER and run a pre-ship checklist BEFORE saying "done."** Don't declare done on a tab you haven't looked at rendered. The xlsx pre-ship checklist lives in `documentation/docs/xlsx_deliverable_standard.md`. Same idea for any deliverable: open it, read it as the recipient, THEN ship.
+- **Verify the RENDER, not the object — a passing unit test is not proof the deliverable is right.** On AUDI-1172 (2026-07-30) I added a per-sheet query deep-link and unit-tested the hyperlink: `.location` and cell `.value` both asserted correct, test green. But Google Sheets renders a hyperlink's `display` OVER the cell value, so the footer's Source/Period line was HIDDEN on every data tab — the object was right, the render was wrong. Only opening it in the actual delivery surface (Sheets) caught it, in the user's screenshot review. Lesson: when a test checks the object model but the recipient sees a rendered surface (Sheets, a browser, a PDF), the test is a proxy — confirm the surface itself before "done." Same spine as mechanize-then-eyeball above.
 - **When a mistake recurs, the fix is enforcement, not another apology.** "I'll be more careful" doesn't scale; a build gate does.
 - Same spine as [[feedback_verify_edit_scripts]] (gate 'shipped' on real evidence) and [[feedback_read_full_source_before_verdict]] (look before concluding). Extends the deterministic-guard philosophy of the workspace kit to my own output.

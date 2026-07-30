@@ -260,7 +260,10 @@ Every existing builder re-run picks up the new look automatically. That is the p
   can't be linted. Ship after that pass, not after the user catches it.
 
 #### Pre-ship checklist (run every time, before saying "done")
-1. **Open the rebuilt file / read each new tab.** Don't ship a tab you haven't looked at rendered.
+1. **Open the rebuilt file in Google Sheets (the delivery surface) / read each tab as the recipient sees it.**
+   Don't ship a tab you haven't looked at rendered. A passing unit test on the object model is NOT proof:
+   AUDI-1172's footer hyperlink passed its `.location`/`.value` test but Sheets rendered the hyperlink
+   `display` over the value, hiding the Source line — only opening it in Sheets caught it.
 2. **Color is signal, not decoration.** Heat/gradient on summaries (few rows); plain on many-row lookup tables.
    Diverging red/green ONLY where one direction is genuinely good/bad — a neutral two-product diff is a signed
    number, not red/green. **Paint the answer column only** (§3 "What to highlight"): labels, scale/provenance,
@@ -271,6 +274,8 @@ Every existing builder re-run picks up the new look automatically. That is the p
    **Every data sheet passes `query="<file>.sql"`** so its Source line names + deep-links the query that built
    it (build hard-fails if the file isn't on the Query tab).
 5. **Rebuild is idempotent + clean:** no `BUILD BLOCKED`, no terseness warnings.
+6. **No person-names in any cell.** They slip into Method/notes blocks (AUDI-1172 shipped "Matt Brorby
+   confirmed", caught in review). Shared deliverables name no people; put the who in the ticket, not the sheet.
 - **2026-07-29 · v14** — SQL comment headers hard-capped. `sql()` trims any run of `--` comment lines
   (blank-separated blocks merged) to `max_comment_run` (default 3) and warns, so the Query tab never
   becomes a wall of grey. A query header is a 1-line label (what it drives + source), not prose. When
