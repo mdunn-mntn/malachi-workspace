@@ -62,7 +62,7 @@ Machine-readable block below (the `## PROBES` fenced JSON) is what the workflow 
     "id": "availability_gate",
     "question": "Why is an advertiser's audience smaller than the UI size, and what gates bidding availability?",
     "must_reach": [
-      "the DS14 augmentor 7-day availability gate (size != availability)",
+      "the DS14 availability gate (build augmentor 1d + guid 4d, 8-day serving TTL; size != availability)",
       "an audience-eval ticket that decomposed it (TI-1026 or AUDI-1117)",
       "HHST intent-gate mechanics (data_knowledge.md)"
     ]

@@ -30,7 +30,7 @@ framing_state: locked
 - **Goal (why):** Realize the cost reduction AUDI-1175 sized. Also shrinks IPDSC volume (MembershipDB resilience). Cost-reduction (Kale focus area).
 - **Objective (done-when):** Scoring input intersected with the current DS14 8-day set before the expensive scoring jobs; a shadow run shows the compute drop AND identical biddable delivery on an advertiser holdout (no lost impressions/reach/visit-rate). Shipped behind a flag with rollback.
 - **Approach:** Pre-filter the scoring input against DS14-recent (details in §3). **Largest $ lever = the DS19 `prospecting_keywords` job (34% of DAG cost, ~$9.6k/mo)**, not just the vertical jobs (~$1.3k/mo). Validate delivery parity before cutover.
-- **What would change the answer:** if a shadow run shows any delivery drop, revert and diagnose (the expected mechanism is the DS14-snapshot vs 8-day-serving-window alignment — see §3 guardrails).
+- **What would change the answer:** if a shadow run shows any delivery drop, revert and diagnose (the expected mechanism is the DS14-snapshot vs 8-day-serving-window alignment — see §3 guardrails). **Priority interaction:** if the incrementality DS14-removal experiment is prioritized (§4 Interaction), this gate must be sequenced after it or scoped to output-only — incrementality is the Q2 #1.
 
 ## 1. The Problem
 
@@ -83,6 +83,8 @@ Intersect the scoring **input** with the **current DS14 (8-day union)** set befo
 - **Serving/bidding** (Aerospike/membership-db), **Fangorn** (separate 1%-sampled feature store), **LiftLab** (served-only), **AUD-5221** (intent-score deciles on the addressable set), **totals/sizing** (already DS14-gated).
 
 **Monitoring caveat (no delivery impact, but give a heads-up):** `ddm.cache_hhst_population_filters` reads the full `prospecting_intent` as a `pct_visible/pct_active` denominator (it writes an analytics cache, never thresholds). Gating scoring will **shift that monitoring metric**. Flag the DDM/Devon owner before cutover so a metric shift isn't misread as an incident.
+
+**Interaction — conflicts with the incrementality DS14-removal experiment (surfaced 2026-07-30):** the incrementality team (Kirsa) plans to test *removing* DS14 from a campaign's bid expression as a treatment, which opens bidding to **scored-but-not-recently-seen IPs** (~1.6× the vertical pool, ~3.2× the MM-Core pool — those multipliers are `1/(1−0.39)` and `1/(1−0.69)`, i.e. derived from our own 39%/69% waste). Those IPs only become biddable *because they are scored*. **This gate removes exactly those scores**, so if both go global they conflict: the gate forecloses the experiment. It's the concrete case AUDI-1175's audit anticipated ("a non-bidding consumer needs the full universe"). Since incrementality is the Q2 #1, the resolution is a sequencing/scoping call — run the experiment first, OR use the §3 output-only gate (keeps full scoring), OR hold this ticket while the experiment is active. Clear it with the incrementality owner before implementing.
 
 ## 5. Expected Improvement (quantified)
 

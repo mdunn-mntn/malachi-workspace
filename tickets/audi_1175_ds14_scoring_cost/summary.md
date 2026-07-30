@@ -66,6 +66,8 @@ Three parallel code investigations (airflow-ti, sqlmesh, membership-db) + one BQ
 
 DS14 8d set = 259M IPs; 1d = 149M. At the strict 1-day window (original thesis) DS13 waste = 56%. Addressable count uses ALL DS14 categories; the standard `cats:[1]` gate is a subset, so true waste is >= these figures (conservative).
 
+**Window note (2026-07-30):** DS14's effective in-market window is ~9-12 days from an IP's *last log sighting* (1-4d build lookback + 8d serving TTL), but the sizing above is on the **8-day union of materialized DS14 membership** — which IS the biddable snapshot (TTL=8d ⇒ biddable = the last 8 daily builds), so the 9-12-day figure is narrative and does NOT change these numbers. Empirical DS14-window behavior (no hard cliff; display is a same-day augmentor echo; CTV has only a soft edge) is in the companion ticket **AUDI-1117** (`tickets/audi_1111_vendor_quality/audi_1117_ds14_svs_overlap/`). (The old "~7-day augmentor" reading was a decode error.)
+
 ### Consumer audit — is the gate safe? (2026-07-28)
 
 Swept airflow-ti, sqlmesh, olympus, membership-db, mode-assets, airflow-camperbid, DDM/Redshift, targeting-infra-ml. **Verdict: safe for every serving/bidding path, but NOT safe to apply globally without scoping** — one live control-plane consumer reads the full scored universe.
@@ -81,6 +83,8 @@ Swept airflow-ti, sqlmesh, olympus, membership-db, mode-assets, airflow-camperbi
 **Open question (Devon):** which system sets production HHST for the campaigns we'd gate, and is the DDM pilot (B) expanding or can its denominator move to an addressable/auction basis?
 
 **UNKNOWN (confirm with owners, not resolvable from code):** AUD-5221 population deciles (no implementation in any repo; if it splits the full US IP population it needs the full set — Alex/Zach) and any LiftLab/DS52 full-scored-universe incrementality export (none found; DS52 is an IPDSC *input* only, Liftlab is outbound Orca sync — #dev-incremental-lift owner).
+
+**MUST-KEEP-FULL — a planned (non-code) consumer, surfaced 2026-07-30:** the incrementality team's proposed **"remove DS14 as an experiment treatment"** (Kirsa; Q2 incrementality OKR) NEEDS the full scored universe. Removing DS14 from a campaign's bid expression opens bidding to scored-but-not-recently-seen IPs (~1.6× vertical / ~3.2× MM-Core pools = `1/(1−0.39)` and `1/(1−0.69)`, i.e. derived from our own waste figures). This gate removes exactly those scores → the two conflict if both go global. This is the concrete instance the audit's "what would change the answer" anticipated. Resolution is a priority/sequencing call (incrementality is Q2 #1): run the experiment first, gate output-only (keeps full scoring), or hold AUDI-1176 while the experiment is active. Tracked in AUDI-1176 §4.
 
 **Design implication (updated 2026-07-28):** the ~$9.6k/mo prize most likely **SURVIVES**. The primary auction-scoped recommender (A) already excludes non-biddable IPs from its denominator, so gating scoring doesn't touch it. The only scored-universe coupling is the DDM pilot (B) on `test_hhst_campaigns` — small-scope, and Devon owns it. De-risk with two shadow queries before any rollout:
 1. **Starvation:** per active funnel-1 prospecting campaign, count how many would fall below `next_population_required` if bid-log population were restricted to DS14-addressable IPs (and how many already hit "HHST set to max reach").

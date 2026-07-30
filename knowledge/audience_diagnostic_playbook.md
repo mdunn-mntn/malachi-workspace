@@ -65,7 +65,7 @@ sources, include/exclude, geo, and the automated clauses. Prototype: `parse_expr
 
 **6. Availability (stock vs flow).** *Is the audience deliverable, or just big on paper?*
 - Realized reach + frequency + daily fresh-IP supply from `cost_impression_log` (`availability.sql`, `availability_daily.sql`).
-- Read: low frequency + fresh IPs arriving daily = NOT pool-exhausted (room to scale spend). Frequency spiking + fresh-IPs→0 = availability-limited. The **DS14 7-day augmentor filter is the platform's formal availability gate.**
+- Read: low frequency + fresh IPs arriving daily = NOT pool-exhausted (room to scale spend). Frequency spiking + fresh-IPs→0 = availability-limited. The **DS14 availability gate (build = augmentor 1d + guid 4d; 8-day serving TTL, ~9-12d effective) is the platform's formal availability gate.**
 
 **7. Targeting vs creative.** *Is poor performance our targeting or their ads?*
 - Score→visit-rate gradient (`visitrate_by_score.sql`, join `cost_impression_log`×`clickpass_log`) + peer benchmark (`ctv_vr_benchmark.sql`).
