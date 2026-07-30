@@ -14,9 +14,9 @@ time_unit: date
 ttl_days: null
 approx_rows: null
 approx_logical_bytes: null
-schema_synced: 2026-07-19
-last_verified: 2026-07-19
-coverage_state: enriched
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [waypoints, conversion_funnel, attribution]
 keywords: [waypoints, transitions, funnel, dropoff, funnel_step, source_event, target_event, pct_to_next, sequential, source_users, transition_users, session_key, ga_client_id, ad_served_id, from_verified_impression]
 source: INFORMATION_SCHEMA+human
@@ -128,9 +128,10 @@ This view is already aggregated, so joins to dimensions are **N:1 and safe** (no
   (companion `attr_advertiser_selective_performance_config`) — the per-advertiser Waypoints pixel config that
   defines the funnel stages & event-name classification (carries a `deleted` flag). This is the origin of the
   stage/event labels. Config dim, **N:1**.
-- **Lineage / sibling views:** derived from **`waypoints_fact`** (physical, 187M rows / 42.5 GB, partition
-  `day`) via **`waypoints_transition_daily`** (physical `…__1934107001`, the per-user-event transition
-  detail: one row per source→target user event, carries `group_id`, `is_ordered`, `current_ga_client_id`,
+- **Lineage / sibling views:** derived from **`waypoints_fact`** (physical TABLE, 232.6M rows / 54.1 GB as
+  of 2026-07-29, partition `day`) via **`waypoints_transition_daily`** (SQLMesh view `…__1934107001`, the
+  per-user-event transition detail: one row per source→target user event, carries `group_id`, `is_ordered`,
+  `current_ga_client_id`,
   `current_session_key`, `current_ad_served_id`). `waypoints_transition_analysis` is a near-passthrough of
   `waypoints_transition_daily` at that same detail grain. **`waypoints_transitions` (this view) is the
   aggregated funnel-rate rollup** of that detail — use it for rates; use the daily/analysis views for the
@@ -175,8 +176,8 @@ This view is already aggregated, so joins to dimensions are **N:1 and safe** (no
   billed / 167.9 s slot / 1.5 s wall**, 160 partitions scanned, 166M+ base rows read — confirms the
   full-history scan even for one output day.
 - **`approx_logical_bytes` = null** (derived aggregation view; no single stored byte count). Real backing
-  storage lives in `waypoints_fact` (42,537,927,068 bytes / 187,051,929 rows) which this view filters +
-  aggregates — do not treat the view's scan estimate as logical bytes.
+  storage lives in `waypoints_fact` (54,098,086,880 bytes / 232,613,083 rows, 2026-07-29; up from 42.5 GB/187M
+  at enrichment) which this view filters + aggregates — do not treat the view's scan estimate as logical bytes.
 
 ## Example queries
 ```sql
@@ -206,6 +207,7 @@ ORDER BY source_event_group_order, target_event_group_order, transition_users DE
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-19: skeleton→enriched. No prose oracle existed in data_catalog.md / data_knowledge.md (net-new; only related pixel-config `attr_advertiser_waypoints_event_mapping` referenced at data_knowledge.md:4146) — enriched from live view SQL + samples. Resolved view chain: waypoints_transitions → waypoints_transition_daily (`…__1934107001`) → waypoints_fact (physical `…__2720337691`, partition `day` DATE, cluster [advertiser_id,campaign_id,funnel_mode], 187M rows/42.5 GB). This view = aggregated funnel-transition rollup, funnel_mode='sequential' only. Verified live 2026-07-17: 11-tuple grain unique (1659=1659), event_type∈{URL,DLV}, from_verified_impression TRUE-or-NULL (never FALSE), pct_to_next_users∈[0,1], source_users≥transition_users always, 58% of rows are transition_count=0 scaffold placeholders. Key drift/finding: the outer `day` filter does NOT prune (18.24 GB with & without, same 1-col dry-run) because source_target_catalog is DISTINCT over all history — prune lever is `advertiser_id` (cluster, ~6.8×). partition_by=day but require_partition_filter=false at the surface (inner view supplies day>='2026-02-10'). approx_logical_bytes=null (derived view).
+- 2026-07-29: enriched→verified. Re-introspected live: 25 cols/types unchanged, view hash `__3774954985` unchanged, resolves via `waypoints_transition_daily` (SQLMesh view, corrected from "physical") to fact `waypoints_fact` (partition `day` require-filter, cluster [advertiser_id,campaign_id,funnel_mode]). Fact grew 187M→232.6M rows / 42.5→54.1 GB (rolling retention); refreshed backing-storage figures. No schema/partition/cluster drift.
 <!-- CHANGELOG END -->
 
 ## View definition
