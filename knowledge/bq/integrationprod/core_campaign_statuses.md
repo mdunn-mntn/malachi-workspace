@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 7
 approx_logical_bytes: 520
 schema_synced: 2026-07-29
-last_verified:
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaigns, taxonomy, reference]
 keywords: [campaign_status, campaign_status_id, status, live, paused, inactive, deleted, legacy_archived, enum, campaigns, core_campaign_statuses, campaign_statuses, cdc]
 source: INFORMATION_SCHEMA+human
@@ -133,4 +133,5 @@ WHERE deleted = FALSE AND campaign_status_id NOT IN (8, 9);
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Doc-debt queue (queried before, no catalog doc). Enriched from LIVE schema (`bq show`) + full 7-row dump. BASE TABLE, 7 rows / 520 B, clustered on campaign_status_id, no partition/TTL. Verified enum {1 Ready,3 Live,4 Pause By Advertisers,5 Pause By MNTN,7 Inactive,8 Deleted,9 Legacy Archived} (sparse — no 2/6); PK/cluster campaign_status_id; carries created_at (dim-seed ts) + datastream_metadata CDC RECORD. Confirmed silver.core.campaign_statuses is a SELECT * view over this table. Reconciled with data_knowledge.md §campaign_status_id mapping: 3=Live delivers, 8/9 escape the deleted BOOLEAN → filter campaign_status_id NOT IN (8,9); rankability gate uses campaign_status_id IN (1,3).
+- 2026-07-29: enriched→verified. Independent confirm pass — re-dumped all 7 rows live: enum {1 Ready,3 Live,4 Pause By Advertisers,5 Pause By MNTN,7 Inactive,8 Deleted,9 Legacy Archived} unchanged (sparse, no 2/6); 4 cols / partition none / cluster campaign_status_id / no TTL / 7 rows confirmed. No drift.
 <!-- CHANGELOG END -->

@@ -14,10 +14,10 @@ cluster_by:
 time_unit: timestamp
 ttl_days: null
 approx_rows: 32560
-approx_logical_bytes: 4357716
+approx_logical_bytes: 4297920
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain:
   - household_score
   - threshold
@@ -175,5 +175,6 @@ FROM `dw-main-bronze.integrationprod.dso_household_score_thresholds`;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Introspected live (dw-main-bronze): BASE TABLE, physical=self, unpartitioned, CLUSTER BY campaign_id, no TTL, max_staleness 15m (Datastream CDC replica of coredb dso.household_score_thresholds). 8 cols. Grain confirmed one-row-per-campaign empirically. Threshold semantics (0/neg = no gate, 10000 = HI-only, 0–10000 bidder scale, bands HI/PP/MI/MR) grounded in data_catalog §archives.household_score_threshold_archives + §dso.* threshold tables + §score columns (AUDI-1070). last_verified left null pending an independent confirm pass.
+- 2026-07-29: enriched→verified. Independent confirm pass — grain re-confirmed (campaign_id unique: 32,560 = 32,560 distinct); threshold range −100..10000, ≤0 no-gate 21,853, =10000 HI-only 2,398 (semantics hold); 8 cols / partition none / cluster campaign_id / no TTL unchanged. Refreshed approx_logical_bytes. No drift.
 <!-- CHANGELOG END -->
 </content>

@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 16830
 approx_logical_bytes: 2151489
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [campaigns, dso, budget-pacing, targeting]
 keywords: [campaign_id, dso, demand_side_optimization, dso_configuration_service, campaign_presets, preset, override, frequency_cap, pacing, pacing_behavior, budget_pace_preset, recency_score_threshold, viewability_score_threshold, cpm_threshold, household_score_threshold, publisher_performance_threshold, network_performance_threshold, pmp_nullification, datastream_metadata]
 source: INFORMATION_SCHEMA+human
@@ -127,6 +127,7 @@ ORDER BY update_time DESC
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Confirmed BASE TABLE (Datastream CDC replica), unpartitioned, clustered on `campaign_id`, no TTL, 16,830 rows / ~2.15 MB. Verified grain (campaign_id unique, current-state upsert). Derived column meanings + sparsity from live COUNTIF/DISTINCT; documented `reason` as append-only audit log and `datastream_metadata.source_timestamp` as ms epoch. Distinguished from the versioned DSO budget tables.
+- 2026-07-29: enriched→verified. Independent confirm pass — grain re-confirmed (campaign_id unique: 16,830 = 16,830 distinct, 0 NULL); 21 cols / partition none / cluster campaign_id / no TTL / 16,830 rows unchanged. No drift.
 <!-- CHANGELOG END -->
 </content>
 </invoke>

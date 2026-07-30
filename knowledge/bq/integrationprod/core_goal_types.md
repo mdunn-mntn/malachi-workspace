@@ -15,8 +15,8 @@ ttl_days: null
 approx_rows: 16
 approx_logical_bytes: 1996
 schema_synced: 2026-07-29
-last_verified: null
-coverage_state: enriched
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [dimensions, campaigns, reference]
 keywords: [goal_type, goal_type_id, goal_type_name, core_goal_types, ROAS, Click ROAS, eCPA, CPA, ROI, VisitRate, CostPerVisit, CostPerCompletedView, optimization goal, campaign_groups, enum, lookup, cdc, integrationprod]
 source: INFORMATION_SCHEMA+human
@@ -158,4 +158,5 @@ ORDER BY goal_type_id;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-29: skeleton→enriched. Physical BASE TABLE behind the silver `core.goal_types` view; introspected via `bq show` (16 rows / 1996 bytes, unpartitioned TABLE, clustered on goal_type_id, no TTL) + INFORMATION_SCHEMA (BASE TABLE). Domain queried live (contiguous ids 1-16, names/descriptions per Purpose table). Confirmed no create_time/update_time and no deleted/is_test cols. datastream_metadata.source_timestamp = MILLISECONDS CDC-capture, identical across rows (bulk snapshot). Canonical FK campaign_groups.goal_type_id (N:1, no fan-out); campaign_groups denormalizes goal_type_name so the join is often unnecessary. Goal-attainment scoring direction (>= revenue / <= cost; CPCV id14 auto-passes) carried from data_knowledge.md.
+- 2026-07-29: enriched→verified. Independent confirm pass — re-dumped all 16 rows live: ids contiguous 1-16, names unchanged (ROAS…CPA); 4 cols / partition none / cluster goal_type_id / no TTL / 16 rows confirmed. No drift.
 <!-- CHANGELOG END -->

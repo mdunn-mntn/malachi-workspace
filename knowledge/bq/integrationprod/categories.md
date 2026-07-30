@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: []
 time_unit: none
 ttl_days: null
-approx_rows: 2020272
-approx_logical_bytes: 619636313
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 2045764
+approx_logical_bytes: 627209165
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [audience, targeting]
 keywords: [categories, data_source_id, data_source_category_id, DS13, DS16, DS21, DS14, taxonomy, verticals, funnel-tree, path_from_root, mntn_id_type, hierarchy]
 source: INFORMATION_SCHEMA+human
@@ -133,4 +133,5 @@ ORDER BY data_source_category_id;
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-19: skeleton→enriched. Live-verified: BASE TABLE (no partition/cluster/TTL); PK = (data_source_id, data_source_category_id) — dscid alone collides (2,979); DS domain {13,14,16,21} only (DS35/DS19/DS38 absent); `mntn_id_type` node-type domain 0–11 (ROOT/AdvertiserID/PageViews/Conversions/Impressions/VV/Prospecting/MultiTouch/Retargeting/CampaignGroupID/CampaignID/Wins) matches documented DS16 tree; `updated_date` 100% NULL, `deprecated` 0% TRUE, no `deleted`/`is_test` cols. Dry-run: SELECT * 591 MiB vs SELECT name 24 MiB. Reconciled prose drift: (a) DS14 = ROOT-only (1 row) here vs 5 categories in the fpa/tpa/audience-expression view; (b) confirmed DS35/DS19 names live in tpa.categories / tpa__mntn_matched_taxonomy__v2, not here.
+- 2026-07-29: enriched→verified. Re-introspected live: 20 cols / partition none / cluster none / no TTL unchanged; PK = (data_source_id, data_source_category_id) re-confirmed (distinct pair 2,045,764 = COUNT(*); dscid-alone collisions still exactly 2,979); DS domain still {13,14,16,21} (DS16 1,956,323 / DS21 89,254 / DS13 186 / DS14 1). Refreshed approx_rows/bytes (2,045,764 rows). No drift.
 <!-- CHANGELOG END -->

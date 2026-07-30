@@ -12,11 +12,11 @@ require_partition_filter: false
 cluster_by: [publisher_id, site]
 time_unit: milliseconds
 ttl_days: null
-approx_rows: 1193783
-approx_logical_bytes: 193238910
-schema_synced: 2026-07-20
-last_verified: 2026-07-20
-coverage_state: enriched
+approx_rows: 1196910
+approx_logical_bytes: 193705499
+schema_synced: 2026-07-29
+last_verified: 2026-07-29
+coverage_state: verified
 domain: [ctv, supply-quality, inventory]
 keywords: [ctv_sites, publisher_type, living-room-quality, lrq, blocklist, allowlist, deal_id, pmp, supply-path, site-classification]
 source: INFORMATION_SCHEMA+human
@@ -158,4 +158,5 @@ WHERE publisher_type_id = 1 AND block = FALSE;
 <!-- CHANGELOG START -->
 <!-- coverage transitions + schema changes: `- YYYY-MM-DD: skeleton→enriched` / `- YYYY-MM-DD: column X added` -->
 - 2026-07-20: skeleton→enriched. No prose oracle existed in data_catalog.md or data_knowledge.md (net-new/undocumented table) — enriched from LIVE schema + empirical queries only. Confirmed: real BASE TABLE (not a view), no partition, cluster (publisher_id, site); grain = one row per globally-unique `site`; publisher_type_id domain from public_publisher_types (1=LRQ/2=CTV-Other/3=Display/4=Encrypted); block fully correlated with type (1=allow, else block); ctv_site_id ~92% NULL & datastream uuid non-unique (neither is a key); deal_id multi-valued; source_timestamp = ms CDC-capture; publisher_id 99.996% FK to public_publishers; sibling ctv_sites is a near-dup minus datastream_metadata/clustering.
+- 2026-07-29: enriched→verified. Re-introspected live: 12 cols / partition none / cluster (publisher_id, site) / no TTL unchanged; publisher_type↔block correlation re-confirmed exactly (type 1 LRQ→block=FALSE 139,892; types 2/3/4 + NULL→block=TRUE, 1,056,313+705); 1,196,910 rows. Refreshed approx_rows/bytes. No drift.
 <!-- CHANGELOG END -->
