@@ -211,32 +211,31 @@ source `partners/bombora/segments/20260726/` **empty** → `ipdsc/dt=2026-07-27/
 partition calendar (delivery began ~07-06): **ABSENT** 07-13/15/17/19/25/27; **PRESENT** 07-06→12, 14, 16,
 18, 20→24, 26, 28. All correct/expected for the intermittent Bombora feed.
 
-**Downstream symptom — `enriched_impressions` DS51=0 for 07-27. STATUS: enriched=0 correctly mirrors serving
-(0 DS51 impressions served that day); the ipdsc-skip explanation is WRONG (see 2nd correction); root cause of the
-serving-0 is OPEN (bidder/serving domain).** Jordan Piepkow (Staff SWE, #alerts) flagged
-`mntn-analytics-prod-01.analytics_curated.enriched_impressions` DS51 for `dt=2026-07-27` reading ~110,798 one day
-and **0** the next. Early framing ("0 is correct, it's the DS51 skip") got the enriched=0 right but the CAUSE
-wrong: the DS51 ipdsc skip is not why serving was 0 (a different skip day, 07-25, served 104K). Do not attribute
-a downstream DS zero to an ipdsc skip without checking whether OTHER skip days also zeroed.
+**Downstream symptom — `enriched_impressions` DS51=0 for 07-27. RESOLVED (3rd + final, verified end-to-end
+2026-07-29): the 0 is WRONG — a `cost_impression_log` (CIL) build data-loss. The ~110K impressions are REAL.**
+Jordan Piepkow (Staff SWE) flagged `mntn-analytics-prod-01.analytics_curated.enriched_impressions` DS51 for
+`dt=2026-07-27` reading ~110,798 one day and **0** the next. Traced the full auction funnel for the 6 Bombora
+campaigns (CG 131563 / adv 30506 "MNTN - No ENG Testing"; campaigns 648318-648323):
+- **spend_log** (won auctions, spend source of truth): **110,792** wins, **$903.83 billed, 100% production
+  (test=0), 100% rendered** (impression_timestamp populated), partner_id=8 (Beeswax).
+- **win_logs** (Beeswax win feed): **110,862** wins.
+- **cost_impression_log**: **0** for these campaigns on 07-27 (the advertiser's OTHER campaigns logged **1.47M**
+  in CIL that day, fine) ← **the data is dropped HERE.**
+- **enriched_impressions**: 0 (correctly mirrors the broken CIL).
 
-**What's solid (verified):** `enriched_impressions.data_source_id` = what the campaign **targeted**
-(`v_campaign_group_segment_history`), enriched against a **35-day BACKWARD** ipdsc window
-(`ipdsc_dt BETWEEN to_date(time)-35d AND time`); builder `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`
-(config `lookback=2`, `ipdsc_lookback=35`, `dsid_block_list=[2,14,42]`, DS51 not blocked). So enriched DS51 ≈ the
-Bombora campaign's **served** impressions ~1:1. CG 131563 / adv 30506 ("MNTN - No ENG Testing", TEST advertiser,
-campaigns 648318-648323): served 07-25=104,177 · 07-26=108,744 (=enriched 108,744) · 07-27=0 (=enriched 0) ·
-07-28=141,002 (≈140,998). enriched=0 correctly MIRRORS serving (0 served → 0 enriched).
+So **both** CIL source tables carry ~110K real/rendered/billed impressions, but the **CIL build dropped them** for
+these campaigns on 07-27; enriched followed to 0. The ~110K = the 110,798 Jordan saw (it was in CIL/enriched
+yesterday, a CIL reprocess of the 07-27 partition removed it). **Route to the CIL SQLMesh-model owner
+(BER/data-platform):** CIL under-counts 07-27 for these campaigns despite spend_log + win_logs both having the data.
+Logged in `improvements_backlog.md`.
 
-**⚠ 2nd correction — the ipdsc skip does NOT cause the 07-27 zero (earlier "skip → serving dark" claim RETRACTED).**
-Hard counter-evidence: **07-25 was ALSO a DS51 ipdsc skip day** and the Bombora campaigns served **104,177** that day
-(membership persisted from the 07-24 drop; DS51 membership-db TTL ~90d per Jordan). And on **07-27 the advertiser served
-1.47M impressions across its OTHER campaigns**; only the 6 Bombora campaigns went to 0. So 07-27=0 is a
-**Bombora-campaign-specific serving gap on that one day**, not the skip and not a data-pipeline gap. **OPEN, bidder/serving
-domain (NOT the reporting pipeline):** likely a campaign-level pause (test advertiser) or a 07-26 DS51 membership-load
-failure into the bidder; the 90d TTL means membership *should* have persisted (as on 07-25), so a true serving-0 is
-surprising. The 110,798 seen for 07-27 the prior day = an unexplained transient (campaigns served 0). **Method lesson:**
-the skip-correlation was a red herring; I verified the 1:1 serving mirror but extrapolated the *cause* from a single
-confirming day (07-27) without checking the counter-case (07-25). One confirming case is not proof of a mechanism.
+**⚠ RETRACTED (both prior explanations were WRONG):** (1) "DS51 ipdsc skip → 0" — dead (07-25 was also a skip and
+served 104K). (2) "Bombora-campaign serving gap / bidder-side" — dead (the campaigns DID serve 110,792 on 07-27,
+$904 billed). Nothing here is about DS51/ipdsc/serving/the enrichment lookback/test traffic. It is a CIL completeness
+bug. **Method lesson (the big one): when a DERIVED/reporting table (CIL, enriched) shows an anomalous 0, check the
+SOURCE OF TRUTH (spend_log) BEFORE theorizing why the 0 is "correct."** I spent four rounds rationalizing why 0 was
+right; one spend_log query showed the impressions were real. Test whether the number is TRUE before explaining why
+it's expected.
 
 **⚠ Process lesson (the real takeaway — a reasoning trap, logged so we don't repeat it):** the original
 GCS-evidenced call (0 correct, benign skip) was right. When Jordan raised a smart architectural objection
@@ -425,12 +424,14 @@ late" is a system-wide DS-flow lag, not an isolated builder bug. (Same-night `au
 audit: **RULED OUT as related to this DS-flow lag / INC-004** — Compass confirmed aud22 reads CIL +
 `geo.network_locations` + audience config from BigQuery, never `ipdsc_geo`/the DS chain, and is
 geo_version-pinned. Its 07-28 fires are low-volume (6 CGs, 11 IPs, 12 imps, $0.12) but **are a real geo
-data-sync artifact, not noise** — afternoon RCA (Harry/zach, 2026-07-29) traced them to **AUDI-1072
-recurring**: `network_locations`/`location_data` hierarchy resolves an IP to the wrong DMA (e.g. 638) vs the
-audience config + ipdata (Columbus). AUDI-1072 closed 07-23 with a 2-ZIP patch (PR #1147: 43221, 45814) +
-Template-55 suppression, **not a source fix**; the `metro_id`/`hierarchy` defect still hits other US ZIPs
-(5 live at geo_version 1783900800). Durable fix is source-level, not per-CGID. Detail + diagnostic query in
-`knowledge/data_catalog.md` (geo location mapping discrepancy note).)
+data-sync artifact, not noise** — traced to **AUDI-1072, which is still OPEN**: `location_data` has rows
+where `metro_id` and the `hierarchy` chain disagree on the DMA (e.g. ZIP 43221 → hierarchy 638/Toledo vs
+metro_id 535/Columbus); served vs targeted geo diverge → audit fires. Fix = PR SteelHouse/sqlmesh#1147
+("keep location_data.metro_id and hierarchy in sync", a GENERAL type-6/7 COALESCE) is **still an OPEN DRAFT,
+never deployed** — blocked on forward-only backfill + a plan-permission error (DevOps DEV-8264). AUDI-1072
+was marked Done only because DM suppressed the audit (ignore template-55, filter World Cup), not because the
+root cause shipped. Not per-CGID; deploy #1147 forward-only once DEV-8264 clears. Full detail + diagnostic +
+open network_locations caveat in `knowledge/data_catalog.md` (geo location mapping discrepancy note).)
 
 **Compass RCA (2026-07-29) — deeper findings (evidence: Cloud Audit Logs + Spark logs + git):**
 - **Late START, not slow compute.** `run_geo` CreateBatch was accepted at **08:07:23Z**; the geo Spark job
