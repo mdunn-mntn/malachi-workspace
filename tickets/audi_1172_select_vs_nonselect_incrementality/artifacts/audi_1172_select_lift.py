@@ -331,8 +331,7 @@ wb.table(
            "'n/a' = the advertiser's lift was not net-incremental or too small to measure (tiny holdout).",
     formats={"Select CPIV": FMT.USD, "Select CPIA": FMT.USD0,
              "non-Sel CPIV": FMT.USD, "non-Sel CPIA": FMT.USD0},
-    heat={"Select CPIV": "low", "Select CPIA": "low", "non-Sel CPIV": "low", "non-Sel CPIA": "low"},
-    kind="data", first_col_width=30,
+    kind="data", first_col_width=30,   # no heat: a 35-row lookup table reads cleaner as plain numbers + the Sig filter
     toc="CPIV/CPIA per advertiser (both cohort); filter the Sig columns to significant rows.",
 )
 
@@ -343,13 +342,13 @@ grp = grp.sort_values("group", key=lambda col: col.map(gorder)).reset_index(drop
 vsig = grp["vis_sig"].astype(str).str.lower().isin(["true", "1", "yes"])
 CN = lambda x, n: (x if (pd.notna(x) and n >= 5) else "n/a")   # hide conv lift on thin groups (Select-only n=2)
 group_df = pd.DataFrame({
-    "Group":                    grp["group"].values,
-    "Advertisers":              grp["n_adv"].values,
-    "Visit lift (volume-wtd)":  grp["vis_ivw"].values,
-    "Visit lift (typical adv)": grp["vis_ew_med"].values,
-    "Vis sig":                  [YESNO(b) for b in vsig],
-    "Conv lift (volume-wtd)":   [CN(x, n) for x, n in zip(grp["conv_ivw"], grp["n_conv"])],
-    "Adv w/ conv":              grp["n_conv"].values,
+    "Group":                 grp["group"].values,
+    "Advertisers":           grp["n_adv"].values,
+    "Visit lift (vol-wtd)":  grp["vis_ivw"].values,
+    "Visit lift (typical)":  grp["vis_ew_med"].values,
+    "Vis sig":               [YESNO(b) for b in vsig],
+    "Conv lift (vol-wtd)":   [CN(x, n) for x, n in zip(grp["conv_ivw"], grp["n_conv"])],
+    "# w/ conv":             grp["n_conv"].values,
 })
 _b = grp[grp["group"] == "Both"].iloc[0]
 _p = grp[grp["group"] == "PTV-only"].iloc[0]
@@ -361,9 +360,11 @@ wb.table(
     method="Overall advertiser-level visit lift (all of an advertiser's prospecting, both products), across ALL "
            "MNTN advertisers. Volume-weighted = precision-pooled (big advertisers drive it); typical adv = median "
            "advertiser. Observational, not causal. Test accounts + WGU excluded. See Read me / Method.",
-    formats={"Visit lift (volume-wtd)": FMT.PCT1, "Visit lift (typical adv)": FMT.PCT1,
-             "Conv lift (volume-wtd)": FMT.PCT1, "Advertisers": FMT.INT, "Adv w/ conv": FMT.INT},
-    signal={"Visit lift (volume-wtd)": {"sig": "Vis sig"}, "Visit lift (typical adv)": {}},
+    formats={"Visit lift (vol-wtd)": FMT.PCT1, "Visit lift (typical)": FMT.PCT1,
+             "Conv lift (vol-wtd)": FMT.PCT1, "Advertisers": FMT.INT, "# w/ conv": FMT.INT},
+    signal={"Visit lift (vol-wtd)": {"sig": "Vis sig"}, "Visit lift (typical)": {}},
+    widths={"Visit lift (vol-wtd)": 17, "Visit lift (typical)": 17, "Conv lift (vol-wtd)": 17,
+            "Advertisers": 12, "Vis sig": 8, "# w/ conv": 10},
     kind="data", first_col_width=14,
     toc="Overall incrementality by product mix: Both / Select-only / PTV-only (all advertisers).",
 )
