@@ -1,0 +1,426 @@
+[00:00] Man.
+[00:01] Yeah. So, okay. This is...
+[00:06] Yeah, get into Databricks.
+[00:09] One second. My phone's upstairs. I gotta go grab it.
+[00:12] Yeah, bro.
+[00:14] Let's go. Runs.
+[00:21] Aww.
+[00:30] There's one for you, there you go.
+[00:47] all right i'm back sorry yeah no problem
+[01:03] what sucks is i never know where to find this stupid i'm looking for it and
+[01:12] yeah it's something they did yesterday like the auto scaling or something
+[01:16] is making certain other tasks fail, too.
+[01:24] Okay, let's try this again.
+[01:27] Let me see what's running.
+[01:33] Page's address is not valid.
+[01:35] Four, five.
+[01:46] Am I on VPN?
+[01:53] Yeah, I am.
+[01:58] Why isn't data...
+[02:09] Are you able to go to this link on Databricks?
+[02:14] I mean, I'm in there right now.
+[02:15] Let me look.
+[02:19] That's weird.
+[02:20] I keep getting...
+[02:21] Let me give you the link I have, maybe, and then...
+[02:25] Yeah, that's weird.
+[02:26] Oh, yeah, that one didn't exactly...
+[02:28] It wanted me to log in again, so something weird.
+[02:33] Okay.
+[02:33] Yeah, try the link I sent you.
+[02:35] Huh.
+[02:36] Oh.
+[02:39] Yeah, maybe from Okta you can do it.
+[02:42] Yeah, I was just clicking it from Okta.
+[02:44] Or Octa.
+[02:46] Oh, the weirdity of your tail scale.
+[02:48] Try it.
+[02:49] Oh, I know what it is.
+[02:52] The block list in Databricks got updated.
+[02:56] I have this blocker on a bunch of stuff, but sometimes I get some false positives in there.
+[03:02] There you go.
+[03:04] Yeah, we're going to have to stumble through this together.
+[03:11] I wish Victor was here sometimes because yeah okay so oh is this the one with the run I
+[03:22] don't know go click on go go click on compute on the left hand side again yeah and then
+[03:31] click job compute I think this is where it runs but yeah oh wait you you have less you
+[03:40] have less jobs. And I'm seeing you have less permissions. Yeah. That's one thing that sucks.
+[03:53] Okay. Yeah, why do you have less permissions? Let me look at your user
+[04:02] Or
+[04:05] Or
+[04:06] Or
+[04:09] Or
+[04:10] Or
+[04:13] Or
+[04:16] Or
+[04:19] Or
+[04:22] Or
+[04:25] Or
+[04:28] users manage. Okay, let me see what you have. Malachi has...
+[04:40] What are you? Your producers, dev and users. I think...
+[04:49] you need to have... Let me see what else people have.
+[04:58] Brian has admins and users.
+[05:04] I'm going to try to give you more access without making an admin,
+[05:08] but producers,
+[05:09] users,
+[05:10] man.
+[05:11] Okay.
+[05:14] Uh,
+[05:15] what does Matt have?
+[05:17] Producers,
+[05:18] dev,
+[05:21] and users.
+[05:22] Okay.
+[05:22] What the heck?
+[05:26] From developer.
+[05:28] Well, let's let me share my screen. Yeah, go ahead and do that. Good idea. And then
+[05:57] We'll still have to stumble through this together.
+[06:00] I'm not...
+[06:02] Dude, sucks that Victor's gone, because...
+[06:06] Let's...
+[06:07] Okay, so these...
+[06:09] So he switched a lot of things to use job compute,
+[06:12] which is like...
+[06:14] Or do you know the difference between these, kind of?
+[06:18] Or like all-purpose compute, you know, is like...
+[06:21] Like where you spin up an actual cluster,
+[06:23] or like you...
+[06:25] Those VMs, you know...
+[06:27] It's like reserve those VMs for you.
+[06:31] And job compute is like where it's like more abstract.
+[06:38] It's like a virtual.
+[06:40] I'm doing a bad job explaining this.
+[06:43] It's cheaper because these are like you're not spinning up a whole cluster.
+[06:48] You're like kind of reusing a cluster that's already spun up.
+[06:53] It's from my understanding, you know.
+[06:55] SQL warehouses.
+[06:56] So whenever you do like, like these are running, by the way,
+[07:00] the green ones are running. So, so you can see,
+[07:03] nobody's running these things.
+[07:07] And then SQL warehouses like with DBT, when,
+[07:11] whenever you do, or this, this has to do with the,
+[07:15] the unity catalog, you know, you, so when you,
+[07:21] when with the DBT job,
+[07:22] you do a bunch of PySpark stuff and that runs on like all purpose computer
+[07:26] job compute and at the end you have to like kind of insert it into a table or something
+[07:32] um and that's what sql warehouses are that this that's where the sql warehouse takes over
+[07:40] so that's kind of and then these other things don't worry about them too much i don't even know
+[07:45] what these things are but that's kind of my naive understanding so we kind of need to look at okay
+[07:51] let's look at this stupid code. They're not stupid, but let's, we kind of need to know.
+[08:00] Wait, right targeted signal. Oh, it's using warehouse. Okay, so let's go back. Yeah.
+[08:11] Oh, so it's going to be in the SQL. Yeah, so right here, if we click inside here,
+[08:17] monitoring. Yeah, here we go.
+[08:21] Oh, there's...
+[08:23] Oh, boy. This is fun.
+[08:29] There's something...
+[08:32] When did this start? There's so many jobs.
+[08:41] Something...
+[08:42] It's running.
+[08:47] Man, Victor would be able to like figure this out so quick.
+[08:54] Uh, oh, what's the, what's running right there?
+[09:06] I see.
+[09:07] is actually
+[09:10] running
+[09:13] or is there a run ID
+[09:18] job submission
+[09:20] response
+[09:21] or maybe we should just ask
+[09:26] AI
+[09:27] yeah
+[09:29] because this is where
+[09:32] or what happens is there like a run
+[09:36] ID. Is this the user? user would be dead? I think it'd be prod runner. But that doesn't that's not
+[09:55] gonna be something running here. Let's see what's running.
+[10:07] Nothing. Oh, and it just turned off. Oh, man. Yeah, this is so
+[10:16] good. Wait, does this still this fail? So no.
+[10:22] So the pod died. It failed timeout at 50 minutes. Run ID.
+[10:32] Oh, did this fail?
+[10:35] Let's see. This one looks like it's still running to me.
+[10:42] Yeah, but I think what it does is it just
+[10:45] Oh, it takes a little while.
+[10:47] Yeah, and then it just, well, the logs look different between them, actually.
+[10:54] Yeah, so we should try to find this one.
+[11:02] U U ID.
+[11:06] Oh, it sucks.
+[11:07] I just don't know.
+[11:14] That's okay.
+[11:15] I mean, if you don't know, I mean, I can look into Databricks now and just try to like go through AI and just have it help me navigate through the UI.
+[11:26] I just I needed to run into town, so I wasn't going to be in front of my computer, but I could always just get to it.
+[11:32] How important is this one?
+[11:36] This is this is the one where we give money to our vendors.
+[11:45] So I've never usually Victor takes care of this one.
+[11:55] He knows more about it.
+[11:57] Sean might be able to look at it.
+[12:04] Man, just finding where it's running is painful, though.
+[12:08] Yeah.
+[12:09] If you got to go, though, that's fine.
+[12:12] I could look into this a little more.
+[12:14] Yeah, it's just, I just wanted to, yeah, I'm actually, I was supposed to be like an hour ago, but this stuff happened right up there.
+[12:22] So it's not like a huge deal.
+[12:25] I just was like, I asked Brian, Brian's working on something unrelated.
+[12:28] So when they, I don't know what they did yesterday, but they did like auto scaling or something with, so certain DAGs are failing because whatever changes they made up, I don't know, but whoever's getting them GCP.
+[12:41] Yeah, so who are the admins of GCP or something like that or whatever?
+[12:45] I don't know.
+[12:46] I just know that they did some change that is causing certain long-running DAGs to fail
+[12:50] because it'll just be like, nope, it's been too long.
+[12:53] So Brian's fixing that.
+[12:55] So he's working on that.
+[12:57] Okay.
+[12:59] That's why...
+[13:00] Let's look at this real quick.
+[13:02] Sorry.
+[13:02] Oh, this has some stuff running.
+[13:06] Well, sorry.
+[13:07] I mean, I could sit here forever.
+[13:11] what is in this?
+[13:18] Anyway, yeah.
+[13:19] Yeah.
+[13:21] You got to go, you got to find a job first.
+[13:24] And then I assume like, if this is the job,
+[13:28] let's see career profile.
+[13:32] Somehow you get some logs too.
+[13:34] That's the next thing.
+[13:36] Yeah.
+[13:37] So it's kind of painful.
+[13:41] copy our work here can you see somehow i don't know
+[13:47] well uh yeah you you okay here it is this is it here that's cool here i'll send it to you
+[13:59] here is our actual synapse like this we did you get it from ai today yeah well it knows how to
+[14:04] do the url so basically i send it and it so it takes you straight to the url okay so this is the
+[14:10] oh okay oh and it looks like it is running yeah okay now now here's spark ui that's where i would
+[14:16] go and then see then now you could kind of this this as you've seen this before right
+[14:24] yeah yeah uh he's shown me you should familiarize yourself with this this is a very common
+[14:30] data engineering thing.
+[14:34] Okay.
+[14:34] So like in here,
+[14:37] SQL DataFrame,
+[14:40] there's, let's see,
+[14:41] there's the running queries.
+[14:43] If you click this,
+[14:45] this is also important.
+[14:47] Explain plan.
+[14:49] This whole thing is important.
+[14:52] I know you got to go too,
+[14:54] so I'm trying to.
+[14:54] No, it's okay.
+[14:55] Don't, it's fine.
+[14:57] And then like,
+[14:58] weight details.
+[15:00] Okay, this
+[15:01] is where
+[15:03] his final
+[15:05] plan
+[15:08] troop. This is where I would take
+[15:10] this
+[15:12] bit.
+[15:16] Or actually
+[15:16] or maybe just take this whole thing.
+[15:18] This is kind of a big thing.
+[15:21] And then feed it
+[15:22] to AI because this is
+[15:24] the explain plan.
+[15:25] yeah so we can kind of see what's going on and then yeah and then be like oh ai it's hanging at
+[15:33] i don't see this necessarily hanging though you know what i'm surprised that we don't have
+[15:39] rand that i've been like kind of trying to do so every single time i have an on-call alert right i
+[15:44] log it as like an internal ticket and i go through all the steps and process of how to fix it and
+[15:50] then once i resolve it i keep record of that but what i was able to do is actually if you have
+[15:55] access to airflow now if you want permanent access you have to do an api thing and like
+[16:00] they're not going to give us tokens to do that stuff anymore i don't think with the whole
+[16:03] vault yeah i but what yeah i know i think i know where you're going i had that mcp tool
+[16:10] but they revoked access to everything for it yeah and so now you have to still ssl but what you can
+[16:16] do is when you have a so it's not a hundred percent automated but what you could do is like
+[16:21] exactly these stages i mean the way of troubleshooting this stuff is like
+[16:25] almost always the same i mean it varies slightly so if you had like dbt if you have data bricks
+[16:31] access right which again is another thing that we don't have access to what you could do is just set
+[16:36] up like an agentic workflow where each different agent has like a very specific job and then just
+[16:42] goes through this and troubleshoots the whole thing you know i'm saying like you can literally
+[16:46] get it from input to like PR almost entirely automated.
+[16:50] I do the a hundred percent. I was trying to do that. In fact, if you want,
+[16:55] just, just use this repo and you can start to try to spin it up again. Uh, data. I had it as the data.
+[17:08] I was trying, I know exactly what you mean. Cause it's, uh, yeah. If you're,
+[17:11] if you're doing repeat tasks, we'll see data.
+[17:14] and well it's like it's pretty simple because like if you just think airflow the first thing
+[17:18] is like it needs to know the task yeah exactly okay cool cool cool i will yeah send me that link
+[17:22] i will definitely take this repo i'm the only one that commits to i think you just push to main
+[17:27] but to take this and i have some of the bones in there where but it's they they revoked access a
+[17:38] lot and so like if you but i have it kind of set up to deploy via argo and so you should not do
+[17:44] that now um yeah then where's mcps right data ing ai i called it data ing ai because and then
+[17:56] yes use this is data ing ai if you add this to your views cursor use cursor right no i mean i
+[18:05] just use cloud code with the vs code extension but well whatever this this this yeah this url
+[18:12] is for the mcp oh yeah i was trying to make an mcp tool you know so that's that's what you would do
+[18:19] so you would just yeah and i i just had cursor update all or like do it all you know and so yeah
+[18:26] eventually yeah it's i that's what i wanted to do too is like read these spark like do exactly
+[18:33] what you were doing we were doing read those spark logs okay or go to the ui and then figure
+[18:40] out what stage is stuck on get the explain plan but there's a lot to it though dude because
+[18:48] oh yeah there's a lot to it that's i started i don't know how much time yeah but like that's
+[18:57] why there's some DAGs where
+[19:00] some steps here.
+[19:05] Let me just show you this because
+[19:07] I was trying to log out the explain plan on some of these.
+[19:13] So if you look
+[19:14] that's why this line of code
+[19:20] Oh yeah, right here.
+[19:24] these lines of code, I had a hell of a time just getting it to log out
+[19:29] the explain plan. But this line of code, the Spark Job Monitor,
+[19:35] yeah, this is what you should look at.
+[19:37] Because this is what I was trying to do to log out
+[19:41] the explain plan. Oh, I see.
+[19:45] Yeah, we're on the same page here.
+[19:48] You see this MCP? Yeah.
+[19:51] but it's it was painful to it was very painful just to get this to work and i i got it logging out but
+[19:59] um
+[20:00] You just feed this to your AI and see if you could start taking it over again.
+[20:10] So where did you get this from here, though?
+[20:13] I'm just curious how you went to that, because I didn't see you.
+[20:16] So here's the obvious.
+[20:18] It's in Airflow TI.
+[20:22] Wait, from Databricks, where you go to the Spark UI stuff?
+[20:26] Oh, from Spark.
+[20:27] Oh, yeah, yeah.
+[20:27] Okay. This doesn't work on Databricks.
+[20:31] I know this doesn't work on Databricks.
+[20:33] I'm just curious about the last thing.
+[20:36] Here's Spark UI right there.
+[20:39] You see that link?
+[20:41] Oh, did you put it on?
+[20:44] Yeah, I see.
+[20:46] I could give you the link.
+[20:48] Is there a way to navigate it from here?
+[20:50] So once you get to this run,
+[20:52] I have this.
+[20:56] You have to give them MCP tool access.
+[20:59] I don't know.
+[21:00] You have to make an API key and hope.
+[21:04] I thought that when we went to this job, when I gave it to you, I thought you got
+[21:09] to that by clicking some link from this page.
+[21:12] That's why I was asking.
+[21:13] This one right here.
+[21:14] Can you see my screen?
+[21:15] The Spark UI.
+[21:16] Sorry.
+[21:17] Let me back up.
+[21:21] This is the link you gave me. So I clicked here. And then this is a notebook. And then
+[21:28] right here is the Spark.
+[21:29] Oh, the Spark. I don't hold on.
+[21:32] Maybe it's under compute. Maybe it's under
+[21:36] I don't see it. Mine says cluster terminated.
+[21:38] What?
+[21:40] I can't see it. Is that the same link you gave me? Yeah, 554453. Yeah, that's the
+[21:50] same one. It says running, but on my right, it says compute. Yeah, check this out. It's
+[21:56] different than yours. You don't have the same permissions. Something's yeah. Oh, cluster
+[22:02] term. So it says for me and I just reset it to you. I mean, like it's, it's refreshed.
+[22:09] So yeah. Yeah. It's still running for me. That's yeah. It says running for me, but it
+[22:17] says cluster terminated online. So I might not have.
+[22:22] That's so weird. Yeah, we should maybe just kick you click what happens if you do
+[22:30] view run events that you like right? Yeah, right there. Oh, you were just doing that.
+[22:38] Go click. What's the board about that notebook? What happens if you click on that notebook
+[22:42] link. This right here. Yeah. Yeah, it just brings me to just brings you the code. Yeah.
+[22:57] So maybe there are permissions things maybe it should I ask Allison to give me enhanced
+[23:02] permissions or
+[23:03] yeah
+[23:05] I could give you admin if you
+[23:08] want and revoke it
+[23:09] do you want me to
+[23:12] why don't I just give you admin
+[23:14] real quick and you can see
+[23:15] see if it works at least
+[23:17] yeah then I can revoke it
+[23:19] or whatever
+[23:20] let's see
+[23:23] identity access
+[23:24] user
+[23:25] admin access
+[23:31] this. Give you this use as a request for group changing on here. Also, particularly it's
+[23:41] not easier the workspace group is later removed. These rules start in workspace. Oh, yeah.
+[23:49] Okay, whatever.
+[23:53] Okay, try it now.
+[23:58] So long it takes.
+[24:01] All right, cluster terminated still.
+[24:07] Why is that?
+[24:10] Oh, one thing.
+[24:14] See.
+[24:16] Click on, or, yeah, hang on.
+[24:19] Oh, yeah. Go to that link again.
+[24:27] Oh, it says graph timeline.
+[24:30] I can see it.
+[24:31] Oh, okay.
+[24:32] Yeah. So that gave me permissions.
+[24:35] Okay. So now I can go to the Spark UI and logs.
+[24:38] Okay. So there you go.
+[24:39] Spark UI, logs, view details, metrics.
+[24:43] So these are all different.
+[24:44] Yeah.
+[24:45] But you should get very familiar with the Spark UI
+[24:47] because that's that's like gonna be as a data engineer's bread and butter there okay
+[24:53] but yeah so just have and the important part is that sql data frame
+[25:00] um button or stages i go to a lot in the sql data frame storage is only needed when you like
+[25:09] cache things you know it's going to tell you what's cached and not okay so not everybody
+[25:14] always caches things. But yeah, so stages, you kind of see, okay, stage ID 14. So go
+[25:20] to SQL DataFrame. Okay. And then click on the running. So this one running the sub X
+[25:31] or says sub execution ID to that to his little link. Oh, so right here. Yeah. These are all
+[25:39] things i learned from victor by the way a lot of things um running jobs uh yeah so then we're
+[25:46] looking for stage 14 so scroll scroll down if if you hover on these things by the way right there
+[25:52] like it'll tell you so he's gonna tell you like hover on that it'll give you some stats about
+[25:58] it'll give you some stats or you see there's numbers there that's like telling you how many
+[26:03] rows are going into things yeah that makes sense so you should become familiar with this but yeah
+[26:09] scroll down so it's kind of it's the blue the blue ones is what it's done it's just kind of
+[26:15] stuck on that exchange thing or something right now or maybe not stuck but that's you know yeah
+[26:21] if you expand it they'll tell you like a bunch of stats okay and then so that's important scroll
+[26:26] down then sql data frame properties i think oh no no uh details details sorry and so this is the
+[26:34] explain plan so if you look for stage 14 scroll that see that yeah that right there is where it's
+[26:43] a hat right you know ryan i bet you i i wonder there's probably somebody who's already done this
+[26:49] like where they're distracted all the logs i want to look it up because somebody might have
+[26:53] already done all the hard work and then i thought that too i thought that too and i brought this up
+[27:00] with victor too but he dude it's kind of an art because there's it's hard to do the spark ui is
+[27:10] not easy but dude i would love to you should you should do it because i would love to use a tool
+[27:15] like that oh yeah i would look around that'd be that'd be so great to just have like this full
+[27:20] workflow or i mean how cool would it be if you already had this workflow where it's like
+[27:25] yeah assuming something's failed yeah because like i was thinking about this just like as a
+[27:30] high level thing how great would it be if you just had a sensor on every single airflow you know dag
+[27:37] right and if something failed it immediately started this process and did the debugging
+[27:43] and then you just got like a summary like hey this is what was found here's a potential pr
+[27:49] that fixes the issue or whatever or it's something you can't fix like gcp i don't know had too much
+[27:54] 100% you shouldn't pursue that
+[27:57] you should pursue that because any company
+[27:59] would want to hire you I was trying
+[28:01] to do it through slack you know
+[28:03] so when you get those alerts that's what I was trying to do
+[28:05] but they turned off my slack bot
+[28:07] yeah they turned off my slack bot too
+[28:08] I had a slack bot that was scraping every single channel
+[28:11] only grabbing the important infrastructure
+[28:13] information or stuff that was going on
+[28:15] and logging it and yeah
+[28:17] they cut it off they told me I could keep it
+[28:19] and then
+[28:20] later they deleted it
+[28:23] which is annoying because if you delete it you can't like re you had to go through all those
+[28:27] slack bot creation steps and then they're like never mind we changed our mind nobody gets access
+[28:32] like okay yeah dude so that's the thing do you security see devops is the new dbas they're there
+[28:40] just to crush your dreams but i have the same dream man you but if if you could just if if
+[28:46] maybe don't make it as automated as like slack integration all that but if you could just like
+[28:50] get an mcp agent to like read the spark ui and now keep in mind google spark ui is different
+[28:59] google takes the the logs the spark logs and i'd see oh man and there's other issues too like when
+[29:07] a spark job finishes you have to go to the history server and our data proc jobs don't
+[29:15] retain the history unless you specifically tell it to.
+[29:18] Yeah.
+[29:19] So if it fails, you got to, it's painful.
+[29:23] So there's a lot of things, gotchas you'll run into, but do,
+[29:27] yeah, have quad or whatever contribute to that repo I gave you and take,
+[29:33] take it over.
+[29:33] I'm not even using it anymore.
+[29:34] And if you, if you could get something we're going to do, that'd be great.
+[29:38] That would help do that.
+[29:39] That would help you learn.
+[29:40] That would help out all the data engineers on your team.
+[29:42] They would love you.
+[29:43] Yeah, I think I might do that because honestly, that's one of my favorite things to do is automate stuff so I don't have to do it anymore.
+[29:52] I agree, dude.
+[29:53] It's my favorite part of the job.
+[29:56] Those are the best developers.
+[29:58] The lazy developers are the best because they just automate things.
+[30:01] Yeah.
+[30:03] Do it, man.
+[30:05] Cool.
+[30:06] All right.
+[30:06] Well, I will at least it looks like it's running.
+[30:09] so um but uh yeah i'll throw that in the backlog so sweet cool thanks ryan all right no problem
+[30:16] bye
