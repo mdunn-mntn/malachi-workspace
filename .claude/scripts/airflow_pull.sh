@@ -16,11 +16,12 @@ WORKSPACE="/Users/malachi/Developer/work/mntn/workspace"
 SCRIPT_DIR="${WORKSPACE}/.claude/scripts"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/config.env"
+cd "$WORKSPACE"   # so manifest log_paths are repo-relative
 
 DATE="$(date -u +%F)"
 DEPLOYMENT_ID="${AIRFLOW_TI_DEPLOYMENT_ID}"
-OUTDIR="${WORKSPACE}/${AIRFLOW_PULL_DIR}"
-ONCALL_DIR="${WORKSPACE}/on-call"
+OUTDIR="${AIRFLOW_PULL_DIR}"
+ONCALL_DIR="on-call"
 MODE="list"
 INTERVAL="${AIRFLOW_POLL_INTERVAL}"
 PY_ARGS=()

@@ -67,6 +67,10 @@ knowledge/bq/perf_archive/
 knowledge/_staging/
 .claude/.session_state
 
+# Airflow log puller — bulk per-day task-log dumps are triage scratch (durable evidence is filed to
+# on-call/incidents/INC-NNN/). Top-level on-call/*.log failure drops stay tracked (the triage signal).
+on-call/airflow_logs/
+
 # Request-mining telemetry — LOCAL ONLY, keyword-only, never pushed (self-improvement kernel)
 knowledge/.request_log.jsonl
 

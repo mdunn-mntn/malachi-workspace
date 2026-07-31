@@ -27,7 +27,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 TERMINAL_STATES = {"success", "failed", "upstream_failed", "skipped", "removed"}
 FAILURE_STATES = {"failed", "upstream_failed"}
@@ -52,11 +52,13 @@ def resolve_bearer(explicit=None):
 
 
 def _token_from_astro_config():
-    """Best-effort parse of the active-context token out of ~/.astro/config.yaml (no pyyaml in stdlib).
+    """Parse the active-context token out of ~/.astro/config.yaml (no pyyaml in stdlib).
 
-    Astro writes a top-level `context: <domain>` (the active one) and a `contexts:` map keyed by domain,
-    each block carrying a `token:` line. We find the active domain's token; if the structure differs,
-    we fall back to the first `token:` we see. Domains contain dots, so keys are matched loosely.
+    Astro writes a top-level `context: <domain>` (the active one, e.g. `astronomer.io`) and a
+    `contexts:` map whose KEYS replace dots with underscores (e.g. `astronomer_io`), each block
+    carrying a `token:` line. The domain header is the shallowest-indent key inside `contexts:`;
+    its fields (token, expiresin, …) are deeper. We match the active domain to its key by
+    normalizing dots/underscores, and fall back to the only/first token if matching fails.
     """
     path = os.path.join(HOME, ".astro", "config.yaml")
     try:
@@ -72,52 +74,43 @@ def _token_from_astro_config():
             active = m.group(1).strip().strip('"')
             break
 
-    # Walk into `contexts:` and collect each domain-block's token by indentation.
-    tokens = {}  # domain -> token
+    tokens = {}  # domain-key -> token
     first_token = None
     in_contexts = False
-    contexts_indent = None
     cur_domain = None
+    domain_indent = None
     for ln in lines:
         if re.match(r"^contexts:\s*$", ln):
             in_contexts = True
-            contexts_indent = 0
             continue
         if not in_contexts:
             continue
-        if ln.strip() == "" or ln.startswith("#"):
+        if not ln.strip() or ln.lstrip().startswith("#"):
             continue
         indent = len(ln) - len(ln.lstrip(" "))
-        # a new top-level key (indent 0) ends the contexts section
-        if indent == 0 and not ln.startswith(" "):
+        if indent == 0:  # a new top-level key ends the contexts block
             break
-        key_m = re.match(r"^(\s+)([^:\s][^:]*):\s*(.*)$", ln)
-        if not key_m:
+        m = re.match(r"^\s+([^:\s]+):\s*(.*)$", ln)
+        if not m:
             continue
-        key = key_m.group(2).strip()
-        val = key_m.group(3).strip().strip('"')
-        # a domain header is the shallowest key inside contexts and has no inline value;
-        # treat any valueless key that looks like a domain (or the shallowest level) as a domain
-        if (
-            val == ""
-            and (contexts_indent in (0, None) or indent <= _domain_indent(cur_domain, indent))
-            and ("." in key or val == "")
-        ):
+        key, val = m.group(1), m.group(2).strip().strip('"')
+        if domain_indent is None:
+            domain_indent = indent
+        if indent == domain_indent:  # domain header (shallowest key under contexts:)
             cur_domain = key
+            continue
         if key == "token" and val:
             token = val.removeprefix("Bearer ").strip()
             if cur_domain:
-                tokens.setdefault(cur_domain, token)
+                tokens[cur_domain] = token
             if first_token is None:
                 first_token = token
-    if active and active in tokens:
-        return tokens[active]
+
+    if active:
+        for cand in (active, active.replace(".", "_"), active.replace("_", ".")):
+            if cand in tokens:
+                return tokens[cand]
     return first_token
-
-
-def _domain_indent(_cur, indent):
-    # helper kept intentionally simple; domain blocks are the shallowest keys under contexts:
-    return indent
 
 
 # --------------------------------------------------------------------------- http
@@ -170,6 +163,10 @@ def _loads(payload):
 def _die_on_status(status, obj, what):
     if status == 200:
         return
+    if status in (401, 403):
+        sys.exit(
+            f"airflow_api: auth failed (HTTP {status}) on {what}. Token expired/invalid; run `astro login`."
+        )
     detail = obj.get("detail") or obj.get("_raw") or obj if isinstance(obj, dict) else obj
     sys.exit(f"airflow_api: {what} failed (HTTP {status}): {str(detail)[:300]}")
 
@@ -225,7 +222,7 @@ def list_task_instances_for_day(base, token, start_iso, end_iso, dag_ids=None, s
     return out
 
 
-def list_runs_for_day(base, token, dag_id, start_iso):
+def list_runs_for_day(base, token, dag_id, start_iso, end_iso):
     out, offset = [], 0
     while True:
         status, obj = _get_json(
@@ -234,6 +231,7 @@ def list_runs_for_day(base, token, dag_id, start_iso):
             f"/dags/{urllib.parse.quote(dag_id)}/dagRuns",
             {
                 "run_after_gte": start_iso,
+                "run_after_lte": end_iso,
                 "limit": PAGE_LIMIT,
                 "offset": offset,
                 "order_by": "run_after",
@@ -409,7 +407,9 @@ def manifest_record(ti, log_path):
 
 # --------------------------------------------------------------------------- day window
 def day_window(date_str):
-    d = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
+    # Format literal UTC-day boundary strings; no tzinfo object needed (keeps this 3.9-compatible
+    # for the system python3 a bash subprocess resolves, and gives ruff nothing to "upgrade").
+    d = datetime.strptime(date_str, "%Y-%m-%d")
     start = d.strftime("%Y-%m-%dT00:00:00Z")
     end = (d + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
     return start, end
@@ -478,7 +478,7 @@ def cmd_list(args):
 def cmd_watch(args):
     token = resolve_bearer(args.token)
     date = args.date
-    start_iso, _ = day_window(date)
+    start_iso, end_iso = day_window(date)
     outdir = os.path.join(args.outdir, date)
     os.makedirs(outdir, exist_ok=True)
     manifest_path = os.path.join(outdir, "_manifest.jsonl")
@@ -501,7 +501,7 @@ def cmd_watch(args):
         any_run = False
         all_terminal = True
         for dag_id in dag_ids:
-            for run in list_runs_for_day(args.base, token, dag_id, start_iso):
+            for run in list_runs_for_day(args.base, token, dag_id, start_iso, end_iso):
                 any_run = True
                 for ti in list_task_instances_in_run(args.base, token, dag_id, run["dag_run_id"]):
                     state = ti.get("state")
