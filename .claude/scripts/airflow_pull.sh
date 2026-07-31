@@ -65,6 +65,7 @@ if [[ -z "$BASE" ]]; then
     fi
 fi
 [[ "$BASE" == *"/api/v2" ]] || BASE="${BASE%/}/api/v2"
+[[ "$BASE" == http*://* ]] || BASE="https://${BASE}"   # inspect returns host+path with no scheme
 
 PY="python3 ${SCRIPT_DIR}/airflow_api.py --base ${BASE}"
 
