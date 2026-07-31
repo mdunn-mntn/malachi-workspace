@@ -21,7 +21,8 @@ makes the next identical alert instant.
 `/oncall <pasted alert text>`.
 
 **Prerequisites:** `gcloud auth login` (reauth if `Reauthentication required` — do it as ONE call, parallel
-gsutil trips the reauth quota). Read access to the alert's Airflow/Astronomer task log.
+gsutil trips the reauth quota). For task logs: `astro login` once, then pull them with
+`.claude/scripts/airflow_pull.sh` (no manual UI download — see Step 2).
 
 ---
 
@@ -52,7 +53,12 @@ If no match, this is a NEW alert → continue to Step 2.
 ## Step 2 — Triage (runbook §1)
 
 1. **Identify** DAG + task + logical date from the alert header.
-2. **Pull the task log**, find what the task is *actually doing* (not just that it failed):
+2. **Pull the task log** — `bash .claude/scripts/airflow_pull.sh --date <D> --dag <dag>` writes every
+   task's log (named `<HHMMSS>__<dag>__<task>__try<N>__<state>.log`) + a `_manifest.jsonl` pass/fail grid
+   to `on-call/airflow_logs/<D>/`; scan failures with
+   `grep -E '"state": "(failed|upstream_failed)"' on-call/airflow_logs/<D>/_manifest.jsonl`. To watch a
+   live pipeline, `--watch --tag <tag>` auto-drops each failure into `on-call/`. Then find what the task
+   is *actually doing* (not just that it failed):
    - **Sensor** → its poke target (`Sensor checks existence of : <bucket>, <object>`).
    - **Producer / Spark / BQ / Vertex** → the output path / query / the real exception. Search the log
      tail for `ERROR` / `Exception` / `Traceback` / `code:` — skip the boilerplate.

@@ -77,7 +77,10 @@ don't hot-patch. The INC entry records "routed to ticket TI-XXX"; it doesn't do 
 ## 1. General triage protocol (any Airflow alert)
 
 1. **Identify** DAG + task + logical date from the alert (`[prod] Airflow <Team> FAILURE [dag/task] at <ts>`).
-2. **Pull the task log**, find what the task is *actually doing* — not that it failed:
+2. **Pull the task log** — `bash .claude/scripts/airflow_pull.sh --date <D> [--dag <dag>]` dumps every
+   task's log + a `_manifest.jsonl` pass/fail grid to `on-call/airflow_logs/<D>/` (needs `astro login`;
+   `--watch --tag <tag>` auto-drops live failures into `on-call/`). Then find what the task is *actually
+   doing* — not that it failed:
    - **Sensor** → the poke target (`Sensor checks existence of : <bucket>, <object>`).
    - **Producer/Spark/BQ** → the output path / query / the real exception (search the log tail for `ERROR`/`Exception`/`Traceback`, skip the boilerplate).
 3. **Check empirical state** — did the thing it waited on / was supposed to write actually land?
