@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics]
+keywords: [mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017]
 domain: [repos, infra]
 lifecycle: active
-last_verified: 2026-07-30
+last_verified: 2026-07-31
 ---
 **The two DAGs that run the MNTN Matched (DS19 keyword) OpenAI batch pipeline** (`SteelHouse/airflow-ti`,
 `dags/machine_learning/`). Both schedule **`0 9 * * *`, `catchup=False`**. Deploy/image routing lives in
@@ -36,6 +36,26 @@ the two DAGs — the handoff is entirely the `openai_batch_submissions/dt=` obje
 Same `openai_batch_runner` image, same `delete_all_storage_files.py`, same env — a pre-run cleanup (frees
 OpenAI file-storage quota headroom before submitting) and a post-run sweep. They run in BOTH DAGs, so the
 cleanup script executes **~4×/day** total.
+
+## `batch_test` post-batch dbt DQ tests — and the backfill CALENDAR-SKEW footgun
+`batch_post >> [batch_test, batch_cleanup_2]`. **`batch_test`** runs `dbt test --select product_categorization`
+(dbt project `mntn_matched_data_quality`; tests at `SteelHouse/shopper_graph/dbt/tests/mntn_matched/post_batch/*.sql`):
+6 tests — `dsc_id__{length,not_null,values}` + `record_count` (data-integrity, hard-fail),
+`product_category_and_key` (WARN-only), and **`product_categorization__max_dt`**.
+- **`max_dt` keys off WALL-CLOCK, not the logical date** — it asserts a partition exists for
+  `date_sub(current_date, 2)` (UTC). On an on-time run that equals the `dt=yesterday` the DAG writes → PASS.
+  On a **late / manual backfill of an OLD logical date it fails SPURIOUSLY**: the backfill correctly writes
+  `dt=yesterday-of-logical`, but the test looks at `current_date-2`. INC-007 backfill: re-ran logical 07-29 on
+  07-31 → wrote `dt=2026-07-28`, test wanted `dt=2026-07-29` → 1-row FAIL though the data was clean
+  (record_count + id tests PASS, `dt=07-28/_SUCCESS` in GCS). **Handling a backfill: mark
+  `test_product_categorization` SUCCESS, do NOT re-run** (fails every time once UTC > the target date+2).
+  Durable fix = key the test off the run's `yesterday`/`run_date` env var → **IMP-016**.
+- **A red `batch_test` does NOT block `keyword_ddp`** — the downstream `wait_for_product_categorization` sensor
+  targets `batch_post.product_categorization` (UPSTREAM of batch_test); batch_test is a leaf parallel with
+  batch_cleanup_2. So its failure is cosmetic to the consumer; clear the sensor independently.
+- **Red-herring in the failure log:** a trailing `OSError: [Errno 99] Cannot assign requested address` from
+  `airflow.utils.email`/`smtplib` is the POST-failure notification email failing (SMTP unreachable from the
+  pod), never the task's cause — task-failure emails silently don't send in this deployment (**IMP-017**).
 
 ## OpenAI file-storage economics — why the 2.5TB quota fails INTERMITTENTLY, not every day
 Daily volume ≈ **75 GiB/day** (input `part-*` ~35 GiB + output `batch_*` ~40 GiB); the pipeline needs only

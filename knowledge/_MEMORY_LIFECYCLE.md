@@ -160,8 +160,8 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_bash_inline_unicode_gotcha | reference | 2026-07-30 | [doc](memory/reference_bash_inline_unicode_gotcha.md) |
 | reference_confluence_api_access | reference | 2026-07-30 | [doc](memory/reference_confluence_api_access.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-07-30 | [doc](memory/reference_fangorn_inference_dataproc.md) |
-| reference_mntn_matched_batch_pipeline | reference | 2026-07-30 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_openai_sdk_pagination | reference | 2026-07-30 | [doc](memory/reference_openai_sdk_pagination.md) |
 | reference_shopper_graph_deploy | reference | 2026-07-30 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-07-30 | [doc](memory/reference_xlsx_master_format.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-07-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
+| reference_mntn_matched_batch_pipeline | reference | 2026-07-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
