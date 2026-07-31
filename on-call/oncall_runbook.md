@@ -865,6 +865,11 @@ databricks jobs get-run <RUN_ID> -o json   # state.result_state = SUCCESS/FAILED
 - **Owner reality:** Victor Savitskiy departed → pipeline under-owned; Sean Yang is a fallback. **We (Malachi) drive the fix; Ryan + Brian advise.**
 - **Current run:** by end of meeting "looks like it's running" (Spark grinding through preemptions via retry). Watch to green.
 
+**Exact config located (GitHub, read-only) — `SteelHouse/dbt` → `ml_squad/models/reporting/targeted_signal_ds_19.yml`** (+ `_ds_13`, `_ds_19_domain`, same pattern; `alias: "targeted_signal"` → why the relation is `mntn_matched_reporting.targeted_signal`; `submission_method: job_cluster`). Current `job_cluster_config`: `driver_node_type_id: c3d-standard-4` (16 GB), `node_type_id: c3d-standard-8` (32 GB), `autoscale min/max = 6/6`, `gcp_attributes.availability: PREEMPTIBLE_WITH_FALLBACK_GCP`, **`first_on_demand: 1`**, and **NO `spark_conf`** (executor memory = node default). The two knobs:
+1. **RAM (Ryan's "+4 GB"):** no `spark_conf` today and no clean "+4 GB" node — the effective move is worker `node_type_id` `c3d-standard-8` (32 GB) → `c3d-highmem-8` (64 GB), and/or add a `spark_conf` (mirror `ml_squad/models/audience_intent/prospecting_intent.yml`: `spark.executor.memory` + `spark.sql.shuffle.partitions: auto`) to cut the 4.9 GB/task spill.
+2. **Spot kill (the actual failure):** `first_on_demand: 1` = only the driver on-demand; all 6 workers spot → `ExecutorLostFailure spot instance kill`. `PREEMPTIBLE_WITH_FALLBACK_GCP` fallback applies only at LAUNCH, not mid-run reclaim, so workers still die. Raise `first_on_demand` to 3 (half) or 6 (all on-demand, most reliable) so a preemption wave can't kill the job. **RAM alone won't stop this.**
+**Do NOT edit from the on-call box** — `SteelHouse/dbt` is a prod repo we don't own (prod-safety); hand the diff to the owner or do it in Cursor. Deploy = a rebuild of the `generic_dbt_runner_ml` image (confirm the workflow before merging).
+
 **Logs:** `on-call/incidents/INC-009/` — try-2 full (`…try2_full_pod404-eviction.txt`: the Databricks `run_id` + the (404) eviction) + a try-2 reattach snapshot. (Try-1's 2-line `Could not read served logs` timeout was captured in-session; that file was overwritten with the try-2 full log before archival.)
 
 ---
