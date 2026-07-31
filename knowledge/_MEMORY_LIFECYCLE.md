@@ -156,7 +156,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_self_qa_before_shipping | feedback | 2026-07-30 | [doc](memory/feedback_self_qa_before_shipping.md) |
 | incrementality-experiment-ber-2250 | project | 2026-07-30 | [doc](memory/project_incrementality_experiment.md) |
 | project_audi_1175_ds14_scoring_cost | project | 2026-07-30 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
-| reference_aud22_geo_reporting_sync | reference | 2026-07-30 | [doc](memory/reference_aud22_geo_reporting_sync.md) |
 | reference_bash_inline_unicode_gotcha | reference | 2026-07-30 | [doc](memory/reference_bash_inline_unicode_gotcha.md) |
 | reference_confluence_api_access | reference | 2026-07-30 | [doc](memory/reference_confluence_api_access.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-07-30 | [doc](memory/reference_fangorn_inference_dataproc.md) |
@@ -164,4 +163,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_shopper_graph_deploy | reference | 2026-07-30 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-07-30 | [doc](memory/reference_xlsx_master_format.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-07-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
+| reference_aud22_geo_reporting_sync | reference | 2026-07-31 | [doc](memory/reference_aud22_geo_reporting_sync.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-07-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |

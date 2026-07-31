@@ -37,25 +37,30 @@ Same `openai_batch_runner` image, same `delete_all_storage_files.py`, same env �
 OpenAI file-storage quota headroom before submitting) and a post-run sweep. They run in BOTH DAGs, so the
 cleanup script executes **~4×/day** total.
 
-## `batch_test` post-batch dbt DQ tests — and the backfill CALENDAR-SKEW footgun
-`batch_post >> [batch_test, batch_cleanup_2]`. **`batch_test`** runs `dbt test --select product_categorization`
-(dbt project `mntn_matched_data_quality`; tests at `SteelHouse/shopper_graph/dbt/tests/mntn_matched/post_batch/*.sql`):
-6 tests — `dsc_id__{length,not_null,values}` + `record_count` (data-integrity, hard-fail),
-`product_category_and_key` (WARN-only), and **`product_categorization__max_dt`**.
-- **`max_dt` keys off WALL-CLOCK, not the logical date** — it asserts a partition exists for
-  `date_sub(current_date, 2)` (UTC). On an on-time run that equals the `dt=yesterday` the DAG writes → PASS.
-  On a **late / manual backfill of an OLD logical date it fails SPURIOUSLY**: the backfill correctly writes
-  `dt=yesterday-of-logical`, but the test looks at `current_date-2`. INC-007 backfill: re-ran logical 07-29 on
-  07-31 → wrote `dt=2026-07-28`, test wanted `dt=2026-07-29` → 1-row FAIL though the data was clean
-  (record_count + id tests PASS, `dt=07-28/_SUCCESS` in GCS). **Handling a backfill: mark
-  `test_product_categorization` SUCCESS, do NOT re-run** (fails every time once UTC > the target date+2).
-  Durable fix = key the test off the run's `yesterday`/`run_date` env var → **IMP-016**.
-- **A red `batch_test` does NOT block `keyword_ddp`** — the downstream `wait_for_product_categorization` sensor
-  targets `batch_post.product_categorization` (UPSTREAM of batch_test); batch_test is a leaf parallel with
-  batch_cleanup_2. So its failure is cosmetic to the consumer; clear the sensor independently.
-- **Red-herring in the failure log:** a trailing `OSError: [Errno 99] Cannot assign requested address` from
-  `airflow.utils.email`/`smtplib` is the POST-failure notification email failing (SMTP unreachable from the
-  pod), never the task's cause — task-failure emails silently don't send in this deployment (**IMP-017**).
+## `batch_test` = the dbt DQ gate on `product_categorization` — mechanics + two failure red-herrings
+`batch_post >> [batch_test, batch_cleanup_2]` (fetch DAG; `batch_test` is a leaf parallel with `batch_cleanup_2`).
+It runs `dbt test --select product_categorization` (6 data tests) via the **`SHOPPER_GRAPH` /
+`mntn_matched_data_pipeline`** image against Databricks target **`prod_warehouse_2xs`**; tests live at
+`SteelHouse/shopper_graph:dbt/tests/mntn_matched/post_batch/*.sql` (dbt project `mntn_matched_data_quality`).
+The 6: `dsc_id__{length,not_null,values}` + `record_count` (data-integrity, hard-fail),
+`product_category_and_key` (WARN-only), and **`product_categorization__max_dt`**. **`product_categorization`
+is a Databricks table** (schema `mntn_matched`), NOT BigQuery — you cannot query it with `bq_run.sh`; it's
+built from `openai_batch_results_joined` + `mntn_matched_taxonomy`.
+- **BACKFILL FALSE-POSITIVE (`max_dt`):** it asserts a partition exists at wall-clock
+  **`dt = date_sub(current_date, 2)`** (UTC), but the pipeline writes `dt = yesterday`(-of-logical-date). On an
+  on-time run these coincide → PASS; on any **late / manual backfill they diverge and `max_dt` FALSE-FAILS**
+  (INC-007: logical-07-29 fetch re-run on 07-31 wrote `dt=07-28` correctly, but the test wanted
+  `current_date-2 = 07-29` → 1-row FAIL, data clean). The **other 5 tests key off the latest partition**
+  (`>= date_sub(current_date, 5)`), so they're backfill-robust. **Diagnostic:** `max_dt` failing ALONE while
+  `record_count` / `dsc_id__*` / `product_category_and_key` PASS ⇒ data is fine — **mark
+  `test_product_categorization` SUCCESS, do NOT re-run** (fails every time once UTC > target date+2). A red
+  `batch_test` is also **cosmetic to `keyword_ddp`**: its `wait_for_product_categorization` sensor targets
+  `batch_post.product_categorization` (UPSTREAM of batch_test), so clear the sensor independently. Durable fix =
+  key it off the pod's `yesterday`/`run_date` env var → **IMP-016**.
+- **SMTP `Errno 99` RED-HERRING:** a failed task's log TAIL showing `OSError: [Errno 99] Cannot assign requested
+  address` from `smtplib` / `airflow.utils.email` is Airflow's **failure-alert EMAIL callback** failing (email
+  alerting is broken on this Astronomer deployment) — NOT the task's real error; scroll UP for it. Seen on both
+  `batch_test` and `batch_cleanup_2` → **IMP-017**.
 
 ## OpenAI file-storage economics — why the 2.5TB quota fails INTERMITTENTLY, not every day
 Daily volume ≈ **75 GiB/day** (input `part-*` ~35 GiB + output `batch_*` ~40 GiB); the pipeline needs only
