@@ -16,7 +16,7 @@ Python code-quality standard for this repo (adopted 2026-07-31, Phase 0+1 shippe
 **Tool:** Ruff is the ONE Python linter + formatter — replaces flake8 + isort + black (all retired). Config is `pyproject.toml` `[tool.ruff]`. Enforced by the commit gate ([[reference_commit_gate]]).
 
 **Two tiers (load-bearing — 78% of .py is throwaway):**
-- **Durable** = `lib/*.py` + `.claude/scripts/*.py` (~15 files): linted + formatted. Select = `E,W,F,I,B,UP,SIM,C4,E741`, `line-length=100`, `E501` ignored (the formatter owns wrapping — unwrappable URL/SQL literals get `# noqa: E501`). Currently 0 ruff errors, no noqa.
+- **Durable** = `lib/*.py` + `.claude/scripts/*.py` (~15 files): linted + formatted. Select = `E,W,F,I,B,UP,SIM,C4,E741,N,C901` (+ `D100-D104` presence + `ANN` scoped to `lib/mntn_xlsx.py` ONLY via per-file-ignores). `line-length=100`, `E501` ignored (formatter owns wrapping; residual literals get `# noqa: E501`); `C901 max-complexity=25` = regression backstop, not a refactor mandate. Currently 0 ruff errors, no noqa.
 - **Throwaway** = `tickets/**/artifacts/*.py` (~60k LOC of run-once analysis): `extend-exclude=["tickets/**"]` — not linted, not formatted. `slack_bot/**` excluded too (decommissioned).
 
 **Two hard gotchas (proven):**
@@ -25,6 +25,6 @@ Python code-quality standard for this repo (adopted 2026-07-31, Phase 0+1 shippe
 
 **How the gate uses it:** `verify.sh --staged` runs `ruff format --check` + `ruff check` on staged durable `.py` (`--force-exclude` makes the tickets exclude apply even for by-path files); `verify.sh --fix` runs `ruff format` + `ruff check --fix` and re-stages. Blocked commit → `verify.sh --fix`, re-stage. Skips cleanly if ruff absent (portable).
 
-**Roadmap (not yet done):** Phase 2 = add `N` + `C901` (IMP-019). Phase 3 = `D` (google) + `ANN201`→`ANN001` scoped to `lib/` ONLY + manual `mypy lib/` (IMP-020) — closes the 3/121-typed gap on the reused library API. `lib/mntn_xlsx.py` already has `from __future__ import annotations`.
+**Status: Phases 0-3 all shipped 2026-07-31.** Phase 2 (`N` + `C901@25`, IMP-019 done) and Phase 3 (`D`-presence + `ANN` on `lib/mntn_xlsx.py` + advisory `mypy lib/mntn_xlsx.py`, IMP-020 done) are live. `lib/mntn_xlsx.py` is fully type-annotated (was 3/121 typed) and mypy-clean. **mypy is advisory only (`mypy lib/mntn_xlsx.py`), NEVER in the gate.** Next widening: lower `C901 max-complexity` toward ~12 as `audit_structure.audit`/`mntn_xlsx.table`/`health_scorecard.main` get refactored; extend `D`/`ANN` + `mypy` to new `lib/*.py` as they land (per-file-ignores already gate them in).
 
 **Why type hints are the real gap** (not style): a typed signature is the biggest self-documentation win — a contract legible to humans, mypy, and the Codex reviewer at once, and it lets an AI agent know a signature without reading the body. Consistent with the house rule [[feedback_sparse_code_comments]] (ruff governs docstrings/format, not inline comments).

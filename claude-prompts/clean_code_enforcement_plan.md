@@ -2,7 +2,7 @@
 
 > Research-backed, adversarially verified (Ruff/mypy claims fact-checked against 2026 sources).
 > Tailored to this repo's two-tier reality: durable code (`lib/`, `.claude/scripts/`) vs throwaway
-> analysis (`tickets/**/artifacts/`, ~60k LOC). Status: PROPOSAL — not yet implemented.
+> analysis (`tickets/**/artifacts/`, ~60k LOC). Status: SHIPPED. Phases 0-3 all live as of 2026-07-31 (ruff adopted + gate-wired, durable tier reformatted + fully type-annotated, mypy advisory). Config: `pyproject.toml`.
 
 ## 1. Verdict (BLUF)
 
