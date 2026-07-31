@@ -34,31 +34,40 @@ Ryan Kleck built `SteelHouse/mntn-data-eng-assistant` — an MCP/AI platform for
 - **Impact:** slow MTTR on prod pipeline failures, single-person dependency, and a revenue-adjacent job (vendor payments) that no one on the call could confidently debug.
 
 ## 3. Plan of Action
-Numbered steps of the approach taken. Updated as the plan evolves.
-1. Step one
-2. Step two
-3. ...
+1. Transcribe the 2026-07-31 Ryan handover 1:1 (meetings/01) — done.
+2. Deep-read `SteelHouse/mntn-data-eng-assistant` + our on-call stack — done (fact sheet in artifacts).
+3. Synthesize the adoption brief (what it does, roadmap, Databricks vs GCP, gap/overlap, recommendation) — done.
+4. Land an adopt / integrate / skip call — done (see §5).
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+Full detail: `artifacts/audi_1190_data_eng_ai_brief.md` (brief) + `artifacts/audi_1190_repo_fact_sheet.md` (repo inventory).
+- **Mature, but a diagnosis assistant — not an autonomous agent.** 12 stable MCP tools (~v0.43.x); no generative LLM in-repo (reasoning is client-side via Cursor/Claude Desktop/Slack bot). The AI value = local `all-MiniLM-L6-v2` semantic incident matching (claimed 75-95%).
+- **Flagship = `diagnose_airflow_alert`** — paste an Airflow alert → Dataproc root cause + Airflow logs + ~600-incident match + action plan + Confluence template. Human-triggered from Slack (`:mag:` emoji / shortcut / slash); **not** cron/webhook auto-fired — the "sensor on every DAG" auto-fire is NOT built.
+- **100% GCP Dataproc, 0% Databricks** — zero `databricks`/`dbx` references; Dataproc-specific throughout (gcloud/gsutil, `.zstd` History Server logs, DCU pricing). No adapter layer → Databricks = a rewrite. **It would not have diagnosed this meeting's job** (INC-009 runs on Databricks).
+- **Auth-model conflict:** ships as a Slack bot holding long-lived API keys (K8s secrets) — the exact pattern MNTN security retired 2026-06-10 (killed our slack_bot and Ryan's). Ryan: Vault stopped issuing Airflow tokens; MCP access revoked.
+- **Gap it fills:** the "missing middle" — Spark event-log/explain-plan → root cause + candidate fix — which our `airflow_pull.sh` (acquisition) + `/oncall` (triage/memory) do not do. Already logged as IMP-021.
+- **Contradictions to verify:** stale version badges, DCU price $0.089 vs $0.09, Confluence page IDs, cache-bucket prefix — validate on real incidents before trusting.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+**Recommendation: adopt the diagnosis core, key-free and manual, scoped to Dataproc.**
+- Harvest `analyze_batch(_detail)` + `extract_spark_events` + the incident-matcher + rule-based action plans as a **locally-invoked MCP tool** using our existing key-free `astro`/`gcloud` auth (no Slack bot, no stored tokens).
+- Wire into the flow we have: `airflow_pull.sh --watch` drops a failure → invoke diagnosis → hand to `/oncall` for the 3-surface write-back.
+- Keep Databricks out of scope (separate track — AUDI-1191). Defer the automated sensor→PR vision until access policy allows tokens.
+- Formalizes backlog **IMP-021**; incident half of the source meeting = on-call **INC-009**.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Should we adopt Ryan's data-eng-ai for on-call, and which capability first?
+  **A:** Yes — the Dataproc diagnosis core, as a manual/key-free MCP tool in our `/oncall` flow. Not the token-holding Slack bot; not (yet) the automated sensor.
+- **Q:** Does it cover Databricks?
+  **A:** No — 100% Dataproc. It cannot debug our Databricks jobs (the INC-009 class) without a rewrite.
+- **Q:** Is it actually "AI/agentic"?
+  **A:** It's an MCP server (reasoning client-side). The only ML is local embedding-based incident matching; action plans are rule-based. The autonomous sensor→PR loop is a vision, not built.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Updated memory `reference_data_eng_mcp` with the concrete tool inventory + Dataproc-only + auth-conflict facts. See §8.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+- Validate the match-accuracy + pricing claims on recent real incidents before this drives on-call decisions.
+- IMP-021 → promoted to this spike (AUDI-1190).
+- Databricks-side job optimization (INC-009 class: spot preemption + spill) tracked separately as **AUDI-1191**.
+- If adopted: scope the key-free MCP-tool extraction as its own build ticket.
