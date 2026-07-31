@@ -47,6 +47,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -57,6 +58,12 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.hyperlink import Hyperlink
 from openpyxl.worksheet.properties import PageSetupProperties
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
+    from openpyxl.cell.cell import Cell
+    from openpyxl.worksheet.worksheet import Worksheet
 
 # ---------------------------------------------------------------------------
 # BRAND — the single source of truth for the look. Swap these for official MNTN
@@ -176,15 +183,21 @@ _LEFT_MID_FLAT = Alignment(
 _RIGHT = Alignment(horizontal="right", vertical="center")
 
 
-def _font(size=10, bold=False, italic=False, color="000000", name=FONT_BODY):
+def _font(
+    size: int = 10,
+    bold: bool = False,
+    italic: bool = False,
+    color: str = "000000",
+    name: str = FONT_BODY,
+) -> Font:
     return Font(name=name, size=size, bold=bold, italic=italic, color=color)
 
 
-def _fill(hex_):
+def _fill(hex_: str) -> PatternFill:
     return PatternFill("solid", fgColor=hex_)
 
 
-def _lerp_hex(a, b, t):
+def _lerp_hex(a: str, b: str, t: float) -> str:
     """Linear-interpolate two 6-hex colors (t in [0,1]) -> a 6-hex string. Used to scale the
     green magnitude ramp per cell in signal() coloring."""
     a, b = a.lstrip("#"), b.lstrip("#")
@@ -197,13 +210,13 @@ def _lerp_hex(a, b, t):
 _DASH_RE = re.compile(r"\s*[—–]\s*")
 
 
-def _demdash(s):
+def _demdash(s: str) -> str:
     """Replace em/en dashes with a spaced hyphen. People read '—' as AI-written, so no MNTN
     deliverable should ship one. ASCII hyphens ('sub-vertical', '2026-07-21') are untouched."""
     return _DASH_RE.sub(" - ", s) if isinstance(s, str) else s
 
 
-def _to_native(v):
+def _to_native(v: Any) -> Any:
     """numpy/pandas -> json-native, NaN/NaT -> None so Excel shows a truly empty cell.
     String cells are em-dash-sanitized on the way in."""
     if v is None:
@@ -227,15 +240,15 @@ class MntnWorkbook:
 
     def __init__(
         self,
-        title,
-        ticket,
-        subtitle="",
-        period="",
-        owner="Malachi Dunn · Audience Intelligence",
-        logo_path=None,
-        generated=None,
-        status="Final",
-    ):
+        title: str,
+        ticket: str,
+        subtitle: str = "",
+        period: str = "",
+        owner: str = "Malachi Dunn · Audience Intelligence",
+        logo_path: str | None = None,
+        generated: str | None = None,
+        status: str = "Final",
+    ) -> None:
         self.title = _demdash(title)
         self.ticket = ticket.upper().strip()
         self.subtitle = _demdash(subtitle)
@@ -246,10 +259,16 @@ class MntnWorkbook:
         self.logo_path = cand if (cand and os.path.exists(cand)) else None
         self.generated = generated  # 'YYYY-MM-DD' string; pass one for reproducible files
         self.status = status
-        self._toc = []  # (sheet_name, one-line description, role)
-        self._issues = []  # build-time violations; save_*() prints them and RAISES so a broken workbook can't ship
-        self._query_tabs = []  # titles of sql() tabs, so a table's query= can deep-link into one
-        self._pending_query_links = []  # (data_sheet_title, footnote_row, query_filename); resolved at save
+        self._toc: list[tuple[str, str, str]] = []  # (sheet_name, one-line description, role)
+        self._issues: list[
+            str
+        ] = []  # build-time violations; save_*() prints them and RAISES so a broken workbook can't ship
+        self._query_tabs: list[
+            str
+        ] = []  # titles of sql() tabs, so a table's query= can deep-link into one
+        self._pending_query_links: list[
+            tuple[str, int, str]
+        ] = []  # (data_sheet_title, footnote_row, query_filename); resolved at save
 
         self.wb = Workbook()
         self.wb.remove(self.wb.active)  # start empty; cover() is added last and moved to front
@@ -261,7 +280,7 @@ class MntnWorkbook:
         p.category = "Analysis deliverable"
 
     # -- internal sheet scaffolding -----------------------------------------
-    def _new_sheet(self, name, role):
+    def _new_sheet(self, name: str, role: str) -> Worksheet:
         ws = self.wb.create_sheet(name[:31])  # Excel 31-char tab limit
         ws.sheet_view.showGridLines = False
         ws.sheet_properties.tabColor = "FF" + TAB.get(
@@ -276,7 +295,7 @@ class MntnWorkbook:
             setattr(ws.page_margins, side, 0.4)
         return ws
 
-    def _titleblock(self, ws, finding, method, ncols=1):
+    def _titleblock(self, ws: Worksheet, finding: str, method: str, ncols: int = 1) -> None:
         """Finding-led title (states the finding) + grey italic methodology line.
 
         The subtitle is merged across the table columns and wrapped, so it never runs off to the
@@ -293,7 +312,7 @@ class MntnWorkbook:
         # Keep the subtitle to ONE short method line; definitions/caveats live on the Read me tab.
         self._accent_rule(ws, ncols)
 
-    def _accent_rule(self, ws, ncols, row=3, height=5):
+    def _accent_rule(self, ws: Worksheet, ncols: int, row: int = 3, height: int = 5) -> None:
         """A thin Mountain Green rule spanning the content width — the shared header-to-body separator
         used on every sheet (data tables AND the Read me / Queries / Method reference tabs), so they
         all read as one system."""
@@ -301,7 +320,7 @@ class MntnWorkbook:
             ws.cell(row=row, column=cc).fill = _fill(BRAND["ACCENT"])
         ws.row_dimensions[row].height = height
 
-    def _sheet_title(self, ws, text, ncols=1):
+    def _sheet_title(self, ws: Worksheet, text: str, ncols: int = 1) -> Cell:
         """Write the row-1 sheet title with top breathing room: a taller row with the title
         BOTTOM-aligned, so there is whitespace above it and the title no longer jams into the top
         edge (the cover keeps the brand band; content/reference tabs just get clean top air).
@@ -322,8 +341,15 @@ class MntnWorkbook:
         return c
 
     def _fit_title_height(
-        self, ws, text, total_width_chars, per_line=19.0, pad=9.0, base=34.0, maxlines=3
-    ):
+        self,
+        ws: Worksheet,
+        text: str,
+        total_width_chars: float,
+        per_line: float = 19.0,
+        pad: float = 9.0,
+        base: float = 34.0,
+        maxlines: int = 3,
+    ) -> None:
         """Size the merged row-1 title height to its wrapped text at the table width (Excel won't
         auto-fit a merged cell). 15pt bold fits ~0.6 chars per width-unit; keeps the base top air."""
         if not text:
@@ -333,8 +359,15 @@ class MntnWorkbook:
         ws.row_dimensions[1].height = max(base, lines * per_line + pad)
 
     def _fit_subtitle_height(
-        self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5
-    ):
+        self,
+        ws: Worksheet,
+        row: int,
+        text: str,
+        total_width_chars: float,
+        per_line: float = 13.5,
+        pad: float = 4.0,
+        maxlines: int = 5,
+    ) -> None:
         """Set a merged, wrapped subtitle row's height to fit its text at the table width.
         total_width_chars = summed width of the merged columns; Excel won't auto-fit merged cells."""
         if not text:
@@ -344,7 +377,7 @@ class MntnWorkbook:
         ws.row_dimensions[row].height = max(16.0, min(lines, maxlines) * per_line + pad)
 
     @staticmethod
-    def _wrap_lines(text, width_chars):
+    def _wrap_lines(text: str, width_chars: int) -> int:
         """Word-aware line count for `text` wrapped to `width_chars`. Returns a large number if any single
         word is wider than the column (unbreakable overflow -> guaranteed clip)."""
         words, lines, cur = str(text).split(), 0, 0
@@ -360,7 +393,16 @@ class MntnWorkbook:
                 cur = len(w)
         return lines + (1 if cur else 0)
 
-    def _fit_header_height(self, ws, df, start_row, colw, per_line=15.0, pad=8.0, base=30.0):
+    def _fit_header_height(
+        self,
+        ws: Worksheet,
+        df: pd.DataFrame,
+        start_row: int,
+        colw: dict[str, int],
+        per_line: float = 15.0,
+        pad: float = 8.0,
+        base: float = 30.0,
+    ) -> None:
         """Size the HEADER row to the TALLEST wrapped header at its column width, so a column title never
         clips (the old fixed 30pt row was the root cause of clipped headers). Bold ~11pt -> ~0.85 chars/unit."""
         maxlines = 1
@@ -369,12 +411,12 @@ class MntnWorkbook:
             maxlines = max(maxlines, self._wrap_lines(col, w))
         ws.row_dimensions[start_row].height = max(base, min(maxlines, 4) * per_line + pad)
 
-    def _issue(self, sheet, msg):
+    def _issue(self, sheet: str, msg: str) -> None:
         """Record a build-time violation. save_*() prints all of them and RAISES, so a workbook that breaks
         a hard rule (char cap, etc.) cannot be produced -- the mistake fails the build instead of shipping."""
         self._issues.append(f"[{sheet}] {msg}")
 
-    def _raise_if_issues(self):
+    def _raise_if_issues(self) -> None:
         if self._issues:
             import sys
 
@@ -388,7 +430,7 @@ class MntnWorkbook:
                 f"Fix them (trim text / widen columns), the file was NOT written."
             )
 
-    def _resolve_query_links(self):
+    def _resolve_query_links(self) -> None:
         """Deep-link each table's Source footnote to its query= block on the Query tab. Runs at save (after
         every sheet exists). A query= naming a file that isn't on the Query tab fails the build."""
         for sheet_title, foot_row, fname in self._pending_query_links:
@@ -417,7 +459,7 @@ class MntnWorkbook:
                 ref=f"A{foot_row}", location=f"'{qtab}'!A{qrow}", display=str(fc.value)
             )
 
-    def _footnote(self, ws, text, row, ncols):
+    def _footnote(self, ws: Worksheet, text: str, row: int, ncols: int) -> None:
         if not text:
             return
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=max(ncols, 1))
@@ -425,7 +467,15 @@ class MntnWorkbook:
         c.font = _font(9, italic=True, color=BRAND["MUTE"])
         c.alignment = _LEFT
 
-    def _autosize(self, ws, df, widths=None, first_col=None, cap=38, filter_pad=7):
+    def _autosize(
+        self,
+        ws: Worksheet,
+        df: pd.DataFrame,
+        widths: dict[str, int] | None = None,
+        first_col: int | None = None,
+        cap: int = 38,
+        filter_pad: int = 7,
+    ) -> dict[str, int]:
         """Size each column to the WIDER of (a) its longest header WORD + padding for bold text and the
         autofilter dropdown icon — so a header word never breaks mid-word ("Spend" -> "Spen/d") — and
         (b) its actual DATA, up to `cap` (longer data wraps on word boundaries).
@@ -435,7 +485,7 @@ class MntnWorkbook:
         genuinely wide.
         """
         widths = widths or {}
-        final = {}
+        final: dict[str, int] = {}
         for j, col in enumerate(df.columns, 1):
             if col in widths:
                 w = min(max(int(widths[col]), 8), 72)  # honor caller intent, sane ceiling
@@ -466,7 +516,17 @@ class MntnWorkbook:
             final[df.columns[0]] = first_col
         return final
 
-    def _fit_row_heights(self, ws, df, start, colw, per_line=15.0, pad=6.0, minh=18.0, maxlines=10):
+    def _fit_row_heights(
+        self,
+        ws: Worksheet,
+        df: pd.DataFrame,
+        start: int,
+        colw: dict[str, int],
+        per_line: float = 15.0,
+        pad: float = 6.0,
+        minh: float = 18.0,
+        maxlines: int = 10,
+    ) -> None:
         """Size each data row to its tallest wrapped cell so nothing clips (Excel won't auto-fit).
 
         colw = {column: width_chars} from _autosize. Slightly over-estimates lines (chars-per-line
@@ -487,8 +547,15 @@ class MntnWorkbook:
 
     @staticmethod
     def _wrap_rows(
-        ws, col_letter, rows, width_chars, per_line=15.0, pad=6.0, minh=16.0, maxlines=40
-    ):
+        ws: Worksheet,
+        col_letter: str,
+        rows: list[tuple[int, str | None]],
+        width_chars: int,
+        per_line: float = 15.0,
+        pad: float = 6.0,
+        minh: float = 16.0,
+        maxlines: int = 40,
+    ) -> None:
         """Size a single wrapped text column's rows (used by notes/glossary prose cells)."""
         cpl = max(int(width_chars * 0.9), 8)
         for rr, text in rows:
@@ -500,22 +567,22 @@ class MntnWorkbook:
     # -- public: table sheet -------------------------------------------------
     def table(
         self,
-        name,
-        df,
-        finding,
-        method="",
-        formats=None,
-        heat=None,
-        rag=None,
-        signal=None,
-        band=True,
-        kind="data",
-        toc="",
-        widths=None,
-        first_col_width=None,
-        freeze="A",
-        query="",
-    ):
+        name: str,
+        df: pd.DataFrame,
+        finding: str,
+        method: str = "",
+        formats: dict[str, str] | None = None,
+        heat: dict[str, str] | None = None,
+        rag: dict[str, Callable[[Any], str | None]] | None = None,
+        signal: dict[str, dict[str, str]] | None = None,
+        band: bool = True,
+        kind: str = "data",
+        toc: str = "",
+        widths: dict[str, int] | None = None,
+        first_col_width: int | None = None,
+        freeze: str = "A",
+        query: str = "",
+    ) -> Worksheet:
         """Add a styled table sheet.
 
         finding  : sheet title that STATES THE FINDING (not the metric).
@@ -614,7 +681,7 @@ class MntnWorkbook:
         # semantic effect/lift coloring: amber = not significant, red = significant negative,
         # green (deeper = more lift) = significant positive. Per-cell fills (needs the value + sign +
         # significance flag, which a single ColorScaleRule can't express).
-        def _is_sig(x):
+        def _is_sig(x: Any) -> bool:
             return x.strip().lower() in ("yes", "true", "y", "1") if isinstance(x, str) else bool(x)
 
         for col, spec in signal.items():
@@ -683,14 +750,14 @@ class MntnWorkbook:
     # -- public: glossary / read-me -----------------------------------------
     def glossary(
         self,
-        name,
-        rows,
-        intro="",
-        toc="How to read this workbook",
-        body_width=104,
-        max_def_chars=220,
-        max_entries=14,
-    ):
+        name: str,
+        rows: list[tuple[str, str]],
+        intro: str = "",
+        toc: str = "How to read this workbook",
+        body_width: int = 104,
+        max_def_chars: int = 220,
+        max_entries: int = 14,
+    ) -> Worksheet:
         """Two-column term/definition sheet (term bold in A, definition wrapped in B).
         A row of ('', '') renders a blank spacer; a row of ('Header', '') renders a section band.
 
@@ -724,7 +791,7 @@ class MntnWorkbook:
         ws.merge_cells("A2:B2")
         self._accent_rule(ws, 2)
         r = 4
-        def_rows = []
+        def_rows: list[tuple[int, str | None]] = []
         for k, v in rows:
             is_section = bool(k) and not v  # (heading, '') -> a section band (visual grouper)
             kc = ws.cell(row=r, column=1, value=(_demdash(k) or None))
@@ -751,7 +818,7 @@ class MntnWorkbook:
         return ws
 
     @staticmethod
-    def _cap_comment_runs(sql_text, cap=3):
+    def _cap_comment_runs(sql_text: str, cap: int = 3) -> tuple[str, int]:
         """Cap every SQL comment HEADER at `cap` lines so the Query tab never becomes a wall of grey.
         A run of consecutive `--` lines (blank lines between them are treated as interior to the same
         header and collapsed) is trimmed to its first `cap` lines. Code and code-separating blanks are
@@ -777,13 +844,14 @@ class MntnWorkbook:
     # -- public: SQL / queries ----------------------------------------------
     def sql(
         self,
-        name,
-        sql_text,
-        note="",
-        toc="The SQL behind the numbers",
-        width=120,
-        max_comment_run=3,
-    ):
+        name: str,
+        sql_text: str,
+        note: str = "",
+        toc: str = "The SQL behind the numbers",
+        width: int = 120,
+        max_comment_run: int = 3,
+    ) -> Worksheet:
+        """Add a Query tab: the SQL verbatim on a code panel, comment headers capped and receded."""
         ws = self._new_sheet(name, "sql")
         self._query_tabs.append(ws.title)  # a table()'s query= can deep-link into this tab
         self._sheet_title(ws, "Queries used (for validation)")
@@ -823,15 +891,15 @@ class MntnWorkbook:
 
     def sql_dir(
         self,
-        name,
-        directory,
-        order=None,
-        ignore=None,
-        headers=None,
-        note="",
-        collapse_aids=True,
-        aid_placeholder="/* the AID list, same as the main query */",
-    ):
+        name: str,
+        directory: str,
+        order: list[str] | None = None,
+        ignore: Iterable[str] | None = None,
+        headers: dict[str, str] | None = None,
+        note: str = "",
+        collapse_aids: bool = True,
+        aid_placeholder: str = "/* the AID list, same as the main query */",
+    ) -> Worksheet:
         """Build the Query tab from EVERY .sql file in `directory` (minus `ignore`), so a newly-added query
         can never be forgotten — the default is 'included', not 'you remembered to add it'.
 
@@ -869,14 +937,16 @@ class MntnWorkbook:
             parts.append(hdr.split("\n")[0].strip() + "\n\n" + body.strip())
         return self.sql(name, "\n\n\n".join(parts) + "\n", note=note)
 
-    def check_queries_covered(self, query_text, directory, ignore=None):
+    def check_queries_covered(
+        self, query_text: str, directory: str, ignore: Iterable[str] | None = None
+    ) -> None:
         """HARD-fail the build if a .sql file in `directory` is NOT present in the Query tab text — so a
         newly-added query can't be forgotten. Use with a hand-curated sql() Query tab (sql_dir() already
         guarantees coverage). `ignore` = filenames deliberately kept out (superseded / one-off diagnostics)."""
         import glob as _glob
         import re as _re
 
-        def norm(s):
+        def norm(s: str) -> str:
             s = _re.sub(r"--[^\n]*", "", s)  # strip comments
             s = _re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([])", s, flags=_re.S)  # neutralize AID lists
             return _re.sub(r"\s+", " ", s).strip().lower()
@@ -896,8 +966,14 @@ class MntnWorkbook:
 
     # -- public: long-form notes / method -----------------------------------
     def notes(
-        self, name, blocks, intro="", toc="Method & caveats", body_width=110, max_block_chars=320
-    ):
+        self,
+        name: str,
+        blocks: list[tuple[str, str]],
+        intro: str = "",
+        toc: str = "Method & caveats",
+        body_width: int = 110,
+        max_block_chars: int = 320,
+    ) -> Worksheet:
         """blocks = list of (heading, body). heading '' -> continuation paragraph.
 
         Each block body leads with its answer and stays <= max_block_chars (the narrative-explainer cap);
@@ -917,7 +993,7 @@ class MntnWorkbook:
             ic.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
         self._accent_rule(ws, 1)
         r = 4
-        body_rows = []
+        body_rows: list[tuple[int, str | None]] = []
         for head, body in blocks:
             if head:
                 hc = ws.cell(row=r, column=1, value=_demdash(head))
@@ -938,7 +1014,7 @@ class MntnWorkbook:
         return ws
 
     # -- public: branded cover (call LAST) ----------------------------------
-    def cover(self, takeaways=None, name="Overview"):
+    def cover(self, takeaways: list[str] | None = None, name: str = "Overview") -> Worksheet:
         """Create the branded cover and move it to the front. Builds the clickable contents
         from every sheet added so far. takeaways = up to 3 headline bullets (Rule of Three)."""
         takeaways = (takeaways or [])[:3]
@@ -1079,14 +1155,15 @@ class MntnWorkbook:
         return ws
 
     # -- save ---------------------------------------------------------------
-    def save_local(self, path):
+    def save_local(self, path: str) -> str:
+        """Resolve links, fail the build on any rule violation, then write the .xlsx to `path`."""
         self._resolve_query_links()  # deep-link each Source footnote to its query block (may add issues)
         self._raise_if_issues()  # a rule violation fails the build here -> no broken file is ever written
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.wb.save(path)
         return path
 
-    def save_drive(self, ticket_key, filename_desc, drive_root=None):
+    def save_drive(self, ticket_key: str, filename_desc: str, drive_root: str | None = None) -> str:
         """Write straight into the mounted Google Drive: My Drive/Tickets/<KEY>/<KEY> <Desc>.xlsx"""
         self._resolve_query_links()  # deep-link each Source footnote to its query block (may add issues)
         self._raise_if_issues()  # broken workbook cannot reach Drive
@@ -1102,10 +1179,14 @@ class MntnWorkbook:
 
 
 # RAG helpers ----------------------------------------------------------------
-def rag_threshold(good_above=None, bad_below=None, reverse=False):
+def rag_threshold(
+    good_above: float | None = None,
+    bad_below: float | None = None,
+    reverse: bool = False,
+) -> Callable[[Any], str | None]:
     """Return a fn(value)->'POS'|'WARN'|'NEG' for use in table(rag=...)."""
 
-    def f(v):
+    def f(v: Any) -> str | None:
         try:
             x = float(v)
         except (TypeError, ValueError):

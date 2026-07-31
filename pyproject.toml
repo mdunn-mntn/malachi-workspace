@@ -10,8 +10,18 @@ extend-exclude = ["tickets/**", "slack_bot/**"]   # run-once analysis + decommis
 
 [tool.ruff.lint]
 # Explicit select — never rely on Ruff defaults (they drift across 0.x releases).
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "E741", "N", "C901"]
-ignore = ["E501"]     # ruff format owns line length; noqa the residual URL/SQL literals
+# D100-D104 = docstring PRESENCE only (no D2xx/D4xx formatting nags). ANN = type-hint presence.
+# Both are scoped to the reusable library (lib/mntn_xlsx.py) via per-file-ignores below.
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "E741", "N", "C901",
+          "D100", "D101", "D102", "D103", "D104", "ANN"]
+ignore = ["E501",                          # ruff format owns line length; noqa the residual literals
+          "ANN401", "ANN002", "ANN003"]    # allow Any and untyped *args/**kwargs (over-strict nags)
+
+[tool.ruff.lint.per-file-ignores]
+# D-presence + ANN apply to the durable LIBRARY only. Tooling scripts + the demo are internal/example
+# code: keep them linted+formatted, but no docstring/type contract. (tickets/** is fully excluded above.)
+".claude/scripts/*.py" = ["D100", "D101", "D102", "D103", "D104", "ANN"]
+"lib/mntn_xlsx_demo.py" = ["D100", "D101", "D102", "D103", "D104", "ANN"]
 
 [tool.ruff.lint.mccabe]
 # Regression backstop, not a refactor mandate: 25 = the current durable-tier ceiling, so no existing
@@ -21,3 +31,11 @@ max-complexity = 25
 
 [tool.ruff.format]
 # ruff format is the single formatter owner (black retired). Deterministic output = minimal edit diffs.
+
+[tool.mypy]
+# ADVISORY ONLY — never in the commit gate (pandas/openpyxl stub noise trains --no-verify). Run manually:
+#   mypy lib/mntn_xlsx.py
+# Scoped to the durable library where typed signatures pay off. Non-strict; tighten per-module later
+# (check_untyped_defs, disallow_incomplete_defs) as annotation coverage rises. See IMP-020.
+files = ["lib/mntn_xlsx.py"]
+ignore_missing_imports = true
