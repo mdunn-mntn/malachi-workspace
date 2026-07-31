@@ -27,7 +27,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 TERMINAL_STATES = {"success", "failed", "upstream_failed", "skipped", "removed"}
 FAILURE_STATES = {"failed", "upstream_failed"}
@@ -408,7 +408,7 @@ def manifest_record(ti, log_path):
 
 # --------------------------------------------------------------------------- day window
 def day_window(date_str):
-    d = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    d = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
     start = d.strftime("%Y-%m-%dT00:00:00Z")
     end = (d + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
     return start, end
