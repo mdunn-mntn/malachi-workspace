@@ -63,11 +63,13 @@ print routing/coverage + health at SessionStart, at UserPromptSubmit inject rele
 pointers (`memory_recall.py` — deterministic per-prompt recall, since this setup has no native per-file
 recall) + log a keyword-only record of each prompt, and at Stop remind to `/capture` + keep comments terse
 + flag un-triaged on-call alert logs in `on-call/` (`oncall_triage_reminder.sh` → run `/oncall`). `.claude/scripts/build_index.sh` regenerates every index from front-matter (run
-after any `knowledge/` change). `perf_digest.py` mines the perf log. **A flake8-style commit gate**
+after any `knowledge/` change). `perf_digest.py` mines the perf log. **A staged-scoped commit gate**
 (`.githooks/`, enabled once via `.claude/scripts/install_git_hooks.sh` → `core.hooksPath`) blocks a
-commit when a **staged** file is malformed (front-matter linters, staged-scoped) or the commit message
-breaks the Terse Comms caps (subject ≤72, no em-dash); if it blocks, run `.claude/scripts/verify.sh --fix`
-then re-stage, or `git commit --no-verify` to bypass. `verify.sh` is the single "run every deterministic
+commit when a **staged** file is malformed (front-matter linters, staged-scoped), a staged **durable**
+Python file (`lib/`, `.claude/scripts/`) fails **ruff** (the single lint+format tool, replacing
+flake8/isort/black; `pyproject.toml`, pinned 0.16.x, `tickets/**` excluded; gate skips it if ruff is
+absent), or the commit message breaks the Terse Comms caps (subject ≤72, no em-dash); if it blocks, run
+`.claude/scripts/verify.sh --fix` then re-stage, or `git commit --no-verify` to bypass. `verify.sh` is the single "run every deterministic
 check" doctor (also whole-repo in `workflow_audit.sh §11`); `build_kit_manifest.sh` regenerates the
 component inventory `documentation/ai_workflow_kit/COMPONENTS.md` (the drift-proof source of truth for
 hook/skill/agent counts); `package_kit.sh` emits a sanitized, domain-blind, cross-job-portable copy of

@@ -41,13 +41,17 @@ Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the 
 - `scripts/build_kit_manifest.sh` — regenerates `documentation/ai_workflow_kit/COMPONENTS.md` from the actual files (the drift-proof component inventory). Idempotent.
 - `scripts/install_git_hooks.sh` — one-time: `git config core.hooksPath .githooks` (activate the commit gate).
 
-## Commit gate (flake8-style, self-contained, zero-dependency)
+## Commit gate (staged-scoped, self-contained; ruff optional)
 The gate lives in committed `.githooks/` and is activated once per clone with
 `.claude/scripts/install_git_hooks.sh` (sets `core.hooksPath`). Two git hooks — distinct from the Claude
 harness hooks above:
 - **`pre-commit`** → `verify.sh --staged`: blocks a commit only when a file THIS commit stages is
-  malformed (front-matter linter), or a staged doc's regenerated index isn't re-staged. **Staged-scoped**,
+  malformed (front-matter linter), a staged doc's regenerated index isn't re-staged, or a staged
+  **durable** Python file (`lib/`, `.claude/scripts/`) fails ruff (lint or format). **Staged-scoped**,
   so pre-existing debt elsewhere never blocks unrelated work. Fix with `verify.sh --fix`, then re-stage.
+  Ruff is the single Python linter+formatter (replaces flake8/isort/black; config in `pyproject.toml`,
+  pinned 0.16.x, two-tier — `tickets/**` excluded). The gate skips the ruff step if ruff isn't installed
+  (`pip install 'ruff>=0.16,<0.17'`), so it stays portable.
 - **`commit-msg`** → `lint_comms.py --kind commit`: subject ≤72 chars, body ≤500 chars / 6 bullets, no em-dash.
 - **Bypass** (emergencies only): `git commit --no-verify`.
 - **Whole-repo** compliance is checked weekly, not per-commit: `workflow_audit.sh §11` runs `verify.sh`
