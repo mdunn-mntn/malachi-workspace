@@ -1,0 +1,17 @@
+# Python tooling config. Ruff is the single linter + formatter (replaces flake8 + isort + black).
+# Two-tier policy: durable code (lib/, .claude/scripts/) is linted + formatted; throwaway analysis
+# under tickets/** is excluded entirely. Enforced staged-scoped via .claude/scripts/verify.sh.
+
+[tool.ruff]
+required-version = ">=0.16,<0.17"     # PIN: 0.16 changed defaults 59->413. Bump deliberately.
+target-version = "py311"
+line-length = 100
+extend-exclude = ["tickets/**", "slack_bot/**"]   # run-once analysis + decommissioned code
+
+[tool.ruff.lint]
+# Explicit select — never rely on Ruff defaults (they drift across 0.x releases).
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "E741"]
+ignore = ["E501"]     # ruff format owns line length; noqa the residual URL/SQL literals
+
+[tool.ruff.format]
+# ruff format is the single formatter owner (black retired). Deterministic output = minimal edit diffs.
