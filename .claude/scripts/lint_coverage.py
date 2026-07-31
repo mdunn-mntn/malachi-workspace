@@ -15,6 +15,7 @@ Modes:
 
 Usage: lint_coverage.py [--check | --fix] [--dir knowledge/bq]
 """
+
 import argparse, os, re, sys, datetime
 
 STUB_RE = re.compile(r"<Fill:|<fill me>", re.IGNORECASE)
@@ -25,6 +26,7 @@ PHYS_RE = re.compile(r"sqlmesh__[A-Za-z0-9_]+`?\s*\.\s*`?[A-Za-z0-9_]+")
 def _phys(text):
     m = PHYS_RE.search(text or "")
     return m.group(0).replace("`", "").replace(" ", "") if m else None
+
 
 APPEND_REGIONS = """
 ## Observed cost
@@ -109,9 +111,15 @@ def check_file(path):
     elif cov not in ("skeleton", "enriched", "verified"):
         v.append(f"coverage_state={cov!r} not in skeleton|enriched|verified")
     elif cov == "verified" and lv_empty:
-        v.append("coverage_state=verified but last_verified is empty (verified means confirmed vs source on a date)")
-    ready = (not has_stub and cov == "skeleton")
-    return v, ("stubs gone but still coverage_state:skeleton — ready to advance to enriched" if ready else None)
+        v.append(
+            "coverage_state=verified but last_verified is empty (verified means confirmed vs source on a date)"
+        )
+    ready = not has_stub and cov == "skeleton"
+    return v, (
+        "stubs gone but still coverage_state:skeleton — ready to advance to enriched"
+        if ready
+        else None
+    )
 
 
 def fix_file(path, today):
@@ -135,13 +143,19 @@ def fix_file(path, today):
 
     updates = {
         "schema_synced": schema_synced,
-        "coverage_state": ("skeleton" if has_stub else (fm_get(fm_lines, "coverage_state") or "skeleton")),
-        "physical_table": existing_phys if (existing_phys and existing_phys != "unknown") else physical_table,
+        "coverage_state": (
+            "skeleton" if has_stub else (fm_get(fm_lines, "coverage_state") or "skeleton")
+        ),
+        "physical_table": existing_phys
+        if (existing_phys and existing_phys != "unknown")
+        else physical_table,
         "require_partition_filter": fm_get(fm_lines, "require_partition_filter") or "unknown",
         "time_unit": fm_get(fm_lines, "time_unit") or "unknown",
         "ttl_days": fm_get(fm_lines, "ttl_days") or "null",
         "domain": fm_get(fm_lines, "domain") if fm_get(fm_lines, "domain") is not None else "[]",
-        "keywords": fm_get(fm_lines, "keywords") if fm_get(fm_lines, "keywords") is not None else "[]",
+        "keywords": fm_get(fm_lines, "keywords")
+        if fm_get(fm_lines, "keywords") is not None
+        else "[]",
     }
     # last_verified: null whenever stubs remain (the core migration)
     if has_stub:
@@ -153,7 +167,7 @@ def fix_file(path, today):
     new_fm = fm_set(fm_lines, updates)
     lines = text.split("\n")
     end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
-    new_text = "\n".join(["---"] + new_fm + ["---"] + lines[end + 1:])
+    new_text = "\n".join(["---"] + new_fm + ["---"] + lines[end + 1 :])
 
     if "OBSERVED:COST START" not in new_text:
         new_text = new_text.rstrip() + "\n" + APPEND_REGIONS
@@ -168,7 +182,9 @@ def fix_file(path, today):
 def main():
     ap = argparse.ArgumentParser()
     here = os.path.dirname(os.path.abspath(__file__))
-    ap.add_argument("--dir", default=os.path.normpath(os.path.join(here, "..", "..", "knowledge", "bq")))
+    ap.add_argument(
+        "--dir", default=os.path.normpath(os.path.join(here, "..", "..", "knowledge", "bq"))
+    )
     ap.add_argument("--fix", action="store_true")
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
@@ -196,7 +212,9 @@ def main():
         if note:
             print(f"ready     {rel}: {note}")
             ready += 1
-    print(f"lint_coverage --check: {len(files)} docs, {violations} violation(s), {ready} ready-to-advance.")
+    print(
+        f"lint_coverage --check: {len(files)} docs, {violations} violation(s), {ready} ready-to-advance."
+    )
     return 1 if violations else 0
 
 

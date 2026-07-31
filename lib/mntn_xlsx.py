@@ -40,6 +40,7 @@ Notes
   * Use None (not "") for truly-empty cells so an adjacent long label can overflow.
   * Keep headers <= 2 words; the sheet title says which group. Column widths fit the WHOLE header.
 """
+
 from __future__ import annotations
 
 import os
@@ -62,19 +63,19 @@ from openpyxl.worksheet.properties import PageSetupProperties
 # ---------------------------------------------------------------------------
 BRAND = {
     # Official MNTN brand palette (brand.mountain.com, 2025 guidelines).
-    "INK":     "191E28",  # Slate Grey (deepest) — cover band bg, footer, brand copy on light
+    "INK": "191E28",  # Slate Grey (deepest) — cover band bg, footer, brand copy on light
     "PRIMARY": "262E3C",  # Slate Grey — table header fills, finding titles, row labels
-    "ACCENT":  "1AC9AA",  # Mountain Green (core brand color) — cover rule, key numbers, takeaway ticks
-    "LINK":    "0AABC5",  # Mountain Blue — hyperlinks (better small-text contrast than the green)
-    "BAND":    "E4F7F2",  # zebra band on data rows — light Mountain Green tint (brand, not grey)
-    "PAPER":   "F6F6F6",  # Glacier White — off-white fill / neutral heat start
-    "GREY":    "5C6675",  # subtitles, methodology lines (mid slate)
-    "MUTE":    "98A2B3",  # footnotes, appendix tab color
-    "LINE":    "DCE3EA",  # thin cell borders / rules
-    "POS":     "1AC9AA",  # Mountain Green — good delta / RAG green
-    "NEG":     "D1495B",  # bad delta / RAG red (brand has no red; reserved — reads "bad" to execs)
-    "WARN":    "E9A23B",  # caution / RAG amber
-    "WHITE":   "FFFFFF",
+    "ACCENT": "1AC9AA",  # Mountain Green (core brand color) — cover rule, key numbers, takeaway ticks
+    "LINK": "0AABC5",  # Mountain Blue — hyperlinks (better small-text contrast than the green)
+    "BAND": "E4F7F2",  # zebra band on data rows — light Mountain Green tint (brand, not grey)
+    "PAPER": "F6F6F6",  # Glacier White — off-white fill / neutral heat start
+    "GREY": "5C6675",  # subtitles, methodology lines (mid slate)
+    "MUTE": "98A2B3",  # footnotes, appendix tab color
+    "LINE": "DCE3EA",  # thin cell borders / rules
+    "POS": "1AC9AA",  # Mountain Green — good delta / RAG green
+    "NEG": "D1495B",  # bad delta / RAG red (brand has no red; reserved — reads "bad" to execs)
+    "WARN": "E9A23B",  # caution / RAG amber
+    "WHITE": "FFFFFF",
 }
 
 # Assets + brand override. Drop the official MNTN logo at assets/mntn_logo.png and it is used on every
@@ -84,6 +85,7 @@ _ASSET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 _DEFAULT_LOGO = os.path.join(_ASSET_DIR, "mntn_logo.png")
 try:
     import json
+
     _bpath = os.path.join(_ASSET_DIR, "brand.json")
     if os.path.exists(_bpath):
         with open(_bpath) as _bf:
@@ -101,6 +103,7 @@ FONT_MONO = "Consolas"
 @dataclass(frozen=True)
 class _Fmt:
     """Number formats. Percents assume the cell holds a DECIMAL (0.0046 -> '0.46%')."""
+
     INT: str = "#,##0"
     NUM1: str = "0.0"
     NUM2: str = "0.00"
@@ -110,7 +113,7 @@ class _Fmt:
     USD: str = '"$"#,##0.00'
     USD0: str = '"$"#,##0'
     USD2: str = '"$"#,##0.00'
-    MULT: str = '0.0"x"'      # advantage ratios: 4.1x
+    MULT: str = '0.0"x"'  # advantage ratios: 4.1x
     ROAS: str = '0.00"x"'
     DATE: str = "yyyy-mm-dd"
 
@@ -127,24 +130,24 @@ FMT = _Fmt()
 # red = significant negative, amber = not significant, and this same green ramp scaled by magnitude
 # for significant positives. The green portion of both modes shares LIGHT->DARK below.
 HEAT = {
-    "LIGHT": "E4F7F2",   # near-white Mountain Green tint (smallest values)
-    "MID":   "8CE0CE",   # mid Mountain Green
-    "DARK":  "1AC9AA",   # Mountain Green (largest / "best" values)
+    "LIGHT": "E4F7F2",  # near-white Mountain Green tint (smallest values)
+    "MID": "8CE0CE",  # mid Mountain Green
+    "DARK": "1AC9AA",  # Mountain Green (largest / "best" values)
     # The pale END of a heat RAMP is floored here (not LIGHT) so EVERY cell in a heat column reads as a
     # visible tint — never near-white. Otherwise a 2-row heat (e.g. Cost per incremental) puts one row dark
     # and the other near-white, which looks like only one row is highlighted. "If we highlight one, highlight
     # all." Also keeps the palest heat cell distinct from the zebra BAND (E4F7F2).
-    "FLOOR": "A7E9DC",   # visible light Mountain Green — the palest a ramp cell ever gets
+    "FLOOR": "A7E9DC",  # visible light Mountain Green — the palest a ramp cell ever gets
 }
 
 TAB = {
-    "cover":    "191E28",  # Slate INK — dark anchor / "start here"
+    "cover": "191E28",  # Slate INK — dark anchor / "start here"
     "headline": "1AC9AA",  # Mountain Green — the hero content tab
-    "data":     "0AABC5",  # Mountain Blue — content
-    "detail":   "26D1EA",  # Mountain Blue (light) — supporting detail
+    "data": "0AABC5",  # Mountain Blue — content
+    "detail": "26D1EA",  # Mountain Blue (light) — supporting detail
     "glossary": "22E5BE",  # Mountain Green (light) — the Read me / reference
-    "sql":      "667085",  # Slate grey — appendix
-    "notes":    "98A2B3",  # Light slate grey — appendix
+    "sql": "667085",  # Slate grey — appendix
+    "notes": "98A2B3",  # Light slate grey — appendix
 }
 
 # Reusable style objects -----------------------------------------------------
@@ -152,8 +155,9 @@ _THIN = Side(style="thin", color=BRAND["LINE"])
 _BORDER = Border(left=_THIN, right=_THIN, top=_THIN, bottom=_THIN)
 _NOBORDER = Border()
 # header cells get a thick Mountain Green underline — ties the slate header to the brand
-_HEADER_BORDER = Border(left=_THIN, right=_THIN, top=_THIN,
-                        bottom=Side(style="thick", color=BRAND["ACCENT"]))
+_HEADER_BORDER = Border(
+    left=_THIN, right=_THIN, top=_THIN, bottom=Side(style="thick", color=BRAND["ACCENT"])
+)
 # ALIGNMENT STANDARD (apply consistently — never leave a cell on Excel's implicit general/bottom default):
 #   - numbers / short codes / Yes-No flags  -> center + vcenter        (_CEN_FLAT)
 #   - single-line text / labels / links / headers -> left + vcenter    (_LEFT_MID_FLAT)
@@ -165,7 +169,9 @@ _CEN_FLAT = Alignment(horizontal="center", vertical="center")
 _CEN_WRAP = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _LEFT = Alignment(horizontal="left", vertical="top", wrap_text=True)
 _LEFT_MID = Alignment(horizontal="left", vertical="center", wrap_text=True)
-_LEFT_MID_FLAT = Alignment(horizontal="left", vertical="center")  # single-line left cells (headers, meta, links)
+_LEFT_MID_FLAT = Alignment(
+    horizontal="left", vertical="center"
+)  # single-line left cells (headers, meta, links)
 _RIGHT = Alignment(horizontal="right", vertical="center")
 
 
@@ -218,8 +224,17 @@ def _to_native(v):
 class MntnWorkbook:
     """A branded, multi-sheet MNTN deliverable. Build content sheets, then call cover() last."""
 
-    def __init__(self, title, ticket, subtitle="", period="", owner="Malachi Dunn · Audience Intelligence",
-                 logo_path=None, generated=None, status="Final"):
+    def __init__(
+        self,
+        title,
+        ticket,
+        subtitle="",
+        period="",
+        owner="Malachi Dunn · Audience Intelligence",
+        logo_path=None,
+        generated=None,
+        status="Final",
+    ):
         self.title = _demdash(title)
         self.ticket = ticket.upper().strip()
         self.subtitle = _demdash(subtitle)
@@ -248,7 +263,9 @@ class MntnWorkbook:
     def _new_sheet(self, name, role):
         ws = self.wb.create_sheet(name[:31])  # Excel 31-char tab limit
         ws.sheet_view.showGridLines = False
-        ws.sheet_properties.tabColor = "FF" + TAB.get(role, BRAND["PRIMARY"])  # FF = opaque (bare hex -> alpha 00 = invisible)
+        ws.sheet_properties.tabColor = "FF" + TAB.get(
+            role, BRAND["PRIMARY"]
+        )  # FF = opaque (bare hex -> alpha 00 = invisible)
         ws.sheet_view.zoomScale = 100
         ws.page_setup.orientation = "landscape"
         ws.page_setup.fitToWidth = 1
@@ -298,24 +315,30 @@ class MntnWorkbook:
         c.alignment = Alignment(horizontal="left", vertical="bottom", wrap_text=(ncols > 1))
         if ncols > 1:
             ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncols)
-        ws.row_dimensions[1].height = 34   # ~2.2x default -> the air sits above the bottom-aligned title
+        ws.row_dimensions[
+            1
+        ].height = 34  # ~2.2x default -> the air sits above the bottom-aligned title
         return c
 
-    def _fit_title_height(self, ws, text, total_width_chars, per_line=19.0, pad=9.0, base=34.0, maxlines=3):
+    def _fit_title_height(
+        self, ws, text, total_width_chars, per_line=19.0, pad=9.0, base=34.0, maxlines=3
+    ):
         """Size the merged row-1 title height to its wrapped text at the table width (Excel won't
         auto-fit a merged cell). 15pt bold fits ~0.6 chars per width-unit; keeps the base top air."""
         if not text:
             return
-        cpl = max(int(total_width_chars * 0.60), 18)   # chars per line for 15pt bold across the span
+        cpl = max(int(total_width_chars * 0.60), 18)  # chars per line for 15pt bold across the span
         lines = min(max(1, -(-len(_demdash(text)) // cpl)), maxlines)
         ws.row_dimensions[1].height = max(base, lines * per_line + pad)
 
-    def _fit_subtitle_height(self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5):
+    def _fit_subtitle_height(
+        self, ws, row, text, total_width_chars, per_line=13.5, pad=4.0, maxlines=5
+    ):
         """Set a merged, wrapped subtitle row's height to fit its text at the table width.
         total_width_chars = summed width of the merged columns; Excel won't auto-fit merged cells."""
         if not text:
             return
-        cpl = max(int(total_width_chars * 0.92), 24)   # ~chars per line across the merged span
+        cpl = max(int(total_width_chars * 0.92), 24)  # ~chars per line across the merged span
         lines = max(1, -(-len(_demdash(text)) // cpl))
         ws.row_dimensions[row].height = max(16.0, min(lines, maxlines) * per_line + pad)
 
@@ -353,10 +376,16 @@ class MntnWorkbook:
     def _raise_if_issues(self):
         if self._issues:
             import sys
+
             report = "\n  - ".join(self._issues)
-            print(f"[mntn_xlsx] BUILD BLOCKED — {len(self._issues)} rule violation(s):\n  - {report}", file=sys.stderr)
-            raise ValueError(f"mntn_xlsx: {len(self._issues)} workbook rule violation(s) — see stderr. "
-                             f"Fix them (trim text / widen columns), the file was NOT written.")
+            print(
+                f"[mntn_xlsx] BUILD BLOCKED — {len(self._issues)} rule violation(s):\n  - {report}",
+                file=sys.stderr,
+            )
+            raise ValueError(
+                f"mntn_xlsx: {len(self._issues)} workbook rule violation(s) — see stderr. "
+                f"Fix them (trim text / widen columns), the file was NOT written."
+            )
 
     def _resolve_query_links(self):
         """Deep-link each table's Source footnote to its query= block on the Query tab. Runs at save (after
@@ -373,14 +402,19 @@ class MntnWorkbook:
                 if target:
                     break
             if not target:
-                self._issue(sheet_title, f"query '{fname}' referenced (query=) but no header naming it is on "
-                                         f"the Query tab -- add the filename to that query's header comment")
+                self._issue(
+                    sheet_title,
+                    f"query '{fname}' referenced (query=) but no header naming it is on "
+                    f"the Query tab -- add the filename to that query's header comment",
+                )
                 continue
             qtab, qrow = target
             fc = self.wb[sheet_title].cell(row=foot_row, column=1)  # merged footnote anchor cell
             # display MUST be the full footnote text: Google Sheets renders a hyperlink's display over the
             # cell value, so display=fname alone would hide Source/Period/Generated. Whole line stays clickable.
-            fc.hyperlink = Hyperlink(ref=f"A{foot_row}", location=f"'{qtab}'!A{qrow}", display=str(fc.value))
+            fc.hyperlink = Hyperlink(
+                ref=f"A{foot_row}", location=f"'{qtab}'!A{qrow}", display=str(fc.value)
+            )
 
     def _footnote(self, ws, text, row, ncols):
         if not text:
@@ -403,7 +437,7 @@ class MntnWorkbook:
         final = {}
         for j, col in enumerate(df.columns, 1):
             if col in widths:
-                w = min(max(int(widths[col]), 8), 72)   # honor caller intent, sane ceiling
+                w = min(max(int(widths[col]), 8), 72)  # honor caller intent, sane ceiling
             else:
                 header = str(col)
                 longest_word = max([len(x) for x in header.split()] or [len(header)])
@@ -413,7 +447,12 @@ class MntnWorkbook:
                 else:
                     # numbers are display-FORMATTED (%, $, commas) — never measure the raw float repr
                     # (str(0.00189)="0.00189372…"). Estimate from magnitude + room for separators/symbol.
-                    mx = pd.to_numeric(cd, errors="coerce").replace([np.inf, -np.inf], np.nan).abs().max()
+                    mx = (
+                        pd.to_numeric(cd, errors="coerce")
+                        .replace([np.inf, -np.inf], np.nan)
+                        .abs()
+                        .max()
+                    )
                     int_digits = len(f"{int(mx):,}") if (pd.notna(mx) and mx >= 1) else 3
                     data_w = int_digits + 5
                 # header word must fit (never break mid-word); data fits up to cap (wraps beyond); floor 10
@@ -446,7 +485,9 @@ class MntnWorkbook:
             ws.row_dimensions[rr].height = max(minh, min(lines, maxlines) * per_line + pad)
 
     @staticmethod
-    def _wrap_rows(ws, col_letter, rows, width_chars, per_line=15.0, pad=6.0, minh=16.0, maxlines=40):
+    def _wrap_rows(
+        ws, col_letter, rows, width_chars, per_line=15.0, pad=6.0, minh=16.0, maxlines=40
+    ):
         """Size a single wrapped text column's rows (used by notes/glossary prose cells)."""
         cpl = max(int(width_chars * 0.9), 8)
         for rr, text in rows:
@@ -456,9 +497,24 @@ class MntnWorkbook:
             ws.row_dimensions[rr].height = max(minh, min(need, maxlines) * per_line + pad)
 
     # -- public: table sheet -------------------------------------------------
-    def table(self, name, df, finding, method="", formats=None, heat=None, rag=None,
-              signal=None, band=True, kind="data", toc="", widths=None, first_col_width=None, freeze="A",
-              query=""):
+    def table(
+        self,
+        name,
+        df,
+        finding,
+        method="",
+        formats=None,
+        heat=None,
+        rag=None,
+        signal=None,
+        band=True,
+        kind="data",
+        toc="",
+        widths=None,
+        first_col_width=None,
+        freeze="A",
+        query="",
+    ):
         """Add a styled table sheet.
 
         finding  : sheet title that STATES THE FINDING (not the metric).
@@ -502,8 +558,11 @@ class MntnWorkbook:
                 c = ws.cell(row=rr, column=j, value=v)
                 c.border = _BORDER
                 # numbers stay centered on one line; text wraps so long cells never clip
-                c.alignment = (_LEFT_MID if (j == 1 and isinstance(v, str))
-                               else (_CEN_WRAP if isinstance(v, str) else _CEN_FLAT))
+                c.alignment = (
+                    _LEFT_MID
+                    if (j == 1 and isinstance(v, str))
+                    else (_CEN_WRAP if isinstance(v, str) else _CEN_FLAT)
+                )
                 if col in formats:
                     c.number_format = formats[col]
                 if j == 1:
@@ -523,10 +582,14 @@ class MntnWorkbook:
             if col not in df.columns:
                 continue
             jj = get_column_letter(list(df.columns).index(col) + 1)
-            rng = f"{jj}{start+1}:{jj}{start+n}"
+            rng = f"{jj}{start + 1}:{jj}{start + n}"
             if direction == "neutral":
-                rule = ColorScaleRule(start_type="min", start_color=BRAND["PAPER"],
-                                      end_type="max", end_color=BRAND["PRIMARY"])
+                rule = ColorScaleRule(
+                    start_type="min",
+                    start_color=BRAND["PAPER"],
+                    end_type="max",
+                    end_color=BRAND["PRIMARY"],
+                )
             else:
                 # SEQUENTIAL single-hue ramp (Mountain Blue), light->saturated. Magnitude gets one hue,
                 # never a red-yellow-green rainbow (that painted the lowest positive value red). 'high':
@@ -536,9 +599,15 @@ class MntnWorkbook:
                     s, m, e = HEAT["FLOOR"], HEAT["MID"], HEAT["DARK"]
                 else:
                     s, m, e = HEAT["DARK"], HEAT["MID"], HEAT["FLOOR"]
-                rule = ColorScaleRule(start_type="min", start_color=s,
-                                      mid_type="percentile", mid_value=50, mid_color=m,
-                                      end_type="max", end_color=e)
+                rule = ColorScaleRule(
+                    start_type="min",
+                    start_color=s,
+                    mid_type="percentile",
+                    mid_value=50,
+                    mid_color=m,
+                    end_type="max",
+                    end_color=e,
+                )
             ws.conditional_formatting.add(rng, rule)
 
         # semantic effect/lift coloring: amber = not significant, red = significant negative,
@@ -546,6 +615,7 @@ class MntnWorkbook:
         # significance flag, which a single ColorScaleRule can't express).
         def _is_sig(x):
             return x.strip().lower() in ("yes", "true", "y", "1") if isinstance(x, str) else bool(x)
+
         for col, spec in signal.items():
             if col not in df.columns:
                 continue
@@ -554,19 +624,24 @@ class MntnWorkbook:
             sigcol = spec.get("sig")
             has_sig = bool(sigcol) and sigcol in df.columns
             flags = [(_is_sig(df[sigcol].iloc[i]) if has_sig else True) for i in range(len(df))]
-            pos = sorted(vals.iloc[i] for i in range(len(df))
-                         if pd.notna(vals.iloc[i]) and vals.iloc[i] > 0 and flags[i])
+            pos = sorted(
+                vals.iloc[i]
+                for i in range(len(df))
+                if pd.notna(vals.iloc[i]) and vals.iloc[i] > 0 and flags[i]
+            )
             npos = len(pos)
             for i in range(len(df)):
                 v = vals.iloc[i]
                 if pd.isna(v):
                     continue
                 c = ws.cell(row=start + 1 + i, column=jcol)
-                if has_sig and not flags[i]:               # inconclusive
-                    c.fill = _fill(BRAND["WARN"]); c.font = _font(10, bold=True, color=BRAND["INK"])
-                elif v < 0:                                 # significant negative
-                    c.fill = _fill(BRAND["NEG"]); c.font = _font(10, bold=True, color=BRAND["WHITE"])
-                else:                                       # significant positive -> green by RANK
+                if has_sig and not flags[i]:  # inconclusive
+                    c.fill = _fill(BRAND["WARN"])
+                    c.font = _font(10, bold=True, color=BRAND["INK"])
+                elif v < 0:  # significant negative
+                    c.fill = _fill(BRAND["NEG"])
+                    c.font = _font(10, bold=True, color=BRAND["WHITE"])
+                else:  # significant positive -> green by RANK
                     # rank-based (not linear): even gradient, so a skewed tail can't wash the rest pale
                     # or flatten the top. Bigger lift = deeper green, evenly stepped.
                     rank = (sum(1 for p in pos if p < v) / (npos - 1)) if npos > 1 else 1.0
@@ -576,22 +651,28 @@ class MntnWorkbook:
                     c.fill = _fill(_lerp_hex(HEAT["LIGHT"], HEAT["DARK"], t))
                     c.font = _font(10, bold=True, color=BRAND["INK"])
 
-        ws.freeze_panes = f"{freeze}{start+1}"
-        ws.auto_filter.ref = f"A{start}:{last_col}{start+n}"
+        ws.freeze_panes = f"{freeze}{start + 1}"
+        ws.auto_filter.ref = f"A{start}:{last_col}{start + n}"
         colw = self._autosize(ws, df, widths=widths, first_col=first_col_width)
         self._fit_row_heights(ws, df, start, colw)
-        self._fit_header_height(ws, df, start, colw)   # size the header row to its wrapped headers -> never clips
+        self._fit_header_height(
+            ws, df, start, colw
+        )  # size the header row to its wrapped headers -> never clips
         # rows 1 (title) and 2 (subtitle) are merged across the table; size heights to the wrapped
         # text at table width so a long finding/method wraps in place instead of running off the edge.
         table_width = sum(colw.get(c, 12) for c in df.columns)
         self._fit_title_height(ws, finding, table_width)
         self._fit_subtitle_height(ws, 2, method, table_width)
         foot_row = start + n + 2
-        self._footnote(ws, f"Source: {self.ticket}"
-                       + (f"  ·  Query: {query}" if query else "")
-                       + (f"  ·  Period: {self.period}" if self.period else "")
-                       + (f"  ·  Generated {self.generated}" if self.generated else ""),
-                       foot_row, ncols)
+        self._footnote(
+            ws,
+            f"Source: {self.ticket}"
+            + (f"  ·  Query: {query}" if query else "")
+            + (f"  ·  Period: {self.period}" if self.period else "")
+            + (f"  ·  Generated {self.generated}" if self.generated else ""),
+            foot_row,
+            ncols,
+        )
         if query:
             self._pending_query_links.append((ws.title, foot_row, query))
         if toc:
@@ -599,8 +680,16 @@ class MntnWorkbook:
         return ws
 
     # -- public: glossary / read-me -----------------------------------------
-    def glossary(self, name, rows, intro="", toc="How to read this workbook", body_width=104,
-                 max_def_chars=220, max_entries=14):
+    def glossary(
+        self,
+        name,
+        rows,
+        intro="",
+        toc="How to read this workbook",
+        body_width=104,
+        max_def_chars=220,
+        max_entries=14,
+    ):
         """Two-column term/definition sheet (term bold in A, definition wrapped in B).
         A row of ('', '') renders a blank spacer; a row of ('Header', '') renders a section band.
 
@@ -613,11 +702,18 @@ class MntnWorkbook:
         # a too-long definition is a HARD fail (exact rule) so it can't ship; too-many-entries stays a warn
         # because max_entries is a deliberate per-call knob (a workbook with more tabs legitimately needs more).
         for k, nch in over:
-            self._issue(name, f"glossary def '{k}' is {nch} chars (cap {max_def_chars}) — trim to 1-2 sentences, move why/how to the Method tab")
+            self._issue(
+                name,
+                f"glossary def '{k}' is {nch} chars (cap {max_def_chars}) — trim to 1-2 sentences, move why/how to the Method tab",
+            )
         if len(ents) > max_entries:
             import sys
-            print(f"[mntn_xlsx] Read me '{name}': {len(ents)} entries > {max_entries} "
-                  "(raise max_entries only if the tab count genuinely warrants it).", file=sys.stderr)
+
+            print(
+                f"[mntn_xlsx] Read me '{name}': {len(ents)} entries > {max_entries} "
+                "(raise max_entries only if the tab count genuinely warrants it).",
+                file=sys.stderr,
+            )
         ws = self._new_sheet(name, "glossary")
         self._sheet_title(ws, self.title)
         sub = f"{self.ticket}." + (f"  {_demdash(intro)}" if intro else "")
@@ -629,11 +725,11 @@ class MntnWorkbook:
         r = 4
         def_rows = []
         for k, v in rows:
-            is_section = bool(k) and not v          # (heading, '') -> a section band (visual grouper)
+            is_section = bool(k) and not v  # (heading, '') -> a section band (visual grouper)
             kc = ws.cell(row=r, column=1, value=(_demdash(k) or None))
             vc = ws.cell(row=r, column=2, value=(_demdash(v) or None))
             if is_section:
-                for cc in (1, 2):                   # light Mountain-Green band across both columns
+                for cc in (1, 2):  # light Mountain-Green band across both columns
                     ws.cell(row=r, column=cc).fill = _fill(BRAND["BAND"])
                 kc.font = _font(10, bold=True, color=BRAND["PRIMARY"])
                 kc.alignment = _LEFT_MID_FLAT
@@ -678,7 +774,15 @@ class MntnWorkbook:
         return "\n".join(out), dropped
 
     # -- public: SQL / queries ----------------------------------------------
-    def sql(self, name, sql_text, note="", toc="The SQL behind the numbers", width=120, max_comment_run=3):
+    def sql(
+        self,
+        name,
+        sql_text,
+        note="",
+        toc="The SQL behind the numbers",
+        width=120,
+        max_comment_run=3,
+    ):
         ws = self._new_sheet(name, "sql")
         self._query_tabs.append(ws.title)  # a table()'s query= can deep-link into this tab
         self._sheet_title(ws, "Queries used (for validation)")
@@ -690,15 +794,23 @@ class MntnWorkbook:
         sql_text, dropped = self._cap_comment_runs(sql_text, max_comment_run)
         if dropped:
             import sys
-            print(f"[mntn_xlsx] Query '{name}' trimmed {dropped} comment line(s) over the "
-                  f"{max_comment_run}-line header cap. Tighten the SQL comment headers.", file=sys.stderr)
+
+            print(
+                f"[mntn_xlsx] Query '{name}' trimmed {dropped} comment line(s) over the "
+                f"{max_comment_run}-line header cap. Tighten the SQL comment headers.",
+                file=sys.stderr,
+            )
         r = 4
         for line in sql_text.split("\n"):  # SQL body left verbatim (never sanitized)
             c = ws.cell(row=r, column=1, value=line)
             # comments recede (muted italic), code stays dark; whole block on a light code-panel fill
             is_comment = line.lstrip().startswith("--")
-            c.font = _font(9, name=FONT_MONO, italic=is_comment,
-                           color=BRAND["GREY"] if is_comment else BRAND["INK"])
+            c.font = _font(
+                9,
+                name=FONT_MONO,
+                italic=is_comment,
+                color=BRAND["GREY"] if is_comment else BRAND["INK"],
+            )
             c.fill = _fill(BRAND["PAPER"])
             c.alignment = _LEFT_MID_FLAT
             r += 1
@@ -708,8 +820,17 @@ class MntnWorkbook:
             self._toc.append((ws.title, toc, "sql"))
         return ws
 
-    def sql_dir(self, name, directory, order=None, ignore=None, headers=None, note="",
-                collapse_aids=True, aid_placeholder="/* the AID list, same as the main query */"):
+    def sql_dir(
+        self,
+        name,
+        directory,
+        order=None,
+        ignore=None,
+        headers=None,
+        note="",
+        collapse_aids=True,
+        aid_placeholder="/* the AID list, same as the main query */",
+    ):
         """Build the Query tab from EVERY .sql file in `directory` (minus `ignore`), so a newly-added query
         can never be forgotten — the default is 'included', not 'you remembered to add it'.
 
@@ -718,24 +839,31 @@ class MntnWorkbook:
         one-line header}; otherwise the file's first `-- ...` line, else the filename. AID UNNEST lists are
         collapsed to a placeholder. The whole thing reuses sql() (comment-cap + styling)."""
         import glob as _glob, re as _re
+
         files = sorted(_glob.glob(os.path.join(directory, "*.sql")))
         ignore = set(ignore or [])
         chosen = [f for f in files if os.path.basename(f) not in ignore]
         if order:
             rank = {n: i for i, n in enumerate(order)}
-            chosen.sort(key=lambda f: (rank.get(os.path.basename(f), len(order)), os.path.basename(f)))
+            chosen.sort(
+                key=lambda f: (rank.get(os.path.basename(f), len(order)), os.path.basename(f))
+            )
         headers = headers or {}
         parts = []
         for f in chosen:
             base = os.path.basename(f)
             raw = open(f).read().strip()
-            first_comment = next((ln.strip() for ln in raw.splitlines() if ln.strip().startswith("--")), None)
+            first_comment = next(
+                (ln.strip() for ln in raw.splitlines() if ln.strip().startswith("--")), None
+            )
             hdr = headers.get(base) or first_comment or f"-- {base}"
             if not hdr.lstrip().startswith("--"):
                 hdr = "-- " + hdr
-            body = _re.sub(r"\A(\s*--[^\n]*\n)+", "", raw)                     # strip the file's own comment block
+            body = _re.sub(r"\A(\s*--[^\n]*\n)+", "", raw)  # strip the file's own comment block
             if collapse_aids:
-                body = _re.sub(r"UNNEST\(\[.*?\]\)", f"UNNEST([ {aid_placeholder} ])", body, flags=_re.S)
+                body = _re.sub(
+                    r"UNNEST\(\[.*?\]\)", f"UNNEST([ {aid_placeholder} ])", body, flags=_re.S
+                )
             parts.append(hdr.split("\n")[0].strip() + "\n\n" + body.strip())
         return self.sql(name, "\n\n\n".join(parts) + "\n", note=note)
 
@@ -744,10 +872,12 @@ class MntnWorkbook:
         newly-added query can't be forgotten. Use with a hand-curated sql() Query tab (sql_dir() already
         guarantees coverage). `ignore` = filenames deliberately kept out (superseded / one-off diagnostics)."""
         import glob as _glob, re as _re
+
         def norm(s):
-            s = _re.sub(r"--[^\n]*", "", s)                                   # strip comments
-            s = _re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([])", s, flags=_re.S)   # neutralize AID lists
+            s = _re.sub(r"--[^\n]*", "", s)  # strip comments
+            s = _re.sub(r"UNNEST\(\[.*?\]\)", "UNNEST([])", s, flags=_re.S)  # neutralize AID lists
             return _re.sub(r"\s+", " ", s).strip().lower()
+
         tab = norm(query_text)
         ignore = set(ignore or [])
         for f in sorted(_glob.glob(os.path.join(directory, "*.sql"))):
@@ -756,10 +886,15 @@ class MntnWorkbook:
                 continue
             body = norm(open(f).read())
             if body and body not in tab:
-                self._issue("Query", f"'{base}' is NOT in the Query tab — add it (or list it in ignore= if superseded/diagnostic)")
+                self._issue(
+                    "Query",
+                    f"'{base}' is NOT in the Query tab — add it (or list it in ignore= if superseded/diagnostic)",
+                )
 
     # -- public: long-form notes / method -----------------------------------
-    def notes(self, name, blocks, intro="", toc="Method & caveats", body_width=110, max_block_chars=320):
+    def notes(
+        self, name, blocks, intro="", toc="Method & caveats", body_width=110, max_block_chars=320
+    ):
         """blocks = list of (heading, body). heading '' -> continuation paragraph.
 
         Each block body leads with its answer and stays <= max_block_chars (the narrative-explainer cap);
@@ -767,7 +902,10 @@ class MntnWorkbook:
         the glossary terseness guard, for the Method/caveats prose."""
         for head, body in blocks:
             if body and len(str(body)) > max_block_chars:
-                self._issue(name, f"block '{head or body[:30]}' is {len(str(body))} chars (cap {max_block_chars}) — trim it or split")
+                self._issue(
+                    name,
+                    f"block '{head or body[:30]}' is {len(str(body))} chars (cap {max_block_chars}) — trim it or split",
+                )
         ws = self._new_sheet(name, "notes")
         self._sheet_title(ws, name)
         if intro:
@@ -781,7 +919,7 @@ class MntnWorkbook:
             if head:
                 hc = ws.cell(row=r, column=1, value=_demdash(head))
                 hc.font = _font(11, bold=True, color=BRAND["PRIMARY"])
-                hc.fill = _fill(BRAND["BAND"])          # light green band = section header
+                hc.fill = _fill(BRAND["BAND"])  # light green band = section header
                 hc.alignment = _LEFT_MID_FLAT
                 r += 1
             bc = ws.cell(row=r, column=1, value=_demdash(body))
@@ -814,6 +952,7 @@ class MntnWorkbook:
         if self.logo_path:
             try:
                 from PIL import Image as PILImage
+
                 target_h = 44  # px; fits inside the 3-row band with breathing room
                 lg = PILImage.open(self.logo_path).convert("RGBA")
                 w = max(1, int(lg.width * target_h / lg.height))
@@ -848,8 +987,12 @@ class MntnWorkbook:
             s.alignment = Alignment(horizontal="left", vertical="center", indent=1)
 
         # meta strip
-        meta = [("Ticket", self.ticket), ("Period", self.period or "—"),
-                ("Prepared by", self.owner), ("Status", self.status)]
+        meta = [
+            ("Ticket", self.ticket),
+            ("Period", self.period or "—"),
+            ("Prepared by", self.owner),
+            ("Status", self.status),
+        ]
         if self.generated:
             meta.insert(2, ("Generated", self.generated))
         r = 9
@@ -865,10 +1008,14 @@ class MntnWorkbook:
         # key takeaways (Rule of Three)
         r += 1
         if takeaways:
-            ws.cell(row=r, column=1, value="Key takeaways").font = _font(13, bold=True, color=BRAND["INK"])
+            ws.cell(row=r, column=1, value="Key takeaways").font = _font(
+                13, bold=True, color=BRAND["INK"]
+            )
             r += 1
             for i, tk in enumerate(takeaways, 1):
-                ws.cell(row=r, column=1, value=str(i)).font = _font(12, bold=True, color=BRAND["ACCENT"])
+                ws.cell(row=r, column=1, value=str(i)).font = _font(
+                    12, bold=True, color=BRAND["ACCENT"]
+                )
                 ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
                 c = ws.cell(row=r, column=2, value=_demdash(tk))
                 c.font = _font(11, color=BRAND["INK"])
@@ -894,7 +1041,9 @@ class MntnWorkbook:
         r += 1
         for sheet_name, desc, role in self._toc:
             link = ws.cell(row=r, column=1, value=sheet_name)
-            link.hyperlink = Hyperlink(ref=f"A{r}", location=f"'{sheet_name}'!A1", display=sheet_name)
+            link.hyperlink = Hyperlink(
+                ref=f"A{r}", location=f"'{sheet_name}'!A1", display=sheet_name
+            )
             link.font = _font(10, bold=True, color=BRAND["LINK"], name=FONT_BODY)
             link.alignment = _LEFT_MID
             ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
@@ -906,10 +1055,13 @@ class MntnWorkbook:
         # footer
         r += 1
         ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=SPAN)
-        f = ws.cell(row=r, column=1,
-                    value=f"MNTN · Audience Intelligence · {self.ticket}"
-                          + (f" · generated {self.generated}" if self.generated else "")
-                          + " · Internal")
+        f = ws.cell(
+            row=r,
+            column=1,
+            value=f"MNTN · Audience Intelligence · {self.ticket}"
+            + (f" · generated {self.generated}" if self.generated else "")
+            + " · Internal",
+        )
         f.font = _font(9, italic=True, color=BRAND["MUTE"])
 
         # column widths for the cover — col A must fit the longest tab name in Contents
@@ -925,18 +1077,19 @@ class MntnWorkbook:
 
     # -- save ---------------------------------------------------------------
     def save_local(self, path):
-        self._resolve_query_links()   # deep-link each Source footnote to its query block (may add issues)
-        self._raise_if_issues()   # a rule violation fails the build here -> no broken file is ever written
+        self._resolve_query_links()  # deep-link each Source footnote to its query block (may add issues)
+        self._raise_if_issues()  # a rule violation fails the build here -> no broken file is ever written
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.wb.save(path)
         return path
 
     def save_drive(self, ticket_key, filename_desc, drive_root=None):
         """Write straight into the mounted Google Drive: My Drive/Tickets/<KEY>/<KEY> <Desc>.xlsx"""
-        self._resolve_query_links()   # deep-link each Source footnote to its query block (may add issues)
-        self._raise_if_issues()   # broken workbook cannot reach Drive
+        self._resolve_query_links()  # deep-link each Source footnote to its query block (may add issues)
+        self._raise_if_issues()  # broken workbook cannot reach Drive
         root = drive_root or os.path.expanduser(
-            "~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/Tickets")
+            "~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/Tickets"
+        )
         folder = os.path.join(root, ticket_key.upper().strip())
         os.makedirs(folder, exist_ok=True)
         fname = f"{ticket_key.upper().strip()} {filename_desc}.xlsx"
@@ -948,6 +1101,7 @@ class MntnWorkbook:
 # RAG helpers ----------------------------------------------------------------
 def rag_threshold(good_above=None, bad_below=None, reverse=False):
     """Return a fn(value)->'POS'|'WARN'|'NEG' for use in table(rag=...)."""
+
     def f(v):
         try:
             x = float(v)
@@ -959,6 +1113,7 @@ def rag_threshold(good_above=None, bad_below=None, reverse=False):
         if lo is not None and x <= lo:
             return "POS" if reverse else "NEG"
         return "WARN"
+
     return f
 
 

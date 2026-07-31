@@ -8,6 +8,7 @@ human call (autonomous skill creation is a named anti-goal).
 
 Read-only. Run it on demand (e.g. during a weekly review or /capture): `request_digest.py [--min N]`.
 """
+
 import argparse, json, os
 from collections import Counter
 
@@ -38,7 +39,9 @@ def main():
 
     recs = load()
     if not recs:
-        print("request_digest: no requests logged yet (knowledge/.request_log.jsonl is empty or absent).")
+        print(
+            "request_digest: no requests logged yet (knowledge/.request_log.jsonl is empty or absent)."
+        )
         print("  The UserPromptSubmit hook populates it as you work; re-run after a few sessions.")
         return 0
 
@@ -53,7 +56,7 @@ def main():
         for n in r.get("nouns", []):
             pairs[(v, n)] += 1
 
-    span = f"{recs[0].get('ts','?')[:10]} → {recs[-1].get('ts','?')[:10]}"
+    span = f"{recs[0].get('ts', '?')[:10]} → {recs[-1].get('ts', '?')[:10]}"
     print(f"request_digest: {len(recs)} requests logged ({span})\n")
 
     print("Top verbs (what you ask FOR):")
@@ -66,9 +69,11 @@ def main():
     proposals = [(vn, c) for vn, c in pairs.most_common() if c >= args.min]
     print(f"\nRecurring shapes (verb+noun, ≥ {args.min}× → skill candidates):")
     if proposals:
-        for (v, n), c in proposals[:args.top]:
+        for (v, n), c in proposals[: args.top]:
             print(f"  {c:>3}×  {v} … {n}   → consider a /skill or runbook for '{v} {n}'")
-        print("\n→ PROPOSAL ONLY. A human decides whether any of these becomes a skill (skills are not auto-created).")
+        print(
+            "\n→ PROPOSAL ONLY. A human decides whether any of these becomes a skill (skills are not auto-created)."
+        )
     else:
         print(f"  (nothing recurs ≥ {args.min}× yet — keep working; re-run later.)")
     return 0

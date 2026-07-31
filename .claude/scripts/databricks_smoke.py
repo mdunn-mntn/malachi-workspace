@@ -18,6 +18,7 @@ Prereqs:
 If the cluster is TERMINATED, start via:
     databricks clusters start --cluster-id 5428-215533-4jodkdfs
 """
+
 import argparse
 import os
 import subprocess
@@ -32,13 +33,16 @@ KEYCHAIN_SERVICE = "databricks-ti837"
 def get_pat() -> str:
     out = subprocess.run(
         ["security", "find-generic-password", "-s", KEYCHAIN_SERVICE, "-w"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return out.stdout.strip()
 
 
 def make_session(token: str):
     from databricks.connect import DatabricksSession
+
     return DatabricksSession.builder.remote(
         host=WORKSPACE_HOST,
         cluster_id=CLUSTER_ID,
@@ -47,12 +51,14 @@ def make_session(token: str):
 
 
 def test_a_bq_campaigns(spark) -> int:
-    df = (spark.read.format("bigquery")
-          .option("parentProject", "dw-main-bronze")
-          .option("billingProject", "dw-main-bronze")
-          .option("project", "dw-main-bronze")
-          .load("dw-main-bronze.integrationprod.campaigns")
-          .filter("deleted = FALSE AND is_test = FALSE"))
+    df = (
+        spark.read.format("bigquery")
+        .option("parentProject", "dw-main-bronze")
+        .option("billingProject", "dw-main-bronze")
+        .option("project", "dw-main-bronze")
+        .load("dw-main-bronze.integrationprod.campaigns")
+        .filter("deleted = FALSE AND is_test = FALSE")
+    )
     return df.count()
 
 
@@ -66,8 +72,7 @@ def test_b_gcs_augmentor(spark, dt: str) -> dict:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dt", default="2026-04-23",
-                        help="augmentor partition date (YYYY-MM-DD)")
+    parser.add_argument("--dt", default="2026-04-23", help="augmentor partition date (YYYY-MM-DD)")
     args = parser.parse_args()
 
     print("[smoke] reading PAT from keychain...")
@@ -75,20 +80,21 @@ def main():
     print("[smoke] starting Databricks Connect session...")
     t0 = time.time()
     spark = make_session(token)
-    print(f"[smoke]   session up in {time.time()-t0:.1f}s")
+    print(f"[smoke]   session up in {time.time() - t0:.1f}s")
 
     print("\n[A] BQ connector: dw-main-bronze.integrationprod.campaigns ...")
     t1 = time.time()
     n_campaigns = test_a_bq_campaigns(spark)
-    print(f"[A]   count={n_campaigns:,}  ({time.time()-t1:.1f}s)")
+    print(f"[A]   count={n_campaigns:,}  ({time.time() - t1:.1f}s)")
 
     print(f"\n[B] GCS augmentor: region=east/dt={args.dt} ...")
     t2 = time.time()
     res = test_b_gcs_augmentor(spark, args.dt)
     print(f"[B]   path={res['path']}")
-    print(f"[B]   schema cols ({len(res['schema_cols'])}): "
-          f"{', '.join(res['schema_cols'][:8])}, ...")
-    print(f"[B]   limit(10).count()={res['n10']}  ({time.time()-t2:.1f}s)")
+    print(
+        f"[B]   schema cols ({len(res['schema_cols'])}): {', '.join(res['schema_cols'][:8])}, ..."
+    )
+    print(f"[B]   limit(10).count()={res['n10']}  ({time.time() - t2:.1f}s)")
 
     if n_campaigns > 100_000 and res["n10"] == 10:
         print("\n[smoke] PASS")

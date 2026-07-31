@@ -22,6 +22,7 @@ Framing gate (the start-of-ticket mirror of the result-when-done rule):
 
 Usage: lint_tickets.py [--check]   # default; non-zero exit on any VIOLATION (hook/CI friendly). WARNs never fail.
 """
+
 import argparse, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -56,7 +57,9 @@ def check(path, rel):
     fm = front_matter(path)
     v, w = [], []
     if fm is None:
-        return [f"{rel}: no YAML front-matter (add the ticket card block — see folder_definitions.md)"], w
+        return [
+            f"{rel}: no YAML front-matter (add the ticket card block — see folder_definitions.md)"
+        ], w
     dt = fm.get("doc_type")
     if dt not in ("ticket", "epic"):
         v.append(f"{rel}: doc_type={dt!r} (must be ticket|epic)")
@@ -73,14 +76,18 @@ def check(path, rel):
     if st == "done":
         r = fm.get("result", "")
         if not r or PLACEHOLDER.match(r):
-            v.append(f"{rel}: status=done but result is empty/placeholder — a done ticket must show its answer")
+            v.append(
+                f"{rel}: status=done but result is empty/placeholder — a done ticket must show its answer"
+            )
 
     # --- Framing gate ---
     fs_raw = fm.get("framing_state")
     if fs_raw is None:
         # legacy card — never block; nudge only when it's actually being worked
         if st in ("in_progress", "done"):
-            w.append(f"{rel}: no framing_state (legacy card) — run /frame to add §0 Framing (Question/Goal/Objective/Approach)")
+            w.append(
+                f"{rel}: no framing_state (legacy card) — run /frame to add §0 Framing (Question/Goal/Objective/Approach)"
+            )
     else:
         state, _, reason = fs_raw.partition(":")
         state, reason = state.strip(), reason.strip()
@@ -88,13 +95,19 @@ def check(path, rel):
             v.append(f"{rel}: framing_state={fs_raw!r} (must be draft | locked | 'skip: <reason>')")
         else:
             if state == "skip" and (not reason or PLACEHOLDER.match(reason)):
-                v.append(f"{rel}: framing_state=skip needs a reason — 'skip: <one-line why this ticket needs no framing>'")
+                v.append(
+                    f"{rel}: framing_state=skip needs a reason — 'skip: <one-line why this ticket needs no framing>'"
+                )
             if st in ("in_progress", "done") and state == "draft":
-                v.append(f"{rel}: status={st} but framing_state=draft — run /frame to lock §0, or set framing_state: 'skip: <reason>' for a trivial ticket")
+                v.append(
+                    f"{rel}: status={st} but framing_state=draft — run /frame to lock §0, or set framing_state: 'skip: <reason>' for a trivial ticket"
+                )
             if state == "locked":
                 q = fm.get("question", "")
                 if not q or PLACEHOLDER.match(q):
-                    v.append(f"{rel}: framing_state=locked but question missing/placeholder — a locked frame must state its question")
+                    v.append(
+                        f"{rel}: framing_state=locked but question missing/placeholder — a locked frame must state its question"
+                    )
     return v, w
 
 
@@ -110,7 +123,11 @@ def cards():
             out.append((os.path.join(d, "summary.md"), f"tickets/{name}/summary.md"))
         for c in sorted(os.listdir(d)):
             cd = os.path.join(d, c)
-            if os.path.isdir(cd) and not c.startswith(("_", ".")) and os.path.exists(os.path.join(cd, "summary.md")):
+            if (
+                os.path.isdir(cd)
+                and not c.startswith(("_", "."))
+                and os.path.exists(os.path.join(cd, "summary.md"))
+            ):
                 out.append((os.path.join(cd, "summary.md"), f"tickets/{name}/{c}/summary.md"))
     return out
 
@@ -129,7 +146,9 @@ def main():
         print(f"WARN {msg}", file=sys.stderr)
     for msg in violations:
         print(f"VIOLATION {msg}", file=sys.stderr)
-    print(f"lint_tickets --check: {len(all_cards)} cards, {len(violations)} violation(s), {len(warnings)} warning(s).")
+    print(
+        f"lint_tickets --check: {len(all_cards)} cards, {len(violations)} violation(s), {len(warnings)} warning(s)."
+    )
     return 1 if violations else 0
 
 

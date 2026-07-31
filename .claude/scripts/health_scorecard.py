@@ -13,6 +13,7 @@ prints nothing and exits 0, so a bad git state can't break SessionStart.
 
 Usage: health_scorecard.py [--verbose]
 """
+
 import datetime, os, re, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -20,14 +21,18 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 KDIR = os.path.join(ROOT, "knowledge")
 MEM_DIR = os.path.join(KDIR, "memory")
 STALE_DAYS = 120
-EVAL_STALE_DAYS = 14   # retrieval regression suite should run at least biweekly
-MEM_STALE_DAYS = 90    # an active memory unverified this long is a refresh candidate
-MEM_TOKEN_CAP = 1500   # MEMORY.md hot-tier ceiling (~6,000 bytes) — flags REGROWTH, not a 20-token overage
+EVAL_STALE_DAYS = 14  # retrieval regression suite should run at least biweekly
+MEM_STALE_DAYS = 90  # an active memory unverified this long is a refresh candidate
+MEM_TOKEN_CAP = (
+    1500  # MEMORY.md hot-tier ceiling (~6,000 bytes) — flags REGROWTH, not a 20-token overage
+)
 DAY = 86400
 
 
 def _git(*args, timeout=15):
-    return subprocess.run(["git", "-C", ROOT, *args], capture_output=True, text=True, timeout=timeout).stdout
+    return subprocess.run(
+        ["git", "-C", ROOT, *args], capture_output=True, text=True, timeout=timeout
+    ).stdout
 
 
 def days_since_capture():
@@ -63,7 +68,9 @@ def _is_curated(rel):
     base = os.path.basename(rel)
     if base == "INDEX.md" or base.startswith("_"):
         return False
-    if rel.startswith("knowledge/memory/"):   # memory has its own signals (memory_*), not the generic orphan/dup ones
+    if rel.startswith(
+        "knowledge/memory/"
+    ):  # memory has its own signals (memory_*), not the generic orphan/dup ones
         return False
     return rel.endswith(".md") and rel.startswith("knowledge/")
 
@@ -97,7 +104,7 @@ def dup_titles():
     """H1 titles shared by 2+ curated knowledge docs (a merge/duplication smell)."""
     titles = {}
     for dp, dirs, files in os.walk(KDIR):
-        dirs[:] = [d for d in dirs if d != "memory"]   # memory files handled by the memory_* signals
+        dirs[:] = [d for d in dirs if d != "memory"]  # memory files handled by the memory_* signals
         for f in files:
             if not f.endswith(".md") or f == "INDEX.md" or f.startswith("_"):
                 continue
@@ -128,8 +135,11 @@ def _date_epoch(iso):
 def _mem_files():
     if not os.path.isdir(MEM_DIR):
         return []
-    return [os.path.join(MEM_DIR, f) for f in sorted(os.listdir(MEM_DIR))
-            if f.endswith(".md") and f != "MEMORY.md" and not f.startswith("_")]
+    return [
+        os.path.join(MEM_DIR, f)
+        for f in sorted(os.listdir(MEM_DIR))
+        if f.endswith(".md") and f != "MEMORY.md" and not f.startswith("_")
+    ]
 
 
 def _mem_fm(path):
@@ -145,7 +155,7 @@ def _mem_fm(path):
         if l.strip() == "---":
             break
         if l[:1] in (" ", "\t") or ":" not in l:
-            m = re.match(r"^\s+type:\s*(.+)$", l)      # nested metadata.type fallback
+            m = re.match(r"^\s+type:\s*(.+)$", l)  # nested metadata.type fallback
             if m and "type" not in fm:
                 fm["type"] = m.group(1).strip().strip('"').strip("'")
             continue
@@ -177,14 +187,28 @@ def memory_lifecycle():
 
 def memory_overlap_clusters(min_files=3):
     """Active memory files sharing a significant filename-stem token — near-duplicate merge candidates."""
-    generic = {"feedback", "reference", "project", "user", "audi", "ti", "ber", "dm",
-               "not", "mntn", "workflow", "audience"}   # type prefixes, ticket prefixes, cross-cutting stopwords
+    generic = {
+        "feedback",
+        "reference",
+        "project",
+        "user",
+        "audi",
+        "ti",
+        "ber",
+        "dm",
+        "not",
+        "mntn",
+        "workflow",
+        "audience",
+    }  # type prefixes, ticket prefixes, cross-cutting stopwords
     tok = {}
     for p in _mem_files():
         if _mem_fm(p).get("lifecycle", "active") != "active":
             continue
         stem = os.path.splitext(os.path.basename(p))[0]
-        for t in {x for x in stem.split("_") if len(x) > 2 and x not in generic and not x.isdigit()}:
+        for t in {
+            x for x in stem.split("_") if len(x) > 2 and x not in generic and not x.isdigit()
+        }:
             tok.setdefault(t, []).append(stem)
     return {t: sorted(v) for t, v in sorted(tok.items()) if len(v) >= min_files}
 
@@ -248,14 +272,20 @@ def main():
         return 0  # never break the caller
 
     over = " OVER" if mtok > MEM_TOKEN_CAP else ""
-    uix = f" · {len(munidx)} UNINDEXED" if munidx else ""   # native-written raw files not in _ROUTING yet
-    mem_line = (f"Memory  : {sum(mcounts.values())} files{uix} · {len(mstale)} stale(>{MEM_STALE_DAYS}d) · "
-                f"{len(mclusters)} overlap-cluster(s) · {len(munres)} unresolved link(s) · "
-                f"MEMORY.md ~{mtok/1000:.1f}k/{MEM_TOKEN_CAP/1000:.1f}k{over}")
+    uix = (
+        f" · {len(munidx)} UNINDEXED" if munidx else ""
+    )  # native-written raw files not in _ROUTING yet
+    mem_line = (
+        f"Memory  : {sum(mcounts.values())} files{uix} · {len(mstale)} stale(>{MEM_STALE_DAYS}d) · "
+        f"{len(mclusters)} overlap-cluster(s) · {len(munres)} unresolved link(s) · "
+        f"MEMORY.md ~{mtok / 1000:.1f}k/{MEM_TOKEN_CAP / 1000:.1f}k{over}"
+    )
 
     def _mem_detail():
-        print(f"\nMemory lifecycle: active {mcounts['active']} · superseded {mcounts['superseded']} "
-              f"· archived {mcounts['archived']}")
+        print(
+            f"\nMemory lifecycle: active {mcounts['active']} · superseded {mcounts['superseded']} "
+            f"· archived {mcounts['archived']}"
+        )
         if munidx:
             print(f"UNINDEXED (native-written; run `lint_memory.py --fix` to fold into _ROUTING):")
             for n in munidx:
@@ -265,7 +295,9 @@ def main():
             for n, d in mstale[:15]:
                 print(f"  {d:>4}d  {n}")
         if mclusters:
-            print("Overlap clusters (shared stem token, ≥3 active — merge candidates, propose-only):")
+            print(
+                "Overlap clusters (shared stem token, ≥3 active — merge candidates, propose-only):"
+            )
             for t, fs in mclusters.items():
                 print(f"  {t}: {', '.join(fs)}")
         if munres:
@@ -275,7 +307,7 @@ def main():
         if not (mstale or mclusters or munres):
             print("(no stale memories, overlap clusters, or broken links)")
 
-    if mem_only:                       # `--memory`: memory section only (for the audit's §10)
+    if mem_only:  # `--memory`: memory section only (for the audit's §10)
         print(mem_line)
         _mem_detail()
         return 0
@@ -287,7 +319,9 @@ def main():
         ev = f"retrieval-eval {de}d ago — STALE, run claude-prompts/retrieval_eval.js"
     else:
         ev = f"retrieval-eval {de}d ago"
-    print(f"Health  : {cap} · {len(orph)} stale doc(s) (>{STALE_DAYS}d) · {len(dups)} dup-title · {ev}")
+    print(
+        f"Health  : {cap} · {len(orph)} stale doc(s) (>{STALE_DAYS}d) · {len(dups)} dup-title · {ev}"
+    )
     print(mem_line)
 
     if verbose:

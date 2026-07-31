@@ -27,14 +27,64 @@ Modes:
 
 Usage: lint_memory.py [--check | --fix] [--dir knowledge/memory]
 """
+
 import argparse, datetime, os, re, subprocess, sys
 
 # Stop-words dropped from auto-seeded keywords (seeds are a floor; a Workflow/human sharpens them).
 STOP = {
-    "the", "a", "an", "and", "or", "not", "no", "is", "are", "was", "were", "be", "to", "of", "in",
-    "on", "for", "with", "by", "as", "at", "it", "its", "this", "that", "these", "those", "from",
-    "use", "used", "using", "via", "per", "vs", "than", "then", "when", "if", "but", "so", "do",
-    "does", "never", "always", "only", "one", "two", "new", "old", "how", "what", "why", "which",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "not",
+    "no",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "to",
+    "of",
+    "in",
+    "on",
+    "for",
+    "with",
+    "by",
+    "as",
+    "at",
+    "it",
+    "its",
+    "this",
+    "that",
+    "these",
+    "those",
+    "from",
+    "use",
+    "used",
+    "using",
+    "via",
+    "per",
+    "vs",
+    "than",
+    "then",
+    "when",
+    "if",
+    "but",
+    "so",
+    "do",
+    "does",
+    "never",
+    "always",
+    "only",
+    "one",
+    "two",
+    "new",
+    "old",
+    "how",
+    "what",
+    "why",
+    "which",
 }
 TYPE_PREFIXES = ("feedback", "reference", "project", "user")
 
@@ -44,7 +94,10 @@ def _git_iso_date(path, root):
     try:
         out = subprocess.run(
             ["git", "-C", root, "log", "-1", "--format=%cs", "--", path],
-            capture_output=True, text=True, timeout=15).stdout.strip()
+            capture_output=True,
+            text=True,
+            timeout=15,
+        ).stdout.strip()
         return out if re.match(r"\d{4}-\d{2}-\d{2}", out) else ""
     except Exception:
         return ""
@@ -62,12 +115,12 @@ def split_front_matter(text):
     end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
     if end is None:
         return None, text
-    return lines[1:end], "\n".join(lines[end + 1:])
+    return lines[1:end], "\n".join(lines[end + 1 :])
 
 
 def top_level_key(line):
     """The key of a top-level (unindented) `key: val` front-matter line, else None."""
-    if line[:1] in (" ", "\t"):          # indented → a nested metadata child, not top-level
+    if line[:1] in (" ", "\t"):  # indented → a nested metadata child, not top-level
         return None
     m = re.match(r"^([A-Za-z0-9_]+):", line)
     return m.group(1) if m else None
@@ -101,7 +154,7 @@ def effective_type(fm_lines):
     if t:
         return t
     for l in fm_lines:
-        m = re.match(r"^\s+type:\s*(.+)$", l)   # indented → nested metadata.type
+        m = re.match(r"^\s+type:\s*(.+)$", l)  # indented → nested metadata.type
         if m:
             return m.group(1).strip().strip('"').strip("'")
     return "reference"
@@ -117,8 +170,8 @@ def seed_keywords(stem, description):
     kws = []
     stem_phrase = "_".join(parts)
     if stem_phrase:
-        kws.append(stem_phrase)                       # the topic name itself (e.g. hhst_pacing_lever)
-    for p in parts:                                   # + individual significant tokens
+        kws.append(stem_phrase)  # the topic name itself (e.g. hhst_pacing_lever)
+    for p in parts:  # + individual significant tokens
         if len(p) > 2 and p not in STOP and p not in kws:
             kws.append(p)
     for w in re.findall(r"[A-Za-z0-9_.]+", (description or "").lower()):
@@ -132,8 +185,12 @@ def seed_keywords(stem, description):
 
 def seed_domain(mtype):
     """A minimal domain seed by type. Sharpened later; keeps _MEMORY_INDEX grouping non-empty."""
-    return {"feedback": ["workflow"], "project": ["project"],
-            "reference": ["reference"], "user": ["user"]}.get(mtype, ["reference"])
+    return {
+        "feedback": ["workflow"],
+        "project": ["project"],
+        "reference": ["reference"],
+        "user": ["user"],
+    }.get(mtype, ["reference"])
 
 
 def _fmt_list(items):
@@ -142,8 +199,11 @@ def _fmt_list(items):
 
 def is_memory_file(fm_lines):
     """A real memory file carries both name and description (excludes MEMORY.md / stray files)."""
-    return fm_lines is not None and fm_scalar(fm_lines, "name") is not None \
+    return (
+        fm_lines is not None
+        and fm_scalar(fm_lines, "name") is not None
         and fm_scalar(fm_lines, "description") is not None
+    )
 
 
 def fix_file(path, root):
@@ -161,7 +221,9 @@ def fix_file(path, root):
     if not fm_list_nonempty(fm_lines, "keywords"):
         # only (re)seed when absent/empty — never clobber a sharpened list
         if fm_scalar(fm_lines, "keywords") is None:
-            additions.append("keywords: " + _fmt_list(seed_keywords(stem, fm_scalar(fm_lines, "description"))))
+            additions.append(
+                "keywords: " + _fmt_list(seed_keywords(stem, fm_scalar(fm_lines, "description")))
+            )
     if fm_scalar(fm_lines, "domain") is None:
         additions.append("domain: " + _fmt_list(seed_domain(mtype)))
     if fm_scalar(fm_lines, "lifecycle") is None:
@@ -171,7 +233,7 @@ def fix_file(path, root):
         additions.append(f"last_verified: {lv}")
 
     if not additions:
-        return False   # idempotent — already migrated
+        return False  # idempotent — already migrated
 
     new_fm = fm_lines + additions
     new_text = "---\n" + "\n".join(new_fm) + "\n---\n" + body.lstrip("\n")
@@ -263,8 +325,10 @@ def main():
     unresolved = wikilink_report(files)
     for fn, tgt in unresolved:
         print(f"WIKILINK   {fn}: [[{tgt}]] resolves to nothing")
-    print(f"lint_memory --check: {len(files)} files, {violations} violation(s), "
-          f"{len(unresolved)} unresolved wikilink(s).")
+    print(
+        f"lint_memory --check: {len(files)} files, {violations} violation(s), "
+        f"{len(unresolved)} unresolved wikilink(s)."
+    )
     return 1 if violations else 0
 
 

@@ -12,6 +12,7 @@ mutate via TTL / late data / SQLMesh rebuilds, so re-run-and-match would false-a
 Usage:
   bq_verify.py <ticket | label-substring | sql_sha256-prefix> [--limit N]     # default N=5, newest first
 """
+
 import argparse, json, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -44,20 +45,27 @@ def card(r):
     ts = r.get("timestamp") or r.get("ts") or "—"
     job = r.get("job_id") or "—"
     bare = job.split(":", 1)[1] if ":" in job else job
-    gb_b = r.get("gb_billed"); gb_p = r.get("gb_processed")
+    gb_b = r.get("gb_billed")
+    gb_p = r.get("gb_processed")
     tables = ", ".join(r.get("sql_tables") or []) or "—"
     out = []
     out.append(f"── {r.get('ticket') or '—'}  ·  {r.get('label') or '—'} ──")
     out.append(f"  when      : {ts}")
-    out.append(f"  cost      : {gb_b if gb_b is not None else '—'} GB billed"
-               f" ({gb_p if gb_p is not None else '—'} processed)"
-               f"  cache={r.get('cache_hit')}  phase={r.get('phase') or '—'}")
+    out.append(
+        f"  cost      : {gb_b if gb_b is not None else '—'} GB billed"
+        f" ({gb_p if gb_p is not None else '—'} processed)"
+        f"  cache={r.get('cache_hit')}  phase={r.get('phase') or '—'}"
+    )
     out.append(f"  git commit: {r.get('git_commit') or '— (pre-provenance run)'}")
     out.append(f"  sql sha256: {r.get('sql_sha256') or '— (pre-provenance run)'}")
-    out.append(f"  sql        : {r.get('sql_preview') or '— (not captured; use full-SQL cmd below)'}")
+    out.append(
+        f"  sql        : {r.get('sql_preview') or '— (not captured; use full-SQL cmd below)'}"
+    )
     out.append(f"  tables     : {tables}")
     out.append(f"  job_id     : {job}")
-    out.append(f"  FULL SQL   : bq show --format=prettyjson -j {bare} | jq -r '.configuration.query.query'")
+    out.append(
+        f"  FULL SQL   : bq show --format=prettyjson -j {bare} | jq -r '.configuration.query.query'"
+    )
     return "\n".join(out)
 
 
@@ -68,11 +76,14 @@ def main():
     a = ap.parse_args()
     hits = load(a.query)
     if not hits:
-        print(f"no perf-log record matches {a.query!r} (ticket / label / sql_sha256). "
-              f"Was the query run through bq_run.sh?", file=sys.stderr)
+        print(
+            f"no perf-log record matches {a.query!r} (ticket / label / sql_sha256). "
+            f"Was the query run through bq_run.sh?",
+            file=sys.stderr,
+        )
         return 1
     print(f"# {len(hits)} match(es) for {a.query!r} — showing newest {min(a.limit, len(hits))}\n")
-    print("\n\n".join(card(r) for r in hits[-a.limit:][::-1]))
+    print("\n\n".join(card(r) for r in hits[-a.limit :][::-1]))
     return 0
 
 

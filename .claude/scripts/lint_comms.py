@@ -26,38 +26,103 @@ Usage:
   lint_comms.py --from-json --file payload.json      # parse a Jira REST v2 payload
   lint_comms.py --hook                               # PreToolUse hook: lints a Jira curl, never blocks
 """
+
 import argparse, json, os, re, sys
 
 CAPS = {
-    "comment":        {"chars": 500, "words": 75,  "bullets": 5},
-    "completion":     {"chars": 800, "words": 120, "bullets": 8},
-    "description":    {"chars": 400, "words": 60,  "bullets": 4},
-    "xlsx":           {"chars": 200, "words": 30,  "lines": 12},  # terse notes cell; chars = per-line cap
-    "xlsx_explainer": {"chars": 320, "words": 55,  "lines": 7},   # narrative Read-me sheet; chars = per-section cap, lines = sections
-    "pr":             {"chars": 900, "words": 130, "bullets": 10}, # PR description: lead line (what+why) → What / Why / Validation
-    "pr_comment":     {"chars": 500, "words": 75,  "bullets": 5},  # PR review comment / reply (same bar as a Jira comment)
-    "commit":         {"chars": 500, "words": 75,  "bullets": 6},  # commit message (subject + terse body); subject also capped below
+    "comment": {"chars": 500, "words": 75, "bullets": 5},
+    "completion": {"chars": 800, "words": 120, "bullets": 8},
+    "description": {"chars": 400, "words": 60, "bullets": 4},
+    "xlsx": {"chars": 200, "words": 30, "lines": 12},  # terse notes cell; chars = per-line cap
+    "xlsx_explainer": {
+        "chars": 320,
+        "words": 55,
+        "lines": 7,
+    },  # narrative Read-me sheet; chars = per-section cap, lines = sections
+    "pr": {
+        "chars": 900,
+        "words": 130,
+        "bullets": 10,
+    },  # PR description: lead line (what+why) → What / Why / Validation
+    "pr_comment": {
+        "chars": 500,
+        "words": 75,
+        "bullets": 5,
+    },  # PR review comment / reply (same bar as a Jira comment)
+    "commit": {
+        "chars": 500,
+        "words": 75,
+        "bullets": 6,
+    },  # commit message (subject + terse body); subject also capped below
 }
 LINE_KINDS = {"xlsx", "xlsx_explainer"}  # measured per line/section, not as one blob
-TITLE_CAP = 120           # Jira summary/title (hard Jira limit is 255; our guidance is far tighter)
-COMMIT_SUBJECT_CAP = 72   # commit subject line (first line) — git convention, hard cap
+TITLE_CAP = 120  # Jira summary/title (hard Jira limit is 255; our guidance is far tighter)
+COMMIT_SUBJECT_CAP = 72  # commit subject line (first line) — git convention, hard cap
 
 HEDGES = [
-    "i think", "i believe", "i feel", "in my opinion", "imo", "seems", "appears",
-    "sort of", "kind of", "probably", "maybe", "might be", "may be", "could be",
-    "should be", "arguably", "presumably", "fairly", "somewhat", "i guess", "i suppose",
+    "i think",
+    "i believe",
+    "i feel",
+    "in my opinion",
+    "imo",
+    "seems",
+    "appears",
+    "sort of",
+    "kind of",
+    "probably",
+    "maybe",
+    "might be",
+    "may be",
+    "could be",
+    "should be",
+    "arguably",
+    "presumably",
+    "fairly",
+    "somewhat",
+    "i guess",
+    "i suppose",
 ]
 THROAT = [
-    "in order to", "it is worth noting", "it's worth noting", "it should be noted",
-    "as mentioned", "as you know", "as you may know", "needless to say",
-    "it is important to note", "it's important to note", "just wanted to",
-    "wanted to let you know", "for what it's worth", "at the end of the day",
-    "that being said", "with that being said", "please note that", "quick note",
+    "in order to",
+    "it is worth noting",
+    "it's worth noting",
+    "it should be noted",
+    "as mentioned",
+    "as you know",
+    "as you may know",
+    "needless to say",
+    "it is important to note",
+    "it's important to note",
+    "just wanted to",
+    "wanted to let you know",
+    "for what it's worth",
+    "at the end of the day",
+    "that being said",
+    "with that being said",
+    "please note that",
+    "quick note",
 ]
 EDITORIAL = [
-    "significant", "significantly", "interesting", "interestingly", "robust", "huge",
-    "massive", "very", "really", "extremely", "incredibly", "notably", "remarkable",
-    "remarkably", "clearly", "obviously", "basically", "essentially", "actually", "simply",
+    "significant",
+    "significantly",
+    "interesting",
+    "interestingly",
+    "robust",
+    "huge",
+    "massive",
+    "very",
+    "really",
+    "extremely",
+    "incredibly",
+    "notably",
+    "remarkable",
+    "remarkably",
+    "clearly",
+    "obviously",
+    "basically",
+    "essentially",
+    "actually",
+    "simply",
 ]
 DASHES = {"—": "em-dash", "–": "en-dash"}
 
@@ -91,15 +156,21 @@ def lint_text(text, kind):
         stats = f"{len(lines)} {unit}s, longest {max((len(l) for l in lines), default=0)} chars"
     else:
         if chars > cap["chars"]:
-            violations.append(f"{chars} chars (cap {cap['chars']}) — over by {chars - cap['chars']}")
+            violations.append(
+                f"{chars} chars (cap {cap['chars']}) — over by {chars - cap['chars']}"
+            )
         if words > cap["words"]:
-            violations.append(f"{words} words (cap {cap['words']}) — over by {words - cap['words']}")
+            violations.append(
+                f"{words} words (cap {cap['words']}) — over by {words - cap['words']}"
+            )
         if bullets > cap["bullets"]:
             violations.append(f"{bullets} bullets (cap {cap['bullets']})")
         stats = f"{chars} chars / {words} words / {bullets} bullets  (cap {cap['chars']}/{cap['words']}/{cap['bullets']})"
 
     if kind == "commit" and lines and len(lines[0]) > COMMIT_SUBJECT_CAP:
-        violations.append(f"commit subject {len(lines[0])} chars (cap {COMMIT_SUBJECT_CAP}) — tighten the first line")
+        violations.append(
+            f"commit subject {len(lines[0])} chars (cap {COMMIT_SUBJECT_CAP}) — tighten the first line"
+        )
 
     for d, name in DASHES.items():
         if d in text:
@@ -134,7 +205,9 @@ def _jobs_from_payload(payload):
     if isinstance(payload, dict) and "fields" in payload:  # issue-create
         f = payload["fields"]
         if f.get("summary"):
-            jobs.append(("summary/title", f["summary"], "description"))  # title uses TITLE_CAP below
+            jobs.append(
+                ("summary/title", f["summary"], "description")
+            )  # title uses TITLE_CAP below
         if f.get("description"):
             jobs.append(("description", f["description"], "description"))
     elif isinstance(payload, dict) and "body" in payload:  # comment
@@ -147,7 +220,10 @@ def _jobs_from_payload(payload):
 def _lint_title(text):
     n = len(text)
     if n > TITLE_CAP:
-        print(f"VIOLATION summary/title: {n} chars (cap {TITLE_CAP}) — tighten the title", file=sys.stderr)
+        print(
+            f"VIOLATION summary/title: {n} chars (cap {TITLE_CAP}) — tighten the title",
+            file=sys.stderr,
+        )
         print(f"[title] {n} chars (cap {TITLE_CAP})  OVER")
         return True
     print(f"[title] {n} chars (cap {TITLE_CAP})  OK")
@@ -184,7 +260,10 @@ def run_hook():
     jobs = _jobs_from_payload(payload)
     if not jobs:
         return 0
-    print("[comms-lint] checking Jira text against the Terse Comms Standard (advisory):", file=sys.stderr)
+    print(
+        "[comms-lint] checking Jira text against the Terse Comms Standard (advisory):",
+        file=sys.stderr,
+    )
     for label, text, kind in jobs:
         if label == "summary/title":
             _lint_title(text)
@@ -201,12 +280,22 @@ def run_hook():
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Lint outward-facing prose against the Terse Comms Standard.")
+    ap = argparse.ArgumentParser(
+        description="Lint outward-facing prose against the Terse Comms Standard."
+    )
     ap.add_argument("--kind", choices=list(CAPS), default="comment")
     ap.add_argument("--file")
     ap.add_argument("--body")
-    ap.add_argument("--from-json", action="store_true", help="input is a Jira REST v2 payload; extract + lint each field")
-    ap.add_argument("--hook", action="store_true", help="PreToolUse hook mode: lint a Jira curl on stdin, never block")
+    ap.add_argument(
+        "--from-json",
+        action="store_true",
+        help="input is a Jira REST v2 payload; extract + lint each field",
+    )
+    ap.add_argument(
+        "--hook",
+        action="store_true",
+        help="PreToolUse hook mode: lint a Jira curl on stdin, never block",
+    )
     args = ap.parse_args()
 
     if args.hook:
