@@ -267,6 +267,26 @@ def list_task_instances_in_run(base, token, dag_id, run_id):
     return out
 
 
+def expand_tries(base, token, ti):
+    """Return one ti-like dict per try (accurate try_number/state/start_date), newest last.
+
+    Uses GET .../taskInstances/{task}/tries (or /{map_index}/tries for mapped tasks). Each try dict is
+    merged over the parent ti so dag_id/dag_run_id/task_id/map_index are always present. Falls back to
+    the single current ti if the endpoint is unavailable.
+    """
+    dp = urllib.parse.quote(ti["dag_id"])
+    rp = urllib.parse.quote(ti["dag_run_id"])
+    tp = urllib.parse.quote(ti["task_id"])
+    mi = ti.get("map_index", -1)
+    base_path = f"/dags/{dp}/dagRuns/{rp}/taskInstances/{tp}"
+    path = f"{base_path}/{mi}/tries" if mi is not None and mi >= 0 else f"{base_path}/tries"
+    status, obj = _get_json(base, token, path)
+    if status != 200:
+        return [ti]
+    tries = obj.get("task_instances", [])
+    return [{**ti, **t} for t in tries] or [ti]
+
+
 def fetch_log(base, token, ti):
     """Fetch and flatten the log for a task instance's current try. Handles NDJSON + JSON+token."""
     dag_id, run_id, task_id = ti["dag_id"], ti["dag_run_id"], ti["task_id"]
@@ -444,29 +464,32 @@ def cmd_list(args):
     os.makedirs(outdir, exist_ok=True)
     manifest_path = os.path.join(outdir, "_manifest.jsonl")
 
-    counts = {"total": 0, "failed": 0, "running": 0}
+    counts = {"total": len(tis), "failed": 0, "running": 0, "logs": 0}
     failed_rows = []
     with open(manifest_path, "w", encoding="utf-8") as mf:
         for ti in tis:
-            counts["total"] += 1
             state = ti.get("state")
             if state in FAILURE_STATES:
                 counts["failed"] += 1
-            elif state in (None, "running", "queued", "scheduled", "deferred", "up_for_retry"):
-                counts["running"] += 1
-            text = fetch_log(args.base, token, ti)
-            fname = log_filename(ti)
-            with open(os.path.join(outdir, fname), "w", encoding="utf-8") as lf:
-                lf.write(text)
-            rel = os.path.join(args.outdir, args.date, fname)
-            mf.write(json.dumps(manifest_record(ti, rel)) + "\n")
-            if state in FAILURE_STATES:
                 failed_rows.append(
                     f"  FAIL {ti.get('dag_id')}.{ti.get('task_id')} (try {ti.get('try_number')})"
                 )
+            elif state in (None, "running", "queued", "scheduled", "deferred", "up_for_retry"):
+                counts["running"] += 1
+            # one log per try with --all-tries (failed retries hold the cause), else the current try only
+            work = expand_tries(args.base, token, ti) if args.all_tries else [ti]
+            for wti in work:
+                text = fetch_log(args.base, token, wti)
+                fname = log_filename(wti)
+                with open(os.path.join(outdir, fname), "w", encoding="utf-8") as lf:
+                    lf.write(text)
+                rel = os.path.join(args.outdir, args.date, fname)
+                mf.write(json.dumps(manifest_record(wti, rel)) + "\n")
+                counts["logs"] += 1
 
+    extra = f" · {counts['logs']} logs (all tries)" if args.all_tries else ""
     print(
-        f"{counts['total']} tasks · {counts['failed']} failed · {counts['running']} in-flight",
+        f"{counts['total']} tasks · {counts['failed']} failed · {counts['running']} in-flight{extra}",
         file=sys.stderr,
     )
     print(f"manifest: {manifest_path}", file=sys.stderr)
@@ -518,7 +541,9 @@ def cmd_watch(args):
                     if key in seen_terminal:
                         continue
                     seen_terminal.add(key)
-                    _emit_completion(args.base, token, ti, outdir, manifest_path, oncall_dir)
+                    _emit_completion(
+                        args.base, token, ti, outdir, manifest_path, oncall_dir, args.all_tries
+                    )
         sys.stderr.flush()
         sys.stdout.flush()
         if any_run and all_terminal and not args.persistent:
@@ -531,15 +556,23 @@ def cmd_watch(args):
         time.sleep(args.interval)
 
 
-def _emit_completion(base, token, ti, outdir, manifest_path, oncall_dir):
+def _emit_completion(base, token, ti, outdir, manifest_path, oncall_dir, all_tries=False):
     state = ti.get("state")
     text = fetch_log(base, token, ti)
     fname = log_filename(ti)
-    with open(os.path.join(outdir, fname), "w", encoding="utf-8") as lf:
-        lf.write(text)
-    rel = os.path.join(outdir, fname)
+    # the terminal try, plus every prior try when --all-tries (failed retries hold the cause)
+    written = [(ti, fname, text)]
+    if all_tries:
+        cur = ti.get("try_number")
+        for wti in expand_tries(base, token, ti):
+            if wti.get("try_number") == cur:
+                continue
+            written.append((wti, log_filename(wti), fetch_log(base, token, wti)))
     with open(manifest_path, "a", encoding="utf-8") as mf:
-        mf.write(json.dumps(manifest_record(ti, rel)) + "\n")
+        for wti, wf, wtext in written:
+            with open(os.path.join(outdir, wf), "w", encoding="utf-8") as lf:
+                lf.write(wtext)
+            mf.write(json.dumps(manifest_record(wti, os.path.join(outdir, wf))) + "\n")
     dur = ti.get("duration")
     dur_s = f"{int(dur)}s" if isinstance(dur, (int, float)) else "?"
     tag = f"{ti.get('dag_id')}.{ti.get('task_id')}"
@@ -570,6 +603,12 @@ def build_parser():
     ls.add_argument("--tag", help="restrict to DAGs carrying this Airflow tag")
     ls.add_argument("--state", action="append", help="restrict to these states (repeatable)")
     ls.add_argument("--outdir", required=True, help="output dir root (date subdir is added)")
+    ls.add_argument(
+        "--all-tries",
+        dest="all_tries",
+        action="store_true",
+        help="download every try (1..N), not just the latest — failed retries hold the cause",
+    )
     ls.set_defaults(func=cmd_list)
 
     w = sub.add_parser("watch", help="poll states; emit + download on each terminal transition")
@@ -586,6 +625,12 @@ def build_parser():
         type=int,
         default=0,
         help="exit after N polls with no runs found (0 = never)",
+    )
+    w.add_argument(
+        "--all-tries",
+        dest="all_tries",
+        action="store_true",
+        help="on each completion, download every try (1..N), not just the terminal one",
     )
     w.set_defaults(func=cmd_watch)
     return p

@@ -56,9 +56,11 @@ If no match, this is a NEW alert → continue to Step 2.
 2. **Pull the task log** — `bash .claude/scripts/airflow_pull.sh --date <D> --dag <dag>` writes every
    task's log (named `<HHMMSS>__<dag>__<task>__try<N>__<state>.log`) + a `_manifest.jsonl` pass/fail grid
    to `on-call/airflow_logs/<D>/`; scan failures with
-   `grep -E '"state": "(failed|upstream_failed)"' on-call/airflow_logs/<D>/_manifest.jsonl`. To watch a
-   live pipeline, `--watch --tag <tag>` auto-drops each failure into `on-call/`. Then find what the task
-   is *actually doing* (not just that it failed):
+   `grep -E '"state": "(failed|upstream_failed)"' on-call/airflow_logs/<D>/_manifest.jsonl`. For a
+   **retried** task add `--all-tries` — it pulls every attempt (1..N, each named by its own time+state),
+   since the failed tries hold the cause and the latest try may be running/green. To watch a live
+   pipeline, `--watch --tag <tag>` auto-drops each failure into `on-call/`. Then find what the task is
+   *actually doing* (not just that it failed):
    - **Sensor** → its poke target (`Sensor checks existence of : <bucket>, <object>`).
    - **Producer / Spark / BQ / Vertex** → the output path / query / the real exception. Search the log
      tail for `ERROR` / `Exception` / `Traceback` / `code:` — skip the boilerplate.

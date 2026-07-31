@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # airflow_pull.sh — pull Astronomer (Airflow 3) task logs for a day + a completion sensor for on-call.
 # Usage:
-#   Day-dump:  bash .claude/scripts/airflow_pull.sh [--date YYYY-MM-DD] [--dag NAME] [--tag TAG] [--state failed] [--deployment ID]
+#   Day-dump:  bash .claude/scripts/airflow_pull.sh [--date YYYY-MM-DD] [--dag NAME] [--tag TAG] [--state failed] [--all-tries] [--deployment ID]
 #   Sensor:    bash .claude/scripts/airflow_pull.sh --watch --tag <tag> [--dag NAME] [--interval 30] [--persistent]
 #   Auth gate: bash .claude/scripts/airflow_pull.sh --check
 #
@@ -41,6 +41,7 @@ while [[ $# -gt 0 ]]; do
         --deployment=*) DEPLOYMENT_ID="${1#--deployment=}"; shift ;;
         --interval)    INTERVAL="$2"; shift 2 ;;
         --interval=*)  INTERVAL="${1#--interval=}"; shift ;;
+        --all-tries)   PY_ARGS+=(--all-tries); shift ;;
         --watch)       MODE="watch"; shift ;;
         --persistent)  PERSISTENT="--persistent"; shift ;;
         --check)       MODE="check"; shift ;;
