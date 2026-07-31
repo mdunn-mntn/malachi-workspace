@@ -39,4 +39,11 @@ Slack replies must read like a person typed them, not like an AI report. Malachi
 - **Concept explanations stay plain prose too.** For "what does the 8-day TTL mean," the version that landed was: what triggers the add, what the TTL does, the per-IP reset, the net effect. No analogy (I offered a guest-list one, it got cut), no "these are two different things" scaffolding, no bullets. Mechanism then consequence, in a short paragraph.
 - **He still hand-trims my "tight" draft — go tighter, and space it out.** After I handed the answer+links, he stripped more words and added extra line breaks / indents / blank lines before sending. My near-final is still too wordy and too dense. Cut more filler than feels safe, and use generous whitespace (a blank line between the punchline, each labeled link, and the explanation) so it scans in a thread instead of reading as a wall.
 
+**Extra lessons from the aud22/memdb replies (2026-07-30/31).**
+- **Use the reader's own name for a system.** They call it **memdb**, not "MembershipDB" — match the term people actually type in the channel.
+- **Don't use internal jargon the reader doesn't share.** "CIL-side tables" got flagged ("nobody knows what a CIL-side table is"). Name the actual tables (`network_locations`, `geo_maxmind_versions`).
+- **Don't invent compound coinages.** "pre-flip", "propagated in", "resolved through", "stale" were all flagged. Say it plainly: "the Jun-29 value", "the change isn't in memdb's copy", "the older value".
+- **Don't presume alignment with the reader's own artifact.** "maps exactly to your drift image" was cut. State the finding and let them see it matches.
+- **State provenance in the reply.** If a value came from their image and I only queried the geo tables, say so ("I'm inferring memdb's build from the metro it resolved to, not reading memdb directly"). See [[feedback_state_query_provenance]].
+
 **Key distinction.** This is different from the Terse Comms Standard for Jira comments, which stays scaffolded (Answer line, then Done, then Next bullets, in wiki markup). Both are BLUF. Slack is human prose, Jira is structured. See [[feedback_bluf_communication]], [[feedback_terse_chat_replies]], [[feedback_terse_tickets]].
