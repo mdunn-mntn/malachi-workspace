@@ -53,7 +53,7 @@ table reaches `enriched`/`verified` in `bq/_COVERAGE.md`, its `data_catalog.md` 
 facts do NOT get a `MEMORY.md` line; they are grep-on-demand, so the always-loaded cost stops growing with
 the corpus. `.claude/scripts/lint_memory.py` migrates/lints memory front-matter; `health_scorecard.py
 --memory` + `workflow_audit.sh` §10 surface stale / overlap-cluster / broken-wikilink / budget signals
-(propose-only). Add or retire memory via `/capture` (it holds the sole delete/merge authority).
+(propose-only). Add or retire memory via `/capture` (it holds the sole delete/merge authority). Per global always-on §13, `/capture` now **auto-fires** at genuine stopping points / learning moments — hooks can't invoke a skill, so this is behavioral (I run it); `capture_reminder.sh` is only the backstop.
 
 **Deterministic layer (`.claude/`, runs itself):** the existing `bq_run.sh` wrapper now also logs
 `sql_tables` (clean names). Nine hooks (`.claude/settings.json`): block a raw `bq query` (forcing the
@@ -185,6 +185,14 @@ A ticket does not go `status: in_progress` on a question nobody pinned down. `##
 - **The gate:** `lint_tickets.py` blocks `status: in_progress|done` while `framing_state: draft`. `/frame` opens the ticket; `/capture` closes it.
 - **Skip hatch:** a trivial ticket (one-line bug fix, housekeeping — the ones CLAUDE.md says need only `summary.md`) sets `framing_state: "skip: <one-line why>"` instead of framing. Reason required.
 - **Legacy cards** (no `framing_state`) only WARN, never block — adoption is opt-in per ticket. Run `/frame` on a legacy ticket when you next touch it.
+
+### New-work ticket trigger — flag it, then open on a yes (global always-on §14)
+
+When a request is a distinct unit of work unrelated to the active ticket (a new investigation/build/analysis, not a follow-up or quick lookup), flag it before diving in — mirror the on-call runbook §0 "classify the surface first" move. Flag = one BLUF line: what it is · **Spike vs Task** read · a one-line frame · leverage tier (§1c). Do NOT auto-open Jira.
+
+- **Spike vs Task:** Spike = one-off evaluation, deliverable is a decision/knowledge → files under AUDI, `[SPIKE]` title, lighter required fields. Task = defined, larger deliverable → story points + PMO rep + quarterly label; omit Release Type unless prod code ships. Current IDs/board rules live in memory `reference_jira_conventions`; multi-item evals follow `feedback_one_spike_multi_item` (one spike + per-item subfolders, never N tickets).
+- **On yes:** `new_ticket.sh <folder>` scaffolds the local folder now (`status: backlog`, `framing_state: draft` — reversible, no board impact) + commit → draft the Jira issue → file on confirm → `/frame <KEY>` when work starts (framing gate applies).
+- **On no:** one `improvements_backlog.md` row (`idea`) — no folder, no Jira.
 
 ## Experiment Analysis Protocol — apply to every tiered rollout / experiment evaluation
 

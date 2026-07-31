@@ -18,6 +18,10 @@ would actually look for it, fixes anything the session just proved wrong, and co
 Do the work — write the files, correct the stale lines, commit, and push. Do **not** propose a
 list and wait for approval. Report what you changed *after* you've changed it.
 
+This skill is also **auto-invoked** per global always-on §13 at genuine stopping points and
+learning moments — not only when the user types `/capture`. When nothing durable emerged, that
+firing is a no-op: say so and skip the commit.
+
 **Args (optional):** `/capture` with no args runs a full sweep. `/capture <TI-XXXX>` pins the
 active ticket. `/capture <doc>` (e.g. `data_knowledge`, `memory`, `summary`) scopes the sweep
 to one destination.

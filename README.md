@@ -312,6 +312,8 @@ Because `CLAUDE.md` and the `knowledge/` files persist across sessions, Claude o
 - Commits and pushes after every meaningful change (queries, findings, doc updates)
 - Updates the knowledge base immediately when new schema or business logic is discovered
 - Creates the correct ticket folder structure when a new ticket is started
+- Auto-runs `/capture` at genuine stopping points and learning moments — routing new facts to the knowledge docs, memory, and self-review without being asked
+- Flags a distinct unrelated task as its own ticket (Spike vs Task) and opens it on your yes — scaffolding the local folder first, filing Jira only on confirm
 - Flags empirically unverified assumptions before writing queries
 - Follows all naming conventions without being reminded
 
