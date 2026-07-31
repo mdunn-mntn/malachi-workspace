@@ -26,9 +26,19 @@ GEN_INDEXES=(knowledge/INDEX.md knowledge/_ROUTING.md knowledge/_MEMORY_INDEX.md
 
 if [ "$MODE" = "--fix" ]; then
   python3 "$S/lint_memory.py" --fix >/dev/null 2>&1 || true
+  # ruff auto-repair on STAGED durable Python (format + safe fixes), then re-stage — mirrors the
+  # index re-stage below. Throwaway tickets/** excluded by pyproject; --force-exclude enforces it.
+  if command -v ruff >/dev/null 2>&1; then
+    fix_py=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(lib/|\.claude/scripts/).*\.py$' || true)
+    if [ -n "$fix_py" ]; then
+      ruff format --force-exclude $fix_py >/dev/null 2>&1 || true
+      ruff check --fix --force-exclude $fix_py >/dev/null 2>&1 || true
+      git add $fix_py 2>/dev/null || true
+    fi
+  fi
   bash "$S/build_index.sh" >/dev/null 2>&1 || true
   git add "${GEN_INDEXES[@]}" 2>/dev/null || true
-  echo "verify --fix: ran lint_memory --fix, rebuilt indexes, staged the regenerated index files."
+  echo "verify --fix: ran lint_memory --fix, ruff format+fix on staged durable py, rebuilt indexes, staged changes."
   exit 0
 fi
 
@@ -65,6 +75,38 @@ echo "verify ($MODE):"
 run_linter "bq_table front-matter (lint_coverage)" "knowledge/" python3 "$S/lint_coverage.py" --check
 run_linter "ticket/framing front-matter (lint_tickets)" "" python3 "$S/lint_tickets.py" --check
 run_linter "memory front-matter (lint_memory)" "" python3 "$S/lint_memory.py" --check
+
+# --- ruff: durable-tier Python (lib/ + .claude/scripts). Staged-scoped in --staged (block only on
+#     files THIS commit stages), whole-tier in full mode. Throwaway tickets/** excluded by pyproject;
+#     --force-exclude enforces it even for files passed by path. Degrades to a skip if ruff is absent
+#     (keeps the gate portable). Line length is owned by `ruff format` (E501 ignored in pyproject). ---
+if ! command -v ruff >/dev/null 2>&1; then
+  echo "  · ruff not installed — skipping Python lint (pip install 'ruff>=0.16,<0.17')"
+elif [ "$MODE" = "--staged" ]; then
+  ruff_py=$(grep -E '^(lib/|\.claude/scripts/).*\.py$' <<<"$STAGED" || true)
+  if [ -z "$ruff_py" ]; then
+    pass "ruff (no durable Python staged)"
+  else
+    rc=0
+    fmt_out=$(ruff format --check --force-exclude $ruff_py 2>&1) || rc=1
+    chk_out=$(ruff check --force-exclude $ruff_py 2>&1) || rc=1
+    if [ "$rc" -eq 0 ]; then pass "ruff (durable Python)"
+    else
+      fail "ruff (durable Python) — run: .claude/scripts/verify.sh --fix, then re-stage"
+      printf '%s\n%s\n' "$fmt_out" "$chk_out" | grep -vE '^(All checks passed|[0-9]+ files? |$)' | sed 's/^/      /'
+    fi
+  fi
+else
+  ruff_py=$(git ls-files -- lib .claude/scripts | grep -E '\.py$' || true)
+  rc=0
+  fmt_out=$(ruff format --check --force-exclude $ruff_py 2>&1) || rc=1
+  chk_out=$(ruff check --force-exclude $ruff_py 2>&1) || rc=1
+  if [ "$rc" -eq 0 ]; then pass "ruff (durable Python, whole tier)"
+  else
+    fail "ruff (durable Python) — run: .claude/scripts/verify.sh --fix"
+    printf '%s\n%s\n' "$fmt_out" "$chk_out" | grep -vE '^(All checks passed|[0-9]+ files? |$)' | sed 's/^/      /'
+  fi
+fi
 
 # --- index freshness: regenerate, then any generated index that differs from what's staged/committed
 #     is out of sync. In --staged, skip entirely unless a front-matter-bearing doc is staged.
