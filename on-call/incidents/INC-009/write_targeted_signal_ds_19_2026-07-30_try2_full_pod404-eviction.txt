@@ -1,0 +1,600 @@
+::group::Log message source detailssources=["gs://airflow-logs-cmcv0v0ae01bk01ngimis9kjy/cmd6bd10c0gl901rfuokgryiq/dag_id=keyword_ddp_reporting/run_id=scheduled__2026-07-30T15:00:00+00:00/task_id=write_targeted_signal_ds_19/attempt=2.log"] 
+::endgroup::
+[2026-07-31T15:47:45.879148Z] INFO - DAG bundles loaded: mainsource=airflow.dag_processing.bundles.manager.DagBundlesManager loc=manager.py:179 
+[2026-07-31T15:47:45.881369Z] INFO - Filling up the DagBag from /tmp/airflow/dag_bundles/astro/main/dags/2026-07-30T19:59:01.5847332Z/dags/machine_learning/keyword_ddp_reporting.pysource=airflow.models.dagbag.DagBag loc=dagbag.py:593 
+[2026-07-31T15:47:46.400147Z] WARNING - Skipping masking for a secret as it's too short (<5 chars)source=airflow.sdk._shared.secrets_masker.secrets_masker loc=secrets_masker.py:555 
+[2026-07-31T15:47:46.405667Z] WARNING - Skipping masking for a secret as it's too short (<5 chars)source=airflow._shared.secrets_masker.secrets_masker loc=secrets_masker.py:555 
+[2026-07-31T15:47:46.536162Z] WARNING - This process (pid=159) is multi-threaded, use of fork() may lead to deadlocks in the child.category=DeprecationWarning source=py.warnings loc=/usr/local/lib/python3.12/site-packages/airflow/providers/openlineage/plugins/listener.py:599 
+[2026-07-31T15:47:47.469659Z] INFO - DEFAULT_HTTP already found in environment variables, skipping aliasing OPENLINEAGE_URLsource=openlineage.client.client loc=client.py:345 
+[2026-07-31T15:47:47.470830Z] INFO - OpenLineageClient will use `composite` transportsource=openlineage.client.client loc=client.py:116 
+[2026-07-31T15:47:47.627769Z] INFO - Stopping OpenLineage CompositeTransport emission after the first successful delivery because `continue_on_success=False`. Transport that emitted the event: <HttpTransport(name=astro_primary, kind=http, priority=2)>source=openlineage.client.transport.composite loc=composite.py:135 
+[2026-07-31T15:47:47.627946Z] INFO - Successfully emitted OpenLineage `START` event of id `019fb38a-1980-71ff-bed0-e3ff50e4609a`source=airflow.providers.openlineage.plugins.adapter.OpenLineageAdapter loc=adapter.py:167 
+[2026-07-31T15:47:47.671782Z] INFO - TaskInstance Details: dag_id=keyword_ddp_reporting task_id=write_targeted_signal_ds_19 dagrun_id=scheduled__2026-07-30T15:00:00+00:00 map_index=-1 run_start_date=2026-07-31T15:47:44.334912Z try_number=2 op_classpath=["include.dbx.kube_operators.DbxDbtOperator","airflow.providers.cncf.kubernetes.operators.pod.KubernetesPodOperator"] source=astronomer.runtime.listener loc=listener.py:23 
+[2026-07-31T15:47:47.683381Z] INFO - Building pod write-targeted-signal-ds-19-ixr46oct with labels: {'dag_id': 'keyword_ddp_reporting', 'task_id': 'write_targeted_signal_ds_19', 'run_id': 'scheduled__2026-07-30T1500000000-4e70dadc9', 'kubernetes_pod_operator': 'True', 'try_number': '2'}source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:1666 
+[2026-07-31T15:47:47.743506Z] INFO - Found matching pod write-targeted-signal-ds-19-822bmvra with labels {'airflow_kpo_in_cluster': 'True', 'airflow_version': '3.1.5-astro.1', 'app': 'airflow', 'astronomer.io/cloud_provider': 'gcp', 'astronomer.io/cloud_region': 'us-central1', 'astronomer.io/deploymentId': 'cmd6bd10c0gl901rfuokgryiq', 'astronomer.io/organizationId': 'cmc0puu8s28z401iybhqnvf7y', 'astronomer.io/workspaceId': 'cmcvca5ia048y01ngw8y36qeq', 'dag_id': 'keyword_ddp_reporting', 'kubernetes_pod_operator': 'True', 'run_id': 'scheduled__2026-07-30T1500000000-4e70dadc9', 'task_id': 'write_targeted_signal_ds_19', 'topology.kubernetes.io/region': 'us-central1', 'topology.kubernetes.io/zone': 'us-central1-a', 'try_number': '1'}source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:642 
+[2026-07-31T15:47:47.743633Z] INFO - `try_number` of task_instance: 2source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:643 
+[2026-07-31T15:47:47.743691Z] INFO - `try_number` of pod: 1source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:644 
+[2026-07-31T15:47:47.743852Z] INFO - Reusing existing pod 'write-targeted-signal-ds-19-822bmvra' (phase=Running, reason=) since it is not terminated or evicted.source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:708 
+[2026-07-31T15:47:47.991670Z] INFO - Found matching pod write-targeted-signal-ds-19-822bmvra with labels {'airflow_kpo_in_cluster': 'True', 'airflow_version': '3.1.5-astro.1', 'app': 'airflow', 'astronomer.io/cloud_provider': 'gcp', 'astronomer.io/cloud_region': 'us-central1', 'astronomer.io/deploymentId': 'cmd6bd10c0gl901rfuokgryiq', 'astronomer.io/organizationId': 'cmc0puu8s28z401iybhqnvf7y', 'astronomer.io/workspaceId': 'cmcvca5ia048y01ngw8y36qeq', 'dag_id': 'keyword_ddp_reporting', 'kubernetes_pod_operator': 'True', 'run_id': 'scheduled__2026-07-30T1500000000-4e70dadc9', 'task_id': 'write_targeted_signal_ds_19', 'topology.kubernetes.io/region': 'us-central1', 'topology.kubernetes.io/zone': 'us-central1-a', 'try_number': '1'}source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:642 
+[2026-07-31T15:47:47.991796Z] INFO - `try_number` of task_instance: 2source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:643 
+[2026-07-31T15:47:47.991844Z] INFO - `try_number` of pod: 1source=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:644 
+[2026-07-31T15:47:47.992813Z] INFO - ::group::Waiting up to 120s to get the POD scheduled...source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:167 
+[2026-07-31T15:47:48.043094Z] INFO - Pod has reached Running phase before launch timeoutsource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:185 
+[2026-07-31T15:47:48.043205Z] INFO - ::endgroup::source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:186 
+[2026-07-31T15:47:48.138949Z] INFO - [base] [0m15:00:41  Running with dbt=1.9.10source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139142Z] INFO - [base] /usr/local/lib/python3.11/site-packages/pydantic/_internal/_config.py:386: UserWarning: Valid config keys have changed in V2:source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139222Z] INFO - [base] * 'allow_population_by_field_name' has been renamed to 'validate_by_name'source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139290Z] WARNING - [base]   warnings.warn(message, UserWarning)source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139355Z] INFO - [base] [0m15:00:47  Registered adapter: databricks=1.9.21source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139410Z] INFO - [base] [0m15:00:48  Unable to do partial parsing because saved manifest not found. Starting full parse.source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139464Z] INFO - [base] [0m15:00:55  Pre compile checkssource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139533Z] INFO - [base] [0m15:01:00  [[33mWARNING[0m]: Configuration paths exist in your dbt_project.yml file which do not apply to any resources.source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139612Z] INFO - [base] There are 1 unused configuration paths:source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139676Z] INFO - [base] - models.ml_squad.mntn_matched_buksource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139731Z] INFO - [base] [0m15:01:01  Found 39 models, 17 data tests, 3 sources, 764 macrossource=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139783Z] INFO - [base] [0m15:01:01  source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139833Z] INFO - [base] [0m15:01:01  Concurrency: 1 threads (target='prod_warehouse_2xs')source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139883Z] INFO - [base] [0m15:01:01  source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139933Z] INFO - [base] [0m15:02:07  1 of 1 START python table model mntn_matched_reporting.targeted_signal ......... [RUN]source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.139983Z] INFO - [base] [0m15:02:08  [[33mWARNING[0m]: Use the user's home folder for uploading python notebooks.  Shared folder use is deprecated due to governance concerns.source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.140069Z] INFO - [base] You may opt into the new behavior sooner by setting `flags.use_user_folder_for_python` to `True` in `dbt_project.yml`.source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:47:48.140166Z] INFO - [base] Visit https://docs.getdbt.com/reference/global-configs/behavior-changes for more information.source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:52:03.520441Z] INFO - [base] [0m15:02:10  Databricks adapter: Job submission response=b'{"run_id":65237255325756}'
+source=airflow.providers.cncf.kubernetes.utils.pod_manager.PodManager loc=pod_manager.py:500 
+[2026-07-31T15:52:03.556543Z] WARNING - Pod meteoric-conservation-7520/write-targeted-signal-ds-19-822bmvra not found during istio check.source=airflow.providers.cncf.kubernetes.operators.pod loc=pod.py:1434 
+[2026-07-31T15:52:03.570862Z] ERROR - (404)
+Reason: Not Found
+HTTP response headers: HTTPHeaderDict({'Audit-Id': '79c9f205-80f3-425e-b738-671ac1a7f78f', 'Cache-Control': 'no-cache, private', 'Content-Type': 'application/json', 'X-Kubernetes-Pf-Flowschema-Uid': '58905d68-e2b1-4e17-8d3b-35113177d10f', 'X-Kubernetes-Pf-Prioritylevel-Uid': '8da88e7e-d5e0-4723-b262-1588b40cc38e', 'Date': 'Fri, 31 Jul 2026 15:52:03 GMT', 'Content-Length': '240'})
+HTTP response body: {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"pods \"write-targeted-signal-ds-19-822bmvra\" not found","reason":"NotFound","details":{"name":"write-targeted-signal-ds-19-822bmvra","kind":"pods"},"code":404}
+
+source=airflow.providers.cncf.kubernetes.operators.pod loc=pod.py:1759 ApiException: (404)
+Reason: Not Found
+HTTP response headers: HTTPHeaderDict({'Audit-Id': '79c9f205-80f3-425e-b738-671ac1a7f78f', 'Cache-Control': 'no-cache, private', 'Content-Type': 'application/json', 'X-Kubernetes-Pf-Flowschema-Uid': '58905d68-e2b1-4e17-8d3b-35113177d10f', 'X-Kubernetes-Pf-Prioritylevel-Uid': '8da88e7e-d5e0-4723-b262-1588b40cc38e', 'Date': 'Fri, 31 Jul 2026 15:52:03 GMT', 'Content-Length': '240'})
+HTTP response body: {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"pods \"write-targeted-signal-ds-19-822bmvra\" not found","reason":"NotFound","details":{"name":"write-targeted-signal-ds-19-822bmvra","kind":"pods"},"code":404}
+
+
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 1529 in patch_already_checked
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 338 in wrapped_f
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 477 in __call__
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 378 in iter
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 400 in <lambda>
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 449 in result
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 401 in __get_result
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 480 in __call__
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 1523 in _patch_with_retry
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api/core_v1_api.py, line 20017 in patch_namespaced_pod
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api/core_v1_api.py, line 20132 in patch_namespaced_pod_with_http_info
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/hooks/kubernetes.py, line 108 in call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 348 in call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 180 in __call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 407 in request
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/rest.py, line 299 in PATCH
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/rest.py, line 238 in request
+,ApiException: (404)
+Reason: Not Found
+HTTP response headers: HTTPHeaderDict({'Audit-Id': '3b0b4a47-e1c0-4cc0-975e-f0160d18c1c6', 'Cache-Control': 'no-cache, private', 'Content-Type': 'application/json', 'X-Kubernetes-Pf-Flowschema-Uid': '58905d68-e2b1-4e17-8d3b-35113177d10f', 'X-Kubernetes-Pf-Prioritylevel-Uid': '8da88e7e-d5e0-4723-b262-1588b40cc38e', 'Date': 'Fri, 31 Jul 2026 15:52:03 GMT', 'Content-Length': '240'})
+HTTP response body: {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"pods \"write-targeted-signal-ds-19-822bmvra\" not found","reason":"NotFound","details":{"name":"write-targeted-signal-ds-19-822bmvra","kind":"pods"},"code":404}
+
+
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 831 in execute_sync
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 338 in wrapped_f
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 477 in __call__
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 378 in iter
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 400 in <lambda>
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 449 in result
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 401 in __get_result
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 480 in __call__
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 909 in await_pod_completion
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 923 in _handle_api_exception
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 893 in await_pod_completion
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 778 in fetch_requested_container_logs
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 659 in fetch_container_logs
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 844 in container_is_running
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 338 in wrapped_f
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 477 in __call__
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 378 in iter
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 400 in <lambda>
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 449 in result
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 401 in __get_result
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 480 in __call__
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 945 in read_pod
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api/core_v1_api.py, line 23999 in read_namespaced_pod
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api/core_v1_api.py, line 24086 in read_namespaced_pod_with_http_info
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/hooks/kubernetes.py, line 108 in call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 348 in call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 180 in __call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 373 in request
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/rest.py, line 244 in GET
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/rest.py, line 238 in request
+
+[2026-07-31T15:52:03.571525Z] INFO - Deleting pod: write-targeted-signal-ds-19-822bmvrasource=airflow.task.operators.include.dbx.kube_operators.DbxDbtOperator loc=pod.py:1490 
+[2026-07-31T15:52:03.602838Z] ERROR - Task failed with exceptionsource=task loc=task_runner.py:986 AirflowException: Pod write-targeted-signal-ds-19-822bmvra returned a failure.
+remote_pod: {'api_version': None,
+ 'kind': None,
+ 'metadata': {'annotations': {'cni.projectcalico.org/containerID': '234d0d5165528883366ac187c3335e0fbf1daf0383cbf6f3564fc35f52f4dbe3',
+                              'cni.projectcalico.org/podIP': '100.64.3.79/32',
+                              'cni.projectcalico.org/podIPs': '100.64.3.79/32'},
+              'creation_timestamp': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal()),
+              'deletion_grace_period_seconds': None,
+              'deletion_timestamp': None,
+              'finalizers': None,
+              'generate_name': None,
+              'generation': 1,
+              'labels': {'airflow_kpo_in_cluster': 'True',
+                         'airflow_version': '3.1.5-astro.1',
+                         'app': 'airflow',
+                         'astronomer.io/cloud_provider': 'gcp',
+                         'astronomer.io/cloud_region': 'us-central1',
+                         'astronomer.io/deploymentId': 'cmd6bd10c0gl901rfuokgryiq',
+                         'astronomer.io/organizationId': 'cmc0puu8s28z401iybhqnvf7y',
+                         'astronomer.io/workspaceId': 'cmcvca5ia048y01ngw8y36qeq',
+                         'dag_id': 'keyword_ddp_reporting',
+                         'kubernetes_pod_operator': 'True',
+                         'run_id': 'scheduled__2026-07-30T1500000000-4e70dadc9',
+                         'task_id': 'write_targeted_signal_ds_19',
+                         'topology.kubernetes.io/region': 'us-central1',
+                         'topology.kubernetes.io/zone': 'us-central1-a',
+                         'try_number': '1'},
+              'managed_fields': [{'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:labels': {'.': {},
+                                                                            'f:airflow_kpo_in_cluster': {},
+                                                                            'f:airflow_version': {},
+                                                                            'f:app': {},
+                                                                            'f:astronomer.io/cloud_provider': {},
+                                                                            'f:astronomer.io/cloud_region': {},
+                                                                            'f:astronomer.io/deploymentId': {},
+                                                                            'f:astronomer.io/organizationId': {},
+                                                                            'f:astronomer.io/workspaceId': {},
+                                                                            'f:dag_id': {},
+                                                                            'f:kubernetes_pod_operator': {},
+                                                                            'f:run_id': {},
+                                                                            'f:task_id': {},
+                                                                            'f:try_number': {}},
+                                                               'f:ownerReferences': {'.': {},
+                                                                                     'k:{"uid":"8182d1ef-f087-4ed5-91ad-f2ef1cad9534"}': {}}},
+                                                'f:spec': {'f:affinity': {},
+                                                           'f:containers': {'k:{"name":"base"}': {'.': {},
+                                                                                                  'f:command': {},
+                                                                                                  'f:env': {'.': {},
+                                                                                                            'k:{"name":"DATABRICKS_GCP_CLIENT_SECRET"}': {'.': {},
+                                                                                                                                                          'f:name': {},
+                                                                                                                                                          'f:valueFrom': {'.': {},
+                                                                                                                                                                          'f:secretKeyRef': {}}},
+                                                                                                            'k:{"name":"env"}': {'.': {},
+                                                                                                                                 'f:name': {},
+                                                                                                                                 'f:value': {}},
+                                                                                                            'k:{"name":"run_date"}': {'.': {},
+                                                                                                                                      'f:name': {},
+                                                                                                                                      'f:value': {}}},
+                                                                                                  'f:image': {},
+                                                                                                  'f:imagePullPolicy': {},
+                                                                                                  'f:lifecycle': {'.': {},
+                                                                                                                  'f:preStop': {'.': {},
+                                                                                                                                'f:exec': {'.': {},
+                                                                                                                                           'f:command': {}}}},
+                                                                                                  'f:name': {},
+                                                                                                  'f:resources': {'.': {},
+                                                                                                                  'f:limits': {'.': {},
+                                                                                                                               'f:cpu': {},
+                                                                                                                               'f:ephemeral-storage': {},
+                                                                                                                               'f:memory': {}},
+                                                                                                                  'f:requests': {'.': {},
+                                                                                                                                 'f:cpu': {},
+                                                                                                                                 'f:ephemeral-storage': {},
+                                                                                                                                 'f:memory': {}}},
+                                                                                                  'f:terminationMessagePath': {},
+                                                                                                  'f:terminationMessagePolicy': {}}},
+                                                           'f:dnsConfig': {'.': {},
+                                                                           'f:options': {}},
+                                                           'f:dnsPolicy': {},
+                                                           'f:enableServiceLinks': {},
+                                                           'f:imagePullSecrets': {'.': {},
+                                                                                  'k:{"name":"meteoric-conservation-7520-private-registry"}': {}},
+                                                           'f:nodeSelector': {},
+                                                           'f:priorityClassName': {},
+                                                           'f:restartPolicy': {},
+                                                           'f:schedulerName': {},
+                                                           'f:securityContext': {},
+                                                           'f:serviceAccount': {},
+                                                           'f:serviceAccountName': {},
+                                                           'f:terminationGracePeriodSeconds': {},
+                                                           'f:tolerations': {}}},
+                                  'manager': 'OpenAPI-Generator',
+                                  'operation': 'Update',
+                                  'subresource': None,
+                                  'time': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal())},
+                                 {'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:annotations': {'.': {},
+                                                                                 'f:cni.projectcalico.org/containerID': {},
+                                                                                 'f:cni.projectcalico.org/podIP': {},
+                                                                                 'f:cni.projectcalico.org/podIPs': {}}}},
+                                  'manager': 'calico',
+                                  'operation': 'Update',
+                                  'subresource': 'status',
+                                  'time': datetime.datetime(2026, 7, 31, 15, 0, 32, tzinfo=tzlocal())},
+                                 {'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:status': {'f:conditions': {'k:{"type":"ContainersReady"}': {'.': {},
+                                                                                                               'f:lastProbeTime': {},
+                                                                                                               'f:lastTransitionTime': {},
+                                                                                                               'f:observedGeneration': {},
+                                                                                                               'f:status': {},
+                                                                                                               'f:type': {}},
+                                                                              'k:{"type":"Initialized"}': {'.': {},
+                                                                                                           'f:lastProbeTime': {},
+                                                                                                           'f:lastTransitionTime': {},
+                                                                                                           'f:observedGeneration': {},
+                                                                                                           'f:status': {},
+                                                                                                           'f:type': {}},
+                                                                              'k:{"type":"PodReadyToStartContainers"}': {'.': {},
+                                                                                                                         'f:lastProbeTime': {},
+                                                                                                                         'f:lastTransitionTime': {},
+                                                                                                                         'f:observedGeneration': {},
+                                                                                                                         'f:status': {},
+                                                                                                                         'f:type': {}},
+                                                                              'k:{"type":"PodScheduled"}': {'f:observedGeneration': {}},
+                                                                              'k:{"type":"Ready"}': {'.': {},
+                                                                                                     'f:lastProbeTime': {},
+                                                                                                     'f:lastTransitionTime': {},
+                                                                                                     'f:observedGeneration': {},
+                                                                                                     'f:status': {},
+                                                                                                     'f:type': {}}},
+                                                             'f:containerStatuses': {},
+                                                             'f:hostIP': {},
+                                                             'f:hostIPs': {},
+                                                             'f:observedGeneration': {},
+                                                             'f:phase': {},
+                                                             'f:podIP': {},
+                                                             'f:podIPs': {'.': {},
+                                                                          'k:{"ip":"100.64.3.79"}': {'.': {},
+                                                                                                     'f:ip': {}}},
+                                                             'f:startTime': {}}},
+                                  'manager': 'kubelet',
+                                  'operation': 'Update',
+                                  'subresource': 'status',
+                                  'time': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal())}],
+              'name': 'write-targeted-signal-ds-19-822bmvra',
+              'namespace': 'meteoric-conservation-7520',
+              'owner_references': [{'api_version': 'v1',
+                                    'block_owner_deletion': False,
+                                    'controller': True,
+                                    'kind': 'ServiceAccount',
+                                    'name': 'meteoric-conservation-7520-worker-serviceaccount',
+                                    'uid': '8182d1ef-f087-4ed5-91ad-f2ef1cad9534'}],
+              'resource_version': '1785510033617951007',
+              'self_link': None,
+              'uid': '90996372-7ebf-40bb-9dba-b5650cc43985'},
+ 'spec': {'active_deadline_seconds': None,
+          'affinity': {'node_affinity': None,
+                       'pod_affinity': None,
+                       'pod_anti_affinity': None},
+          'automount_service_account_token': None,
+          'containers': [{'args': None,
+                          'command': ['dbt',
+                                      'run',
+                                      '--select',
+                                      'targeted_signal_ds_19',
+                                      '--target',
+                                      'prod_warehouse_2xs'],
+                          'env': [{'name': 'run_date',
+                                   'value': '2026-07-30',
+                                   'value_from': None},
+                                  {'name': 'env',
+                                   'value': 'prod',
+                                   'value_from': None},
+                                  {'name': 'DATABRICKS_GCP_CLIENT_SECRET',
+                                   'value': None,
+                                   'value_from': {'config_map_key_ref': None,
+                                                  'field_ref': None,
+                                                  'file_key_ref': None,
+                                                  'resource_field_ref': None,
+                                                  'secret_key_ref': {'key': 'DATABRICKS_GCP_CLIENT_SECRET',
+                                                                     'name': 'env-secrets',
+                                                                     'optional': None}}}],
+                          'env_from': None,
+                          'image': 'steelhousedev/generic_dbt_runner_ml:gcp-prod',
+                          'image_pull_policy': 'Always',
+                          'lifecycle': {'post_start': None,
+                                        'pre_stop': {'_exec': {'command': ['/bin/sh',
+                                                                           '-c',
+                                                                           'kill '
+                                                                           '-s '
+                                                                           'INT '
+                                                                           '1; '
+                                                                           'sleep '
+                                                                           '10']},
+                                                     'http_get': None,
+                                                     'sleep': None,
+                                                     'tcp_socket': None},
+                                        'stop_signal': None},
+                          'liveness_probe': None,
+                          'name': 'base',
+                          'ports': None,
+                          'readiness_probe': None,
+                          'resize_policy': None,
+                          'resources': {'claims': None,
+                                        'limits': {'cpu': '250m',
+                                                   'ephemeral-storage': '256Mi',
+                                                   'memory': '512Mi'},
+                                        'requests': {'cpu': '250m',
+                                                     'ephemeral-storage': '256Mi',
+                                                     'memory': '512Mi'}},
+                          'restart_policy': None,
+                          'restart_policy_rules': None,
+                          'security_context': None,
+                          'startup_probe': None,
+                          'stdin': None,
+                          'stdin_once': None,
+                          'termination_message_path': '/dev/termination-log',
+                          'termination_message_policy': 'File',
+                          'tty': None,
+                          'volume_devices': None,
+                          'volume_mounts': [{'mount_path': '/var/run/secrets/kubernetes.io/serviceaccount',
+                                             'mount_propagation': None,
+                                             'name': 'kube-api-access-7pfrk',
+                                             'read_only': True,
+                                             'recursive_read_only': None,
+                                             'sub_path': None,
+                                             'sub_path_expr': None}],
+                          'working_dir': None}],
+          'dns_config': {'nameservers': None,
+                         'options': [{'name': 'ndots', 'value': '4'}],
+                         'searches': None},
+          'dns_policy': 'ClusterFirst',
+          'enable_service_links': True,
+          'ephemeral_containers': None,
+          'host_aliases': None,
+          'host_ipc': None,
+          'host_network': None,
+          'host_pid': None,
+          'host_users': None,
+          'hostname': None,
+          'hostname_override': None,
+          'image_pull_secrets': [{'name': 'meteoric-conservation-7520-private-registry'}],
+          'init_containers': None,
+          'node_name': 'gke-cmcv0v0ae01bk01n-n2dcustom816384--bda9d30d-lhbg',
+          'node_selector': {'astronomer.io/worker-node': 'True'},
+          'os': None,
+          'overhead': None,
+          'preemption_policy': 'Never',
+          'priority': 0,
+          'priority_class_name': 'meteoric-conservation-7520-default',
+          'readiness_gates': None,
+          'resource_claims': None,
+          'resources': None,
+          'restart_policy': 'Never',
+          'runtime_class_name': None,
+          'scheduler_name': 'gke.io/optimize-utilization-scheduler',
+          'scheduling_gates': None,
+          'security_context': {'app_armor_profile': None,
+                               'fs_group': None,
+                               'fs_group_change_policy': None,
+                               'run_as_group': None,
+                               'run_as_non_root': None,
+                               'run_as_user': None,
+                               'se_linux_change_policy': None,
+                               'se_linux_options': None,
+                               'seccomp_profile': None,
+                               'supplemental_groups': None,
+                               'supplemental_groups_policy': None,
+                               'sysctls': None,
+                               'windows_options': None},
+          'service_account': 'meteoric-conservation-7520-kpo',
+          'service_account_name': 'meteoric-conservation-7520-kpo',
+          'set_hostname_as_fqdn': None,
+          'share_process_namespace': None,
+          'subdomain': None,
+          'termination_grace_period_seconds': 30,
+          'tolerations': [{'effect': 'NoSchedule',
+                           'key': 'astronomer.io/node-group',
+                           'operator': 'Equal',
+                           'toleration_seconds': None,
+                           'value': 'airflow-worker'},
+                          {'effect': 'NoExecute',
+                           'key': 'node.kubernetes.io/not-ready',
+                           'operator': 'Exists',
+                           'toleration_seconds': 300,
+                           'value': None},
+                          {'effect': 'NoExecute',
+                           'key': 'node.kubernetes.io/unreachable',
+                           'operator': 'Exists',
+                           'toleration_seconds': 300,
+                           'value': None}],
+          'topology_spread_constraints': None,
+          'volumes': [{'aws_elastic_block_store': None,
+                       'azure_disk': None,
+                       'azure_file': None,
+                       'cephfs': None,
+                       'cinder': None,
+                       'config_map': None,
+                       'csi': None,
+                       'downward_api': None,
+                       'empty_dir': None,
+                       'ephemeral': None,
+                       'fc': None,
+                       'flex_volume': None,
+                       'flocker': None,
+                       'gce_persistent_disk': None,
+                       'git_repo': None,
+                       'glusterfs': None,
+                       'host_path': None,
+                       'image': None,
+                       'iscsi': None,
+                       'name': 'kube-api-access-7pfrk',
+                       'nfs': None,
+                       'persistent_volume_claim': None,
+                       'photon_persistent_disk': None,
+                       'portworx_volume': None,
+                       'projected': {'default_mode': 420,
+                                     'sources': [{'cluster_trust_bundle': None,
+                                                  'config_map': None,
+                                                  'downward_api': None,
+                                                  'pod_certificate': None,
+                                                  'secret': None,
+                                                  'service_account_token': {'audience': None,
+                                                                            'expiration_seconds': 3607,
+                                                                            'path': 'token'}},
+                                                 {'cluster_trust_bundle': None,
+                                                  'config_map': {'items': [{'key': 'ca.crt',
+                                                                            'mode': None,
+                                                                            'path': 'ca.crt'}],
+                                                                 'name': 'kube-root-ca.crt',
+                                                                 'optional': None},
+                                                  'downward_api': None,
+                                                  'pod_certificate': None,
+                                                  'secret': None,
+                                                  'service_account_token': None},
+                                                 {'cluster_trust_bundle': None,
+                                                  'config_map': None,
+                                                  'downward_api': {'items': [{'field_ref': {'api_version': 'v1',
+                                                                                            'field_path': 'metadata.namespace'},
+                                                                              'mode': None,
+                                                                              'path': 'namespace',
+                                                                              'resource_field_ref': None}]},
+                                                  'pod_certificate': None,
+                                                  'secret': None,
+                                                  'service_account_token': None}]},
+                       'quobyte': None,
+                       'rbd': None,
+                       'scale_io': None,
+                       'secret': None,
+                       'storageos': None,
+                       'vsphere_volume': None}],
+          'workload_ref': None},
+ 'status': {'allocated_resources': None,
+            'conditions': [{'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'True',
+                            'type': 'PodReadyToStartContainers'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'True',
+                            'type': 'Initialized'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'True',
+                            'type': 'Ready'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'True',
+                            'type': 'ContainersReady'},
+                           {'last_probe_time': None,
+                            'last_transition_time': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal()),
+                            'message': None,
+                            'observed_generation': 1,
+                            'reason': None,
+                            'status': 'True',
+                            'type': 'PodScheduled'}],
+            'container_statuses': [{'allocated_resources': {'cpu': '250m',
+                                                            'ephemeral-storage': '256Mi',
+                                                            'memory': '512Mi'},
+                                    'allocated_resources_status': None,
+                                    'container_id': 'containerd://6419937a0ecd0feed218205fd352bc46ca0c1dba817c3bce7daa97cff90328e9',
+                                    'image': 'docker.io/steelhousedev/generic_dbt_runner_ml:gcp-prod',
+                                    'image_id': 'docker.io/steelhousedev/generic_dbt_runner_ml@sha256:2bd832530b154ac4bd7df8e325069041a53069bd42a6edf1cafcb77ffedcc3ee',
+                                    'last_state': {'running': None,
+                                                   'terminated': None,
+                                                   'waiting': None},
+                                    'name': 'base',
+                                    'ready': True,
+                                    'resources': {'claims': None,
+                                                  'limits': {'cpu': '250m',
+                                                             'ephemeral-storage': '256Mi',
+                                                             'memory': '512Mi'},
+                                                  'requests': {'cpu': '250m',
+                                                               'ephemeral-storage': '256Mi',
+                                                               'memory': '512Mi'}},
+                                    'restart_count': 0,
+                                    'started': True,
+                                    'state': {'running': {'started_at': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal())},
+                                              'terminated': None,
+                                              'waiting': None},
+                                    'stop_signal': None,
+                                    'user': {'linux': {'gid': 0,
+                                                       'supplemental_groups': [0],
+                                                       'uid': 0}},
+                                    'volume_mounts': [{'mount_path': '/var/run/secrets/kubernetes.io/serviceaccount',
+                                                       'name': 'kube-api-access-7pfrk',
+                                                       'read_only': True,
+                                                       'recursive_read_only': 'Disabled'}]}],
+            'ephemeral_container_statuses': None,
+            'extended_resource_claim_status': None,
+            'host_i_ps': [{'ip': '172.20.0.18'}],
+            'host_ip': '172.20.0.18',
+            'init_container_statuses': None,
+            'message': None,
+            'nominated_node_name': None,
+            'observed_generation': 1,
+            'phase': 'Running',
+            'pod_i_ps': [{'ip': '100.64.3.79'}],
+            'pod_ip': '100.64.3.79',
+            'qos_class': 'Guaranteed',
+            'reason': None,
+            'resize': None,
+            'resource_claim_statuses': None,
+            'resources': None,
+            'start_time': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal())}}
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 934 in run
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/execution_time/task_runner.py, line 1325 in _execute_task
+    File /usr/local/lib/python3.12/site-packages/airflow/sdk/bases/operator.py, line 417 in wrapper
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 779 in execute
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 860 in execute_sync
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 1292 in post_complete_action
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 1366 in cleanup
+,ApiException: (404)
+Reason: Not Found
+HTTP response headers: HTTPHeaderDict({'Audit-Id': '3b0b4a47-e1c0-4cc0-975e-f0160d18c1c6', 'Cache-Control': 'no-cache, private', 'Content-Type': 'application/json', 'X-Kubernetes-Pf-Flowschema-Uid': '58905d68-e2b1-4e17-8d3b-35113177d10f', 'X-Kubernetes-Pf-Prioritylevel-Uid': '8da88e7e-d5e0-4723-b262-1588b40cc38e', 'Date': 'Fri, 31 Jul 2026 15:52:03 GMT', 'Content-Length': '240'})
+HTTP response body: {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"pods \"write-targeted-signal-ds-19-822bmvra\" not found","reason":"NotFound","details":{"name":"write-targeted-signal-ds-19-822bmvra","kind":"pods"},"code":404}
+
+
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 831 in execute_sync
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 338 in wrapped_f
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 477 in __call__
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 378 in iter
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 400 in <lambda>
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 449 in result
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 401 in __get_result
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 480 in __call__
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 909 in await_pod_completion
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 923 in _handle_api_exception
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/operators/pod.py, line 893 in await_pod_completion
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 778 in fetch_requested_container_logs
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 659 in fetch_container_logs
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 844 in container_is_running
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 338 in wrapped_f
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 477 in __call__
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 378 in iter
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 400 in <lambda>
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 449 in result
+    File /usr/local/lib/python3.12/concurrent/futures/_base.py, line 401 in __get_result
+    File /usr/local/lib/python3.12/site-packages/tenacity/__init__.py, line 480 in __call__
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/utils/pod_manager.py, line 945 in read_pod
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api/core_v1_api.py, line 23999 in read_namespaced_pod
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api/core_v1_api.py, line 24086 in read_namespaced_pod_with_http_info
+    File /usr/local/lib/python3.12/site-packages/airflow/providers/cncf/kubernetes/hooks/kubernetes.py, line 108 in call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 348 in call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 180 in __call_api
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/api_client.py, line 373 in request
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/rest.py, line 244 in GET
+    File /usr/local/lib/python3.12/site-packages/kubernetes/client/rest.py, line 238 in request
+
+[2026-07-31T15:52:03.768606Z] INFO - {'dag': <DAG: keyword_ddp_reporting>, 'inlets': [], 'map_index_template': None, 'outlets': [], 'run_id': 'scheduled__2026-07-30T15:00:00+00:00', 'task': <Task(DbxDbtOperator): write_targeted_signal_ds_19>, 'task_instance': RuntimeTaskInstance(id=UUID('019fb8d7-8ef1-7995-b158-546480bd62c3'), task_id='write_targeted_signal_ds_19', dag_id='keyword_ddp_reporting', run_id='scheduled__2026-07-30T15:00:00+00:00', try_number=2, dag_version_id=UUID('019f900e-3e70-75b3-9d9d-bc60caa4d876'), map_index=-1, hostname='100.64.3.88', context_carrier=None, task=<Task(DbxDbtOperator): write_targeted_signal_ds_19>, bundle_instance=AstroBundleBackend(name=main), max_tries=1, start_date=datetime.datetime(2026, 7, 31, 15, 47, 44, 334912, tzinfo=datetime.timezone.utc), end_date=datetime.datetime(2026, 7, 31, 15, 52, 3, 603316, tzinfo=datetime.timezone.utc), state=<TaskInstanceState.FAILED: 'failed'>, is_mapped=False, rendered_map_index=None), 'ti': RuntimeTaskInstance(id=UUID('019fb8d7-8ef1-7995-b158-546480bd62c3'), task_id='write_targeted_signal_ds_19', dag_id='keyword_ddp_reporting', run_id='scheduled__2026-07-30T15:00:00+00:00', try_number=2, dag_version_id=UUID('019f900e-3e70-75b3-9d9d-bc60caa4d876'), map_index=-1, hostname='100.64.3.88', context_carrier=None, task=<Task(DbxDbtOperator): write_targeted_signal_ds_19>, bundle_instance=AstroBundleBackend(name=main), max_tries=1, start_date=datetime.datetime(2026, 7, 31, 15, 47, 44, 334912, tzinfo=datetime.timezone.utc), end_date=datetime.datetime(2026, 7, 31, 15, 52, 3, 603316, tzinfo=datetime.timezone.utc), state=<TaskInstanceState.FAILED: 'failed'>, is_mapped=False, rendered_map_index=None), 'outlet_events': <airflow.sdk.execution_time.context.OutletEventAccessors object at 0x782142db5b20>, 'inlet_events': InletEventsAccessors(_inlets=[], _assets={}, _asset_aliases={}), 'macros': <MacrosAccessor (dynamic access to macros)>, 'params': {}, 'var': {'json': <VariableAccessor (dynamic access)>, 'value': <VariableAccessor (dynamic access)>}, 'conn': <ConnectionAccessor (dynamic access)>, 'dag_run': DagRun(dag_id='keyword_ddp_reporting', run_id='scheduled__2026-07-30T15:00:00+00:00', logical_date=datetime.datetime(2026, 7, 30, 15, 0, tzinfo=datetime.timezone.utc), data_interval_start=datetime.datetime(2026, 7, 30, 15, 0, tzinfo=datetime.timezone.utc), data_interval_end=datetime.datetime(2026, 7, 31, 15, 0, tzinfo=datetime.timezone.utc), run_after=datetime.datetime(2026, 7, 31, 15, 0, tzinfo=datetime.timezone.utc), start_date=datetime.datetime(2026, 7, 31, 15, 0, 1, 286735, tzinfo=datetime.timezone.utc), end_date=None, clear_number=0, run_type=<DagRunType.SCHEDULED: 'scheduled'>, state=<DagRunState.RUNNING: 'running'>, conf={}, triggering_user_name=None, consumed_asset_events=[]), 'triggering_asset_events': TriggeringAssetEventsAccessor(_events=defaultdict(<class 'list'>, {})), 'task_instance_key_str': 'keyword_ddp_reporting__write_targeted_signal_ds_19__20260730', 'task_reschedule_count': 0, 'prev_start_date_success': <Proxy at 0x782141675640 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x782141747ce0>>, 'prev_end_date_success': <Proxy at 0x782141675440 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x782141747d80>>, 'logical_date': DateTime(2026, 7, 30, 15, 0, 0, tzinfo=Timezone('UTC')), 'ds': '2026-07-30', 'ds_nodash': '20260730', 'ts': '2026-07-30T15:00:00+00:00', 'ts_nodash': '20260730T150000', 'ts_nodash_with_tz': '20260730T150000+0000', 'data_interval_end': DateTime(2026, 7, 31, 15, 0, 0, tzinfo=Timezone('UTC')), 'data_interval_start': DateTime(2026, 7, 30, 15, 0, 0, tzinfo=Timezone('UTC')), 'prev_data_interval_start_success': <Proxy at 0x7821418e4180 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x7821417239c0>>, 'prev_data_interval_end_success': <Proxy at 0x7821418e6280 with factory <function RuntimeTaskInstance.get_template_context.<locals>.<lambda> at 0x7821417223e0>>, 'exception': AirflowException('Pod write-targeted-signal-ds-19-822bmvra returned a failure.\nremote_pod: {\'api_version\': None,\n \'kind\': None,\n \'metadata\': {\'annotations\': {\'cni.projectcalico.org/containerID\': \'234d0d5165528883366ac187c3335e0fbf1daf0383cbf6f3564fc35f52f4dbe3\',\n                              \'cni.projectcalico.org/podIP\': \'100.64.3.79/32\',\n                              \'cni.projectcalico.org/podIPs\': \'100.64.3.79/32\'},\n              \'creation_timestamp\': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal()),\n              \'deletion_grace_period_seconds\': None,\n              \'deletion_timestamp\': None,\n              \'finalizers\': None,\n              \'generate_name\': None,\n              \'generation\': 1,\n              \'labels\': {\'airflow_kpo_in_cluster\': \'True\',\n                         \'airflow_version\': \'3.1.5-astro.1\',\n                         \'app\': \'airflow\',\n                         \'astronomer.io/cloud_provider\': \'gcp\',\n                         \'astronomer.io/cloud_region\': \'us-central1\',\n                         \'astronomer.io/deploymentId\': \'cmd6bd10c0gl901rfuokgryiq\',\n                         \'astronomer.io/organizationId\': \'cmc0puu8s28z401iybhqnvf7y\',\n                         \'astronomer.io/workspaceId\': \'cmcvca5ia048y01ngw8y36qeq\',\n                         \'dag_id\': \'keyword_ddp_reporting\',\n                         \'kubernetes_pod_operator\': \'True\',\n                         \'run_id\': \'scheduled__2026-07-30T1500000000-4e70dadc9\',\n                         \'task_id\': \'write_targeted_signal_ds_19\',\n                         \'topology.kubernetes.io/region\': \'us-central1\',\n                         \'topology.kubernetes.io/zone\': \'us-central1-a\',\n                         \'try_number\': \'1\'},\n              \'managed_fields\': [{\'api_version\': \'v1\',\n                                  \'fields_type\': \'FieldsV1\',\n                                  \'fields_v1\': {\'f:metadata\': {\'f:labels\': {\'.\': {},\n                                                                            \'f:airflow_kpo_in_cluster\': {},\n                                                                            \'f:airflow_version\': {},\n                                                                            \'f:app\': {},\n                                                                            \'f:astronomer.io/cloud_provider\': {},\n                                                                            \'f:astronomer.io/cloud_region\': {},\n                                                                            \'f:astronomer.io/deploymentId\': {},\n                                                                            \'f:astronomer.io/organizationId\': {},\n                                                                            \'f:astronomer.io/workspaceId\': {},\n                                                                            \'f:dag_id\': {},\n                                                                            \'f:kubernetes_pod_operator\': {},\n                                                                            \'f:run_id\': {},\n                                                                            \'f:task_id\': {},\n                                                                            \'f:try_number\': {}},\n                                                               \'f:ownerReferences\': {\'.\': {},\n                                                                                     \'k:{"uid":"8182d1ef-f087-4ed5-91ad-f2ef1cad9534"}\': {}}},\n                                                \'f:spec\': {\'f:affinity\': {},\n                                                           \'f:containers\': {\'k:{"name":"base"}\': {\'.\': {},\n                                                                                                  \'f:command\': {},\n                                                                                                  \'f:env\': {\'.\': {},\n                                                                                                            \'k:{"name":"DATABRICKS_GCP_CLIENT_SECRET"}\': {\'.\': {},\n                                                                                                                                                          \'f:name\': {},\n                                                                                                                                                          \'f:valueFrom\': {\'.\': {},\n                                                                                                                                                                          \'f:secretKeyRef\': {}}},\n                                                                                                            \'k:{"name":"env"}\': {\'.\': {},\n                                                                                                                                 \'f:name\': {},\n                                                                                                                                 \'f:value\': {}},\n                                                                                                            \'k:{"name":"run_date"}\': {\'.\': {},\n                                                                                                                                      \'f:name\': {},\n                                                                                                                                      \'f:value\': {}}},\n                                                                                                  \'f:image\': {},\n                                                                                                  \'f:imagePullPolicy\': {},\n                                                                                                  \'f:lifecycle\': {\'.\': {},\n                                                                                                                  \'f:preStop\': {\'.\': {},\n                                                                                                                                \'f:exec\': {\'.\': {},\n                                                                                                                                           \'f:command\': {}}}},\n                                                                                                  \'f:name\': {},\n                                                                                                  \'f:resources\': {\'.\': {},\n                                                                                                                  \'f:limits\': {\'.\': {},\n                                                                                                                               \'f:cpu\': {},\n                                                                                                                               \'f:ephemeral-storage\': {},\n                                                                                                                               \'f:memory\': {}},\n                                                                                                                  \'f:requests\': {\'.\': {},\n                                                                                                                                 \'f:cpu\': {},\n                                                                                                                                 \'f:ephemeral-storage\': {},\n                                                                                                                                 \'f:memory\': {}}},\n                                                                                                  \'f:terminationMessagePath\': {},\n                                                                                                  \'f:terminationMessagePolicy\': {}}},\n                                                           \'f:dnsConfig\': {\'.\': {},\n                                                                           \'f:options\': {}},\n                                                           \'f:dnsPolicy\': {},\n                                                           \'f:enableServiceLinks\': {},\n                                                           \'f:imagePullSecrets\': {\'.\': {},\n                                                                                  \'k:{"name":"meteoric-conservation-7520-private-registry"}\': {}},\n                                                           \'f:nodeSelector\': {},\n                                                           \'f:priorityClassName\': {},\n                                                           \'f:restartPolicy\': {},\n                                                           \'f:schedulerName\': {},\n                                                           \'f:securityContext\': {},\n                                                           \'f:serviceAccount\': {},\n                                                           \'f:serviceAccountName\': {},\n                                                           \'f:terminationGracePeriodSeconds\': {},\n                                                           \'f:tolerations\': {}}},\n                                  \'manager\': \'OpenAPI-Generator\',\n                                  \'operation\': \'Update\',\n                                  \'subresource\': None,\n                                  \'time\': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal())},\n                                 {\'api_version\': \'v1\',\n                                  \'fields_type\': \'FieldsV1\',\n                                  \'fields_v1\': {\'f:metadata\': {\'f:annotations\': {\'.\': {},\n                                                                                 \'f:cni.projectcalico.org/containerID\': {},\n                                                                                 \'f:cni.projectcalico.org/podIP\': {},\n                                                                                 \'f:cni.projectcalico.org/podIPs\': {}}}},\n                                  \'manager\': \'calico\',\n                                  \'operation\': \'Update\',\n                                  \'subresource\': \'status\',\n                                  \'time\': datetime.datetime(2026, 7, 31, 15, 0, 32, tzinfo=tzlocal())},\n                                 {\'api_version\': \'v1\',\n                                  \'fields_type\': \'FieldsV1\',\n                                  \'fields_v1\': {\'f:status\': {\'f:conditions\': {\'k:{"type":"ContainersReady"}\': {\'.\': {},\n                                                                                                               \'f:lastProbeTime\': {},\n                                                                                                               \'f:lastTransitionTime\': {},\n                                                                                                               \'f:observedGeneration\': {},\n                                                                                                               \'f:status\': {},\n                                                                                                               \'f:type\': {}},\n                                                                              \'k:{"type":"Initialized"}\': {\'.\': {},\n                                                                                                           \'f:lastProbeTime\': {},\n                                                                                                           \'f:lastTransitionTime\': {},\n                                                                                                           \'f:observedGeneration\': {},\n                                                                                                           \'f:status\': {},\n                                                                                                           \'f:type\': {}},\n                                                                              \'k:{"type":"PodReadyToStartContainers"}\': {\'.\': {},\n                                                                                                                         \'f:lastProbeTime\': {},\n                                                                                                                         \'f:lastTransitionTime\': {},\n                                                                                                                         \'f:observedGeneration\': {},\n                                                                                                                         \'f:status\': {},\n                                                                                                                         \'f:type\': {}},\n                                                                              \'k:{"type":"PodScheduled"}\': {\'f:observedGeneration\': {}},\n                                                                              \'k:{"type":"Ready"}\': {\'.\': {},\n                                                                                                     \'f:lastProbeTime\': {},\n                                                                                                     \'f:lastTransitionTime\': {},\n                                                                                                     \'f:observedGeneration\': {},\n                                                                                                     \'f:status\': {},\n                                                                                                     \'f:type\': {}}},\n                                                             \'f:containerStatuses\': {},\n                                                             \'f:hostIP\': {},\n                                                             \'f:hostIPs\': {},\n                                                             \'f:observedGeneration\': {},\n                                                             \'f:phase\': {},\n                                                             \'f:podIP\': {},\n                                                             \'f:podIPs\': {\'.\': {},\n                                                                          \'k:{"ip":"100.64.3.79"}\': {\'.\': {},\n                                                                                                     \'f:ip\': {}}},\n                                                             \'f:startTime\': {}}},\n                                  \'manager\': \'kubelet\',\n                                  \'operation\': \'Update\',\n                                  \'subresource\': \'status\',\n                                  \'time\': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal())}],\n              \'name\': \'write-targeted-signal-ds-19-822bmvra\',\n              \'namespace\': \'meteoric-conservation-7520\',\n              \'owner_references\': [{\'api_version\': \'v1\',\n                                    \'block_owner_deletion\': False,\n                                    \'controller\': True,\n                                    \'kind\': \'ServiceAccount\',\n                                    \'name\': \'meteoric-conservation-7520-worker-serviceaccount\',\n                                    \'uid\': \'8182d1ef-f087-4ed5-91ad-f2ef1cad9534\'}],\n              \'resource_version\': \'1785510033617951007\',\n              \'self_link\': None,\n              \'uid\': \'90996372-7ebf-40bb-9dba-b5650cc43985\'},\n \'spec\': {\'active_deadline_seconds\': None,\n          \'affinity\': {\'node_affinity\': None,\n                       \'pod_affinity\': None,\n                       \'pod_anti_affinity\': None},\n          \'automount_service_account_token\': None,\n          \'containers\': [{\'args\': None,\n                          \'command\': [\'dbt\',\n                                      \'run\',\n                                      \'--select\',\n                                      \'targeted_signal_ds_19\',\n                                      \'--target\',\n                                      \'prod_warehouse_2xs\'],\n                          \'env\': [{\'name\': \'run_date\',\n                                   \'value\': \'2026-07-30\',\n                                   \'value_from\': None},\n                                  {\'name\': \'env\',\n                                   \'value\': \'prod\',\n                                   \'value_from\': None},\n                                  {\'name\': \'DATABRICKS_GCP_CLIENT_SECRET\',\n                                   \'value\': None,\n                                   \'value_from\': {\'config_map_key_ref\': None,\n                                                  \'field_ref\': None,\n                                                  \'file_key_ref\': None,\n                                                  \'resource_field_ref\': None,\n                                                  \'secret_key_ref\': {\'key\': \'DATABRICKS_GCP_CLIENT_SECRET\',\n                                                                     \'name\': \'env-secrets\',\n                                                                     \'optional\': None}}}],\n                          \'env_from\': None,\n                          \'image\': \'steelhousedev/generic_dbt_runner_ml:gcp-prod\',\n                          \'image_pull_policy\': \'Always\',\n                          \'lifecycle\': {\'post_start\': None,\n                                        \'pre_stop\': {\'_exec\': {\'command\': [\'/bin/sh\',\n                                                                           \'-c\',\n                                                                           \'kill \'\n                                                                           \'-s \'\n                                                                           \'INT \'\n                                                                           \'1; \'\n                                                                           \'sleep \'\n                                                                           \'10\']},\n                                                     \'http_get\': None,\n                                                     \'sleep\': None,\n                                                     \'tcp_socket\': None},\n                                        \'stop_signal\': None},\n                          \'liveness_probe\': None,\n                          \'name\': \'base\',\n                          \'ports\': None,\n                          \'readiness_probe\': None,\n                          \'resize_policy\': None,\n                          \'resources\': {\'claims\': None,\n                                        \'limits\': {\'cpu\': \'250m\',\n                                                   \'ephemeral-storage\': \'256Mi\',\n                                                   \'memory\': \'512Mi\'},\n                                        \'requests\': {\'cpu\': \'250m\',\n                                                     \'ephemeral-storage\': \'256Mi\',\n                                                     \'memory\': \'512Mi\'}},\n                          \'restart_policy\': None,\n                          \'restart_policy_rules\': None,\n                          \'security_context\': None,\n                          \'startup_probe\': None,\n                          \'stdin\': None,\n                          \'stdin_once\': None,\n                          \'termination_message_path\': \'/dev/termination-log\',\n                          \'termination_message_policy\': \'File\',\n                          \'tty\': None,\n                          \'volume_devices\': None,\n                          \'volume_mounts\': [{\'mount_path\': \'/var/run/secrets/kubernetes.io/serviceaccount\',\n                                             \'mount_propagation\': None,\n                                             \'name\': \'kube-api-access-7pfrk\',\n                                             \'read_only\': True,\n                                             \'recursive_read_only\': None,\n                                             \'sub_path\': None,\n                                             \'sub_path_expr\': None}],\n                          \'working_dir\': None}],\n          \'dns_config\': {\'nameservers\': None,\n                         \'options\': [{\'name\': \'ndots\', \'value\': \'4\'}],\n                         \'searches\': None},\n          \'dns_policy\': \'ClusterFirst\',\n          \'enable_service_links\': True,\n          \'ephemeral_containers\': None,\n          \'host_aliases\': None,\n          \'host_ipc\': None,\n          \'host_network\': None,\n          \'host_pid\': None,\n          \'host_users\': None,\n          \'hostname\': None,\n          \'hostname_override\': None,\n          \'image_pull_secrets\': [{\'name\': \'meteoric-conservation-7520-private-registry\'}],\n          \'init_containers\': None,\n          \'node_name\': \'gke-cmcv0v0ae01bk01n-n2dcustom816384--bda9d30d-lhbg\',\n          \'node_selector\': {\'astronomer.io/worker-node\': \'True\'},\n          \'os\': None,\n          \'overhead\': None,\n          \'preemption_policy\': \'Never\',\n          \'priority\': 0,\n          \'priority_class_name\': \'meteoric-conservation-7520-default\',\n          \'readiness_gates\': None,\n          \'resource_claims\': None,\n          \'resources\': None,\n          \'restart_policy\': \'Never\',\n          \'runtime_class_name\': None,\n          \'scheduler_name\': \'gke.io/optimize-utilization-scheduler\',\n          \'scheduling_gates\': None,\n          \'security_context\': {\'app_armor_profile\': None,\n                               \'fs_group\': None,\n                               \'fs_group_change_policy\': None,\n                               \'run_as_group\': None,\n                               \'run_as_non_root\': None,\n                               \'run_as_user\': None,\n                               \'se_linux_change_policy\': None,\n                               \'se_linux_options\': None,\n                               \'seccomp_profile\': None,\n                               \'supplemental_groups\': None,\n                               \'supplemental_groups_policy\': None,\n                               \'sysctls\': None,\n                               \'windows_options\': None},\n          \'service_account\': \'meteoric-conservation-7520-kpo\',\n          \'service_account_name\': \'meteoric-conservation-7520-kpo\',\n          \'set_hostname_as_fqdn\': None,\n          \'share_process_namespace\': None,\n          \'subdomain\': None,\n          \'termination_grace_period_seconds\': 30,\n          \'tolerations\': [{\'effect\': \'NoSchedule\',\n                           \'key\': \'astronomer.io/node-group\',\n                           \'operator\': \'Equal\',\n                           \'toleration_seconds\': None,\n                           \'value\': \'airflow-worker\'},\n                          {\'effect\': \'NoExecute\',\n                           \'key\': \'node.kubernetes.io/not-ready\',\n                           \'operator\': \'Exists\',\n                           \'toleration_seconds\': 300,\n                           \'value\': None},\n                          {\'effect\': \'NoExecute\',\n                           \'key\': \'node.kubernetes.io/unreachable\',\n                           \'operator\': \'Exists\',\n                           \'toleration_seconds\': 300,\n                           \'value\': None}],\n          \'topology_spread_constraints\': None,\n          \'volumes\': [{\'aws_elastic_block_store\': None,\n                       \'azure_disk\': None,\n                       \'azure_file\': None,\n                       \'cephfs\': None,\n                       \'cinder\': None,\n                       \'config_map\': None,\n                       \'csi\': None,\n                       \'downward_api\': None,\n                       \'empty_dir\': None,\n                       \'ephemeral\': None,\n                       \'fc\': None,\n                       \'flex_volume\': None,\n                       \'flocker\': None,\n                       \'gce_persistent_disk\': None,\n                       \'git_repo\': None,\n                       \'glusterfs\': None,\n                       \'host_path\': None,\n                       \'image\': None,\n                       \'iscsi\': None,\n                       \'name\': \'kube-api-access-7pfrk\',\n                       \'nfs\': None,\n                       \'persistent_volume_claim\': None,\n                       \'photon_persistent_disk\': None,\n                       \'portworx_volume\': None,\n                       \'projected\': {\'default_mode\': 420,\n                                     \'sources\': [{\'cluster_trust_bundle\': None,\n                                                  \'config_map\': None,\n                                                  \'downward_api\': None,\n                                                  \'pod_certificate\': None,\n                                                  \'secret\': None,\n                                                  \'service_account_token\': {\'audience\': None,\n                                                                            \'expiration_seconds\': 3607,\n                                                                            \'path\': \'token\'}},\n                                                 {\'cluster_trust_bundle\': None,\n                                                  \'config_map\': {\'items\': [{\'key\': \'ca.crt\',\n                                                                            \'mode\': None,\n                                                                            \'path\': \'ca.crt\'}],\n                                                                 \'name\': \'kube-root-ca.crt\',\n                                                                 \'optional\': None},\n                                                  \'downward_api\': None,\n                                                  \'pod_certificate\': None,\n                                                  \'secret\': None,\n                                                  \'service_account_token\': None},\n                                                 {\'cluster_trust_bundle\': None,\n                                                  \'config_map\': None,\n                                                  \'downward_api\': {\'items\': [{\'field_ref\': {\'api_version\': \'v1\',\n                                                                                            \'field_path\': \'metadata.namespace\'},\n                                                                              \'mode\': None,\n                                                                              \'path\': \'namespace\',\n                                                                              \'resource_field_ref\': None}]},\n                                                  \'pod_certificate\': None,\n                                                  \'secret\': None,\n                                                  \'service_account_token\': None}]},\n                       \'quobyte\': None,\n                       \'rbd\': None,\n                       \'scale_io\': None,\n                       \'secret\': None,\n                       \'storageos\': None,\n                       \'vsphere_volume\': None}],\n          \'workload_ref\': None},\n \'status\': {\'allocated_resources\': None,\n            \'conditions\': [{\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'True\',\n                            \'type\': \'PodReadyToStartContainers\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'True\',\n                            \'type\': \'Initialized\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'True\',\n                            \'type\': \'Ready\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'True\',\n                            \'type\': \'ContainersReady\'},\n                           {\'last_probe_time\': None,\n                            \'last_transition_time\': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal()),\n                            \'message\': None,\n                            \'observed_generation\': 1,\n                            \'reason\': None,\n                            \'status\': \'True\',\n                            \'type\': \'PodScheduled\'}],\n            \'container_statuses\': [{\'allocated_resources\': {\'cpu\': \'250m\',\n                                                            \'ephemeral-storage\': \'256Mi\',\n                                                            \'memory\': \'512Mi\'},\n                                    \'allocated_resources_status\': None,\n                                    \'container_id\': \'containerd://6419937a0ecd0feed218205fd352bc46ca0c1dba817c3bce7daa97cff90328e9\',\n                                    \'image\': \'docker.io/steelhousedev/generic_dbt_runner_ml:gcp-prod\',\n                                    \'image_id\': \'docker.io/steelhousedev/generic_dbt_runner_ml@sha256:2bd832530b154ac4bd7df8e325069041a53069bd42a6edf1cafcb77ffedcc3ee\',\n                                    \'last_state\': {\'running\': None,\n                                                   \'terminated\': None,\n                                                   \'waiting\': None},\n                                    \'name\': \'base\',\n                                    \'ready\': True,\n                                    \'resources\': {\'claims\': None,\n                                                  \'limits\': {\'cpu\': \'250m\',\n                                                             \'ephemeral-storage\': \'256Mi\',\n                                                             \'memory\': \'512Mi\'},\n                                                  \'requests\': {\'cpu\': \'250m\',\n                                                               \'ephemeral-storage\': \'256Mi\',\n                                                               \'memory\': \'512Mi\'}},\n                                    \'restart_count\': 0,\n                                    \'started\': True,\n                                    \'state\': {\'running\': {\'started_at\': datetime.datetime(2026, 7, 31, 15, 0, 33, tzinfo=tzlocal())},\n                                              \'terminated\': None,\n                                              \'waiting\': None},\n                                    \'stop_signal\': None,\n                                    \'user\': {\'linux\': {\'gid\': 0,\n                                                       \'supplemental_groups\': [0],\n                                                       \'uid\': 0}},\n                                    \'volume_mounts\': [{\'mount_path\': \'/var/run/secrets/kubernetes.io/serviceaccount\',\n                                                       \'name\': \'kube-api-access-7pfrk\',\n                                                       \'read_only\': True,\n                                                       \'recursive_read_only\': \'Disabled\'}]}],\n            \'ephemeral_container_statuses\': None,\n            \'extended_resource_claim_status\': None,\n            \'host_i_ps\': [{\'ip\': \'172.20.0.18\'}],\n            \'host_ip\': \'172.20.0.18\',\n            \'init_container_statuses\': None,\n            \'message\': None,\n            \'nominated_node_name\': None,\n            \'observed_generation\': 1,\n            \'phase\': \'Running\',\n            \'pod_i_ps\': [{\'ip\': \'100.64.3.79\'}],\n            \'pod_ip\': \'100.64.3.79\',\n            \'qos_class\': \'Guaranteed\',\n            \'reason\': None,\n            \'resize\': None,\n            \'resource_claim_statuses\': None,\n            \'resources\': None,\n            \'start_time\': datetime.datetime(2026, 7, 31, 15, 0, 31, tzinfo=tzlocal())}}')}source=include.job_config.slack_messages loc=slack_messages.py:132 
+[2026-07-31T15:52:03.768928Z] INFO - id=UUID('019fb8d7-8ef1-7995-b158-546480bd62c3') task_id='write_targeted_signal_ds_19' dag_id='keyword_ddp_reporting' run_id='scheduled__2026-07-30T15:00:00+00:00' try_number=2 dag_version_id=UUID('019f900e-3e70-75b3-9d9d-bc60caa4d876') map_index=-1 hostname='100.64.3.88' context_carrier=None task=<Task(DbxDbtOperator): write_targeted_signal_ds_19> bundle_instance=AstroBundleBackend(name=main) max_tries=1 start_date=datetime.datetime(2026, 7, 31, 15, 47, 44, 334912, tzinfo=datetime.timezone.utc) end_date=datetime.datetime(2026, 7, 31, 15, 52, 3, 603316, tzinfo=datetime.timezone.utc) state=<TaskInstanceState.FAILED: 'failed'> is_mapped=False rendered_map_index=Nonesource=include.job_config.slack_messages loc=slack_messages.py:134 
+[2026-07-31T15:52:05.191387Z] INFO - DEFAULT_HTTP already found in environment variables, skipping aliasing OPENLINEAGE_URLsource=openlineage.client.client loc=client.py:345 
+[2026-07-31T15:52:05.192484Z] INFO - OpenLineageClient will use `composite` transportsource=openlineage.client.client loc=client.py:116 
+[2026-07-31T15:52:05.442985Z] INFO - Stopping OpenLineage CompositeTransport emission after the first successful delivery because `continue_on_success=False`. Transport that emitted the event: <HttpTransport(name=astro_primary, kind=http, priority=2)>source=openlineage.client.transport.composite loc=composite.py:135 
+[2026-07-31T15:52:05.443184Z] INFO - Successfully emitted OpenLineage `FAIL` event of id `019fb38a-1980-71ff-bed0-e3ff50e4609a`source=airflow.providers.openlineage.plugins.adapter.OpenLineageAdapter loc=adapter.py:167 
