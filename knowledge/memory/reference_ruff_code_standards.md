@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [ruff, ruff check, ruff format, pyproject.toml, flake8, black, isort, mypy, clean code, self-documenting code, two-tier lint, durable code, throwaway artifacts, ANN type hints, pydocstyle, E501, required-version, per-file-ignores, force-exclude, clean_code_enforcement_plan]
+keywords: [ruff, ruff check, ruff format, pyproject.toml, flake8, black, isort, mypy, clean code, self-documenting code, two-tier lint, durable code, throwaway artifacts, ANN type hints, pydocstyle, E501, required-version, per-file-ignores, force-exclude, format-on-save, vscode settings, charliermarsh.ruff, language server, clean_code_enforcement_plan]
 domain: [workflow, repos, infra]
 lifecycle: active
 last_verified: 2026-07-31
@@ -28,3 +28,7 @@ Python code-quality standard for this repo (adopted 2026-07-31, Phase 0+1 shippe
 **Status: Phases 0-3 all shipped 2026-07-31.** Phase 2 (`N` + `C901@25`, IMP-019 done) and Phase 3 (`D`-presence + `ANN` on `lib/mntn_xlsx.py` + advisory `mypy lib/mntn_xlsx.py`, IMP-020 done) are live. `lib/mntn_xlsx.py` is fully type-annotated (was 3/121 typed) and mypy-clean. **mypy is advisory only (`mypy lib/mntn_xlsx.py`), NEVER in the gate.** Next widening: lower `C901 max-complexity` toward ~12 as `audit_structure.audit`/`mntn_xlsx.table`/`health_scorecard.main` get refactored; extend `D`/`ANN` + `mypy` to new `lib/*.py` as they land (per-file-ignores already gate them in).
 
 **Why type hints are the real gap** (not style): a typed signature is the biggest self-documentation win — a contract legible to humans, mypy, and the Codex reviewer at once, and it lets an AI agent know a signature without reading the body. Consistent with the house rule [[feedback_sparse_code_comments]] (ruff governs docstrings/format, not inline comments).
+
+**Format-on-save (editor, local):** `.vscode/settings.json` (gitignored, per-machine) sets `[python]` defaultFormatter=`charliermarsh.ruff` + formatOnSave + `codeActionsOnSave` (`fixAll.ruff`, `organizeImports.ruff`). Requires the **charliermarsh.ruff** VSCode extension installed. So durable `.py` is formatted+import-fixed before it reaches the gate (gate becomes a backstop). mypy 1.9 (installed) runs clean on the fully-typed `lib/mntn_xlsx.py`.
+
+**GOTCHA — CLI vs editor exclude (verified 2026-07-31):** `ruff format`/`ruff check` on an EXPLICITLY-passed path IGNORES `exclude`/`extend-exclude` (e.g. `ruff format tickets/foo.py` WILL reformat it) — that is exactly why the gate passes `--force-exclude`. But the **VSCode language server DOES honor `exclude` for the open file**, so format-on-save on a `tickets/**` analysis script does nothing. If format-on-save ever churns a ticket file, that is the one signal the exclude isn't being honored.
