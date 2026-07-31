@@ -121,7 +121,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_select_vs_nonselect_incrementality | reference | 2026-07-28 | [doc](memory/reference_select_vs_nonselect_incrementality.md) |
 | reference_total_visit_signal | reference | 2026-07-28 | [doc](memory/reference_total_visit_signal.md) |
 | BUK rebranded to Behavior Keywords | project | 2026-07-29 | [doc](memory/project_buk_rebrand.md) |
-| Data Engineering MCP/AI Service | reference | 2026-07-29 | [doc](memory/reference_data_eng_mcp.md) |
 | Document style preference | feedback | 2026-07-29 | [doc](memory/feedback_doc_style.md) |
 | Engineering Levels & Skills Rubric | reference | 2026-07-29 | [doc](memory/reference_eng_rubric.md) |
 | Engineering Rubric Rollout Timeline | project | 2026-07-29 | [doc](memory/project_rubric_rollout.md) |
@@ -166,5 +165,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_airflow_log_puller | reference | 2026-07-31 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_aud22_geo_reporting_sync | reference | 2026-07-31 | [doc](memory/reference_aud22_geo_reporting_sync.md) |
 | reference_commit_gate | reference | 2026-07-31 | [doc](memory/reference_commit_gate.md) |
+| reference_data_eng_mcp | reference | 2026-07-31 | [doc](memory/reference_data_eng_mcp.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-07-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_ruff_code_standards | reference | 2026-07-31 | [doc](memory/reference_ruff_code_standards.md) |
