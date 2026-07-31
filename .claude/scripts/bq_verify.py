@@ -13,7 +13,10 @@ Usage:
   bq_verify.py <ticket | label-substring | sql_sha256-prefix> [--limit N]     # default N=5, newest first
 """
 
-import argparse, json, os, sys
+import argparse
+import json
+import os
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LOG = os.path.normpath(os.path.join(HERE, "..", "..", "knowledge", "bq_perf_log.jsonl"))

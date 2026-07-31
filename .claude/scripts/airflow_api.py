@@ -96,13 +96,14 @@ def _token_from_astro_config():
             continue
         key = key_m.group(2).strip()
         val = key_m.group(3).strip().strip('"')
-        # a domain header is the shallowest key inside contexts and has no inline value
-        if val == "" and (
-            contexts_indent in (0, None) or indent <= _domain_indent(cur_domain, indent)
+        # a domain header is the shallowest key inside contexts and has no inline value;
+        # treat any valueless key that looks like a domain (or the shallowest level) as a domain
+        if (
+            val == ""
+            and (contexts_indent in (0, None) or indent <= _domain_indent(cur_domain, indent))
+            and ("." in key or val == "")
         ):
-            # treat any valueless key that looks like a domain (or the shallowest level) as a domain
-            if "." in key or val == "":
-                cur_domain = key
+            cur_domain = key
         if key == "token" and val:
             token = val.removeprefix("Bearer ").strip()
             if cur_domain:
@@ -563,13 +564,13 @@ def build_parser():
     v = sub.add_parser("version", help="auth/connectivity smoke test")
     v.set_defaults(func=cmd_version)
 
-    l = sub.add_parser("list", help="download all task logs for a day")
-    l.add_argument("--date", required=True, help="UTC day YYYY-MM-DD")
-    l.add_argument("--dag", help="restrict to one dag_id")
-    l.add_argument("--tag", help="restrict to DAGs carrying this Airflow tag")
-    l.add_argument("--state", action="append", help="restrict to these states (repeatable)")
-    l.add_argument("--outdir", required=True, help="output dir root (date subdir is added)")
-    l.set_defaults(func=cmd_list)
+    ls = sub.add_parser("list", help="download all task logs for a day")
+    ls.add_argument("--date", required=True, help="UTC day YYYY-MM-DD")
+    ls.add_argument("--dag", help="restrict to one dag_id")
+    ls.add_argument("--tag", help="restrict to DAGs carrying this Airflow tag")
+    ls.add_argument("--state", action="append", help="restrict to these states (repeatable)")
+    ls.add_argument("--outdir", required=True, help="output dir root (date subdir is added)")
+    ls.set_defaults(func=cmd_list)
 
     w = sub.add_parser("watch", help="poll states; emit + download on each terminal transition")
     w.add_argument("--date", required=True, help="UTC day YYYY-MM-DD to watch")

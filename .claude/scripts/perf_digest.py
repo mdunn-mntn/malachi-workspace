@@ -10,7 +10,10 @@ Usage:
                  --mode {by-table,offenders,repeats,phase-accuracy,all}
 """
 
-import argparse, collections, json, os, sys
+import argparse
+import collections
+import json
+import os
 
 
 def _clean(ref):

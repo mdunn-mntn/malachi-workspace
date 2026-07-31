@@ -23,7 +23,11 @@ Framing gate (the start-of-ticket mirror of the result-when-done rule):
 Usage: lint_tickets.py [--check]   # default; non-zero exit on any VIOLATION (hook/CI friendly). WARNs never fail.
 """
 
-import argparse, os, re, sys
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TDIR = os.path.normpath(os.path.join(HERE, "..", "..", "tickets"))
@@ -33,7 +37,7 @@ PLACEHOLDER = re.compile(r"^\s*$|^[—\-]$|\{.*\}|<=?\s*90|fill|TODO", re.IGNORE
 
 def front_matter(path):
     try:
-        lines = open(path, encoding="utf-8").read().split("\n")
+        lines = Path(path).read_text(encoding="utf-8").split("\n")
     except Exception:
         return None
     if not lines or lines[0].strip() != "---":
@@ -42,8 +46,8 @@ def front_matter(path):
     if end is None:
         return None
     fm = {}
-    for l in lines[1:end]:
-        m = re.match(r"^(\w+):\s*(.*)$", l)
+    for line in lines[1:end]:
+        m = re.match(r"^(\w+):\s*(.*)$", line)
         if m:
             fm[m.group(1)] = m.group(2).strip().strip('"').strip("'")
     return fm

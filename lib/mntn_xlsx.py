@@ -46,6 +46,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -838,7 +839,8 @@ class MntnWorkbook:
         (superseded / one-off diagnostic queries — omitting requires a deliberate act). headers: {filename:
         one-line header}; otherwise the file's first `-- ...` line, else the filename. AID UNNEST lists are
         collapsed to a placeholder. The whole thing reuses sql() (comment-cap + styling)."""
-        import glob as _glob, re as _re
+        import glob as _glob
+        import re as _re
 
         files = sorted(_glob.glob(os.path.join(directory, "*.sql")))
         ignore = set(ignore or [])
@@ -852,7 +854,7 @@ class MntnWorkbook:
         parts = []
         for f in chosen:
             base = os.path.basename(f)
-            raw = open(f).read().strip()
+            raw = Path(f).read_text().strip()
             first_comment = next(
                 (ln.strip() for ln in raw.splitlines() if ln.strip().startswith("--")), None
             )
@@ -871,7 +873,8 @@ class MntnWorkbook:
         """HARD-fail the build if a .sql file in `directory` is NOT present in the Query tab text — so a
         newly-added query can't be forgotten. Use with a hand-curated sql() Query tab (sql_dir() already
         guarantees coverage). `ignore` = filenames deliberately kept out (superseded / one-off diagnostics)."""
-        import glob as _glob, re as _re
+        import glob as _glob
+        import re as _re
 
         def norm(s):
             s = _re.sub(r"--[^\n]*", "", s)  # strip comments
@@ -884,7 +887,7 @@ class MntnWorkbook:
             base = os.path.basename(f)
             if base in ignore:
                 continue
-            body = norm(open(f).read())
+            body = norm(Path(f).read_text())
             if body and body not in tab:
                 self._issue(
                     "Query",
@@ -1039,7 +1042,7 @@ class MntnWorkbook:
         hc.fill = _fill(BRAND["PRIMARY"])
         hc.alignment = _LEFT_MID_FLAT
         r += 1
-        for sheet_name, desc, role in self._toc:
+        for sheet_name, desc, _role in self._toc:
             link = ws.cell(row=r, column=1, value=sheet_name)
             link.hyperlink = Hyperlink(
                 ref=f"A{r}", location=f"'{sheet_name}'!A1", display=sheet_name

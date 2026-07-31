@@ -14,7 +14,13 @@ prints nothing and exits 0, so a bad git state can't break SessionStart.
 Usage: health_scorecard.py [--verbose]
 """
 
-import datetime, os, re, subprocess, sys, time
+import datetime
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -110,11 +116,14 @@ def dup_titles():
                 continue
             p = os.path.join(dp, f)
             try:
-                for ln in open(p, encoding="utf-8"):
-                    m = re.match(r"^#\s+(.+?)\s*$", ln)
-                    if m:
-                        titles.setdefault(m.group(1).lower(), []).append(os.path.relpath(p, ROOT))
-                        break
+                with open(p, encoding="utf-8") as _fh:
+                    for ln in _fh:
+                        m = re.match(r"^#\s+(.+?)\s*$", ln)
+                        if m:
+                            titles.setdefault(m.group(1).lower(), []).append(
+                                os.path.relpath(p, ROOT)
+                            )
+                            break
             except Exception:
                 pass
     return {t: ps for t, ps in titles.items() if len(ps) > 1}
@@ -146,20 +155,20 @@ def _mem_fm(path):
     """Top-level memory front-matter (+ nested metadata.type fallback): type/lifecycle/last_verified/name/keywords/domain."""
     fm = {"keywords": [], "domain": []}
     try:
-        lines = open(path, encoding="utf-8").read().split("\n")
+        lines = Path(path).read_text(encoding="utf-8").split("\n")
     except Exception:
         return fm
     if not lines or lines[0].strip() != "---":
         return fm
-    for l in lines[1:]:
-        if l.strip() == "---":
+    for line in lines[1:]:
+        if line.strip() == "---":
             break
-        if l[:1] in (" ", "\t") or ":" not in l:
-            m = re.match(r"^\s+type:\s*(.+)$", l)  # nested metadata.type fallback
+        if line[:1] in (" ", "\t") or ":" not in line:
+            m = re.match(r"^\s+type:\s*(.+)$", line)  # nested metadata.type fallback
             if m and "type" not in fm:
                 fm["type"] = m.group(1).strip().strip('"').strip("'")
             continue
-        k, v = l.split(":", 1)
+        k, v = line.split(":", 1)
         k, v = k.strip(), v.strip()
         if v.startswith("[") and v.endswith("]"):
             fm[k] = [x.strip().strip('"').strip("'") for x in v[1:-1].split(",") if x.strip()]
@@ -225,7 +234,7 @@ def memory_wikilinks():
     out = []
     for p in files:
         try:
-            txt = open(p, encoding="utf-8").read()
+            txt = Path(p).read_text(encoding="utf-8")
         except Exception:
             continue
         for m in re.findall(r"\[\[([^\]]+)\]\]", txt):
@@ -287,7 +296,7 @@ def main():
             f"· archived {mcounts['archived']}"
         )
         if munidx:
-            print(f"UNINDEXED (native-written; run `lint_memory.py --fix` to fold into _ROUTING):")
+            print("UNINDEXED (native-written; run `lint_memory.py --fix` to fold into _ROUTING):")
             for n in munidx:
                 print(f"  {n}")
         if mstale:

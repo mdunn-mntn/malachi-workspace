@@ -28,7 +28,13 @@ Modes:
 Usage: lint_memory.py [--check | --fix] [--dir knowledge/memory]
 """
 
-import argparse, datetime, os, re, subprocess, sys
+import argparse
+import datetime
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
 
 # Stop-words dropped from auto-seeded keywords (seeds are a floor; a Workflow/human sharpens them).
 STOP = {
@@ -128,9 +134,9 @@ def top_level_key(line):
 
 def fm_scalar(fm_lines, key):
     """Value of a top-level scalar key (strips quotes + trailing comment), else None."""
-    for l in fm_lines:
-        if top_level_key(l) == key:
-            v = l.split(":", 1)[1].strip()
+    for line in fm_lines:
+        if top_level_key(line) == key:
+            v = line.split(":", 1)[1].strip()
             if v[:1] not in ('"', "'", "["):
                 h = v.find(" #")
                 if h != -1:
@@ -141,9 +147,9 @@ def fm_scalar(fm_lines, key):
 
 def fm_list_nonempty(fm_lines, key):
     """True if a top-level list key exists and is a non-empty [...] literal."""
-    for l in fm_lines:
-        if top_level_key(l) == key:
-            v = l.split(":", 1)[1].strip()
+    for line in fm_lines:
+        if top_level_key(line) == key:
+            v = line.split(":", 1)[1].strip()
             return v.startswith("[") and v.endswith("]") and v[1:-1].strip() != ""
     return False
 
@@ -153,8 +159,8 @@ def effective_type(fm_lines):
     t = fm_scalar(fm_lines, "type")
     if t:
         return t
-    for l in fm_lines:
-        m = re.match(r"^\s+type:\s*(.+)$", l)  # indented → nested metadata.type
+    for line in fm_lines:
+        m = re.match(r"^\s+type:\s*(.+)$", line)  # indented → nested metadata.type
         if m:
             return m.group(1).strip().strip('"').strip("'")
     return "reference"
@@ -207,7 +213,7 @@ def is_memory_file(fm_lines):
 
 
 def fix_file(path, root):
-    text = open(path, encoding="utf-8").read()
+    text = Path(path).read_text(encoding="utf-8")
     fm_lines, body = split_front_matter(text)
     if not is_memory_file(fm_lines):
         return False
@@ -218,12 +224,11 @@ def fix_file(path, root):
 
     if fm_scalar(fm_lines, "doc_type") is None:
         additions.append("doc_type: memory")
-    if not fm_list_nonempty(fm_lines, "keywords"):
-        # only (re)seed when absent/empty — never clobber a sharpened list
-        if fm_scalar(fm_lines, "keywords") is None:
-            additions.append(
-                "keywords: " + _fmt_list(seed_keywords(stem, fm_scalar(fm_lines, "description")))
-            )
+    # only (re)seed when absent/empty — never clobber a sharpened list
+    if not fm_list_nonempty(fm_lines, "keywords") and fm_scalar(fm_lines, "keywords") is None:
+        additions.append(
+            "keywords: " + _fmt_list(seed_keywords(stem, fm_scalar(fm_lines, "description")))
+        )
     if fm_scalar(fm_lines, "domain") is None:
         additions.append("domain: " + _fmt_list(seed_domain(mtype)))
     if fm_scalar(fm_lines, "lifecycle") is None:
@@ -240,7 +245,7 @@ def fix_file(path, root):
     if not new_text.endswith("\n"):
         new_text += "\n"
     if new_text != text:
-        open(path, "w", encoding="utf-8").write(new_text)
+        Path(path).write_text(new_text, encoding="utf-8")
         return True
     return False
 
@@ -249,7 +254,7 @@ def _all_names(files):
     """Set of resolvable link targets: every file's `name:` + its filename stem, normalized."""
     names = set()
     for p in files:
-        fm_lines, _ = split_front_matter(open(p, encoding="utf-8").read())
+        fm_lines, _ = split_front_matter(Path(p).read_text(encoding="utf-8"))
         if not is_memory_file(fm_lines):
             continue
         names.add(_norm(os.path.splitext(os.path.basename(p))[0]))
@@ -267,7 +272,7 @@ def wikilink_report(files):
     """[(file, unresolved_target), ...] — [[links]] that resolve to no name/stem (kebab-normalized)."""
     names, out = _all_names(files), []
     for p in files:
-        text = open(p, encoding="utf-8").read()
+        text = Path(p).read_text(encoding="utf-8")
         for m in re.findall(r"\[\[([^\]]+)\]\]", text):
             if _norm(m) not in names:
                 out.append((os.path.basename(p), m))
@@ -275,7 +280,7 @@ def wikilink_report(files):
 
 
 def check_file(path):
-    text = open(path, encoding="utf-8").read()
+    text = Path(path).read_text(encoding="utf-8")
     fm_lines, _ = split_front_matter(text)
     if not is_memory_file(fm_lines):
         return []

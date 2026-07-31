@@ -16,7 +16,12 @@ Modes:
 Usage: lint_coverage.py [--check | --fix] [--dir knowledge/bq]
 """
 
-import argparse, os, re, sys, datetime
+import argparse
+import datetime
+import os
+import re
+import sys
+from pathlib import Path
 
 STUB_RE = re.compile(r"<Fill:|<fill me>", re.IGNORECASE)
 # View definitions quote each component in backticks: `sqlmesh__ds`.`table` — span the backticks/dots.
@@ -57,8 +62,8 @@ def split_front_matter(text):
 
 
 def fm_get(fm_lines, key):
-    for l in fm_lines:
-        m = re.match(rf"^{re.escape(key)}:\s*(.*)$", l)
+    for line in fm_lines:
+        m = re.match(rf"^{re.escape(key)}:\s*(.*)$", line)
         if m:
             v = m.group(1).strip()
             # strip trailing comment on scalar values
@@ -74,13 +79,13 @@ def fm_set(fm_lines, updates):
     """Replace existing keys; append missing ones at the end of the block. Returns new fm_lines."""
     seen = set()
     out = []
-    for l in fm_lines:
-        m = re.match(r"^(\w+):", l)
+    for line in fm_lines:
+        m = re.match(r"^(\w+):", line)
         if m and m.group(1) in updates:
             out.append(f"{m.group(1)}: {updates[m.group(1)]}")
             seen.add(m.group(1))
         else:
-            out.append(l)
+            out.append(line)
     for k, v in updates.items():
         if k not in seen:
             out.append(f"{k}: {v}")
@@ -89,11 +94,10 @@ def fm_set(fm_lines, updates):
 
 def check_file(path):
     """Return list of violation strings (empty = clean); also a 'ready' note if applicable."""
-    text = open(path, encoding="utf-8").read()
+    text = Path(path).read_text(encoding="utf-8")
     fm_lines, _, _ = split_front_matter(text)
     if fm_lines is None or fm_get(fm_lines, "doc_type") != "bq_table":
         return [], None
-    body = text.split("\n---\n", 1)[-1]
     has_stub = bool(STUB_RE.search(text))
     cov = fm_get(fm_lines, "coverage_state")
     lv = fm_get(fm_lines, "last_verified")
@@ -123,7 +127,7 @@ def check_file(path):
 
 
 def fix_file(path, today):
-    text = open(path, encoding="utf-8").read()
+    text = Path(path).read_text(encoding="utf-8")
     fm_lines, _, _ = split_front_matter(text)
     if fm_lines is None or fm_get(fm_lines, "doc_type") != "bq_table":
         return False
@@ -174,7 +178,7 @@ def fix_file(path, today):
     if not new_text.endswith("\n"):
         new_text += "\n"
     if new_text != text:
-        open(path, "w", encoding="utf-8").write(new_text)
+        Path(path).write_text(new_text, encoding="utf-8")
         return True
     return False
 

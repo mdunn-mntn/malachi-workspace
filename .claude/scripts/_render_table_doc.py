@@ -9,7 +9,11 @@ derived front-matter fields (partition_by, cluster_by, approx_rows, approx_logic
 last_verified). This is what makes the catalog safe to refresh without losing enrichment.
 """
 
-import json, os, re, sys, datetime
+import datetime
+import json
+import os
+import re
+import sys
 
 AUTO_RE = re.compile(r"(<!-- AUTO:SCHEMA START.*?-->\n).*?(\n<!-- AUTO:SCHEMA END -->)", re.DOTALL)
 # View definitions quote each component in backticks: `sqlmesh__ds`.`table` — span the backticks/dots.
@@ -81,8 +85,8 @@ def set_fm(content, updates):
     if end is None:
         return content
     block, seen = lines[1:end], set()
-    for i, l in enumerate(block):
-        m = re.match(r"^(\w+):", l)
+    for i, line in enumerate(block):
+        m = re.match(r"^(\w+):", line)
         if m and m.group(1) in updates:
             block[i] = f"{m.group(1)}: {updates[m.group(1)]}"
             seen.add(m.group(1))

@@ -12,6 +12,7 @@ import os
 import sys
 
 import pandas as pd
+from openpyxl import load_workbook
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from lib.mntn_xlsx import FMT, MntnWorkbook, rag_threshold
@@ -264,7 +265,5 @@ except Exception as e:  # Drive not mounted in some contexts
     print("drive save skipped:", e)
 
 # reopen to prove it's valid
-from openpyxl import load_workbook
-
 chk = load_workbook(local)
 print("tabs        :", chk.sheetnames)

@@ -27,7 +27,11 @@ Usage:
   lint_comms.py --hook                               # PreToolUse hook: lints a Jira curl, never blocks
 """
 
-import argparse, json, os, re, sys
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
 
 CAPS = {
     "comment": {"chars": 500, "words": 75, "bullets": 5},
@@ -143,17 +147,19 @@ def lint_text(text, kind):
     violations, warnings = [], []
     chars = len(text)
     words = len(text.split())
-    lines = [l for l in text.splitlines() if l.strip()]
-    bullets = sum(1 for l in lines if l.lstrip().startswith(("*", "-", "•")))
+    lines = [line for line in text.splitlines() if line.strip()]
+    bullets = sum(1 for line in lines if line.lstrip().startswith(("*", "-", "•")))
 
     if kind in LINE_KINDS:
         unit = "section" if kind == "xlsx_explainer" else "line"
-        over = [(i + 1, len(l)) for i, l in enumerate(lines) if len(l) > cap["chars"]]
+        over = [(i + 1, len(line)) for i, line in enumerate(lines) if len(line) > cap["chars"]]
         for ln, n in over:
             violations.append(f"{unit} {ln} is {n} chars (cap {cap['chars']}/{unit})")
         if len(lines) > cap["lines"]:
             violations.append(f"{len(lines)} {unit}s (cap {cap['lines']})")
-        stats = f"{len(lines)} {unit}s, longest {max((len(l) for l in lines), default=0)} chars"
+        stats = (
+            f"{len(lines)} {unit}s, longest {max((len(line) for line in lines), default=0)} chars"
+        )
     else:
         if chars > cap["chars"]:
             violations.append(
@@ -304,7 +310,7 @@ def main():
     if args.body is not None:
         raw = args.body
     elif args.file:
-        raw = open(args.file, encoding="utf-8").read()
+        raw = Path(args.file).read_text(encoding="utf-8")
     else:
         raw = sys.stdin.read()
 

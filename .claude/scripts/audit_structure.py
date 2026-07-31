@@ -19,7 +19,12 @@ Categories → default proposed action:
 Usage: audit_structure.py [--json PATH] [--top-level DIR]   # default prints summary to stdout
 """
 
-import argparse, json, os, re, subprocess, sys
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -78,7 +83,7 @@ BAD_SEG = re.compile(r"[A-Z ]|[a-z0-9]-[a-z0-9]")  # uppercase, space, or dash-b
 
 def git_files():
     out = subprocess.run(["git", "-C", ROOT, "ls-files"], capture_output=True, text=True).stdout
-    return [l for l in out.splitlines() if l]
+    return [line for line in out.splitlines() if line]
 
 
 def add(findings, category, severity, action, path, reason):

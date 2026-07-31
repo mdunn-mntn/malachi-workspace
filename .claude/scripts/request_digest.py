@@ -9,7 +9,10 @@ human call (autonomous skill creation is a named anti-goal).
 Read-only. Run it on demand (e.g. during a weekly review or /capture): `request_digest.py [--min N]`.
 """
 
-import argparse, json, os
+import argparse
+import contextlib
+import json
+import os
 from collections import Counter
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -20,14 +23,13 @@ def load():
     if not os.path.exists(LOG):
         return []
     out = []
-    for ln in open(LOG, encoding="utf-8"):
-        ln = ln.strip()
-        if not ln:
-            continue
-        try:
-            out.append(json.loads(ln))
-        except Exception:
-            pass
+    with open(LOG, encoding="utf-8") as _fh:
+        for ln in _fh:
+            ln = ln.strip()
+            if not ln:
+                continue
+            with contextlib.suppress(Exception):
+                out.append(json.loads(ln))
     return out
 
 

@@ -20,7 +20,6 @@ If the cluster is TERMINATED, start via:
 """
 
 import argparse
-import os
 import subprocess
 import sys
 import time
