@@ -943,12 +943,12 @@ class MntnWorkbook:
         from every sheet added so far. takeaways = up to 3 headline bullets (Rule of Three)."""
         takeaways = (takeaways or [])[:3]
         ws = self._new_sheet(name, "cover")
-        SPAN = 8
-        wide = get_column_letter(SPAN)
+        span = 8
+        wide = get_column_letter(span)
 
         # brand band (rows 1-3): INK fill, wordmark / logo left
         for rr in (1, 2, 3):
-            for cc in range(1, SPAN + 1):
+            for cc in range(1, span + 1):
                 ws.cell(row=rr, column=cc).fill = _fill(BRAND["INK"])
             ws.row_dimensions[rr].height = 22
         ws.merge_cells(f"A1:{wide}3")
@@ -973,7 +973,7 @@ class MntnWorkbook:
             wm.font = _font(26, bold=True, color=BRAND["WHITE"])
             wm.alignment = Alignment(horizontal="left", vertical="center", indent=1)
         # accent rule (row 4)
-        for cc in range(1, SPAN + 1):
+        for cc in range(1, span + 1):
             ws.cell(row=4, column=cc).fill = _fill(BRAND["ACCENT"])
         ws.row_dimensions[4].height = 5
 
@@ -1019,7 +1019,7 @@ class MntnWorkbook:
                 ws.cell(row=r, column=1, value=str(i)).font = _font(
                     12, bold=True, color=BRAND["ACCENT"]
                 )
-                ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
+                ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=span)
                 c = ws.cell(row=r, column=2, value=_demdash(tk))
                 c.font = _font(11, color=BRAND["INK"])
                 c.alignment = _LEFT_MID
@@ -1036,7 +1036,7 @@ class MntnWorkbook:
         th.font = _font(9, bold=True, color=BRAND["WHITE"])
         th.fill = _fill(BRAND["PRIMARY"])
         th.alignment = _LEFT_MID_FLAT
-        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
+        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=span)
         hc = ws.cell(row=r, column=2, value="What's on it")
         hc.font = _font(9, bold=True, color=BRAND["WHITE"])
         hc.fill = _fill(BRAND["PRIMARY"])
@@ -1049,7 +1049,7 @@ class MntnWorkbook:
             )
             link.font = _font(10, bold=True, color=BRAND["LINK"], name=FONT_BODY)
             link.alignment = _LEFT_MID
-            ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=SPAN)
+            ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=span)
             d = ws.cell(row=r, column=2, value=_demdash(desc))
             d.font = _font(10, color=BRAND["GREY"])
             d.alignment = _LEFT_MID
@@ -1057,7 +1057,7 @@ class MntnWorkbook:
 
         # footer
         r += 1
-        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=SPAN)
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=span)
         f = ws.cell(
             row=r,
             column=1,
@@ -1070,7 +1070,7 @@ class MntnWorkbook:
         # column widths for the cover — col A must fit the longest tab name in Contents
         longest_tab = max((len(n) for n, _, _ in self._toc), default=16)
         ws.column_dimensions["A"].width = min(max(longest_tab + 2, 16), 28)
-        for cc in range(2, SPAN + 1):
+        for cc in range(2, span + 1):
             ws.column_dimensions[get_column_letter(cc)].width = 16
 
         # move to front and select
