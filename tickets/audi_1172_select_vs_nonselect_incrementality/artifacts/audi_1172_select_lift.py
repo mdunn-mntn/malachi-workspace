@@ -63,7 +63,13 @@ LEFT JOIN `dw-main-silver.public.advertisers` adv USING (advertiser_id)
 GROUP BY 1,2,3
 """
 
-df = client.query(SQL).to_dataframe()
+try:
+    df = client.query(SQL).to_dataframe()
+except Exception as _e:   # ADC token expiry etc. — fall back to the last materialized lift CSV (loud, not silent)
+    _csv = f"{TDIR}/outputs/audi_1172_lift_by_adv_product.csv"
+    print(f"[warn] live BQ lift query failed ({type(_e).__name__}); using cached {_csv}. "
+          f"Numbers are from the last successful run — re-run with fresh BQ auth before final delivery.")
+    df = pd.read_csv(_csv)
 
 # derived per advertiser x product
 import numpy as np
@@ -352,15 +358,24 @@ gorder = {"Both": 0, "Select-only": 1, "PTV-only": 2}
 grp = grp.sort_values("group", key=lambda col: col.map(gorder)).reset_index(drop=True)
 vsig = grp["vis_sig"].astype(str).str.lower().isin(["true", "1", "yes"])
 CN = lambda x, n: (x if (pd.notna(x) and n >= 5) else "n/a")   # hide conv lift on thin groups (Select-only n=2)
+# CPIV/CPIA per group from the all_facts group-cost query (volume-weighted lift, total-cost basis).
+gcost = pd.DataFrame(json.loads(open(f"{OUT}/audi_1172_aid_group_cost.json").read()))
+for c in ["rel_lift_visit", "rel_lift_conv", "vv_reported", "conv_reported", "spend"]:
+    gcost[c] = pd.to_numeric(gcost[c], errors="coerce")
+gcost["cpiv"] = [_cost(v, l, s) for v, l, s in zip(gcost["vv_reported"], gcost["rel_lift_visit"], gcost["spend"])]
+gcost["cpia"] = [_cost(v, l, s) for v, l, s in zip(gcost["conv_reported"], gcost["rel_lift_conv"], gcost["spend"])]
+gc = {r["grp"]: r for _, r in gcost.iterrows()}
 group_df = pd.DataFrame({
     "Group":                grp["group"].values,
     "Advertisers":          grp["n_adv"].values,
     "Visit lift (IVW)":     grp["vis_ivw"].values,
     "Visit lift (median)":  grp["vis_ew_med"].values,
     "Vis sig":              [YESNO(b) for b in vsig],
+    "CPIV":                 [NA(gc[g]["cpiv"]) for g in grp["group"]],
     "Conv lift (IVW)":      [CN(x, n) for x, n in zip(grp["conv_ivw"], grp["n_conv"])],
     "Conv lift (median)":   [CN(x, n) for x, n in zip(grp["conv_ew_med"], grp["n_conv"])],
     "# w/ conv":            grp["n_conv"].values,
+    "CPIA":                 [NA(gc[g]["cpia"]) for g in grp["group"]],
 })
 _b = grp[grp["group"] == "Both"].iloc[0]
 _p = grp[grp["group"] == "PTV-only"].iloc[0]
@@ -369,18 +384,20 @@ wb.table(
     finding=(f"Select-running advertisers are more incremental overall than PTV-only "
              f"(IVW {_b.vis_ivw*100:+.1f}% vs {_p.vis_ivw*100:+.1f}%; "
              f"median advertiser {_b.vis_ew_med*100:+.0f}% vs {_p.vis_ew_med*100:+.0f}%)"),
-    method="Overall advertiser-level visit lift, all MNTN advertisers, by product mix. Observational, not causal. "
-           "See Read me / Method for IVW vs median and exclusions.",
+    method="Overall advertiser-level lift + cost per incremental, all MNTN advertisers, by product mix. "
+           "Observational, not causal. See Read me / Method for methods and exclusions.",
     formats={"Visit lift (IVW)": FMT.PCT1, "Visit lift (median)": FMT.PCT1,
              "Conv lift (IVW)": FMT.PCT1, "Conv lift (median)": FMT.PCT1,
-             "Advertisers": FMT.INT, "# w/ conv": FMT.INT},
-    # signal colors each column on its OWN scale, so conv (a different scale) is highlighted within its own box
+             "Advertisers": FMT.INT, "# w/ conv": FMT.INT, "CPIV": FMT.USD, "CPIA": FMT.USD0},
+    # signal colors each lift column on its OWN scale; heat greens the cheaper CPIV/CPIA (cost = lower better)
     signal={"Visit lift (IVW)": {"sig": "Vis sig"}, "Visit lift (median)": {},
             "Conv lift (IVW)": {}, "Conv lift (median)": {}},
+    heat={"CPIV": "low", "CPIA": "low"},
     widths={"Visit lift (IVW)": 15, "Visit lift (median)": 16, "Conv lift (IVW)": 15,
-            "Conv lift (median)": 16, "Advertisers": 17, "Vis sig": 8, "# w/ conv": 10},
+            "Conv lift (median)": 16, "Advertisers": 17, "Vis sig": 8, "# w/ conv": 10,
+            "CPIV": 10, "CPIA": 9},
     kind="data", first_col_width=14,
-    toc="Overall incrementality by product mix: Both / Select-only / PTV-only (all advertisers).",
+    toc="Overall lift + cost per incremental by product mix: Both / Select-only / PTV-only (all advertisers).",
     query="audi_1172_aid_group_lift.sql",
 )
 
@@ -409,8 +426,8 @@ wb.glossary(
             "use the inverse-variance-weighted lift (IVW). Same data, different question."),
         ("Cost by advertiser", "Per-customer CPIV/CPIA (both cohort). Filter the Sig columns to Yes; 'n/a' = that advertiser's "
             "lift was not net-incremental or too small to measure (tiny holdout)."),
-        ("AID-level lift by group", "Overall advertiser incrementality, all MNTN advertisers, split PTV-only / Select-only / "
-            "Both. IVW (inverse-variance; larger advertisers dominate) vs median advertiser. Observational, not causal."),
+        ("AID-level lift by group", "Overall incrementality + cost, all MNTN advertisers, split PTV-only / Select-only / "
+            "Both. Lift = IVW (big advertisers dominate) vs median. CPIV/CPIA = spend per incremental (volume-weighted lift). Observational."),
         ("Coverage & window", ""),
         ("Window", "2026-06-22 to 07-27; each IP's visits count within 7 days of its first bid (fixed per-IP window). "
             "Trailing ~7 days still maturing. No pre-6/22 data (no backfill)."),
@@ -449,6 +466,7 @@ def _load_sql(fname, collapse_aids=True):
 CPIV_SQL = _load_sql("audi_1172_cpiv_vv_correct.sql")
 COST_ADV_SQL = _load_sql("audi_1172_cpiv_vv_by_adv.sql")
 GROUP_SQL = _load_sql("audi_1172_aid_group_lift.sql", collapse_aids=False)  # all advertisers, no AID list
+GROUP_COST_SQL = _load_sql("audi_1172_aid_group_cost.sql", collapse_aids=False)
 
 # One short header per query (<=3 lines; the sql() tab enforces this cap and warns otherwise).
 QUERY_TAB = (
@@ -460,6 +478,8 @@ QUERY_TAB = (
     + COST_ADV_SQL + "\n\n\n"
     "-- audi_1172_aid_group_lift.sql - drives AID-level lift by group (ALL MNTN advertisers, 3 product-mix groups).\n\n"
     + GROUP_SQL + "\n\n\n"
+    "-- audi_1172_aid_group_cost.sql - drives the CPIV/CPIA columns on AID-level lift by group (group-pooled cost).\n\n"
+    + GROUP_COST_SQL + "\n\n\n"
     + SCOPING_SQL + "\n"
 )
 
@@ -493,6 +513,9 @@ wb.notes(
         ("AID-level lift by group (observational)", "The 3-group comparison (PTV-only / Select-only / Both) is OBSERVATIONAL, not "
             "causal: advertisers self-select into Select. IVW is dominated by big advertisers (PTV-only ~0%); the median advertiser "
             "is higher, read both. Test accounts + WGU excluded; Select-only n small, conversion lift n/a."),
+        ("Group CPIV/CPIA", "Group spend (metered, prospecting) / group incremental, on the volume-weighted lift (total-cost "
+            "basis, like the Cost tabs), NOT the IVW/median in the lift columns. Both is cheapest per incremental visit and "
+            "conversion; Select-only CPIA n/a (too few holdout conversions)."),
         ("Do not over-read", "Individual low-volume campaigns have wide intervals; a single small Select campaign is not a verdict. "
             "The pooled and paired advertiser-level reads are the defensible outputs."),
     ],
