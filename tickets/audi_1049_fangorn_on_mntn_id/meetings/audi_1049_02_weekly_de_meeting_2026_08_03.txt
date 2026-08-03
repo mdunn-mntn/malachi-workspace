@@ -1,0 +1,259 @@
+[00:00] um i'm also uh i have one week on after that and i'm going to uh ireland
+[00:12] oh that'll be fun my aunt and uncle went to ireland recently
+[00:17] yeah i'm looking forward to a bit of time off yeah so go ahead
+[00:25] how's the drinking culture over there in ireland it's it's pretty pretty uh decent drinking
+[00:33] okay do they mostly drink beers or like whiskeys beer and whiskey mostly guinness and irish whiskey
+[00:43] yeah irish coffee as dessert yeah cool yeah it should be good though we're going um going over
+[00:54] there for a concert in Dublin.
+[00:58] Nice.
+[00:58] And hang out.
+[01:00] But, yeah, so just to kind of go over this PR real quick.
+[01:06] The only things that were really done was just like a straight copy of the
+[01:12] good log derived mountain bird.
+[01:15] Yeah.
+[01:16] Straight copy of the good log derived level two and level three.
+[01:20] some naming convention changes
+[01:25] the
+[01:28] this resolves based off of what you
+[01:32] implemented
+[01:33] yep
+[01:36] and then yes it's mostly naming convention
+[01:42] and then
+[01:46] it adds
+[01:48] the
+[01:51] operators and does the
+[01:57] both the
+[02:00] daily and the monthly snapshot stuff.
+[02:07] Okay.
+[02:07] The monthly.
+[02:11] I think that's... I didn't run the monthly.
+[02:14] I don't know how long that generally takes to run
+[02:17] but I ran both the daily ones
+[02:18] as far as the grain goes
+[02:21] they look fine
+[02:22] okay like did you
+[02:25] did you do a row count
+[02:27] against like the current
+[02:29] the version
+[02:30] okay how's that
+[02:33] compare it should be pretty close
+[02:35] right I'd expect to be
+[02:37] pretty close
+[02:38] because it's mostly a
+[02:41] 1-2-1 mapping with some
+[02:43] edge cases, but...
+[03:13] Really weird.
+[03:14] It allows me to move faster through this.
+[03:20] It could be good.
+[03:31] Yeah.
+[04:02] I think they might be off by day.
+[04:15] I don't know.
+[04:16] That's fine.
+[04:17] Yeah.
+[04:17] They're mostly pretty consistent, I think.
+[04:20] Yeah.
+[04:32] 190 million is like 50%.
+[04:48] So, okay.
+[04:52] So the household ID version is half of what IP is.
+[04:57] yeah that that's expected right because normal i mean we would expect the household id has
+[05:06] multiple ips in most cases right right i just didn't know how close it should be
+[05:11] yeah you say it was like mostly one-to-one matching
+[05:15] yeah i think yeah i think it makes it makes sense right it's still at the same
+[05:20] uh pretty close i mean 50 loss that kind of aligns with what
+[05:26] Matt mentioned, right?
+[05:29] When he was mapping the two,
+[05:31] like he lost 50% of the
+[05:33] IPs or something.
+[05:37] Or when he mapped
+[05:38] Fangorn to the graph
+[05:41] or something like that. Yeah, I mean, kind of
+[05:43] along the same line.
+[05:47] Yeah.
+[05:48] And also, for this version, I think we just want to
+[05:51] get the proof of concept out
+[05:53] and we can always
+[05:55] fine-tune the numbers.
+[05:59] Cool.
+[06:02] Also, the other thing is we
+[06:03] want to call it
+[06:05] mountain ID or her household
+[06:07] ID because I was told by
+[06:09] Jack to name it
+[06:11] household ID in the table.
+[06:15] But
+[06:16] should we name it the same
+[06:17] for that table name or
+[06:20] keep it separate?
+[06:21] Maybe that's a problem we can bring it up
+[06:23] at a bigger group.
+[06:25] just to be consistent
+[06:27] I think we should be consistent with what the
+[06:30] identity team is doing
+[06:31] you can switch it to household ID
+[06:33] yeah because they
+[06:35] yeah I switched to
+[06:37] I switched that column name to
+[06:39] household ID instead of mountain ID
+[06:42] so
+[06:42] yeah it might want to be just be
+[06:46] consistent there
+[06:47] 45%
+[06:51] yeah
+[06:52] yeah that's cool i think i'm happy with that number
+[06:58] that's so weird though because like i think on average they say that the average household has
+[07:11] somewhere between like five and ten devices so you'd think that it would be the scale would be
+[07:18] a lot less but maybe not backwards this is backwards this is 45 percent higher
+[07:24] oh no no you're right right now i
+[07:30] masked it wrong um say that again i was just saying that i'm surprised that it's only half
+[07:39] because i think that a lot of studies show that that the average household has like five to ten
+[07:44] different devices.
+[07:46] Yeah, but not each device has
+[07:48] its own IP. The house itself
+[07:50] has an IP address, and then
+[07:52] somebody
+[07:54] has...
+[07:56] You map somebody's
+[07:57] roaming phone IP
+[08:00] also to that same household, right?
+[08:02] And so you...
+[08:04] Yeah, sure, but
+[08:06] it's
+[08:09] probably more...
+[08:11] Yeah, but this is a total
+[08:12] row count. You might want to do a distinct
+[08:14] count for household id and ip might be a different well group group three is distinct on household id
+[08:23] okay it's okay okay it's it's all verticals exploded so it's like yeah because it's vertical
+[08:29] oh i see so it's already yeah it's a yeah it's already wide uh this one this is the um yeah
+[08:39] Yeah.
+[08:41] This one is, is, is,
+[08:48] let me look at that.
+[08:49] We could
+[08:59] IP or IP address.
+[09:00] It looks like we use household ID as the actual identifier.
+[09:09] It's just the naming on the path.
+[09:11] Yeah, yeah, yeah.
+[09:12] The table column is household ID, just the path for the table name.
+[09:30] Just think household IDs and then we'll have a
+[09:51] You spell address as 2D?
+[09:53] Yeah.
+[09:54] I can never spell address correctly.
+[10:01] Oh, just IP.
+[10:03] Yeah.
+[10:08] Man, at my previous company, we were using Google ID.
+[10:19] And the amount of different ways you can have, like, you know,
+[10:22] Google ID good. Yeah, this is this matches what we see down here, right? So this was
+[10:29] that it is unique then. Yeah. Yeah. So yeah, 45% ratio. Household IDs to Yeah, I guess.
+[10:51] And yeah, so like I said, I'm pretty comfortable with this.
+[11:00] The thing is that errors and possibly the aggregation logic
+[11:05] will come out when we start building models on top of it.
+[11:09] And this is just, like I said, just a straight copy
+[11:14] of the work that was over there.
+[11:20] OK.
+[11:20] I think the aggregation logic makes sense. Okay, cool. Yeah, if you want to prove it,
+[11:28] we can ship that out and we can start working on the backlog stuff.
+[11:32] Sounds good to me.
+[11:34] Cool.
+[11:37] All right.
+[11:39] Yeah, thanks for coming over this, Brian.
+[11:41] well funny that
+[11:46] that Malachi had such like a trial by fire week
+[11:50] last week and then as soon as Sean goes on Paul
+[11:54] had zero problems over the weekend did you fix the
+[11:58] inference pipeline or because I was expecting yeah I
+[12:01] did so yeah we're having I haven't actually seen if it
+[12:06] actually failed anywhere but basically
+[12:09] I have permissions to push PRs without reviews in this.
+[12:25] Oh, for your for that?
+[12:27] Yeah, for my repo. I'm the only one who can do that in this repo.
+[12:32] Okay.
+[12:33] There is a basically I added Yeah, so it has a because it's trying to create a massive
+[12:58] data cluster in US East 1.
+[13:02] Sometimes there's just not enough resources in US East 1.
+[13:06] I thought about moving it to a different region,
+[13:09] but the problem with that is that I
+[13:13] don't know how the VPC works with different regions.
+[13:16] I don't know if our subnet is active in all regions
+[13:23] or how all the cross-region problems that will show up
+[13:27] If you try to move data across regions or access data across regions,
+[13:32] there's so many little gotchas when moving things to a different region.
+[13:37] So I kicked that out as an option.
+[13:40] The other option was moving this to a less...
+[13:43] This basically runs at noon every day, which is high traffic, right?
+[13:48] And we may see more failures during the week than on the weekend, right?
+[13:51] And so this basically does a within a single run, it will look for a stock out error and retry three times with five minute intervals.
+[14:06] So just see if we can create the cluster.
+[14:13] I haven't actually logged on yet today to see.
+[14:17] One of the things that you'll see to actually see this.
+[14:29] It's finishing up with its feature drift stuff right now.
+[14:32] I don't even have, we don't have a history of failed clusters even so.
+[14:51] Seems to be running fine.
+[14:57] Oh, I'm not even sharing my screen.
+[15:03] Yeah, everything seems to be running fine.
+[15:06] Cool.
+[15:07] You know, I don't see any errors.
+[15:10] The problem is I don't have any way to log those retries.
+[15:16] And the only way they would appear is like a failed cluster here.
+[15:20] And those failed clusters get cleaned up on retry.
+[15:23] So yeah, I don't know exactly what will I need to do something to log those errors.
+[15:34] Yeah, it's man, my cloud really didn't like this.
+[15:41] It wanted to remove this thing that you added, Sean, like the NLTK security patch.
+[15:49] like just didn't like that there.
+[15:53] Yeah.
+[15:55] Yeah.
+[15:55] But we kind of,
+[15:56] at least the softer security,
+[15:58] uh,
+[15:58] vulnerability ticket,
+[16:00] um,
+[16:01] we'll see if it comes up again.
+[16:03] Yeah.
+[16:04] Cool.
+[16:06] Um,
+[16:07] yeah.
+[16:09] One thing that we got to kind of keep in mind is,
+[16:12] so Allison had me,
+[16:15] um,
+[16:16] uh,
+[16:18] basically,
+[16:18] whiteboard out the cost
+[16:21] of all this stuff
+[16:23] and I basically gave it a
+[16:25] like a upper bound of
+[16:27] $35,000 a month
+[16:29] that being said
+[16:32] there are some places you can kind of trim out
+[16:35] stuff
+[16:36] like especially if we're running
+[16:38] if we're running a test we don't need
+[16:41] to run it on all
+[16:42] you know
+[16:44] we don't need to run it on all
+[16:47] verticals and actually if we run it on one vertical and bring the size of the cluster
+[16:51] down substantially the cost is um like i think it was uh
+[16:57] oh yeah so here's the cost like comparison between the two we're looking at you know 290
+[17:08] workers versus four workers and the the daily cost goes from 191 down to a dollar 28 so
+[17:18] yeah cool yeah i mean that's a little it'll be a little higher than that just because we run
+[17:27] two pipelines two yeah yeah yeah wow 35 000 a month it's pretty high yeah i mean the the
+[17:38] I did this analysis back when I thought we were running the entire
+[17:43] feature store because the feature store
+[17:47] costs about $15,000 a month and then
+[17:51] just the inference pipeline costs about $12,400 a month
+[17:55] and then storage is
+[17:57] the Fangorn storage is actually way higher than I expected it to be because feature store storage is only
+[18:03] $300 a month whereas Fangorn is $2,000 and I based
+[18:07] that off of a six-month TTL. We actually have
+[18:09] no TTL in place
+[18:11] right now.
+[18:13] Okay.
+[18:14] We should think about doing in the future.
+[18:20] All right.
+[18:21] Good to know.
+[18:26] Yeah. Sounds good.
+[18:27] Thank you, guys. Keep in touch.
+[18:30] Yeah. Ping me when you
+[18:31] take a look at that PR.
+[18:35] Sounds good.
+[18:36] Sounds good. Thanks, guys.
+[18:37] Thank you both.
+[18:38] Talk to you later.
+[18:39] Bye.

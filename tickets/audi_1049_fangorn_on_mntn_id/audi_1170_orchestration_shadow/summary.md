@@ -117,10 +117,41 @@ runs on the one schedule without a forked DAG.
 - **Backfill depth (AUDI-1101 resolved):** `identity_graph_history` (id_type=30, BQ, ~60d) back to 2026-06-01,
   ~9 weekly snapshots — "plenty." Deeper → `household_graph_parquet` (~600 GB, `asOfDate`/`asOfDateRevisionNumber`).
 
-### 4b. Two decisions pending Brian sync (branch the plan)
-- **D1 — L2/L3 ownership split** (AUDI-1168/1169 are Brian's; re-key is trivial, not yet on main).
-- **D2 — Sept-4 cut** (epic MVP train+validate needs backfill by Sept-4, but 1170's gate = daily pipeline +
-  first parity readout, backfill as fast-follow — AUDI-1103 can't train without backfill).
+### 4b. Two decisions pending Brian sync (branch the plan) — RESOLVED at the 2026-08-03 DE meeting (see §4c)
+
+### 4c. Weekly DE meeting 2026-08-03 (Brian, Malachi, +1) — decisions
+Transcript: `../meetings/audi_1049_02_weekly_de_meeting_2026_08_03.txt`. This was the sync.
+- **D1 RESOLVED — Brian owns L2/L3 + all wiring.** His **PR #1166** (branch `AUDI-1168`, OPEN, base main) is a
+  straight copy of the IP L2/L3, re-keyed to household via Sean's `resolve_households` helper, wired into
+  **both** DAGs — daily (`[ip_rollup, identity_graph_ip_household_id] >> guid_log_derived_mntn_id_vertical_id >>
+  guid_log_pivot_mntn_id_vertical_id`) and monthly (`_snap` tasks behind the day-15 gate). Team agreed to
+  **ship it** as the POC and start on the backlog. **→ AUDI-1170's "additive task group + edges" deliverable is
+  done in #1166; my job on it is to REVIEW (Brian asked to be pinged), not rebuild.**
+- **First parity data point (informal):** household audience ≈ **45–50% of the IP count** (~190M). Expected
+  (a household holds multiple IPs; ~1:2 with edge cases); aligns with Matt's ~50% loss mapping Fangorn to the
+  graph. Team comfortable for a POC. **This is the seed of my shadow-parity readout** — I formalize per-vertical
+  + coverage + day-over-day churn and set the reconciliation band.
+- **Naming (the doc deliverable):** column is **`household_id`** (Jack, locked; Brian switched the column from
+  `mountain_id`→`household_id`). Open: the **table/model name** still uses `mntn_id`
+  (`guid_log_derived_mntn_id_vertical_id`); team **leans to making it consistent (`household_id`)** but wants a
+  bigger-group confirm. → I own resolving this in `feature_store_naming_standards.md`; recommend `household_id`
+  token to match column + identity team, flag the rename to Brian before #1166 merges.
+- **D2 (Sept-4 cut) — not hard-locked, POC-first posture.** No explicit backfill-depth-for-training decision;
+  team's stance = "get the POC out, fine-tune later" → aligns with the framing cut (parity gate first). Backfill
+  depth for AUDI-1103 still to confirm with Brian/Matt.
+- **Monthly snapshot NOT yet run** (Brian wired it but "didn't run the monthly"). → validation gap my
+  backfill/shadow can cover (training reads monthly L3).
+- **Aggregation correctness deferred** (Brian: "errors / aggregation logic will come out when we build models on
+  top") — this is exactly the AUDI-1170 shadow + AUDI-1105 validation role.
+- **Cost lever for backfill/tests (Brian, re Alyson's $35K/mo whiteboard):** a test run on **1 vertical + small
+  cluster (4 workers) ≈ $1.28/day vs ~$191/day at 290 workers.** Use single-vertical/small-cluster for cheap
+  validation backfills. Also: **no TTL on Fangorn storage currently** (should add one; FS storage $300/mo,
+  Fangorn $2K/mo).
+
+**Updated AUDI-1170 lane (post-meeting):** (1) **review Brian's #1166** (ping owed); (2) **backfill runner**
+(cheap single-vertical test path first); (3) **shadow-parity monitor + reconciliation band** (extends the
+45–50% data point); (4) **naming-standards doc** (`household_id` token); (5) **validate the monthly snapshot
+path** (Brian hasn't run it). Orchestration/wiring itself = Brian's #1166.
 
 _Full plan of action: `~/.claude/plans/i-have-to-execute-snoopy-sutton.md` (approved 2026-08-03)._
 _Research detail: this session's three Explore-agent reports (orchestration/PR#1156, L2/L3 internals, backfill/monitor)._
