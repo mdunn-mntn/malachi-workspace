@@ -22,6 +22,8 @@ import argparse
 import json
 import os
 import re
+import shlex
+import subprocess
 import sys
 import time
 import urllib.error
@@ -34,6 +36,8 @@ FAILURE_STATES = {"failed", "upstream_failed"}
 PAGE_LIMIT = 100
 HTTP_TIMEOUT = 60
 HOME = os.path.expanduser("~")
+# repo root = .../workspace (this file is .claude/scripts/airflow_api.py)
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # --------------------------------------------------------------------------- auth
@@ -542,7 +546,15 @@ def cmd_watch(args):
                         continue
                     seen_terminal.add(key)
                     _emit_completion(
-                        args.base, token, ti, outdir, manifest_path, oncall_dir, args.all_tries
+                        args.base,
+                        token,
+                        ti,
+                        outdir,
+                        manifest_path,
+                        oncall_dir,
+                        args.all_tries,
+                        args.diagnose,
+                        args.diagnose_cmd,
                     )
         sys.stderr.flush()
         sys.stdout.flush()
@@ -556,7 +568,38 @@ def cmd_watch(args):
         time.sleep(args.interval)
 
 
-def _emit_completion(base, token, ti, outdir, manifest_path, oncall_dir, all_tries=False):
+def _run_diagnosis(drop_path, diagnose_cmd):
+    """Shell out to the RCA orchestrator on a dropped failure log; write <drop>.rca.md.
+
+    Loose coupling by design: this fetcher does not import the debugger, it only
+    optionally runs a configured command (default: airflow_debugger.orchestrate).
+    """
+    cmd = shlex.split(diagnose_cmd) + [drop_path]
+    try:
+        out = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, timeout=300)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+        print(f"  RCA skipped ({type(e).__name__})", flush=True)
+        return
+    report = out.stdout.strip() or (out.stderr or "").strip()[:500]
+    if not report:
+        return
+    rca_path = drop_path + ".rca.md"
+    with open(rca_path, "w", encoding="utf-8") as f:
+        f.write(report + "\n")
+    print(f"  RCA -> {rca_path}\n  {report.splitlines()[0]}", flush=True)
+
+
+def _emit_completion(
+    base,
+    token,
+    ti,
+    outdir,
+    manifest_path,
+    oncall_dir,
+    all_tries=False,
+    diagnose=False,
+    diagnose_cmd=None,
+):
     state = ti.get("state")
     text = fetch_log(base, token, ti)
     fname = log_filename(ti)
@@ -582,6 +625,8 @@ def _emit_completion(base, token, ti, outdir, manifest_path, oncall_dir, all_tri
         with open(drop, "w", encoding="utf-8") as df:
             df.write(text)
         print(f"FAIL {tag} {state} {dur_s} -> {drop}", flush=True)
+        if diagnose:
+            _run_diagnosis(drop, diagnose_cmd)
     else:
         marker = "OK" if state == "success" else state.upper()
         print(f"{marker} {tag} {state} {dur_s}", flush=True)
@@ -631,6 +676,17 @@ def build_parser():
         dest="all_tries",
         action="store_true",
         help="on each completion, download every try (1..N), not just the terminal one",
+    )
+    w.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="on each failure drop, run the RCA orchestrator and write <log>.rca.md for /oncall",
+    )
+    w.add_argument(
+        "--diagnose-cmd",
+        dest="diagnose_cmd",
+        default="python3 -m airflow_debugger.orchestrate --no-llm",
+        help="command the failure log path is appended to (default: deterministic RCA, no LLM cost)",
     )
     w.set_defaults(func=cmd_watch)
     return p

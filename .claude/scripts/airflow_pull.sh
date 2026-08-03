@@ -2,7 +2,8 @@
 # airflow_pull.sh — pull Astronomer (Airflow 3) task logs for a day + a completion sensor for on-call.
 # Usage:
 #   Day-dump:  bash .claude/scripts/airflow_pull.sh [--date YYYY-MM-DD] [--dag NAME] [--tag TAG] [--state failed] [--all-tries] [--deployment ID]
-#   Sensor:    bash .claude/scripts/airflow_pull.sh --watch --tag <tag> [--dag NAME] [--interval 30] [--persistent]
+#   Sensor:    bash .claude/scripts/airflow_pull.sh --watch --tag <tag> [--dag NAME] [--interval 30] [--persistent] [--diagnose]
+#              --diagnose runs the RCA orchestrator on each dropped failure log and writes <log>.rca.md for /oncall.
 #   Auth gate: bash .claude/scripts/airflow_pull.sh --check
 #
 # Downloads every task-instance log that ran on --date (UTC), renames each to
@@ -42,6 +43,9 @@ while [[ $# -gt 0 ]]; do
         --interval)    INTERVAL="$2"; shift 2 ;;
         --interval=*)  INTERVAL="${1#--interval=}"; shift ;;
         --all-tries)   PY_ARGS+=(--all-tries); shift ;;
+        --diagnose)    PY_ARGS+=(--diagnose); shift ;;
+        --diagnose-cmd)   PY_ARGS+=(--diagnose-cmd "$2"); shift 2 ;;
+        --diagnose-cmd=*) PY_ARGS+=(--diagnose-cmd "${1#--diagnose-cmd=}"); shift ;;
         --watch)       MODE="watch"; shift ;;
         --persistent)  PERSISTENT="--persistent"; shift ;;
         --check)       MODE="check"; shift ;;

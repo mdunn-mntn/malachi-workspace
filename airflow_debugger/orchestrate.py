@@ -60,10 +60,12 @@ def investigate(log_path: str, use_llm: bool = True) -> dict:
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) < 2:
+    argv = sys.argv[1:]
+    paths = [a for a in argv if not a.startswith("-")]  # flag-order robust
+    if not paths:
         print("usage: python -m airflow_debugger.orchestrate <airflow_log_file> [--no-llm]")
         raise SystemExit(2)
-    res = investigate(sys.argv[1], use_llm="--no-llm" not in sys.argv)
+    res = investigate(paths[0], use_llm="--no-llm" not in argv)
     print(res["report"])
     print("---")
     print(f"confidence: {res['confidence']} | llm_used: {res['llm_used']}")

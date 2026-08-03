@@ -96,7 +96,11 @@ Build in progress. Code home: `airflow_debugger/` package in the workspace (key-
 - **Design decision (noted):** used the Anthropic **Messages API directly**, not the full Claude Agent SDK — the deterministic pre-processor already does the extraction, so the LLM's job is one bounded synthesis call (the Agent SDK's subagent/tool machinery + the `claude` binary aren't needed and aren't installed). Swappable behind `synth.synthesize` (e.g. to a ChatGPT client later). The `ANTHROPIC_API_KEY` is the LLM-orchestration credential, separate from the key-free data-access layer.
 - Offline tests: `tests/test_{signatures,parse,incident_match}.py`. Package `README.md` added. Ruff-clean.
 
-**Remaining (Phase 2 integration + Phase 3):** wire `airflow_pull.sh --watch` drop → `orchestrate` → write the report artifact into `on-call/` for `/oncall` to triage (the 3-surface write-back stays `/oncall`'s single-writer job, not the debugger's). Phase 3 (deferred/gated): in-DAG auto-fire callback, sanctioned Slack thread-reply, propose-only PR + adversarial reviewer.
+### Phase 2 integration DONE (2026-08-03) — --watch auto-diagnosis wired
+- `airflow_pull.sh --watch --tag <tag> --diagnose` now, on each failed task, drops the log into `on-call/` AND writes `<log>.rca.md` next to it with the deterministic RCA, so alerts self-diagnose for `/oncall`. Loose coupling: `airflow_api.py._run_diagnosis` shells out to `python3 -m airflow_debugger.orchestrate` (subprocess, no import), default `--no-llm` (key-free + zero API cost in the unattended loop; the human runs full `orchestrate` with the LLM fallback during `/oncall` triage). Smoke-tested: a simulated INC-009 drop wrote the correct `orchestration/pod-evicted` RCA. The 3-surface write-back stays `/oncall`'s single-writer job.
+- `orchestrate` CLI made flag-order-robust (picks the first non-flag arg as the log path).
+
+**Remaining = Phase 3 (deferred/gated):** in-DAG auto-fire callback (touches prod airflow-ti, feature-flagged, Ryan's review), sanctioned Slack thread-reply (bot policy blocks it), propose-only PR + adversarial reviewer (both research tracks say hold until the read-only RCA is trusted in real use).
 
 ## 6. Questions Answered
 - **Q:** Extend an existing ticket or create new? **A:** Frame this existing AUDI-1191 shell as the single build ticket (user decision, 2026-08-03). AUDI-1170 is unrelated (Fangorn household FS).
