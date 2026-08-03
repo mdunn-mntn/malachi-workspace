@@ -99,3 +99,6 @@ claude-prompts/workflow_audits/.structure_findings.json
 # AI Workflow Kit global-layer templates (source, not generated artifacts)
 !documentation/ai_workflow_kit/templates/global/settings.json
 !documentation/ai_workflow_kit/templates/global/mcp_servers.json
+
+# Spark UI HTML exports (SPA shell, no data - reference only)
+on-call/*.html

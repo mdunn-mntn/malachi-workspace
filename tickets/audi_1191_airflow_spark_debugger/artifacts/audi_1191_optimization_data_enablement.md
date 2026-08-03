@@ -9,7 +9,9 @@ airflow-ti attach points. Historical (pre-change) runs stay uncollectable; this 
 
 Turn on Spark **event-log delivery** on both engines and attach a **persistent history store**, so a
 completed job's plan + per-node metrics land in GCS where our key-free analyzer (`optimizations.py` +
-`eventlog_profiler.py`) can read them. Databricks is best enforced via the existing **cluster policy**
+`eventlog_profiler.py`) can read them. The event log is the highest-leverage lever because it is the
+**one artifact that captures all 7 Spark data surfaces** (jobs/stages/executors/environment/storage/SQL)
+— see `audi_1191_spark_data_inventory.md`. Prefer it over `explain()`-to-stdout, which gets only the plan. Databricks is best enforced via the existing **cluster policy**
 (one edit, org-wide); Dataproc is a **batch property** the framework already checks for.
 
 ## Dataproc (serverless batches — e.g. tpa_mntn_id_export)
