@@ -65,7 +65,15 @@ The critical-path blocker (INC-009: "on-call box lacks programmatic Databricks a
 Implication: **both engines stay in scope** (Databricks does not drop to acquisition-only). The INC-009 runbook line + memory that say Databricks is unreachable are now stale — reconcile via `/capture` / `/oncall`.
 
 ## 5. Solution
-Pending build. See §3 phases + the approved plan.
+Build in progress. Code home: `airflow_debugger/` package in the workspace (key-free, no bot/tokens); harvest source cloned to `~/Developer/work/mntn/mntn-data-eng-assistant` (read-only, not modified).
+
+### Phase 1 progress (2026-08-03) — Databricks analyzer built + validated live
+- `airflow_debugger/signatures.py` — 14-signature deterministic taxonomy classifier; most-specific-first (e.g. `TABLE_OR_VIEW_ALREADY_EXISTS` beats generic `AnalysisException`). Carries a `programmatic_fix` flag ("yes/sometimes/no") that gates the deferred auto-PR. Offline unit tests pass: `airflow_debugger/tests/test_signatures.py` (7 cases).
+- `airflow_debugger/databricks_rca.py` — **NET-NEW** Databricks analyzer via the `databricks` CLI (profile `malachi@mountain.com`, subprocess, key-free). `analyze_run(run_id)` → `jobs get-run` (state) → `jobs get-run-output` per failed **task** run_id (root error + ANSI-stripped trace tail) → `clusters get` (termination_reason) → signature match. Returns a small JSON evidence bundle; never raises on a CLI error.
+- **Validated live vs INC-009** (run 459011294807453): extracts `TABLE_OR_VIEW_ALREADY_EXISTS` (SQLSTATE 42P07) + the `saveAsTable` trace, classifies `idempotency/orphaned-run`, `programmatic_fix: sometimes` — matches the runbook verdict. Cluster terminated `JOB_FINISHED/SUCCESS` (confirms: the Databricks job succeeded and wrote data; the failure is the orphaned-retry collision). Evidence: `outputs/inc009_databricks_evidence.json`.
+- Package is ruff-clean.
+
+Next (Phase 1 cont.): harvest the Dataproc analyzer (`analyze_batch` / `extract_spark_events` + `MCP_*_BASE64` decoders) into `dataproc_rca.py` and validate vs INC-005; then the alert parser + operator→engine router.
 
 ## 6. Questions Answered
 - **Q:** Extend an existing ticket or create new? **A:** Frame this existing AUDI-1191 shell as the single build ticket (user decision, 2026-08-03). AUDI-1170 is unrelated (Fangorn household FS).
