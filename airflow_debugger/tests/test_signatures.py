@@ -42,6 +42,45 @@ CASES = [
         "Cluster terminated. Reason: PREEMPTIBLE_WITH_FALLBACK_GCP instance was preempted",
         "spot_preemption",
     ),
+    # --- corpus gap classes (INC-001..INC-008) ---
+    (
+        "inc004_late_data",
+        "AnalysisException [PATH_NOT_FOUND]: gs://mntn-data-archive-prod/ipdsc_geo/dt=2026-07-29",
+        "path_not_found_late_data",
+    ),
+    (
+        "inc003_vertex_param",
+        "ValueError: The pipeline parameter reference_date is not found in the pipeline "
+        "job input definitions",
+        "vertex_param_contract",
+    ),
+    (
+        "inc008_stockout",
+        "RuntimeError: Job failed with: code: 14 ... the zone does not have enough resources "
+        "available to fulfill the request",
+        "cluster_create_stockout",
+    ),
+    (
+        "inc008_quota",
+        "Insufficient N2_CPUS quota. Requested 4672 but only 328 available in us-central1",
+        "quota_exhaustion",
+    ),
+    (
+        "inc007_openai_quota",
+        "invalid_request_error: You have exceeded your file storage quota. Projects are "
+        "limited to 2.5TB of files.",
+        "openai_file_quota",
+    ),
+    (
+        "inc001_sensor_timeout",
+        "airflow.exceptions.AirflowSensorTimeout: Snap. Time is up. precondition_bombora poked 216x",
+        "sensor_timeout",
+    ),
+    (
+        "inc007_external_task",
+        "ExternalTaskFailedError: The external task product_categorization in state upstream_failed",
+        "external_task_failed",
+    ),
 ]
 
 
@@ -65,8 +104,22 @@ def test_table_exists_beats_generic_analysis() -> None:
     assert m is not None and m.key == "table_or_view_already_exists"
 
 
+def test_path_not_found_beats_generic_analysis() -> None:
+    """A PATH_NOT_FOUND AnalysisException is late-data, not a generic query error."""
+    m = classify("AnalysisException [PATH_NOT_FOUND]: gs://bucket/ipdsc_geo/dt=2026-07-29")
+    assert m is not None and m.key == "path_not_found_late_data"
+
+
+def test_pod_evict_not_mistaken_for_sensor_timeout() -> None:
+    """A pod-evict 'served logs timed out' stays pod_evicted_404, not sensor_timeout."""
+    m = classify("Could not read served logs: timed out ... pods 'x' not found during istio check")
+    assert m is not None and m.key == "pod_evicted_404"
+
+
 if __name__ == "__main__":
     test_classifier_cases()
     test_empty_returns_none()
     test_table_exists_beats_generic_analysis()
+    test_path_not_found_beats_generic_analysis()
+    test_pod_evict_not_mistaken_for_sensor_timeout()
     print(f"OK — {len(CASES)} classifier cases + edge cases passed")

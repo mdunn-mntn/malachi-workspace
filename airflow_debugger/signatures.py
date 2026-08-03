@@ -101,6 +101,26 @@ SIGNATURES: list[Signature] = [
         "sometimes",
     ),
     Signature(
+        "path_not_found_late_data",
+        r"PATH_NOT_FOUND|Path does not exist|path does not exist.{0,60}gs://|"
+        r"AnalysisException.{0,40}(PATH_NOT_FOUND|does not exist)",
+        "late-data/missing-partition",
+        "A source partition the job reads (e.g. gs://.../dt=<run_date>) has not landed yet. "
+        "Usually the upstream producer runs late (timing race), not a code bug; verify the "
+        "partition + _SUCCESS then re-run the consumer, else re-run the producer.",
+        "no",
+    ),
+    Signature(
+        "vertex_param_contract",
+        r"pipeline parameter .{0,60}not found in the pipeline( job)? input definitions|"
+        r"parameter .{0,40}is not found in the pipeline",
+        "vertex/param-mismatch",
+        "The operator injects a param name the Vertex/KFP template does not declare "
+        "(e.g. reference_date vs run_date), so PipelineJob rejects it before submission. "
+        "Fix = rename the KFP pipeline param to match + recompile/redeploy the template.",
+        "yes",
+    ),
+    Signature(
         "analysis_exception",
         r"AnalysisException|TABLE_OR_VIEW_NOT_FOUND|UNRESOLVED_COLUMN|cannot resolve",
         "query/schema-error",
@@ -123,6 +143,57 @@ SIGNATURES: list[Signature] = [
         "ttl/wall-clock",
         "Job cancelled at its TTL / wall-clock limit (often a perf regression).",
         "sometimes",
+    ),
+    Signature(
+        "openai_file_quota",
+        r"exceeded your file storage quota|Projects are limited to .{0,10}TB of files|"
+        r"file storage quota",
+        "vendor-quota/openai",
+        "OpenAI project hit its 2.5TB file-storage quota, so the batch-input upload is rejected "
+        "(deterministic 400 - retries cannot fix it). Purge old OpenAI files / let expiry clear it.",
+        "no",
+    ),
+    Signature(
+        "cluster_create_stockout",
+        r"code:?\s*14\b|\bUNAVAILABLE\b.{0,60}resource|does not have enough resources|"
+        r"ZONE_RESOURCE_POOL_EXHAUSTED|resource pool exhausted|out of .{0,20}(capacity|stock)",
+        "infra/zonal-stockout",
+        "Dataproc/GCE could not get machines in the zone (transient GCP stockout). Usually "
+        "self-recovers in ~1-2h; autozone re-picks. Delete any lingering ERROR cluster (it "
+        "self-blocks the retry on quota), then re-run.",
+        "no",
+        "dataproc",
+    ),
+    Signature(
+        "quota_exhaustion",
+        r"Insufficient .{0,30}quota|QUOTA_EXCEEDED|quota.{0,20}exceeded|"
+        r"\bN2_CPUS\b|\bDISKS_TOTAL_GB\b",
+        "infra/quota",
+        "The request is at/over a regional quota ceiling (often a large cluster near 90%+ of "
+        "N2_CPUS/DISKS_TOTAL_GB, or a prior failed cluster's VMs self-blocking the retry). "
+        "Raise quota / delete the lingering cluster / shrink the request.",
+        "no",
+        "dataproc",
+    ),
+    Signature(
+        "sensor_timeout",
+        r"AirflowSensorTimeout|Sensor has timed out|Snap\. Time is up|"
+        r"up_for_reschedule.{0,40}timeout",
+        "sensor-timeout",
+        "A sensor watched a partition/upstream that was not ready by its deadline. Often benign "
+        "(optional 3P partner skipped that day) or the upstream is still running; verify source "
+        "presence before treating it as a real failure.",
+        "no",
+    ),
+    Signature(
+        "external_task_failed",
+        r"ExternalTaskFailedError|ExternalTaskSensor.{0,40}fail|state.{0,10}upstream_failed|"
+        r"upstream task.{0,20}(failed|upstream_failed)",
+        "upstream-failure",
+        "An upstream task the sensor depends on is in failed/upstream_failed - this task is a "
+        "symptom. Audit the upstream chain for the stage that actually broke; do not clear the "
+        "sensor until the awaited partition lands.",
+        "no",
     ),
     Signature(
         "auth_error",
