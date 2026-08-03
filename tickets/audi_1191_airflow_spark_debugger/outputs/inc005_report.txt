@@ -1,0 +1,4 @@
+RCA [high]: tpa_mntn_id_export/tpa_mntn_id_export - ttl/wall-clock
+Cancelled at its 10800s TTL (ran 10804s). Usually a perf regression. Profile the Spark event log for spill/skew/uncached recompute; a TTL bump alone rarely fixes it.
+Code fix possible; verify first.
+https://console.cloud.google.com/dataproc/batches/us-central1/tpa-mntn-id-20260729-3?project=mntn-prj-prod-00

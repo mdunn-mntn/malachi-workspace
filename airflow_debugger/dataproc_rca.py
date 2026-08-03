@@ -179,7 +179,7 @@ def analyze_batch(
     ev.has_event_log = bool(event_log_dir) or bool(hs)
     if not ev.has_event_log:
         ev.notes.append(
-            "no persistent event log (eventLog.dir unset) — deep spill/skew profile unavailable"
+            "no persistent event log (eventLog.dir unset); deep spill/skew profile unavailable"
         )
 
     logs = _logging_messages(batch_id, project)
@@ -203,8 +203,8 @@ def analyze_batch(
             Match(
                 "ttl_exceeded",
                 "ttl/wall-clock",
-                f"Cancelled at its {ev.ttl} TTL (ran {ev.runtime_s}s). Usually a perf regression — "
-                "profile the Spark event log for spill/skew/uncached recompute; a TTL bump alone "
+                f"Cancelled at its {ev.ttl} TTL (ran {ev.runtime_s}s). Usually a perf regression. "
+                "Profile the Spark event log for spill/skew/uncached recompute; a TTL bump alone "
                 "rarely fixes it.",
                 "sometimes",
                 f"CANCELLED at ttl {ev.ttl}",

@@ -79,7 +79,15 @@ Build in progress. Code home: `airflow_debugger/` package in the workspace (key-
 - **Cloud Logging IS readable** with user creds and carries the same driver messages + `MCP_*_BASE64` breadcrumbs (incl. `MCP_FINAL_EXECUTION_PLAN`). The analyzer routes through `gcloud logging read` — no new credential needed for **failure RCA**.
 - **Deep event-log profile** (spill/skew/recompute via `eventlog_profiler.py`) needs the `.zstd` Spark event log in GCS → would require **read-only `storage.objectViewer`** on the prod Dataproc buckets `dataproc-staging-...-d8mf0cme` + `dataproc-temp-...-svhwvc6j`. Caveat: only helps when the batch emitted an event log (INC-005's did not — `eventLog.dir` unset; enabling emission is a separate airflow-ti/prod lever).
 
-Next (Phase 1 cont.): the alert parser + operator→engine router (`ModelPysparkBatchOperator`→Dataproc; `ModelPysparkDbxJobOperator`/`DbxDbtOperator`→Databricks), then the Phase-2 orchestrator + BLUF/STAR report.
+### Phase 1 COMPLETE (2026-08-03) — full deterministic chain, both engines validated end-to-end
+- `airflow_debugger/parse.py` — parser + operator→engine router + **cross-layer synthesis**. Reads a failed-task Airflow log → identity (dag/task/run/try), engine from `op_classpath` (`DbxDbtOperator`/`DatabricksSubmitRun`→databricks; `ModelPysparkBatch`/`DataprocCreateBatch`→dataproc), and the downstream job id (Dataproc `Batch job <id>`; Databricks run_id from the dbt adapter's `Job submission response={"run_id":N}`). `diagnose()` synthesizes across layers: **if the Spark job SUCCEEDED but Airflow failed → orchestration-only**, use the Airflow-log signature (e.g. pod-404).
+- `airflow_debugger/report.py` — BLUF/STAR ≤500-char generator (answer line + confidence → orchestration-only note → likely cause → programmatic-fix-aware action → console link). No em-dashes (terse-comms clean).
+- **Validated end-to-end from the REAL incident logs:**
+  - INC-005 (Dataproc): `on-call/incidents/INC-005/...try3...txt` → `RCA [high]: tpa_mntn_id_export - ttl/wall-clock ... a TTL bump alone rarely fixes it` + dataproc console link. Matches the runbook verdict.
+  - INC-009 (Databricks): `...try2...pod404...txt` → parser extracts run_id 65237255325756 → analyzer finds that run **SUCCEEDED** → report: `RCA [high]: ... - orchestration/pod-evicted. Downstream databricks job SUCCEEDED, orchestration-only failure.` This reproduces the runbook's hard-won reconciliation automatically.
+- Reports lint clean vs `lint_comms --kind comment`. Offline tests: `tests/test_signatures.py` (7) + `tests/test_parse.py` (5). Package ruff-clean. Reports saved to `outputs/inc00{5,9}_report.txt`.
+
+**Phase 1 done: log → parse → diagnose → report works deterministically (no LLM) on both engines.** Next = Phase 2: the Claude-Agent-SDK orchestrator wraps this for unknown-signature synthesis + the `all-MiniLM-L6-v2` incident matcher (local corpus = `incident_log.jsonl` + `/oncall` §2) + `/oncall` 3-surface write-back.
 
 ## 6. Questions Answered
 - **Q:** Extend an existing ticket or create new? **A:** Frame this existing AUDI-1191 shell as the single build ticket (user decision, 2026-08-03). AUDI-1170 is unrelated (Fangorn household FS).

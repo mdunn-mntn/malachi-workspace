@@ -1,0 +1,5 @@
+RCA [high]: keyword_ddp_reporting/write_targeted_signal_ds_19 - orchestration/pod-evicted
+Downstream databricks job SUCCEEDED, orchestration-only failure.
+K8s pod evicted or lost mid-run (orchestration-only; the Spark/Databricks job may have succeeded and written data).
+Not a code fix (compute/infra or upstream).
+https://1262887251702944.4.gcp.databricks.com/jobs/85436725717072/runs/65237255325756

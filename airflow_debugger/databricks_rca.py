@@ -62,6 +62,7 @@ class DatabricksEvidence:
 
     engine: str = "databricks"
     run_id: int | None = None
+    job_id: int | None = None
     run_name: str | None = None
     state: dict = field(default_factory=dict)
     failed_tasks: list = field(default_factory=list)
@@ -80,6 +81,7 @@ def analyze_run(run_id: int) -> DatabricksEvidence:
         )
         return ev
     ev.run_name = run.get("run_name")
+    ev.job_id = run.get("job_id")
     ev.state = run.get("state", {})
     tasks = run.get("tasks") or [run]  # single-task runs carry state at the top level
 
