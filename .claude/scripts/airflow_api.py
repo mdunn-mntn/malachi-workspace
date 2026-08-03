@@ -490,6 +490,8 @@ def cmd_list(args):
                 rel = os.path.join(args.outdir, args.date, fname)
                 mf.write(json.dumps(manifest_record(wti, rel)) + "\n")
                 counts["logs"] += 1
+            if state in FAILURE_STATES and getattr(args, "diagnose", False):
+                _run_diagnosis(os.path.join(outdir, log_filename(ti)), args.diagnose_cmd)
 
     extra = f" · {counts['logs']} logs (all tries)" if args.all_tries else ""
     print(
@@ -653,6 +655,17 @@ def build_parser():
         dest="all_tries",
         action="store_true",
         help="download every try (1..N), not just the latest — failed retries hold the cause",
+    )
+    ls.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="run the RCA orchestrator on each failed task's log and write <log>.rca.md",
+    )
+    ls.add_argument(
+        "--diagnose-cmd",
+        dest="diagnose_cmd",
+        default="python3 -m airflow_debugger.orchestrate --no-llm",
+        help="command the failure log path is appended to (default: deterministic RCA, no LLM cost)",
     )
     ls.set_defaults(func=cmd_list)
 

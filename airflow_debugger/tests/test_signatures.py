@@ -81,6 +81,13 @@ CASES = [
         "ExternalTaskFailedError: The external task product_categorization in state upstream_failed",
         "external_task_failed",
     ),
+    (
+        # First live-fire catch (2026-08-02, vertical_classification_api): a dbt data-quality test.
+        "live_dbt_test_fail",
+        "Completed with 1 error ... Failure in test ddp_vertical_classification_api__failure_rate "
+        "... Got 5580 results, configured to fail if >5000",
+        "dbt_test_failure",
+    ),
 ]
 
 

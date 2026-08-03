@@ -101,6 +101,17 @@ SIGNATURES: list[Signature] = [
         "sometimes",
     ),
     Signature(
+        "dbt_test_failure",
+        r"Failure in test |Completed with \d+ error|Got \d+ results, configured to fail if|"
+        r"\d+ of \d+ FAIL \d+",
+        "dbt-test/data-quality",
+        "A dbt data-quality test tripped its threshold (the test query returned more failing "
+        "rows than allowed, e.g. 'Got N results, configured to fail if >M'). The upstream data "
+        "violated an expectation - route to the model owner to fix the source data or adjust the "
+        "test bound; not an auto-fixable code crash.",
+        "no",
+    ),
+    Signature(
         "path_not_found_late_data",
         r"PATH_NOT_FOUND|Path does not exist|path does not exist.{0,60}gs://|"
         r"AnalysisException.{0,40}(PATH_NOT_FOUND|does not exist)",

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # airflow_pull.sh — pull Astronomer (Airflow 3) task logs for a day + a completion sensor for on-call.
 # Usage:
-#   Day-dump:  bash .claude/scripts/airflow_pull.sh [--date YYYY-MM-DD] [--dag NAME] [--tag TAG] [--state failed] [--all-tries] [--deployment ID]
+#   Day-dump:  bash .claude/scripts/airflow_pull.sh [--date YYYY-MM-DD] [--dag NAME] [--tag TAG] [--state failed] [--all-tries] [--diagnose] [--deployment ID]
+#              --diagnose auto-RCAs each failed task's log (writes <log>.rca.md). Daily wrapper: oncall_daily_rca.sh.
 #   Sensor:    bash .claude/scripts/airflow_pull.sh --watch --tag <tag> [--dag NAME] [--interval 30] [--persistent] [--diagnose]
 #              --diagnose runs the RCA orchestrator on each dropped failure log and writes <log>.rca.md for /oncall.
 #   Auth gate: bash .claude/scripts/airflow_pull.sh --check
