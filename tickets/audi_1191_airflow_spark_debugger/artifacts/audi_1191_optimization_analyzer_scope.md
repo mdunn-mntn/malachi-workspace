@@ -33,9 +33,13 @@ SQL/DataFrame config. All of that is in the Spark UI SQL detail (the screenshots
 
 - **Databricks:** the Spark SQL detail is the Spark UI, backed by the **Spark REST API**
   `/api/v1/applications/<app_id>/sql/<executionId>` served through the workspace Spark-UI proxy —
-  reachable with the `malachi@mountain.com` OAuth token as bearer. The physical-plan text +
-  optimizer-stats block also appear in the driver/notebook output (`get-run-output` partially reaches
-  it). **Next:** prove the exact REST path returns nodes+metrics key-free; fall back to plan-text.
+  reachable with the `malachi@mountain.com` OAuth token as bearer. **EVIDENCED 2026-08-03 (probe on
+  the real INC-009 task run 616633605519362):** `databricks jobs get-run-output` returns ONLY
+  `error / error_trace / metadata / notebook_output` — NO plan text, NO `sizeInBytes`, NO
+  `ANALYZE TABLE`. So the plan/optimizer-stats are **not** in the cheap driver output; the
+  "plan-text-first is cheap for Databricks" assumption is false. Getting the Databricks plan requires
+  the **Spark REST** path (or the driver log4j log, if the CBO advisory lands there — unverified), or
+  a prod change to `explain()` to stdout. **Next:** spike the Spark REST/proxy path key-free.
 - **Dataproc:** plan + metrics come from the Spark **event log** (`.zstd`) → `eventlog_profiler.py`
   already extracts spill/skew/recompute, but the event log is often **absent** (`eventLog.dir` unset —
   INC-005 had none; enabling emission is a prod lever). Plan text can also land in Cloud Logging driver
