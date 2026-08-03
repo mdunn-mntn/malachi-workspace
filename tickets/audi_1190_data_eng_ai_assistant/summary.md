@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "Evaluate the Data Eng AI assistant for on-call + Airflow"
-status: backlog
+status: done
 date: 2026-07-31
 summary: "Spike: adopt SteelHouse/mntn-data-eng-assistant (data-eng-ai.in.mountain.com) for our on-call + Airflow triage, or not."
-result: "not started"
+result: "Adopt the Dataproc diagnosis core as a manual, key-free MCP tool in /oncall; not the token-holding Slack bot; Dataproc-only (no Databricks). Brief delivered. Formalizes IMP-021."
 question: "Should we take over Ryan's data-eng-ai assistant (MCP/agentic Spark+Airflow debugger) for our on-call, and if so which capability first, given the access constraints?"
 framing_state: locked
 ---
