@@ -54,8 +54,11 @@ SQL/DataFrame config. All of that is in the Spark UI SQL detail (the screenshots
   Until then: the analyzer runs on plans grabbed **manually** from the Spark UI (works today — delivered the targeted_signal wins).
 - **Dataproc:** plan + metrics come from the Spark **event log** (`.zstd`) → `eventlog_profiler.py`
   already extracts spill/skew/recompute, but the event log is often **absent** (`eventLog.dir` unset —
-  INC-005 had none; enabling emission is a prod lever). Plan text can also land in Cloud Logging driver
-  output. **Next:** plan-text-from-driver-log now; push for event-log emission for the deep profile.
+  INC-005 had none; enabling emission is a prod lever). **EVIDENCED 2026-08-03:** the Cloud Logging
+  driver output does NOT carry the physical plan / optimizer-stats either (INC-005's driver log = 0 plan
+  markers; recent batches emit no driver plan text). So — symmetric with Databricks — Dataproc also has
+  **no cheap plan source**; both engines need the event-log/explain enablement (IMP-023). **Next:** turn
+  on `spark.eventLog.enabled` for one batch → read the `.zstd` with `eventlog_profiler.py`.
 
 ## Crawl mode — optimize succeeded DAGs, not just failures (the "check every DAG" vision)
 
