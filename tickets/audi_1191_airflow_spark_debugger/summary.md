@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure-triage + optimization agent"
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first, Claude-Agent-SDK debugger that RCAs a failed Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report; secondary use = job optimization from the same Spark-log analysis."
-result: "in progress — Phase 0: Databricks + Dataproc read access CONFIRMED (kill-criterion cleared, both engines viable)"
+result: "in progress — Phases 0-2 done: key-free RCA debugger (Dataproc + Databricks) validated end-to-end on INC-005 + INC-009; deterministic-first + LLM fallback. Remaining: /oncall write-back wiring + Phase 3 (auto-fire, Slack, PR)"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -87,7 +87,16 @@ Build in progress. Code home: `airflow_debugger/` package in the workspace (key-
   - INC-009 (Databricks): `...try2...pod404...txt` → parser extracts run_id 65237255325756 → analyzer finds that run **SUCCEEDED** → report: `RCA [high]: ... - orchestration/pod-evicted. Downstream databricks job SUCCEEDED, orchestration-only failure.` This reproduces the runbook's hard-won reconciliation automatically.
 - Reports lint clean vs `lint_comms --kind comment`. Offline tests: `tests/test_signatures.py` (7) + `tests/test_parse.py` (5). Package ruff-clean. Reports saved to `outputs/inc00{5,9}_report.txt`.
 
-**Phase 1 done: log → parse → diagnose → report works deterministically (no LLM) on both engines.** Next = Phase 2: the Claude-Agent-SDK orchestrator wraps this for unknown-signature synthesis + the `all-MiniLM-L6-v2` incident matcher (local corpus = `incident_log.jsonl` + `/oncall` §2) + `/oncall` 3-surface write-back.
+**Phase 1 done: log → parse → diagnose → report works deterministically (no LLM) on both engines.**
+
+### Phase 2 (2026-08-03) — orchestrator + incident matcher + LLM fallback, validated
+- `airflow_debugger/incident_match.py` — **lightweight** local matcher (token-overlap + dag/task boost) over `on-call/incident_log.jsonl`. Chose lexical over `all-MiniLM-L6-v2`/torch: the corpus is 9 incidents, so embeddings are over-engineering (upgradeable later). Surfaces the twin incident correctly (INC-009 query → INC-009 top).
+- `airflow_debugger/synth.py` — LLM synthesis fallback via the **Anthropic Messages API** (`claude-opus-4-8`, adaptive thinking, ≤500-char BLUF/STAR system prompt). Fires **only** when the deterministic classifier finds no signature. Validated on a synthetic novel `DiskFullException` → correct 307-char RCA with the infra-vs-code action split. Never crashes the debugger on an API/auth error.
+- `airflow_debugger/orchestrate.py` — top-level entrypoint: `python3 -m airflow_debugger.orchestrate <log>`. Deterministic-first: INC-005 + INC-009 resolve at `high` confidence with **no LLM call** and the matcher attaches similar past incidents; unknown signatures fall through to `synth`.
+- **Design decision (noted):** used the Anthropic **Messages API directly**, not the full Claude Agent SDK — the deterministic pre-processor already does the extraction, so the LLM's job is one bounded synthesis call (the Agent SDK's subagent/tool machinery + the `claude` binary aren't needed and aren't installed). Swappable behind `synth.synthesize` (e.g. to a ChatGPT client later). The `ANTHROPIC_API_KEY` is the LLM-orchestration credential, separate from the key-free data-access layer.
+- Offline tests: `tests/test_{signatures,parse,incident_match}.py`. Package `README.md` added. Ruff-clean.
+
+**Remaining (Phase 2 integration + Phase 3):** wire `airflow_pull.sh --watch` drop → `orchestrate` → write the report artifact into `on-call/` for `/oncall` to triage (the 3-surface write-back stays `/oncall`'s single-writer job, not the debugger's). Phase 3 (deferred/gated): in-DAG auto-fire callback, sanctioned Slack thread-reply, propose-only PR + adversarial reviewer.
 
 ## 6. Questions Answered
 - **Q:** Extend an existing ticket or create new? **A:** Frame this existing AUDI-1191 shell as the single build ticket (user decision, 2026-08-03). AUDI-1170 is unrelated (Fangorn household FS).

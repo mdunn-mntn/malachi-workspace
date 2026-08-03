@@ -9,7 +9,21 @@ auth — no stored tokens, no Slack bot.
 Modules:
 - signatures     : deterministic Spark/Airflow failure taxonomy (regex fingerprints)
 - databricks_rca : net-new Databricks job-run analyzer (CLI, key-free)
-- dataproc_rca   : Dataproc batch analyzer (harvested from data-eng-assistant) [pending]
+- dataproc_rca   : Dataproc batch analyzer (harvested from data-eng-assistant)
+- parse          : Airflow-log parser + operator->engine router + cross-layer synthesis
+- report         : BLUF/STAR <=500-char report generator
+- incident_match : lightweight local matcher over on-call/incident_log.jsonl
+- synth          : LLM synthesis fallback for unknown signatures (Anthropic Messages API)
+- orchestrate    : top-level entrypoint (log -> diagnosis -> report)
 """
 
-__all__ = ["signatures", "databricks_rca"]
+__all__ = [
+    "databricks_rca",
+    "dataproc_rca",
+    "incident_match",
+    "orchestrate",
+    "parse",
+    "report",
+    "signatures",
+    "synth",
+]
