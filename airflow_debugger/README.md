@@ -45,8 +45,10 @@ airflow log ─▶ parse (identity + op_classpath→engine + job-id) ─▶ diag
 
 ## Modules
 
-`signatures` taxonomy · `parse` router+synthesis · `dataproc_rca` / `databricks_rca` analyzers ·
-`incident_match` local matcher · `report` BLUF/STAR · `synth` LLM fallback · `orchestrate` entrypoint.
+`signatures` taxonomy (21 fingerprints) · `parse` log router+synthesis · `context_parse` in-callback
+first-look (Airflow-free, key-free — the Phase-3 auto-fire tier) · `dataproc_rca` / `databricks_rca`
+analyzers · `incident_match` local matcher · `report` BLUF/STAR · `synth` LLM fallback · `orchestrate`
+entrypoint.
 
 ## Notes
 
