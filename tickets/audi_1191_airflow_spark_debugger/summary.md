@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure-triage + optimization agent"
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first, Claude-Agent-SDK debugger that RCAs a failed Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report; secondary use = job optimization from the same Spark-log analysis."
-result: "in progress — Phase 0 (fork + strip + Databricks-access spike)"
+result: "in progress — Phase 0: Databricks + Dataproc read access CONFIRMED (kill-criterion cleared, both engines viable)"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -54,6 +54,16 @@ Research complete (2026-08-03). Sources: the compass prior-art report, three Exp
 - **OSS building blocks (verified):** astronomer/agents `debugging-dags` skill (mine the RCA playbook), korotovsky/slack-mcp-server (thread_ts, Phase 3), anthropics/claude-code-action (propose-only PR, Phase 3), Claude Agent SDK subagents (`AgentDefinition`, context isolation). DataFlint OSS = UI plugin only (MCP is commercial). Prefer `RafaelCartenet/mcp-databricks-server` over the stale/unlicensed JustTryAI.
 - **No failure hook exists in airflow-ti** — attach point for Phase 3 = `include/job_config/job_config.py` `JobConfig.make_dag_args` (`on_failure_callback` list). History Server peripheral is commented out in some DAGs → Dataproc analyzer must tolerate missing `.zstd` event logs.
 
+### Phase 0 result (2026-08-03): access RESOLVED — kill-criterion cleared
+The critical-path blocker (INC-009: "on-call box lacks programmatic Databricks access — OAuth hangs, API connection refused") is **resolved**. Both read paths confirmed live, key-free:
+- **Databricks** via U2M OAuth CLI profile **`malachi@mountain.com`** (the `DEFAULT` profile is invalid — always pass `-p malachi@mountain.com`). Confirmed reads:
+  - `databricks jobs get-run <run_id>` → run state (INC-009 run 459011294807453 → FAILED/INTERNAL_ERROR, task `inner_notebook` run_id 616633605519362).
+  - `databricks jobs get-run-output <TASK run_id>` → the actual root cause. INC-009 returned `error` = `[TABLE_OR_VIEW_ALREADY_EXISTS] ... prod.mntn_matched_reporting.targeted_signal ... SQLSTATE: 42P07` + `error_trace` (AnalysisException at the `df.write.mode("overwrite").partitionBy(...)` line). **Must use the TASK run_id, not the parent job run_id.**
+  - SQL warehouse `sql_warehouse_2xs` is RUNNING → the `system.lakeflow` structured path (job_run_timeline, retries, duration) is available.
+- **Dataproc** via `gcloud` **user creds** (`gcloud auth login`, account `malachi@mountain.com`) — `gcloud dataproc batches list --region us-central1 --project mntn-prj-prod-00` returns live batches. NOTE: `gcloud auth application-default` (ADC) is NOT set — the harvested analyzers use `gcloud`/`gsutil` subprocess (works on user creds); only wire ADC if a module uses the `google-cloud-*` Python client directly.
+
+Implication: **both engines stay in scope** (Databricks does not drop to acquisition-only). The INC-009 runbook line + memory that say Databricks is unreachable are now stale — reconcile via `/capture` / `/oncall`.
+
 ## 5. Solution
 Pending build. See §3 phases + the approved plan.
 
@@ -67,7 +77,8 @@ Pending build. See §3 phases + the approved plan.
 Pending. Capture: the operator→engine map, the `MCP_*_BASE64` breadcrumb protocol, the Databricks-access resolution, and any Spark-signature taxonomy additions.
 
 ## 8. Open Items / Follow-ups
-- **Critical path:** resolve key-free Databricks read access (Phase 0). Kill criterion if unresolvable.
+- ~~**Critical path:** resolve key-free Databricks read access (Phase 0). Kill criterion if unresolvable.~~ **RESOLVED 2026-08-03** — Databricks CLI profile `malachi@mountain.com` (U2M OAuth) + gcloud user creds both read live (see §4 Phase 0 result). Both engines viable.
+- **Reconcile stale on-call records** (via `/capture` / `/oncall`): INC-009 + the reference memory state Databricks is programmatically unreachable — no longer true.
 - Validate the harvested Dataproc analyzer's claims (match accuracy, 2024 DCU pricing, $0.089 vs $0.09) on INC-005 before trusting.
 - Ryan hands off the data-eng-assistant repo (IMP-021).
 - Slack auto-reply + auto-fire sensor blocked by the no-bot policy → deferred to a sanctioned app (Phase 3).
