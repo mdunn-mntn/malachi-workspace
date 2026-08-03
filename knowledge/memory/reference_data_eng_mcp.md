@@ -19,7 +19,7 @@ MNTN Data Engineering runs an AI/MCP on-call diagnosis service: repo `SteelHouse
 - Also: `analyze_batch(_detail)`, `extract_spark_events` (Dataproc exec plans, stage metrics, DCU+shuffle cost, top-3 recs), `gcs_folder_size`, `count_parquet_rows`, `schema_inspector`, `get_recent_airflow_failures`, `generate_oncall_handoff`, `confluence_reader`. Action plans + cost recs are rule-based string-matching, not generative.
 
 **Two facts that cap adoption:**
-1. **100% GCP Dataproc, 0% Databricks.** Zero databricks/dbx refs; Dataproc-specific throughout (gcloud/gsutil, `.zstd` Spark History Server logs, DCU pricing). Databricks = a rewrite, not a flag. It would NOT diagnose our Databricks jobs (e.g. INC-009 keyword_ddp_reporting).
+1. **100% GCP Dataproc, 0% Databricks.** Zero databricks/dbx refs; Dataproc-specific throughout (gcloud/gsutil, `.zstd` Spark History Server logs, DCU pricing). Databricks = a rewrite, not a flag. It would NOT diagnose our Databricks jobs (e.g. INC-009 keyword_ddp_reporting). **Superseded for our build (2026-08-03):** [[project_airflow_debugger]] (AUDI-1191) built a net-new key-free Databricks analyzer + a Dataproc analyzer, both validated; Databricks access is now resolved (see [[reference_databricks]]).
 2. **Auth-model conflict.** Ships as a Slack bot holding long-lived K8s-secret tokens (`SLACK_BOT_TOKEN`, `ASTRO_API_TOKEN`, `CONFLUENCE_API_TOKEN`, `PAGERDUTY_API_TOKEN`) — the exact pattern MNTN security retired 2026-06-10 (killed our slack_bot and Ryan's). Ryan: Vault stopped issuing Airflow tokens; the MCP tool's access was revoked.
 
 **`spark_job_monitor.py` is NOT in this repo** — it's the producer-side util in `airflow-ti` (`include/util/spark_job_monitor.py`) that emits base64 breadcrumbs; this repo is the consumer.

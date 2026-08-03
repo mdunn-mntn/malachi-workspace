@@ -4,11 +4,18 @@ description: Databricks: push >4h-risk queries there (memory-optimized); more sm
 metadata:
   type: reference
 doc_type: memory
-keywords: [databricks, spark shuffle, executor cores, node sizing, augmentor_log, prospecting_intent, gcs parquet archive, bq 6-hour wall, memory-optimized cluster, victor benchmark]
+keywords: [databricks, spark shuffle, executor cores, node sizing, augmentor_log, prospecting_intent, gcs parquet archive, bq 6-hour wall, memory-optimized cluster, victor benchmark, databricks cli, u2m oauth, jobs get-run, get-run-output, oncall databricks access, system.lakeflow, sql_warehouse]
 domain: [bigquery, infra]
 lifecycle: active
-last_verified: 2026-07-09
+last_verified: 2026-08-03
 ---
+
+## On-call RCA CLI access (verified 2026-08-03)
+The on-call box CAN now read Databricks programmatically, key-free — this supersedes the INC-009-era "no programmatic Databricks access / CLI hangs on OAuth" note. Use the **U2M OAuth CLI profile `malachi@mountain.com`** (the `DEFAULT` profile is invalid — always pass `-p malachi@mountain.com`). Workspace `https://1262887251702944.4.gcp.databricks.com`.
+- `databricks jobs get-run <run_id> -o json` → `state.result_state` (SUCCESS/FAILED) + `tasks[].run_id`.
+- `databricks jobs get-run-output <TASK run_id> -o json` → `error` (root cause, e.g. `TABLE_OR_VIEW_ALREADY_EXISTS` SQLSTATE 42P07) + `error_trace`. **Must use the TASK run_id, not the parent job run_id.**
+- SQL warehouse `sql_warehouse_2xs` is RUNNING → the `system.lakeflow` structured path (job_run_timeline, retries, duration) is available.
+- This is the read path the [[project_airflow_debugger]] `databricks_rca.py` drives. See also [[reference_oncall_runbook]] INC-009.
 ## from reference_databricks_for_heavy_queries.md
 For heavy lift / incrementality queries that scan augmentor_log or prospecting_intent over multi-day windows, propose Databricks BEFORE committing to a long BQ run. We have access to large clusters there.
 
