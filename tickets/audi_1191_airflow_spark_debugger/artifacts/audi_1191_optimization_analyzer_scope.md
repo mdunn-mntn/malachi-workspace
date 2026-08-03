@@ -40,6 +40,18 @@ SQL/DataFrame config. All of that is in the Spark UI SQL detail (the screenshots
   "plan-text-first is cheap for Databricks" assumption is false. Getting the Databricks plan requires
   the **Spark REST** path (or the driver log4j log, if the CBO advisory lands there — unverified), or
   a prod change to `explain()` to stdout. **Next:** spike the Spark REST/proxy path key-free.
+
+  **SPIKED 2026-08-03 (real run 616633605519362, cluster 5731-160716-16bfsjew, app 1624571757441950872) — BLOCKED for completed job clusters:**
+  - `cluster_log_conf = None` → **no event log persisted** anywhere readable (unlike Dataproc's event log path).
+  - `/driver-proxy-api/o/<org>/<cluster>/<port>/api/v1/applications` → **400 `INVALID_STATE: Cluster is in Terminated state`** (driver proxy is running-cluster-only; job clusters terminate right after the run).
+  - `/sparkui/<cluster>/driver-0/api/v1/applications` → **500 `TEMPORARILY_UNAVAILABLE`** for a terminated cluster (the Historical Spark UI is HTML-rendered, no clean REST).
+  - Not in `get-run-output`; not in SQL query history (dbt **python** model, not a warehouse query).
+
+  **Verdict:** automated key-free acquisition of a completed Databricks job-cluster's Spark plan/metrics is **not viable via REST**. Two real unblocks, both needing an owner/Ryan prod change:
+  1. **Enable `cluster_log_conf` event-log delivery to GCS** on the job cluster → then read the event log like Dataproc (`eventlog_profiler.py`). Durable, gives full metrics.
+  2. **Add `explain(mode="cost")` (or `EXPLAIN COST`) to the dbt model** → plan + optimizer-stats print to stdout → land in `get-run-output` (already key-free). Lighter, gets the low-hanging missing-stats/join/shuffle findings.
+
+  Until then: the analyzer runs on plans grabbed **manually** from the Spark UI (works today — delivered the targeted_signal wins).
 - **Dataproc:** plan + metrics come from the Spark **event log** (`.zstd`) → `eventlog_profiler.py`
   already extracts spill/skew/recompute, but the event log is often **absent** (`eventLog.dir` unset —
   INC-005 had none; enabling emission is a prod lever). Plan text can also land in Cloud Logging driver
