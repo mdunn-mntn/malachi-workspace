@@ -73,10 +73,60 @@ lookback-churn choice (features follow the day's vs the snapshot's household); w
 runs on the one schedule without a forked DAG.
 
 ## 4. Investigation & Findings
-_(queries in `queries/`, results in `outputs/`)_
+
+### 4a. Codebase research 2026-08-03 (read current `main`; local checkout stale on TI-956, June 8, pre-#1156)
+**The reframe: the build surface is much smaller than the ticket description assumed.**
+
+- **Resolution + household aggregation is DONE and tested — not a stub.** PR **#1156** (AUDI-1166/1167, merged
+  **2026-07-30**, 6 files) shipped `utils_model/household_resolution.py` (505 lines, 15 passing unit tests):
+  - `resolve_households(df, id_columns, graph_df=None, spark=None, as_of_or_before=run_date, min_confidence=None)`
+    — as-of, **max-confidence** IP→household join; **row-count invariant** (one `household_id` per row, no
+    fan-out; unresolved tagged not dropped). Emits `household_id, resolution_status, resolved_from,
+    resolution_confidence, resolution_is_shared`. `id_columns` ordered `[(col, IdType)]`; for v1 `[("ip", IdType.IPV4)]`.
+  - `aggregate_to_household(resolved_df, sum_cols, min_cols, max_cols, count_distinct_cols, extra_group_by=("vertical_id",), identifier_col="ip")`
+    — collapse to `household_id (× vertical)`; **every measure classified explicitly** (unclassified = dropped,
+    never silently summed); emits `contributing_rows`, `source_identifier_count`. Distinct/HLL must NOT be summed.
+  - `latest_graph_partition()` (newest `asOfDate ≤ date`, max revision; **raises if >14d stale**),
+    `load_graph_ids(id_types=(IPV4,), current_only=True, dedupe=True)`, `coverage_metrics()`, `class IdType` (IPV4=30, MNTN_GUID=41, …).
+- **L1 already wired.** `identity_graph_ip_household_id` (graph mirror; reads `gs://identity-graph-prod/mntn-graph/household_graph_parquet`;
+  keyed `dt=graph asOfDate`; idempotent, no-ops between weekly builds; ~7 GiB IPv4 slice) and the `(ip,guid)`
+  keyset `guid_log_ip_guid_advertiser_id` are **daily leaves** in `feature_store_setup_model.py` (no edges yet).
+- **Household L2/L3 re-key is ~10 lines.** IP L2 `guid_log_derived_ip_vertical_id` (`GuidLogDerived(MultiSnapshotFileStorageBaseModel)`,
+  `supported_snapshots()=["base","monthly"]`) has **zero HLL/distinct columns** — all `sum/min/max` + recency,
+  IP-associative. Re-key = resolve `ip→household_id` on the daily aggregate (`ip_vertical_daily`, above L150),
+  change `.groupBy("ip","vertical_id")` (L155) → `.groupBy("household_id","vertical_id")`, `select` `ip`→`household_id`,
+  `repartition("household_id")`. Window block (L158+) unchanged. L3 pivot = pure `"ip"→"household_id"` rename
+  (incl. `entity_id`, `entity_column_name`); single-shard guard (<10000 cols) holds at ~222 verticals.
+- **No `hh_` L2/L3 on `main` yet** (AUDI-1168, Brian, In Progress — hasn't landed). **This is the overlap (D1).**
+- **Orchestration = TWO DAGs.** `feature_store_setup_model` (daily 01:03 UTC) **and** `feature_store_snapshot`
+  (monthly, day-15 runs the derived+pivot with `--snapshot monthly`). Training (AUDI-1103) is on **monthly** L3.
+- **Model framework:** one file = one `BaseModel` subclass + `@compute.dataproc_batch` + `@model_config`
+  (`location_root`), `model(self, run_date)`, `read_model("stem.Class")`, `df_write(df)`. Compile via
+  `python model_upload.py --dryrun` → regenerates **committed** `dags/model_task_config.json` (stem-keyed,
+  compute/spark only; paths live in `@model_config`). Never hand-edit it. New filename → own GCS prefix (no collision).
+- **Backfill:** no built-in date-range runner. Single-date idempotent `overwrite`-by-`dt`. Dev = serial
+  `python model_run.py <id> -a '{"run_date": d}'` loop (blocks per date, runs on `mntn-prj-dev-00`). Prod =
+  a param'd DAG (`schedule=None`, `catchup=False`, dynamic task-mapping fan-out) modeled on
+  `domain_vertical_mappings_backfill.py` + `feature_store_snapshot.py`. Backfill **L1 mirror first**.
+- **Parity comparands (GCS parquet, not BQ):** IP L2 `gs://mntn-data-archive-prod/feature_store/feature_group_2_derived/guid_log_derived_ip_vertical_id`;
+  IP L3 `.../feature_group_3_pivoted/guid_log_pivot_ip_vertical_id` (one row per ip, wide vertical cols). Ready-made
+  score pair: IP `intent_score_map` vs HH `intent_score_household_map` under `gs://household-scoring-prod/output/scoring/`.
+- **Monitor template:** `models/monitoring/vertical_size_monitor.py` (per-vertical distinct today-vs-yesterday +
+  diff, writes parquet `dt=run_date` before email/Slack, wired as a `ModelPysparkBatchOperator` in its producer
+  DAG). Reuse `coverage_metrics()` for the resolution/coverage split. Precedent re-key: `intent_score_household_map.py`.
+- **Backfill depth (AUDI-1101 resolved):** `identity_graph_history` (id_type=30, BQ, ~60d) back to 2026-06-01,
+  ~9 weekly snapshots — "plenty." Deeper → `household_graph_parquet` (~600 GB, `asOfDate`/`asOfDateRevisionNumber`).
+
+### 4b. Two decisions pending Brian sync (branch the plan)
+- **D1 — L2/L3 ownership split** (AUDI-1168/1169 are Brian's; re-key is trivial, not yet on main).
+- **D2 — Sept-4 cut** (epic MVP train+validate needs backfill by Sept-4, but 1170's gate = daily pipeline +
+  first parity readout, backfill as fast-follow — AUDI-1103 can't train without backfill).
+
+_Full plan of action: `~/.claude/plans/i-have-to-execute-snoopy-sutton.md` (approved 2026-08-03)._
+_Research detail: this session's three Explore-agent reports (orchestration/PR#1156, L2/L3 internals, backfill/monitor)._
 
 ## 5. Solution
-_(PRs, config, code)_
+_(PRs, config, code — pending Phase 2+; Phase 1 = naming doc + parity monitor + backfill scaffold)_
 
 ## 6. Questions Answered
 - **Q:** — **A:** —
@@ -85,6 +135,16 @@ _(PRs, config, code)_
 _(document the shadow-parity methodology + household-stability metric)_
 
 ## 8. Open Items / Follow-ups
+
+### Status after 2026-08-03 research (what's resolved vs still open)
+**Research-resolved** (see §4a): PR #1156 is real/merged (Q1 — build on merged helpers, not a fresh branch;
+`(ip,guid)` L1 is for the GUID fast-follow, IPv4-only v1 uses the existing IP L1); the resolver interface is
+`utils_model.household_resolution` — **call the shipped helpers, don't inline a parallel resolver** (Q2);
+direct-graph-join works but the **mirror as `graph_df` is cheaper (~7 GiB vs ~200 GiB)** (Q3 — lean mirror,
+confirm w/ Sean); additive task group + edges mechanics fully mapped (self-served).
+**Still open — the Brian/Sean sync (see the plan's "Team questions"):** D1 split · D2 Sept-4 cut · Brian's L2
+branch location · monthly-snapshot wiring · **naming token** (`household_id` vs `mntn_id` vs `hh_`) · lookback-churn semantics.
+
 ### Clarify with Sean Yang (FS lead + ticket author, now on DS13/19) — before/early in the build
 1. **PR #1156 base + the `(ip,guid)` L1 table:** should the household `hh_` L2/L3 models build on your draft
    PR (airflow-ti #1156) or a fresh branch — and does its `(ip,guid)` L1 table stub anything I'd duplicate?
