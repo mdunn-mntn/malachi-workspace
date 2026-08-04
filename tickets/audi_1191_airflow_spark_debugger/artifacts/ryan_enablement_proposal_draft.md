@@ -1,4 +1,4 @@
-# Ryan enablement proposal (DRAFT — Malachi to send on Slack)
+# Ryan enablement proposal (DRAFT: Malachi to send on Slack)
 
 > Slack voice, BLUF. Sits in the ticket; not sent by the agent.
 
@@ -17,6 +17,6 @@ delivery, get-run-output has none). Turning event logs on fixes it:
   framework already warns it's off). Add `logBlockUpdates.enabled=true` for cache stats.
 - Databricks: `cluster_log_conf` on the job cluster, or enforce it on the cluster policy.
 
-Storage is cheap; I'll flag any history-server cost to Zach first. Once it's flowing I point the crawler
-at the GCS prefix for a ranked cross-job backlog. No prod code from me, just the flip — your call where.
-Config + rationale: `audi_1191_optimization_data_enablement.md`.
+Storage is cheap. Once it's flowing I point the crawler at the GCS prefix for a ranked cross-job backlog.
+No prod code from me, just the flip, your call where. Config + rationale:
+`audi_1191_optimization_data_enablement.md`.
