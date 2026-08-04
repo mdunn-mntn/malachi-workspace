@@ -1,29 +1,22 @@
 # Ryan enablement proposal (DRAFT — Malachi to send on Slack)
 
-> A short message to unblock the optimization half of AUDI-1191. Human/Slack voice, no bullets-heavy
-> Jira shape. Sits in the ticket so it's ready to send; not sent by the agent.
+> Slack voice, BLUF. Sits in the ticket; not sent by the agent.
 
 ---
 
-Hey Ryan — quick ask that unblocks the Spark optimization side of the debugger.
+Hey Ryan — can we turn Spark event logs on for one batch + one dbt model?
 
-I built the analyzer that reads a job's Spark event log and spits out ranked recommendations across
-three buckets: query/PR fixes (missing stats → ANALYZE TABLE, de-skew, right-size shuffle partitions),
-compute fixes (bump memory/on-demand, with the reason), and real failures to route. I validated it on
-real Spark event logs — it correctly catches skew, spill, spot-preemption cost, cache eviction, and pulls
-the per-operator SQL metrics.
+It's the one blocker for a Spark optimization tool I built: it reads a job's event log and returns ranked
+fixes (query/PR: missing stats, skew, shuffle partitions; compute: memory/on-demand with the reason;
+plus real failures to route). Validated on real event logs.
 
-The one thing missing is the fuel. Completed job clusters don't expose the plan/metrics anywhere I can
-read key-free (driver proxy is running-only, no log delivery, get-run-output has none of it). The fix is
-just turning event logs on:
+Completed jobs don't expose the plan/metrics any other key-free way (driver proxy is running-only, no log
+delivery, get-run-output has none). Turning event logs on fixes it:
 
-- Dataproc: set `spark.eventLog.enabled=true` + a GCS `spark.eventLog.dir` (+ `logBlockUpdates.enabled=true`
-  for cache stats) in the batch properties. The framework already warns when it's off.
-- Databricks: add `cluster_log_conf` to the job cluster (or enforce it on the cluster policy) so the
-  event log lands in GCS after the run.
+- Dataproc: `spark.eventLog.enabled=true` + a GCS `spark.eventLog.dir` in the batch properties (the
+  framework already warns it's off). Add `logBlockUpdates.enabled=true` for cache stats.
+- Databricks: `cluster_log_conf` on the job cluster, or enforce it on the cluster policy.
 
-Could we pilot it on one low-risk batch and one dbt model? Event-log storage is cheap; I'd flag any
-history-server cost to Zach before standing one up. Once it's flowing I point the crawler at the GCS prefix
-and we get a ranked cross-job backlog of the biggest wins. Full config + rationale is in the ticket
-(`audi_1191_optimization_data_enablement.md`). No prod code from me — just the config flip, your call on
-where.
+Storage is cheap; I'll flag any history-server cost to Zach first. Once it's flowing I point the crawler
+at the GCS prefix for a ranked cross-job backlog. No prod code from me, just the flip — your call where.
+Config + rationale: `audi_1191_optimization_data_enablement.md`.
