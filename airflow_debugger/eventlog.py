@@ -102,7 +102,15 @@ def _read_events(path: str) -> list:
     with open(path, "rb") as f:
         raw = f.read()
     text = _zstd_decompress(raw) if raw[:4] == b"\x28\xb5\x2f\xfd" else raw.decode("utf-8", "replace")
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
+    events = []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue  # tolerate a truncated/malformed final line (in-progress or crashed logs)
+    return events
 
 
 def _zstd_decompress(raw: bytes) -> str:

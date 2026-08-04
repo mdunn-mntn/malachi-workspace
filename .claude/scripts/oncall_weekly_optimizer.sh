@@ -37,8 +37,10 @@ trap 'rm -rf "$TMP"' EXIT
 
 # List the prefix by recency. A stale/absent/denied prefix is not an error here (enablement
 # may not be live yet) — we degrade to a "pending" note rather than failing the cron.
+# Only finalized .zstd logs — the crawler discards .inprogress, so including them wastes
+# the newest-N download budget and can pass the "0 downloaded" guard with a misleading report.
 listing="$(gsutil ls -l "${PREFIX}/**" 2>/dev/null \
-    | grep -E '\.zstd$|\.inprogress$' \
+    | grep -E '\.zstd$' \
     | sort -k2 \
     | awk '{print $NF}' \
     | tail -n "$CAP")"
