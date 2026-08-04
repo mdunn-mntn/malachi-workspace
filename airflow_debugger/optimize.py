@@ -15,14 +15,19 @@ _TYPE_ORDER = ["failure", "infra", "code"]
 _TYPE_LABEL = {"code": "CODE / query-PR", "infra": "INFRA / compute", "failure": "FAILURE / route"}
 
 
-def optimize_run(eventlog_path: str) -> list[OptFinding]:
-    """Parse an event log and return all optimization findings (plan + metrics), ranked."""
+def analyze_eventlog(eventlog_path: str) -> tuple:
+    """Parse an event log and return (SparkRun, ranked findings) - plan + metric detectors."""
     run = parse_eventlog(eventlog_path)
     findings = analyze_run(run)
     for s in run.sql:
         if s.plan_text:
             findings += analyze_plan(s.plan_text)
-    return _dedup_rank(findings)
+    return run, _dedup_rank(findings)
+
+
+def optimize_run(eventlog_path: str) -> list[OptFinding]:
+    """Parse an event log and return all optimization findings (plan + metrics), ranked."""
+    return analyze_eventlog(eventlog_path)[1]
 
 
 def _dedup_rank(findings: list[OptFinding]) -> list[OptFinding]:

@@ -12,7 +12,7 @@ import glob
 import os
 from dataclasses import dataclass, field
 
-from .optimize import optimize_run
+from .optimize import analyze_eventlog
 
 
 @dataclass
@@ -22,6 +22,7 @@ class JobReport:
     source: str
     findings: list = field(default_factory=list)
     error: str | None = None
+    app_name: str | None = None  # from spark.app.name - the human label for the job
 
     @property
     def n_high(self) -> int:
@@ -54,11 +55,12 @@ def crawl(paths: list[str]) -> list[JobReport]:
     """Run the optimizer on every event log; return per-job reports ranked worst-first."""
     reports = []
     for log in _event_logs(paths):
+        base = os.path.basename(log.rstrip("/"))
         try:
-            reports.append(JobReport(source=os.path.basename(log.rstrip("/")),
-                                     findings=optimize_run(log)))
+            run, findings = analyze_eventlog(log)
+            reports.append(JobReport(source=base, findings=findings, app_name=run.app_name))
         except Exception as e:  # a bad log must not sink the crawl
-            reports.append(JobReport(source=os.path.basename(log.rstrip("/")), error=str(e)[:120]))
+            reports.append(JobReport(source=base, error=str(e)[:120]))
     reports.sort(key=lambda r: r.score, reverse=True)
     return reports
 
@@ -78,7 +80,8 @@ def render_crawl(reports: list[JobReport]) -> str:
             continue
         top = r.findings[0]
         by_type = ", ".join(sorted({f.rec_type for f in r.findings}))
-        lines.append(f"- {r.source} [{r.n_high} high, {len(r.findings)} total; {by_type}] "
+        label = r.app_name or r.source
+        lines.append(f"- {label} [{r.n_high} high, {len(r.findings)} total; {by_type}] "
                      f"-> top: {top.title}")
     return "\n".join(lines)
 
