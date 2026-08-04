@@ -144,7 +144,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_hhst_pacing_lever | reference | 2026-07-29 | [doc](memory/reference_hhst_pacing_lever.md) |
 | reference_workflow_kit_porting | reference | 2026-07-29 | [doc](memory/reference_workflow_kit_porting.md) |
 | rubric_strategy | feedback | 2026-07-29 | [doc](memory/feedback_rubric_strategy.md) |
-| sparse_code_comments | feedback | 2026-07-29 | [doc](memory/feedback_sparse_code_comments.md) |
 | sprint_ready_plan | feedback | 2026-07-29 | [doc](memory/feedback_sprint_ready_plan.md) |
 | feedback_hold_evidenced_verdict | feedback | 2026-07-30 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_read_full_source_before_verdict | feedback | 2026-07-30 | [doc](memory/feedback_read_full_source_before_verdict.md) |
@@ -171,3 +170,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_plain_voice_internal_docs | feedback | 2026-08-04 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | project_airflow_debugger | project | 2026-08-04 | [doc](memory/project_airflow_debugger.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-04 | [doc](memory/reference_mntn_devops_permissions.md) |
+| sparse_code_comments | feedback | 2026-08-04 | [doc](memory/feedback_sparse_code_comments.md) |
