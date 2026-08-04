@@ -4,7 +4,7 @@
 
 ---
 
-Hey Ryan — can we turn Spark event logs on for one batch + one dbt model?
+Hey Ryan, can we turn Spark event logs on for one batch + one dbt model?
 
 It's the one blocker for a Spark optimization tool I built: it reads a job's event log and returns ranked
 fixes (query/PR: missing stats, skew, shuffle partitions; compute: memory/on-demand with the reason;
