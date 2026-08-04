@@ -48,9 +48,12 @@ airflow log ─▶ parse (identity + op_classpath→engine + job-id) ─▶ diag
 `signatures` taxonomy (21 fingerprints) · `parse` log router+synthesis · `context_parse` in-callback
 first-look (Airflow-free, key-free — the Phase-3 auto-fire tier) · `dataproc_rca` / `databricks_rca`
 analyzers · `incident_match` local matcher · `report` BLUF/STAR · `synth` LLM fallback · `orchestrate`
-entrypoint · `optimizations` Spark query-plan optimization detectors (use-case #2: efficiency on
-succeeded jobs too — `missing_statistics`, `shuffle_partition_sizing`, `broadcast_candidate`,
-`window_full_sort`, `repeated_scan`).
+entrypoint · `eventlog` full 7-surface Spark event-log parser (jobs/stages/tasks/executors/environment/
+SQL per-node metrics; handles `.zstd`) · `optimizations` optimization detectors over the plan text
+(`analyze_plan`: missing_statistics, shuffle_partition_sizing, broadcast_candidate, window_full_sort,
+repeated_scan) AND the event log (`analyze_run`: skew, disk_spill, gc_pressure, spot_preemption_cost,
+shuffle_fetch_instability) — emitting `code` / `infra` / `failure` recommendations with real metrics.
+Parser + detectors validated on a real Spark event log (`tests/fixtures/eventlog.zstd`).
 
 ## Notes
 

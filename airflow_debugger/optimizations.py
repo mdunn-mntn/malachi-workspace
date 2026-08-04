@@ -58,6 +58,7 @@ class OptFinding:
     impact: str  # high | medium | low
     evidence: str
     fix: str
+    rec_type: str = "code"  # code (query/PR) | infra (cores/memory) | failure (RCA)
 
 
 def parse_plan_text(text: str) -> ParsedPlan:
@@ -185,6 +186,90 @@ def analyze_plan(text: str) -> list[OptFinding]:
     rank = {"high": 0, "medium": 1, "low": 2}
     deduped.sort(key=lambda f: rank.get(f.impact, 3))
     return deduped
+
+
+def _gb(b: int) -> float:
+    return b / 1024**3
+
+
+def analyze_run(run: object) -> list[OptFinding]:
+    """Detectors over a parsed SparkRun (event log) - the metrics the plan text can't give.
+
+    Emits the three recommendation types: `code` (query/PR), `infra` (cores/memory), and
+    `failure` (a real fault to route). Each carries the real numbers as evidence.
+    """
+    out: list[OptFinding] = []
+    props = getattr(run, "spark_props", {}) or {}
+    parts = props.get("spark.sql.shuffle.partitions")
+
+    for s in run.stages:
+        spill = s.mem_spill + s.disk_spill
+        # SKEW - one task runs far longer than the median (invisible in the plan text).
+        if s.num_tasks >= 8 and s.skew_ratio >= 5:
+            out.append(OptFinding(
+                "skew", f"Stage {s.stage_id} skewed {s.skew_ratio:.1f}x (max vs median task)",
+                "high" if s.skew_ratio >= 10 else "medium",
+                f"{s.num_tasks} tasks, slowest is {s.skew_ratio:.1f}x the median - one partition holds "
+                "most of the data.",
+                "Salt the skewed join/group key or enable AQE skew join; a plain repartition will not "
+                "fix a value-skewed key.", rec_type="code"))
+        # SPILL - shuffle/agg spilled to disk; size partitions up (code) or memory (infra).
+        if spill >= 1024**3:
+            out.append(OptFinding(
+                "disk_spill", f"Stage {s.stage_id} spilled {_gb(spill):.1f} GiB",
+                "high" if spill >= 20 * 1024**3 else "medium",
+                f"Memory+disk spill {_gb(spill):.1f} GiB over {s.num_tasks} tasks - partitions exceed "
+                "executor memory.",
+                "Raise spark.sql.shuffle.partitions (smaller partitions) first; if it persists, raise "
+                "executor memory.", rec_type="code"))
+        # WIDE SHUFFLE at the default partition count.
+        if s.shuffle_write_bytes >= 50 * 1024**3:
+            want = max(1, round(s.shuffle_write_bytes / (256 * 1024**2)))
+            out.append(OptFinding(
+                "shuffle_partition_sizing",
+                f"Stage {s.stage_id} wide shuffle ({_gb(s.shuffle_write_bytes):.0f} GiB)",
+                "high", f"{_gb(s.shuffle_write_bytes):.0f} GiB shuffle write at "
+                f"shuffle.partitions={parts or 'default'}.",
+                f"Set spark.sql.shuffle.partitions ~{want} (~256 MiB each) or enable AQE coalesce.",
+                rec_type="code"))
+
+    # GC PRESSURE across the run - an infra (memory) signal.
+    run_ms = sum(s.run_time_ms for s in run.stages)
+    gc_ms = sum(s.gc_time_ms for s in run.stages)
+    if run_ms and gc_ms / run_ms >= 0.1:
+        out.append(OptFinding(
+            "gc_pressure", f"GC is {100 * gc_ms / run_ms:.0f}% of task time",
+            "high" if gc_ms / run_ms >= 0.2 else "medium",
+            f"{gc_ms / 1000:.0f}s GC of {run_ms / 1000:.0f}s task time - executors are memory-starved.",
+            "Raise executor memory / use memory-optimized workers; secondarily cut per-task data via "
+            "more partitions.", rec_type="infra"))
+
+    # SPOT PREEMPTION - failed tasks from reclaimed executors (an infra config choice).
+    preempted = [e for e in run.executors
+                 if e.removed_reason and any(t in e.removed_reason.lower()
+                                             for t in ("preempt", "spot", "lost", "decommission"))]
+    total_failed = sum(e.failed_tasks for e in run.executors)
+    if preempted and total_failed:
+        out.append(OptFinding(
+            "spot_preemption_cost",
+            f"{total_failed} task failures from {len(preempted)} reclaimed executors",
+            "high", f"Executors removed ({preempted[0].removed_reason}) forced {total_failed} task "
+            "re-runs - spot churn is costing wall-clock.",
+            "Raise first_on_demand / add on-demand fallback for this job, or checkpoint before the "
+            "long shuffle.", rec_type="infra"))
+
+    # FETCH-FAILED instability -> a real fault to route (failure), not just slow.
+    fetch = sum(s.fetch_failed for s in run.stages)
+    if fetch:
+        out.append(OptFinding(
+            "shuffle_fetch_instability", f"{fetch} FetchFailed tasks (shuffle instability)",
+            "high", f"{fetch} FetchFailed re-runs - lost executors/nodes or >2 GiB shuffle blocks.",
+            "Route as infra instability; reduce shuffle block size (more partitions) and check "
+            "node health / preemption.", rec_type="failure"))
+
+    rank = {"high": 0, "medium": 1, "low": 2}
+    out.sort(key=lambda f: rank.get(f.impact, 3))
+    return out
 
 
 if __name__ == "__main__":
