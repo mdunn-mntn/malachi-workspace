@@ -82,6 +82,21 @@ CASES = [
         "external_task_failed",
     ),
     (
+        # Real prod (2026-08-02, tpa_ipdsc_export/ipdsc_ds_67): DS67 model code bug - a bound
+        # method passed instead of its call result, so the bucket name is the method repr.
+        "prod_ds67_bound_method",
+        "IllegalArgumentException: Invalid GCS bucket name '<bound method BaseModel.write_location "
+        "of <class __main__.DS67>>': bucket name must contain only 'a-z0-9_.-' characters.",
+        "invalid_output_path_config",
+    ),
+    (
+        # Real prod downstream symptom (2026-08-03, tpa_mntn_id_export): missing ipdsc/ds67 partition.
+        "prod_missing_partition",
+        "FileNotFoundError: Missing required ipdsc partition at "
+        "gs://mntn-data-archive-prod/ipdsc/dt=2026-08-03/data_source_id=67",
+        "path_not_found_late_data",
+    ),
+    (
         # First live-fire catch (2026-08-02, vertical_classification_api): a dbt data-quality test.
         "live_dbt_test_fail",
         "Completed with 1 error ... Failure in test ddp_vertical_classification_api__failure_rate "

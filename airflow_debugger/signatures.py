@@ -112,13 +112,24 @@ SIGNATURES: list[Signature] = [
         "no",
     ),
     Signature(
+        "invalid_output_path_config",
+        r"Invalid GCS bucket name|bucket name must contain only|<bound method|"
+        r"IllegalArgumentException.{0,80}(bucket|path|location)",
+        "code/config-error",
+        "A model produced an invalid output path/bucket - often a Python bug where a method "
+        "reference (e.g. write_location) is passed instead of its call result write_location(), "
+        "so the bucket becomes the method's repr. A real code fix in the model, not a re-run.",
+        "yes",
+    ),
+    Signature(
         "path_not_found_late_data",
         r"PATH_NOT_FOUND|Path does not exist|path does not exist.{0,60}gs://|"
-        r"AnalysisException.{0,40}(PATH_NOT_FOUND|does not exist)",
+        r"AnalysisException.{0,40}(PATH_NOT_FOUND|does not exist)|"
+        r"Missing( required)?.{0,30}partition|Missing required.{0,40}at gs://",
         "late-data/missing-partition",
         "A source partition the job reads (e.g. gs://.../dt=<run_date>) has not landed yet. "
-        "Usually the upstream producer runs late (timing race), not a code bug; verify the "
-        "partition + _SUCCESS then re-run the consumer, else re-run the producer.",
+        "Usually the upstream producer runs late or FAILED (timing race or a broken producer); "
+        "verify the partition + _SUCCESS then re-run the consumer, else fix/re-run the producer.",
         "no",
     ),
     Signature(
