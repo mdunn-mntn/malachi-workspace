@@ -88,7 +88,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_minimize_complexity | feedback | 2026-07-22 | [doc](memory/feedback_minimize_complexity.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-07-22 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
 | feedback_no_unsolicited_suggestions | feedback | 2026-07-22 | [doc](memory/feedback_no_unsolicited_suggestions.md) |
-| feedback_plain_voice_internal_docs | feedback | 2026-07-22 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | reference_audience_intent_scoring_dag | reference | 2026-07-22 | [doc](memory/reference_audience_intent_scoring_dag.md) |
 | reference_mntn_campaign_stages | reference | 2026-07-22 | [doc](memory/reference_mntn_campaign_stages.md) |
 | feedback-adversarial-workflow-authoring | feedback | 2026-07-23 | [doc](memory/feedback_adversarial_workflow_authoring.md) |
@@ -170,4 +169,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | databricks | reference | 2026-08-03 | [doc](memory/reference_databricks.md) |
 | project_airflow_debugger | project | 2026-08-03 | [doc](memory/project_airflow_debugger.md) |
 | reference_holdout_lift_lineage | reference | 2026-08-03 | [doc](memory/reference_holdout_lift_lineage.md) |
+| feedback_plain_voice_internal_docs | feedback | 2026-08-04 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-04 | [doc](memory/reference_mntn_devops_permissions.md) |
