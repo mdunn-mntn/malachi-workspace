@@ -3,9 +3,20 @@
 Event logging is **off right now** (Ryan turned it off after the Nov-2025 test). This is how to turn it
 back on so the optimizer gets live fuel, per Ryan's walk-through.
 
-**STATUS: PR OPEN — [SteelHouse/airflow-ti#1169](https://github.com/SteelHouse/airflow-ti/pull/1169)**
+**STATUS: PR OPEN + DEV-VALIDATED — [SteelHouse/airflow-ti#1169](https://github.com/SteelHouse/airflow-ti/pull/1169)**
 (Dataproc eventLog + PHS removal + the 2 extras, one PR; awaiting Ryan review/merge, 2026-08-04). The
 Databricks half (below) and the TTL are still separate/pending.
+
+**Dev end-to-end validation (2026-08-04):** deployed to dev, ran `feature_store_hourly` → **the dev SA
+writes real event logs to `gs://mntn-data-archive-dev/spark-events`** (`app-*.zstd`, multi-MB, growing
+live). SA-write confirmed. Two prod-breaking bugs were caught in dev and fixed in the PR before merge:
+1. **`airflow.sdk.Variable.get` takes `default=`, NOT `default_var=`** (Airflow 3 SDK; the classic
+   `airflow.models.Variable` used `default_var`). Wrong kwarg → `TypeError` in `execute()` before submit →
+   would have failed **every** prod Dataproc DAG. Fixed.
+2. **Dataproc Serverless REJECTS `spark.eventLog.logBlockUpdates.enabled`** (`INVALID_ARGUMENT: unsupported
+   properties`). Only `enabled`/`dir`/`compress` are accepted. **Consequence: the RDD block-update /
+   cache-storage surface is NOT capturable via Dataproc Serverless event logs** (the `cache_ineffective`
+   detector has no data on Dataproc). Dropped the property.
 
 ## Dataproc (GCP) — the main path
 
