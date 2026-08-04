@@ -64,8 +64,21 @@ def test_infra_and_failure_recommendation_types() -> None:
     assert ("cache_ineffective", "infra") in keys
 
 
+def test_optimize_entrypoint_end_to_end() -> None:
+    """The one-call entrypoint parses the real log and renders a grouped report."""
+    from airflow_debugger.optimize import optimize_run, render_report
+
+    findings = optimize_run(FIXTURE)
+    assert any(f.key == "skew" for f in findings)
+    report = render_report(findings)
+    assert "CODE / query-PR" in report
+    assert "skew" in report.lower()
+
+
 if __name__ == "__main__":
     test_parse_real_eventlog_all_surfaces()
+    test_parse_storage_surface_real()
+    test_optimize_entrypoint_end_to_end()
     test_detectors_flag_skew_on_real_run()
     test_infra_and_failure_recommendation_types()
     print("OK - eventlog parser + detectors validated on a real Spark event log")
