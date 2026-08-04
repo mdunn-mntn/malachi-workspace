@@ -81,7 +81,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mm_vs_3p_scorecard | reference | 2026-07-21 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
 | reference_mntn_brand_assets | reference | 2026-07-21 | [doc](memory/reference_mntn_brand_assets.md) |
 | reference_mode_dashboard_porting | reference | 2026-07-21 | [doc](memory/reference_mode_dashboard_porting.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-07-22 | [doc](memory/reference_airflow_ti.md) |
 | audi-1089-ddp-evals | project | 2026-07-22 | [doc](memory/project_audi_1089_ddp_evals.md) |
 | audi-1111-vendor-quality | project | 2026-07-22 | [doc](memory/project_audi_1111_vendor_quality.md) |
 | fangorn-tier-assignment | reference | 2026-07-22 | [doc](memory/reference_fangorn_tier_assignment.md) |
@@ -167,7 +166,8 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mntn_matched_batch_pipeline | reference | 2026-07-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_ruff_code_standards | reference | 2026-07-31 | [doc](memory/reference_ruff_code_standards.md) |
 | databricks | reference | 2026-08-03 | [doc](memory/reference_databricks.md) |
-| project_airflow_debugger | project | 2026-08-03 | [doc](memory/project_airflow_debugger.md) |
 | reference_holdout_lift_lineage | reference | 2026-08-03 | [doc](memory/reference_holdout_lift_lineage.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-08-04 | [doc](memory/reference_airflow_ti.md) |
 | feedback_plain_voice_internal_docs | feedback | 2026-08-04 | [doc](memory/feedback_plain_voice_internal_docs.md) |
+| project_airflow_debugger | project | 2026-08-04 | [doc](memory/project_airflow_debugger.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-04 | [doc](memory/reference_mntn_devops_permissions.md) |
