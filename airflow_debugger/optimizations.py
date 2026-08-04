@@ -258,6 +258,17 @@ def analyze_run(run: object) -> list[OptFinding]:
             "Raise first_on_demand / add on-demand fallback for this job, or checkpoint before the "
             "long shuffle.", rec_type="infra"))
 
+    # CACHE eviction - a persisted RDD got evicted (memory pressure) so it recomputes.
+    if getattr(run, "rdd_evictions", 0) > 0:
+        out.append(OptFinding(
+            "cache_ineffective",
+            f"Cached data evicted {run.rdd_evictions}x (cache under memory pressure)",
+            "medium",
+            f"{run.rdd_evictions} cached RDD blocks were dropped ({_gb(run.cached_rdd_bytes):.1f} GiB "
+            "still cached) - an evicted cache is recomputed on the next read.",
+            "Raise executor/storage memory, use MEMORY_AND_DISK, or cache a narrower projection so the "
+            "working set fits.", rec_type="infra"))
+
     # FETCH-FAILED instability -> a real fault to route (failure), not just slow.
     fetch = sum(s.fetch_failed for s in run.stages)
     if fetch:

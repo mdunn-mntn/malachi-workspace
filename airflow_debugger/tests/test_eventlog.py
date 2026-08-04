@@ -13,6 +13,7 @@ from airflow_debugger.eventlog import ExecutorInfo, SparkRun, StageMetrics, pars
 from airflow_debugger.optimizations import analyze_run
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "eventlog.zstd")
+CACHE_FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "eventlog_cache.zstd")
 
 
 def test_parse_real_eventlog_all_surfaces() -> None:
@@ -32,6 +33,13 @@ def test_parse_real_eventlog_all_surfaces() -> None:
                for s in run.sql for m in s.node_metrics)
 
 
+def test_parse_storage_surface_real() -> None:
+    """The storage surface (cached RDD blocks + bytes) is recovered from BlockUpdated events."""
+    run = parse_eventlog(CACHE_FIXTURE)
+    assert run.rdd_cached_blocks > 0
+    assert run.cached_rdd_bytes > 0
+
+
 def test_detectors_flag_skew_on_real_run() -> None:
     """analyze_run surfaces the skew as a code-type finding on the real log."""
     findings = analyze_run(parse_eventlog(FIXTURE))
@@ -40,7 +48,8 @@ def test_detectors_flag_skew_on_real_run() -> None:
 
 def test_infra_and_failure_recommendation_types() -> None:
     """A crafted run exercises the infra (GC, spot) and failure (fetch) recommendation types."""
-    run = SparkRun(spark_props={"spark.sql.shuffle.partitions": "200"})
+    run = SparkRun(spark_props={"spark.sql.shuffle.partitions": "200"}, rdd_evictions=5,
+                   cached_rdd_bytes=40 * 1024**3)
     run.stages = [
         StageMetrics(stage_id=1, num_tasks=100, run_time_ms=100_000, gc_time_ms=30_000,
                      fetch_failed=12, mem_spill=30 * 1024**3),
@@ -52,6 +61,7 @@ def test_infra_and_failure_recommendation_types() -> None:
     assert ("spot_preemption_cost", "infra") in keys
     assert ("shuffle_fetch_instability", "failure") in keys
     assert ("disk_spill", "code") in keys
+    assert ("cache_ineffective", "infra") in keys
 
 
 if __name__ == "__main__":

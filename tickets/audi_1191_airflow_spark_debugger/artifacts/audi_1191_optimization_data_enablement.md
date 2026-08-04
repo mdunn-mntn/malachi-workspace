@@ -26,6 +26,9 @@ it just isn't being written.
    - `spark.eventLog.enabled=true`
    - `spark.eventLog.dir=gs://<mntn-dataproc-event-logs>/<env>/`
    - `spark.eventLog.compress=true` (the `.zstd` the profiler already expects)
+   - `spark.eventLog.logBlockUpdates.enabled=true` — **required for the Storage/cache surface**
+     (cached RDD bytes + evictions come from `BlockUpdated` events, which the log omits by default;
+     verified 2026-08-03). Slightly more verbose; enable where cache-effectiveness matters.
    → the event log lands in GCS; `eventlog_profiler.py` reads it → full spill/skew/recompute metrics.
 2. **Historical retention:** attach a **persistent Spark History Server** via
    `peripherals_config.spark_history_server_config` — the config shape ALREADY exists at

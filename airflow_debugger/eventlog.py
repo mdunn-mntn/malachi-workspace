@@ -87,6 +87,10 @@ class SparkRun:
     executors: list = field(default_factory=list)
     sql: list = field(default_factory=list)
     jobs: int = 0
+    # storage surface (needs spark.eventLog.logBlockUpdates.enabled=true, else zeros)
+    cached_rdd_bytes: int = 0
+    rdd_cached_blocks: int = 0
+    rdd_evictions: int = 0
 
 
 def _read_events(path: str) -> list:
@@ -140,6 +144,8 @@ def parse_eventlog(path: str) -> SparkRun:
     execs: dict[str, ExecutorInfo] = {}
     acc_values: dict[int, int] = {}  # accumulatorId -> value, for SQL node metrics
     plan_infos: dict[int, dict] = {}
+    block_cached: dict[str, bool] = {}  # rdd block -> currently cached (storage surface)
+    block_bytes: dict[str, int] = {}
     app_start = app_end = None
 
     def stage(sid: int) -> StageMetrics:
@@ -190,11 +196,15 @@ def parse_eventlog(path: str) -> SparkRun:
             for pair in e.get("accumUpdates", []):
                 if isinstance(pair, list) and len(pair) == 2:
                     acc_values[pair[0]] = _num(pair[1])
+        elif ev == "SparkListenerBlockUpdated":
+            run.rdd_evictions += _block_updated(e, block_cached, block_bytes)
 
     for s in run.sql:
         if s.exec_id in plan_infos:
             s.node_metrics = _plan_node_metrics(plan_infos[s.exec_id], acc_values)
 
+    run.cached_rdd_bytes = sum(block_bytes.values())
+    run.rdd_cached_blocks = sum(1 for v in block_cached.values() if v)
     if app_start and app_end:
         run.duration_ms = app_end - app_start
     run.stages = sorted(stages.values(), key=lambda s: s.stage_id)
@@ -207,6 +217,20 @@ def _num(v: object) -> int:
         return int(float(str(v).replace(",", "").split()[0]))
     except (ValueError, IndexError):
         return 0
+
+
+def _block_updated(e: dict, block_cached: dict, block_bytes: dict) -> int:
+    """Track a cached RDD block's state; return 1 if it was just evicted, else 0."""
+    bi = e.get("Block Updated Info", {}) or {}
+    bid = bi.get("Block ID", "")
+    if not bid.startswith("rdd_"):
+        return 0
+    sl = bi.get("Storage Level", {}) or {}
+    cached = bool(sl.get("Use Memory") or sl.get("Use Disk"))
+    evicted = 1 if (block_cached.get(bid) and not cached) else 0
+    block_cached[bid] = cached
+    block_bytes[bid] = (bi.get("Memory Size", 0) + bi.get("Disk Size", 0)) if cached else 0
+    return evicted
 
 
 def _task_end(e: dict, stage: Callable, execu: Callable) -> None:
