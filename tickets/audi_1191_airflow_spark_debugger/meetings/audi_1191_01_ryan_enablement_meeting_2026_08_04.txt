@@ -1,0 +1,293 @@
+[00:00] Until it gets to the point where it's like all of the outputs are vetted and stuff.
+[00:08] But I've already tested it against a few things.
+[00:10] It's working pretty good.
+[00:11] So the only drawback is that in order for me to run it, I have to authenticate through SSO.
+[00:17] so if there
+[00:19] if it is valuable and ends up being
+[00:22] something we want to use
+[00:23] we'll have to see
+[00:26] if we can get some
+[00:27] API key stuff
+[00:30] set up so that
+[00:32] it can just automate
+[00:33] yeah
+[00:36] that's what
+[00:38] all that one repo I gave you
+[00:40] does or if you write
+[00:42] to that spark events folder it could read
+[00:44] that you know
+[00:45] And then, and it's just, oh yeah, it's an API, but you know, or it's like, it's an MCP tool.
+[00:52] And so like people could use it and you could get a red or you have DevOps help you register.
+[00:59] And then anybody can use it like the base camp, like what base camp does.
+[01:02] Or that, that would be cool.
+[01:04] Actually, if you got to like somehow worked into base camp, maybe, you know, but.
+[01:09] Yeah.
+[01:09] And one of the big things, too, that I wanted to do was not just the logging, but also efficiency and optimization.
+[01:18] So, like, I know we don't have time to always check out all those things because we develop stuff so fast.
+[01:23] But, for example, it takes in all the ‑‑ it's not just taking in logging issues.
+[01:29] It's also taking in, like, the query.
+[01:33] Yeah.
+[01:33] You know, just the job information and just identifying stuff that, you know, is low hanging fruit.
+[01:42] Like, for example, one of the there's a pretty huge update we can make on one of the vertical categorization stuff.
+[01:51] There's some sort of join and it's really skew the very first one.
+[01:55] And so we could just change one of the, just set one of the query parameters saying that it's a skew join and it should make it more efficient.
+[02:05] So anyways, there's just like a lot of stuff that it can like.
+[02:08] Dude, that's awesome.
+[02:09] Can you show me what you got maybe?
+[02:12] And then I can.
+[02:13] Yeah, I mean, I don't really have anything going on right now.
+[02:16] Like so far, I've just, the only thing I've done is just edit it in my VS code.
+[02:24] so I mean I could show you how it works essentially
+[02:28] I took a screenshot this morning
+[02:31] but yeah I mean the answer to that is I don't have that
+[02:36] yet but I will get to the point where I can and then I'd love to show you
+[02:40] like all the steps in it but right now I've just been prompting away
+[02:44] for the most part. Yeah that's fine let me just show you the caveat
+[02:48] this is the persistent history cluster that
+[02:52] Dustin set up.
+[02:59] And this is just a data
+[03:01] proc cluster that's always running.
+[03:06] And so that's where when you look at one of these jobs,
+[03:10] let's see, loading batches.
+[03:15] So when I left off, so if we look at one that
+[03:18] succeeded. Okay, well, this one didn't enable it.
+[03:22] But if you find one, like if this
+[03:26] view Spark history server is not grayed out,
+[03:29] that cluster, it's like using that cluster.
+[03:37] So if you
+[03:37] go to... So basically the caveat
+[03:42] is you can't set that option that you're talking about, Spark event logs.
+[03:46] and use the history cluster at the same time.
+[03:55] Okay.
+[03:57] So that's the caveat.
+[03:58] So which, yeah, anyway, I don't know if, I mean, yeah.
+[04:04] The Spark events bucket has 51 logs in it
+[04:08] from like a week in November.
+[04:11] So it looks like it was turned on and then off.
+[04:13] yeah because I turned it off after
+[04:17] and let's
+[04:17] I think there's more if you
+[04:21] oh shoot I was just
+[04:23] there
+[04:23] yeah
+[04:27] because that's what I was messing around with
+[04:29] but you should be able to write
+[04:33] from there I have
+[04:35] I had to set the permissions up
+[04:37] so that our
+[04:39] airflow TI could write there
+[04:41] oh where's that oh yeah right here
+[04:43] so you should be able to just
+[04:46] set that
+[04:47] and then
+[04:48] let me show you something because there's
+[04:51] folders I was having all sorts
+[04:54] of trouble like
+[04:55] I wanted it compressed and we
+[04:58] should also set a life cycle on that
+[05:00] you know like delete it after
+[05:02] we could do like delete on
+[05:03] age 30 or something
+[05:05] on spark events yeah 30 days
+[05:08] and then
+[05:10] Come on.
+[05:12] Can I delete the two stale
+[05:14] in progress files in there?
+[05:17] Yeah, you can delete everything in here, dude.
+[05:19] See, so there's
+[05:21] folders in here. I started putting them in folders.
+[05:23] So yeah, there's these
+[05:24] compressed
+[05:27] ones and then I also
+[05:28] started putting them in folders. So if you look in here,
+[05:32] yeah,
+[05:33] there's like multiple events,
+[05:35] you know, or
+[05:37] whatever.
+[05:37] so or maybe just have your
+[05:41] or yeah maybe leave
+[05:43] a couple then you can be like
+[05:44] have cursor or whatever take a look at
+[05:47] those and see
+[05:48] if it wants to like copy that
+[05:50] or what it wants to do I don't know
+[05:52] so
+[05:55] okay so yeah you would set
+[05:57] that to
+[05:59] spark events you know
+[06:00] but then any of the
+[06:03] you're gonna run into
+[06:05] issues with any of the airflow
+[06:07] OTI code that is
+[06:09] you know, that is
+[06:11] that's using that. You just
+[06:16] look for persistent history cluster and you'll see there's some
+[06:21] jobs that have that set. So you'd have to turn that off, which I don't think
+[06:25] is a big deal because I don't know anybody.
+[06:28] Yeah.
+[06:30] Oh, okay. Yeah, I see.
+[06:33] okay
+[06:35] I guess this uses it
+[06:38] the IPDSC job
+[06:39] okay
+[06:41] but
+[06:43] audience intent yeah see I commented
+[06:46] it out because I was using it but then I
+[06:48] wanted to like get that stuff working
+[06:50] so
+[06:52] but just so just
+[06:54] that's the main caveat just keep
+[06:56] that in mind the only person I know that really
+[06:58] used that a lot was Victor though
+[07:00] so okay
+[07:01] since he's gone
+[07:03] yeah
+[07:06] so looks like the event logging is
+[07:09] so the event logging is not on and you were saying
+[07:11] that if you turn that on you can't do
+[07:13] yeah
+[07:15] correct you can't do both
+[07:17] it'll throw an error
+[07:19] saying you can't
+[07:21] do both
+[07:22] sorry the other one is the
+[07:25] the history
+[07:28] no sorry you said
+[07:31] what are the two things that you can't do
+[07:35] concurrently?
+[07:36] You can't do
+[07:37] you can't
+[07:39] do this
+[07:41] and
+[07:43] which one
+[07:46] one of your settings
+[07:47] and this
+[07:49] okay
+[07:52] okay I got you
+[07:55] at the same time
+[07:56] but I don't think that matters
+[07:59] but
+[08:00] But, or like kind of what you're, yeah, just so you know, like what you're doing, the route you're going down is like making your own kind of Spark UI.
+[08:09] You're going to start to like realize that, oh, this is what I'm doing.
+[08:13] I'm having, because that's how the persistent history cluster, it grabs the logs, you know?
+[08:21] And so that's kind of like the route you're going down is you're trying to make a better Spark UI.
+[08:25] or maybe not that, you know, but add, you know, honestly,
+[08:32] if they just added AI to that, to the persistent history cluster,
+[08:38] let's, and, you know, or yeah, maybe let's find one of the IPDSC jobs.
+[08:44] Yeah, because one of the questions I had is that the Databricks job clusters
+[08:49] don't persist event logs.
+[08:51] So it needs cluster log.
+[08:53] that's what it says, yeah, cluster log
+[08:56] or some policy if we want them.
+[08:59] So I don't know who we would ask to set that up
+[09:02] or if we could set that up ourselves.
+[09:06] Or just set that setting.
+[09:08] Just set that setting.
+[09:09] Don't forget about.
+[09:10] And if there's a job that you want to go,
+[09:12] just set that setting.
+[09:14] I can change the setting myself.
+[09:17] Yeah, yeah, yeah.
+[09:17] You do it in.
+[09:18] Yeah, you do it.
+[09:19] I might even have it commented out in some of my code.
+[09:28] Yeah, but it's just a Spark setting.
+[09:33] You know, so you'll set it.
+[09:37] Yeah, but I've seen something called cluster underscore log underscore config.
+[09:46] I don't know.
+[09:47] I thought it was a policy thing or something.
+[09:49] like i don't know i thought like i thought that it had something to do with like something you
+[09:53] set up an admin with databricks like where oh well okay this isn't a data this this this yeah
+[10:00] not databricks yeah i was talking about databricks for um this other thing that i have to give
+[10:07] oh yeah yeah no that's okay though sorry i i said something unrelated um but yeah i technically need
+[10:15] that for Databricks. And then this is correct.
+[10:17] For the GCP stuff,
+[10:19] you're...
+[10:21] It's just that they're slightly different because we have it
+[10:22] running in two different places.
+[10:24] Yeah, you'll have to fight
+[10:26] with Databricks stuff then.
+[10:28] Because you won't have access.
+[10:32] You'll just...
+[10:32] Yeah, you'll have to figure that out.
+[10:34] I don't think the Databricks user will have access
+[10:36] to write to this folder
+[10:39] either. So you'll have to do
+[10:40] DevOps ticket.
+[10:42] Just so you know.
+[10:43] okay so yeah that's gonna get a little more complicated and i don't even know
+[10:48] if databricks will allow you to set that setting because they assume like to because the thing is
+[10:56] you're going to ship all the logs to a different location you know what i mean yeah and then so
+[11:01] if it doesn't know where to pull them yeah this is like the history club you know this is like
+[11:05] history.
+[11:08] So, but yeah,
+[11:09] you, so you got some work ahead of you,
+[11:11] but,
+[11:12] or if you could think of a different way
+[11:15] where maybe you could just
+[11:17] give your tool this
+[11:19] URL,
+[11:21] you know, and it can
+[11:22] grab the things it needs
+[11:25] from here.
+[11:27] You know, maybe that's easier.
+[11:31] You know what I mean?
+[11:35] and then does that make sense or whatever yeah yeah that does make sense sorry i don't keep it
+[11:42] much and then and then the other things i was mentioning is you might want the explain plan
+[11:46] which is in details here i don't know if it always it's in the log somewhere obviously
+[11:54] because it pulls yeah i collected that stuff too yeah and then and then you might want the script
+[11:59] you know because somebody might be like oh you know i changed the script slightly they might
+[12:05] you know they might want to know or you know they're gonna they're gonna use your ai apply
+[12:11] the recommendation change the script run it again that they won't know they'll start to get confused
+[12:16] which version of the script you know or they might want to try two different things uh-huh so that's
+[12:22] that's the things i would add to your to whatever to explain plan which tells you a lot and then
+[12:28] the script.
+[12:31] Anyway, I'll shut up now.
+[12:33] No, this is all good. You answered all the questions
+[12:35] I had. I just wanted to double check.
+[12:37] It sounds like I need to talk to DevOps about the Databricks
+[12:39] side of the log stuff
+[12:41] and then I will
+[12:43] look into the whole persistent
+[12:45] history cluster and then the other thing
+[12:47] at the same time.
+[12:49] Just try it first. Don't even talk to DevOps.
+[12:51] Dude, I just...
+[12:53] Nowadays, I just download the...
+[12:55] Just get them out in DevOps repo
+[12:57] and then have cursor build you a PR to get you permissions and then send it
+[13:02] DevOps. That's all I ever do.
+[13:04] I don't even bother DevOps anymore if I have, unless I have to.
+[13:08] Oh really?
+[13:09] Yeah. Cause there it's DevOps is like the new DBAs.
+[13:14] They're there just to block you.
+[13:17] You know what I mean? So like, it's better if you,
+[13:19] it's better if you come out on with a PR and Christina's really good.
+[13:22] And I just give her like a, like, Hey, my bot said this,
+[13:26] I need this permissions to like, you know, write up spark logs to this directory.
+[13:29] Can you check it out? And she'll approve it most of the time.
+[13:33] Oh, so you actually just have them be a approver of the PR.
+[13:38] Yeah, exactly. And as soon as she approves it, you merge it,
+[13:42] it deploys itself and then you're good.
+[13:45] Gotcha. Okay.
+[13:47] Step cursor, give you just enable that setting,
+[13:52] see what error pops out. And then yeah,
+[13:55] to just have cursor make you a mountain devops pr
+[13:59] okay yeah um all right that's perfect ryan um i will update that and yeah i think it's i'm not
+[14:11] putting this as like a big ticket because it's like i just kind of want to work on it without
+[14:14] anybody telling me not to do it so no i know that's exactly how i did yeah keep going you
+[14:19] just keep going so i'm gonna do it until it's finished and then once it's all like
+[14:23] tested and it looks nice then I'm gonna be like hey guys I got this cool thing to share with
+[14:28] everybody so yeah dude that's great not we we have yeah we we build our graph and data bricks
+[14:34] so yeah we would use that too we ours or but the identity team they use Scala Spark so maybe
+[14:41] if you could think about and making sure it works for Scala Spark or whatever that'd be great but
+[14:48] Yeah.
+[14:49] Whatever.
+[14:50] But yeah, I worked on PySpark first, because that's what almost everybody uses.
+[14:55] Okay.
+[14:56] All right, Ryan.
+[15:00] Thank you.
+[15:01] Good luck, dude.
+[15:02] Yep.
+[15:03] Take care.
+[15:04] All right.
