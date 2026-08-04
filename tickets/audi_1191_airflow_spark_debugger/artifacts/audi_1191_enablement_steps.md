@@ -3,6 +3,10 @@
 Event logging is **off right now** (Ryan turned it off after the Nov-2025 test). This is how to turn it
 back on so the optimizer gets live fuel, per Ryan's walk-through.
 
+**STATUS: PR OPEN — [SteelHouse/airflow-ti#1169](https://github.com/SteelHouse/airflow-ti/pull/1169)**
+(Dataproc eventLog + PHS removal + the 2 extras, one PR; awaiting Ryan review/merge, 2026-08-04). The
+Databricks half (below) and the TTL are still separate/pending.
+
 ## Dataproc (GCP) — the main path
 
 **Key constraint (Ryan):** you CANNOT run `spark.eventLog.enabled=true` AND the persistent history
@@ -10,16 +14,17 @@ cluster on the same batch — Dataproc throws an error. Pick one. Both produce r
 (the PHS is really just aggregating the same logs + serving a Spark UI — "the route you're going down is
 your own AI Spark UI").
 
-**Recommended: `spark.eventLog.enabled` → `spark-events`** (lighter; my crawler already reads that prefix):
-1. In the batch `runtime_properties` (the model's `@compute.dataproc_batch(...)`), set:
-   - `spark.eventLog.enabled=true`
-   - `spark.eventLog.dir=gs://mntn-data-archive-prod/spark-events`
-   - `spark.eventLog.compress=true`
-   - (for cache stats) `spark.eventLog.logBlockUpdates.enabled=true`
-2. **Turn OFF the persistent history cluster** on the few jobs that set it — grep `persistent_history_cluster`:
-   `ipdsc` job (`include/spark/data_source/ipdsc_emr_cluster.py:67-69`) uses it; `audience_intent` has it
-   commented out. Ryan: only Victor used it and he's gone, so removing it is low-risk.
-3. The GCS write perm is already set up (Ryan configured airflow-ti to write to `spark-events`).
+**Recommended: `spark.eventLog.enabled` → `spark-events`** (lighter; my crawler already reads that prefix).
+**How PR #1169 actually did it** (better than per-model: there are 72 `@compute.dataproc_batch` models):
+1. **Central injection in the batch operator** — `ModelPysparkBatchOperator.execute` (`include/models/operators.py`)
+   already injects `MNTN_RUNTIME_ENV` per submit; added the 4 eventLog props there so all 72 decorator models
+   inherit them. **Env-aware dir** `gs://mntn-data-archive-{prod|dev}/spark-events` (dev logs stay out of the prod
+   crawl). **Kill switch** Variable `SPARK_EVENT_LOG_ENABLED=false` disables fleet-wide with no revert.
+2. **ipdsc/tpa raw path** (`ipdsc_emr_cluster.py`, not decorator-based) — added the same 4 props to `get_config`
+   (env-threaded) AND **removed the `peripherals_config.spark_history_server_config` (PHS)**, the only live PHS
+   attachment (audience_intent already commented). That is the mutual-exclusion resolution.
+3. GCS write perm already set (Ryan). **Not in the PR (follow-ups):** audience_intent raw batch, the 3
+   `dataproc_workflow` templates, Databricks (below).
 
 **Alternative Ryan floated:** instead of writing+reading event logs, point the tool at the History Server
 URL and pull what it needs from there. (More infra; the eventLog route is simpler for the optimizer.)
