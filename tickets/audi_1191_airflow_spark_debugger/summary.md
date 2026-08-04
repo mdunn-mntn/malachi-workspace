@@ -160,6 +160,10 @@ Build in progress. Code home: `airflow_debugger/` package in the workspace (key-
 
 **Remaining in Phase 3 (gated on Ryan review + live-trust):** land the off-worker event consumer, open the default-off airflow-ti feature-branch PR (never push main), then flip `DEBUGGER_AUTOFIRE` one team at a time. Sanctioned Slack threaded-reply + propose-only PR + adversarial reviewer stay separately gated until the read-only RCA is trusted in real use.
 
+### Post-meeting execution (2026-08-04) — #2 patch drafted + #7 weekly crawl live
+- **#7 Weekly optimizer cron (DONE, mine):** `.claude/scripts/oncall_weekly_optimizer.sh` pulls the newest event logs from `gs://mntn-data-archive-prod/spark-events` (key-free gsutil, `check_hashes=never`, bounded to newest 40 one-at-a-time), runs `airflow_debugger.crawl`, writes a ranked cross-job backlog to `outputs/optimizer_backlog_<date>.md`. Idles gracefully with **no git noise** until enablement lands (empty/denied prefix → exit 0). Launchd agent `com.mntn.weekly-spark-optimizer` loaded (Mon 11:00 PT, `plutil -lint` OK). Tested in local mode on the 13 real prod logs: 13 jobs, 34 findings, 10 high-impact, 242x skew ranked first.
+- **#2 BaseModel observe patch (DRAFTED for Ryan's PR):** the 2 extras already exist as methods in `spark_job_monitor.py`; the fix is to **invoke the existing monitor once from the shared `df_write` path** via a guarded `BaseModel._observe_output(df)` + one line per concrete `df_write` (5 write paths; read-only skipped). Zero model-file edits, cannot fail a write, `MNTN_SPARK_OBSERVE=0` off-switch, deferred import (compile-mode safe). Full diff + test plan: `artifacts/audi_1191_basemodel_observe_patch.md`. Bundles into the step-#1 eventLog PR. **Not applied to airflow-ti** (repo on an unrelated branch; Ryan merges).
+
 ## 6. Questions Answered
 - **Q:** Extend an existing ticket or create new? **A:** Frame this existing AUDI-1191 shell as the single build ticket (user decision, 2026-08-03). AUDI-1170 is unrelated (Fangorn household FS).
 - **Q:** Dataproc-first or both engines? **A:** Both in parallel; Databricks access front-loaded as a Phase-0 prerequisite.

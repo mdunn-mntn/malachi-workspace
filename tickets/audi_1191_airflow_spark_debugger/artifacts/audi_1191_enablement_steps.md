@@ -35,12 +35,17 @@ folder either. Ryan's path (skip waiting on DevOps):
    approves, it self-deploys"). Don't file a blocking DevOps ticket first.
 3. If GCS delivery is blocked, fall back to giving the tool the Databricks History Server URL to read from.
 
-## The 2 extras (Ryan) — add to the models
+## The 2 extras (Ryan) — DRAFTED, see `audi_1191_basemodel_observe_patch.md`
+- Both methods **already exist** in `utils_model/spark_job_monitor.py` (`log_execution_plan`,
+  `log_script_content`). The gap was that nothing calls them unless a model wires a monitor by hand.
 - **`log_execution_plan(df)`** — the explain plan "tells you a lot" (Optimized/Analyzed + missing-stats
   advisory the raw event log lacks). I already pull the physical plan from the event log; this adds the rest.
 - **`log_script_content(__file__)`** — **for version tracking**: once someone applies the tool's
   recommendation and re-runs, they need to know which script version produced which events/recs.
-- Wire once in a shared BaseModel so every model inherits it (not per-model).
+- **Patch (draft):** invoke the existing monitor **once** from the shared `df_write` path via a guarded
+  `BaseModel._observe_output(df)` helper + one line per concrete `df_write`. Zero model-file edits, cannot
+  fail a write, `MNTN_SPARK_OBSERVE=0` off-switch. Bundle into the step-#1 eventLog PR. Full diff in
+  `audi_1191_basemodel_observe_patch.md`.
 
 ## Housekeeping
 - **TTL:** `Delete age 30` on `spark-events/` — Ryan approved. I lack `storage.buckets.update`, so Ryan/an
