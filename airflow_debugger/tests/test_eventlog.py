@@ -75,10 +75,21 @@ def test_optimize_entrypoint_end_to_end() -> None:
     assert "skew" in report.lower()
 
 
+def test_fleet_crawl_ranks_worst_first() -> None:
+    """The crawl scans multiple event logs and ranks the one with findings first."""
+    from airflow_debugger.crawl import crawl, render_crawl
+
+    reports = crawl([FIXTURE, CACHE_FIXTURE])
+    assert reports[0].source.endswith("eventlog.zstd")  # the skewed job ranks first
+    assert reports[0].n_high >= 1
+    assert "Fleet optimization" in render_crawl(reports)
+
+
 if __name__ == "__main__":
     test_parse_real_eventlog_all_surfaces()
     test_parse_storage_surface_real()
     test_optimize_entrypoint_end_to_end()
     test_detectors_flag_skew_on_real_run()
     test_infra_and_failure_recommendation_types()
+    test_fleet_crawl_ranks_worst_first()
     print("OK - eventlog parser + detectors validated on a real Spark event log")

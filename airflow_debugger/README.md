@@ -55,7 +55,9 @@ repeated_scan) AND the event log (`analyze_run`: skew, disk_spill, gc_pressure, 
 shuffle_fetch_instability) — emitting `code` / `infra` / `failure` recommendations with real metrics.
 Parser + detectors validated on real Spark event logs (`tests/fixtures/eventlog.zstd`,
 `eventlog_cache.zstd`). One-call report: `python3 -m airflow_debugger.optimize <eventlog>` → parse all
-7 surfaces + every detector → BLUF report grouped by CODE / INFRA / FAILURE.
+7 surfaces + every detector → BLUF report grouped by CODE / INFRA / FAILURE. Fleet crawl:
+`python3 -m airflow_debugger.crawl <event_log_dir_or_glob>` → optimize every job, rank a cross-job
+backlog worst-first (the "check every DAG" mode; point at the GCS event-log prefix once enabled).
 
 ## Notes
 
