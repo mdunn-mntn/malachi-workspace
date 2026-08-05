@@ -147,8 +147,46 @@ self-reported (we run the meter). Full detail + caveats in each child's summary.
 | Jira | epic AUDI-1111 (comments 596088 + desc); results comments AUDI-1115 #596162, AUDI-1116 #596106, AUDI-1117 #596107 |
 | Durable knowledge | `knowledge/data_knowledge.md`: §RTC (two pipelines + measured 0.01%), §svs (ULID latency instrument), §DS14 (MembershipDB + AUDI-1117 pointers), billing (self-reported meter) |
 
+## 5b. BAE-4923 — external validation of the preemption thesis (BAE side, 2026-08-04)
+
+**Sherwin Ocampo independently reproduced the free-log preemption finding and put it at ~$43K/month
+(~$516K/yr)** — larger than either of our grains ($273.7K/yr at ip×domain×date, $412.4K/yr at
+DS13 vertical/category). Reconciling that gap is the open review.
+
+| | |
+|---|---|
+| Ticket | [BAE-4923](https://mntn.atlassian.net/browse/BAE-4923) "DDP Business Claim Validation" (Support, **status Done**, assignee Sherwin Ocampo, reporter Mike Dolzer, created 2026-07-21) |
+| Ask | Mike asked Sherwin/Maya to second-pair-of-eyes his vendor-quality claims: "could save us as much as 800k/yr", P2 for mid-August |
+| Mike's source sheet | `docs.google.com/spreadsheets/d/1tVhe2vBr6q8VV9tbdvB4wZpDNqi0hwvc` (queries + analyses) |
+| **Sherwin's result sheet** | `docs.google.com/spreadsheets/d/150Robua_GKHyfnI0JuvEuAjPya7F3938eXpJQ5exGNs` (comment 602686, 2026-08-04) |
+| Sherwin's claim | Winning MM segments where the winners include **both** a free source (guid or auglog) **and** one or more usage-based DDPs. Credits are currently spread across all winning sources; shifting the usage-based-DDP share to the free sources saves **~$43K/mo**. |
+| cc'd | two accountids on the comment (not yet resolved to names) |
+
+**Why this matters:** this is BAE (the team that owns the meter) confirming our AUDI-1093/1113
+thesis from their own data, on a ticket already marked Done. It is the strongest external support
+the preemption proposal has, and it arrives with a number ~1.9x ours.
+
+**Review to run (blocked on Drive access — see below):**
+1. Reconcile $43K/mo vs our $273.7K/yr and $412.4K/yr. Prime suspects: credit **grain** (Sherwin's
+   "winning MM segments" reads as the impression-winner grain, ours as ip×domain×date visit grain
+   — §4 records that these swing ~5x), the 1/N-vs-full-preemption rule, and the window/month used.
+2. Check whether his winner set is the BAE gold `ddp_mm_winners_imp` path (our AUDI-1115 anchor) or
+   `external.targeted_signal`, and whether it is Funnel-1/CTV-only like the billed base.
+3. Confirm his free-source definition = guid DS23 + augmentor DS30 (ours) and nothing else.
+4. Check Mike's $800K/yr claim against the roster: our metered CPM roster is ~$812K/yr at June
+   run-rate, so "$800K" reads as *drop everything metered*, not as the preemption slice.
+5. Decide whether the ticket being **Done** means BAE considers this settled — if so, the
+   implementation ask (AUDI-1113) needs re-raising, not re-proving.
+
+**BLOCKER:** both sheets return 401. The Drive MCP connector is authenticated to a personal Google
+account, and the `gcloud` credential for `malachi@mountain.com` carries no Drive scope. Unblock with
+any one of: (a) `gcloud auth login --enable-gdrive-access`, (b) add a Drive shortcut of both sheets
+into `My Drive/` so the local mount syncs them, or (c) File > Download > CSV into
+`tickets/audi_1111_vendor_quality/outputs/`.
+
 ## 5. Open Items
 
+- [ ] **BAE-4923 review** — reconcile Sherwin's ~$43K/mo against our $273.7K/$412.4K per yr (blocked on sheet access)
 - [ ] AUDI-1113/1114 owner assignment at grooming
 - [ ] Monday 2026-07-20 meeting: billing credit-assignment rule (fractional vs first-reporter)
 - [ ] Proposal routing: pre-read Alyson → Mike + Kale → Paulo (after analyses land)
