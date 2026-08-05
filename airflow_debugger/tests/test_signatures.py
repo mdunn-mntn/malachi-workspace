@@ -82,6 +82,15 @@ CASES = [
         "external_task_failed",
     ),
     (
+        # Real prod (2026-08-05, hashed_email_ds_26_signals/wait_fpa): the external task was SKIPPED
+        # (producer short-circuited on a missing Predactiv/DS26 file) yet Airflow emits the identical
+        # "... failed." message. Same signature key; disambiguation needs the external task's state.
+        "inc011_external_task_skipped",
+        "ExternalTaskFailedError: Some of the external tasks ['dsid26_predactiv_processing'] in DAG "
+        "fpa_site_visit_batch_serverless failed.",
+        "external_task_failed",
+    ),
+    (
         # Real prod (2026-08-02, tpa_ipdsc_export/ipdsc_ds_67): DS67 model code bug - a bound
         # method passed instead of its call result, so the bucket name is the method repr.
         "prod_ds67_bound_method",

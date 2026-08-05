@@ -212,9 +212,13 @@ SIGNATURES: list[Signature] = [
         r"ExternalTaskFailedError|ExternalTaskSensor.{0,40}fail|state.{0,10}upstream_failed|"
         r"upstream task.{0,20}(failed|upstream_failed)",
         "upstream-failure",
-        "An upstream task the sensor depends on is in failed/upstream_failed - this task is a "
-        "symptom. Audit the upstream chain for the stage that actually broke; do not clear the "
-        "sensor until the awaited partition lands.",
+        "The sensor's external task is in a failed state - this task is a symptom, not the cause. "
+        "ExternalTaskFailedError uses the SAME message for a SKIPPED external task (producer "
+        "short-circuited on missing source data = benign partner-data gap, INC-011) as for a truly "
+        "failed/upstream_failed one (real break, INC-006/007), so resolve the external task's ACTUAL "
+        "state first: skipped -> check the producer's source_available_<ds> log for 'No source "
+        "data', no-op the hour, do not backfill; failed/upstream_failed -> audit the upstream chain. "
+        "Never clear-to-retry a skip - the awaited partition will not land.",
         "no",
     ),
     Signature(
