@@ -6,10 +6,10 @@ metadata:
   type: project
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [audi_1111, vendor data quality, valuation epic, willingness to pay, preemption, ddp_mm_winners_imp, rtc vendor-independent, ds14, cpm layer, 33across, won impression billing]
+keywords: [audi_1111, vendor data quality, valuation epic, willingness to pay, preemption, ddp_mm_winners_imp, rtc vendor-independent, ds14, cpm layer, 33across, won impression billing, bae-4923, preemption run rate, mm_dsid_count]
 domain: [project, pricing]
 lifecycle: active
-last_verified: 2026-07-22
+last_verified: 2026-08-05
 ---
 **AUDI-1111** epic (research-for-a-proposal; implementation separate) from the 2026-07-16
 AUDI-1089 stakeholder readout. Children: AUDI-1093 (preemption spec, re-parented) + 1113
@@ -67,3 +67,17 @@ need vendors." Routing: consolidated proposal → pre-read Alyson → Mike + Kal
 mechanism (MemDB or Zach/Sean); candidate tickets NOT yet created (selection-bias/IPDSC test;
 keyword campaign-usage report). Related: [[project_audi_1089_ddp_evals]] [[reference_ddp_billing_logic]]
 [[reference_ddp_valuation_framework]].
+
+**2026-08-05 — BAE independently confirmed the preemption thesis, and the number went UP.**
+BAE-4923 (Sherwin Ocampo, who runs the meter) reproduced free-log preemption from the billing side
+at ~$43K/mo. Reviewed: his six months reproduce to the cent, but he recomputed the 1/N denominator
+as `ARRAY_LENGTH(mm_dsids_winner)` instead of the native `mm_dsid_count` (double-counts the
+33Across DS28+DS40 pair on 34.2% of rows, +15-19%/mo) AND averaged a series growing 2.35x Jan→Jul,
+so his figure is net conservative. **Corrected July-2026 run-rate = $64,076/mo = $768,916/yr**
+(May-Jul avg $52,042/mo). That converges on Mike Dolzer's independent "$800K/yr" claim against a
+~$812K/yr metered roster: **preemption alone recovers ~95% of what dropping every metered vendor
+would, dropping no one.** The old $273,671/yr is the ip×domain×date VISIT grain — correct at its
+grain, but never quote it as the run-rate; the impression-winner grain is what the meter charges on.
+Open: does 33Across get one credit share or two (only BAE can settle). BAE-4923 is already Done, so
+the live ask is AUDI-1113 implementation, not more proof.
+[[project_bae_4923_ddp_claim_validation]] [[reference_ddp_billing_logic]]

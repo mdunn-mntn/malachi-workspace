@@ -1202,6 +1202,18 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   free-preemption rule = **$273.7K/yr** at (ip,domain,date) grain (33Across $221.7K). Both free
   logs are confirmed IN targeted_signal → exclusion implementable there; **Sherwin = crediting/
   billing contact**; Sean endorses the fix. Preemption substitutes for drops on the overlap slice.
+  ⚠ **$273.7K/yr is the VISIT grain — NOT the preemption run-rate. Superseded as the headline
+  2026-08-05 (BAE-4923):** measured at the impression-winner grain the meter actually charges on
+  (`ddp_mm_winners_imp_YYYYMM`), the recoverable figure is **$64,076/mo = $768,916/yr** at the
+  corrected July-2026 run-rate (May–Jul avg $52,042/mo = $624,504/yr). BAE (Sherwin, BAE-4923)
+  independently reproduced this thesis from their own side and put it at ~$43K/mo; his six months
+  reproduce to the cent, but he (a) recomputed the 1/N denominator as `ARRAY_LENGTH` instead of the
+  native `mm_dsid_count`, double-counting the 33Across DS28+DS40 pair (+15–19%/mo), and (b) averaged
+  a series growing 2.35x Jan→Jul, which understates by more — net, **his number is conservative**.
+  **Volume is growing fast, so any multi-month mean goes stale — always requote off the newest
+  `_YYYYMM` table.** Corrected July annualizes to ~$769K/yr against a ~$812K/yr metered roster:
+  **preemption alone recovers ~95% of what dropping every metered vendor would, dropping no one.**
+  Recon query `tickets/audi_1111_vendor_quality/queries/bae_4923_preemption_recon.sql`.
   **Bills are self-reported, no vendor audit (2026-07-16 readout, Sean Yang):** MNTN runs the
   targeted_signal compute (Sherwin's team), produces the monthly usage report, and TELLS the
   vendor what we owe — full unilateral control of the meter, so preemption needs no vendor

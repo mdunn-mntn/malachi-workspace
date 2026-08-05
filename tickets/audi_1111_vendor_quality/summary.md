@@ -4,15 +4,15 @@ title: "AUDI-1111: Vendor Data Quality & Valuation"
 status: in_progress
 date: 2026-07-17
 summary: "Epic: set a 3P data-quality bar and true willingness-to-pay price per vendor"
-result: "No metered vendor breaks even at $0.50; RTC vendor-independent; preemption $274K/yr"
-keywords: [audi-1111, vendor quality, willingness to pay, wtp cpm, rtc, ds14, svs, free log preemption]
+result: "No metered vendor breaks even at $0.50; RTC vendor-independent; preemption $769K/yr at Jul-2026 impression-winner grain (BAE-4923 confirmed)"
+keywords: [audi-1111, vendor quality, willingness to pay, wtp cpm, rtc, ds14, svs, free log preemption, bae-4923, mm_dsid_count, 33across dedup, preemption run rate]
 ---
 
 ## TL;DR
 
 **Q:** For AUDI-1111 vendor data-quality & valuation, what is the true willingness-to-pay price per 3P vendor and do the platform's real-time layers (RTC, DS14 gate) actually need the vendors?
 
-**A:** No metered vendor breaks even at the $0.50 contract on any WTP lens (L0 break-even e.g. 33Across $0.086-0.257, closest is 33A API $0.127-0.381; effective cost 1.3x-7.4x over ceiling). Free-union coverage under the flow-filter rule is 44.1% (vs 59.4% same-day). RTC is effectively vendor-independent: 99.99% of RTC-fired imps are free-covered, vendor-only 0.01%, because vendor logs arrive 2.4-8.6h stale vs free logs at 0 min. The DS14 gate is real but soft: only 36.1% of 301.5M svs IPs are in-gate; recommendation drafted to widen free-log windows before paying vendors for reach. Cross-cutting: AUDI-1113 free-log credit preemption is worth $273,671/yr and needs no vendor cooperation (billing is self-reported).
+**A:** No metered vendor breaks even at the $0.50 contract on any WTP lens (L0 break-even e.g. 33Across $0.086-0.257, closest is 33A API $0.127-0.381; effective cost 1.3x-7.4x over ceiling). Free-union coverage under the flow-filter rule is 44.1% (vs 59.4% same-day). RTC is effectively vendor-independent: 99.99% of RTC-fired imps are free-covered, vendor-only 0.01%, because vendor logs arrive 2.4-8.6h stale vs free logs at 0 min. The DS14 gate is real but soft: only 36.1% of 301.5M svs IPs are in-gate; recommendation drafted to widen free-log windows before paying vendors for reach. Cross-cutting: AUDI-1113 free-log credit preemption needs no vendor cooperation (billing is self-reported) and is worth **$768,916/yr** at the corrected July-2026 impression-winner run-rate — the grain the meter actually charges on (the earlier $273,671/yr is the ip×domain×date *visit* grain; both are correct at their own grain, but only the impression-winner figure is the run-rate). BAE independently reproduced this thesis on BAE-4923 and reported ~$43K/mo; his months reproduce to the cent but he double-counted the 33Across DS28+DS40 pair and averaged a series growing 2.35x, so his figure is conservative. See §5b.
 
 **How:** Three measured, adversarially-verified analyses: (1) AUDI-1115 WTP as 3 CPM lenses per vendor (all-ingested / flow-filtered actually-used / bid-and-won) giving effective CPM and break-even ceiling; (2) AUDI-1116 RTC vendor-share plus an svs ULID ingest-latency instrument comparing free-log vs vendor arrival times; (3) AUDI-1117 DS14 availability-gate vs site_visit_signal overlap pool math on 301.5M svs IPs.
 
@@ -22,7 +22,9 @@ keywords: [audi-1111, vendor quality, willingness to pay, wtp cpm, rtc, ds14, sv
 - No metered vendor breaks even at $0.50 on any lens; free-union flow-filter coverage 44.1% vs 59.4% same-day
 - RTC effectively vendor-independent: 99.99% of RTC-fired imps free-covered, vendor-only 0.01%; vendors arrive 2.4-8.6h stale vs free logs at 0 min
 - DS14 gate soft: only 36.1% of 301.5M svs IPs in-gate; widen free-log windows before paying vendors for reach
-- AUDI-1113 free-log credit preemption worth $273,671/yr, needs no vendor cooperation because billing is self-reported
+- AUDI-1113 free-log credit preemption worth **$768,916/yr** (corrected Jul-2026 impression-winner run-rate; $273,671/yr was the visit grain), needs no vendor cooperation because billing is self-reported
+- BAE-4923 (Sherwin) independently confirmed preemption from the billing side; his ~$43K/mo is conservative — `mm_dsid_count` != `ARRAY_LENGTH(mm_dsids_winner)` (33Across DS28+DS40 dedupe to one vendor on 34.2% of rows)
+- Preemption alone recovers ~95% of what dropping every metered vendor would (~$769K vs a ~$812K/yr roster), dropping no one
 
 **Reuse when:**
 - valuing a 3P data vendor / willingness-to-pay CPM per vendor
@@ -49,7 +51,7 @@ evidence base lives in `tickets/audi_1089_ddp_vendor_evaluations/` (Done, standa
 | Ticket | What | Owner | Folder |
 |---|---|---|---|
 | [AUDI-1093](https://mntn.atlassian.net/browse/AUDI-1093) | Free-log credit preemption — investigate + spec (In Progress; re-parented into this epic) | Malachi | (pre-epic, work in audi_1089 runbook) |
-| [AUDI-1113](https://mntn.atlassian.net/browse/AUDI-1113) | Implement free-log credit preemption in billing ($273,671/yr stake) | TBD (Sean Yang's team?) | — |
+| [AUDI-1113](https://mntn.atlassian.net/browse/AUDI-1113) | Implement free-log credit preemption in billing (**$768,916/yr stake** at the corrected Jul-2026 impression-winner run-rate; BAE-confirmed on BAE-4923) | TBD (Sean Yang's team?) | — |
 | [AUDI-1114](https://mntn.atlassian.net/browse/AUDI-1114) | Vendor data-quality outreach — 5 asks (33Across webmail/bots, Sovrn malformed URLs, Justuno user_agent, 5x5 outbrain iframes, ShareThis/Predactiv adult) | TBD (Alyson?) | — |
 | [AUDI-1115](https://mntn.atlassian.net/browse/AUDI-1115) | True willingness-to-pay CPM per vendor — 3 lenses | Malachi | `audi_1115_wtp_cpm/` |
 | [AUDI-1116](https://mntn.atlassian.net/browse/AUDI-1116) | RTC × free logs — feed, timing, hourly-grain check | Malachi | (folder on start) |
@@ -131,7 +133,8 @@ real-time layers don't need the vendors at all.**
    costs nothing) vs 95.7M vendor-only (and 50% of 33Across's IPs arrive non-biddable).
    Recommendation drafted: widen free-log windows before paying vendors for reach.
 
-Cross-cutting: AUDI-1113 preemption ($273,671/yr) needs no vendor cooperation — billing is
+Cross-cutting: AUDI-1113 preemption (**$768,916/yr** at the corrected Jul-2026 impression-winner
+run-rate — see §5b; $273,671/yr was the visit grain) needs no vendor cooperation — billing is
 self-reported (we run the meter). Full detail + caveats in each child's summary.md.
 
 ## 4c. Where everything lives (deliverables map)
@@ -244,7 +247,12 @@ settled, the live ask is implementation (AUDI-1113), not further proof.
 
 ## 5. Open Items
 
-- [ ] **BAE-4923 review** — reconcile Sherwin's ~$43K/mo against our $273.7K/$412.4K per yr (blocked on sheet access)
+- [x] **BAE-4923 review** — done 2026-08-05; corrected run-rate $768,916/yr, see §5b
+- [ ] **Ask Sherwin the one open question:** does 33Across get ONE credit share or two — i.e. is
+      native `mm_dsid_count` the denominator billing actually applies? Only BAE can settle it, and
+      it moves the number ~15-19%. (BAE-4923 is already Done, so this may need a fresh thread.)
+- [ ] Decide whether to re-raise AUDI-1113 implementation now that BAE has independently confirmed
+      the thesis from the billing side — the case is no longer ours alone
 - [ ] AUDI-1113/1114 owner assignment at grooming
 - [ ] Monday 2026-07-20 meeting: billing credit-assignment rule (fractional vs first-reporter)
 - [ ] Proposal routing: pre-read Alyson → Mike + Kale → Paulo (after analyses land)
