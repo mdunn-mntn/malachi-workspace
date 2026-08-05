@@ -1,15 +1,17 @@
 ---
 doc_type: ticket
-title: "Automated Airflow/Spark failure-triage + optimization agent"
+title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Databricks)"
 status: in_progress
 date: 2026-07-31
-summary: "Build a key-free, deterministic-first, Claude-Agent-SDK debugger that RCAs a failed Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report; secondary use = job optimization from the same Spark-log analysis."
-result: "in progress — RCA debugger (Dataproc+Databricks) + optimization crawler validated on INC-005/009 + live prod; eventLog PR #1169 MERGED to prod 2026-08-04 (merge cef446a3: batch-operator path + local runner + BaseModel observe; workflow-op deferred, ipdsc reverted/PHS kept). Remaining: follow-up PRs (workflow-op eventLog, Databricks GCS-write, spark-events TTL) + Phase 3 auto-fire"
+summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
+result: "in progress — RCA debugger (Dataproc+Databricks) validated on INC-005/009 + live prod (INC-010); eventLog PR #1169 MERGED to prod 2026-08-04 (merge cef446a3: batch-operator path + local runner + BaseModel observe; workflow-op deferred, ipdsc reverted/PHS kept). Optimizer split out to AUDI-1194 (own ticket + airflow_optimizer/ package, 2026-08-05). Remaining: follow-up PRs (workflow-op eventLog, Databricks GCS-write, spark-events TTL) + Phase 3 auto-fire"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
 
-# Automated Airflow/Spark failure-triage + optimization agent
+# Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Databricks)
+
+> **2026-08-05 split:** this ticket is now the **DEBUGGER only** (failure-triggered RCA, package `airflow_debugger/`). The **OPTIMIZER** (success-triggered efficiency crawler) split to **AUDI-1194** / package `airflow_optimizer/` (commits a8ebad2d + b153266d). The §"Use-case #2" optimizer sections below are the historical build record from when both engines lived under this ticket; go-forward optimizer work lives in `tickets/audi_1194_optimizer_efficiency_crawler/`.
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1191
 **Status:** backlog

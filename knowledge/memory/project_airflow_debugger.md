@@ -1,15 +1,17 @@
 ---
 name: project_airflow_debugger
-description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for failed Airflow tasks (Dataproc + Databricks); Phase 1 complete, validated on INC-005 + INC-009
+description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, validated INC-005/009 + live prod. Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow debugger, AUDI-1191, spark failure rca, dataproc rca, databricks rca, eventlog_profiler, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report]
+keywords: [airflow debugger, AUDI-1191, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-04
+last_verified: 2026-08-05
 ---
+**SCOPE (as of 2026-08-05 ticket + package split):** this memory is the **DEBUGGER** — the failure-triggered RCA workflow, ticket **AUDI-1191**, package **`airflow_debugger/`** (parse, context_parse, signatures, dataproc_rca, databricks_rca, incident_match, report, synth, orchestrate). AUDI-1191 was retitled "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Databricks)". The **OPTIMIZER** (success-triggered efficiency crawler) split out to ticket **AUDI-1194** / package **`airflow_optimizer/`** → see **[[project_airflow_optimizer]]** for the go-forward source of truth (eventlog parser, detectors, crawl, weekly cron, PHS access). The two packages are fully decoupled and share ONLY `eventlog.py`, which now lives in `airflow_optimizer/`. Paragraphs below that discuss the eventlog parser / optimizations / crawl / weekly cron are the **historical build record** from when both engines lived under AUDI-1191 — current optimizer facts belong in the optimizer memory.
+
 Building an automated Airflow/Spark failure-triage agent under **AUDI-1191** (the build ticket AUDI-1190 §8 deferred; origin IMP-021). Code lives in the workspace at **`airflow_debugger/`** (key-free, no bot/tokens, no changes to SteelHouse work repos). Harvest source cloned read-only to `~/Developer/work/mntn/mntn-data-eng-assistant`. Approved plan: `~/.claude/plans/we-may-have-already-logical-ladybug.md`. See [[reference_data_eng_mcp]], [[reference_airflow_ti]], [[reference_databricks]], [[reference_oncall_runbook]].
 
 **Why:** cut on-call MTTR + remove the Victor-shaped bus factor on Spark/Databricks debugging. Deterministic-first: code does log-fetch + signature-match; an LLM only synthesizes unknown cases.
