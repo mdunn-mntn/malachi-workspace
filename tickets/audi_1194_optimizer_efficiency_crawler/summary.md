@@ -1,17 +1,17 @@
 ---
 doc_type: ticket
-title: "AUDI: optimizer efficiency crawler"
+title: "AUDI-1194: Airflow/Spark optimization crawler"
 status: backlog
 date: 2026-08-05
-summary: "optimizer efficiency crawler"
-result: "not started"
+summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
+result: "not started — split from AUDI-1191 (debugger); optimizer half mostly built (eventlog/optimizations/optimize/crawl + weekly cron), needs productionizing"
 question: ""
 framing_state: draft
 ---
 
-# AUDI: optimizer efficiency crawler
+# AUDI-1194: Airflow/Spark optimization crawler
 
-**Jira:** https://mntn.atlassian.net/browse/AUDI
+**Jira:** https://mntn.atlassian.net/browse/AUDI-1194
 **Status:** backlog
 **Date Started:** 2026-08-05
 **Assignee:** Malachi
