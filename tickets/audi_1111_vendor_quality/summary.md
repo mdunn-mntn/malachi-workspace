@@ -166,23 +166,81 @@ DS13 vertical/category). Reconciling that gap is the open review.
 thesis from their own data, on a ticket already marked Done. It is the strongest external support
 the preemption proposal has, and it arrives with a number ~1.9x ours.
 
-**Review to run (blocked on Drive access — see below):**
-1. Reconcile $43K/mo vs our $273.7K/yr and $412.4K/yr. Prime suspects: credit **grain** (Sherwin's
-   "winning MM segments" reads as the impression-winner grain, ours as ip×domain×date visit grain
-   — §4 records that these swing ~5x), the 1/N-vs-full-preemption rule, and the window/month used.
-2. Check whether his winner set is the BAE gold `ddp_mm_winners_imp` path (our AUDI-1115 anchor) or
-   `external.targeted_signal`, and whether it is Funnel-1/CTV-only like the billed base.
-3. Confirm his free-source definition = guid DS23 + augmentor DS30 (ours) and nothing else.
-4. Check Mike's $800K/yr claim against the roster: our metered CPM roster is ~$812K/yr at June
-   run-rate, so "$800K" reads as *drop everything metered*, not as the preemption slice.
-5. Decide whether the ticket being **Done** means BAE considers this settled — if so, the
-   implementation ask (AUDI-1113) needs re-raising, not re-proving.
+### Review completed 2026-08-05 — verdict: conclusion holds, the number is too LOW
 
-**BLOCKER:** both sheets return 401. The Drive MCP connector is authenticated to a personal Google
-account, and the `gcloud` credential for `malachi@mountain.com` carries no Drive scope. Unblock with
-any one of: (a) `gcloud auth login --enable-gdrive-access`, (b) add a Drive shortcut of both sheets
-into `My Drive/` so the local mount syncs them, or (c) File > Download > CSV into
-`tickets/audi_1111_vendor_quality/outputs/`.
+Sherwin's method reproduces exactly, and it is the right grain for this question. His query works on
+`dw-main-gold.reporting.ddp_mm_winners_imp_YYYYMM` — the same BAE gold winners table AUDI-1115 uses
+as the billing anchor — so it measures the meter directly rather than inferring it. **All six of his
+monthly cells reproduce to the cent** (query: `queries/bae_4923_preemption_recon.sql`; full series:
+`outputs/bae_4923_savings_reconciliation.csv`). His free set (guid 23 + augmentor 30), his metered
+set (28/40/24/33/36) and his flat-fee exclusion (25/26/39) all match our roster, and the winner
+arrays contain exactly those 10 dsids and no others — no DS17 or DS35 leaks into the catch-all.
+
+**Two independent errors that point in opposite directions:**
+
+**(1) 33Across is double-counted — inflates every month ~15-19%.** The table carries a native
+`mm_dsid_count` column; Sherwin shadowed it with a recomputed `array_length(mm_dsids_winner)`. They
+disagree on **34.2% of rows (181.5M of 530.7M in June)**, and the gap is *exactly* the 33Across
+dedup — measured with zero exceptions:
+
+| both 28 and 40 in winners | `array_length` − `mm_dsid_count` | rows (202606) |
+|---|---|---|
+| false | 0 | 349,175,512 |
+| true | 1 | 181,514,444 |
+
+The pipeline treats **DS28 (33Across) + DS40 (33Across API) as ONE vendor** in the credit
+denominator. Using `array_length` both inflates the denominator *and* counts 33Across twice in the
+paid numerator; net, the paid share is overstated on a third of all rows.
+
+**(2) He averaged a steeply growing series — understates the run-rate by far more.** The six months
+are monotonic ($36.2K Jan → $60.1K Jun), driven by volume (mixed imps 147.4M → 345.7M, 2.35x). A
+6-month mean is the wrong statistic for a forward-looking savings claim. **July (`_202607`) already
+exists and he did not use it.**
+
+| month | mixed imps | Sherwin (`array_length`) | corrected (vendor-deduped) |
+|---|---:|---:|---:|
+| 202601 | 147,404,382 | $36,227.96 | $31,400.80 |
+| 202602 | 149,439,498 | $37,821.56 | $33,094.91 |
+| 202603 | 147,018,623 | $38,136.27 | $33,046.63 |
+| 202604 | 151,012,519 | $39,020.36 | $33,747.91 |
+| 202605 | 201,321,683 | $48,226.59 | $41,115.40 |
+| 202606 | 268,886,220 | $60,109.09 | $50,934.30 |
+| **202607** | **345,696,097** | **$76,141.43** | **$64,076.31** |
+
+**Net: the growth effect dominates the double-count, so his $43K/mo is conservative.**
+
+| basis | $/mo | $/yr |
+|---|---:|---:|
+| Sherwin as stated (6-mo mean, uncorrected) | $43,257 | $519,084 |
+| corrected, last 3 months (May-Jul) | $52,042 | $624,504 |
+| **corrected, July run-rate** | **$64,076** | **$768,916** |
+
+**The striking convergence:** corrected July annualizes to **$768,916/yr**, which lands on Mike's
+"as much as 800k/yr" from a completely independent direction — and our metered CPM roster is
+~$812K/yr at June run-rate. Preemption alone now recovers ~95% of what dropping every metered
+vendor would, without dropping anyone.
+
+**Reconciles with our own numbers, doesn't contradict them.** Our $273.7K/yr is (ip × domain × date)
+*visit* grain and $412.4K/yr is DS13 vertical/category grain; Sherwin's is the *impression-winner*
+grain. §4 already records that these swing ~5x, and for preemption the impression-winner grain is
+the correct one — it is literally what the meter charges on. Our recorded 291.1M mixed imps for
+202606 vs the 268.9M here is the flat-fee definition: rows whose only non-free winner is 25/26/39
+are "mixed" under our loose definition but carry no metered credit, so they are correctly excluded.
+
+**What to raise with Sherwin (his pipeline, his call):**
+1. Confirm `mm_dsid_count` is the denominator billing actually applies — i.e. does 33Across get one
+   share or two? This is the single biggest driver and it is a question only BAE can settle.
+2. Use `mm_dsid_count` rather than recomputing `array_length`, and use July, not a 6-month mean.
+3. Use the row's `tv_cpm` instead of a hardcoded `0.50` — the roster is all $0.50 today so it does
+   not change the answer, but `ddp_all_matches_cpm` prices DS17 at $0.95, so the hardcode is a
+   latent trap if the roster ever changes.
+4. Minor: the `avg_*_pct` columns are averages of per-row ratios, not ratio-of-sums (June: avg-of-
+   ratios 38/18/45 vs true shares 37.6/17.7/44.7). Immaterial here, misleading if reused.
+5. His `GROUP BY` drops `and_seq`/`or_seq`; verified harmless — a per-row recomputation returns the
+   identical total, so no rows collapse.
+
+**Open, and now the real question:** BAE-4923 is already **Done**. If BAE considers the claim
+settled, the live ask is implementation (AUDI-1113), not further proof.
 
 ## 5. Open Items
 

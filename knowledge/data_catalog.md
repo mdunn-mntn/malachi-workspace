@@ -2313,6 +2313,19 @@ Small internal dataset for data usage reporting/auditing.
     cross-PATH split, e.g. 0.5 when a 3P segment path also matched — NOT 1/n_winners), `tv_cpm`
     (**=0 on 100% of free-only-winner rows — free logs never bill; =$0.50 on 91.7% of mixed
     free+paid rows — the AUDI-1093 preemption gap, 291.1M imps in 202606**). June: 530.7M rows.
+    **`mm_dsid_count` != `ARRAY_LENGTH(mm_dsids_winner)` — DO NOT recompute the denominator
+    (BAE-4923, measured 2026-08-05):** the native `mm_dsid_count` column is the array length MINUS
+    ONE *exactly* when both **DS28 (33Across) and DS40 (33Across API)** are in the winner array —
+    the pipeline dedupes them to ONE vendor for the credit split. Measured with zero exceptions on
+    202606: both-present → diff 1 (181,514,444 rows, **34.2%**); otherwise → diff 0 (349,175,512
+    rows). Recomputing `ARRAY_LENGTH` as the 1/N denominator (as BAE-4923's original query did)
+    both inflates N and counts 33Across twice in the numerator, **overstating any per-vendor credit
+    share by ~15-19%/mo**. Always use the native column. Note the two 33Across dsids also bill as
+    one vendor (~$598K/yr combined, AUDI-1089).
+    Mixed free+paid **metered** imps must exclude flat-fee-only rows: winners whose sole non-free
+    dsid is 25/26/39 carry no metered credit (268.9M in 202606 vs 291.1M under the loose
+    free-vs-anything definition). Full winner-array roster is exactly 10 dsids —
+    23/24/25/26/28/30/33/36/39/40 — no DS17 or DS35 appears here.
   - `ddp_mm_winners_domains[_YYYYMM]` — domain-grain winners.
 - **Gotchas:** `data_source_id` here = the CONSUMER (13/19 in winners_imp; 17/35/etc. in
   all_matches), NOT the vendor — vendors live in the arrays; winner-array order is effectively

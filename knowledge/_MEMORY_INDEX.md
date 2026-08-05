@@ -5,7 +5,7 @@ The full memory list, browse-by-domain. To retrieve: grep `_ROUTING.md` for your
 one `memory/<file>.md` it names. Detail lives in each file; the always-loaded hot tier is `memory/MEMORY.md`.
 
 ### (unassigned)
-- [project-bae-4923-ddp-claim-validation](memory/project_bae_4923_ddp_claim_validation.md) — BAE-4923 (Done, Sherwin Ocampo) independently validated the free-log preemption thesis at ~$43K/mo (~$516K/yr) vs our $273.7K/$412.4K per yr — reconcile the grain gap; two Google Sheets are the evidence and both are 401-locked to current creds  ·  _project · verified 2026-08-05_
+- [project-bae-4923-ddp-claim-validation](memory/project_bae_4923_ddp_claim_validation.md) — BAE-4923 (Sherwin) validated free-log preemption at ~$43K/mo; reviewed 2026-08-05 — his 6 months reproduce to the cent but he recomputed the 1/N denominator as ARRAY_LENGTH (double-counts 33Across DS28+DS40, +15-19%) and averaged a growing series; corrected July run-rate = $64,076/mo = $768,916/yr, which lands on Mike's $800K claim  ·  _project · verified 2026-08-05_
 
 ### audience-scoring
 - [Zach Schoenberger is authoritative on audience platform / holdout](memory/reference_audience_platform_authority.md) — For audience-platform, audience expression, holdout enforcement, and retargeting-vs-prospecting questions, Zach Schoenberger (Sr Principal Architect) is the highest-confidence source at MNTN. Defer to him over docs, code reads, or other team members.  ·  _reference · verified 2026-07-29_
