@@ -15,7 +15,7 @@ WORKSPACE="/Users/malachi/Developer/work/mntn/workspace"
 PREFIX="${SPARK_EVENTS_PREFIX:-gs://mntn-data-archive-prod/spark-events}"
 CAP="${OPTIMIZER_LOG_CAP:-40}"        # newest N logs per run (bounded: -m bulk pulls have crashed)
 DATE="$(date +%F)"
-OUTDIR="${WORKSPACE}/tickets/audi_1191_airflow_spark_debugger/outputs"
+OUTDIR="${WORKSPACE}/tickets/audi_1194_optimizer_efficiency_crawler/outputs"
 REPORT="${OUTDIR}/optimizer_backlog_${DATE}.md"
 
 cd "$WORKSPACE"
