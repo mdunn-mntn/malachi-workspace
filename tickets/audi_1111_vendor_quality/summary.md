@@ -231,8 +231,13 @@ the correct one — it is literally what the meter charges on. Our recorded 291.
 are "mixed" under our loose definition but carry no metered credit, so they are correctly excluded.
 
 **What to raise with Sherwin (his pipeline, his call):**
-1. Confirm `mm_dsid_count` is the denominator billing actually applies — i.e. does 33Across get one
-   share or two? This is the single biggest driver and it is a question only BAE can settle.
+1. ~~Confirm `mm_dsid_count` is the denominator billing actually applies — does 33Across get one
+   share or two?~~ **ANSWERED 2026-08-05 (Slack).** Sherwin: the denominator counts distinct dsids
+   and 33Across counts once; when both DS28 and DS40 are involved BAE tracks it and halves that
+   single share across the two 33Across line items *at reporting time*. The pair totals one share
+   either way, so the halving is line-item allocation only and does not move totals or the savings
+   figure. **Native `mm_dsid_count` confirmed as the billing denominator; $768,916/yr stands.** He
+   also noted he had not looked into the discrepancy himself, so this review is the deeper pass.
 2. Use `mm_dsid_count` rather than recomputing `array_length`, and use July, not a 6-month mean.
 3. Use the row's `tv_cpm` instead of a hardcoded `0.50` — the roster is all $0.50 today so it does
    not change the answer, but `ddp_all_matches_cpm` prices DS17 at $0.95, so the hardcode is a
@@ -248,9 +253,10 @@ settled, the live ask is implementation (AUDI-1113), not further proof.
 ## 5. Open Items
 
 - [x] **BAE-4923 review** — done 2026-08-05; corrected run-rate $768,916/yr, see §5b
-- [ ] **Ask Sherwin the one open question:** does 33Across get ONE credit share or two — i.e. is
-      native `mm_dsid_count` the denominator billing actually applies? Only BAE can settle it, and
-      it moves the number ~15-19%. (BAE-4923 is already Done, so this may need a fresh thread.)
+- [x] **Sherwin confirmed the denominator (Slack, 2026-08-05):** distinct dsids, 33Across counts
+      ONCE; when both DS28+DS40 are involved BAE halves that single share across the two 33Across
+      line items at reporting time, so the pair totals one share either way and the halving has no
+      effect on totals. Native `mm_dsid_count` settled. **$768,916/yr is the figure to quote.**
 - [ ] Decide whether to re-raise AUDI-1113 implementation now that BAE has independently confirmed
       the thesis from the billing side — the case is no longer ours alone
 - [ ] AUDI-1113/1114 owner assignment at grooming

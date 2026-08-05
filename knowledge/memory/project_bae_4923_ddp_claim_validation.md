@@ -44,9 +44,16 @@ May-Jul $52,042/mo = $624,504/yr; **corrected July run-rate $64,076/mo = $768,91
 "$800K/yr" from an independent direction, against a metered roster of ~$812K/yr. **Preemption alone
 recovers ~95% of what dropping every metered vendor would, without dropping anyone.**
 
-**The ticket is already Done** — the live ask is implementation (AUDI-1113), not more proof. The one
-question only BAE can settle: does 33Across get one credit share or two (i.e. is `mm_dsid_count` the
-denominator billing actually applies)?
+**RESOLVED 2026-08-05 (Sherwin, Slack) — the correction is confirmed and the number stands.** Asked
+him directly whether 33Across earns one share or two. His answer: the denominator counts DISTINCT
+dsids and 33Across counts ONCE; when both DS28 and DS40 are involved BAE tracks it and halves that
+single share across the two 33Across line items **at reporting time**. So the pair totals one share
+either way and the halving is pure line-item allocation with no effect on totals. Native
+`mm_dsid_count` is settled as the billing denominator, so **$768,916/yr (corrected July run-rate)
+is the figure to quote.** He also confirmed he hadn't dug into it ("thinking about it on the side"),
+so this review is the deeper pass, not a duplicate of his.
+
+**The ticket is already Done** — the live ask is implementation (AUDI-1113), not more proof.
 
 Query + full series: `tickets/audi_1111_vendor_quality/queries/bae_4923_preemption_recon.sql`,
 `outputs/bae_4923_savings_reconciliation.csv`. Narrative: that ticket's `summary.md` §5b.

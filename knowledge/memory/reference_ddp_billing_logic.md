@@ -24,7 +24,12 @@ mechanism").
 denominator. Measured on 202606 with zero exceptions: both present → `array_length - mm_dsid_count`
 = 1 (181,514,444 rows); otherwise → 0 (349,175,512 rows). Recomputing inflates N *and* double-counts
 33Across in the numerator, **overstating any per-vendor credit share ~15-19%/mo**. This is the exact
-error in BAE-4923's original query; see [[project_bae_4923_ddp_claim_validation]]. Corollary for
+error in BAE-4923's original query; see [[project_bae_4923_ddp_claim_validation]].
+**CONFIRMED BY SHERWIN (Slack, 2026-08-05), who runs the meter:** the denominator counts DISTINCT
+dsids and 33Across counts ONCE; when both DS28 and DS40 are involved BAE tracks it and halves that
+single share across the two 33Across line items at REPORTING time. So the pair's total is one share
+either way, and the halving is pure allocation between line items with **no effect on totals** or on
+preemption savings. The deduped `mm_dsid_count` is settled as the correct denominator. Corollary for
 "mixed free+paid" counts: exclude rows whose only non-free winner is a flat-fee vendor (25/26/39) —
 they carry no metered credit (268.9M metered-mixed imps in 202606 vs 291.1M under free-vs-anything). The 07-13 residue read below (May+ "INTEGER single-vendor credit / first-reporter") was a
 usage_reporting_data rollup artifact — the upstream winners table (`ddp_mm_winners_imp_202606`) shows

@@ -1210,6 +1210,9 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   reproduce to the cent, but he (a) recomputed the 1/N denominator as `ARRAY_LENGTH` instead of the
   native `mm_dsid_count`, double-counting the 33Across DS28+DS40 pair (+15–19%/mo), and (b) averaged
   a series growing 2.35x Jan→Jul, which understates by more — net, **his number is conservative**.
+  **Denominator CONFIRMED by Sherwin (Slack 2026-08-05):** distinct dsids, 33Across counts ONCE; when
+  both DS28+DS40 are involved BAE halves that single share across the two 33Across line items at
+  REPORTING time, so the pair totals one share either way and the halving does not move totals.
   **Volume is growing fast, so any multi-month mean goes stale — always requote off the newest
   `_YYYYMM` table.** Corrected July annualizes to ~$769K/yr against a ~$812K/yr metered roster:
   **preemption alone recovers ~95% of what dropping every metered vendor would, dropping no one.**
