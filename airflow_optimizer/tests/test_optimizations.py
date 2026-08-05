@@ -6,7 +6,7 @@ for write_targeted_signal (INC-009's job). Proves the detectors fire the low-han
 
 from __future__ import annotations
 
-from airflow_debugger.optimizations import analyze_plan, parse_plan_text
+from airflow_optimizer.optimizations import analyze_plan, parse_plan_text
 
 # Trimmed to the load-bearing lines from the Spark SQL detail screenshots.
 PLAN = """

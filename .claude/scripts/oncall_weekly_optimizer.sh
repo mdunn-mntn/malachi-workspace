@@ -24,7 +24,7 @@ mkdir -p "$OUTDIR"
 # ---- Local-dir mode (testing): crawl a directory that already holds event logs. ----------
 if [[ $# -ge 1 && -d "$1" ]]; then
     echo "[weekly_optimizer] local mode: crawling $1"
-    body="$(python3 -m airflow_debugger.crawl "$1")"
+    body="$(python3 -m airflow_optimizer.crawl "$1")"
     { echo "# Spark fleet optimizer backlog — ${DATE} (local: $1)"; echo; echo "$body"; } > "$REPORT"
     echo "[weekly_optimizer] wrote ${REPORT#"$WORKSPACE"/}"
     echo "$body" | head -n 1
@@ -67,7 +67,7 @@ if [[ $n -eq 0 ]]; then
 fi
 
 echo "[weekly_optimizer] pulled ${n} log(s) from ${PREFIX}; crawling."
-body="$(python3 -m airflow_debugger.crawl "$TMP")"
+body="$(python3 -m airflow_optimizer.crawl "$TMP")"
 {
     echo "# Spark fleet optimizer backlog — ${DATE}"
     echo

@@ -64,6 +64,6 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("usage: python -m airflow_debugger.optimize <spark_eventlog>")
+        print("usage: python -m airflow_optimizer.optimize <spark_eventlog>")
         raise SystemExit(2)
     print(render_report(optimize_run(sys.argv[1])))

@@ -45,19 +45,14 @@ airflow log ─▶ parse (identity + op_classpath→engine + job-id) ─▶ diag
 
 ## Modules
 
-`signatures` taxonomy (21 fingerprints) · `parse` log router+synthesis · `context_parse` in-callback
+`signatures` taxonomy (23 fingerprints) · `parse` log router+synthesis · `context_parse` in-callback
 first-look (Airflow-free, key-free — the Phase-3 auto-fire tier) · `dataproc_rca` / `databricks_rca`
 analyzers · `incident_match` local matcher · `report` BLUF/STAR · `synth` LLM fallback · `orchestrate`
-entrypoint · `eventlog` full 7-surface Spark event-log parser (jobs/stages/tasks/executors/environment/
-SQL per-node metrics; handles `.zstd`) · `optimizations` optimization detectors over the plan text
-(`analyze_plan`: missing_statistics, shuffle_partition_sizing, broadcast_candidate, window_full_sort,
-repeated_scan) AND the event log (`analyze_run`: skew, disk_spill, gc_pressure, spot_preemption_cost,
-shuffle_fetch_instability) — emitting `code` / `infra` / `failure` recommendations with real metrics.
-Parser + detectors validated on real Spark event logs (`tests/fixtures/eventlog.zstd`,
-`eventlog_cache.zstd`). One-call report: `python3 -m airflow_debugger.optimize <eventlog>` → parse all
-7 surfaces + every detector → BLUF report grouped by CODE / INFRA / FAILURE. Fleet crawl:
-`python3 -m airflow_debugger.crawl <event_log_dir_or_glob>` → optimize every job, rank a cross-job
-backlog worst-first (the "check every DAG" mode; point at the GCS event-log prefix once enabled).
+entrypoint.
+
+The optimization half (event-log parsing + efficiency detectors + fleet crawl) split out to the
+`airflow_optimizer/` package (AUDI-1194) — the success-only workflow, run separately. The two packages
+share only the Spark event-log parser.
 
 ## Notes
 

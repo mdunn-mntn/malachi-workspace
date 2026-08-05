@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import os
 
-from airflow_debugger.eventlog import ExecutorInfo, SparkRun, StageMetrics, parse_eventlog
-from airflow_debugger.optimizations import analyze_run
+from airflow_optimizer.eventlog import ExecutorInfo, SparkRun, StageMetrics, parse_eventlog
+from airflow_optimizer.optimizations import analyze_run
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "eventlog.zstd")
 CACHE_FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "eventlog_cache.zstd")
@@ -66,7 +66,7 @@ def test_infra_and_failure_recommendation_types() -> None:
 
 def test_optimize_entrypoint_end_to_end() -> None:
     """The one-call entrypoint parses the real log and renders a grouped report."""
-    from airflow_debugger.optimize import optimize_run, render_report
+    from airflow_optimizer.optimize import optimize_run, render_report
 
     findings = optimize_run(FIXTURE)
     assert any(f.key == "skew" for f in findings)
@@ -77,7 +77,7 @@ def test_optimize_entrypoint_end_to_end() -> None:
 
 def test_fleet_crawl_ranks_worst_first() -> None:
     """The crawl scans multiple event logs and ranks the one with findings first."""
-    from airflow_debugger.crawl import crawl, render_crawl
+    from airflow_optimizer.crawl import crawl, render_crawl
 
     reports = crawl([FIXTURE, CACHE_FIXTURE])
     assert reports[0].source.endswith("eventlog.zstd")  # the skewed job ranks first

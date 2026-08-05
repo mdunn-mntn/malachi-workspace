@@ -7,8 +7,8 @@ from the screenshots; the same output is produced automatically once the event l
 import sys
 
 sys.path.insert(0, "/Users/malachi/Developer/work/mntn/workspace")
-from airflow_debugger.eventlog import ExecutorInfo, SparkRun, StageMetrics  # noqa: E402
-from airflow_debugger.optimizations import analyze_plan, analyze_run  # noqa: E402
+from airflow_optimizer.eventlog import ExecutorInfo, SparkRun, StageMetrics  # noqa: E402
+from airflow_optimizer.optimizations import analyze_plan, analyze_run  # noqa: E402
 
 # --- from the SQL/DataFrame plan (screenshot) ---
 PLAN = """

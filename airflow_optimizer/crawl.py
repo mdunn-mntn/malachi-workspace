@@ -90,6 +90,6 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("usage: python -m airflow_debugger.crawl <event_log_dir_or_glob> ...")
+        print("usage: python -m airflow_optimizer.crawl <event_log_dir_or_glob> ...")
         raise SystemExit(2)
     print(render_crawl(crawl(sys.argv[1:])))
