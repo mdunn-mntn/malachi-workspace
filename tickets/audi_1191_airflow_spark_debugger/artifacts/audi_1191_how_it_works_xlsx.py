@@ -44,8 +44,8 @@ wb.notes(
          "A regex taxonomy (23 fingerprints) classifies the failure. A high-confidence match returns a cached verdict with NO LLM call. Each signature carries a programmatic-fix flag that separates a fixable root cause from a downstream symptom."),
         ("5. Report",
          "A BLUF/STAR report under 500 characters: the root cause, a confidence level, the affected file and line where known, whether a code fix is possible, and a deep link to the batch/run."),
-        ("6. Optimizer (the efficiency half)",
-         "The same Spark event log is parsed across all 7 surfaces (jobs, stages, tasks, executors, environment, SQL node metrics, storage). Detectors flag skew, spill, GC pressure, spot-preemption cost, and shuffle instability with real numbers, then rank a cross-job backlog worst-first (the check-every-DAG mode)."),
+        ("6. Optimizer (the efficiency half, both engines)",
+         "On Dataproc it parses the Spark event log (all 7 surfaces). On Databricks it reads the EXPLAIN COST plan plus Spark metrics. The same detectors flag skew, spill, GC pressure, spot-preemption cost, missing table stats, and shuffle instability with real numbers, then rank a cross-job backlog worst-first."),
         ("7. Deterministic-first + key-free",
          "Steps 1-5 are deterministic code. The LLM is a single bounded synthesis call used ONLY when no signature matches. Data access is SSO/CLI-token based (astro, gcloud, Databricks OAuth); the LLM key is a separate layer used only for the fallback."),
     ],
@@ -73,6 +73,10 @@ cases = pd.DataFrame([
      "Example DAG / task": "Update Vertical Categorization", "What it read": "Spark event log (7 surfaces)",
      "Tool verdict (output)": "Stage 0 skewed 242x (max vs median task). Salt the skewed key or enable AQE skew join.",
      "Confidence": "high", "Validated vs": "prod crawl 2026-08-04"},
+    {"Use case": "Optimization — stats + shuffle", "Engine": "Databricks",
+     "Example DAG / task": "keyword_ddp_reporting / targeted_signal", "What it read": "EXPLAIN COST plan + Spark job metrics",
+     "Tool verdict (output)": "Missing table stats (ANALYZE), 768/72/182 GiB shuffles under-partitioned, 161 spot-kill re-runs. Code + infra fixes.",
+     "Confidence": "high", "Validated vs": "INC-009 job / screenshots"},
 ])
 wb.table(
     "Use cases proven",
@@ -116,8 +120,8 @@ wb.notes(
 
 # ---------------------------------------------------------------- 5. Worked example: Optimizer
 wb.notes(
-    "Ex — Optimizer",
-    intro="The efficiency half: reading a Spark event log to find a concrete speed-up (the Update Vertical Categorization job).",
+    "Ex — Optimizer (Dataproc)",
+    intro="The efficiency half on Dataproc: reading a Spark event log to find a concrete speed-up (the Update Vertical Categorization job).",
     blocks=[
         ("Input", "A finished job's Spark event log (.zstd) from the archive bucket. No failure needed — this runs on healthy jobs to find waste."),
         ("Parse (7 surfaces)", "Parses jobs, stages, tasks, executors, environment, SQL per-node metrics, and storage from the event log into structured metrics."),
@@ -126,6 +130,22 @@ wb.notes(
          "[high] Stage 0 skewed 242.1x (max vs median task). Why: one partition holds most of the data. Fix: salt the skewed group/join key or enable AQE skew join (spark.sql.adaptive.skewJoin.enabled); a plain repartition will not fix a value-skewed key."),
         ("Crawl (check every DAG)", "The same optimizer runs across a directory of event logs and ranks a cross-job backlog worst-first. The 2026-08-04 prod crawl scanned 13 jobs and surfaced 34 findings, 10 high-impact, led by this 242x skew."),
         ("Outcome", "Flagged to the model owner (DDP) as a concrete wall-clock and cost win. First real optimization target found autonomously by the tool."),
+    ],
+)
+
+# ---------------------------------------------------------------- 5b. Worked example: Databricks optimizer
+wb.notes(
+    "Ex — Optimizer (Databricks)",
+    intro="The same efficiency half on Databricks, on a real job (targeted_signal, in keyword_ddp_reporting). Databricks is used by ~66 dbt models plus a handful of PySpark jobs across the mntn_match and DDP DAGs.",
+    blocks=[
+        ("Input", "A Databricks job's EXPLAIN COST plan (from jobs get-run-output) plus its Spark job metrics (stage shuffle sizes, task failures, executor events). No GCS event log needed here."),
+        ("Parse", "The plan gives per-node operators and optimizer statistics; the metrics give stage shuffle sizes, failed tasks, and executor removals."),
+        ("CODE fixes (actual output)",
+         "Missing table stats on product_categorization (13.5B rows scanned) so the optimizer defaults to full sorts, fix ANALYZE TABLE COMPUTE STATISTICS. Wide shuffles 768/72/182 GiB at the default partition count, fix set spark.sql.shuffle.partitions (~256 MiB each) or enable AQE coalesce."),
+        ("INFRA / FAILURE fixes (actual output)",
+         "161 task re-runs from 7 spot-reclaimed executors, fix raise first_on_demand or add on-demand fallback. 168 FetchFailed tasks (shuffle instability), route as infra and reduce shuffle block size."),
+        ("Grouping", "Each finding is tagged CODE (a query/config PR), INFRA (a cluster change), or FAILURE (route it) so the owner knows the kind of fix."),
+        ("Outcome", "Same detectors as the Dataproc optimizer, different acquisition (the plan plus Spark metrics instead of the GCS event log). This is what proves the optimizer works on both engines."),
     ],
 )
 
@@ -174,7 +194,7 @@ wb.glossary(
 wb.cover(
     takeaways=[
         "One automated tool turns a failed Airflow task into a root-cause report with the affected file, for both Dataproc and Databricks.",
-        "Validated on real DAGs across every use case: three flavors of Dataproc RCA, a Databricks RCA, and a live optimizer find (a 242x skew).",
+        "Validated on real DAGs across every use case: Dataproc and Databricks RCA, plus the optimizer on both engines (a 242x Dataproc skew, and Databricks missing-stats + spot churn).",
         "Deterministic-first and key-free: most cases are instant with no LLM and no stored tokens.",
     ]
 )
