@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: cd88fb3d-15ea-4c2f-a714-1f519abde06b
 doc_type: memory
-keywords: [ddp billing, targeted_signal, usage_reporting_data, 1/N fractional split, free log preemption, 33across, augmentor, ddp_mm_winners_imp, DS13, DS19, tv_cpm, AUDI-1089, AUDI-1092, AUDI-1093, enriched_impressions, sherwin ocampo, mntn id crediting]
+keywords: [ddp billing, targeted_signal, usage_reporting_data, 1/N fractional split, free log preemption, 33across, augmentor, ddp_mm_winners_imp, DS13, DS19, tv_cpm, AUDI-1089, AUDI-1092, AUDI-1093, enriched_impressions, sherwin ocampo, mntn id crediting, mm_dsid_count, array_length denominator, 33across dedup, ds28 ds40, bae-4923]
 domain: [pricing, business]
 lifecycle: active
-last_verified: 2026-07-29
+last_verified: 2026-08-05
 ---
 DDP billing (**AUDI-1092 CLOSED/Done 2026-07-22** — credit model CONFIRMED in code + BAE testimony,
 supersedes the residue-only reading below). **The current model is a 1/N FRACTIONAL split, NOT
@@ -17,7 +17,16 @@ first-reporter** — confirmed by reading the crediting script (`SteelHouse/bae-
 + BAE meeting owners (07-20/21): credit = `impression_cnt / mm_dsid_count`, N = all sources with the
 category in `targeted_signal` in the 30d before the imp, free logs (23/30) in N at $0 CPM, winner layer
 OR=lowest-CPM/AND=highest-CPM (see the "BAE MEETINGS" block below + data_knowledge § "DDP MM crediting
-mechanism"). The 07-13 residue read below (May+ "INTEGER single-vendor credit / first-reporter") was a
+mechanism").
+**N IS `mm_dsid_count`, THE NATIVE COLUMN — NEVER RECOMPUTE IT AS `ARRAY_LENGTH(mm_dsids_winner)`
+(measured BAE-4923, 2026-08-05).** The two differ on **34.2%** of rows, and the gap is *exactly* the
+**DS28 (33Across) + DS40 (33Across API) dedup** — the pipeline counts that pair as ONE vendor in the
+denominator. Measured on 202606 with zero exceptions: both present → `array_length - mm_dsid_count`
+= 1 (181,514,444 rows); otherwise → 0 (349,175,512 rows). Recomputing inflates N *and* double-counts
+33Across in the numerator, **overstating any per-vendor credit share ~15-19%/mo**. This is the exact
+error in BAE-4923's original query; see [[project_bae_4923_ddp_claim_validation]]. Corollary for
+"mixed free+paid" counts: exclude rows whose only non-free winner is a flat-fee vendor (25/26/39) —
+they carry no metered credit (268.9M metered-mixed imps in 202606 vs 291.1M under free-vs-anything). The 07-13 residue read below (May+ "INTEGER single-vendor credit / first-reporter") was a
 usage_reporting_data rollup artifact — the upstream winners table (`ddp_mm_winners_imp_202606`) shows
 fractional cross-path 0.5 splits still alive in June; ±7-42%/vendor winners→meter residual unreconciled
 but doesn't change the model. HISTORY (07-13 residue analysis): Jan-Apr 2026 usage rows ~100% decimal
@@ -46,6 +55,12 @@ Flat-fee vendors (5x5/Predactiv/Klickly) are paid regardless of use — renewal 
 **Free logs do NOT preempt paid credit** (Sean Yang 2026-07-13): vendors earn day-grain credit on
 signals guid/augmentor also capture — **$273.7K/yr recoverable** with a free-preemption rule, exact
 at (ip,domain,date) grain from q3c (33Across $221.7K) — AUDI-1093. Preemption substitutes for drops.
+⚠ **That $273.7K is the VISIT grain — do not quote it as the preemption run-rate.** At the
+impression-winner grain (what the meter actually charges on, `ddp_mm_winners_imp`), the measured
+figure is far larger and growing fast: **corrected July 2026 = $64,076/mo = $768,916/yr** (BAE-4923,
+2026-08-05; May-Jul avg $52,042/mo). Volume more than doubled Jan→Jul 2026, so ANY multi-month mean
+is stale on arrival — always requote off the newest `_YYYYMM` table.
+[[project_bae_4923_ddp_claim_validation]]
 **Business case finalized 2026-07-15:** post-preemption bills $812K → $539K/yr (33Across $200.4K,
 API $134.0K, Sovrn $115.6K, Justuno $73.3K, Cybba $15.4K); cuts are cost-only (vendor unique value
 untouched by construction). NO vendor flips worth-its-bill on the portfolio lens; 33A API lands

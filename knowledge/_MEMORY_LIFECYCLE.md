@@ -136,7 +136,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_shared_worktree_commits | feedback | 2026-07-29 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_slack_reply_voice | feedback | 2026-07-29 | [doc](memory/feedback_slack_reply_voice.md) |
 | project_fangorn_on_mntn_id | project | 2026-07-29 | [doc](memory/project_fangorn_on_mntn_id.md) |
-| reference-ddp-billing-logic | reference | 2026-07-29 | [doc](memory/reference_ddp_billing_logic.md) |
 | reference_data_pipeline_repo | reference | 2026-07-29 | [doc](memory/reference_data_pipeline_repo.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-07-29 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_github_pr_no_clone | reference | 2026-07-29 | [doc](memory/reference_github_pr_no_clone.md) |
@@ -172,3 +171,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mntn_devops_permissions | reference | 2026-08-04 | [doc](memory/reference_mntn_devops_permissions.md) |
 | sparse_code_comments | feedback | 2026-08-04 | [doc](memory/feedback_sparse_code_comments.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
+| reference-ddp-billing-logic | reference | 2026-08-05 | [doc](memory/reference_ddp_billing_logic.md) |
