@@ -1,0 +1,172 @@
+[00:00] But I just kind of wanted to go over it.
+[00:03] So I just want to make sure I understand, though, the whole point of this feature store stuff was basically to replicate the feature store that the Mountain ID had into our current ad DAG.
+[00:16] I want to be clear.
+[00:18] I'm sorry.
+[00:18] I just wasn't really a part of the conversation so much as other people making the decisions and then learning off of it.
+[00:28] So I don't feel like I started with like a clear understanding of what we were trying to do, which is why it kind of was a bit confusing to me.
+[00:36] So anyways, from the ticket, Sean cleared it out really, really good.
+[00:42] But basically, the TLDR is that the identity team had, we're using this term feature store pretty loosely.
+[00:51] So they have features related to the mountain ID.
+[00:54] we want to replicate that in our feature store uh no so we have a feature store and that the
+[01:06] the primary key for that feature store is ip so what we need to do is create a and what we're
+[01:13] doing is creating two parallel well four technically parallel tables that um uh that
+[01:23] replicate what we have already built for Fangorn.
+[01:27] But instead of the primary key being IP,
+[01:31] it's going to be mountain ID or household ID.
+[01:35] And so I've already,
+[01:36] the thing that I just shipped this morning is the tables or like the,
+[01:44] the, the DAGs and everything for the tables.
+[01:47] But before we can actually start training Fangorn,
+[01:50] which is slated for next sprint,
+[01:52] We need history because the models need a history to be able to train and predict off of.
+[02:02] So the feature store is still just the feature store that we've been using this whole time, the one that Ryan built.
+[02:08] But it's just a different key, different primary key.
+[02:12] Okay.
+[02:13] That makes sense because I helped with part of the feature store, actually, for some Fangorn stuff.
+[02:17] stuff. So, there's going to be two concurrently running feature stores. One for mount 90 and
+[02:23] one for IP.
+[02:24] So, when you look at here.
+[02:26] Yeah, go ahead.
+[02:31] So if you look at the way that feature store is set up,
+[02:52] I think the auth login stuff is like they shortened the time between having to reauthenticate.
+[02:59] So we have these three layers.
+[03:09] Sean built a new keyed layer for group one, and I just did the layers for group two derived
+[03:19] monthly, group three pivoted, group three pivoted monthly.
+[03:23] So when you look in these, these are basically broken down into, Sean calls them tables.
+[03:36] They're just directories.
+[03:38] Yeah.
+[03:39] So this one is one of the ones that feeds Feature Store or feeds Fangorn.
+[03:44] So I have a the stuff that I just shipped will add a new one of these that is instead of it saying good log derived IP, it's good log derived household ID, vertical ID.
+[04:01] So this, if you look at where this is, this runs every day.
+[04:18] And we basically need to backfill the household ID version of this, like a month.
+[04:27] And I believe that Ryan has scripts that already does this.
+[04:32] We need to do that.
+[04:34] We need to do that for.
+[04:39] We need to do that for this one.
+[04:42] Then we have to do that for the level three one.
+[04:48] Which will be.
+[04:52] Here.
+[04:53] The level three one is built on top of the level two one.
+[04:55] So you got to do the level two one first.
+[04:58] And we're talking six.
+[05:02] No, I'm looking here.
+[05:04] 90 day backfill or back test needed.
+[05:06] Yeah.
+[05:07] If it's 90 day backfill, then yeah, that's, that's how far back we got to go.
+[05:12] So, yeah.
+[05:13] So there are.
+[05:25] I don't have it in my history.
+[05:35] So the new...
+[05:41] Come on.
+[05:46] The new stuff that I shipped today will add the DAGs and the Dataproc jobs that will do
+[06:13] daily stuff.
+[06:16] And these should have
+[06:17] like
+[06:19] if you look at the
+[06:20] store snapshot, this is the
+[06:23] one that does the monthly roll
+[06:25] ups that we receive.
+[06:30] Okay.
+[06:31] Yeah, and so
+[06:32] I don't know what Sean put on that ticket for the
+[06:35] monthly roll ups,
+[06:37] but it should
+[06:39] be probably
+[06:41] backfilled for at least two months.
+[06:45] Okay.
+[06:45] Well, it says add the four models as an
+[06:47] additive task group and feature store
+[06:49] setup model. So
+[06:51] keeps one schedule, no forked DAG,
+[06:53] compile model task, configure JSON
+[06:55] dependency edges,
+[06:58] L1 mirror,
+[06:59] L2, L3.
+[07:02] So.
+[07:03] Yeah, that's all very confusing.
+[07:06] There are
+[07:07] there should be
+[07:13] the end state should be
+[07:20] basically
+[07:23] I believe
+[07:25] okay let me think
+[07:28] there is
+[07:30] four tables yeah
+[07:32] you're right so
+[07:34] there's a level two
+[07:36] daily and a level 2 monthly
+[07:39] and a level 3 daily and a level 3 monthly
+[07:41] and those
+[07:43] are the ones that need to be backfilled
+[07:45] the level 3 the daily
+[07:47] stuff 90 days
+[07:48] if that's correct
+[07:50] I would ping
+[07:53] Ryan because he's done this a lot
+[07:55] done the backfills
+[07:57] when we've found problems
+[07:59] with it
+[08:00] okay
+[08:02] yeah
+[08:03] because yeah I think he'll he probably has some shell scripts and or things that'll do that'll
+[08:09] basically do that so can we back up for a second so the feature store setup model that's the
+[08:15] current dag that's running the um all the feature store stuff right so when it says
+[08:21] add the four models where are the four models that he's talking about is he talking about
+[08:26] that they're already added there i added the four models in in the like these are the four models
+[08:35] already added to the dag okay back here um there is um
+[08:46] So there are two technically models added, and they're ran in two separate ways. One
+[08:58] is ran in a daily methodology, and one is run in a monthly.
+[09:07] Okay. Yeah, I see it. The feature store set up model. Which ones did you, well, I
+[09:15] could probably look here. I'll just open up the DAG here. Okay. So that part's already
+[09:23] been done, though.
+[09:24] Yeah. Let's look at it to make sure that everything looks great. It's hard to look
+[09:30] edit not in dag view. So this is the household ID vertical ID
+[09:49] for layers two, and then there's layer three. The monthly I
+[09:58] forget how that works with monthly. Let's see. That's the
+[10:04] feature source snapshot. Different bag. Yeah, so these are
+[10:25] the four DAGs. The two here and the two here. But they're the exact same.
+[10:33] Okay. So, the feature store snapshot and the feature store monthly. Sorry, the
+[10:45] feature store setup model.
+[10:46] Yeah, yeah. So, this should be, I mean, when you look at the code
+[10:56] I see. Okay. Yeah, because I was confused because when I was looking at it, I was like,
+[11:08] I only see two that were missing. So, that makes sense.
+[11:16] Okay.
+[11:17] So, yeah, if you look at the model ID here, so, like, this GUID log derived household
+[11:26] ID, it says vertical ID snap, but that's just the task name.
+[11:31] The actual model that it's running is the exact same model here.
+[11:36] It's the exact same model, it just takes different parameters so that it runs a snapshot of an
+[11:41] entire month's worth of data instead of a, instead of just a day. And so, yeah, I mean,
+[11:51] Ryan's done this more. I mean, I haven't done it at all, but Ryan's done this a couple of times
+[11:56] now and I think he would be a good asset for. Okay. So just to reiterate, basically all I need
+[12:04] to do, since you already added the models in there, cause this is added in the ticket, but it
+[12:08] looks like you already have the models so i just need to be in charge of the backfill for running
+[12:13] correct okay the model yeah as far as i can tell yeah just the backfill of 90 days for the daily
+[12:18] and i don't know if that backfill needs to happen with the help of airflow because airflow has
+[12:30] backfill tools um and if that's the case uh then i don't exactly know how to i don't know how to
+[12:40] set that up you might need to change the dags around a little bit to make that work okay i
+[12:44] think that ryan just has like a a shell script that deploys things but it also might that also
+[12:52] might have been before we did all of this constraints around, um, yeah, around, uh,
+[13:00] the like access to GCP and all that.
+[13:05] So if you want to set up a call with him and I, or just ping him offline and see if he
+[13:10] has some, some pointers, uh, either way is cool.
+[13:14] But I think if I were in your situation, uh, even with the amount of knowledge I know about
+[13:20] it, it would go faster. Ryan, just because he already has the.
+[13:27] Okay. That makes sense to me. I did this before with the feature store. I'm almost positive it
+[13:33] was a Dataproc job that we used to backfill it. I don't think we used Airflow. I will reach out.
+[13:38] This is Airflow running Dataproc jobs, but the Dataproc, there might be a master Dataproc job
+[13:44] that actually does like the full thing. So yeah, I'll ask him. Yeah. No, thank you for clarifying
+[13:49] this because I was just a little bit
+[13:51] confused. I'm like, I'm not actually sure
+[13:53] what I'm being asked to do.
+[13:55] So this makes sense to me.
+[13:57] Yeah, yeah.
+[14:00] Those tickets
+[14:01] are a bit confusing. I mean, similarly
+[14:03] my ticket was
+[14:04] it doesn't say
+[14:10] anything about
+[14:13] adding it to the DAG, but
+[14:15] I did it anyway.
+[14:17] Yeah, that makes sense.
+[14:18] okay I'll ping I'll ping Ryan and I'll let you know but I don't think it should be an issue
+[14:24] so I this is pretty clear to me so yep cool good thanks Brian later on bye

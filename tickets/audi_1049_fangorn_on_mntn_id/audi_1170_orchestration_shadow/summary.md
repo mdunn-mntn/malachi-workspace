@@ -153,6 +153,35 @@ Transcript: `../meetings/audi_1049_02_weekly_de_meeting_2026_08_03.txt`. This wa
 45–50% data point); (4) **naming-standards doc** (`household_id` token); (5) **validate the monthly snapshot
 path** (Brian hasn't run it). Orchestration/wiring itself = Brian's #1166.
 
+### 4d. HHID FS Backfill meeting 2026-08-05 (Brian + Malachi) — AUDI-1170 collapses to the backfill
+Transcript: `meetings/audi_1170_01_hhid_fs_backfill_2026_08_05.txt`.
+- **#1166 MERGED 2026-08-05 16:33 UTC with `household_id` naming** (renamed from `mntn_id` — the review/meeting
+  lean adopted). Household L2/L3 live in both prod DAGs; **first daily output is tonight** (merge landed after
+  today's 01:03 UTC run → **0 prod household partitions** as of 11am PT, confirmed via gsutil).
+- **AUDI-1170's remaining scope = the BACKFILL (+ the shadow-validation gate).** Brian: "since you already
+  added the models... I just need to be in charge of the backfill." The "four models" = **L2 daily, L2 monthly,
+  L3 daily, L3 monthly** (2 models × the daily-setup + monthly-snapshot DAGs), all wired in #1166.
+- **Depth = 90-day daily backfill** (ticket "~90-day back-test"); **monthly ≥ 2 months.** Order **L2 → L3**
+  (L3 built on L2). **Resolves D2: backfill IS on the critical path — training is slated NEXT SPRINT (AUDI-1103).**
+- **⚠ Prereq I found (not raised in the meeting): backfill the L1 mirror FIRST.** Prod mirror has only
+  `dt=2026-07-27` + `2026-08-03`; Brian's L2 loads the mirror `optional=False` per as-of graph date, so a
+  90-day backfill **fails** until the mirror is materialized over the ~13 weekly asOfDates in the window (from
+  `household_graph_parquet`). Order = **mirror → L2 → L3**.
+- **⚠ Depth is graph-capped, not 90 days.** 90d back = 2026-05-07, but the graph only goes to ~**2026-06-01**
+  (AUDI-1101; ~66 days). `latest_graph_partition` raises for run_dates before the earliest asOfDate → the
+  household backfill **caps at ~2026-06-01**. Confirm 66d is enough (AUDI-1101 said "plenty") or whether
+  `household_graph_parquet` has deeper history than the BQ `identity_graph_history` table.
+- **Get Ryan Kleck's backfill scripts.** Brian (hasn't run a backfill himself) strongly recommends Ryan — has
+  shell scripts + knows the gotchas. Open mechanism: **Airflow backfill tools vs a "master Dataproc job"**
+  (Malachi recalls the FS backfill was a Dataproc job, not Airflow; Ryan's script may predate current
+  GCP-access constraints → may need updating). Action: ping Ryan / set up a Ryan+Brian call.
+- **Shadow-parity validation still mine** (not discussed, but the ticket's "prove it's right" gate remains).
+
+**Action items (2026-08-05):** (1) ping Ryan for backfill scripts/pointers + mechanism (Dataproc master job vs
+Airflow `backfill`); (2) backfill **mirror → L2 → L3** daily to ~2026-06-01 + monthly ≥2mo; (3) confirm the
+graph-depth cap (66 vs 90d) with Ryan/Matt; (4) build the shadow-parity readout on the backfilled output + set
+the reconciliation band.
+
 _Full plan of action: `~/.claude/plans/i-have-to-execute-snoopy-sutton.md` (approved 2026-08-03)._
 _Research detail: this session's three Explore-agent reports (orchestration/PR#1156, L2/L3 internals, backfill/monitor)._
 
