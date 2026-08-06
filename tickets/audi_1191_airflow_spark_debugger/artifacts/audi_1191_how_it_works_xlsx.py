@@ -13,12 +13,15 @@ import os
 import sys
 
 import pandas as pd
+from openpyxl.styles import Font
+from openpyxl.worksheet.hyperlink import Hyperlink
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from airflow_debugger import signatures as sig
-from lib.mntn_xlsx import FMT, MntnWorkbook
+from lib.mntn_xlsx import BRAND, FMT, MntnWorkbook
 
-GEN = "2026-08-05"
+GEN = "2026-08-06"
+GH = "https://github.com/mdunn-mntn/malachi-workspace/blob/main/"
 
 wb = MntnWorkbook(
     title="Airflow/Spark Failure-Debugger + Optimizer",
@@ -29,27 +32,105 @@ wb = MntnWorkbook(
     status="Working",
 )
 
-# ---------------------------------------------------------------- 1. How it works
-wb.notes(
-    "How it works",
-    intro="A failed Airflow task goes in; a root-cause report comes out. Deterministic first, so most cases need no LLM. Key-free: no stored tokens, no Slack bot, no changes to the prod repos.",
-    blocks=[
-        ("1. Trigger",
-         "The existing key-free log puller (airflow_pull.sh --watch) drops each failed task's Airflow log into a folder. Nothing runs in the prod DAGs."),
-        ("2. Parse + route",
-         "It reads the log to identify the DAG, task, and logical date, then routes by operator type to the right Spark engine (Dataproc or Databricks) and pulls the downstream job id."),
-        ("3. Engine analyzer",
-         "Dataproc: batch describe + Cloud Logging traceback + structural TTL check. Databricks: jobs get-run + get-run-output + cluster events. This turns a boilerplate Airflow error into the real underlying cause."),
-        ("4. Signature match",
-         "A regex taxonomy (23 fingerprints) classifies the failure. A high-confidence match returns a cached verdict with NO LLM call. Each signature carries a programmatic-fix flag that separates a fixable root cause from a downstream symptom."),
-        ("5. Report",
-         "A BLUF/STAR report under 500 characters: the root cause, a confidence level, the affected file and line where known, whether a code fix is possible, and a deep link to the batch/run."),
-        ("6. Optimizer (the efficiency half, both engines)",
-         "On Dataproc it parses the Spark event log (all 7 surfaces). On Databricks it reads the EXPLAIN COST plan plus Spark metrics. The same detectors flag skew, spill, GC pressure, spot-preemption cost, missing table stats, and shuffle instability with real numbers, then rank a cross-job backlog worst-first."),
-        ("7. Deterministic-first + key-free",
-         "Steps 1-5 are deterministic code. The LLM is a single bounded synthesis call used ONLY when no signature matches. Data access is SSO/CLI-token based (astro, gcloud, Databricks OAuth); the LLM key is a separate layer used only for the fallback."),
-    ],
+# ---------------------------------------------------------------- 1. How it works (step map)
+# One row per testable chunk. D = debugger (fires on failures), O = optimizer (sweeps successes, AUDI-1194).
+STEPS = [
+    # (step, name, what/how, code display, code repo-path#anchor, test command, proven)
+    ("D1", "Detect failed tasks",
+     "Queries the Airflow REST API on Astronomer directly (no Slack): POST /dags/~/dagRuns/~/taskInstances/list, "
+     "windowed on the UTC day, state=failed. Auth is the short-lived astro SSO login. The Slack alert is only how "
+     "a human notices; the tool finds the same failure itself from the API.",
+     "airflow_api.py:203", ".claude/scripts/airflow_api.py#L203",
+     "bash .claude/scripts/airflow_pull.sh --date <D> --state failed",
+     "Live 2026-08-06: found 5 failed tasks"),
+    ("D2", "Download the log",
+     "For each failed try: GET the task-instance log (structured JSON/NDJSON), render to plain text, save as "
+     "<time>__<dag>__<task>__try<N>__<state>.log plus a _manifest.jsonl row (the pass/fail grid).",
+     "airflow_api.py:294", ".claude/scripts/airflow_api.py#L294",
+     "same command; logs land in on-call/airflow_logs/<date>/",
+     "INC-010 + INC-011 pulls"),
+    ("D3", "Parse + route",
+     "Reads the log for identity (dag, task, run, logical date), routes by operator classpath to the engine "
+     "(Dataproc vs Databricks), and extracts the downstream Spark job id (batch id / run id).",
+     "parse.py:51", "airflow_debugger/parse.py#L51",
+     "python3 -m airflow_debugger.tests.test_parse",
+     "Unit tests green"),
+    ("D4", "Engine RCA",
+     "Dataproc: batches describe + Cloud Logging traceback + structural TTL check (dataproc_rca.py:156). "
+     "Databricks: jobs get-run + get-run-output on the TASK run id + cluster events (databricks_rca.py:74). "
+     "Turns the boilerplate Airflow error into the real underlying cause.",
+     "dataproc_rca.py:156", "airflow_debugger/dataproc_rca.py#L156",
+     "python3 -m airflow_debugger.dataproc_rca <batch_id>",
+     "INC-005 (TTL) · INC-009 (pod-evict)"),
+    ("D5", "Signature match",
+     "24 regex fingerprints classify the failure; a high-confidence match returns a cached verdict with NO LLM "
+     "call. Each signature's programmatic-fix flag separates a fixable root cause from a downstream symptom.",
+     "signatures.py:28", "airflow_debugger/signatures.py#L28",
+     "python3 -m airflow_debugger.tests.test_signatures",
+     "18 cases incl the INC-011 skip-vs-fail"),
+    ("D6", "Past-incident match",
+     "Lexical matcher over the local incident corpus (on-call/incident_log.jsonl) attaches the most similar past "
+     "incidents to the verdict, so a repeat is recognized instantly.",
+     "incident_match.py:34", "airflow_debugger/incident_match.py#L34",
+     "python3 -m airflow_debugger.tests.test_incident_match",
+     "Surfaces the INC-009 twin"),
+    ("D7", "Report",
+     "BLUF/STAR report under 500 characters: root cause + confidence + affected file:line where known + whether a "
+     "code fix is possible + a deep link to the batch/run.",
+     "report.py:50", "airflow_debugger/report.py#L50",
+     "python3 -m airflow_debugger.report <log file>",
+     "INC-005 / 009 / 010 / 011"),
+    ("D8", "LLM fallback",
+     "ONLY when no signature matched: one bounded LLM synthesis call over the distilled evidence (synth.py:29). "
+     "Everything before this is plain deterministic code, so known failures cost nothing and are instant.",
+     "orchestrate.py:16", "airflow_debugger/orchestrate.py#L16",
+     "python3 -m airflow_debugger.orchestrate <log>  (--no-llm to force it off)",
+     "Unknown-signature path only"),
+    ("O1", "Get the job's Spark data",
+     "Runs on SUCCEEDED jobs. Dataproc: the .zstd Spark event log from gs://mntn-data-archive-{env}/spark-events "
+     "(fleet-enabled by PR #1169) or the PHS per-batch dirs (ipdsc/tpa). Databricks: the EXPLAIN COST plan + Spark "
+     "metrics from jobs get-run-output.",
+     "oncall_weekly_optimizer.sh", ".claude/scripts/oncall_weekly_optimizer.sh",
+     "bash .claude/scripts/oncall_weekly_optimizer.sh",
+     "Prod event logs flowing since 2026-08-04"),
+    ("O2", "Parse 7 surfaces",
+     "Full Spark event-log parse into structured metrics: jobs, stages, tasks, executors, environment, SQL node "
+     "metrics, storage.",
+     "eventlog.py:147", "airflow_optimizer/eventlog.py#L147",
+     "python3 -m airflow_optimizer.tests.test_eventlog",
+     "Real prod event-log fixtures"),
+    ("O3", "Detect waste",
+     "Plan detectors (missing stats, broadcast candidate, shuffle sizing, window full-sort, repeated scan) + run "
+     "detectors (skew, spill, GC pressure, spot-preemption cost, fetch instability), each with real numbers and a "
+     "concrete fix.",
+     "optimizations.py:97", "airflow_optimizer/optimizations.py#L97",
+     "python3 -m airflow_optimizer.tests.test_optimizations",
+     "Found the 242x prod skew"),
+    ("O4", "Rank the fleet backlog",
+     "Crawls every event log, ranks jobs worst-first, groups each finding CODE / INFRA / FAILURE so the owner "
+     "knows the kind of fix.",
+     "crawl.py:54", "airflow_optimizer/crawl.py#L54",
+     "python3 -m airflow_optimizer.crawl <dir-or-glob>",
+     "2026-08-04 prod crawl: 13 jobs, 34 findings"),
+]
+steps_df = pd.DataFrame(
+    [{"Step": s, "Name": n, "What it does and how": w, "Code": d, "Test it": t, "Proven": p}
+     for (s, n, w, d, _, t, p) in STEPS]
 )
+ws_steps = wb.table(
+    "How it works",
+    steps_df,
+    finding="Every step is a small, separately testable chunk of plain code",
+    method="D = debugger (fires on failures) · O = optimizer (sweeps successes, AUDI-1194). Code links to the exact "
+           "source line on GitHub (mdunn-mntn/malachi-workspace). Test it = the command that exercises just that step.",
+    kind="headline",
+    widths={"Step": 6, "Name": 22, "What it does and how": 64, "Code": 22, "Test it": 44, "Proven": 26},
+    toc="The step map — every chunk, how it's done, the code link, and how to test it",
+)
+for i, (_, _, _, disp, repo_path, _, _) in enumerate(STEPS, 1):  # data rows start at 5 (title block 1-3, header 4)
+    c = ws_steps.cell(row=4 + i, column=list(steps_df.columns).index("Code") + 1)
+    c.hyperlink = Hyperlink(ref=c.coordinate, target=GH + repo_path, display=disp)
+    c.font = Font(name=c.font.name, size=10, color=BRAND["LINK"], underline="single")
 
 # ---------------------------------------------------------------- 2. Use cases proven
 cases = pd.DataFrame([
@@ -168,7 +249,7 @@ wb.table(
     method="Built live from airflow_debugger.signatures. Engine 'any' applies to both. Auto-fix possible separates a fixable root cause (Yes) from a symptom or infra issue (No).",
     kind="data",
     widths={"Signature": 26, "Engine": 11, "Class": 22, "Likely cause": 62, "Auto-fix possible?": 16},
-    toc="Coverage — the 23 fingerprints the deterministic classifier knows",
+    toc=f"Coverage — the {len(tax)} fingerprints the deterministic classifier knows",
 )
 
 # ---------------------------------------------------------------- 7. Read me / glossary
@@ -186,6 +267,7 @@ wb.glossary(
         ("Event-log surfaces", "A Spark event log records 7 layers (jobs, stages, tasks, executors, environment, SQL node metrics, storage). The optimizer reads all 7 to find skew and spill."),
         ("Skew", "One partition holds far more data than the others, so one task runs much longer than the rest. Measured as max-vs-median task time."),
         ("Signature", "A regex fingerprint of a known failure. A high-confidence match returns a cached verdict with no LLM call."),
+        ("Code links", "The Code column on 'How it works' links to the exact source line on GitHub (mdunn-mntn/malachi-workspace). Repo access required; without it, the file:line shown is still the reference."),
         ("Programmatic-fix flag", "Per signature: whether an automated code fix is even possible. It separates a fixable root cause from a downstream symptom or an infra issue."),
     ],
 )
