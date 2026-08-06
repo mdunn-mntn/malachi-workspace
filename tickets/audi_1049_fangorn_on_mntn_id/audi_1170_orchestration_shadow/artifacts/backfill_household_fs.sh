@@ -65,8 +65,8 @@ copy_model() {
   echo ">> COPY $m  dev -> PROD"
   gsutil ls "$DEV/$rel/" 2>/dev/null | grep -E "/dt=[0-9-]+/$" | while read -r p; do
     local dt; dt=$(basename "$p")
-    if [[ "$DRY_RUN" == "0" ]]; then gsutil -m cp -r "$DEV/$rel/$dt" "$PROD/$rel/";
-    else echo "    DRY: gsutil -m cp -r $DEV/$rel/$dt $PROD/$rel/"; fi
+    if [[ "$DRY_RUN" == "0" ]]; then gcloud storage cp -r -q "$DEV/$rel/$dt" "$PROD/$rel/";
+    else echo "    DRY: gcloud storage cp -r $DEV/$rel/$dt $PROD/$rel/"; fi
   done
 }
 
@@ -83,8 +83,8 @@ case "$MODE" in
     while [[ "$d" < "$END" || "$d" == "$END" ]]; do
       if gsutil -q stat "$DEV/$REL_GUID/dt=$d/_SUCCESS" 2>/dev/null; then echo "  skip  dt=$d (dev exists)"
       elif ! gsutil -q stat "$PROD/$REL_GUID/dt=$d/_SUCCESS" 2>/dev/null; then echo "  MISS  dt=$d (not in prod!)"
-      elif [[ "$DRY_RUN" == "0" ]]; then echo "  copy  dt=$d"; gsutil -m -q cp -r "$PROD/$REL_GUID/dt=$d" "$DEV/$REL_GUID/" || { echo "  FAIL copy dt=$d — stopping"; exit 1; }
-      else echo "    DRY: gsutil -m cp -r $PROD/$REL_GUID/dt=$d $DEV/$REL_GUID/"; fi
+      elif [[ "$DRY_RUN" == "0" ]]; then echo "  copy  dt=$d"; gcloud storage cp -r -q "$PROD/$REL_GUID/dt=$d" "$DEV/$REL_GUID/" || { echo "  FAIL copy dt=$d — stopping"; exit 1; }
+      else echo "    DRY: gcloud storage cp -r $PROD/$REL_GUID/dt=$d $DEV/$REL_GUID/"; fi
       d=$(add_days "$d" 1)
     done
     ;;
