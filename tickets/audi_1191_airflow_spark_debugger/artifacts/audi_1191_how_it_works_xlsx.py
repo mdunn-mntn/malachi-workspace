@@ -63,7 +63,7 @@ STEPS = [
      "python3 -m airflow_debugger.dataproc_rca <batch_id>",
      "INC-005 (TTL) · INC-009 (pod-evict) · INC-012 (ruled out TTL in one call)"),
     ("D5", "Signature match",
-     "25 regex fingerprints classify the failure; a high-confidence match returns a cached verdict with NO LLM "
+     f"{len(sig.SIGNATURES)} regex fingerprints classify the failure; a high-confidence match returns a cached verdict with NO LLM "
      "call. Each signature's programmatic-fix flag separates a fixable root cause from a downstream symptom.",
      "signatures.py:28", "airflow_debugger/signatures.py#L28",
      "python3 -m airflow_debugger.tests.test_signatures",
