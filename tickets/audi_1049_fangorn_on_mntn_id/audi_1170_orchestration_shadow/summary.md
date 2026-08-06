@@ -182,6 +182,20 @@ Airflow `backfill`); (2) backfill **mirror → L2 → L3** daily to ~2026-06-01 
 graph-depth cap (66 vs 90d) with Ryan/Matt; (4) build the shadow-parity readout on the backfilled output + set
 the reconciliation band.
 
+### 4e. Backfill mechanism resolved (Ryan sync 2026-08-06 + hands-on) — full detail in memory [[reference_airflow3_backfill_scoping]]
+- **Ryan has NO backfill script** (Brian's belief was wrong). Graph depth reaches **2026-04-20**, so the full
+  **90-day** backfill is achievable (corrects the 66-day cap in §4c/§4d).
+- **The Airflow-3 UI "Run Backfill" is WHOLE-DAG only — cannot scope to the 3 household tasks** (reruns all ~35
+  tasks × 89 days). No per-task option; "Advanced" = run conf, not task select. This is a dead end.
+- **Correct mechanism = run the 3 models in DEV via `model_run.py` (loop over dates) → `gsutil` copy new
+  partitions dev→prod** (Ryan's endorsed "big-ass script"), OR a **dedicated backfill DAG** (schedule=None,
+  Param dates, only the 3 models). `model_run.py` targets dev. Order **mirror → L2 → L3**; mirror only ~13
+  weekly runs (skip 6 days). **Next: write that script / DAG.**
+- **Cleanup episode:** a botched whole-DAG UI backfill (89 runs, May-8→Aug-6, v194) was triggered on the paused
+  DAG. Resolved by confirming **0 non-terminal backfill runs** (only queued/running would execute on unpause;
+  success/failed are inert) via the Airflow API (path prefix from `<base href>`, e.g. `/dokgryiq/api/v2/...`),
+  then unpausing. Env: **Astronomer Runtime 3.1-9 / Airflow 3.1.5.**
+
 _Full plan of action: `~/.claude/plans/i-have-to-execute-snoopy-sutton.md` (approved 2026-08-03)._
 _Research detail: this session's three Explore-agent reports (orchestration/PR#1156, L2/L3 internals, backfill/monitor)._
 
