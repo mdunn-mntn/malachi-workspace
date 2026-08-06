@@ -965,7 +965,7 @@ gcloud storage ls "gs://mntn-data-partners/partners/predactiv/dt=2026080520/"   
 
 **Impact:** `ipdsc_mntn_select/dt=2026-08-06/` missing `hh=19` (hh=12–18 + hh=20 present). Owner (Sean Yang) re-running with the DAG's `dt`/`hhs` params to close the hole; a re-run usually passes because the latency is variable.
 
-**Durable fix (IMP-027, a small airflow-ti PR):** in `spark/data_source/materialize_mntn_select.py`, expand `region={east,west}` into two literal paths (no wildcard → leaf-dir listing only) for both `get_paths` and the `.parquet()` read; and/or set `spark.hadoop.fs.gs.glob.flat.enable=false`; raising `fs.gs.http.read-timeout` is a band-aid. Owner TPA_EXPORT.
+**Durable fix (IMP-027) MERGED 2026-08-06 as [airflow-ti#1176](https://github.com/SteelHouse/airflow-ti/pull/1176):** in `spark/data_source/materialize_mntn_select.py`, expand `region={east,west}` into two literal paths (no wildcard → leaf-dir listing only) for both `get_paths` and the `.parquet()` read; and/or set `spark.hadoop.fs.gs.glob.flat.enable=false`; raising `fs.gs.http.read-timeout` is a band-aid. Owner TPA_EXPORT.
 
 **Diagnosis lessons (hard-won):**
 - The Airflow log + `batches describe` stateMessage are pure boilerplate for this class — the answer lives in the **staging-bucket `driveroutput.*`** (`dataproc-debug` PAM grants read; first ~2 min of "still 403" is propagation, retry).
