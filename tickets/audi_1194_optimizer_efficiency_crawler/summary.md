@@ -26,7 +26,7 @@ Split from AUDI-1191 (which keeps the failure debugger). This ticket is the OPTI
 - **What would change the answer:** If the findings are mostly false positives / not actionable (owners don't act), or the event-log/plan data can't be reached key-free at fleet scale, the "check every DAG automatically" premise fails and it degrades to a manual/on-request tool. Also: if a full daily sweep is too expensive AND weekly misses too much, the cadence model needs rethinking.
 
 ## 1. Introduction
-Brief context: what system/feature/data is involved, and why this ticket exists.
+The success-sweep optimizer, split from AUDI-1191 on 2026-08-05 (package `airflow_optimizer/`). Inherited optimizer artifacts moved here 2026-08-06: `artifacts/audi_1194_optimization_analyzer_scope.md` (scope + acquisition plan), `artifacts/audi_1194_spark_data_inventory.md` (the 7-surface data inventory), `artifacts/targeted_signal_demo.py` (Databricks demo), `artifacts/finding_vertical_categorization_skew.md` (the 242x finding), `outputs/optimizer_backlog_2026-08-04.md` (first prod crawl backlog). Deliverable: `My Drive/Tickets/AUDI-1194/AUDI-1194 Optimizer How It Works.xlsx` (generator in `artifacts/`).
 
 ## 2. The Problem
 What exactly is broken, unclear, or needed? Include:
