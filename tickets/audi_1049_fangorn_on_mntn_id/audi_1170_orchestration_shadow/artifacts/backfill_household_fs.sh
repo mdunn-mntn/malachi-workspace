@@ -69,6 +69,20 @@ echo "MODE=$MODE  DRY_RUN=$DRY_RUN  range=$START..$END  airflow-ti=$AIRFLOW_TI"
 [[ "$DRY_RUN" == "0" ]] && echo "!! LIVE RUN — this submits real Dataproc jobs (dev) / writes PROD (copy)."
 
 case "$MODE" in
+  seed)
+    # L2 reads guid_log_ip_advertiser_id (L1) with a 30-day lookback, and dev reads resolve to the
+    # DEV bucket only. Seed dev with the prod L1 partitions the backfill needs: START-30d .. END.
+    REL_GUID="feature_group_1_source/guid_log_ip_advertiser_id"
+    d=$(date -j -v-30d -f %Y-%m-%d "$START" +%Y-%m-%d)
+    echo "== SEED dev L1 guid_log from prod: $d .. $END (~120 days, server-side copy) =="
+    while [[ "$d" < "$END" || "$d" == "$END" ]]; do
+      if gsutil -q stat "$DEV/$REL_GUID/dt=$d/_SUCCESS" 2>/dev/null; then echo "  skip  dt=$d (dev exists)"
+      elif ! gsutil -q stat "$PROD/$REL_GUID/dt=$d/_SUCCESS" 2>/dev/null; then echo "  MISS  dt=$d (not in prod!)"
+      elif [[ "$DRY_RUN" == "0" ]]; then echo "  copy  dt=$d"; gsutil -m -q cp -r "$PROD/$REL_GUID/dt=$d" "$DEV/$REL_GUID/" || { echo "  FAIL copy dt=$d — stopping"; exit 1; }
+      else echo "    DRY: gsutil -m cp -r $PROD/$REL_GUID/dt=$d $DEV/$REL_GUID/"; fi
+      d=$(add_days "$d" 1)
+    done
+    ;;
   smoke)
     echo "== SMOKE: mirror -> L2 -> L3 for $SMOKE_DATE (dev only) =="
     run_model "$MIRROR" "$SMOKE_DATE" "$REL_MIRROR" ""              # mirror dt = graph asOfDate (unknown here) -> no skip
