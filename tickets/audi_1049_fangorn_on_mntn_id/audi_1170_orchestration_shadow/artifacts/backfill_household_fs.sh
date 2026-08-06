@@ -12,10 +12,14 @@
 #   bash backfill_household_fs.sh smoke        # 1 old date end-to-end (mirror->L2->L3), then inspect
 #   DRY_RUN=0 bash backfill_household_fs.sh seed      # prod L1 guid_log -> dev (L2's 30d-lookback input)
 #   DRY_RUN=0 bash backfill_household_fs.sh smoke
-#   DRY_RUN=0 bash backfill_household_fs.sh mirror    # ~13 weekly mirror runs, newest first, parallel
-#   DRY_RUN=0 bash backfill_household_fs.sh daily     # 90x (L2 -> L3) date-pairs, oldest first, parallel
-#   DRY_RUN=0 bash backfill_household_fs.sh copy      # dev -> prod (writes PROD)
+#   DRY_RUN=0 bash backfill_household_fs.sh mirror       # ~13 weekly mirror runs, newest first, parallel
+#   DRY_RUN=0 bash backfill_household_fs.sh copy-mirror  # mirror dev -> PROD (MUST run before daily:
+#                                                        #   L2 reads the mirror from PROD even in dev)
+#   DRY_RUN=0 bash backfill_household_fs.sh daily        # 90x (L2 -> L3) date-pairs, oldest first, parallel
+#   DRY_RUN=0 bash backfill_household_fs.sh copy         # L2+L3 dev -> prod (writes PROD)
 # CONCURRENCY=4 by default (parallel Dataproc batches; Ryan OK'd running these simultaneously).
+# Read-resolution (compiled model_config.json): guid_log L1 reads DEV (hence seed); the graph mirror is
+# read-only -> reads PROD always; L2/L3 read DEV. So: seed -> mirror -> copy-mirror -> daily -> copy.
 #
 # PREREQS: local airflow-ti on `main` (has the merged household models);
 #   `gcloud auth login` + `gcloud auth application-default login`; `uv sync --group models`.
@@ -95,8 +99,8 @@ case "$MODE" in
     run_model "$L3" "$SMOKE_DATE" "$REL_L3" "$(add_days "$SMOKE_DATE" 1)"
     echo "== inspect dev output before the full run: =="
     echo "   gsutil ls $DEV/$REL_MIRROR/ ; gsutil ls $DEV/$REL_L2/ ; gsutil ls $DEV/$REL_L3/"
-    echo "   If L2/L3 produced dt=$(add_days "$SMOKE_DATE" 1) with rows, the chain works -> run: mirror, l2, l3, copy."
-    echo "   If L2 failed on a missing mirror partition, the mirror read resolves to PROD -> stop and tell Claude (switch to a prod backfill DAG)."
+    echo "   If L2/L3 produced dt=$(add_days "$SMOKE_DATE" 1) with rows -> run: mirror, copy-mirror, daily, copy."
+    echo "   NOTE the mirror read resolves to PROD (read-only model) -> copy-mirror must run before daily."
     ;;
   mirror)  echo "== MIRROR backfill (~weekly, newest first, x$CONCURRENCY) =="
            seq_dates "$START" 7 | tail -r | xargs -P "$CONCURRENCY" -I{} bash "$0" one-mirror {} ;;
@@ -107,7 +111,8 @@ case "$MODE" in
            run_model "$L3" "$ARG_DATE" "$REL_L3" "$(add_days "$ARG_DATE" 1)" ;;
   l2)      echo "== L2 backfill (daily) =="; for d in $(seq_dates "$START" 1); do run_model "$L2" "$d" "$REL_L2" "$(add_days "$d" 1)"; done ;;
   l3)      echo "== L3 backfill (daily) =="; for d in $(seq_dates "$START" 1); do run_model "$L3" "$d" "$REL_L3" "$(add_days "$d" 1)"; done ;;
-  copy)    copy_model "$MIRROR" "$REL_MIRROR"; copy_model "$L2" "$REL_L2"; copy_model "$L3" "$REL_L3" ;;
-  *) echo "unknown MODE '$MODE' (use: smoke|mirror|l2|l3|copy)"; exit 2 ;;
+  copy-mirror) copy_model "$MIRROR" "$REL_MIRROR" ;;
+  copy)    copy_model "$L2" "$REL_L2"; copy_model "$L3" "$REL_L3" ;;
+  *) echo "unknown MODE '$MODE' (use: seed|smoke|mirror|copy-mirror|daily|pair|l2|l3|copy)"; exit 2 ;;
 esac
 echo "done ($MODE)."
