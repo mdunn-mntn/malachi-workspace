@@ -192,6 +192,8 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 **ui_conversions gotcha:** NULL `conversion_type` is rendered as string sentinel **`'-101'`** in `summarydata.ui_conversions` — never filter `conversion_type IS NULL` there. Attribution layer also drops extreme amounts (empirically between $590K kept and $5.7M dropped; plausibly a ~$1M cap).
 
+**ui_conversions.impression_time = the FIRST qualifying impression of the attribution, NOT the VV-triggering one (PS-8572, 2026-08-06):** on the SAME `ad_served_id`, `ui_conversions.impression_time` differs from `clickpass_log.impression_time` (observed deltas +46s to +34.5d, 10/10 sampled). Client-facing matchback exports surface the ui_conversions value, so chains look anchored to much older impressions than the fresh one that actually triggered the VV — reconstruct the true chain from `clickpass_log`. Also: matchback export timestamps are EDT (UTC-4), not UTC.
+
 ---
 
 ## feature_store/feature_group_1_source/conv_log_ip (parquet, daily)
@@ -2477,6 +2479,11 @@ does NOT prune partitions — it scanned **164.9B rows / 85,043 slot-sec / 280s 
 latest date, probe it first (`SELECT DISTINCT dt ... WHERE dt >= recent ORDER BY dt DESC LIMIT 1`), then inline
 the literal. Also prefer `APPROX_COUNT_DISTINCT(ip)` over exact `COUNT(DISTINCT ip)` on full-partition scans.
 
+**⚠ Parquet predicate pushdown makes IP-list membership checks cheap (PS-8572, 2026-08-06):** an
+`ip IN UNNEST([...])` filter with ~2,154 literal IPs cut a ~91GB DS47 single-partition scan to ~9.3GB actual
+(10x). For "are these specific IPs members?" questions, push the IP list into the WHERE clause instead of
+joining/scanning the whole partition.
+
 **⚠ Authoritative 3P segment SIZE table (use instead of ipdsc DISTINCT-IP):** `dw-main-bronze.external_ddm.data_source_category_sizes`
 (`data_source_id`, `data_source_category_id`, `category_size`, partitioned y/m/d) — this is the per-segment size the **platform UI shows**
 (matches buyer-quoted "15M/12M" numbers). **Access-gated** (GCS `gs://mntn-data-monitoring/audience-metrics/data-source-category-sizes/` —
@@ -2638,6 +2645,7 @@ Exclude this value when counting qualifying HEMs.
 
 **IP estimate:** `match_rate * entry_count` approximates IP count. Use ipdsc__v1 for exact count.
 **Geographic partitions:** Advertisers often split uploads by state group (10 geo partitions common for national campaigns).
+**No match-rate HISTORY exists anywhere in BQ (PS-8572, 2026-08-06):** searched integrationprod `archives_*`, `history`, `coredw`, `reportingdbprod`, and sqlmesh datasets — only the CURRENT `match_rate` is observable. `integrationprod.ui_audience_uploads` is a 1:1 current-state mirror, not history. Claims like "match rate climbed N pts since upload" are unverifiable in BQ.
 
 ---
 
@@ -3243,8 +3251,16 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
     Keyed advertiser_id; 14,582 advertisers as of 2026-06-26.
   - Block is applied **at the advertiser level** (bidder reads this config and suppresses globally); ~96% of
     prospecting campaigns have NO per-campaign pageview clause in `audience_audience_segments`, so the config
-    table — not the per-campaign expression — is authoritative. (Archive `archives_advertiser_configuration_archives`
-    is also fresh for change history.)
+    table — not the per-campaign expression — is authoritative. (Archive =
+    `dw-main-bronze.integrationprod.archives_advertiser_configuration_archives` — note NO `audience_` prefix
+    (no `archives_audience_advertiser_configuration_archives` exists) and NO `update_time` column: order by
+    `create_time` + `version`. Fresh for change history. PS-8572, 2026-08-06.)
+- **`conversion_lookback_window` / `page_view_lookback_window` = the BLOCK lookbacks** (the horizon
+  `block_conversion` / `block_first_party` suppress over) — a different knob from the VV windows
+  (`advertisers.clickpass_acquisition_ttl` / `clickpass_click_ttl`) and from `conversion_window`; a THIRD knob
+  (`lookback_window`) lives INSIDE DS21/DS34 clauses of the `audience_segments` expression. Lovepop 58797:
+  14d PRO VV / 7d RT VV / 30d conversion window but 90d block lookback (90→180 on 2026-08-04) + DS21 180d /
+  DS34 90d clause lookbacks. Name the specific knob. (PS-8572, 2026-08-06)
 - **Per-campaign exclusion clause in `audience_audience_segments`** (`is_targeted=false`) can look like
   `UserLastVisitTime >= N,day and UserNumPageViews >= K` (lookback + threshold) — but this is NOT the
   authoritative block (block_prospecting is enforced advertiser-level by the bidder; ~96% of campaigns have no
@@ -3278,7 +3294,7 @@ To reconstruct why an advertiser's delivery/composition/performance changed (HHS
 | **Flight schedule** (short-flight <72h → manual HHST=0) | `silver.core.flights` | campaign_group_id, start_time, end_time, budget, status_id (3=active/completed, 8=superseded). Duration = TIMESTAMP_DIFF(end,start,HOUR). Each budget/schedule edit = new row. Companion: `silver.dso.campaign_group_flight`. |
 | **Audience / data-source (DS) targeting** | `silver.archives.audience_segment_archives` | campaign_id, expression (nested JSON), expression_type_id=2 & is_targeted=TRUE. Extract DS ids: REGEXP_EXTRACT_ALL(expression, r'"data_source_id":([0-9]+)'). **ORDER BY create_time, NOT version (non-monotonic).** Live: `bronze.integrationprod.audience_segments`. |
 | **Attribution / reporting_style** (last_touch vs industry_standard) | `silver.archives.advertiser_setting_archives` | advertiser_id, reporting_style, update_time. LAG to find flips. Live: `bronze.integrationprod.r2_advertiser_settings`. |
-| **Lookback windows** | `silver.audience.advertiser_configurations` | conversion_lookback, page_view_lookback (FRESH; not the stale integrationprod one). |
+| **Lookback windows** | `silver.audience.advertiser_configurations` | conversion_lookback, page_view_lookback = BLOCK lookbacks, not VV windows (PS-8572). FRESH; not the stale integrationprod one. |
 | **Campaign / group launches & pauses** | `bronze.integrationprod.campaigns` + `campaign_groups` (+ `sum_by_campaign_by_day` for first/last delivery day) | campaign_group_id=client campaign; campaign_id=internal stage (obj 1 S1 / 5,6 MT / 7 Ego / 4 Retgt). Group NAMES encode intent (Scale-Up / General-Interest / DMA). campaign_groups is full of test/archived junk. |
 | **Scoring engine (Fangorn migration)** | `logdata.cost_impression_log` household_score | continuous 8001-9999 = Fangorn; exactly 10000/8000 = bucketed. Per-advertiser rolling migration. DS46 in the audience expression = Fangorn. |
 | **Delivery composition / VR / craters** | `summarydata.sum_by_campaign_by_day` + `logdata.cost_impression_log` | daily VR (views+clicks)/impressions to spot tracking outages (VR→~0 at normal spend = data gap, NOT audience). |

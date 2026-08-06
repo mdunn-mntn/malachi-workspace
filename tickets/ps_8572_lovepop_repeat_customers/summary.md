@@ -121,7 +121,10 @@ Recommendations: Audience squad investigate migration semantics (why DS47 exclud
   **A:** DS47 covers old uploads (April list has 13.9M DS47 IPs) so no re-upload needed, BUT DS47 is not a per-IP superset: 86% of direct-matched converting IPs are absent from it.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Captured 2026-08-06 (/capture sweep):
+- `data_knowledge.md`: DS47 not a per-IP superset of DS4 (7/1 migration hole) + S1-only CRM exclusion clauses (CRM Upload Flow section + Three Universal Rules corollary); corrected the "taxonomy/RT-membership lookback" read of `advertiser_configurations` windows to BLOCK lookbacks; added the three-lookback-knob disambiguation with the Lovepop 14d/7d/30d vs 90d example.
+- `data_catalog.md`: ui_conversions.impression_time = FIRST qualifying impression (differs from clickpass_log on same ad_served_id; matchback exports EDT); no match-rate history table in BQ (ui_audience_uploads = current-state mirror); ipdsc IN UNNEST predicate-pushdown 10x perf note; `archives_advertiser_configuration_archives` naming (no `audience_` prefix, no update_time, order by create_time + version).
+- Memory: new `reference_crm_exclusion_serve_time`; `feedback_background_work_liveness` gained the BSD find `-newermt` false-alarm gotcha.
 
 ## 8. Open Items / Follow-ups
 Anything not resolved, handed off, or deferred.
