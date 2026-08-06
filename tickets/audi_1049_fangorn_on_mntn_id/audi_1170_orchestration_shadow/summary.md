@@ -196,6 +196,19 @@ the reconciliation band.
   success/failed are inert) via the Airflow API (path prefix from `<base href>`, e.g. `/dokgryiq/api/v2/...`),
   then unpausing. Env: **Astronomer Runtime 3.1-9 / Airflow 3.1.5.**
 
+### 4f. Backfill execution started 2026-08-06 (script + PAM access)
+- **Script:** `artifacts/backfill_household_fs.sh` — phased dev+copy (smoke → mirror → l2 → l3 → copy),
+  DRY_RUN default, resume-skip on existing dev partitions, copy is additive (never `-d`). Invokes
+  `uv run python model_run.py` (bare `python` not on PATH).
+- **Prereqs fixed:** airflow-ti moved TI-956 branch → `main` @ 8342a91 (209 commits; all 3 household model
+  IDs present in `model_task_config.json`); `uv sync --group models`; ADC refreshed.
+- **Access = PAM, not standing IAM** (Ryan): the Dataproc SA is hardcoded (`utils_runner/dataproc.py:36`);
+  submit fails without `serviceAccountUser`. Requested via `gcloud pam grants create` on entitlements
+  `dataproc-runtime-actas` + `dataproc-submit` (mntn-prj-dev-00, 4h max, devops 1-approval) → both ACTIVE
+  same day. **A multi-hour phase needs a fresh 4h grant.** CLI recipe in [[reference_airflow3_backfill_scoping]].
+- **Smoke test** (mirror→L2→L3 for 2026-05-15, dev): running — resolves the dev-vs-prod read-resolution
+  question before the ~190-job full run.
+
 _Full plan of action: `~/.claude/plans/i-have-to-execute-snoopy-sutton.md` (approved 2026-08-03)._
 _Research detail: this session's three Explore-agent reports (orchestration/PR#1156, L2/L3 internals, backfill/monitor)._
 

@@ -47,10 +47,10 @@ run_model() {
   fi
   echo "  run   [$m] run_date=$d"
   if [[ "$DRY_RUN" == "0" ]]; then
-    ( cd "$AIRFLOW_TI" && python model_run.py "$m" -a "{\"run_date\": \"$d\"}" ) \
+    ( cd "$AIRFLOW_TI" && uv run python model_run.py "$m" -a "{\"run_date\": \"$d\"}" ) \
       || { echo "  FAIL  [$m] $d — stopping"; exit 1; }
   else
-    echo "    DRY: (cd $AIRFLOW_TI && python model_run.py $m -a '{\"run_date\": \"$d\"}')"
+    echo "    DRY: (cd $AIRFLOW_TI && uv run python model_run.py $m -a '{\"run_date\": \"$d\"}')"
   fi
 }
 

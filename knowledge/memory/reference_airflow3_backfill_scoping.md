@@ -3,7 +3,7 @@ name: Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a
 description: The Astronomer Airflow-3 UI "Run Backfill" is whole-DAG only (no per-task selection); to backfill a few new models, run them in dev via model_run.py and gsutil-copy to prod, or build a dedicated backfill DAG. Plus the API path-prefix + safe-unpause heuristic.
 type: reference
 doc_type: memory
-keywords: [airflow 3 backfill, astronomer backfill UI, whole-dag backfill, feature_store_setup_model backfill, dev copy to prod, dedicated backfill DAG, base href api prefix, dagRuns api v2, non-terminal runs unpause, household FS backfill, AUDI-1170]
+keywords: [airflow 3 backfill, astronomer backfill UI, whole-dag backfill, feature_store_setup_model backfill, dev copy to prod, dedicated backfill DAG, base href api prefix, dagRuns api v2, non-terminal runs unpause, household FS backfill, AUDI-1170, pam grant, dataproc-runtime-actas, dataproc-submit, serviceAccountUser, model_run.py permissions]
 domain: [infra, workflow]
 lifecycle: active
 last_verified: 2026-08-06
@@ -30,3 +30,11 @@ const live=all.filter(d=>!["success","failed"].includes(d.state));
 console.log("backfill runs:",all.length,"| non-terminal (only risk):",live.length);})();
 ```
 `non-terminal: 0` → nothing runs on unpause → safe. See [[reference_airflow_ti]] and [[feedback_astronomer_clear_with_latest_bundle]].
+
+**Running `model_run.py` in dev needs PAM grants (not standing IAM).** The Dataproc SA is hardcoded (`utils_runner/dataproc.py:36` → `airflow-ti-dev@mntn-prj-dev-00`); without `serviceAccountUser` the submit fails `400 User not authorized to act as service account`. Fix = Google Cloud **Privileged Access Manager** via CLI (Ryan Kleck's standard path, no IAM ticket):
+```bash
+gcloud pam entitlements search --caller-access-type=grant-requester --location=global --project=mntn-prj-dev-00   # list what you can request
+gcloud pam grants create --entitlement=dataproc-runtime-actas --location=global --project=mntn-prj-dev-00 --requested-duration=14400s --justification="<ticket>: why"
+gcloud pam grants create --entitlement=dataproc-submit        --location=global --project=mntn-prj-dev-00 --requested-duration=14400s --justification="<ticket>: why"
+```
+`dataproc-runtime-actas`=`roles/iam.serviceAccountUser`, `dataproc-submit`=`roles/dataproc.editor` (request BOTH). Eligible via `audience-intelligence@mountain.com`; 1 approver from devops-squad (pam-slack-bot pings Slack); **max 14400s (4h) per grant** — a multi-hour backfill needs a fresh grant per ~4h window. Poll `gcloud pam grants describe <name> --format='value(state)'` for `ACTIVE`. Also on the machine: `python` isn't on PATH in airflow-ti — invoke `uv run python model_run.py …`.

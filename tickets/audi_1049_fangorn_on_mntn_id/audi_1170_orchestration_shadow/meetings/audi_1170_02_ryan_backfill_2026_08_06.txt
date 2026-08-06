@@ -1,0 +1,608 @@
+[00:00] deal they just wanted me to i guess go through you um about this so let me share my screen real quick
+[00:11] yeah
+[00:17] okay um
+[00:21] where's my ticket here sorry for some reason i got logged out of it um okay
+[00:28] Okay, so this is the feature store stuff with the Mountain ID and the IP.
+[00:36] And so anyways, this ticket has just resolved around just setting up the backfill for all these.
+[00:47] So from what I understand, the feature store essentially was we were creating a...
+[00:53] We have basically two parallel feature stores, one with Mountain ID and one with IP.
+[00:58] And we were creating the one with mountain ID.
+[01:01] Now Brian's already taken care of those steps of creating it,
+[01:04] but now there needs to be the backfill.
+[01:06] And essentially I think we need 90 days.
+[01:12] And so they wanted me to ask you how you did the backfill for,
+[01:17] or how you would do the backfill for these.
+[01:20] They said that you've had some sort of script for running the backfill.
+[01:22] I didn't think that was true, but maybe you do.
+[01:25] like at an IP level
+[01:29] yeah
+[01:30] or well
+[01:32] yeah not really
+[01:35] yeah I don't have a script for it
+[01:37] okay I see
+[01:38] let me just double check how far back
+[01:41] our graph data goes
+[01:42] because you might not be able to
+[01:44] we got back to 4.20
+[01:47] April 20th
+[01:48] so you're not going to be able to go back
+[01:51] further than like that
+[01:53] just so you know
+[01:55] that should be fine i i only need to go back 90 days at max which would be like i said it
+[02:02] oh dude sorry it's august already yeah it is oh my god yeah okay okay um
+[02:13] um yes to be quite frank i didn't i wasn't really part of like the decision making
+[02:20] process of this and then like
+[02:22] I wasn't really sure like this ticket
+[02:24] isn't even very clear like
+[02:26] because I wasn't even the one that was going to add
+[02:28] these models here
+[02:29] yeah so
+[02:32] anyways
+[02:34] well
+[02:35] I could discuss this
+[02:38] I just don't want to like
+[02:39] like give you too much information
+[02:42] because
+[02:44] there's a couple
+[02:46] different ways we could do this
+[02:48] well okay first of all the feature store is set up like in the layers you know layer one two three
+[02:55] yep layer one is like a daily aggregation um and it's designed like where you shouldn't have to go
+[03:06] backfill layer one you know and so that's kind of like because layer one you know aggregated daily
+[03:15] layer two is where we go back 30 days or something you know and then and then aggregate it by ip
+[03:23] and layer three is like a pivot or less so like if you want to mirror that if you are if you want to
+[03:33] duplicate that at a household like you're gonna have to consciously decide that layer one you're
+[03:41] never going to go back and backfill but layer two is where you could backfill yeah but don't i need
+[03:48] to create because layer two is dependent on layer one once i need all that data so that layer two
+[03:53] can start doing the aggregate stuff yeah so this is where so there's this is where there's two
+[04:02] options for layer one
+[04:03] and you'll I forget
+[04:06] what we landed on
+[04:07] and so
+[04:09] one option is
+[04:11] or well
+[04:16] let me think
+[04:18] or maybe they
+[04:19] I guess did they did they tell
+[04:22] you in layer actually did they just tell you
+[04:24] in layer one they want household ID
+[04:26] yeah I believe so
+[04:28] that was what they okay
+[04:29] I think that's my household ID
+[04:32] because I thought that there was already
+[04:33] That makes it easy then.
+[04:39] IP.
+[04:40] Yeah, that makes it easy.
+[04:42] That's the easiest way to go then.
+[04:45] That makes this way easier.
+[04:47] The way I was thinking of doing it
+[04:48] is more complicated, but you know what?
+[04:50] That's fine.
+[04:52] We can do it more complicated
+[04:53] later on down the road.
+[04:55] Yeah, so here's what
+[04:57] basically Brian did. So he added
+[04:59] two
+[05:00] models here and two models here.
+[05:05] So that's the four model addition that he did.
+[05:10] And then I, again,
+[05:11] like I didn't really get a lot of context for what the stick was supposed to
+[05:15] be doing. So I pretty much know that I'm supposed to backfill like,
+[05:18] but I don't really understand what that means necessarily. Like, I mean,
+[05:22] I get that I need to fill in the data, but like, I'm not exactly sure.
+[05:26] So basically my thought process is that, so for IP,
+[05:30] we've been grabbing features.
+[05:32] I don't know where the features come from.
+[05:33] I had to check.
+[05:34] Right.
+[05:34] But we're grabbing features for IP.
+[05:37] And all we want to do is create those same features with mountain ID.
+[05:40] But since we're starting it from today,
+[05:41] we need to go back a certain set of time.
+[05:44] So basically I need to rerun these tasks.
+[05:48] Or I don't know if I would say rerun the tasks,
+[05:50] but I need to run this so that it works for.
+[05:54] Okay.
+[05:55] Okay.
+[05:56] Go,
+[05:56] go to click,
+[05:57] click on DAGs.
+[05:58] Let's start the kind of the beginning.
+[06:00] Okay.
+[06:00] or look at feature
+[06:03] or just type in feature
+[06:05] just three
+[06:07] oh those are dev
+[06:11] or yeah go
+[06:12] sorry go to
+[06:14] or okay just look in prod
+[06:17] or go to the prod
+[06:18] prod airflow
+[06:20] or you were just there I think
+[06:22] yeah now you can see it so which one are you
+[06:24] you wanted
+[06:25] okay there's three
+[06:27] there's three feature store things.
+[06:29] One's hourly.
+[06:31] One's feature store setup model is the daily ones.
+[06:35] It's poorly named.
+[06:36] It should just be,
+[06:37] it was named that way.
+[06:38] Well,
+[06:39] whatever.
+[06:39] It's just poorly named.
+[06:40] And then feature store snapshot you were looking at.
+[06:42] That's,
+[06:43] that's one that like takes monthly snapshots.
+[06:46] So it only runs certain days or runs every day,
+[06:50] but it only actually does something certain days.
+[06:54] Cause we wanted like,
+[06:55] like um and sorry and the difference is feature store hourly is like those big data sets like
+[07:02] augmenter log google log and stuff where it's hard to aggregate it up by day it's cheaper to like do
+[07:10] it hourly and then have feature store setup model do it by day does that make sense yeah and then
+[07:18] And feature store snapshot is where we, so we output the feature store every day because we need it to like score models, you know, like Fangorn and stuff like that.
+[07:33] We want to score things every day, but we don't want to keep all that history in GCS because that'll cost money.
+[07:40] but we do want to keep like maybe once one like one day per month and that's what feature store
+[07:50] snapshots about is keeping like one day per month so that way we could you know we could have it
+[07:57] back to the end of time or when this started so does that make sense the three different
+[08:02] yep okay so that being said you're probably going to do most of this work in feature store
+[08:09] well, you're going to do it across these three.
+[08:16] So where I would start,
+[08:18] are you doing this for all of the models?
+[08:21] Or for all of these steps?
+[08:24] Or is there a certain one that you want?
+[08:26] I thought it was just the four additional ones, right?
+[08:30] Okay, so what did,
+[08:32] show me what Brian added, I guess, to.
+[08:36] Yeah.
+[08:37] Because I didn't quite understand,
+[08:39] which one's the log derived household
+[08:44] okay what's that identity graph ip household what's that the it's in layer one feature group
+[08:51] one source this one i didn't why what is this well this is just going to be the dag schedule but
+[09:02] yeah show me the
+[09:04] code if you
+[09:06] would for that
+[09:08] step
+[09:09] yeah
+[09:10] identity graph household is there a way to
+[09:14] go to the code directly from here
+[09:16] no yeah yeah okay
+[09:18] that's what I thought you have to look in
+[09:20] github
+[09:22] yeah
+[09:23] the reason I'm understanding this is
+[09:28] because that's going to run daily and you might
+[09:30] need this for the hourlies things. But sorry, I guess this
+[09:37] is where Okay, but you're only doing okay, I got it. We gotta
+[09:43] figure out some stuff.
+[09:49] Yeah, models are related. This is less under DAGs folder to go
+[09:59] we have airflow TI. Yeah, models. Models. Yes, it's confusing.
+[10:07] Then feature store. Yeah, the feature group one source. And
+[10:10] then where's what was it called? identity graph IP household?
+[10:16] Yeah, yeah.
+[10:18] This this he must be hitting our our parquet feature stores.
+[10:25] Scroll down or what's his input to this is what I'm wondering.
+[10:29] oh and scroll down a little more a little more right that's the right location why is he okay
+[10:40] whatever yeah scroll down graph dfe load graph ids where's that function that load graph ids
+[10:49] oh it's in utils i think utils model
+[10:54] okay what does that
+[10:59] load graph IDs
+[11:01] do
+[11:02] household
+[11:05] resolution it's
+[11:06] yeah they're
+[11:08] so
+[11:13] load so yeah just look for the
+[11:15] function if you would
+[11:17] graph
+[11:20] IDs it takes
+[11:22] okay wait it takes a spark session
+[11:25] as of or before
+[11:27] so I think that's a date
+[11:29] okay yeah use the newest snapshot
+[11:32] okay yeah
+[11:35] because we only output weekly
+[11:38] graphs you know
+[11:39] so you're going to pass it
+[11:41] okay yeah so this
+[11:43] is going to be slightly confusing but yeah you're going to pass it
+[11:46] like a date
+[11:46] and it's going to find
+[11:49] the partition
+[11:50] before the, or, you know, the max partition before that date.
+[11:55] Does that make sense?
+[11:57] Yeah.
+[11:59] Or, you know, like, cause you're going to like, we only have our,
+[12:02] like, for example, we have our newest partitions, August 3rd, 2026.
+[12:07] And today's August 6th.
+[12:08] So when you're running this, you're going to,
+[12:10] you're going to pass like August 6th or something,
+[12:12] but there is no August 6th.
+[12:14] It's going to have to go find August 3rd and same when you backfill.
+[12:18] so you know we got like a july 27th graph and then august 3rd so when you backfill
+[12:24] august 2nd you know you don't want to use like the forward looking date you want to use the july 27th
+[12:32] one does that make sense yeah yep that makes sense oh yeah that's not too and then okay id
+[12:40] types current only keep only open assignment interval. Okay, yeah. So n
+[12:46] time is null. Then what's D dupe collapse to one row per graph ID graph type. Oh,
+[12:59] okay. So that's like max confidence. And then what's base path? Oh, that's the
+[13:06] a graph based path. Okay, so this is okay. So he Yeah, this Okay, sorry. So his DAG go back to his
+[13:18] or me sorry, his code that we were. So this does get let me see what columns he outputs. He puts
+[13:34] It's hard to tell, huh?
+[13:42] It was output df has date.
+[13:46] I see.
+[13:48] I go back to that function to know what it outputs.
+[13:52] You go back to that load.
+[13:55] Sorry.
+[13:56] No, you're okay.
+[13:58] Load graph IDs.
+[14:01] Yeah.
+[14:02] yeah or is it select it selects id or it does some filtering selects id is graph id id type
+[14:15] household id okay confidence score is shared and actually scroll scroll down because it's
+[14:21] just going to use those what is this return graph man so annoying sometimes they're all right okay
+[14:29] there's select above it.
+[14:35] household ID.
+[14:36] Okay, it outputs graph ID, graph ID type, household ID,
+[14:41] confidence score is shared. As update and graph revision.
+[14:49] Okay. So you're so confusing. You're the rename columns is so
+[14:57] you're gonna say,
+[15:07] everybody type. Okay.
+[15:13] Think I know what this does. So, which so in this new window, can
+[15:19] Can you just show me what code you're trying to update?
+[15:28] Or one of the things?
+[15:31] Like what code I'm trying to update?
+[15:33] Yeah, or which one of these steps?
+[15:35] Is it good log?
+[15:36] Is that one?
+[15:37] I think it's these four.
+[15:38] So in here, it's the setup model.
+[15:40] So there's good log derived household.
+[15:42] He just created it.
+[15:44] And then good log pivot household.
+[15:47] And then that's in the setup model.
+[15:50] And then the snapshot model, it's these two.
+[15:52] Good log-derived household.
+[15:54] Okay, so that's the port.
+[15:55] Gotcha.
+[15:56] Okay.
+[15:56] Okay, so what you're going to do, yeah.
+[16:01] Okay, this makes sense.
+[16:03] Is then good log-derived household there in this code?
+[16:08] Mm-hmm.
+[16:12] Find that code in GitHub.
+[16:15] Okay, good log-derived, yeah.
+[16:17] I can do that
+[16:17] yeah
+[16:19] so he must have the bones set up for you
+[16:22] and you just gotta like
+[16:24] yeah I think so
+[16:25] because he already did layer 2 or layer 3
+[16:29] okay
+[16:30] he did layer
+[16:34] 1
+[16:35] or wait no he's asking the back
+[16:38] dude what the hell
+[16:39] okay I guess I'm confused
+[16:41] well that's what he said but
+[16:43] I think
+[16:44] where's your
+[16:47] where's your ticket
+[16:49] is this a ticket
+[16:51] yeah here's my ticket
+[16:53] but I'm not adding the four models
+[16:58] because he did that so this is
+[17:00] backfill
+[17:02] runner over historical
+[17:04] as of date partitions
+[17:06] fall back
+[17:13] depth
+[17:16] or
+[17:17] yeah I think this was like a Jira
+[17:20] like an AI Jira ticket
+[17:22] I think he has all the
+[17:24] code done he just wants you
+[17:26] to run those for
+[17:28] IC so you don't have to change
+[17:30] any code I don't think so I think I just need
+[17:32] to run them so
+[17:34] okay yeah I hate doing
+[17:36] backfills in Airflow
+[17:37] do you have to do it in Airflow
+[17:40] you could do
+[17:43] it
+[17:43] locally or in dev
+[17:46] but if you do it
+[17:48] you could do it in
+[17:51] you could do it
+[17:53] in dev or locally but then you
+[17:54] have to make you have to like
+[17:56] copy the data so it's gonna
+[17:58] write it out to dev
+[18:00] and you have you know you have to
+[18:02] it's not a big deal but you have to
+[18:04] run one day in dev
+[18:06] copy the data to prod
+[18:08] or do you
+[18:10] it becomes irritating
+[18:11] Airflow is the best way to do it
+[18:14] Okay
+[18:15] Can't you go back and edit
+[18:20] The Python script and set
+[18:22] The backfill day
+[18:23] Where it will automatically start running
+[18:26] Day after day after day
+[18:27] Because there's a setting at the top
+[18:34] Of each file
+[18:35] So if I go
+[18:36] If I go to the DAGs
+[18:41] I thought DAGs all had that
+[18:43] yeah
+[18:44] it just
+[18:48] yeah like if you set the
+[18:50] well this has a schedule there
+[18:52] but it has a start date
+[18:54] so you could change the start date
+[18:56] and then say catch up equals true
+[18:58] I don't know if that's a
+[19:01] it doesn't
+[19:02] go to
+[19:04] go to feature store
+[19:06] setup model I think that's already done
+[19:08] or
+[19:10] why is this in bitstream hourly
+[19:13] there is no catch up for these
+[19:16] but yeah you could technically go back
+[19:17] 90 days
+[19:18] you could try that
+[19:22] or but I just don't know
+[19:24] I could show you the way
+[19:32] I know how to do it
+[19:33] but it's
+[19:35] way confusing
+[19:37] or not wake up it's just tough with our version of airflow okay so just in gist right
+[19:46] brian has four models they're running every single day one of them i think it's just the snapshot
+[19:53] yeah it's the snapshot and the setup models okay so they only run once
+[20:00] day. Yeah. So I basically need to run 90 days of that. As far back as I can. So I basically,
+[20:08] all I need to do is run these models for 90 days. That's all I need to do. Yeah.
+[20:12] And just forget about the snapshot stuff for now. Cause the snapshot, you want to backfill these
+[20:18] too. So, so, so here's, here's what you just, just click, turn, turn, turn this off for now.
+[20:28] turn this dag off okay and then you're in prod so just yeah turn it off for a minute hit trigger
+[20:35] and then you're gonna do backfill
+[20:39] um uncheck that unpause feature store thing real quick and you're gonna do all runs
+[20:49] and then you're gonna go from so this is where you're gonna go 90 days back 90 days back oh
+[20:57] let's see
+[20:58] yeah
+[20:58] I don't know what
+[21:02] May 8th
+[21:04] 2026
+[21:04] yeah
+[21:06] so
+[21:07] actually I think there's
+[21:08] three things
+[21:09] I need to run
+[21:10] because I think you need
+[21:10] this identity graph
+[21:12] thing
+[21:12] so yeah
+[21:15] May 8th
+[21:18] let's see
+[21:19] May 8th
+[21:20] yeah that'll work
+[21:20] all runs
+[21:23] and then
+[21:24] okay
+[21:25] max active runs
+[21:29] make that
+[21:30] three
+[21:32] and then
+[21:35] why can't you hit run back fill
+[21:37] oh I had to specify
+[21:42] okay
+[21:44] now hit run back fill it's turned off
+[21:47] so it's not going to do anything
+[21:48] hold on let's take a screenshot
+[21:50] this
+[21:52] yeah this is the part that sucks
+[21:54] because it's going to fill up your screen
+[21:57] with a bunch of junk.
+[22:00] Okay.
+[22:01] One second here.
+[22:03] Yeah, 89 runs will be triggered.
+[22:05] Whatever. 89, that's enough, dude.
+[22:08] It might not be 90 days
+[22:09] exactly. All right, so go ahead and run it.
+[22:11] Yeah, click run backfill. It's
+[22:12] turned off, so it's not going to do anything.
+[22:15] You'll see where the pain is.
+[22:17] But what you're going to have to do is
+[22:18] go, I think we've done this before,
+[22:21] mark the ones you don't want
+[22:23] to run as successful.
+[22:24] and then clear, or mark the ones you don't want to run as successful,
+[22:30] clear the ones you do want to run,
+[22:34] or make sure they're cleared, and then turn the DAG on.
+[22:40] That's painful.
+[22:40] I wonder if we advanced options.
+[22:44] Oh, maybe. I don't know. I guess maybe.
+[22:48] Maybe we could have asked Cursor.
+[22:51] and then so so uh here scroll up uh scroll up a little bit there you see that we're actually
+[22:58] options can you drop down that options and then run type change that to backfill
+[23:04] and then do number of dag runs up uh under options oh sorry yeah there's no problem
+[23:16] Increase that to 50.
+[23:19] That's the most I can do.
+[23:22] Okay, now give yourself some room.
+[23:24] Hide that code thing.
+[23:27] Just give yourself some room because you're going to be in this screen all day.
+[23:31] And so now...
+[23:34] Oh, shoot.
+[23:35] How come...
+[23:38] The ones you want to run aren't there.
+[23:44] Why is that?
+[23:46] Oh, they're empty.
+[23:51] Yeah, because you want to run the ones that are...
+[23:55] Hover up on the gray...
+[23:59] I want to see what date that is.
+[24:00] Go all the way up to the gray.
+[24:03] Yeah, so this is 6-18.
+[24:05] 6-18.
+[24:09] I think I understood...
+[24:16] Ryan, I think I understand this.
+[24:17] Like I could probably figure this out or whatever and mess with it.
+[24:21] I just wanted to make sure that it was clear what I was doing.
+[24:24] Cause I, I just,
+[24:25] I didn't understand what I was being asked to do a hundred percent.
+[24:29] So.
+[24:30] Yeah.
+[24:31] Sorry.
+[24:31] I probably got you in a bad state here though.
+[24:34] Cause you're don't,
+[24:35] don't turn this on until you're going to have to like mark all these as
+[24:40] success.
+[24:41] And then I'm going to,
+[24:44] I'm going to,
+[24:45] this is a pain in the butt
+[24:47] there's got to be a better way to do it
+[24:49] I guarantee there is I'll look in cursor
+[24:51] see if there's a better way to do it and then also figure
+[24:53] out why those missing ones are there
+[24:55] and then I'll let you know what I find out but
+[24:57] sorry dude yeah
+[24:59] go to this
+[25:00] advanced configuration you're right
+[25:03] maybe that advanced configuration you'd be like oh
+[25:05] skip these run these
+[25:07] then this
+[25:09] I don't know how to go back further either
+[25:11] so like you're gonna have to
+[25:13] yeah sorry man i got you in a bad state you can't go more than 50 or how there's a way to
+[25:24] increase the number of dag runs or something
+[25:30] like how far back you can go dude sorry i might have got you in a bad state but anyway
+[25:38] well let me show you just or do you know how to yeah i might have to mark this as successful one
+[25:43] at a time so if you do you know how to do that yeah okay you're saying like i would have to do
+[25:50] that for every single task though that i didn't want to run like now i would just have to it looks
+[25:55] like i'll have to do like oh yeah so you can't you can't do it from that box either what i would do
+[26:01] go to her just click on log IP for for one of those yeah and then option all right no hold on
+[26:15] area where maybe it's popper yeah you need to yeah yeah then right not there yeah yeah yeah
+[26:23] right then mark instance as success oh yeah actually this is how we do it actually actually
+[26:30] you could do it hit click mark instance as success yeah and then right here wait then do past click
+[26:38] basically past future upstream downstream all of them and that okay so you don't need to see
+[26:45] further back than 50 this will take care of it but when you click confirm it's going to hang a while
+[26:51] because this this like has a tape it has like a database of things so just so you know or did you
+[26:56] click confirm you have to wait like a minute for it to stop spinning and so like right here usually
+[27:03] what i do if i'm doing a bunch of these is i have another window with the other ones i want to mark
+[27:08] as resolved you know this is only going to do it for one day no this is gonna do it for all okay i
+[27:15] see for that specific task yeah it will mark every single one as yeah this is confusing
+[27:23] it has affected tasks 89 because you did an 89 day backfill yeah so yeah so now it's done so now
+[27:31] so you're gonna have to oh yeah so sorry dude what you might have to do is like
+[27:35] undo this backfill by marking them all as success and then figure out why you can't run
+[27:44] those other ones okay which i don't i guess that's the part i don't understand okay i will
+[27:52] I will look into that. I'll figure it out.
+[27:54] Sorry. No, that's okay. It's okay. I mean, this is helpful. I just,
+[27:58] the only problem I was like, I just didn't know,
+[28:00] I didn't know what I was doing. So I know what I'm doing.
+[28:03] So now I know I can try to figure out, but when I'm like,
+[28:05] I don't even know exactly what I'm being asked to do.
+[28:08] But real quick, I do think you have to run identity,
+[28:11] identity graph, IP, household ID, the, the layer one.
+[28:16] You need to run that back 90 days. Cause that,
+[28:19] I think that's like a setup step.
+[28:21] And then you need to run GUID log derived household ID, vertical ID.
+[28:26] And then GUID log pivot household ID, vertical ID.
+[28:31] Do you see those three?
+[28:32] So there's this one?
+[28:34] Yeah, that one.
+[28:36] Identify graph.
+[28:36] Yeah, that one.
+[28:39] So you run that one for 89 days.
+[28:44] Identify graph IP.
+[28:47] Yeah.
+[28:49] Oh, and furthermore, yeah, yeah, you have to run that one.
+[28:56] And furthermore, you have to run 90 days of that one first, I believe, before you do anything else.
+[29:04] Okay, what else?
+[29:06] You said then feature group two derived run GUID log derived household ID vertical ID.
+[29:17] Do you see that one?
+[29:18] Yeah.
+[29:21] So you need to run the layer one first.
+[29:26] And then the layer two one.
+[29:29] And then in layer three, you have to run GUID log pivot household ID, vertical ID.
+[29:38] Okay, that makes sense.
+[29:40] And the layer two and layer three ones, you can run the same day at the same time.
+[29:48] Okay.
+[29:48] If that makes sense.
+[29:49] So step one, run 89 days of identity graph IP household ID.
+[29:54] Step two, run 89 days of those, the layer two and layer three ones.
+[30:00] And you can run them.
+[30:02] You don't have to run one before the other necessarily, you know.
+[30:06] Or you can run them.
+[30:07] Or yeah, you can just run them all.
+[30:10] Okay.
+[30:11] That sounds good to me.
+[30:13] And I guess, yeah.
+[30:15] And I guess technically, if you only run 89 days of identity graph, well, whatever.
+[30:27] Whatever.
+[30:28] I'm not going to overthink this for you.
+[30:32] But yeah, so then once you're done with that, then you need to go back to the snapshot.
+[30:36] Then you need to do the snapshot one and run that for 90 days.
+[30:40] but it should really only be like three jobs because it's monthly snapshot you know what i
+[30:46] mean so it should only that should be very quick that shouldn't so so do this first basically okay
+[30:52] but what you're saying though is once i do those three that you mentioned
+[30:55] then run the ones these backfill ones
+[30:59] oh sorry or once you or you need to do the backfill of identity identity graph ip household
+[31:11] id first back 89 days and this oh okay sorry these are the ones that that um yeah yeah oh man
+[31:23] sorry it's so confusing no you're okay so these two are the ones that brian created those two
+[31:29] the ones, yeah, but he doesn't have enough
+[31:31] identity graph
+[31:33] IP household ID.
+[31:35] Let me, yeah, I'll
+[31:37] write it down, too. Just hold on.
+[31:39] Wait, leave on the screen. I'm sorry.
+[31:41] I have a tendency probably to
+[31:43] talk too much, so it's
+[31:45] identity graph
+[31:47] IP household
+[31:49] ID.
+[31:52] Run backwards
+[31:53] for 90
+[31:55] days.
+[31:57] Step two is
+[31:59] GUID
+[32:01] log
+[32:03] derived
+[32:08] household
+[32:13] ID, vertical ID. Man, the names of some of these.
+[32:23] This is going to
+[32:24] run these two
+[32:31] back 90 days
+[32:33] you can run them at the same
+[32:37] time though
+[32:40] so do it log
+[32:45] pivot household ID
+[32:49] vertical ID
+[32:50] this is what I'm saying
+[33:00] maybe this will help you
+[33:02] yeah
+[33:07] so you need to do step one first
+[33:12] and then step two you can run those two
+[33:16] together each day you know does that make sense
+[33:20] I mean what one that's layer three one depends on layer two one but you can run those
+[33:26] together you know just make sure you run it forward yes if that makes sense yes no that makes
+[33:35] sense um I guess technically identity the identity graph ip household id could run it
+[33:44] I mean, it's just, you could run, run a backward or forward, you know, because it's just like a daily thing.
+[33:54] But those next two, you need to run them forward.
+[33:59] You know, so go back.
+[34:00] So 90 days, go back 90 days, run A, then run B, then go back 89 days, run A, then B, and so on.
+[34:09] But you're in a bad spot here because of what I told you to do.
+[34:14] Just so you know, I think you're going to have to mark all these as successful and then come back and figure out how to run specifically those three things.
+[34:23] Okay.
+[34:23] No, that's okay.
+[34:24] I'll figure it out.
+[34:25] I mean, I wonder if there's like an easier way to do it.
+[34:29] I'm actually surprised with how widely spread like used Airflow, how kind of limited some of the.
+[34:36] yeah and it's our version of air flow is kind of a pain because it used to before astro
+[34:43] before we use astro it was it's different or i guess this is airflow three airflow two was
+[34:52] probably a little bit better but um yeah but dude i would just start marking all those
+[35:00] backfill ones that we have set up as successful and then turn the dag on and make sure nothing's
+[35:06] running and then so so like basically undo what we just did something i'm sorry but
+[35:13] yeah undo what we just did and then figure out how to do what i said there okay no problem hey
+[35:22] i will let me get working on this so i can try to figure out if we can i can figure out how to
+[35:26] clear this and stuff and set that up and then if i have any issues i'll reach out but i really
+[35:31] really appreciate it ryan yeah no problem i'm sorry i feel like i made it worse for you
+[35:36] you're okay good luck dude yeah no problem talk to you later all right bye
