@@ -206,8 +206,14 @@ the reconciliation band.
   submit fails without `serviceAccountUser`. Requested via `gcloud pam grants create` on entitlements
   `dataproc-runtime-actas` + `dataproc-submit` (mntn-prj-dev-00, 4h max, devops 1-approval) → both ACTIVE
   same day. **A multi-hour phase needs a fresh 4h grant.** CLI recipe in [[reference_airflow3_backfill_scoping]].
-- **Smoke test** (mirror→L2→L3 for 2026-05-15, dev): running — resolves the dev-vs-prod read-resolution
-  question before the ~190-job full run.
+- **Smoke test GREEN** (2026-05-15): took 3 attempts, each exposing one read-resolution fact (all in
+  [[reference_airflow3_backfill_scoping]]): (1) `guid_log_ip_advertiser_id` L1 reads DEV → added `seed`
+  phase (120 prod partitions → dev, `gcloud storage cp` server-side; `gsutil -m` died silently, macOS
+  fork bug); (2) the graph mirror is read-only → **L2 always reads it from PROD** → added `copy-mirror`
+  phase before `daily`; (3) final chain L2=17.5 GB, L3=10.2 GB at `dt=2026-05-16` in dev.
+- **Locked run order: seed ✅ → mirror (13 weekly, x4 lanes) → copy-mirror (→prod) → daily (90 L2→L3
+  pairs, x4 lanes, ~8-10h) → copy (→prod).** Parallel lanes per Ryan ("run them at the same time").
+  Prod-write access confirmed (mirror dt=2026-05-11 copied). Fresh 4h PAM grant needed per window.
 
 _Full plan of action: `~/.claude/plans/i-have-to-execute-snoopy-sutton.md` (approved 2026-08-03)._
 _Research detail: this session's three Explore-agent reports (orchestration/PR#1156, L2/L3 internals, backfill/monitor)._
