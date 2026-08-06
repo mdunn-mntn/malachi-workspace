@@ -10,9 +10,12 @@
 #
 # USAGE (always DRY_RUN by default — it only prints commands):
 #   bash backfill_household_fs.sh smoke        # 1 old date end-to-end (mirror->L2->L3), then inspect
+#   DRY_RUN=0 bash backfill_household_fs.sh seed      # prod L1 guid_log -> dev (L2's 30d-lookback input)
 #   DRY_RUN=0 bash backfill_household_fs.sh smoke
-#   DRY_RUN=0 bash backfill_household_fs.sh mirror   # then l2, then l3, then copy
+#   DRY_RUN=0 bash backfill_household_fs.sh mirror    # ~13 weekly mirror runs, newest first, parallel
+#   DRY_RUN=0 bash backfill_household_fs.sh daily     # 90x (L2 -> L3) date-pairs, oldest first, parallel
 #   DRY_RUN=0 bash backfill_household_fs.sh copy      # dev -> prod (writes PROD)
+# CONCURRENCY=4 by default (parallel Dataproc batches; Ryan OK'd running these simultaneously).
 #
 # PREREQS: local airflow-ti on `main` (has the merged household models);
 #   `gcloud auth login` + `gcloud auth application-default login`; `uv sync --group models`.
@@ -20,11 +23,13 @@ set -uo pipefail
 
 # ---------- config ----------
 AIRFLOW_TI="${AIRFLOW_TI:-$HOME/Developer/work/mntn/airflow-ti}"
-START="2026-05-08"; END="2026-08-05"
+START="${START:-2026-05-08}"; END="${END:-2026-08-05}"
 SMOKE_DATE="${SMOKE_DATE:-2026-05-15}"   # old enough that PROD mirror lacks that week -> a real test
 DRY_RUN="${DRY_RUN:-1}"                   # 1 = print only; 0 = actually run
 SKIP_EXISTING="${SKIP_EXISTING:-1}"       # 1 = skip a date whose dev partition already exists (resume)
+CONCURRENCY="${CONCURRENCY:-4}"           # parallel Dataproc batches for mirror/daily
 MODE="${1:-smoke}"
+ARG_DATE="${2:-}"
 
 MIRROR="identity_graph_ip_household_id"
 L2="guid_log_derived_household_id_vertical_id"
@@ -93,7 +98,13 @@ case "$MODE" in
     echo "   If L2/L3 produced dt=$(add_days "$SMOKE_DATE" 1) with rows, the chain works -> run: mirror, l2, l3, copy."
     echo "   If L2 failed on a missing mirror partition, the mirror read resolves to PROD -> stop and tell Claude (switch to a prod backfill DAG)."
     ;;
-  mirror)  echo "== MIRROR backfill (~weekly) =="; for d in $(seq_dates "$START" 7); do run_model "$MIRROR" "$d" "$REL_MIRROR" ""; done ;;
+  mirror)  echo "== MIRROR backfill (~weekly, newest first, x$CONCURRENCY) =="
+           seq_dates "$START" 7 | tail -r | xargs -P "$CONCURRENCY" -I{} bash "$0" one-mirror {} ;;
+  daily)   echo "== DAILY backfill (L2->L3 pairs, oldest first, x$CONCURRENCY) =="
+           seq_dates "$START" 1 | xargs -P "$CONCURRENCY" -I{} bash "$0" pair {} ;;
+  one-mirror) run_model "$MIRROR" "$ARG_DATE" "$REL_MIRROR" "" ;;
+  pair)    run_model "$L2" "$ARG_DATE" "$REL_L2" "$(add_days "$ARG_DATE" 1)"
+           run_model "$L3" "$ARG_DATE" "$REL_L3" "$(add_days "$ARG_DATE" 1)" ;;
   l2)      echo "== L2 backfill (daily) =="; for d in $(seq_dates "$START" 1); do run_model "$L2" "$d" "$REL_L2" "$(add_days "$d" 1)"; done ;;
   l3)      echo "== L3 backfill (daily) =="; for d in $(seq_dates "$START" 1); do run_model "$L3" "$d" "$REL_L3" "$(add_days "$d" 1)"; done ;;
   copy)    copy_model "$MIRROR" "$REL_MIRROR"; copy_model "$L2" "$REL_L2"; copy_model "$L3" "$REL_L3" ;;
