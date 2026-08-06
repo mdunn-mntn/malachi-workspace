@@ -162,7 +162,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ruff_code_standards | reference | 2026-07-31 | [doc](memory/reference_ruff_code_standards.md) |
 | databricks | reference | 2026-08-03 | [doc](memory/reference_databricks.md) |
 | reference_holdout_lift_lineage | reference | 2026-08-03 | [doc](memory/reference_holdout_lift_lineage.md) |
-| feedback_plain_voice_internal_docs | feedback | 2026-08-04 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-04 | [doc](memory/reference_mntn_devops_permissions.md) |
 | sparse_code_comments | feedback | 2026-08-04 | [doc](memory/feedback_sparse_code_comments.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-05 | [doc](memory/reference_airflow_ti.md) |
@@ -175,4 +174,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference-mntn-google-drive-access | reference | 2026-08-05 | [doc](memory/reference_mntn_google_drive_access.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-06 | [doc](memory/reference_airflow3_backfill_scoping.md) |
 | background_work_liveness | feedback | 2026-08-06 | [doc](memory/feedback_background_work_liveness.md) |
+| feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |

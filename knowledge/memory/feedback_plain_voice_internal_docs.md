@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [plain_voice_internal_docs, plain voice, AI report tells, Confluence spec, em-dash, callout banner, AUDI-1083, internal docs, PR description, jargon, invented shorthand, fleet-wide, metaphor, be direct]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-08-04
+last_verified: 2026-08-06
 ---
 The user rejected the first cut of the AUDI-1083 Confluence spec: "reads like an AI report, and not
 very good." Internal reference/spec docs must read like a sharp human engineer wrote them.
@@ -31,7 +31,8 @@ work, even when the content is right.
   (say "for Dataproc batch jobs"), "get fuel" (say what the data is for), "the 2 agreed extras" (name the
   two things), "guarded, off-switch" (say "disable with `MNTN_SPARK_OBSERVE=0`"). Cut whole lines that
   add nothing to a reader (the "Not in scope:" line). Be direct. This applies to PR/Jira descriptions too,
-  not just Confluence.
+  not just Confluence. Also applies to Slack replies (2026-08-06, INC-012): "flat-lists" rejected as odd;
+  say "lists every file under the folder". Prefer the common phrase over the technical-sounding compound.
 
 Applies to Confluence pages, spec docs, internal reference docs, PR/Jira descriptions. Related:
 [[feedback_facts_not_presentation]], [[feedback_no_unsolicited_suggestions]], [[feedback_doc_style]].
