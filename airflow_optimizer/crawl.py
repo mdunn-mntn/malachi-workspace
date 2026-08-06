@@ -69,7 +69,8 @@ def render_crawl(reports: list[JobReport]) -> str:
     """Cross-job backlog: fleet summary + each job's top findings, worst-first."""
     scored = [r for r in reports if not r.error]
     total = sum(len(r.findings) for r in scored)
-    lines = [f"Fleet optimization: {len(scored)} jobs scanned, {total} findings, "
+    lines = [f"Fleet optimization: {len(scored)} job{'s' if len(scored) != 1 else ''} scanned, "
+             f"{total} finding{'s' if total != 1 else ''}, "
              f"{sum(r.n_high for r in scored)} high-impact.", ""]
     for r in reports:
         if r.error:

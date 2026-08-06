@@ -42,76 +42,76 @@ STEPS = [
      "a human notices; the tool finds the same failure itself from the API.",
      "airflow_api.py:203", ".claude/scripts/airflow_api.py#L203",
      "bash .claude/scripts/airflow_pull.sh --date <D> --state failed",
-     "Live 2026-08-06 (5 failed tasks). Gap found: a failed try mid-retry needs watch-mode, not the day-dump"),
+     "Agent-tested 2026-08-06 (6 failed tasks). Mid-retry tries need watch-mode, not the day-dump"),
     ("D2", "Download the log",
      "For each failed try: GET the task-instance log (structured JSON/NDJSON), render to plain text, save as "
      "<time>__<dag>__<task>__try<N>__<state>.log plus a _manifest.jsonl row (the pass/fail grid).",
      "airflow_api.py:294", ".claude/scripts/airflow_api.py#L294",
      "same command; logs land in on-call/airflow_logs/<date>/",
-     "INC-010 + INC-011 pulls"),
+     "Agent-tested 2026-08-06 (3 logs + manifest verified) · INC-010/011/012 pulls"),
     ("D3", "Parse + route",
      "Reads the log for identity (dag, task, run, logical date), routes by operator classpath to the engine "
      "(Dataproc vs Databricks), and extracts the downstream Spark job id (batch id / run id).",
      "parse.py:51", "airflow_debugger/parse.py#L51",
      "python3 -m airflow_debugger.tests.test_parse",
-     "Unit tests green"),
+     "Agent-tested 2026-08-06; quoted-identity gap found + FIXED same day (test_parse_quoted_identity)"),
     ("D4", "Engine RCA",
      "Dataproc: batches describe + Cloud Logging traceback + structural TTL check (dataproc_rca.py:156). "
      "Databricks: jobs get-run + get-run-output on the TASK run id + cluster events (databricks_rca.py:74). "
      "Turns the boilerplate Airflow error into the real underlying cause.",
      "dataproc_rca.py:156", "airflow_debugger/dataproc_rca.py#L156",
      "python3 -m airflow_debugger.dataproc_rca <batch_id>",
-     "INC-005 (TTL) · INC-009 (pod-evict) · INC-012 (ruled out TTL in one call)"),
+     "INC-005/009/012. Gap: no driveroutput fallback when Cloud Logging is empty (IMP-028)"),
     ("D5", "Signature match",
      f"{len(sig.SIGNATURES)} regex fingerprints classify the failure; a high-confidence match returns a cached verdict with NO LLM "
      "call. Each signature's programmatic-fix flag separates a fixable root cause from a downstream symptom.",
      "signatures.py:28", "airflow_debugger/signatures.py#L28",
      "python3 -m airflow_debugger.tests.test_signatures",
-     "19 cases incl INC-011 skip-vs-fail + INC-012 GCS list timeout"),
+     "19 cases; agent live-classified the INC-012 driver text -> gcs_list_timeout"),
     ("D6", "Past-incident match",
      "Lexical matcher over the local incident corpus (on-call/incident_log.jsonl) attaches the most similar past "
      "incidents to the verdict, so a repeat is recognized instantly.",
      "incident_match.py:34", "airflow_debugger/incident_match.py#L34",
      "python3 -m airflow_debugger.tests.test_incident_match",
-     "Surfaces the INC-009 twin"),
+     "Agent-tested 2026-08-06: INC-012 query -> INC-012 top match (0.605)"),
     ("D7", "Report",
      "BLUF/STAR report under 500 characters: root cause + confidence + affected file:line where known + whether a "
      "code fix is possible + a deep link to the batch/run.",
      "report.py:50", "airflow_debugger/report.py#L50",
      "python3 -m airflow_debugger.report <log file>",
-     "INC-005 / 009 / 010 / 011 / 012"),
+     "Agent-tested 2026-08-06 on 2 real logs, both <=500 chars, header names dag/task"),
     ("D8", "LLM fallback",
      "ONLY when no signature matched: one bounded LLM synthesis call over the distilled evidence (synth.py:29). "
      "Everything before this is plain deterministic code, so known failures cost nothing and are instant.",
      "orchestrate.py:16", "airflow_debugger/orchestrate.py#L16",
      "python3 -m airflow_debugger.orchestrate <log>  (--no-llm to force it off)",
-     "Unknown-signature path only"),
+     "Agent-tested 2026-08-06: real log = no LLM call; synthetic unknown error = fallback fired"),
     ("O1", "Get the job's Spark data",
      "Runs on SUCCEEDED jobs. Dataproc: the .zstd Spark event log from gs://mntn-data-archive-{env}/spark-events "
      "(fleet-enabled by PR #1169) or the PHS per-batch dirs (ipdsc/tpa). Databricks: the EXPLAIN COST plan + Spark "
      "metrics from jobs get-run-output.",
      "oncall_weekly_optimizer.sh", ".claude/scripts/oncall_weekly_optimizer.sh",
      "bash .claude/scripts/oncall_weekly_optimizer.sh",
-     "Prod event logs flowing since 2026-08-04"),
+     "Agent-tested 2026-08-06: 360 objects read, parsed clean. Gap: eventlog_v2 rolling parts (IMP-029)"),
     ("O2", "Parse 7 surfaces",
      "Full Spark event-log parse into structured metrics: jobs, stages, tasks, executors, environment, SQL node "
      "metrics, storage.",
      "eventlog.py:147", "airflow_optimizer/eventlog.py#L147",
      "python3 -m airflow_optimizer.tests.test_eventlog",
-     "Real prod event-log fixtures"),
+     "Agent-tested 2026-08-06: 4 jobs/9 stages/34 tasks/3 SQL parsed from fixture"),
     ("O3", "Detect waste",
      "Plan detectors (missing stats, broadcast candidate, shuffle sizing, window full-sort, repeated scan) + run "
      "detectors (skew, spill, GC pressure, spot-preemption cost, fetch instability), each with real numbers and a "
      "concrete fix.",
      "optimizations.py:97", "airflow_optimizer/optimizations.py#L97",
      "python3 -m airflow_optimizer.tests.test_optimizations",
-     "Found the 242x prod skew"),
+     "Found the 242x prod skew; agent re-ran 2026-08-06 (12.2x fixture skew)"),
     ("O4", "Rank the fleet backlog",
      "Crawls every event log, ranks jobs worst-first, groups each finding CODE / INFRA / FAILURE so the owner "
      "knows the kind of fix.",
      "crawl.py:54", "airflow_optimizer/crawl.py#L54",
      "python3 -m airflow_optimizer.crawl <dir-or-glob>",
-     "2026-08-04 prod crawl: 13 jobs, 34 findings"),
+     "2026-08-04 prod crawl (13 jobs, 34 findings); agent re-ran 2026-08-06"),
 ]
 steps_df = pd.DataFrame(
     [{"Step": s, "Name": n, "What it does and how": w, "Code": d, "Test it": t, "Proven": p}

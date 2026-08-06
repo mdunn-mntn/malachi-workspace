@@ -46,6 +46,22 @@ def test_parse_sensor_is_other() -> None:
     assert p.batch_id is None and p.dbx_run_id is None
 
 
+# Real prod shape (INC-012): identity appears only QUOTED inside the RuntimeTaskInstance repr
+# (dag_id='materialize_mntn_select'); there is no unquoted "TaskInstance Details" line.
+_QUOTED_IDENTITY_LOG = """
+[2026-08-06T21:04:16Z] INFO - {'task_instance': RuntimeTaskInstance(task_id='materialize', dag_id='materialize_mntn_select', run_id='scheduled__2026-08-06T19:45:00+00:00', try_number=1)}
+[2026-08-06T21:04:16Z] ERROR - AirflowException("Batch job mntn-select-2026-08-06-1786049114 failed with error: Google Cloud Dataproc Agent reports job failure")
+"""
+
+
+def test_parse_quoted_identity() -> None:
+    """dag_id/task_id parse when they only appear quoted (INC-012 log shape)."""
+    p = parse_log(_QUOTED_IDENTITY_LOG)
+    assert p.dag_id == "materialize_mntn_select"
+    assert p.task_id == "materialize"
+    assert p.try_number == 1
+
+
 def test_spark_succeeded() -> None:
     """A SUCCESS Databricks run with no failed tasks reads as succeeded."""
     assert _spark_succeeded(
@@ -84,6 +100,7 @@ if __name__ == "__main__":
         test_parse_databricks,
         test_parse_dataproc,
         test_parse_sensor_is_other,
+        test_parse_quoted_identity,
         test_spark_succeeded,
         test_report_orchestration_only_no_emdash,
     ]:

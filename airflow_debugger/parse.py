@@ -51,8 +51,8 @@ def _first(pattern: str, text: str, flags: int = 0) -> str | None:
 def parse_log(text: str) -> ParsedFailure:
     """Parse a failed-task Airflow log into identity + engine + job id."""
     p = ParsedFailure()
-    p.dag_id = _first(r"dag_id=([A-Za-z0-9_.-]+)", text)
-    p.task_id = _first(r"task_id=([A-Za-z0-9_.-]+)", text)
+    p.dag_id = _first(r"dag_id=['\"]?([A-Za-z0-9_.-]+)", text)
+    p.task_id = _first(r"task_id=['\"]?([A-Za-z0-9_.-]+)", text)
     p.run_id = _first(r"dagrun_id=(\S+)", text) or _first(
         r"run_id['\"]?[=:]\s*['\"]?(scheduled__[^'\"\s]+)", text
     )
