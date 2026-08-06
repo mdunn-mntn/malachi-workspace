@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: 60b2f7af-ea4c-4042-bcd9-027f6c6ad945
 doc_type: memory
-keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access, ExternalTaskSensor, skipped_states, failed_states, skip as failure, ExternalTaskFailedError, wait_fpa]
+keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access, ExternalTaskSensor, skipped_states, failed_states, skip as failure, ExternalTaskFailedError, wait_fpa, globStatus, flat glob, fs.gs.glob.flat.enable, gcs list timeout, literal partition paths, augmentor_log glob, INC-012, PR 1176]
 domain: [repos, infra]
 lifecycle: active
-last_verified: 2026-08-05
+last_verified: 2026-08-06
 ---
 ## Repo
 - **GitHub:** SteelHouse/airflow-ti
@@ -113,6 +113,10 @@ Three-layer feature store on GCP Dataproc Serverless via Airflow (Astronomer):
 - **Airflow 3 `airflow.sdk.Variable.get(key, default=..., deserialize_json=...)` uses `default=`, NOT `default_var=`.** The classic `airflow.models.Variable.get` used `default_var`; the SDK renamed it. Passing `default_var` → `TypeError` at task runtime.
 - **Dataproc Serverless has a property ALLOWLIST** — it rejects unknown `spark.*` props with `INVALID_ARGUMENT: Attempted to set unsupported properties: [...]`. Confirmed unsupported: **`spark.eventLog.logBlockUpdates.enabled`**. Supported eventLog props: `spark.eventLog.enabled`/`dir`/`compress`. So RDD block-update (cache) events are NOT captured on Dataproc Serverless.
 - **Dev Dataproc SA `airflow-ti-dev@mntn-prj-dev-00.iam.gserviceaccount.com` CAN write `gs://mntn-data-archive-dev/spark-events`** (confirmed via a live dev run writing `app-*.zstd`). Can't submit a dev batch from the CLI/`model_run.py` yourself — user lacks `iam.serviceAccounts.actAs` on that SA; the Astro runner has it.
+
+## GCS globStatus flat-glob gotchas (INC-012, 2026-08-06)
+- **Hadoop `globStatus` on GCS resolves a glob by listing EVERY object under the first wildcard, then filtering client-side** (flat glob; `fs.gs.glob.flat.enable` default true). A mid-path glob like `region={east,west}/dt=X/hh=Y` therefore lists the entire prefix — for `gs://mntn-data-archive-prod/augmentor_log/` that is ~17M objects (measured 2026-08-06: one leaf hh= list = 18,401 names in 7s; a 50K-name crawl sample = 29s), and the list is latency-fragile → `SocketTimeoutException` killed `materialize_mntn_select` twice (INC-012). **Safe patterns:** literal partition paths (no wildcard → leaf-dir listing only), or a trailing-star-only glob whose FIRST wildcard is at the file level — `materialize_mntn_first_party`'s `yyyy/mm/dd/hh/*` is bounded and fine.
+- **`globStatus` returns null (NOT an empty array) for a wildcard-free path that does not exist** — iterate it unguarded and you crash. Guarded in `spark/spark_utils.py` `get_paths` by PR #1176 (merged 2026-08-06, `3a97ea3`), the same PR that expanded mntn-select's `region=` glob to literal paths.
 
 ## Cross-DAG ExternalTaskSensor: skip-as-failure gotcha (INC-011, 2026-08-05)
 - **An `ExternalTaskSensor` with `"skipped"` in `failed_states` HARD-FAILS (fast, ~5s, single poke) on a BENIGN upstream skip** and raises the **IDENTICAL** `ExternalTaskFailedError: Some of the external tasks [...] failed.` message it raises for a true failure. So **a log regex cannot tell a skip from a fail** — you must resolve the external task's ACTUAL final state (`skipped` vs `failed`/`upstream_failed`) via the REST taskInstances endpoint before judging it.

@@ -140,7 +140,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_workflow_kit_porting | reference | 2026-07-29 | [doc](memory/reference_workflow_kit_porting.md) |
 | rubric_strategy | feedback | 2026-07-29 | [doc](memory/feedback_rubric_strategy.md) |
 | sprint_ready_plan | feedback | 2026-07-29 | [doc](memory/feedback_sprint_ready_plan.md) |
-| feedback_hold_evidenced_verdict | feedback | 2026-07-30 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_read_full_source_before_verdict | feedback | 2026-07-30 | [doc](memory/feedback_read_full_source_before_verdict.md) |
 | feedback_self_qa_before_shipping | feedback | 2026-07-30 | [doc](memory/feedback_self_qa_before_shipping.md) |
 | incrementality-experiment-ber-2250 | project | 2026-07-30 | [doc](memory/project_incrementality_experiment.md) |
@@ -163,7 +162,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_holdout_lift_lineage | reference | 2026-08-03 | [doc](memory/reference_holdout_lift_lineage.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-04 | [doc](memory/reference_mntn_devops_permissions.md) |
 | sparse_code_comments | feedback | 2026-08-04 | [doc](memory/feedback_sparse_code_comments.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-08-05 | [doc](memory/reference_airflow_ti.md) |
 | audi-1111-vendor-quality | project | 2026-08-05 | [doc](memory/project_audi_1111_vendor_quality.md) |
 | jira-conventions | reference | 2026-08-05 | [doc](memory/reference_jira_conventions.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
@@ -172,7 +170,9 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference-ddp-billing-logic | reference | 2026-08-05 | [doc](memory/reference_ddp_billing_logic.md) |
 | reference-mntn-google-drive-access | reference | 2026-08-05 | [doc](memory/reference_mntn_google_drive_access.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-06 | [doc](memory/reference_airflow3_backfill_scoping.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-08-06 | [doc](memory/reference_airflow_ti.md) |
 | background_work_liveness | feedback | 2026-08-06 | [doc](memory/feedback_background_work_liveness.md) |
+| feedback_hold_evidenced_verdict | feedback | 2026-08-06 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | feedback_terse_chat_replies | feedback | 2026-08-06 | [doc](memory/feedback_terse_chat_replies.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |

@@ -6,10 +6,10 @@ metadata:
   type: feedback
   originSessionId: 443e7168-7c62-47df-afdd-8d8cbe74c71d
 doc_type: memory
-keywords: [hold the evidenced verdict, dont fold to pushback, domain owner objection, hypothesis not refutation, discriminating test, read the deployed source, github org code-search, correct answer vs known mechanism, DS51 enriched_impressions, INC-001]
+keywords: [hold the evidenced verdict, dont fold to pushback, domain owner objection, hypothesis not refutation, discriminating test, read the deployed source, github org code-search, correct answer vs known mechanism, DS51 enriched_impressions, INC-001, INC-012, lost executors red herring]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-07-30
+last_verified: 2026-08-06
 ---
 When I've reached a conclusion backed by direct evidence and someone (even the domain owner / a senior
 engineer) pushes back with a plausible architectural objection — especially one hedged with "who knows" /
@@ -75,5 +75,13 @@ mechanism. I'd conceded a correct conclusion and flip-flopped the runbook three 
    publishing a verdict you'll rewrite in 20 minutes.** Under-updating (point 1, folding) and over-updating
    (this, thrashing) are the two failure modes of the same skill — the fix for both is: test first, name once,
    then hold-with-updating. See [[reference_fangorn_inference_dataproc]].
+
+9. **The pattern working as written — INC-012 (2026-08-06, `materialize_mntn_select`).** The owner's first read
+   was "lost executors"; the alert thread said "preemption". The `driveroutput` evidence showed a GCS list
+   timeout (`Error listing gs://.../augmentor_log/region=` → `SocketTimeoutException`), and the
+   executor-lost lines were benign idle scale-downs logged at ERROR. Held the evidenced verdict against
+   both plausible reads, shipped the fix same day (airflow-ti#1176: literal region paths + a `globStatus`
+   null-guard in `get_paths`), and the owner merged it. Acknowledge the owner's read, test it against the
+   evidence, hold, close with the discriminating artifact.
 
 Related: [[feedback_no_unsolicited_suggestions]], [[feedback_facts_not_presentation]], [[feedback_source_table_ips]], [[reference_oncall_runbook]], [[reference_data_pipeline_repo]], [[reference_fangorn_inference_dataproc]], [[feedback_read_full_source_before_verdict]].

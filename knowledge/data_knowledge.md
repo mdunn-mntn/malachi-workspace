@@ -3534,8 +3534,9 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 - `partner_ad_format` is authoritative for VIDEO vs BANNER
 
 ### augmentor_log TTL and Archives
-- BQ TTL: 10 days. Parquet archive: ~30 days at `gs://mntn-data-archive-prod/augmentor_log/region={east,west}/dt=YYYY-MM-DD/hh=HH`
-- Ryan's pipeline (`aug_log_ip_vertical_id_hourly.py`) reads from parquet, runs hourly, maps domains to vertical IDs via tldextract
+- BQ TTL: 10 days. Parquet archive: ~30 days at `gs://mntn-data-archive-prod/augmentor_log/region={east,west}/dt=YYYY-MM-DD/hh=HH` (38 dt partitions per region as of 2026-08-06)
+- **Archive scale (INC-012, 2026-08-06):** ~18.4K files per hour partition (tiny-files smell) → ~17M objects under the prefix. A mid-path glob (`region={east,west}/...`) flat-lists ALL of it via the GCS connector — use literal partition paths in Spark readers (see memory `reference_airflow_ti` § GCS globStatus flat-glob gotchas).
+- Consumers: `materialize_mntn_select` (hourly, TPA_EXPORT) unions it with `bidder_auction_events` and writes `gs://mntn-data-archive-prod/ipdsc_mntn_select/dt=/hh=`; Ryan's pipeline (`aug_log_ip_vertical_id_hourly.py`) reads it hourly, maps domains to vertical IDs via tldextract
 - Output: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/` partitioned by dt/hh
 - Pipeline code: `steelhouse/airflow-ti` repo, `models/feature_store/feature_group_1_source/`
 
