@@ -198,6 +198,20 @@ SIGNATURES: list[Signature] = [
         "dataproc",
     ),
     Signature(
+        "gcs_list_timeout",
+        r"Error listing gs://|GoogleCloudStorageImpl\.listStorageObjects|"
+        r"SocketTimeoutException: Read timed out",
+        "transient-infra/gcs-listing",
+        "Driver-side GCS LIST timed out during input discovery - usually a glob the GCS connector "
+        "resolves by flat-listing the entire prefix (O(all history)) before filtering. Retries die "
+        "at a ~constant elapsed (same execution point). 'Lost executor ... spark scale down' lines "
+        "alongside are benign idle decommissions, NOT the cause. A re-run usually passes (list "
+        "latency is variable); durable fix is literal partition paths instead of a glob, or "
+        "fs.gs.glob.flat.enable=false. The evidence lives in the staging-bucket driveroutput, "
+        "not the Airflow log.",
+        "sometimes",
+    ),
+    Signature(
         "sensor_timeout",
         r"AirflowSensorTimeout|Sensor has timed out|Snap\. Time is up|"
         r"up_for_reschedule.{0,40}timeout",

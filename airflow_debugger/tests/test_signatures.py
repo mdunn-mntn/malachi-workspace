@@ -77,6 +77,14 @@ CASES = [
         "sensor_timeout",
     ),
     (
+        # Real prod (2026-08-06, materialize_mntn_select): driver-side GCS list of the full
+        # augmentor_log prefix timed out; both tries died ~19 min in (INC-012).
+        "inc012_gcs_list_timeout",
+        "Caused by: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/"
+        "region=\nCaused by: java.net.SocketTimeoutException: Read timed out",
+        "gcs_list_timeout",
+    ),
+    (
         "inc007_external_task",
         "ExternalTaskFailedError: The external task product_categorization in state upstream_failed",
         "external_task_failed",

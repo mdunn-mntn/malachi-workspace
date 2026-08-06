@@ -72,6 +72,24 @@ For the 16 sample/cluster IPs (200 CIL impressions, 2026-05-01..2026-08-05): 0 p
 - Uploads: 28594 entry_count 3,618,989, match_rate 0.629 (residual 37.1%); 32697 entry_count 341,383, match_rate 0.669 (residual 33.1%). data_source_category_id = audience_upload_id confirmed. No match-rate history table exists in BQ (the claimed 9-11pt climb is unverifiable here).
 - ipdsc: both uploads observable under DS4 AND DS47; DS47 membership ~2.2-2.4x DS4 (graph expansion; 28594: 13.87M vs 5.87M IPs at 7/15). DS21/DS34 NOT in ipdsc (site-converter exclusion only testable behaviorally, which 4.3 does). DS47 partitions predate the 7/1 release (release was enforcement-side). 6/29 upload resolved in ipdsc by 6/30 (~1 day latency).
 
+### 4.6 Claims audit (every claim in the ticket description + comments, double-checked)
+| Claim (who) | Verdict | Evidence |
+|---|---|---|
+| Blocks all TRUE, "blocking enabled correctly" (Richie) | TRUE | TRUE continuously since 2026-04-14 (1b archives) |
+| "180-day lookback" (Richie) | MISLEADING | conversion_lookback_window was 90d for the entire complaint window; changed 90->180 on 8/4 20:43 UTC, the day the ticket was filed. Richie read the post-change value. Separately, the DS21 clause lookback doubled 90d->180d on 6/26 (v6) |
+| Audience 95073 correctly excludes 28594+32697 (Richie) | TRUE today, FALSE historically | Current expression correct (DS47 both lists, negative polarity). But 95073 exists only since 7/31; predecessor 79847 had no CRM clause before 6/30, 32697-only until 7/16, 28594 added 7/16 |
+| Match rates climbed 9-11pts (Richie) | UNVERIFIABLE in BQ | No match-rate history/archive table exists; current 62.9%/66.9% only |
+| "~24-26% residual unmatched" (Richie) | FALSE | Residuals are 37.1% (28594) and 33.1% (32697) |
+| "6 of 10 samples share an impression+visit pair" (Richie) | UNDERCOUNT | Actually 7 of 10 (he missed 12181317353545) |
+| 5-order cluster table (Richie) | EXACT | All 5 order IDs, conversion times, IPs match; confirmed as 5 conversions on ONE ad_served_id in ui_conversions |
+| Two other examples 12173057753161/12175650553929 (Richie) | EXACT | Partners 12161181777993 / 12174612693065 confirmed same pair, same IP |
+| "No fresh impression near repeat conversions" (Richie) | TRUE in export, FALSE at serve level | Attribution never re-anchored (true), but the household IPs DID receive fresh impressions: 147 post-conversion imps in sample, e.g. 107.115.29.35 got 8 RT imps 7/16-7/30 while cluster conversions ran 7/27-7/29. All S2/S3/RT, none S1 |
+| "CRM list uploaded 6/29" (Alec) | HALF-TRUE | 32697 yes (6/29); 28594 is the 4/15 upload (3.62M entries), the main list |
+| Stage-3 theory: convert, stay eligible, "receive prospecting for 30 days" (Alec) | MECHANISM RIGHT, DETAILS WRONG | S2/S3 do retarget converters (52/52 S3 imps post-conversion in sample) but S1 stops: 0 post-conversion S1 imps. The "30 days" is the conversion window in attribution, not a serving window |
+| Order 12181567668297 story: ad 6/10, visit 6/25, conv 7/9, prior conv 1d before under other household IP (Alec) | EXACT | Chain reproduced 0s deltas; household partner 98.242.67.136 first conv 7/8 16:29 UTC |
+| "DS47 doesn't apply to old audience uploads", re-upload could help (Alec) | FALSE | The April upload 28594 IS in DS47: 13.87M IPs at 7/15 (2.4x its DS4 count). DS47 covers old uploads; no re-upload needed (Richie's conclusion right, reasoning moot) |
+| "983 repeat customers" (client) | UNVERIFIABLE as stated | Matchback = 2,290 orders with no repeat flag; only the 10 samples have days-since-last-purchase. Classification of all 2,290 in flight |
+
 ### 4.5 Exclusion timeline periods (used by steps 4-5)
 P0 2026-06-01..06-30 02:08 UTC: no CRM exclusion existed. P1 06-30 02:08..07-16 18:17: 32697 excluded, 28594 NOT. P2 07-16 18:17..08-04: both excluded (DS47). Grace 3d after attach.
 
