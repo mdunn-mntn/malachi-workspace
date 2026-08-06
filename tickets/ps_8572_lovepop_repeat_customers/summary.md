@@ -12,7 +12,7 @@ framing_state: locked
 # PS-8572: lovepop repeat customers
 
 **Jira:** https://mntn.atlassian.net/browse/PS-8572
-**Status:** backlog
+**Status:** in_progress
 **Date Started:** 2026-08-06
 **Assignee:** Malachi
 
@@ -46,7 +46,6 @@ Approved plan at `~/.claude/plans/i-got-this-jira-mossy-clock.md`. Pre-registere
 - Two-clock compliance in THEIR data: 0 of 2,290 orders exceed either window; max visit-to-conversion exactly 30.0d (the conversion-window bound is visible); max impression-to-visit 60d (well under 180d).
 - 49.5% of orders (1,134) have impressions PRE-dating the 6/29 upload; 1,156 post-upload need membership adjudication.
 - 100 impression+visit pairs carry >1 order (224 orders; up to 9 on one pair); 29 of those pairs span 2-3 IPs (household IP drift visible in their own report).
-3. ...
 
 ## 4. Investigation & Findings
 

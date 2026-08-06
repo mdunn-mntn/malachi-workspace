@@ -42,7 +42,7 @@ STEPS = [
      "a human notices; the tool finds the same failure itself from the API.",
      "airflow_api.py:203", ".claude/scripts/airflow_api.py#L203",
      "bash .claude/scripts/airflow_pull.sh --date <D> --state failed",
-     "Live 2026-08-06: found 5 failed tasks"),
+     "Live 2026-08-06 (5 failed tasks). Gap found: a failed try mid-retry needs watch-mode, not the day-dump"),
     ("D2", "Download the log",
      "For each failed try: GET the task-instance log (structured JSON/NDJSON), render to plain text, save as "
      "<time>__<dag>__<task>__try<N>__<state>.log plus a _manifest.jsonl row (the pass/fail grid).",
@@ -61,13 +61,13 @@ STEPS = [
      "Turns the boilerplate Airflow error into the real underlying cause.",
      "dataproc_rca.py:156", "airflow_debugger/dataproc_rca.py#L156",
      "python3 -m airflow_debugger.dataproc_rca <batch_id>",
-     "INC-005 (TTL) · INC-009 (pod-evict)"),
+     "INC-005 (TTL) · INC-009 (pod-evict) · INC-012 (ruled out TTL in one call)"),
     ("D5", "Signature match",
-     "24 regex fingerprints classify the failure; a high-confidence match returns a cached verdict with NO LLM "
+     "25 regex fingerprints classify the failure; a high-confidence match returns a cached verdict with NO LLM "
      "call. Each signature's programmatic-fix flag separates a fixable root cause from a downstream symptom.",
      "signatures.py:28", "airflow_debugger/signatures.py#L28",
      "python3 -m airflow_debugger.tests.test_signatures",
-     "18 cases incl the INC-011 skip-vs-fail"),
+     "19 cases incl INC-011 skip-vs-fail + INC-012 GCS list timeout"),
     ("D6", "Past-incident match",
      "Lexical matcher over the local incident corpus (on-call/incident_log.jsonl) attaches the most similar past "
      "incidents to the verdict, so a repeat is recognized instantly.",
@@ -79,7 +79,7 @@ STEPS = [
      "code fix is possible + a deep link to the batch/run.",
      "report.py:50", "airflow_debugger/report.py#L50",
      "python3 -m airflow_debugger.report <log file>",
-     "INC-005 / 009 / 010 / 011"),
+     "INC-005 / 009 / 010 / 011 / 012"),
     ("D8", "LLM fallback",
      "ONLY when no signature matched: one bounded LLM synthesis call over the distilled evidence (synth.py:29). "
      "Everything before this is plain deterministic code, so known failures cost nothing and are instant.",

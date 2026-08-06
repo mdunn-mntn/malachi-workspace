@@ -94,7 +94,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mm_component_taxonomy | reference | 2026-07-23 | [doc](memory/reference_mm_component_taxonomy.md) |
 | Terse tickets and docs | feedback | 2026-07-24 | [doc](memory/feedback_terse_tickets.md) |
 | feedback-dont-extend-old-tickets | feedback | 2026-07-24 | [doc](memory/feedback_dont_extend_old_tickets.md) |
-| feedback_terse_chat_replies | feedback | 2026-07-24 | [doc](memory/feedback_terse_chat_replies.md) |
 | raspberry-pi-5-server | reference | 2026-07-24 | [doc](memory/reference_pi5_server.md) |
 | reference-workflow-audit-loop | reference | 2026-07-24 | [doc](memory/reference_workflow_audit_loop.md) |
 | reference_ghost_bid_lift_register | reference | 2026-07-24 | [doc](memory/reference_ghost_bid_lift_register.md) |
@@ -175,4 +174,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-06 | [doc](memory/reference_airflow3_backfill_scoping.md) |
 | background_work_liveness | feedback | 2026-08-06 | [doc](memory/feedback_background_work_liveness.md) |
 | feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
+| feedback_terse_chat_replies | feedback | 2026-08-06 | [doc](memory/feedback_terse_chat_replies.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
