@@ -10,6 +10,7 @@ imps AS (
     CASE campaign_id
       WHEN 614193 THEN 'S1' WHEN 614191 THEN 'S2' WHEN 614192 THEN 'S3'
       WHEN 637329 THEN 'RT' WHEN 637330 THEN 'RT' WHEN 637331 THEN 'RT' WHEN 637332 THEN 'RT'
+      WHEN 637328 THEN 'RT' WHEN 637333 THEN 'RT'
       ELSE 'other' END AS stage
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE advertiser_id = 58797

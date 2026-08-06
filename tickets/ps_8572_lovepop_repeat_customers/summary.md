@@ -93,17 +93,32 @@ For the 16 sample/cluster IPs (200 CIL impressions, 2026-05-01..2026-08-05): 0 p
 ### 4.5 Exclusion timeline periods (used by steps 4-5)
 P0 2026-06-01..06-30 02:08 UTC: no CRM exclusion existed. P1 06-30 02:08..07-16 18:17: 32697 excluded, 28594 NOT. P2 07-16 18:17..08-04: both excluded (DS47). Grace 3d after attach.
 
+### 4.7 Campaign-wide serve-time test (Task B, queries ps_8572_04b_*)
+1,423,952 impressions, 65 days, all Lovepop campaigns. Pre-registered verdict rule PASSED: P2 (post-7/16) S1 post-grace impressions to DS47-member IPs = 0 of 165,985 (thresholds 0.1% / 25 IPs). P1 32697 leakage = 25 imps, all within 7.5h after the 3d grace cutoff (propagation tail), zero after. The 28594 gap cohort (P1, list not attached): 5,458 S1 impressions to 2,668 member IPs over 6/30-7/16 (plus S2 4,524 / S3 1,006 / RT 7,977). P0 context: 59.6% of June S1 impressions went to would-be 28594 members (legal, no exclusion existed). The 3 flagged IPs from 4.3: DS4-only members, never DS47 -> served because exclusion evaluates DS47; gap cohort, not violations. Sibling leakage post-attach (P2 post-grace vs 7/17): S2 1,824 / S3 799 / RT 11,951 imps to member IPs, S1 zero, consistent with the CRM clause living only on S1.
+
+### 4.8 Sibling campaigns (Task A, queries ps_8572_04a_*)
+S2 (614191) and S3 (614192) carry NO CRM exclusion and NEVER did in any archived version (no DS47/DS4/DS21/DS34/DS2; just DS16 stage-progression include + DS14 gate + holdout). RT cg 129046 (SIX obj4 campaigns incl. 637328/637333) has zero CRM clauses, republished 90s after S1's CRM add on 6/30 with no clause = deliberate omission (Zach rule: CRM unusable in retargeting). Old S1 587084: DS47 [28594] only, 32697 never added, 0 imps in window. CRM suppression for S2/S3 relies entirely on S1 gating entry into the stage segments.
+
+### 4.9 Matchback classification (Task C, outputs/ps_8572_matchback_classified.csv) + THE MIGRATION HOLE
+All 2,290 orders classified, 0 residual: A_pre_exclusion 1,169 (51.0%) | D_unmatched 394 (17.2%) | P2_ds4_gap 229 (10.0%) | B_28594_gap 170 (7.4%) | P1_nonmember 111 (4.9%, 99 of them DS4@6/30 members) | C_post_attach_candidate 84 (3.7%) | B2_32697_candidate 46 (2.0%) | small buckets 87. The 10 samples: 6 pre-exclusion, 0 true violations.
+**Biggest mechanism: the 7/1 DS4->DS47 migration is NOT a superset move.** 1,300 of 2,154 converting IPs were DS4 exact-matches at 6/30; only 281 were DS47 members at 7/02 (overlap 182; 1,118 dropped). DS47 is 2.2-2.4x bigger in aggregate but covers DIFFERENT IPs. Since the bidder exclusion evaluates DS47 from 7/1, most direct CRM-matched customers fell out of the live exclusion at migration (P2_ds4_gap + most P1_nonmember + 125 of B_28594_gap = ~24% of orders). The 84 C_post_attach_candidates and 46 B2 candidates must be S2/S3/RT servings (Task B proved S1 post-grace member hits = 0/25-in-tail), i.e. explained by 4.8.
+
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+No enforcement bug: the S1 bidder exclusion is 0-leak against its configured set. The complaint decomposes into 5 dated, quantified mechanisms:
+1. 51% pre-exclusion impressions (no CRM clause existed before 6/30; client believed exclusions were live).
+2. DS4->DS47 migration hole (~24%): direct-matched IPs dropped from the live exclusion on 7/1. PLATFORM ISSUE -> Audience squad.
+3. Late attach of main list 28594 on 7/16 (7.4% + 5,458 gap S1 impressions).
+4. S2/S3 + RT carry no CRM exclusion (by design/never configured) -> post-conversion and post-attach member serving is all sibling-stage.
+5. Match gap / IP drift: 17.2% of orders on IPs never matched to any list (match rates 62.9/66.9%).
+Recommendations: Audience squad investigate migration semantics (why DS47 excludes exact-matched DS4 IPs' coverage); client-side suggestions = conversion window definition, zero S2/S3 spend if converters must not see ads, re-check RT group intent, expectations on 63-67% match rates.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Were post-6/29 impressions served to CRM-list IPs at serve time (framing question)?
+  **A:** Yes, but through config gaps, not enforcement failure: 5,458 S1 imps to 28594 members during the 17-day attach gap; ~24% of matchback orders via the DS4->DS47 migration hole; S2/S3/RT by clause absence. Against its own configured DS47 set, S1 leakage = 0 post-attach.
+- **Q:** Is the "same impression+visit -> many orders" pattern an attribution bug (Richie's ask)?
+  **A:** No. All 10 chains reproduce with 0s deltas; every order in 2,290 satisfies the 180d/14d VV + 30d conversion windows; the 5-order cluster is 5 conversions on one ad_served_id, working as designed.
+- **Q:** Does DS47 supersede DS4 for old uploads (Alec's re-upload theory)?
+  **A:** DS47 covers old uploads (April list has 13.9M DS47 IPs) so no re-upload needed, BUT DS47 is not a per-IP superset: 86% of direct-matched converting IPs are absent from it.
 
 ## 7. Data Documentation Updates
 What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.

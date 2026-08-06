@@ -9,7 +9,7 @@ Subcommands:
 import csv
 import json
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -140,9 +140,14 @@ def classify():
                 if member_0804:
                     later.append("ds47_0804")
                 note = "later_matched:" + "+".join(later) if later else ""
+            elif imp <= GRACE1_END and m["ds47_0702_32697"]:
+                bucket = "P1_32697_in_grace"
+            elif m["ds4_0630_32697"] and not m["ds47_0702_32697"]:
+                bucket = "P1_32697_ds47_dropped"
+                note = "32697 direct DS4 member at 6/30 but absent from DS47 after the 7/01 migration"
             else:
-                bucket = "other_unclassified"
-                note = "P1_member_0702_no_rule (e.g. 32697 member, imp inside 3d grace, or both-list member)"
+                bucket = "P1_32697_later_joined"
+                note = "32697 membership appears only at a later snapshot (0717/0804)"
         else:  # P2
             if imp > GRACE2_END and member_0717:
                 bucket = "C_post_attach_candidate"
@@ -152,9 +157,22 @@ def classify():
                 bucket = "C_in_grace"
             elif not any_member:
                 bucket = "D_unmatched"
+            elif (m["ds4_0630_28594"] or m["ds4_0630_32697"]) and not member_0717:
+                bucket = "P2_ds4_gap"
+                note = "direct DS4 CRM member at 6/30 but absent from attached DS47 segments at 7/17"
+                if member_0702:
+                    note += "; was DS47 member at 7/02"
+                if member_0804:
+                    note += "; reappears at 8/04"
+            elif member_0702 and not member_0717:
+                bucket = "P2_ds47_churned"
+                note = "DS47 member at 7/02 (not DS4 6/30), dropped from DS47 by 7/17"
+            elif imp <= GRACE2_END and not member_0717 and member_0804:
+                bucket = "P2_in_grace_later_joined"
+                note = "impression in 3d grace, membership appears only at 8/04"
             else:
                 bucket = "other_unclassified"
-                note = "P2_member_somewhere_but_no_rule (not member at 0717; member only at earlier snapshot or in-grace+0804-only)"
+                note = "P2 residual: no rule matched"
 
         exp28 = m["ds47_0702_28594"] and not m["ds4_0630_28594"]
         exp32 = m["ds47_0702_32697"] and not m["ds4_0630_32697"]
@@ -222,6 +240,16 @@ def classify():
         "caveat": "DS4 sampled only at dt=2026-06-30; DS47-only vs also-DS4 is distinguishable only against that snapshot. 32697 ingested 2026-06-30 02:06 UTC so the 6/30 DS4 partition may pre-date its first build.",
     }
 
+    imps = sorted(r["impression_time_utc"] for r in out_rows)
+    bb = buckets.get("B_28594_gap", [])
+    derived = {
+        "impression_range_utc": [imps[0], imps[-1]],
+        "p1_nonmember_note_distribution": dict(Counter(r["note"] for r in buckets.get("P1_nonmember", []))),
+        "p1_nonmember_ds4_0630_member": sum(1 for r in buckets.get("P1_nonmember", []) if "ds4_0630" in r["note"]),
+        "b_28594_via_ds4_0630_only_never_ds47": sum(1 for r in bb if r["ds4_0630_28594"] and not (r["ds47_0702_28594"] or r["ds47_0717_28594"] or r["final_0804_28594"])),
+        "b_28594_with_some_ds47_snapshot": sum(1 for r in bb if r["ds47_0702_28594"] or r["ds47_0717_28594"] or r["final_0804_28594"]),
+        "headline": "DS47 holds far fewer of the converting IPs than DS4 direct match: 1300/2154 in DS4 at 6/30 vs 281 in DS47 at 7/02 (182 overlap). The DS4->DS47 migration (7/01) dropped most direct-matched customer IPs from the live exclusion.",
+    }
     summary = {
         "task": "PS-8572 Task C matchback order classification",
         "n_orders": n,
@@ -233,6 +261,7 @@ def classify():
             "grace2_end": GRACE2_END.isoformat(),
         },
         "bucket_counts": bucket_counts,
+        "derived_findings": derived,
         "final_state_membership_at_0804": fs,
         "per_snapshot_membership_of_2154_ips": per_snapshot,
         "graph_expansion_evidence": exp_summary,
