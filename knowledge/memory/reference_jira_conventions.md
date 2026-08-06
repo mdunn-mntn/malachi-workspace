@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee]
+keywords: [jira conventions, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing]
 domain: [jira-process]
 lifecycle: active
-last_verified: 2026-07-28
+last_verified: 2026-08-05
 ---
 ## from feedback_jira_formatting.md
 
@@ -183,7 +183,7 @@ TAR team Jira best practices: `documentation/architecture/TAR-JIRA Best Practice
 - Always estimate story points when creating new tickets
 - Update tickets before standup and planning meetings (status, not data entry in meetings)
 
-**Boards, Spikes & sprints (AUDI-1148, 2026-07-22):** Spikes + sprints live in **AUDI** (Scrum board **1814**, active sprint via `GET /rest/agile/1.0/board/1814/sprint?state=active`). **INCR is a Kanban board (3013) with NO sprints and NO Spike issue type** — file spike/sprint work under AUDI even when it's incrementality work. AUDI issue types: Spike=`11467`, Task=3, Story=6, Bug=1, Epic=27. **An AUDI Spike requires only project + issuetype + summary** — Story Points, PMO Rep, Developer, Release Type are NOT required for a Spike (unlike Tasks). Add to sprint: `POST /rest/agile/1.0/sprint/<sid>/issue {"issues":["AUDI-XXXX"]}`. Attach files: `POST /rest/api/2/issue/AUDI-XXXX/attachments` with header `X-Atlassian-Token: no-check` + `-F "file=@path"` (multiple `-F` OK); replace a stale attachment by `DELETE /rest/api/2/attachment/<attid>` first (updating the local file does NOT update the Jira copy).
+**Boards, Spikes & sprints (AUDI-1148, 2026-07-22):** Spikes + sprints live in **AUDI** (Scrum board **1814**, active sprint via `GET /rest/agile/1.0/board/1814/sprint?state=active`). **INCR is a Kanban board (3013) with NO sprints and NO Spike issue type** — file spike/sprint work under AUDI even when it's incrementality work. AUDI issue types: Spike=`11467`, Task=3, Story=6, Bug=1, Epic=27. **An AUDI Spike requires only project + issuetype + summary** — Story Points, PMO Rep, Developer, Release Type are NOT required for a Spike (unlike Tasks). **Spike routing is org-forced to AUDI (verified 2026-08-05):** issuetype `11467` exists in BOTH the TI and AUDI create-meta, and POSTing `project={key:"TI"}` + `issuetype={id:"11467"}` still lands the issue in the **AUDI** project regardless of the create-project key — I posted project TI and got key `AUDI-1195`. So "file a TI spike" resolves to AUDI; matches the CLAUDE.md convention that spikes file under AUDI. Add to sprint: `POST /rest/agile/1.0/sprint/<sid>/issue {"issues":["AUDI-XXXX"]}`. Attach files: `POST /rest/api/2/issue/AUDI-XXXX/attachments` with header `X-Atlassian-Token: no-check` + `-F "file=@path"` (multiple `-F` OK); replace a stale attachment by `DELETE /rest/api/2/attachment/<attid>` first (updating the local file does NOT update the Jira copy).
 
 ## from reference_jira_search_api_v3.md
 

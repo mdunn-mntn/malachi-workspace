@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: 60b2f7af-ea4c-4042-bcd9-027f6c6ad945
 doc_type: memory
-keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access]
+keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access, ExternalTaskSensor, skipped_states, failed_states, skip as failure, ExternalTaskFailedError, wait_fpa]
 domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-08-05
@@ -113,3 +113,7 @@ Three-layer feature store on GCP Dataproc Serverless via Airflow (Astronomer):
 - **Airflow 3 `airflow.sdk.Variable.get(key, default=..., deserialize_json=...)` uses `default=`, NOT `default_var=`.** The classic `airflow.models.Variable.get` used `default_var`; the SDK renamed it. Passing `default_var` → `TypeError` at task runtime.
 - **Dataproc Serverless has a property ALLOWLIST** — it rejects unknown `spark.*` props with `INVALID_ARGUMENT: Attempted to set unsupported properties: [...]`. Confirmed unsupported: **`spark.eventLog.logBlockUpdates.enabled`**. Supported eventLog props: `spark.eventLog.enabled`/`dir`/`compress`. So RDD block-update (cache) events are NOT captured on Dataproc Serverless.
 - **Dev Dataproc SA `airflow-ti-dev@mntn-prj-dev-00.iam.gserviceaccount.com` CAN write `gs://mntn-data-archive-dev/spark-events`** (confirmed via a live dev run writing `app-*.zstd`). Can't submit a dev batch from the CLI/`model_run.py` yourself — user lacks `iam.serviceAccounts.actAs` on that SA; the Astro runner has it.
+
+## Cross-DAG ExternalTaskSensor: skip-as-failure gotcha (INC-011, 2026-08-05)
+- **An `ExternalTaskSensor` with `"skipped"` in `failed_states` HARD-FAILS (fast, ~5s, single poke) on a BENIGN upstream skip** and raises the **IDENTICAL** `ExternalTaskFailedError: Some of the external tasks [...] failed.` message it raises for a true failure. So **a log regex cannot tell a skip from a fail** — you must resolve the external task's ACTUAL final state (`skipped` vs `failed`/`upstream_failed`) via the REST taskInstances endpoint before judging it.
+- **The provider's documented remedy:** move `skipped` out of `failed_states` into `skipped_states=[State.SKIPPED]` — then a legitimate no-data upstream skip makes the sensor **SKIP** (propagates the skip) instead of FAIL+page. Shipped for both `wait_fpa` DAGs in airflow-ti#1175 (AUDI-1195). Only apply where an upstream skip is genuinely benign (a producer short-circuit on missing partner data); where a skip means a real break (e.g. `keyword_ddp_reporting`), keep it in `failed_states`. Incident detail: runbook §2/§3 INC-011.

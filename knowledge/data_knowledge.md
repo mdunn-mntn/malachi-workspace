@@ -1048,6 +1048,16 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   serverless). `ENABLED_DSIDS = [23,25,26,28,30,36]`; per-DS lag hours (5x5=5h, augmentor/guid=1h, 33across=8h).
   Two outputs per vendor: stage-1 `gs://mntn-data-archive-{env}/fpa_vendor_log/data_source_id=NN/` (raw archive),
   stage-2 `…/signals/site_visit_signal/dt=/hh=/data_source_id=NN/`.
+- **Hourly partner delivery + benign short-circuit (INC-011, 2026-08-05):** each source drops HOURLY to
+  `gs://mntn-data-partners/partners/<vendor>/dt=<YYYYMMDDHH>/` where `hh` = **UTC hour**; the producer
+  `fpa_site_visit_batch_serverless` checks a data hour **~2h behind** the run's logical date. Per source, a
+  `source_available_dsid<N>` (`_ShortCircuitDecoratedOperator`) gate checks that hourly prefix — **absent → returns
+  False → that hour's `dsid<N>_processing` is SKIPPED while the producer DAG still SUCCEEDS** (logs `No source data
+  for dsid=<N>, dt=<D>, hh=<H>`). **A missing hourly partner file is a routine benign event**, not a pipeline break;
+  the source self-heals the next hour. **DS26 = Predactiv** (`partners/predactiv/dt=<YYYYMMDDHH>/`), **DS23 = the
+  internal guid_log source.** Downstream `hashed_email_ds_26_signals` (DS26) and `hashed_email_guid_log_signals`
+  (DS23) each wait on their source's `dsid<N>_processing` via an `ExternalTaskSensor` — a benign skip there historically
+  paged prod (INC-011, fix airflow-ti#1175).
 - **DS30 (augmentor) and DS23 (guid) feeder specifics (from the actual Spark jobs, AUDI-1091, 2026-07-22):**
   `dsid30_augmentor_log_processing.py` reads full `augmentor_log` (east+west) then **filters to
   `placement_type IN ("BANNER","BANNER_AND_VIDEO")`** — so **svs DS30 is only the BANNER slice of augmentor.**

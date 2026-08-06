@@ -107,7 +107,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | background_work_liveness | feedback | 2026-07-28 | [doc](memory/feedback_background_work_liveness.md) |
 | bq-workflow | feedback | 2026-07-28 | [doc](memory/feedback_bq_workflow.md) |
 | idso_repo | reference | 2026-07-28 | [doc](memory/reference_idso_repo.md) |
-| jira-conventions | reference | 2026-07-28 | [doc](memory/reference_jira_conventions.md) |
 | project_audi_1173_freq_cap_bandit | project | 2026-07-28 | [doc](memory/project_audi_1173_freq_cap_bandit.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-07-28 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_frequency_capping | reference | 2026-07-28 | [doc](memory/reference_frequency_capping.md) |
@@ -169,6 +168,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | sparse_code_comments | feedback | 2026-08-04 | [doc](memory/feedback_sparse_code_comments.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-05 | [doc](memory/reference_airflow_ti.md) |
 | audi-1111-vendor-quality | project | 2026-08-05 | [doc](memory/project_audi_1111_vendor_quality.md) |
+| jira-conventions | reference | 2026-08-05 | [doc](memory/reference_jira_conventions.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
 | project_airflow_debugger | project | 2026-08-05 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-08-05 | [doc](memory/project_airflow_optimizer.md) |

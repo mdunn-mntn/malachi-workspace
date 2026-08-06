@@ -1038,6 +1038,31 @@ downstream of product_categorization: tpa_export, audience_sizes, mntn_matched_t
 - **Where each incident's failure lives:** submit-side OpenAI file quota = INC-007 (durable fix IMP-013); fetch-side download loop-abort = INC-006 (fix #296); downstream sensor hygiene = PR #1162 (fail-fast). The keyword_ddp sensor is only ever a *lagging* symptom of an upstream break.
 - Alerts are Slack-only (sev 1/5, no PagerDuty); an upstream failure surfaces on-call ~a day later via keyword_ddp. Direct upstream alerting / data-aware scheduling = IMP-009.
 
+**FPA site-visit batch → hashed-email/GUID signal consumers (team TGT/targeting, `airflow-ti`)** — hit by INC-011
+```
+partner drops ──▶ gs://mntn-data-partners/partners/<vendor>/dt=<YYYYMMDDHH>/   (hourly, per source)
+fpa_site_visit_batch_serverless  [@hourly]
+  source_available_dsid<N>  (_ShortCircuitDecoratedOperator)  ← checks the partner's hourly GCS prefix
+     │  present → True                         │  absent → False → SKIP (producer DAG still SUCCEEDS)
+     ▼                                         ▼
+  dsid<N>_processing  (DataprocCreateBatchOperator) ──▶ site_visit_signal/…/data_source_id=<N>
+     (sources seen live in one run: dsid 26/25/23/28/30/36)
+            │  (ExternalTaskSensor wait_fpa, SAME logical date, no execution_delta,
+            │   timeout=900, mode=reschedule, check_existence=True)
+            ▼
+  hashed_email_ds_26_signals   wait_fpa → dsid26_predactiv_processing  ← ALERTS here (INC-011)
+  hashed_email_guid_log_signals wait_fpa → dsid23_guid_log_processing  (sibling, same latent bug)
+```
+- Each source is gated: `source_available_dsid<N>` short-circuits the hour when the partner's hourly prefix is
+  absent (`No source data for dsid=<N> …`) → its `dsid<N>_processing` is **SKIPPED** while the producer DAG
+  still SUCCEEDS. A missing hourly partner file is a routine benign event, not a break.
+- **Only 3 ExternalTaskSensors exist in `airflow-ti` `dags/`:** these two `wait_fpa` sensors + `keyword_ddp_reporting`'s
+  `wait_for_product_categorization` (INC-006/007). The `wait_fpa` pair polls the SAME logical date (no
+  `execution_delta`); `keyword_ddp` uses a 6h delta.
+- **Skip-as-failure trap (INC-011):** `wait_fpa`'s `failed_states` counts a `skipped` external task as a failure →
+  a benign partner-data gap pages prod. Durable fix MERGED (airflow-ti#1175, AUDI-1195): `skipped` moved to
+  `skipped_states` on both `wait_fpa` DAGs; `keyword_ddp` deliberately excluded (its skip is a real break). See §3 INC-011.
+
 ---
 
 ## 5. Structured incident log (`on-call/incident_log.jsonl`)
