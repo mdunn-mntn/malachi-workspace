@@ -49,10 +49,31 @@ Approved plan at `~/.claude/plans/i-got-this-jira-mossy-clock.md`. Pre-registere
 3. ...
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+### 4.1 The headline: the main CRM list was not in the bidder exclusion until 2026-07-16
+From `audience_segment_archives` version history for campaign 614193 (queries `ps_8572_01c_*`, outputs `ps_8572_expr_archive_history.json`):
+- Before 2026-06-30 02:08 UTC: NO CRM exclusion clause existed at all (segment versions v1-v6).
+- 2026-06-30 02:08 (v7): CRM clause first added, as DS4 [32697] ONLY, i.e. only the small "0-364 - Customer List - 6.29 Upload" (341K entries).
+- 2026-07-01 10:40 (v8): migrated DS4 -> DS47 [32697] (DS47 release day).
+- 2026-07-16 18:17 (v10): 28594 ("Customer List - 4.15 upload", 3.62M entries, created 2026-04-15 not 6/29) FIRST added -> DS47 [28594, 32697].
+- 2026-07-31 18:11: whole audience swapped 79847 -> 95073 "Aug_Geo_Holdout" (same CRM excludes, includes DS13->DS46, geo change).
+So members of the 3.6M-entry main customer list were targetable in prospecting for 17.3 days after the client believed exclusions were live, and no CRM exclusion existed at all in June. Current expression is CORRECT: DS47 [28594, 32697] at negative polarity (expr.py XOR-of-not verified), DS21 [58797] 180d + DS34 [58797] 90d + DS2 behavioral excludes (seg 635121 = UserNumConversions 1-50, seg 682481 = UserNumPageViews 2-50), 10% holdout, DS14 gate.
+
+### 4.2 Sample chains: matchback validated exactly, zero window violations (Step 2)
+All 10 sample orders reproduced from ui_conversions + clickpass_log with 0-second deltas on all 30 timestamps (matchback is EDT). All chains satisfy impression->visit <= 180d (max 44.55d) and visit->conversion <= 30d (max 20.27d). The 5-order cluster is confirmed: 5 conversions = 5 distinct orders on ONE ad_served_id (e4b97b34-b10d-457d-bc21-010d6a9140d3). Full 2,290-order matchback: 0 orders violate either window; max visit->conversion exactly 30.0d. Files: `outputs/ps_8572_sample_chains.csv`, `outputs/ps_8572_matchback_profile.md`.
+Gotchas found: matchback "Impression Time" = ui_conversions.impression_time (FIRST qualifying impression), which differs from clickpass_log.impression_time on the same ad_served_id in 10/10 rows (up to +34.5d; e.g. the 5/26 "impression" actually anchors to a fresh 6/29 clickpass impression, 10.2d before the visit, inside the 14d PRO VV window). 6/10 visits sit on the S2/S3 campaigns (614191/614192) while the conversion is credited to 614193. 3/10 visit_ip != conversion_ip (cross-device/household).
+
+### 4.3 Serving after conversion: zero prospecting-S1 impressions (Step 3)
+For the 16 sample/cluster IPs (200 CIL impressions, 2026-05-01..2026-08-05): 0 post-conversion S1 impressions on either anchor (attribution time or true event time). All 147 post-conversion impressions were S2 (6) / S3 (52) / standalone retargeting cg 129046 (89). The behavioral converter suppression (block_conversion + DS21/DS2) is working in S1. The "ads after converting" experience is S2/S3 within the prospecting group + the standalone RT group, both by-design retargeting. 9 post-6/29 S1 impressions exist to 3 IPs, all PRE-conversion (adjudicated against list membership in step 4). Files: `outputs/ps_8572_serving_after_conv*.csv`.
+
+### 4.4 Config facts (Steps 1a/1b/1d/1e)
+- Windows (58797): PRO VV window 14d, RT 7d, conversion window 30d (all variants), unchanged all 2026. NOT 180d; Richie's "180-day lookback" = conversion_lookback_window in advertiser_configurations, a different field, and it was 90d for the whole complaint window (changed 90->180 on 2026-08-04, the day the ticket was filed).
+- Blocks: block_conversion / block_first_party / block_prospecting all TRUE continuously since 2026-04-14 (one same-second FALSE blip on 8/4, a save transaction artifact). page_view_lookback 90d.
+- Uploads: 28594 entry_count 3,618,989, match_rate 0.629 (residual 37.1%); 32697 entry_count 341,383, match_rate 0.669 (residual 33.1%). data_source_category_id = audience_upload_id confirmed. No match-rate history table exists in BQ (the claimed 9-11pt climb is unverifiable here).
+- ipdsc: both uploads observable under DS4 AND DS47; DS47 membership ~2.2-2.4x DS4 (graph expansion; 28594: 13.87M vs 5.87M IPs at 7/15). DS21/DS34 NOT in ipdsc (site-converter exclusion only testable behaviorally, which 4.3 does). DS47 partitions predate the 7/1 release (release was enforcement-side). 6/29 upload resolved in ipdsc by 6/30 (~1 day latency).
+
+### 4.5 Exclusion timeline periods (used by steps 4-5)
+P0 2026-06-01..06-30 02:08 UTC: no CRM exclusion existed. P1 06-30 02:08..07-16 18:17: 32697 excluded, 28594 NOT. P2 07-16 18:17..08-04: both excluded (DS47). Grace 3d after attach.
 
 ## 5. Solution
 What was done to resolve the issue:
