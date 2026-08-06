@@ -16,7 +16,8 @@
 #   DRY_RUN=0 bash backfill_household_fs.sh copy-mirror  # mirror dev -> PROD (MUST run before daily:
 #                                                        #   L2 reads the mirror from PROD even in dev)
 #   DRY_RUN=0 bash backfill_household_fs.sh daily        # 90x (L2 -> L3) date-pairs, oldest first, parallel
-#   DRY_RUN=0 bash backfill_household_fs.sh copy         # L2+L3 dev -> prod (writes PROD)
+#   DRY_RUN=0 bash backfill_household_fs.sh monthly      # snapshot=monthly pairs (2026-06-01, 2026-07-01)
+#   DRY_RUN=0 bash backfill_household_fs.sh copy         # L2+L3 (incl. monthly/) dev -> prod (writes PROD)
 # CONCURRENCY=4 by default (parallel Dataproc batches; Ryan OK'd running these simultaneously).
 # Read-resolution (compiled model_config.json): guid_log L1 reads DEV (hence seed); the graph mirror is
 # read-only -> reads PROD always; L2/L3 read DEV. So: seed -> mirror -> copy-mirror -> daily -> copy.
@@ -50,16 +51,18 @@ seq_dates() { local d="$1"; while [[ "$d" < "$END" || "$d" == "$END" ]]; do echo
 
 # ---------- run one model for one date (in dev, blocking) ----------
 run_model() {
-  local m="$1" d="$2" rel="$3" out_dt="$4"
+  local m="$1" d="$2" rel="$3" out_dt="$4" snap="${5:-}"
   if [[ "$SKIP_EXISTING" == "1" && -n "$out_dt" ]] && gsutil -q stat "$DEV/$rel/dt=$out_dt/_SUCCESS" 2>/dev/null; then
     echo "  skip  [$m] $d (dev dt=$out_dt exists)"; return 0
   fi
-  echo "  run   [$m] run_date=$d"
+  local args="{\"run_date\": \"$d\"}"
+  [[ -n "$snap" ]] && args="{\"run_date\": \"$d\", \"snapshot\": \"$snap\"}"
+  echo "  run   [$m] run_date=$d${snap:+ snapshot=$snap}"
   if [[ "$DRY_RUN" == "0" ]]; then
-    ( cd "$AIRFLOW_TI" && uv run python model_run.py "$m" -a "{\"run_date\": \"$d\"}" ) \
+    ( cd "$AIRFLOW_TI" && uv run python model_run.py "$m" -a "$args" ) \
       || { echo "  FAIL  [$m] $d — stopping"; exit 1; }
   else
-    echo "    DRY: (cd $AIRFLOW_TI && uv run python model_run.py $m -a '{\"run_date\": \"$d\"}')"
+    echo "    DRY: (cd $AIRFLOW_TI && uv run python model_run.py $m -a '$args')"
   fi
 }
 
@@ -67,10 +70,12 @@ run_model() {
 copy_model() {
   local m="$1" rel="$2"
   echo ">> COPY $m  dev -> PROD"
-  gsutil ls "$DEV/$rel/" 2>/dev/null | grep -E "/dt=[0-9-]+/$" | while read -r p; do
-    local dt; dt=$(basename "$p")
-    if [[ "$DRY_RUN" == "0" ]]; then gcloud storage cp -r -q "$DEV/$rel/$dt" "$PROD/$rel/";
-    else echo "    DRY: gcloud storage cp -r $DEV/$rel/$dt $PROD/$rel/"; fi
+  for sub in "" "monthly/"; do
+    gsutil ls "$DEV/$rel/$sub" 2>/dev/null | grep -E "/dt=[0-9-]+/$" | while read -r p; do
+      local dt; dt=$(basename "$p")
+      if [[ "$DRY_RUN" == "0" ]]; then gcloud storage cp -r -q "$DEV/$rel/$sub$dt" "$PROD/$rel/${sub%/}${sub:+/}";
+      else echo "    DRY: gcloud storage cp -r $DEV/$rel/$sub$dt $PROD/$rel/$sub"; fi
+    done
   done
 }
 
@@ -111,6 +116,13 @@ case "$MODE" in
            run_model "$L3" "$ARG_DATE" "$REL_L3" "$(add_days "$ARG_DATE" 1)" ;;
   l2)      echo "== L2 backfill (daily) =="; for d in $(seq_dates "$START" 1); do run_model "$L2" "$d" "$REL_L2" "$(add_days "$d" 1)"; done ;;
   l3)      echo "== L3 backfill (daily) =="; for d in $(seq_dates "$START" 1); do run_model "$L3" "$d" "$REL_L3" "$(add_days "$d" 1)"; done ;;
+  monthly)
+    # feature_store_snapshot analog: day-15 runs use run_date=first-of-month + snapshot=monthly.
+    # In-window months whose 14d outcome window is fully seeded. Aug-1 lands via the prod DAG on Aug-15.
+    for d in 2026-06-01 2026-07-01; do
+      run_model "$L2" "$d" "$REL_L2" "" monthly
+      run_model "$L3" "$d" "$REL_L3" "" monthly
+    done ;;
   copy-mirror) copy_model "$MIRROR" "$REL_MIRROR" ;;
   copy)    copy_model "$L2" "$REL_L2"; copy_model "$L3" "$REL_L3" ;;
   *) echo "unknown MODE '$MODE' (use: seed|smoke|mirror|copy-mirror|daily|pair|l2|l3|copy)"; exit 2 ;;
