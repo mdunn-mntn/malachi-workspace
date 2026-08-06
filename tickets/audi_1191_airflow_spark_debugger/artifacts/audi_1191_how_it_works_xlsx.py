@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""AUDI-1191 explainer + proof deliverable.
+"""AUDI-1191 failure-debugger explainer + proof deliverable.
 
 Builds the branded multi-sheet .xlsx that (1) explains how the automated Airflow/Spark
-failure-debugger + optimizer works step by step, and (2) proves it on real DAGs across
-every use case (Dataproc RCA, Databricks RCA, the optimizer). The signature-taxonomy sheet
-is built live from airflow_debugger.signatures so it never drifts.
+failure DEBUGGER works step by step (D1-D8), and (2) proves it on real incidents
+(INC-005/009/010/011/012). The signature-taxonomy sheet is built live from
+airflow_debugger.signatures so it never drifts. The optimizer (success-sweep) half has its
+own deliverable under AUDI-1194.
 
 Regenerate: python3 tickets/audi_1191_airflow_spark_debugger/artifacts/audi_1191_how_it_works_xlsx.py
 """
@@ -24,16 +25,16 @@ GEN = "2026-08-06"
 GH = "https://github.com/mdunn-mntn/malachi-workspace/blob/main/"
 
 wb = MntnWorkbook(
-    title="Airflow/Spark Failure-Debugger + Optimizer",
+    title="Airflow/Spark Failure Debugger",
     ticket="AUDI-1191",
-    subtitle="How it works, and proof on real DAGs across every use case (Dataproc RCA, Databricks RCA, optimization).",
+    subtitle="How the failure debugger works, step by step, and proof on 5 real prod incidents (Dataproc + Databricks).",
     period="Validated Jul-Aug 2026",
     generated=GEN,
     status="Working",
 )
 
 # ---------------------------------------------------------------- 1. How it works (step map)
-# One row per testable chunk. D = debugger (fires on failures), O = optimizer (sweeps successes, AUDI-1194).
+# One row per testable chunk. Fires on FAILURES only; the success-sweep optimizer is AUDI-1194.
 STEPS = [
     # (step, name, what/how, code display, code repo-path#anchor, test command, proven)
     ("D1", "Detect failed tasks",
@@ -86,32 +87,6 @@ STEPS = [
      "orchestrate.py:16", "airflow_debugger/orchestrate.py#L16",
      "python3 -m airflow_debugger.orchestrate <log>  (--no-llm to force it off)",
      "Agent-tested 2026-08-06: real log = no LLM call; synthetic unknown error = fallback fired"),
-    ("O1", "Get the job's Spark data",
-     "Runs on SUCCEEDED jobs. Dataproc: the .zstd Spark event log from gs://mntn-data-archive-{env}/spark-events "
-     "(fleet-enabled by PR #1169) or the PHS per-batch dirs (ipdsc/tpa). Databricks: the EXPLAIN COST plan + Spark "
-     "metrics from jobs get-run-output.",
-     "oncall_weekly_optimizer.sh", ".claude/scripts/oncall_weekly_optimizer.sh",
-     "bash .claude/scripts/oncall_weekly_optimizer.sh",
-     "Agent-tested 2026-08-06: 360 objects read, parsed clean. Gap: eventlog_v2 rolling parts (IMP-029)"),
-    ("O2", "Parse 7 surfaces",
-     "Full Spark event-log parse into structured metrics: jobs, stages, tasks, executors, environment, SQL node "
-     "metrics, storage.",
-     "eventlog.py:147", "airflow_optimizer/eventlog.py#L147",
-     "python3 -m airflow_optimizer.tests.test_eventlog",
-     "Agent-tested 2026-08-06: 4 jobs/9 stages/34 tasks/3 SQL parsed from fixture"),
-    ("O3", "Detect waste",
-     "Plan detectors (missing stats, broadcast candidate, shuffle sizing, window full-sort, repeated scan) + run "
-     "detectors (skew, spill, GC pressure, spot-preemption cost, fetch instability), each with real numbers and a "
-     "concrete fix.",
-     "optimizations.py:97", "airflow_optimizer/optimizations.py#L97",
-     "python3 -m airflow_optimizer.tests.test_optimizations",
-     "Found the 242x prod skew; agent re-ran 2026-08-06 (12.2x fixture skew)"),
-    ("O4", "Rank the fleet backlog",
-     "Crawls every event log, ranks jobs worst-first, groups each finding CODE / INFRA / FAILURE so the owner "
-     "knows the kind of fix.",
-     "crawl.py:54", "airflow_optimizer/crawl.py#L54",
-     "python3 -m airflow_optimizer.crawl <dir-or-glob>",
-     "2026-08-04 prod crawl (13 jobs, 34 findings); agent re-ran 2026-08-06"),
 ]
 steps_df = pd.DataFrame(
     [{"Step": s, "Name": n, "What it does and how": w, "Code": d, "Test it": t, "Proven": p}
@@ -121,8 +96,8 @@ ws_steps = wb.table(
     "How it works",
     steps_df,
     finding="Every step is a small, separately testable chunk of plain code",
-    method="D = debugger (fires on failures) · O = optimizer (sweeps successes, AUDI-1194). Code links to the exact "
-           "source line on GitHub (mdunn-mntn/malachi-workspace). Test it = the command that exercises just that step.",
+    method="Fires on failures only (the success-sweep optimizer is AUDI-1194, its own workbook). Code links to the "
+           "exact source line on GitHub (mdunn-mntn/malachi-workspace). Test it = the command that exercises just that step.",
     kind="headline",
     widths={"Step": 6, "Name": 22, "What it does and how": 64, "Code": 22, "Test it": 44, "Proven": 26},
     toc="The step map — every chunk, how it's done, the code link, and how to test it",
@@ -132,41 +107,41 @@ for i, (_, _, _, disp, repo_path, _, _) in enumerate(STEPS, 1):  # data rows sta
     c.hyperlink = Hyperlink(ref=c.coordinate, target=GH + repo_path, display=disp)
     c.font = Font(name=c.font.name, size=10, color=BRAND["LINK"], underline="single")
 
-# ---------------------------------------------------------------- 2. Use cases proven
+# ---------------------------------------------------------------- 2. Incidents proven
 cases = pd.DataFrame([
-    {"Use case": "Failure RCA — perf / TTL", "Engine": "Dataproc",
-     "Example DAG / task": "tpa_mntn_id_export", "What it read": "batch describe + event log",
+    {"Incident": "INC-005", "Failure class": "Perf / TTL", "Engine": "Dataproc",
+     "DAG / task": "tpa_mntn_id_export", "What it read": "batch describe + event log",
      "Tool verdict (output)": "Cancelled at 10800s TTL (perf regression). Profile the event log for spill/skew; a TTL bump alone rarely fixes it.",
-     "Confidence": "high", "Validated vs": "INC-005 (owner PR #1161)"},
-    {"Use case": "Failure RCA — code bug", "Engine": "Dataproc",
-     "Example DAG / task": "tpa_ipdsc_export / ipdsc_ds_67", "What it read": "batch describe + Cloud Logging traceback",
+     "Confirmed by": "Owner perf fix PR #1161"},
+    {"Incident": "ds67", "Failure class": "Code bug", "Engine": "Dataproc",
+     "DAG / task": "tpa_ipdsc_export / ipdsc_ds_67", "What it read": "batch describe + Cloud Logging traceback",
      "Tool verdict (output)": "Invalid GCS bucket name: write_location passed as a method, not called. Root cause at ipdsc_ds_67.py:73.",
-     "Confidence": "high", "Validated vs": "ds67 (owner fix a008b2e)"},
-    {"Use case": "Failure RCA — late / missing data", "Engine": "Dataproc",
-     "Example DAG / task": "tpa_ipdsc_export / wait_ds17_src", "What it read": "Airflow sensor log + GCS",
-     "Tool verdict (output)": "Mandatory partner feed (ShareThis / DS17) missing; the existence sensor hard-timed out.",
-     "Confidence": "high", "Validated vs": "INC-010 (owner day-1 fix)"},
-    {"Use case": "Failure RCA — orchestration", "Engine": "Databricks",
-     "Example DAG / task": "keyword_ddp_reporting / write_targeted_signal_ds_19", "What it read": "jobs get-run + get-run-output + cluster events",
+     "Confirmed by": "Owner fix a008b2e, exact file/line"},
+    {"Incident": "INC-009", "Failure class": "Orchestration only", "Engine": "Databricks",
+     "DAG / task": "keyword_ddp_reporting / write_targeted_signal_ds_19", "What it read": "jobs get-run + get-run-output + cluster events",
      "Tool verdict (output)": "Databricks job SUCCEEDED; K8s pod evicted mid-run (orchestration-only). Not a code fix.",
-     "Confidence": "high", "Validated vs": "INC-009"},
-    {"Use case": "Optimization — skew", "Engine": "Dataproc",
-     "Example DAG / task": "Update Vertical Categorization", "What it read": "Spark event log (7 surfaces)",
-     "Tool verdict (output)": "Stage 0 skewed 242x (max vs median task). Salt the skewed key or enable AQE skew join.",
-     "Confidence": "high", "Validated vs": "prod crawl 2026-08-04"},
-    {"Use case": "Optimization — stats + shuffle", "Engine": "Databricks",
-     "Example DAG / task": "keyword_ddp_reporting / targeted_signal", "What it read": "EXPLAIN COST plan + Spark job metrics",
-     "Tool verdict (output)": "Missing table stats (ANALYZE), 768/72/182 GiB shuffles under-partitioned, 161 spot-kill re-runs. Code + infra fixes.",
-     "Confidence": "high", "Validated vs": "INC-009 job / screenshots"},
+     "Confirmed by": "Owner marked success; data verified in GCS"},
+    {"Incident": "INC-010", "Failure class": "Late / missing partner data", "Engine": "Dataproc",
+     "DAG / task": "tpa_ipdsc_export / wait_ds17_src", "What it read": "Airflow sensor log + GCS",
+     "Tool verdict (output)": "Mandatory partner feed (ShareThis / DS17) missing; the existence sensor hard-timed out. Also caught: the unblock copy was previous-day data.",
+     "Confirmed by": "Owner root cause matched + day-1 fallback shipped"},
+    {"Incident": "INC-011", "Failure class": "Skip treated as failure", "Engine": "n/a (sensor)",
+     "DAG / task": "hashed_email_ds_26_signals / wait_fpa", "What it read": "sensor log + external task state + producer short-circuit log",
+     "Tool verdict (output)": "False alarm: producer SUCCEEDED and correctly skipped (no Predactiv file that hour); the sensor counts a skip as a failure.",
+     "Confirmed by": "Fix PR #1175 merged (skipped_states, 2 DAGs)"},
+    {"Incident": "INC-012", "Failure class": "GCS list timeout", "Engine": "Dataproc",
+     "DAG / task": "materialize_mntn_select / materialize", "What it read": "batch describe + staging driveroutput",
+     "Tool verdict (output)": "Both tries died listing augmentor_log: the region glob lists every file (~17M) to find one hour. 'Lost executors' was a red herring (idle scale-downs).",
+     "Confirmed by": "Fix PR #1176 merged (literal paths); corrected the thread's preemption theory"},
 ])
 wb.table(
-    "Use cases proven",
+    "Incidents proven",
     cases,
-    finding="Validated on real DAGs across both engines and both purposes (RCA and optimization)",
-    method="Each row is a real failed task or job the tool was run on. Tool verdict is the actual output; Validated vs is the incident or owner action that confirmed it.",
+    finding="Six real prod incidents diagnosed correctly, including two where the tool corrected the first human read",
+    method="Each row is a real failure the tool was run on. Tool verdict is the actual output; Confirmed by is the owner action or merged fix that proved it right.",
     kind="headline",
-    widths={"Use case": 26, "Engine": 11, "Example DAG / task": 34, "What it read": 30, "Tool verdict (output)": 60, "Confidence": 10, "Validated vs": 24},
-    toc="The proof — one row per real use case, tool output vs ground truth",
+    widths={"Incident": 10, "Failure class": 20, "Engine": 12, "DAG / task": 34, "What it read": 30, "Tool verdict (output)": 58, "Confirmed by": 30},
+    toc="The proof — one row per real incident, tool output vs ground truth",
 )
 
 # ---------------------------------------------------------------- 3. Worked example: Dataproc RCA
@@ -199,34 +174,16 @@ wb.notes(
     ],
 )
 
-# ---------------------------------------------------------------- 5. Worked example: Optimizer
+# ---------------------------------------------------------------- 5. Worked example: INC-012
 wb.notes(
-    "Ex — Optimizer (Dataproc)",
-    intro="The efficiency half on Dataproc: reading a Spark event log to find a concrete speed-up (the Update Vertical Categorization job).",
+    "Ex — GCS list timeout",
+    intro="The newest live incident (INC-012, materialize_mntn_select): the evidence overruled two plausible human theories, and the fix merged the same day.",
     blocks=[
-        ("Input", "A finished job's Spark event log (.zstd) from the archive bucket. No failure needed — this runs on healthy jobs to find waste."),
-        ("Parse (7 surfaces)", "Parses jobs, stages, tasks, executors, environment, SQL per-node metrics, and storage from the event log into structured metrics."),
-        ("Detect", "The skew detector compares max-vs-median task time per stage. Stage 0's slowest task ran 242x the median: one partition held nearly all the data, with GC pressure alongside."),
-        ("Recommend (actual output)",
-         "[high] Stage 0 skewed 242.1x (max vs median task). Why: one partition holds most of the data. Fix: salt the skewed group/join key or enable AQE skew join (spark.sql.adaptive.skewJoin.enabled); a plain repartition will not fix a value-skewed key."),
-        ("Crawl (check every DAG)", "The same optimizer runs across a directory of event logs and ranks a cross-job backlog worst-first. The 2026-08-04 prod crawl scanned 13 jobs and surfaced 34 findings, 10 high-impact, led by this 242x skew."),
-        ("Outcome", "Flagged to the model owner (DDP) as a concrete wall-clock and cost win. First real optimization target found autonomously by the tool."),
-    ],
-)
-
-# ---------------------------------------------------------------- 5b. Worked example: Databricks optimizer
-wb.notes(
-    "Ex — Optimizer (Databricks)",
-    intro="The same efficiency half on Databricks, on a real job (targeted_signal, in keyword_ddp_reporting). Databricks is used by ~66 dbt models plus a handful of PySpark jobs across the mntn_match and DDP DAGs.",
-    blocks=[
-        ("Input", "A Databricks job's EXPLAIN COST plan (from jobs get-run-output) plus its Spark job metrics (stage shuffle sizes, task failures, executor events). No GCS event log needed here."),
-        ("Parse", "The plan gives per-node operators and optimizer statistics; the metrics give stage shuffle sizes, failed tasks, and executor removals."),
-        ("CODE fixes (actual output)",
-         "Missing table stats on product_categorization (13.5B rows scanned) so the optimizer defaults to full sorts, fix ANALYZE TABLE COMPUTE STATISTICS. Wide shuffles 768/72/182 GiB at the default partition count, fix set spark.sql.shuffle.partitions (~256 MiB each) or enable AQE coalesce."),
-        ("INFRA / FAILURE fixes (actual output)",
-         "161 task re-runs from 7 spot-reclaimed executors, fix raise first_on_demand or add on-demand fallback. 168 FetchFailed tasks (shuffle instability), route as infra and reduce shuffle block size."),
-        ("Grouping", "Each finding is tagged CODE (a query/config PR), INFRA (a cluster change), or FAILURE (route it) so the owner knows the kind of fix."),
-        ("Outcome", "Same detectors as the Dataproc optimizer, different acquisition (the plan plus Spark metrics instead of the GCS event log). This is what proves the optimizer works on both engines."),
+        ("Input", "Airflow alert: 'Dataproc Agent reports job failure' (boilerplate). Two tries died at the same ~19 minutes. The team's thread read it as lost executors, then spot preemption."),
+        ("Analyze", "batches describe ruled out the TTL class in one call (ran 1121s of a 14400s TTL). The driver output showed both tries died on the same timeout while listing gs://.../augmentor_log/, and the 'lost executor' lines were idle scale-downs with no preempt or kill messages."),
+        ("Mechanism", "The path used region={east,west}, a pattern. Expanding it makes the GCS connector list every file under augmentor_log (~17M) just to find one hour. When that listing runs slow, the job dies. Measured: the exact-folder list is 18K names in 7s."),
+        ("Verdict", "Not preemption, not lost executors: a fragile full-prefix listing hitting variable GCS latency. A re-run passes (latency varies), so it would keep paging until fixed."),
+        ("Fix + outcome", "PR #1176: point the job at the two exact region folders instead of the pattern (plus a crash guard in the shared helper). Merged same day by the owning team. The hour hole was backfilled; signature gcs_list_timeout added so the next one is recognized instantly."),
     ],
 )
 
@@ -257,15 +214,14 @@ wb.glossary(
     "Read me",
     intro="What this tool is, and the terms used across the tabs.",
     rows=[
-        ("What it is", "An automated debugger for failed Airflow/Spark tasks (Dataproc and Databricks). It returns a root-cause report with the affected file and a confidence level. A second mode reads healthy jobs to find efficiency wins."),
+        ("What it is", "An automated debugger for failed Airflow/Spark tasks (Dataproc and Databricks). On a failure it returns a root-cause report with the affected file and a confidence level, in under 500 characters."),
         ("Why it exists", "On-call debugging of a failed task was slow and expert-dependent, and the framework author left. This removes the single-person dependency and cuts time-to-diagnosis."),
+        ("The other half", "The efficiency sweep (reads jobs that SUCCEEDED and finds waste like skew and spill) is a separate tool and workbook: AUDI-1194, in the same Drive folder set."),
         ("", ""),
         ("Deterministic-first", "The fetch, routing, signature match, and report are plain code. The LLM is used only as a fallback when no known signature matches, so most cases cost nothing and are instant."),
         ("Key-free", "No stored API tokens and no Slack bot. Data access uses short-lived SSO / CLI tokens (astro, gcloud, Databricks OAuth). Required by MNTN security policy."),
         ("BLUF / STAR", "Bottom Line Up Front. The report leads with the answer (root cause) in one line, then the supporting detail, kept under 500 characters."),
         ("RCA", "Root-cause analysis: naming the actual underlying cause, not just that the task failed."),
-        ("Event-log surfaces", "A Spark event log records 7 layers (jobs, stages, tasks, executors, environment, SQL node metrics, storage). The optimizer reads all 7 to find skew and spill."),
-        ("Skew", "One partition holds far more data than the others, so one task runs much longer than the rest. Measured as max-vs-median task time."),
         ("Signature", "A regex fingerprint of a known failure. A high-confidence match returns a cached verdict with no LLM call."),
         ("Code links", "The Code column on 'How it works' links to the exact source line on GitHub (mdunn-mntn/malachi-workspace). Repo access required; without it, the file:line shown is still the reference."),
         ("Programmatic-fix flag", "Per signature: whether an automated code fix is even possible. It separates a fixable root cause from a downstream symptom or an infra issue."),
@@ -275,9 +231,9 @@ wb.glossary(
 # ---------------------------------------------------------------- Cover (LAST)
 wb.cover(
     takeaways=[
-        "One automated tool turns a failed Airflow task into a root-cause report with the affected file, for both Dataproc and Databricks.",
-        "Validated on real DAGs across every use case: Dataproc and Databricks RCA, plus the optimizer on both engines (a 242x Dataproc skew, and Databricks missing-stats + spot churn).",
-        "Deterministic-first and key-free: most cases are instant with no LLM and no stored tokens.",
+        "A failed Airflow task goes in; a root-cause report with the affected file comes out, for both Dataproc and Databricks.",
+        "Proven on six real prod incidents, including two where the tool corrected the first human diagnosis (INC-011 skip-vs-fail, INC-012 list timeout); both fixes merged.",
+        "Deterministic-first and key-free: known failures resolve instantly with no LLM call and no stored tokens.",
     ]
 )
 
