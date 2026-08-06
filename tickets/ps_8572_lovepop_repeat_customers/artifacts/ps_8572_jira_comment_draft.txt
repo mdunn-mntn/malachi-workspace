@@ -3,10 +3,11 @@
 No enforcement bug. Post-attach, S1 served 0 of 165,985 impressions to the live exclusion set. The repeat customers trace to config gaps.
 
 h3. Findings
-* No CRM clause on 614193 before 6/30; main list 28594 attached 7/16. 51% of the 2,290 matchback orders pre-date any exclusion; the gap got 5,458 S1 imps to 2,668 list IPs.
-* The 7/1 DS4->DS47 migration dropped 86% of direct-matched converting IPs (1,118 of 1,300) from the live exclusion. ~24% of orders.
-* S2/S3 + RT carry no CRM clause (never did); all post-conversion serving is those stages. 17% of IPs never matched (62.9/66.9% match rates).
+* No CRM clause before 6/30; main list attached 7/16. 51% of the 2,290 orders pre-date any exclusion.
+* The 7/1 DS4->DS47 migration dropped 86% of direct-matched IPs from the live exclusion. ~24% of orders.
+* S2/S3 + RT carry no CRM clause; all post-conversion serving is those stages. 17% of IPs never matched (63/67%).
+* Lookbacks: conversion window 30d (attribution); block lookback 90d, changed to 180d on 8/4 (filing day); DS21 clause 180d since 6/26.
 
 h3. Next
 * Audience: review DS4->DS47 migration coverage.
-* Reporter: conversion window (30d), S2/S3 spend, match-rate expectations.
+* Reporter: 30d conversion window, S2/S3 spend, match rates.
