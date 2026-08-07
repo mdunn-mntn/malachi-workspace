@@ -20,6 +20,7 @@ GCP_PROJECT = "mntn-prj-prod-00"
 GITHUB_AIRFLOW_TI = "https://github.com/SteelHouse/airflow-ti/blob/main"
 _AIRFLOW_TI_LOCAL = Path.home() / "Developer" / "work" / "mntn" / "airflow-ti"
 _FILE_LINE = re.compile(r'File "([^"]+\.py)", line (\d+)')
+_FRAMEWORK_MARKERS = ("site-packages", "dist-packages", "/pyspark/", "/py4j/", "/lib/python")
 _KNOWN_FIX_MIN_SCORE = 0.5
 _MAX = 500
 
@@ -95,8 +96,8 @@ def build_report(diag: dict) -> str:
     return report
 
 
-def _repo_paths() -> dict[str, str]:
-    """basename -> repo-relative path from the local airflow-ti checkout (empty if absent)."""
+def _repo_paths() -> dict[str, list[str]]:
+    """basename -> all repo-relative paths from the local airflow-ti checkout (empty if absent)."""
     try:
         out = subprocess.run(
             ["git", "-C", str(_AIRFLOW_TI_LOCAL), "ls-files"],
@@ -108,18 +109,35 @@ def _repo_paths() -> dict[str, str]:
         return {}
     if out.returncode != 0:
         return {}
-    paths: dict[str, str] = {}
+    paths: dict[str, list[str]] = {}
     for p in out.stdout.splitlines():
-        paths.setdefault(p.rsplit("/", 1)[-1], p)
+        paths.setdefault(p.rsplit("/", 1)[-1], []).append(p)
     return paths
 
 
-def code_links(diag: dict, repo_paths: dict[str, str] | None = None) -> list[str]:
-    """GitHub links for the repo files named in the failure's tracebacks.
+def _resolve_frame(full: str, candidates: list[str]) -> str | None:
+    """Pick the repo path a traceback frame refers to; None when it can't be sure.
 
-    Framework frames (site-packages, /usr/local) are skipped; a file only links
-    when its basename exists in the airflow-ti tree, so an unrelated script never
-    produces a wrong link.
+    A single candidate wins. On a basename collision, a Spark driver frame
+    (Dataproc /var/dataproc tmp dir, Databricks) means the deployed spark/
+    script; anything still ambiguous is skipped rather than guessed.
+    """
+    if len(candidates) == 1:
+        return candidates[0]
+    if "/var/dataproc/" in full or "/databricks/" in full:
+        spark_hits = [c for c in candidates if c.startswith("spark/")]
+        if len(spark_hits) == 1:
+            return spark_hits[0]
+    return None
+
+
+def code_links(diag: dict, repo_paths: dict[str, list[str]] | None = None) -> list[tuple[str, str]]:
+    """(url, repo_path) pairs for the repo files named in the failure's tracebacks.
+
+    Framework frames are skipped, a file only links when its basename exists in
+    the airflow-ti tree, and an ambiguous basename collision is skipped rather
+    than guessed, so an unrelated script never produces a wrong link. The
+    deepest frame per file wins (nearest the raise).
     """
     spark = diag.get("spark") or {}
     text = " ".join(
@@ -127,38 +145,64 @@ def code_links(diag: dict, repo_paths: dict[str, str] | None = None) -> list[str
     )
     if repo_paths is None:
         repo_paths = _repo_paths()
-    links, seen = [], set()
+    resolved: dict[str, tuple[str, str]] = {}  # basename -> (repo_path, line); last frame wins
     for full, line in _FILE_LINE.findall(text):
-        if "site-packages" in full or full.startswith("/usr/"):
+        if any(m in full for m in _FRAMEWORK_MARKERS) or full.startswith(("/usr/", "/opt/")):
             continue
         name = full.rsplit("/", 1)[-1]
-        if name in seen:
+        if name == "__init__.py":
             continue
-        seen.add(name)
-        repo = repo_paths.get(name)
+        repo = _resolve_frame(full, repo_paths.get(name, []))
         if repo:
-            links.append(f"{GITHUB_AIRFLOW_TI}/{repo}#L{line}")
-    return links[:3]
+            resolved[name] = (repo, line)
+    return [
+        (f"{GITHUB_AIRFLOW_TI}/{repo}#L{line}", repo) for repo, line in list(resolved.values())[:3]
+    ]
+
+
+def _one_line(text: str, cap: int = 400) -> str:
+    """Collapse log-sourced text to one line so it can't forge package lines."""
+    return " ".join(text.split())[:cap]
+
+
+def _known_fix(diag: dict, matches: list[dict]) -> dict | None:
+    """The top match's fix PR, claimed only when identity agrees with this failure.
+
+    Only the highest-scoring match is considered, and when the diagnosis knows
+    its dag/task the match must share one; a token-overlap score alone must not
+    attach an unrelated incident's PR (a two-word query can score 1.0).
+    """
+    if not matches:
+        return None
+    top = matches[0]
+    if not top.get("fix_pr") or top.get("score", 0) < _KNOWN_FIX_MIN_SCORE:
+        return None
+    ident = diag.get("identity") or {}
+    dag, task = ident.get("dag_id"), ident.get("task_id")
+    identities_known = (dag or task) and (top.get("dag") or top.get("task"))
+    if identities_known and top.get("dag") != dag and top.get("task") != task:
+        return None
+    return top
 
 
 def build_troubleshooting(
-    diag: dict, matches: list[dict] | None = None, repo_paths: dict[str, str] | None = None
+    diag: dict, matches: list[dict] | None = None, repo_paths: dict[str, list[str]] | None = None
 ) -> str:
     """Paste-ready write-up: BLUF, problem, solution with any known fix PR, code links."""
     matches = matches or []
     root = diag.get("root_signature") or {}
     lines = [build_report(diag), "", "Problem"]
-    problem = (root.get("likely_cause") or "").strip() or (
-        (diag.get("root_error") or "").strip()[:400] or "Unclassified; see the log tail."
+    problem = _one_line(
+        (root.get("likely_cause") or "").strip()
+        or (diag.get("root_error") or "").strip()
+        or "Unclassified; see the log tail."
     )
     lines.append(problem)
     if root.get("matched_on"):
-        lines.append(f'Matched on: "{root["matched_on"]}"')
+        lines.append(f'Matched on: "{_one_line(root["matched_on"], 120)}"')
 
     lines += ["", "Solution"]
-    known = next(
-        (m for m in matches if m.get("fix_pr") and m.get("score", 0) >= _KNOWN_FIX_MIN_SCORE), None
-    )
+    known = _known_fix(diag, matches)
     if known:
         lines.append(f"Known fix: {known['fix_pr']} ({known['inc']}, runbook §3)")
     fix = _FIX_ACTION.get(root.get("programmatic_fix"))
@@ -171,14 +215,17 @@ def build_troubleshooting(
     fix_files = (known or {}).get("fix_files") or []
     if links or fix_files:
         lines += ["", "Code"]
-        lines += [f"- {link}" for link in links]
+        lines += [f"- {url}" for url, _ in links]
+        linked_paths = {repo for _, repo in links}
         for f in fix_files:
-            url = f"{GITHUB_AIRFLOW_TI}/{f}"
-            if not any(url in link for link in links):
-                lines.append(f"- {url} (fixed by {known['inc']})")
+            if f not in linked_paths:
+                lines.append(f"- {GITHUB_AIRFLOW_TI}/{f} (fixed by {known['inc']})")
 
     if matches:
-        lines += ["", "Similar: " + ", ".join(f"{m['inc']}({m['score']})" for m in matches)]
+        lines += [
+            "",
+            "Similar: " + ", ".join(f"{m.get('inc')}({m.get('score')})" for m in matches),
+        ]
     return "\n".join(lines)
 
 

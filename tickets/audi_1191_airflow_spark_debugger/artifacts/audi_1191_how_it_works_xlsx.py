@@ -3,7 +3,7 @@
 
 Builds the branded multi-sheet .xlsx that (1) explains how the automated Airflow/Spark
 failure DEBUGGER works step by step (D1-D8), and (2) proves it on real incidents
-(INC-005/009/010/011/012). The signature-taxonomy sheet is built live from
+(INC-005/009/010/011/012/013 + ds67). The signature-taxonomy sheet is built live from
 airflow_debugger.signatures so it never drifts. The optimizer (success-sweep) half has its
 own deliverable under AUDI-1194.
 
@@ -21,13 +21,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirna
 from airflow_debugger import signatures as sig
 from lib.mntn_xlsx import BRAND, FMT, MntnWorkbook
 
-GEN = "2026-08-06"
+GEN = "2026-08-07"
 GH = "https://github.com/mdunn-mntn/malachi-workspace/blob/main/"
 
 wb = MntnWorkbook(
     title="Airflow/Spark Failure Debugger",
     ticket="AUDI-1191",
-    subtitle="How the failure debugger works, step by step, and proof on 5 real prod incidents (Dataproc + Databricks).",
+    subtitle="How the failure debugger works, step by step, and proof on 7 real prod incidents (Dataproc + Databricks).",
     period="Validated Jul-Aug 2026",
     generated=GEN,
     status="Working",
@@ -81,9 +81,9 @@ STEPS = [
      "(2) Troubleshooting pack (--troubleshoot): Problem, Solution with the known fix PR when a past incident "
      "carries one (fix_pr in the corpus), and Code links built from the traceback (framework frames skipped, "
      "file resolved against the airflow-ti tree, exact #L line).",
-     "report.py:144", "airflow_debugger/report.py#L144",
+     "report.py:188", "airflow_debugger/report.py#L188",
      "python3 -m airflow_debugger.tests.test_report",
-     "Live on INC-013: repeat alert returns PR #1179 + all 3 fixed files + the #L30 traceback link"),
+     "Live on INC-013: repeat alert returns PR #1179 + 3 fixed files + the #L30 link; 3 adversarial-review defects fixed w/ regressions (wrong-file collision, framework-frame leak, unrelated-PR claim)"),
     ("D8", "LLM fallback",
      "ONLY when no signature matched: one bounded LLM synthesis call over the distilled evidence (synth.py:29). "
      "Everything before this is plain deterministic code, so known failures cost nothing and are instant.",
