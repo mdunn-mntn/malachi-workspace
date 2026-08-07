@@ -168,12 +168,12 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_hold_evidenced_verdict | feedback | 2026-08-06 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | feedback_terse_chat_replies | feedback | 2026-08-06 | [doc](memory/feedback_terse_chat_replies.md) |
-| feedback_validated_is_not_correct | feedback | 2026-08-06 | [doc](memory/feedback_validated_is_not_correct.md) |
-| project_airflow_debugger | project | 2026-08-06 | [doc](memory/project_airflow_debugger.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
 | reference_gitignore_json_rule | reference | 2026-08-06 | [doc](memory/reference_gitignore_json_rule.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-07 | [doc](memory/reference_airflow3_backfill_scoping.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-07 | [doc](memory/reference_airflow_ti.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
+| feedback_validated_is_not_correct | feedback | 2026-08-07 | [doc](memory/feedback_validated_is_not_correct.md) |
+| project_airflow_debugger | project | 2026-08-07 | [doc](memory/project_airflow_debugger.md) |
 | project_fangorn_on_mntn_id | project | 2026-08-07 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |
