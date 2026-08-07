@@ -228,6 +228,8 @@ _Research detail: this session's three Explore-agent reports (orchestration/PR#1
   2026-06-01 + 2026-07-01 both layers. 0 unresolved failures. Aug-1 monthly lands via the prod
   snapshot DAG on Aug-15.
 - **Access:** ~4 PAM grant windows (dataproc-runtime-actas + dataproc-submit, 4h each).
+- **Tooling merged upstream** (airflow-ti#1180, 2026-08-07): `scripts/model_backfill.sh` (generalized) +
+  `docs/model_backfill.md` (methodology) + the batch-ID collision fix.
 - **Ops surprises solved en route** (detail in [[reference_airflow3_backfill_scoping]]): per-model
   read-resolution (guid_log=dev, mirror=prod-always), graph builds every ~3-4d not weekly (weekly
   sampling missed 06-15/06-22/07-13 → reactive gap-fill), batch-ID minute-collision (local
