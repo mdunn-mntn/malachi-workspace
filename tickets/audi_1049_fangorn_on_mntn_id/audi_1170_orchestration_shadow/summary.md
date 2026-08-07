@@ -1,7 +1,7 @@
 ---
 doc_type: ticket
 title: "AUDI-1170: Orchestration, backfill, and shadow validation for the household FS"
-status: backlog
+status: in_progress
 date: 2026-07-28
 summary: "Wire L1→L2→L3 as an additive task group in feature_store_setup_model.py; backfill runner + shadow parity dashboards"
 result: ""
@@ -219,7 +219,20 @@ _Full plan of action: `~/.claude/plans/i-have-to-execute-snoopy-sutton.md` (appr
 _Research detail: this session's three Explore-agent reports (orchestration/PR#1156, L2/L3 internals, backfill/monitor)._
 
 ## 5. Solution
-_(PRs, config, code — pending Phase 2+; Phase 1 = naming doc + parity monitor + backfill scaffold)_
+
+**The 90-day household FS backfill shipped 2026-08-06** (all in prod, verified):
+- **Mechanism:** `artifacts/backfill_household_fs.sh` — dev `model_run.py` runs + `gcloud storage` copy to prod.
+  Phases: seed (120 prod L1 guid_log partitions → dev) → mirror (17 graph builds, incl. gap-fills) →
+  copy-mirror → daily (90 L2→L3 pairs, 4 lanes) → monthly (Jun+Jul snapshot pairs) → copy.
+- **Prod result:** mirror 17 dts · L2 base 90/90 (dt 2026-05-09..08-06) · L3 base 90/90 · monthly
+  2026-06-01 + 2026-07-01 both layers. 0 unresolved failures. Aug-1 monthly lands via the prod
+  snapshot DAG on Aug-15.
+- **Access:** ~4 PAM grant windows (dataproc-runtime-actas + dataproc-submit, 4h each).
+- **Ops surprises solved en route** (detail in [[reference_airflow3_backfill_scoping]]): per-model
+  read-resolution (guid_log=dev, mirror=prod-always), graph builds every ~3-4d not weekly (weekly
+  sampling missed 06-15/06-22/07-13 → reactive gap-fill), batch-ID minute-collision (local
+  dataproc.py patch), gsutil -m macOS fork bug, monthly writes to `feature_group_X_monthly/` suffix
+  dirs, never merge into an existing prod dt (part-file dedup guard).
 
 ## 6. Questions Answered
 - **Q:** — **A:** —

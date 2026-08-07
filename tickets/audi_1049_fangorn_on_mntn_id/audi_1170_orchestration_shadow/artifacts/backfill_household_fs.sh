@@ -68,13 +68,17 @@ run_model() {
 
 # ---------- copy a model's dev partitions -> prod (additive; never -d) ----------
 copy_model() {
+  # monthly snapshots live in a SUFFIXED group dir (feature_group_X_monthly/<alias>), not a subdir
   local m="$1" rel="$2"
+  local group="${rel%%/*}" alias="${rel#*/}"
   echo ">> COPY $m  dev -> PROD"
-  for sub in "" "monthly/"; do
-    gsutil ls "$DEV/$rel/$sub" 2>/dev/null | grep -E "/dt=[0-9-]+/$" | while read -r p; do
+  for r in "$rel" "${group}_monthly/$alias"; do
+    gsutil ls "$DEV/$r/" 2>/dev/null | grep -E "/dt=[0-9-]+/$" | while read -r p; do
       local dt; dt=$(basename "$p")
-      if [[ "$DRY_RUN" == "0" ]]; then gcloud storage cp -r -q "$DEV/$rel/$sub$dt" "$PROD/$rel/${sub%/}${sub:+/}";
-      else echo "    DRY: gcloud storage cp -r $DEV/$rel/$sub$dt $PROD/$rel/$sub"; fi
+      # never merge into an existing prod partition (different part-file names = duplicated rows)
+      if gsutil -q stat "$PROD/$r/$dt/_SUCCESS" 2>/dev/null; then echo "  skip  $r/$dt (exists in prod)"; continue; fi
+      if [[ "$DRY_RUN" == "0" ]]; then gcloud storage cp -r -q "$DEV/$r/$dt" "$PROD/$r/";
+      else echo "    DRY: gcloud storage cp -r $DEV/$r/$dt $PROD/$r/"; fi
     done
   done
 }
