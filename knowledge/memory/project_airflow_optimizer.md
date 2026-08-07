@@ -1,14 +1,14 @@
 ---
 name: project_airflow_optimizer
-description: AUDI-1194 airflow_optimizer/ — scheduled key-free efficiency crawler over SUCCEEDED Spark jobs (Dataproc event logs + Databricks plans); split from the AUDI-1191 debugger 2026-08-05; optimizer half mostly built, needs productionizing
+description: AUDI-1194 airflow_optimizer/ — scheduled key-free efficiency crawler over SUCCEEDED Spark jobs (Dataproc event logs + Databricks plans); split from AUDI-1191 2026-08-05; in_progress — first external validation run 2026-08-07 (Ryan's intent_score_map) found+verified a straggler/idle-fleet root cause, added straggler + idle_reserved_executors detectors, fixed IMP-029
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow optimizer, AUDI-1194, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, weekly optimizer cron, phs event logs, dataproc-debug pam, 242x skew, dataproc databricks optimization]
+keywords: [airflow optimizer, AUDI-1194, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, weekly optimizer cron, phs event logs, dataproc-debug pam, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, intent_score_map validation, IMP-029 rolling dirs]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-05
+last_verified: 2026-08-07
 ---
 **AUDI-1194 = the OPTIMIZER** (success-triggered efficiency sweep), **split from the AUDI-1191 debugger 2026-08-05** (both AUDI, type Task, Backlog). The two are separate workflows with distinct triggers/schedules/deliverables: the debugger fires only on a **failure**, the optimizer sweeps every DAG that **succeeds**. They can chain but are distinct. AUDI-1194: 5 story points, PMO rep Bryce Wagg, label q3_2026, folder `tickets/audi_1194_optimizer_efficiency_crawler/`, framing **LOCKED** (§0 in its summary). See [[project_airflow_debugger]] (the RCA half), [[reference_airflow_ti]], [[reference_oncall_runbook]].
 
@@ -31,5 +31,7 @@ last_verified: 2026-08-05
 **Weekly cron LIVE:** `.claude/scripts/oncall_weekly_optimizer.sh` + launchd `com.mntn.weekly-spark-optimizer` (Mon 11:00 PT). Pulls newest ≤40 logs from `spark-events`, runs `airflow_optimizer.crawl`, writes `tickets/audi_1194_optimizer_efficiency_crawler/outputs/optimizer_backlog_<date>.md`. Idles with no git noise until enablement lands.
 
 **Proof it works — real fleet finding (IMP-024):** crawl of 13 real prod jobs → **`Update Vertical Categorization` chronic Stage-0 skew up to 242x** (every run 10-242x) = #1 fleet target; `Prepare HTML Content` 18.4x; 6 jobs clean. Labeled by `spark.app.name` (event log self-identifies).
+
+**Validation run 1 (2026-08-07) — first external ask (Ryan Kleck, `aud-int-int-map` = `intent_score_map`):** ticket now **in_progress**. Found + adversarially verified: a 67-min IO-stalled straggler (13.4x duration on 1.0x data, 5% CPU, speculation off) pinned 240 executors at 32% utilization (~$175 of the ~$260 list run idle); 88.8 TiB spill/run. En route: **IMP-029 FIXED** (v2 rolling dirs `eventlog_v2_batch-<uuid>/events_N_*` parsed in numeric order — the old cand[0] bug would have missed the entire tail), **2 new detectors** (`straggler` = duration-skew × uniform-data cross-check; `idle_reserved_executors` = exec-hours held vs slot-busy). **Verify-pass lesson: 4-agent adversarial workflow refuted my shuffleTracking.timeout rec against Spark source BEFORE it reached the job owner — keep verify-before-send mandatory for owner-facing tuning recs** (mechanism detail in [[reference_dataproc_eventlog_profiling]]). Recs delivered to Ryan: speculation=true + shuffle.partitions 4915→~30k (set in BOTH decorator and builder line ~89 — builder wins).
 
 **Cadence decision (open):** measure the cost of one full sweep, then **daily if cheap, weekly if expensive**. Assumptions to resolve first: (1) standing GCS read on the temp bucket (blocker for the PHS subset), (2) efficient batch-enumeration for the scattered per-uuid PHS logs, (3) validate the live Databricks `EXPLAIN COST` path.

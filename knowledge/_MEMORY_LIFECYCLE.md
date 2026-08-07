@@ -131,7 +131,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_shared_worktree_commits | feedback | 2026-07-29 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_slack_reply_voice | feedback | 2026-07-29 | [doc](memory/feedback_slack_reply_voice.md) |
 | reference_data_pipeline_repo | reference | 2026-07-29 | [doc](memory/reference_data_pipeline_repo.md) |
-| reference_dataproc_eventlog_profiling | reference | 2026-07-29 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_github_pr_no_clone | reference | 2026-07-29 | [doc](memory/reference_github_pr_no_clone.md) |
 | reference_hhst_pacing_lever | reference | 2026-07-29 | [doc](memory/reference_hhst_pacing_lever.md) |
 | reference_workflow_kit_porting | reference | 2026-07-29 | [doc](memory/reference_workflow_kit_porting.md) |
@@ -161,7 +160,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | audi-1111-vendor-quality | project | 2026-08-05 | [doc](memory/project_audi_1111_vendor_quality.md) |
 | jira-conventions | reference | 2026-08-05 | [doc](memory/reference_jira_conventions.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
-| project_airflow_optimizer | project | 2026-08-05 | [doc](memory/project_airflow_optimizer.md) |
 | reference-ddp-billing-logic | reference | 2026-08-05 | [doc](memory/reference_ddp_billing_logic.md) |
 | reference-mntn-google-drive-access | reference | 2026-08-05 | [doc](memory/reference_mntn_google_drive_access.md) |
 | background_work_liveness | feedback | 2026-08-06 | [doc](memory/feedback_background_work_liveness.md) |
@@ -176,5 +174,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-07 | [doc](memory/feedback_validated_is_not_correct.md) |
 | project_airflow_debugger | project | 2026-08-07 | [doc](memory/project_airflow_debugger.md) |
+| project_airflow_optimizer | project | 2026-08-07 | [doc](memory/project_airflow_optimizer.md) |
 | project_fangorn_on_mntn_id | project | 2026-08-07 | [doc](memory/project_fangorn_on_mntn_id.md) |
+| reference_dataproc_eventlog_profiling | reference | 2026-08-07 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |

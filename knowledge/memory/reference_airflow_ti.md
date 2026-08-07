@@ -70,6 +70,7 @@ Three-layer feature store on GCP Dataproc Serverless via Airflow (Astronomer):
 - **`@compute.dataproc_batch(runtime_properties=...)`** — ONLY cluster infra settings: `dynamicAllocation.*`, `executor.cores`
 - **`SparkSession.builder.config(...)`** — ALL Spark behavior settings: `sql.shuffle.partitions`, `sql.files.*`, `sql.parquet.*`
 - **Avoid timeout/retry overrides** (`network.timeout`, `rpc.askTimeout`, `shuffle.io.*`) unless specifically needed — fewer settings = easier to port
+- **Duplicate-setting trap (AUDI-1194, 2026-08-07):** when a SQL prop is set in BOTH places, the **builder value wins at `getOrCreate`** — e.g. `intent_score_map.py` hardcodes `spark.sql.shuffle.partitions=4915` in the builder (line ~89) AND in `runtime_properties`; a decorator-only change is a **no-op**. Grep the model's builder before assuming a runtime_properties tweak took effect.
 
 ## Parquet Schema Gotchas (discovered TI-810)
 - **guid_log `product` column:** STRUCT in parquet (not string like BQ silver view). Use `F.col("product").isNotNull()`, not `F.col("product") != "null"`
