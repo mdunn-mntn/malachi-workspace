@@ -49,22 +49,22 @@ First external request for the efficiency workflow. Ryan (Slack, 2026-08-07): "c
 
 **Root cause is a STRAGGLER, not data skew.** Stage 6 (final stage, 4915 tasks) task idx=4844: 4,039s wall vs 301s median (13.4x) on IDENTICAL data (2.2 GiB / 70.1M records vs median 2.14 GiB / 69.9M). CPU time 213s (5% of wall), GC 1.7s, fetch wait 0 → a slow-node/IO stall. Its executor was not systematically slow (mean 84s vs fleet 62s across 245 tasks) → one-off stall, not a bad node. `spark.speculation=false`, so nothing re-ran it while 239 executors sat idle. All other 4,914 stage-6 tasks finished by 06:17:37.
 
-**Why the fleet stayed reserved:** `spark.dynamicAllocation.shuffleTracking.enabled=true` with NO `shuffleTracking.timeout` (default infinite) → executors holding shuffle blocks for the live stage are exempt from `executorIdleTimeout=144s`. All 240 ran stage-2/3 map tasks, all held shuffle files, none ever became reap-eligible.
+**Why the fleet stayed reserved (mechanism CORRECTED by the adversarial verify pass):** shuffleTracking on serverless pins any executor whose shuffle blocks are referenced by a LIVE job — Spark 4.0.0 `ExecutorMonitor.timedOutExecutors()` excludes `hasActiveShuffle` executors BEFORE any deadline check. The final AQE job (job 4 = stages 4/5/6, 05:58→07:18) registered the stage-2/3 shuffles as active for its whole duration, and all 240 executors wrote stage-2/3 shuffle data → none release-eligible until 61s before app end. **`shuffleTracking.timeout` is NOT a fix here** (it only governs shuffles whose referencing jobs have all ended — it would have released ZERO executors this run). My initial draft recommended it; verifier `idle_hold` refuted it against Spark source. The only mid-query release lever is disabling shuffleTracking + decommission block migration, which has real risk (11.3 TB shuffle onto 38 min-executors' ~14.25 TB disk, resubmission risk) — not recommended. The correct lever is killing the tail: speculation.
 
-**Secondary findings (optimizer report, `outputs/audi_1194_intent_score_map_optimizer_report_2026_08_07.md`):** ~91 TiB spill per run (stage 2: 16.6 TiB, stage 3: 22.2 TiB, stage 6: 52.2 TiB at ~1.5 GiB shuffle-read per task under shuffle.partitions=4915); stage-3 shuffle write 7.4 TiB.
+**Secondary findings (verified numbers):** 88.8 TiB spill per run (78.6 mem + 10.2 disk; stage 2: 16.2, stage 3: 21.7, stage 6: 51.0 TiB). Stage 6 reads 10.29 TiB shuffle (2.14 GiB/task vs ~1.4 GiB unified execution memory per slot → 100% of its tasks spill); writes 2.07 TiB Avro.
 
-**Cost (list-price, CUD caveat per `feedback_dataproc_cost_awareness`):** 2,918 DCU-h/run (milliDcuSeconds=10,504,601,634) x $0.089/DCU-h premium ≈ $260/run ≈ $7.8k/mo daily. Idle hold ≈ 1,960 DCU-h ≈ $175/run ≈ $5.2k/mo; the 62-min tail alone ≈ $160/run.
+**Cost (list-price, CUD caveat per `feedback_dataproc_cost_awareness`; all figures verified):** 2,918 DCU-h/run x $0.089/DCU-h premium ≈ $260/run (+~$20 shuffle storage) ≈ $7.8k/mo daily. Idle hold ≈ 1,960 DCU-h ≈ $175/run; the 62-min tail ≈ $160/run accounting, ~$135/run recoverable (minExecutors=38 floor).
 
-**Recommendations for Ryan (config-only, he owns the change):**
-1. `spark.speculation=true` (+ quantile ~0.9) — a straggler re-runs on the idle fleet; safe with the ManifestCommitter output path.
-2. `spark.dynamicAllocation.shuffleTracking.timeout=300s` — idle executors get released even while a tail task runs.
-3. Raise `spark.sql.shuffle.partitions` 4915 → ~15-30k to cut the 52 TiB stage-6 spill (AQE coalesce is on, overshoot is safe).
+**Recommendations for Ryan (config-only, he owns the change; both survived adversarial verify):**
+1. `spark.speculation=true` (+ quantile ~0.9) — THE fix. A speculative copy finishes in ~5-7 min on the idle fleet; job 4 ends ~06:25, which also unpins/tears down the fleet (~210 of 396 exec-h saved). Committer chain (ManifestCommitterFactory + PathOutputCommitProtocol) verified speculation-safe.
+2. Raise `spark.sql.shuffle.partitions` 4915 → ~30000 (top of range: even 15000 still spills at ~3.2 GiB in-mem vs 1.4 available) to cut the 51 TiB stage-6 spill. **Set in TWO places** — decorator runtime_properties AND hardcoded in the SparkSession builder (line ~89); the builder wins, changing only the decorator is a no-op. Output files go 4915→~30000 at ~72 MiB each — fine for GCS/Avro. Note this fix does not touch stages 2/3's 37.9 TiB map-side spill (input-split-driven).
 
 **Engine improvements shipped from this run:**
 - IMP-029 fixed: v2 rolling dirs (`events_1_..N_`) now parsed fully in numeric order (was: only part 1, which would have MISSED the entire tail — parts 1-3 cover the first 28 min, part 4 the final 76).
 - New detector `straggler` — skew detector now cross-checks per-task data volume (`StageMetrics.data_skew_ratio`); duration skew on uniform data → speculation fix, not salting. The old detector misdiagnosed this exact case as data skew.
-- New detector `idle_reserved_executors` — exec-hours held vs slot-busy, with the shuffleTracking-hold callout.
+- New detector `idle_reserved_executors` — exec-hours held vs slot-busy, with the shuffleTracking live-job pinning callout (fix text corrected post-verify: tail fixes, not shuffleTracking.timeout).
 - Deep-dive script `artifacts/audi_1194_executor_timeline.py` (registered-vs-busy timeline, low-parallelism windows, removal reasons) — candidate to fold into the engine later.
+- Adversarial verify (4-agent workflow, ~300k tokens) earned its keep: 3 claims confirmed high-conf with numeric corrections; 1 refuted (shuffleTracking.timeout no-op) BEFORE the wrong rec reached the job owner. Verify-before-send stays mandatory for owner-facing tuning recs.
 
 ## 5. Solution
 What was done to resolve the issue:

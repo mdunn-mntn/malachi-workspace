@@ -91,7 +91,7 @@ def test_idle_reserved_executors_detector() -> None:
                    executors=execs, app_end_ts=t1)
     findings = {f.key: f for f in analyze_run(run)}
     assert "idle_reserved_executors" in findings
-    assert "shuffleTracking has no timeout" in findings["idle_reserved_executors"].evidence
+    assert "shuffleTracking pins executors" in findings["idle_reserved_executors"].evidence
 
 
 def test_optimize_entrypoint_end_to_end() -> None:

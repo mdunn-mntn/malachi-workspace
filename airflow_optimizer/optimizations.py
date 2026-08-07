@@ -275,9 +275,11 @@ def analyze_run(run: object) -> list[OptFinding]:
             "Raise first_on_demand / add on-demand fallback for this job, or checkpoint before the "
             "long shuffle.", rec_type="infra"))
 
-    # IDLE RESERVED EXECUTORS - the fleet is held (billed) while few tasks run. Dynamic
-    # allocation with shuffleTracking and no timeout never releases executors that hold
-    # shuffle blocks, so one long tail task pins every executor to the end of the run.
+    # IDLE RESERVED EXECUTORS - the fleet is held (billed) while few tasks run. With
+    # shuffleTracking (serverless, no external shuffle service), executors holding shuffle
+    # blocks referenced by a LIVE job are never release-eligible (Spark ExecutorMonitor
+    # hasActiveShuffle exemption; shuffleTracking.timeout applies only after the referencing
+    # jobs end), so one long tail task pins every executor to the end of the run.
     execs = [e for e in run.executors if getattr(e, "added_ts", None)]
     app_end = getattr(run, "app_end_ts", None)
     cores = int(props.get("spark.executor.cores", "1") or 1)
@@ -289,9 +291,9 @@ def analyze_run(run: object) -> list[OptFinding]:
         if reg_ms / 3_600_000 >= 20 and util < 0.4:
             removed = sum(1 for e in execs if e.removed_ts)
             tracking = props.get("spark.dynamicAllocation.shuffleTracking.enabled") == "true"
-            no_timeout = "spark.dynamicAllocation.shuffleTracking.timeout" not in props
-            hold = (" shuffleTracking has no timeout, so executors holding shuffle blocks are "
-                    "never released." if tracking and no_timeout else "")
+            hold = (" shuffleTracking pins executors whose shuffle blocks a live job still "
+                    "references, so the fleet is held until the tail task finishes."
+                    if tracking else "")
             out.append(OptFinding(
                 "idle_reserved_executors",
                 f"Executors {100 * util:.0f}% utilized: ~{idle_h:.0f} idle executor-hours held",
@@ -299,8 +301,9 @@ def analyze_run(run: object) -> list[OptFinding]:
                 f"{len(execs)} executors held {reg_ms / 3_600_000:.0f} executor-hours but task slots "
                 f"were busy only {100 * util:.0f}% of that; {removed} were released before app "
                 f"end.{hold}",
-                "Set spark.dynamicAllocation.shuffleTracking.timeout (e.g. 300s) so idle executors "
-                "are reaped, and fix the tail (straggler/skew) that keeps the stage alive.",
+                "Fix the tail that keeps the final job alive (speculation for stragglers, skew "
+                "fixes) - releasing executors mid-query is not achievable via "
+                "shuffleTracking.timeout, which only applies after the referencing job ends.",
                 rec_type="infra"))
 
     # CACHE eviction - a persisted RDD got evicted (memory pressure) so it recomputes.
