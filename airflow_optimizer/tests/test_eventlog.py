@@ -64,6 +64,36 @@ def test_infra_and_failure_recommendation_types() -> None:
     assert ("cache_ineffective", "infra") in keys
 
 
+def test_straggler_vs_data_skew_discrimination() -> None:
+    """Duration skew on uniform data = straggler (infra/speculation), not data skew (code)."""
+    uniform_reads = [100] * 19 + [110]
+    straggler_stage = StageMetrics(stage_id=6, num_tasks=20,
+                                   task_durs=[10] * 19 + [200], task_read_bytes=uniform_reads)
+    skewed_stage = StageMetrics(stage_id=7, num_tasks=20,
+                                task_durs=[10] * 19 + [200],
+                                task_read_bytes=[100] * 19 + [5000])
+    run = SparkRun(spark_props={"spark.speculation": "false"},
+                   stages=[straggler_stage, skewed_stage])
+    by_key = {(f.key, f.rec_type) for f in analyze_run(run)}
+    assert ("straggler", "infra") in by_key
+    assert ("skew", "code") in by_key
+    straggler = next(f for f in analyze_run(run) if f.key == "straggler")
+    assert "speculation is OFF" in straggler.evidence
+
+
+def test_idle_reserved_executors_detector() -> None:
+    """A fleet held with <40% slot utilization emits the idle_reserved_executors finding."""
+    t0, t1 = 1_000_000_000_000, 1_000_000_000_000 + 3 * 3_600_000  # 3h app
+    execs = [ExecutorInfo(exec_id=str(i), added_ts=t0, run_time_ms=1 * 3_600_000)
+             for i in range(10)]  # 30 exec-h held, 10 busy -> 33% util
+    run = SparkRun(spark_props={"spark.executor.cores": "1",
+                                "spark.dynamicAllocation.shuffleTracking.enabled": "true"},
+                   executors=execs, app_end_ts=t1)
+    findings = {f.key: f for f in analyze_run(run)}
+    assert "idle_reserved_executors" in findings
+    assert "shuffleTracking has no timeout" in findings["idle_reserved_executors"].evidence
+
+
 def test_optimize_entrypoint_end_to_end() -> None:
     """The one-call entrypoint parses the real log and renders a grouped report."""
     from airflow_optimizer.optimize import optimize_run, render_report

@@ -42,6 +42,7 @@ class StageMetrics:
     peak_exec_mem: int = 0
     failure_reason: str | None = None
     task_durs: list = field(default_factory=list)  # per-task wall time, for skew
+    task_read_bytes: list = field(default_factory=list)  # per-task input+shuffle read, for data skew
 
     @property
     def skew_ratio(self) -> float:
@@ -50,6 +51,14 @@ class StageMetrics:
             return 1.0
         med = median(self.task_durs) or 1
         return max(self.task_durs) / med
+
+    @property
+    def data_skew_ratio(self) -> float:
+        """max task read bytes / median - separates true data skew from a slow-node straggler."""
+        if len(self.task_read_bytes) < 4:
+            return 1.0
+        med = median(self.task_read_bytes) or 1
+        return max(self.task_read_bytes) / med
 
 
 @dataclass
@@ -83,6 +92,8 @@ class SparkRun:
     app_id: str | None = None
     app_name: str | None = None
     duration_ms: int | None = None
+    app_start_ts: int | None = None
+    app_end_ts: int | None = None
     spark_props: dict = field(default_factory=dict)
     stages: list = field(default_factory=list)
     executors: list = field(default_factory=list)
@@ -225,6 +236,7 @@ def parse_eventlog(path: str) -> SparkRun:
 
     run.cached_rdd_bytes = sum(block_bytes.values())
     run.rdd_cached_blocks = sum(1 for v in block_cached.values() if v)
+    run.app_start_ts, run.app_end_ts = app_start, app_end
     if app_start and app_end:
         run.duration_ms = app_end - app_start
     run.stages = sorted(stages.values(), key=lambda s: s.stage_id)
@@ -275,15 +287,18 @@ def _task_end(e: dict, stage: Callable, execu: Callable) -> None:
     st.disk_spill += tm.get("Disk Bytes Spilled", 0)
     st.peak_exec_mem = max(st.peak_exec_mem, tm.get("Peak Execution Memory", 0))
     srm = tm.get("Shuffle Read Metrics") or {}
-    st.shuffle_read_bytes += srm.get("Remote Bytes Read", 0) + srm.get("Local Bytes Read", 0)
+    task_read = srm.get("Remote Bytes Read", 0) + srm.get("Local Bytes Read", 0)
+    st.shuffle_read_bytes += task_read
     st.fetch_wait_ms += srm.get("Fetch Wait Time", 0)
     st.shuffle_write_bytes += (tm.get("Shuffle Write Metrics") or {}).get("Shuffle Bytes Written", 0)
-    st.input_bytes += (tm.get("Input Metrics") or {}).get("Bytes Read", 0)
+    task_input = (tm.get("Input Metrics") or {}).get("Bytes Read", 0)
+    st.input_bytes += task_input
     st.output_bytes += (tm.get("Output Metrics") or {}).get("Bytes Written", 0)
     x.gc_time_ms += tm.get("JVM GC Time", 0)
     x.run_time_ms += tm.get("Executor Run Time", 0)
     fin, lau = ti.get("Finish Time", 0), ti.get("Launch Time", 0)
     st.task_durs.append((fin - lau) if (fin and lau) else tm.get("Executor Run Time", 0))
+    st.task_read_bytes.append(task_read + task_input)
 
 
 if __name__ == "__main__":

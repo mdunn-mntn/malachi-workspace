@@ -205,14 +205,31 @@ def analyze_run(run: object) -> list[OptFinding]:
     for s in run.stages:
         spill = s.mem_spill + s.disk_spill
         # SKEW - one task runs far longer than the median (invisible in the plan text).
+        # Cross-check against per-task data volume: uniform data + one slow task is a
+        # STRAGGLER (slow node / IO stall), not data skew - salting won't fix it.
         if s.num_tasks >= 8 and s.skew_ratio >= 5:
-            out.append(OptFinding(
-                "skew", f"Stage {s.stage_id} skewed {s.skew_ratio:.1f}x (max vs median task)",
-                "high" if s.skew_ratio >= 10 else "medium",
-                f"{s.num_tasks} tasks, slowest is {s.skew_ratio:.1f}x the median - one partition holds "
-                "most of the data.",
-                "Salt the skewed join/group key or enable AQE skew join; a plain repartition will not "
-                "fix a value-skewed key.", rec_type="code"))
+            if s.data_skew_ratio >= 2:
+                out.append(OptFinding(
+                    "skew", f"Stage {s.stage_id} skewed {s.skew_ratio:.1f}x (max vs median task)",
+                    "high" if s.skew_ratio >= 10 else "medium",
+                    f"{s.num_tasks} tasks, slowest is {s.skew_ratio:.1f}x the median and reads "
+                    f"{s.data_skew_ratio:.1f}x the median data - one partition holds most of the data.",
+                    "Salt the skewed join/group key or enable AQE skew join; a plain repartition will "
+                    "not fix a value-skewed key.", rec_type="code"))
+            else:
+                spec_off = props.get("spark.speculation", "false") != "true"
+                out.append(OptFinding(
+                    "straggler",
+                    f"Stage {s.stage_id} straggler: slowest task {s.skew_ratio:.1f}x the median on "
+                    "uniform data",
+                    "high" if s.skew_ratio >= 10 else "medium",
+                    f"{s.num_tasks} tasks, slowest is {s.skew_ratio:.1f}x the median wall time but "
+                    f"reads only {s.data_skew_ratio:.1f}x the median data - a slow executor/node or "
+                    "IO stall, not data skew."
+                    + (" spark.speculation is OFF, so nothing re-ran it." if spec_off else ""),
+                    "Enable spark.speculation=true (with spark.speculation.quantile ~0.9) so a "
+                    "straggling task is re-launched on an idle executor instead of pinning the stage.",
+                    rec_type="infra"))
         # SPILL - shuffle/agg spilled to disk; size partitions up (code) or memory (infra).
         if spill >= 1024**3:
             out.append(OptFinding(
@@ -257,6 +274,34 @@ def analyze_run(run: object) -> list[OptFinding]:
             "re-runs - spot churn is costing wall-clock.",
             "Raise first_on_demand / add on-demand fallback for this job, or checkpoint before the "
             "long shuffle.", rec_type="infra"))
+
+    # IDLE RESERVED EXECUTORS - the fleet is held (billed) while few tasks run. Dynamic
+    # allocation with shuffleTracking and no timeout never releases executors that hold
+    # shuffle blocks, so one long tail task pins every executor to the end of the run.
+    execs = [e for e in run.executors if getattr(e, "added_ts", None)]
+    app_end = getattr(run, "app_end_ts", None)
+    cores = int(props.get("spark.executor.cores", "1") or 1)
+    if execs and app_end and len(execs) >= 8:
+        reg_ms = sum(max((e.removed_ts or app_end) - e.added_ts, 0) for e in execs)
+        busy_ms = sum(e.run_time_ms for e in execs)
+        util = busy_ms / (reg_ms * cores) if reg_ms else 1.0
+        idle_h = (reg_ms * cores - busy_ms) / 3_600_000 / cores
+        if reg_ms / 3_600_000 >= 20 and util < 0.4:
+            removed = sum(1 for e in execs if e.removed_ts)
+            tracking = props.get("spark.dynamicAllocation.shuffleTracking.enabled") == "true"
+            no_timeout = "spark.dynamicAllocation.shuffleTracking.timeout" not in props
+            hold = (" shuffleTracking has no timeout, so executors holding shuffle blocks are "
+                    "never released." if tracking and no_timeout else "")
+            out.append(OptFinding(
+                "idle_reserved_executors",
+                f"Executors {100 * util:.0f}% utilized: ~{idle_h:.0f} idle executor-hours held",
+                "high" if util < 0.25 else "medium",
+                f"{len(execs)} executors held {reg_ms / 3_600_000:.0f} executor-hours but task slots "
+                f"were busy only {100 * util:.0f}% of that; {removed} were released before app "
+                f"end.{hold}",
+                "Set spark.dynamicAllocation.shuffleTracking.timeout (e.g. 300s) so idle executors "
+                "are reaped, and fix the tail (straggler/skew) that keeps the stage alive.",
+                rec_type="infra"))
 
     # CACHE eviction - a persisted RDD got evicted (memory pressure) so it recomputes.
     if getattr(run, "rdd_evictions", 0) > 0:
