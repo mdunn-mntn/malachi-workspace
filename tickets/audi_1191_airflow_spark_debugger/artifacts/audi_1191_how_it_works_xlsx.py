@@ -151,62 +151,6 @@ wb.table(
     toc="The proof — one row per real incident, tool output vs ground truth",
 )
 
-# ---------------------------------------------------------------- 3. Worked example: Dataproc RCA
-wb.notes(
-    "Ex — Dataproc RCA",
-    intro="A perf failure on a Dataproc batch (INC-005, tpa_mntn_id_export), traced step by step.",
-    blocks=[
-        ("Input", "Airflow alert: tpa_mntn_id_export FAILED. The Airflow log is boilerplate ('Batch job was cancelled') and does not say why."),
-        ("Parse + route", "Identified DAG tpa_mntn_id_export; operator type routes to Dataproc; pulled the batch id."),
-        ("Analyze", "Dataproc batch describe stateHistory: 'Cancelling batch as ttl exceeded' after running the full 10804s against a 10800s TTL. The structural TTL check flags it ran to the wall."),
-        ("Signature", "ttl_exceeded (class ttl/wall-clock, programmatic_fix = sometimes)."),
-        ("Report (actual output)",
-         "RCA [high]: tpa_mntn_id_export - ttl/wall-clock. Cancelled at its 10800s TTL (ran 10804s). Usually a perf regression. Profile the Spark event log for spill/skew/uncached recompute; a TTL bump alone rarely fixes it. Code fix possible; verify first. + a deep link to the batch."),
-        ("Outcome", "Matches the incident ground truth: the real fix was a Spark perf fix (cache the reused frame, raise shuffle partitions), shipped by the owner as PR #1161, not a TTL bump."),
-    ],
-)
-
-# ---------------------------------------------------------------- 4. Worked example: Databricks RCA
-wb.notes(
-    "Ex — Databricks RCA",
-    intro="An orchestration failure on a Databricks job (INC-009, write_targeted_signal_ds_19), traced step by step.",
-    blocks=[
-        ("Input", "Airflow alert: write_targeted_signal_ds_19 FAILED with an empty log ('No exception message found')."),
-        ("Parse + route", "Operator type (DbxDbtOperator / KubernetesPodOperator) routes to Databricks; pulled the Databricks run id."),
-        ("Analyze", "Databricks jobs get-run + get-run-output: the underlying job run SUCCEEDED and wrote its data. The Airflow-side pod was evicted / lost mid-run (a 404 in the pod check)."),
-        ("Signature", "pod_evicted_404 (class orchestration/pod-evicted, programmatic_fix = no)."),
-        ("Report (actual output)",
-         "RCA [high]: keyword_ddp_reporting/write_targeted_signal_ds_19 - orchestration/pod-evicted. Downstream databricks job SUCCEEDED, orchestration-only failure. K8s pod evicted or lost mid-run (the job may have succeeded and written data). Not a code fix (compute/infra or upstream). + a deep link to the run."),
-        ("Outcome", "Matches ground truth: the owner confirmed the data was complete and marked the task success; the durable fix is anti-eviction, not a code change. The tool correctly separated the successful job from the failed orchestration."),
-    ],
-)
-
-# ---------------------------------------------------------------- 5. Worked example: INC-012
-wb.notes(
-    "Ex — GCS list timeout",
-    intro="The newest live incident (INC-012, materialize_mntn_select): the evidence overruled two plausible human theories, and the fix merged the same day.",
-    blocks=[
-        ("Input", "Airflow alert: 'Dataproc Agent reports job failure' (boilerplate). Two tries died at the same ~19 minutes. The team's thread read it as lost executors, then spot preemption."),
-        ("Analyze", "batches describe ruled out the TTL class in one call (ran 1121s of a 14400s TTL). The driver output showed both tries died on the same timeout while listing gs://.../augmentor_log/, and the 'lost executor' lines were idle scale-downs with no preempt or kill messages."),
-        ("Mechanism", "The path used region={east,west}, a pattern. Expanding it makes the GCS connector list every file under augmentor_log (~17M) just to find one hour. When that listing runs slow, the job dies. Measured: the exact-folder list is 18K names in 7s."),
-        ("Verdict", "Not preemption, not lost executors: a fragile full-prefix listing hitting variable GCS latency. A re-run passes (latency varies), so it would keep paging until fixed."),
-        ("Fix + outcome", "PR #1176: point the job at the two exact region folders instead of the pattern (plus a crash guard in the shared helper). Merged same day by the owning team. The hour hole was backfilled; signature gcs_list_timeout added so the next one is recognized instantly."),
-    ],
-)
-
-# ---------------------------------------------------------------- 5b. Worked example: troubleshooting pack
-wb.notes(
-    "Ex — Troubleshooting pack",
-    intro="The final step (D7, --troubleshoot): a repeat of INC-013's alert now comes back with the fix PR and code links ready to paste. Real output below.",
-    blocks=[
-        ("Command", "python3 -m airflow_debugger.orchestrate <failed log> --troubleshoot --no-llm. Same chain as always; the pack adds Problem / Solution / Code sections after the BLUF line."),
-        ("Problem", "The signature's cause line plus the exact text it matched on. If nothing matched, it says so honestly and points at the log tail instead of guessing."),
-        ("Solution (real output)", "Known fix: github.com/SteelHouse/airflow-ti/pull/1179 (INC-013, runbook §3). The PR comes from the incident corpus: each resolved incident stores fix_pr + fix_files, so a repeat alert is answered with the merged fix, not a fresh investigation."),
-        ("Code (real output)", ".../spark/fpa/dsid30_augmentor_log_processing.py#L30 straight from the traceback (framework frames skipped, resolved against the airflow-ti tree), plus the other files PR #1179 fixed."),
-        ("Why it works offline", "Everything comes from the corpus and the traceback: no LLM, no network beyond what the RCA already fetched. Tested in test_report.py; proven live on the real INC-013 log while both driver-log sources were unreachable."),
-    ],
-)
-
 # ---------------------------------------------------------------- 6. Signature taxonomy (live)
 CLASS_MAP = {  # human label for the fix flag
     "yes": "Yes", "sometimes": "Sometimes", "no": "No",
