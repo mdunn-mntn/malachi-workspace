@@ -48,9 +48,11 @@
   .problem { display: flex; gap: 0.3in; align-items: stretch; padding-bottom: 0.22in; border-bottom: 1px solid var(--line); }
   .problem .txt { flex: 1.55; }
   .stat-tile { flex: 1; background: var(--paper); border-left: 3px solid var(--accent); padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; }
-  .stat-tile .big { font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: -0.2px; }
-  .stat-tile .big .down { color: #D1495B; }
-  .stat-tile .cap { font-size: 10px; line-height: 1.45; color: var(--grey); margin-top: 6px; }
+  .stat-tile .big { font-size: 15px; font-weight: 700; color: var(--primary); letter-spacing: -0.2px; display: flex; align-items: center; gap: 7px; }
+  .stat-tile .frac { display: inline-flex; flex-direction: column; text-align: center; font-size: 11px; font-weight: 600; }
+  .stat-tile .frac .num { border-bottom: 1.5px solid var(--primary); padding: 0 6px 3px; }
+  .stat-tile .frac .den { padding-top: 3px; }
+  .stat-tile .cap { font-size: 10px; line-height: 1.45; color: var(--grey); margin-top: 8px; }
 
   /* ── diagram ── */
   .how { padding: 0.2in 0 0.18in; border-bottom: 1px solid var(--line); }
@@ -101,9 +103,9 @@
         rather than replacing it.</p>
       </div>
       <div class="stat-tile">
-        <div class="big">4,100% <span style="color:var(--mute)">→</span> <span class="down">−63%</span></div>
-        <div class="cap">When eBay put its attributed search ROI to a randomized test, 4,100% became −63%.
-        Same spend, same data, a different question. (Published in Econometrica.)</div>
+        <div class="big">Lift&nbsp;= <span class="frac"><span class="num">ad-group visit rate&nbsp;&minus;&nbsp;holdout visit rate</span><span class="den">holdout visit rate</span></span></div>
+        <div class="cap">Computed per campaign from the bidder's own bid and visit logs, with a
+        confidence interval on every estimate.</div>
       </div>
     </div>
 
