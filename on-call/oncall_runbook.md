@@ -986,7 +986,7 @@ gcloud storage ls "gs://mntn-data-partners/partners/predactiv/dt=2026080520/"   
 
 ### INC-013 — `fpa_site_visit_batch_serverless` `dsid30_augmentor_log_processing` — INC-012's failure class in a sibling `augmentor_log` reader (glob + basePath, both surfaces)
 
-**Date:** 2026-08-07 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [fpa_site_visit_batch_serverless/dsid30_augmentor_log_processing] at 2026-08-07 06:00:00 PT`, Try 1 of 2, batch `fpa-dsid30-20260807-20260807t130000-7149`, "Dataproc Agent reports job failure" boilerplate. **STATUS: RESOLVED (root-caused; durable fix = IMP-031; holes need re-run).**
+**Date:** 2026-08-07 · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [fpa_site_visit_batch_serverless/dsid30_augmentor_log_processing] at 2026-08-07 06:00:00 PT`, Try 1 of 2, batch `fpa-dsid30-20260807-20260807t130000-7149`, "Dataproc Agent reports job failure" boilerplate. **STATUS: RESOLVED (root-caused; durable fix PR [airflow-ti#1179](https://github.com/SteelHouse/airflow-ti/pull/1179) open, all 3 scripts; holes need re-run after merge+deploy).**
 
 **Verdict: transient_infra (GCS list latency) hitting the SAME fragile full-prefix listing as INC-012, in a different script.** Driver traceback (Cloud Logging REST): `dsid30_augmentor_log_processing.py:30` → `spark.read.option("basePath", AUGMENTOR_LOG_BASE).parquet("…/region={east,west}/dt=<D>/hh=<H>")` → `Error listing gs://mntn-data-archive-prod/augmentor_log/region=` → `SocketTimeoutException`. Both INC-012 timeout surfaces present: the `{east,west}` glob flat-lists the whole ~17M-object prefix AND `basePath` stats the root. Script added 2026-05-07; retries masked it for ~3 months until prefix growth pushed list latency over the budget.
 
