@@ -13,6 +13,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -93,23 +94,34 @@ class SparkRun:
     rdd_evictions: int = 0
 
 
+def _part_order(path: str) -> tuple:
+    """Sort key for v2 rolling parts: numeric part index (events_10 after events_2)."""
+    m = re.search(r"events_(\d+)_", os.path.basename(path))
+    return (int(m.group(1)) if m else 1 << 30, path)
+
+
 def _read_events(path: str) -> list:
     """Yield event dicts from a plain-JSON, single `.zstd`, or v2 rolling-dir event log."""
     if os.path.isdir(path):
-        cand = sorted(glob.glob(os.path.join(path, "events_*")) + glob.glob(os.path.join(path, "*")))
-        cand = [c for c in cand if "appstatus" not in c and not c.endswith(".crc")]
-        path = cand[0] if cand else path
-    with open(path, "rb") as f:
-        raw = f.read()
-    text = _zstd_decompress(raw) if raw[:4] == b"\x28\xb5\x2f\xfd" else raw.decode("utf-8", "replace")
+        parts = sorted(glob.glob(os.path.join(path, "events_*")), key=_part_order)
+        if not parts:
+            parts = [c for c in sorted(glob.glob(os.path.join(path, "*")))
+                     if "appstatus" not in c and not c.endswith(".crc")]
+    else:
+        parts = [path]
     events = []
-    for line in text.splitlines():
-        if not line.strip():
-            continue
-        try:
-            events.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue  # tolerate a truncated/malformed final line (in-progress or crashed logs)
+    for part in parts:
+        with open(part, "rb") as f:
+            raw = f.read()
+        text = (_zstd_decompress(raw) if raw[:4] == b"\x28\xb5\x2f\xfd"
+                else raw.decode("utf-8", "replace"))
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue  # tolerate a truncated/malformed final line (in-progress or crashed logs)
     return events
 
 

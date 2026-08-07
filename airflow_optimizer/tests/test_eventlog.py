@@ -75,6 +75,42 @@ def test_optimize_entrypoint_end_to_end() -> None:
     assert "skew" in report.lower()
 
 
+def test_parse_v2_rolling_dir_reads_all_parts(tmp_path: os.PathLike[str]) -> None:
+    """A v2 rolling dir is parsed across ALL events_* parts, in numeric part order (IMP-029)."""
+    import json
+    from pathlib import Path
+
+    tmp_path = Path(tmp_path)
+
+    d = tmp_path / "eventlog_v2_batch-test"
+    d.mkdir()
+    (d / "appstatus_batch-test").write_text("")
+    part_events = {
+        "events_1_batch-test": [
+            {"Event": "SparkListenerApplicationStart", "App Name": "rolling-test",
+             "Timestamp": 1000},
+            {"Event": "SparkListenerJobStart"},
+        ],
+        "events_2_batch-test": [{"Event": "SparkListenerJobStart"}],
+        "events_10_batch-test": [
+            {"Event": "SparkListenerJobStart"},
+            {"Event": "SparkListenerApplicationEnd", "Timestamp": 61000},
+        ],
+    }
+    for name, events in part_events.items():
+        (d / name).write_text("\n".join(json.dumps(e) for e in events))
+
+    from airflow_optimizer.eventlog import _part_order
+
+    ordered = sorted(part_events, key=_part_order)
+    assert ordered == ["events_1_batch-test", "events_2_batch-test", "events_10_batch-test"]
+
+    run = parse_eventlog(str(d))
+    assert run.app_name == "rolling-test"
+    assert run.jobs == 3  # one per part - fails if only cand[0] is read
+    assert run.duration_ms == 60000  # ApplicationEnd lives in the last part
+
+
 def test_fleet_crawl_ranks_worst_first() -> None:
     """The crawl scans multiple event logs and ranks the one with findings first."""
     from airflow_optimizer.crawl import crawl, render_crawl
