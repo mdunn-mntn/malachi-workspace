@@ -65,6 +65,7 @@
 
   .chart { margin-top: 6px; }
   .chart svg { width: 100%; height: auto; display: block; }
+  .read { font-size: 11.5px; line-height: 1.5; color: var(--primary); margin-top: 8px; }
 
   /* ── KPI band ── */
   .stats { display: flex; gap: 0.26in; padding: 0.18in 0 0.02in; margin-top: auto; }
@@ -96,7 +97,8 @@
         <p>Attribution credits a visit to an ad whenever the ad touched it. It cannot say whether that
         visit would have happened anyway. Because campaigns target people already likely to convert,
         attributed results overstate what the ads actually changed. Incrementality answers the harder
-        question: <b>how many visits happened only because the ad ran?</b></p>
+        question: <b>how many visits happened only because the ad ran?</b> It adds to attribution
+        rather than replacing it.</p>
       </div>
       <div class="stat-tile">
         <div class="big">4,100% <span style="color:var(--mute)">→</span> <span class="down">−63%</span></div>
@@ -217,9 +219,11 @@
             <rect x="112" y="72" width="52" height="24" rx="4" fill="#0F6FBF"/>
             <text x="172" y="89" font-size="13.5" font-weight="700" fill="#262E3C">+4%</text>
             <line x1="112" y1="104" x2="112" y2="28" stroke="#DCE3EA" stroke-width="1.5"/>
-            <text x="0" y="124" font-size="9.5" fill="#98A2B3">Visits caused per 100 the campaign would have gotten anyway. Prospecting, Jun 22 onward.</text>
+            <text x="0" y="124" font-size="9.5" fill="#98A2B3">Prospecting campaigns, Jun 22, 2026 onward.</text>
           </svg>
         </div>
+        <p class="read">Read it as: for every 100 visits a campaign would have gotten anyway, Select
+        adds 22 more; non-Select adds 4. Both products add visits. Select adds roughly five times as many.</p>
       </div>
     </div>
 
@@ -234,7 +238,7 @@
       </div>
       <div class="kpi">
         <div class="n">1,100+</div>
-        <div class="c">advertisers under always-on ghost-bid measurement today</div>
+        <div class="c">advertisers with measurable ghost-bid lift data</div>
       </div>
     </div>
 

@@ -40,6 +40,7 @@
   .trust li::before { content: "✓"; position: absolute; left: 0; top: 0; color: var(--accent); font-weight: 700; font-size: 22px; }
 
   .chart svg { width: 100%; height: auto; display: block; }
+  .read { font-size: 19px; line-height: 1.45; color: var(--primary); margin-top: 14px; }
 
   .stats { display: flex; gap: 28px; margin-top: 44px; }
   .kpi { flex: 1; background: var(--paper); border-top: 4px solid var(--accent); padding: 20px 22px 18px; }
@@ -66,7 +67,8 @@
     <div class="left">
       <p class="problem">Attribution credits a visit to an ad whenever the ad touched it, so it cannot say
       whether the visit would have happened anyway. Ghost bidding answers the harder question:
-      <b>how many visits happened only because the ad ran?</b></p>
+      <b>how many visits happened only because the ad ran?</b> It adds to attribution rather than
+      replacing it.</p>
       <h2><span class="num">1</span>How it works</h2>
       <div style="max-width: 1060px;">
       <svg class="diagram" viewBox="0 0 1000 258" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
@@ -150,7 +152,7 @@
         </div>
         <div class="kpi">
           <div class="n">1,100+</div>
-          <div class="c">advertisers under always-on ghost-bid measurement today</div>
+          <div class="c">advertisers with measurable ghost-bid lift data</div>
         </div>
       </div>
     </div>
@@ -173,16 +175,18 @@
           <rect x="112" y="68" width="52" height="22" rx="4" fill="#0F6FBF"/>
           <text x="172" y="83" font-size="12.5" font-weight="700" fill="#262E3C">+4%</text>
           <line x1="112" y1="98" x2="112" y2="26" stroke="#DCE3EA" stroke-width="1.5"/>
-          <text x="0" y="118" font-size="9" fill="#98A2B3">Visits caused per 100 the campaign would have gotten anyway. Prospecting, Jun 22 onward.</text>
+          <text x="0" y="118" font-size="9" fill="#98A2B3">Prospecting campaigns, Jun 22, 2026 onward.</text>
         </svg>
       </div>
+      <p class="read">Read it as: for every 100 visits a campaign would have gotten anyway, Select adds
+      22 more; non-Select adds 4. Both add visits. Select adds roughly five times as many.</p>
     </div>
   </div>
 
   <div class="foot">
     <div class="fine">Ghost-bid measurement live since Jun 2026, prospecting campaigns. Lift is relative to each
-    product's holdout visit rate; per-product results are statistically significant. Measured across all
-    bid-eligible households (intent-to-treat). Full method and per-advertiser detail: AUDI-1172 workbook.</div>
+    product's holdout visit rate; both results are statistically significant. Full method and per-advertiser
+    detail: AUDI-1172 workbook.</div>
     <div class="brand">MNTN · Data Science &amp; Measurement</div>
   </div>
 
