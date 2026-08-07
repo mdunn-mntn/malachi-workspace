@@ -66,6 +66,22 @@ First external request for the efficiency workflow. Ryan (Slack, 2026-08-07): "c
 - Deep-dive script `artifacts/audi_1194_executor_timeline.py` (registered-vs-busy timeline, low-parallelism windows, removal reasons) — candidate to fold into the engine later.
 - Adversarial verify (4-agent workflow, ~300k tokens) earned its keep: 3 claims confirmed high-conf with numeric corrections; 1 refuted (shuffleTracking.timeout no-op) BEFORE the wrong rec reached the job owner. Verify-before-send stays mandatory for owner-facing tuning recs.
 
+### Hardening pass (2026-08-07 PM): 41 corpus-confirmed defects found and fixed
+
+Mirrored the AUDI-1191 pattern: 5 per-module finders against a 48-log / 611MB REAL corpus (both runtimes, 29KB-98MB, 3 rolling dirs) → skeptic verifiers reproducing by execution (41/42 confirmed, 1 rejected) → fix wave with a regression test per defect. Two workflow runs died to session restarts; resumed from journal cache, final 3 file-groups fixed inline. Commit `629660a1`.
+
+**Worst confirmed defects (all fixed):**
+- **Multi-frame zstd**: with the `zstandard` package installed, only frame 1 of a log decompressed → every real log parsed EMPTY and reported "clean." Worked here only because the package is absent (CLI fallback). Now streamed with `read_across_frames`; corrupt logs raise instead of passing as clean.
+- **Memory**: the 98MB log peaked 18-19GB RSS (materialized 4x); now streamed end-to-end → 49MB peak, whole 48-log corpus in 58s.
+- **Plan detectors were dead code on the real feed**: head-cap `[:8000]` stored the logical-plan prefix (physical plan lost in 67/159 real plans) + scan regex only matches Databricks-format text. Tail-cap fixed; OSS-format detector rework logged as follow-up (IMP-033 candidate).
+- **Phantom skew**: zero-median fallback (`or 1`) manufactured 345,427x "data skew" (17 of 30 real skew findings); no duration floor let 13x-on-0.5s-tasks bury real tails (33/48 logs polluted). Zero-median → 1.0; 60s slowest-task floor (`SKEW_MIN_TASK_MS`).
+- **Chimera merge**: any dir containing `events_*` parsed as ONE rolling log — the cron's flat download dir merged parts of DIFFERENT batches into one pseudo-job. Guarded (rolling = `eventlog_v2_*` name or `appstatus_*` marker); cron now reconstructs rolling dirs (`dest_for()` + `--selftest`).
+- Also: stage-retry double-count, failed-task skew pollution, num_tasks=0 under dropped lifecycle events (silently disabled detectors on a 5,055-task stage), spill mem+disk conflation (6.5x overstatement), spot-preemption matching normal serverless "decommission" scale-downs, `App ID` field name, .inprogress logs invisible, ranking by phantom-high counts.
+
+**New detectors from the pass:** `shuffle_fetch_wait` (fired immediately: 6 jobs at 53-72% fetch-wait) and zero-task idle fleets. Post-fix corpus crawl: 48/48 scanned (0 silent drops), 99 findings vs 168 pre-fix noise. **Systemic fleet finding: the hourly `aug_log_ip*`/`site_network_hourly` family runs at 2-8% executor utilization, 20-61 idle exec-h per run.**
+
+**Sweep cost → cadence: DAILY.** 48 logs = 58s local CPU + 49MB RSS + ~600MB GCS download. The weekly launchd can move to daily once the cron's next green live run confirms.
+
 ## 5. Solution
 What was done to resolve the issue:
 - Code changes (PRs, commits)
@@ -82,4 +98,9 @@ Specific questions that were resolved during this ticket:
 What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+- **mntn-devops#4724 (draft):** standing bucket-scoped `storage.objectViewer` on the PHS temp bucket for `audience-intelligence@` — Malachi marks ready + pings Christina. `dataproc.viewer` already standing via DEV-8182; `phs.py` enumeration works today (22 batches), fetch lights up on merge.
+- **IMP-024 handoff:** owner is Ryan/targeting (not DDP); DAG is manual-only. Message drafted; profile the next manual run with the new discriminator before anyone codes a fix.
+- **OSS plan-format detectors** (follow-up from hardening): scan/stats regexes are Databricks-format only; Dataproc physicalPlanDescription needs its own patterns. Backlog row pending.
+- **Cadence switch weekly → daily** after the next green live cron run.
+- **Databricks EXPLAIN COST acquisition** still unvalidated (pre-existing).
+- **Fleet finding to route:** hourly aug_log_ip*/site_network_hourly at 2-8% executor utilization (20-61 idle exec-h/run) — candidates for min/initialExecutors cuts.
