@@ -1,0 +1,165 @@
+Using the default container image
+Waiting for container log creation
+PYSPARK_PYTHON=/opt/dataproc/conda/bin/python
+Generating /home/spark/.pip/pip.conf
+Configuring index-url as 'https://us-python.pkg.dev/artifact-registry-python-cache/virtual-python/simple/'
+JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
+SPARK_EXTRA_CLASSPATH=
+:: loading settings :: file = /etc/spark/conf/ivysettings.xml
+26/08/06 20:46:23 WARN MetricsConfig: Cannot locate configuration: tried hadoop-metrics2-google-hadoop-file-system.properties,hadoop-metrics2.properties
+🔧 Environment: prod
+26/08/06 20:46:47 WARN SimpleTableFunctionRegistry: The function table_changes replaced a previously registered function.
+26/08/06 20:46:47 WARN SimpleTableFunctionRegistry: The function table_changes_by_path replaced a previously registered function.
+26/08/06 20:47:07 WARN DataSource: [COLUMN_ALREADY_EXISTS] The column `region` already exists. Consider to choose another name or rename the existing column.
+✅ Found data in bidder_auction_events: gs://mntn-data-archive-prod/bidder_auction_events/region={east,west}/dt=2026-08-06/hh=19/
+26/08/06 20:47:34 ERROR TaskSchedulerImpl: Lost executor 19 on 10.140.0.66: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 1 on 10.140.0.114: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 28 on 10.140.0.85: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 10 on 10.140.0.152: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 26 on 10.140.0.37: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 44 on 10.140.0.24: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 48 on 10.140.0.100: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 35 on 10.140.0.74: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 5 on 10.140.0.76: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 16 on 10.140.0.124: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:35 ERROR TaskSchedulerImpl: Lost executor 31 on 10.140.0.54: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 27 on 10.140.0.115: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 22 on 10.140.0.153: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 12 on 10.140.0.68: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 45 on 10.140.0.35: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 17 on 10.140.0.96: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 13 on 10.140.0.157: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 2 on 10.140.0.17: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 33 on 10.140.0.26: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 37 on 10.140.0.13: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 7 on 10.140.0.149: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 24 on 10.140.0.127: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 43 on 10.140.0.59: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 9 on 10.140.0.48: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 36 on 10.140.0.75: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 39 on 10.140.0.29: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 20 on 10.140.0.116: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 14 on 10.140.0.31: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 4 on 10.140.0.144: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 0 on 10.140.0.109: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 41 on 10.140.0.60: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 32 on 10.140.0.39: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 3 on 10.140.0.122: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 40 on 10.140.0.113: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 15 on 10.140.0.125: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 11 on 10.140.0.14: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 8 on 10.140.0.18: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 47 on 10.140.0.151: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 42 on 10.140.0.84: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 30 on 10.140.0.34: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 6 on 10.140.0.118: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 18 on 10.140.0.156: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 34 on 10.140.0.87: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 23 on 10.140.0.16: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 21 on 10.140.0.82: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:36 ERROR TaskSchedulerImpl: Lost executor 46 on 10.140.0.15: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:37 ERROR TaskSchedulerImpl: Lost executor 25 on 10.140.0.150: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+26/08/06 20:47:37 ERROR TaskSchedulerImpl: Lost executor 38 on 10.140.0.117: Executor decommission finished: spark scale down (1.0s) - Migration: 0/0 blocks (0.0 B/0.0 B), 0 deleted
+Traceback (most recent call last):
+  File "/var/dataproc/tmp/srvls-batch-e8a9d9e3-7dae-4b7d-af5f-7694fdaad71a/materialize_mntn_select.py", line 153, in <module>
+    materialize_hourly(date=args.date, hh=h, output=args.output)
+  File "/var/dataproc/tmp/srvls-batch-e8a9d9e3-7dae-4b7d-af5f-7694fdaad71a/materialize_mntn_select.py", line 89, in materialize_hourly
+    df = read_source(spark, source, path)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/dataproc/tmp/srvls-batch-e8a9d9e3-7dae-4b7d-af5f-7694fdaad71a/materialize_mntn_select.py", line 47, in read_source
+    if not get_paths(spark, input_base, path):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/dataproc/tmp/srvls-batch-e8a9d9e3-7dae-4b7d-af5f-7694fdaad71a/spark_utils.py", line 22, in get_paths
+    in hadoop_path.getFileSystem(hadoop_conf).globStatus(hadoop_filter)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/spark/python/lib/py4j-0.10.9.7-src.zip/py4j/java_gateway.py", line 1322, in __call__
+  File "/usr/lib/spark/python/lib/pyspark.zip/pyspark/errors/exceptions/captured.py", line 179, in deco
+  File "/usr/lib/spark/python/lib/py4j-0.10.9.7-src.zip/py4j/protocol.py", line 326, in get_return_value
+py4j.protocol.Py4JJavaError: An error occurred while calling o157.globStatus.
+: java.io.IOException: Concurrent glob execution failed: java.io.IOException: Failed to get result: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.concurrentGlobInternal(GoogleHadoopFileSystem.java:1620)
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.globStatus(GoogleHadoopFileSystem.java:1045)
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.globStatus(GoogleHadoopFileSystem.java:1600)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+	at py4j.Gateway.invoke(Gateway.java:282)
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:182)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:106)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: java.util.concurrent.ExecutionException: java.io.IOException: Failed to get result: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/
+	at java.base/java.util.concurrent.FutureTask.report(FutureTask.java:122)
+	at java.base/java.util.concurrent.FutureTask.get(FutureTask.java:191)
+	at java.base/java.util.concurrent.AbstractExecutorService.doInvokeAny(AbstractExecutorService.java:204)
+	at java.base/java.util.concurrent.AbstractExecutorService.invokeAny(AbstractExecutorService.java:225)
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.concurrentGlobInternal(GoogleHadoopFileSystem.java:1610)
+	... 14 more
+Caused by: java.io.IOException: Failed to get result: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageFileSystemImpl.getFromFuture(GoogleCloudStorageFileSystemImpl.java:960)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageFileSystemImpl.listFileInfo(GoogleCloudStorageFileSystemImpl.java:1038)
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.lambda$listStatus$13(GoogleHadoopFileSystem.java:860)
+	at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration(IOStatisticsBinding.java:547)
+	at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.lambda$trackDurationOfOperation$5(IOStatisticsBinding.java:528)
+	at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration(IOStatisticsBinding.java:449)
+	at com.google.cloud.hadoop.fs.gcs.GhfsGlobalStorageStatistics.trackDuration(GhfsGlobalStorageStatistics.java:115)
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.trackDurationWithTracing(GoogleHadoopFileSystem.java:791)
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.listStatus(GoogleHadoopFileSystem.java:843)
+	at org.apache.hadoop.fs.Globber.listStatus(Globber.java:128)
+	at org.apache.hadoop.fs.Globber.doGlob(Globber.java:291)
+	at org.apache.hadoop.fs.Globber.glob(Globber.java:202)
+	at org.apache.hadoop.fs.FileSystem.globStatus(FileSystem.java:2211)
+	at com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem.lambda$concurrentGlobInternal$33(GoogleHadoopFileSystem.java:1613)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	... 1 more
+Caused by: java.util.concurrent.ExecutionException: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/
+	at java.base/java.util.concurrent.FutureTask.report(FutureTask.java:122)
+	at java.base/java.util.concurrent.FutureTask.get(FutureTask.java:191)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageFileSystemImpl.getFromFuture(GoogleCloudStorageFileSystemImpl.java:953)
+	... 19 more
+Caused by: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageImpl.listStorageObjectsAndPrefixesPage(GoogleCloudStorageImpl.java:1668)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageImpl.listStorageObjectsAndPrefixes(GoogleCloudStorageImpl.java:1602)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageImpl.listObjectInfo(GoogleCloudStorageImpl.java:1835)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageFileSystemImpl.listDirectory(GoogleCloudStorageFileSystemImpl.java:1141)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageFileSystemImpl.lambda$listFileInfo$5(GoogleCloudStorageFileSystemImpl.java:1020)
+	... 4 more
+Caused by: java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at org.conscrypt.ConscryptEngineSocket$SSLInputStream.readFromSocket(ConscryptEngineSocket.java:978)
+	at org.conscrypt.ConscryptEngineSocket$SSLInputStream.processDataFromSocket(ConscryptEngineSocket.java:942)
+	at org.conscrypt.ConscryptEngineSocket$SSLInputStream.readUntilDataAvailable(ConscryptEngineSocket.java:857)
+	at org.conscrypt.ConscryptEngineSocket$SSLInputStream.read(ConscryptEngineSocket.java:830)
+	at java.base/java.io.BufferedInputStream.fill(BufferedInputStream.java:244)
+	at java.base/java.io.BufferedInputStream.read1(BufferedInputStream.java:284)
+	at java.base/java.io.BufferedInputStream.read(BufferedInputStream.java:343)
+	at java.base/sun.net.www.http.HttpClient.parseHTTPHeader(HttpClient.java:826)
+	at java.base/sun.net.www.http.HttpClient.parseHTTP(HttpClient.java:761)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream0(HttpURLConnection.java:1740)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1641)
+	at java.base/java.net.HttpURLConnection.getResponseCode(HttpURLConnection.java:529)
+	at java.base/sun.net.www.protocol.https.HttpsURLConnectionImpl.getResponseCode(HttpsURLConnectionImpl.java:308)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.http.javanet.NetHttpResponse.<init>(NetHttpResponse.java:36)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.http.javanet.NetHttpRequest.execute(NetHttpRequest.java:152)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.http.javanet.NetHttpRequest.execute(NetHttpRequest.java:84)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.http.HttpRequest.execute(HttpRequest.java:1012)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.googleapis.services.AbstractGoogleClientRequest.executeUnparsed(AbstractGoogleClientRequest.java:565)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.googleapis.services.AbstractGoogleClientRequest.executeUnparsed(AbstractGoogleClientRequest.java:506)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.googleapis.services.AbstractGoogleClientRequest.execute(AbstractGoogleClientRequest.java:616)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.util.ResilientOperation.retry(ResilientOperation.java:66)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageImpl.executeListCall(GoogleCloudStorageImpl.java:1739)
+	at com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.gcsio.GoogleCloudStorageImpl.listStorageObjectsAndPrefixesPage(GoogleCloudStorageImpl.java:1657)
+	... 8 more
+

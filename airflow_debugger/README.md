@@ -25,7 +25,7 @@ python3 -m airflow_debugger.dataproc_rca   <dataproc_batch_id>
 ```
 airflow log ─▶ parse (identity + op_classpath→engine + job-id) ─▶ diagnose (cross-layer synthesis)
                                                                       │
-             ┌── dataproc_rca (describe + Cloud Logging + structural TTL)
+             ┌── dataproc_rca (describe + Cloud Logging → staging driveroutput fallback + structural TTL)
    route ────┤
              └── databricks_rca (jobs get-run + get-run-output + cluster events)
                                                                       │
@@ -39,7 +39,9 @@ airflow log ─▶ parse (identity + op_classpath→engine + job-id) ─▶ diag
 ## Auth (two separate layers)
 
 - **Data access (key-free):** Airflow via `astro` CLI token; Dataproc via `gcloud` user creds +
-  Cloud Logging; Databricks via the `malachi@mountain.com` U2M OAuth CLI profile.
+  Cloud Logging; Databricks via the `malachi@mountain.com` U2M OAuth CLI profile. The staging-bucket
+  driveroutput fallback (fires when Cloud Logging returns no error text) needs the `dataproc-debug`
+  PAM grant; without it the analyzer notes the 403 and how to unblock.
 - **LLM orchestration:** `ANTHROPIC_API_KEY` (or an `ant auth login` profile) — used only by
   `synth.py` for the unknown-signature fallback (`claude-opus-4-8`). Separate from data access.
 

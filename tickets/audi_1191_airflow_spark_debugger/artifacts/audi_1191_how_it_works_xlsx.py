@@ -57,12 +57,13 @@ STEPS = [
      "python3 -m airflow_debugger.tests.test_parse",
      "Adversarial review 2026-08-06: 9 parse defects fixed; real-log sweep 64/64 identity, 33/33 job ids"),
     ("D4", "Engine RCA",
-     "Dataproc: batches describe + Cloud Logging traceback + structural TTL check (dataproc_rca.py:156). "
-     "Databricks: jobs get-run + get-run-output on the TASK run id + cluster events (databricks_rca.py:74). "
-     "Turns the boilerplate Airflow error into the real underlying cause.",
+     "Dataproc: batches describe + Cloud Logging traceback + structural TTL check (dataproc_rca.py:156); "
+     "when Cloud Logging has no error text it reads the staging driveroutput named in the batch stateMessage "
+     "(needs the dataproc-debug PAM grant; notes the 403 and the unblock step without it). "
+     "Databricks: jobs get-run + get-run-output on the TASK run id + cluster events (databricks_rca.py:74).",
      "dataproc_rca.py:156", "airflow_debugger/dataproc_rca.py#L156",
-     "python3 -m airflow_debugger.dataproc_rca <batch_id>",
-     "INC-005/009/012. Gap: no driveroutput fallback when Cloud Logging is empty (IMP-028)"),
+     "python3 -m airflow_debugger.tests.test_dataproc_rca",
+     "INC-005/009/012. Driveroutput fallback (IMP-028) tested on the real INC-012 driver text: full gcs_list_timeout verdict"),
     ("D5", "Signature match",
      f"{len(sig.SIGNATURES)} regex fingerprints classify the failure; a high-confidence match returns a cached verdict with NO LLM "
      "call. Each signature's programmatic-fix flag separates a fixable root cause from a downstream symptom.",

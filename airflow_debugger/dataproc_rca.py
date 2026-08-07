@@ -5,9 +5,11 @@ describe the batch (state / ttl / config / timing) and read its driver log via
 **Cloud Logging** -> decode the `MCP_EVENT_LOGGING_CONFIG_BASE64` breadcrumb for
 the Spark application_id -> extract the error text -> match a signature.
 
-Driver logs come from Cloud Logging, NOT the GCS staging bucket: that bucket is
-403 for on-call user creds (no `storage.objects.list`), while Cloud Logging is
-readable and carries the same driver messages + MCP breadcrumbs.
+Driver text comes from Cloud Logging first, falling back to the staging-bucket
+`driveroutput.*` glob named in the batch stateMessage when Logging returns no
+error text (egress flake, thin logging). The staging bucket denies everything
+(even a direct object get reports `storage.objects.list` 403) without the
+`dataproc-debug` PAM grant, so the fallback degrades to an actionable note.
 
 TTL kills are detected structurally (state CANCELLED + runtime ~= ttl), which is
 more reliable than any log string. The `.zstd` Spark event-log deep-dive
@@ -42,6 +44,9 @@ _ERR_MARKERS = (
     "ERROR",
     "CANCELLED",
 )
+_DRIVEROUTPUT_RE = re.compile(r"gs://\S+/driveroutput(?:\.\*|\.\d+)?")
+_DRIVER_HEAD_CHARS = 20_000  # keep the head: the MCP breadcrumb prints at startup
+_DRIVER_TAIL_CHARS = 180_000  # keep the tail: the failure sits at the end
 _PERF_KEYS = (
     "spark:spark.sql.shuffle.partitions",
     "spark:spark.dynamicAllocation.maxExecutors",
@@ -86,6 +91,40 @@ def _logging_messages(batch_id: str, project: str) -> tuple[str, str | None]:
          "--order", "desc", "--format", "value(jsonPayload.message)"]
     )  # fmt: skip
     return stdout or "", err
+
+
+def driveroutput_uri(state_message: str | None) -> str | None:
+    """The staging-bucket driver-output glob a failed batch names in its stateMessage."""
+    m = _DRIVEROUTPUT_RE.search(state_message or "")
+    return m.group(0) if m else None
+
+
+def _driveroutput_text(uri: str) -> tuple[str | None, str | None]:
+    """Read driver output from the staging bucket; return (text, None) or (None, why)."""
+    try:
+        out = subprocess.run(
+            ["gsutil", "-o", "GSUtil:check_hashes=never", "cat", uri],
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        return None, str(e)
+    if out.returncode != 0:
+        err = out.stderr or out.stdout or ""
+        if "403" in err or "AccessDenied" in err:
+            return None, (
+                "403 on the staging bucket; request the dataproc-debug PAM grant, then re-run"
+            )
+        return None, err.strip()[-400:] or f"exit code {out.returncode}"
+    text = out.stdout
+    if len(text) > _DRIVER_HEAD_CHARS + _DRIVER_TAIL_CHARS:
+        text = (
+            text[:_DRIVER_HEAD_CHARS]
+            + "\n...[driveroutput truncated]...\n"
+            + text[-_DRIVER_TAIL_CHARS:]
+        )
+    return text, None
 
 
 def _ttl_seconds(ttl: str | None) -> int | None:
@@ -193,6 +232,21 @@ def analyze_batch(
         ev.notes.append(f"driver log fetch failed: {log_err}")
     else:
         ev.notes.append("no driver log via Cloud Logging (check freshness window)")
+
+    # Fallback: Cloud Logging gave no error text -> read the staging driveroutput
+    # the stateMessage names (INC-012's cause lived only there).
+    if not ev.error_text:
+        uri = driveroutput_uri(ev.state_message)
+        if uri:
+            text, do_err = _driveroutput_text(uri)
+            if text:
+                ev.application_id = ev.application_id or _decode_app_id(text)
+                ev.error_text = _error_region(text)
+                ev.notes.append("driver text read from staging driveroutput (Cloud Logging had none)")
+                if ev.has_event_log and ev.application_id and event_log_dir and not ev.event_log_uri:
+                    ev.event_log_uri = f"{event_log_dir}/{ev.application_id}"
+            else:
+                ev.notes.append(f"driveroutput fallback failed: {do_err}")
 
     # Structural TTL detection: CANCELLED + ran ~= its ttl => wall-clock kill.
     ttl_s = _ttl_seconds(ev.ttl)
