@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1170: Orchestration, backfill, and shadow validation for the household FS"
-status: in_progress
+status: done
 date: 2026-07-28
 summary: "Wire L1→L2→L3 as an additive task group in feature_store_setup_model.py; backfill runner + shadow parity dashboards"
-result: ""
+result: "90-day household FS backfill shipped and verified in prod (mirror 17 builds, L2/L3 90/90 daily, Jun+Jul monthly); method merged upstream airflow-ti#1180. Shadow-parity readout moved out of scope at close."
 question: "Can we stand up the household FS as an additive hh_ task group that runs end-to-end daily and emits a first shadow-parity readout (household-vs-IP sizes, coverage, day-over-day stability) proving it's safe to consume?"
 framing_state: locked
 ---
