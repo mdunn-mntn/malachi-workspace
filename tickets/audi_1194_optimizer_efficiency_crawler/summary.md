@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1194: Airflow/Spark optimization crawler"
-status: backlog
+status: in_progress
 date: 2026-08-05
 summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
-result: "not started — split from AUDI-1191 (debugger); optimizer half mostly built (eventlog/optimizations/optimize/crawl + weekly cron), needs productionizing"
+result: "in progress — first external validation run 2026-08-07 on Ryan's aud-int-int-map batch (intent_score_map); IMP-029 rolling-dir fix shipped en route"
 question: "Can a scheduled key-free crawler read every succeeded Spark job (Dataproc event logs + Databricks plans/metrics) and emit a ranked, actionable optimization backlog with no manual step?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1194: Airflow/Spark optimization crawler
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1194
-**Status:** backlog
+**Status:** in_progress
 **Date Started:** 2026-08-05
 **Assignee:** Malachi
 
