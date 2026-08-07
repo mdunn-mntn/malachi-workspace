@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import os
 
+import pytest
+
+import airflow_optimizer.optimizations as opt
 from airflow_debugger.perf_profile import PERF_SIGNATURES, profile, should_profile
 from airflow_debugger.report import build_troubleshooting
 
@@ -30,8 +33,9 @@ def test_gate_fires_only_on_perf_signatures_with_a_log() -> None:
     assert not should_profile({"root_signature": {"key": "ttl_exceeded"}, "spark": None})
 
 
-def test_profile_runs_optimizer_on_local_event_log() -> None:
+def test_profile_runs_optimizer_on_local_event_log(monkeypatch: pytest.MonkeyPatch) -> None:
     """A perf failure with a local event log yields optimizer findings."""
+    monkeypatch.setattr(opt, "SKEW_MIN_TASK_MS", 0)  # tiny fixture; plumbing not thresholds
     res = profile(_diag("ttl_exceeded", uri=FIXTURE))
     assert res is not None and res["error"] is None
     assert res["findings"], "the skewed fixture must yield findings"
@@ -45,8 +49,9 @@ def test_profile_degrades_to_note_when_log_unreachable() -> None:
     assert "not reachable" in res["error"]
 
 
-def test_troubleshooting_renders_perf_section() -> None:
+def test_troubleshooting_renders_perf_section(monkeypatch: pytest.MonkeyPatch) -> None:
     """The troubleshooting pack renders the perf section (findings or the unavailable note)."""
+    monkeypatch.setattr(opt, "SKEW_MIN_TASK_MS", 0)
     diag = _diag("ttl_exceeded", uri=FIXTURE)
     diag["perf_profile"] = profile(diag)
     pack = build_troubleshooting(diag)

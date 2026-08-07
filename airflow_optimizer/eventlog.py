@@ -15,7 +15,7 @@ import json
 import os
 import re
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from statistics import median
 
@@ -49,7 +49,9 @@ class StageMetrics:
         """max task time / median task time (>~5 with enough tasks = real skew)."""
         if len(self.task_durs) < 4:
             return 1.0
-        med = median(self.task_durs) or 1
+        med = median(self.task_durs)
+        if med <= 0:  # a zero median manufactures astronomical ratios on trivial stages
+            return 1.0
         return max(self.task_durs) / med
 
     @property
@@ -57,7 +59,9 @@ class StageMetrics:
         """max task read bytes / median - separates true data skew from a slow-node straggler."""
         if len(self.task_read_bytes) < 4:
             return 1.0
-        med = median(self.task_read_bytes) or 1
+        med = median(self.task_read_bytes)
+        if med <= 0:  # median task read 0 bytes -> data-skew assessment is meaningless
+            return 1.0
         return max(self.task_read_bytes) / med
 
 
@@ -111,41 +115,68 @@ def _part_order(path: str) -> tuple:
     return (int(m.group(1)) if m else 1 << 30, path)
 
 
-def _read_events(path: str) -> list:
-    """Yield event dicts from a plain-JSON, single `.zstd`, or v2 rolling-dir event log."""
+def _read_events(path: str) -> Iterator[dict]:
+    """Yield event dicts from a plain-JSON, single `.zstd`, or v2 rolling-dir event log.
+
+    Streams line-by-line (a 98MB .zstd expands to ~1.8GB; materializing it OOMs the cron).
+    Raises ValueError on an undecodable part or an ambiguous directory - a corrupt log must
+    surface as an error upstream, never parse to an empty "clean" run.
+    """
     if os.path.isdir(path):
         parts = sorted(glob.glob(os.path.join(path, "events_*")), key=_part_order)
         if not parts:
-            parts = [c for c in sorted(glob.glob(os.path.join(path, "*")))
-                     if "appstatus" not in c and not c.endswith(".crc")]
+            cand = [c for c in sorted(glob.glob(os.path.join(path, "*")))
+                    if "appstatus" not in c and not c.endswith(".crc")]
+            if len(cand) != 1:
+                raise ValueError(
+                    f"{path}: directory holds {len(cand)} files and is not a v2 rolling log - "
+                    "pass each event log individually"
+                )
+            parts = cand
     else:
         parts = [path]
-    events = []
     for part in parts:
         with open(part, "rb") as f:
-            raw = f.read()
-        text = (_zstd_decompress(raw) if raw[:4] == b"\x28\xb5\x2f\xfd"
-                else raw.decode("utf-8", "replace"))
-        for line in text.splitlines():
+            magic = f.read(4)
+        lines = _zstd_lines(part) if magic == b"\x28\xb5\x2f\xfd" else _plain_lines(part)
+        for line in lines:
             if not line.strip():
                 continue
             try:
-                events.append(json.loads(line))
+                yield json.loads(line)
             except json.JSONDecodeError:
                 continue  # tolerate a truncated/malformed final line (in-progress or crashed logs)
-    return events
 
 
-def _zstd_decompress(raw: bytes) -> str:
+def _plain_lines(part: str) -> Iterator[str]:
+    with open(part, encoding="utf-8", errors="replace") as f:
+        yield from f
+
+
+def _zstd_lines(part: str) -> Iterator[str]:
+    """Stream decompressed lines; real Spark logs are MULTI-FRAME zstd, and a one-shot
+    single-frame decompress silently returns only the first ~58 bytes."""
     try:
+        import io
+
         import zstandard
 
-        return zstandard.ZstdDecompressor().decompress(raw, max_output_size=500_000_000).decode(
-            "utf-8", "replace"
-        )
-    except Exception:
-        out = subprocess.run(["zstd", "-dc"], input=raw, capture_output=True)
-        return out.stdout.decode("utf-8", "replace")
+        with open(part, "rb") as f:
+            reader = zstandard.ZstdDecompressor().stream_reader(f, read_across_frames=True)
+            yield from io.TextIOWrapper(reader, encoding="utf-8", errors="replace")
+        return
+    except ImportError:
+        pass
+    except Exception as e:
+        raise ValueError(f"{part}: zstd decode failed ({e})") from e
+    proc = subprocess.Popen(["zstd", "-dc", part], stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL)
+    try:
+        yield from (ln.decode("utf-8", "replace") for ln in proc.stdout)
+    finally:
+        proc.stdout.close()
+        if proc.wait() != 0:
+            raise ValueError(f"{part}: zstd CLI decode failed (rc={proc.returncode})")
 
 
 def _plan_node_metrics(spark_plan_info: dict, acc_values: dict) -> list:
@@ -169,9 +200,8 @@ def _plan_node_metrics(spark_plan_info: dict, acc_values: dict) -> list:
 
 def parse_eventlog(path: str) -> SparkRun:
     """Parse a Spark event log into a structured `SparkRun` (all 7 surfaces)."""
-    events = _read_events(path)
     run = SparkRun()
-    stages: dict[int, StageMetrics] = {}
+    stages: dict[tuple, StageMetrics] = {}  # (stage_id, attempt) - retries must not merge
     execs: dict[str, ExecutorInfo] = {}
     acc_values: dict[int, int] = {}  # accumulatorId -> value, for SQL node metrics
     plan_infos: dict[int, dict] = {}
@@ -179,17 +209,17 @@ def parse_eventlog(path: str) -> SparkRun:
     block_bytes: dict[str, int] = {}
     app_start = app_end = None
 
-    def stage(sid: int) -> StageMetrics:
-        return stages.setdefault(sid, StageMetrics(stage_id=sid))
+    def stage(sid: int, attempt: int = 0) -> StageMetrics:
+        return stages.setdefault((sid, attempt), StageMetrics(stage_id=sid))
 
     def execu(eid: str) -> ExecutorInfo:
         return execs.setdefault(eid, ExecutorInfo(exec_id=eid))
 
-    for e in events:
+    for e in _read_events(path):
         ev = e.get("Event", "")
         if ev == "SparkListenerApplicationStart":
             app_start = e.get("Timestamp")
-            run.app_id = e.get("appId")
+            run.app_id = e.get("App ID") or e.get("appId")
             run.app_name = e.get("App Name")
         elif ev == "SparkListenerApplicationEnd":
             app_end = e.get("Timestamp")
@@ -205,7 +235,7 @@ def parse_eventlog(path: str) -> SparkRun:
             run.jobs += 1
         elif ev == "SparkListenerStageCompleted":
             si = e.get("Stage Info", {}) or {}
-            st = stage(si.get("Stage ID"))
+            st = stage(si.get("Stage ID"), si.get("Stage Attempt ID", 0))
             st.name = si.get("Stage Name", st.name)
             st.num_tasks = max(st.num_tasks, si.get("Number of Tasks", 0))
             if si.get("Failure Reason"):
@@ -219,7 +249,8 @@ def parse_eventlog(path: str) -> SparkRun:
             eid = e.get("executionId")
             run.sql.append(
                 SqlExec(exec_id=eid, description=e.get("description", "")[:200],
-                        plan_text=(e.get("physicalPlanDescription") or "")[:8000])
+                        # keep the TAIL: physical plan + stats come last; a head-cap loses them
+                        plan_text=(e.get("physicalPlanDescription") or "")[-8000:])
             )
             if e.get("sparkPlanInfo"):
                 plan_infos[eid] = e["sparkPlanInfo"]
@@ -239,9 +270,22 @@ def parse_eventlog(path: str) -> SparkRun:
     run.app_start_ts, run.app_end_ts = app_start, app_end
     if app_start and app_end:
         run.duration_ms = app_end - app_start
-    run.stages = sorted(stages.values(), key=lambda s: s.stage_id)
+    run.stages = _finalize_stages(stages)
     run.executors = list(execs.values())
     return run
+
+
+def _finalize_stages(stages: dict) -> list:
+    """Keep each stage's LAST attempt (retries must not double-count) and backfill
+    num_tasks from observed task ends when lifecycle events were dropped under load."""
+    last: dict[int, tuple] = {}
+    for (sid, att), st in stages.items():
+        if sid not in last or att > last[sid][0]:
+            last[sid] = (att, st)
+    final = [st for _, st in last.values()]
+    for st in final:
+        st.num_tasks = max(st.num_tasks, st.succeeded + st.failed + st.fetch_failed)
+    return sorted(final, key=lambda s: s.stage_id)
 
 
 def _num(v: object) -> int:
@@ -266,11 +310,12 @@ def _block_updated(e: dict, block_cached: dict, block_bytes: dict) -> int:
 
 
 def _task_end(e: dict, stage: Callable, execu: Callable) -> None:
-    st = stage(e.get("Stage ID"))
+    st = stage(e.get("Stage ID"), e.get("Stage Attempt ID", 0))
     ti = e.get("Task Info", {}) or {}
     reason = (e.get("Task End Reason", {}) or {}).get("Reason", "")
     x = execu(str(ti.get("Executor ID")))
-    if reason == "Success":
+    succeeded = reason == "Success"
+    if succeeded:
         st.succeeded += 1
         x.completed_tasks += 1
     elif reason == "FetchFailed":
@@ -296,9 +341,10 @@ def _task_end(e: dict, stage: Callable, execu: Callable) -> None:
     st.output_bytes += (tm.get("Output Metrics") or {}).get("Bytes Written", 0)
     x.gc_time_ms += tm.get("JVM GC Time", 0)
     x.run_time_ms += tm.get("Executor Run Time", 0)
-    fin, lau = ti.get("Finish Time", 0), ti.get("Launch Time", 0)
-    st.task_durs.append((fin - lau) if (fin and lau) else tm.get("Executor Run Time", 0))
-    st.task_read_bytes.append(task_read + task_input)
+    if succeeded:  # a failed task's wall time is a failure to route, not skew evidence
+        fin, lau = ti.get("Finish Time", 0), ti.get("Launch Time", 0)
+        st.task_durs.append((fin - lau) if (fin and lau) else tm.get("Executor Run Time", 0))
+        st.task_read_bytes.append(task_read + task_input)
 
 
 if __name__ == "__main__":

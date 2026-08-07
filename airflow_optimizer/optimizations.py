@@ -21,6 +21,7 @@ _UNIT = {"B": 1, "KIB": 1024, "MIB": 1024**2, "GIB": 1024**3, "TIB": 1024**4}
 BROADCAST_MAX_BYTES = 100 * 1024**2  # below this a join side is broadcast-eligible
 LARGE_SHUFFLE_BYTES = 50 * 1024**3  # a shuffle this wide is worth partition-sizing
 TARGET_PARTITION_BYTES = 256 * 1024**2  # Spark rule-of-thumb per shuffle partition
+SKEW_MIN_TASK_MS = 60_000  # skew/straggler noise floor: slowest task must be material
 
 
 def _to_bytes(num: str, unit: str) -> int:
@@ -203,11 +204,12 @@ def analyze_run(run: object) -> list[OptFinding]:
     parts = props.get("spark.sql.shuffle.partitions")
 
     for s in run.stages:
-        spill = s.mem_spill + s.disk_spill
         # SKEW - one task runs far longer than the median (invisible in the plan text).
         # Cross-check against per-task data volume: uniform data + one slow task is a
         # STRAGGLER (slow node / IO stall), not data skew - salting won't fix it.
-        if s.num_tasks >= 8 and s.skew_ratio >= 5:
+        # Absolute floor: a "13x" ratio on a 0.5s task is noise that buries real tails.
+        if (s.num_tasks >= 8 and s.skew_ratio >= 5
+                and max(s.task_durs, default=0) >= SKEW_MIN_TASK_MS):
             if s.data_skew_ratio >= 2:
                 out.append(OptFinding(
                     "skew", f"Stage {s.stage_id} skewed {s.skew_ratio:.1f}x (max vs median task)",
@@ -230,24 +232,51 @@ def analyze_run(run: object) -> list[OptFinding]:
                     "Enable spark.speculation=true (with spark.speculation.quantile ~0.9) so a "
                     "straggling task is re-launched on an idle executor instead of pinning the stage.",
                     rec_type="infra"))
-        # SPILL - shuffle/agg spilled to disk; size partitions up (code) or memory (infra).
-        if spill >= 1024**3:
+        # SPILL - report disk (physically written) and in-memory-at-spill separately;
+        # summing them double-counts the same records and overstates ~6.5x.
+        if s.disk_spill >= 2 * 1024**3 or s.mem_spill >= 32 * 1024**3:
             out.append(OptFinding(
-                "disk_spill", f"Stage {s.stage_id} spilled {_gb(spill):.1f} GiB",
-                "high" if spill >= 20 * 1024**3 else "medium",
-                f"Memory+disk spill {_gb(spill):.1f} GiB over {s.num_tasks} tasks - partitions exceed "
-                "executor memory.",
+                "disk_spill",
+                f"Stage {s.stage_id} spilled {_gb(s.disk_spill):.1f} GiB to disk "
+                f"({_gb(s.mem_spill):.0f} GiB in-memory at spill time)",
+                "high" if (s.disk_spill >= 64 * 1024**3 or s.mem_spill >= 512 * 1024**3)
+                else "medium",
+                f"Disk spill {_gb(s.disk_spill):.1f} GiB / in-memory {_gb(s.mem_spill):.1f} GiB "
+                f"over {s.num_tasks} tasks - per-task data exceeds execution memory.",
                 "Raise spark.sql.shuffle.partitions (smaller partitions) first; if it persists, raise "
                 "executor memory.", rec_type="code"))
-        # WIDE SHUFFLE at the default partition count.
-        if s.shuffle_write_bytes >= 50 * 1024**3:
-            want = max(1, round(s.shuffle_write_bytes / (256 * 1024**2)))
+        # WIDE SHUFFLE with too FEW partitions (oversized reducers). Only the increase
+        # direction is safe advice: AQE coalesce already merges too-small partitions,
+        # so a "cut partitions" suggestion is noise everywhere AQE is on.
+        parts_n = int(parts) if str(parts or "").isdigit() else 200
+        per_part = s.shuffle_write_bytes / parts_n
+        if s.shuffle_write_bytes >= 50 * 1024**3 and per_part >= 512 * 1024**2:
+            want = max(parts_n + 1, round(s.shuffle_write_bytes / (256 * 1024**2)))
+            aqe = props.get("spark.sql.adaptive.enabled") == "true"
             out.append(OptFinding(
                 "shuffle_partition_sizing",
-                f"Stage {s.stage_id} wide shuffle ({_gb(s.shuffle_write_bytes):.0f} GiB)",
-                "high", f"{_gb(s.shuffle_write_bytes):.0f} GiB shuffle write at "
-                f"shuffle.partitions={parts or 'default'}.",
-                f"Set spark.sql.shuffle.partitions ~{want} (~256 MiB each) or enable AQE coalesce.",
+                f"Stage {s.stage_id} wide shuffle ({_gb(s.shuffle_write_bytes):.0f} GiB, "
+                f"~{per_part / 1024**2:.0f} MiB/partition)",
+                "high", f"{_gb(s.shuffle_write_bytes):.0f} GiB shuffle write over "
+                f"shuffle.partitions={parts or 'default'} = ~{per_part / 1024**2:.0f} MiB per "
+                "partition - oversized reducers spill.",
+                f"Raise spark.sql.shuffle.partitions to ~{want} (~256 MiB each)."
+                + (" AQE coalesce is already on; it only merges small partitions and cannot "
+                   "split oversized ones." if aqe else ""),
+                rec_type="code"))
+        # FETCH-WAIT dominance - tasks stall waiting on shuffle fetch, not computing.
+        if s.run_time_ms >= 300_000 and s.fetch_wait_ms / s.run_time_ms >= 0.3:
+            ratio = s.fetch_wait_ms / s.run_time_ms
+            out.append(OptFinding(
+                "shuffle_fetch_wait",
+                f"Stage {s.stage_id} spends {100 * ratio:.0f}% of task time waiting on "
+                "shuffle fetch",
+                "high" if ratio >= 0.5 else "medium",
+                f"{s.fetch_wait_ms / 1000:.0f}s of {s.run_time_ms / 1000:.0f}s task time is "
+                f"shuffle-fetch wait over {s.num_tasks} tasks - the shuffle IO path is the "
+                "bottleneck, not compute.",
+                "Raise spark.sql.shuffle.partitions (smaller blocks fetch in parallel) and check "
+                "executor count/network tier; premium disk helps only the write side.",
                 rec_type="code"))
 
     # GC PRESSURE across the run - an infra (memory) signal.
@@ -261,11 +290,13 @@ def analyze_run(run: object) -> list[OptFinding]:
             "Raise executor memory / use memory-optimized workers; secondarily cut per-task data via "
             "more partitions.", rec_type="infra"))
 
-    # SPOT PREEMPTION - failed tasks from reclaimed executors (an infra config choice).
+    # SPOT PREEMPTION - failed tasks ON reclaimed executors (an infra config choice).
+    # "decommission"/"lost" are NORMAL serverless scale-down strings, not preemption,
+    # and only the reclaimed executors' own failures count - not run-wide failures.
     preempted = [e for e in run.executors
                  if e.removed_reason and any(t in e.removed_reason.lower()
-                                             for t in ("preempt", "spot", "lost", "decommission"))]
-    total_failed = sum(e.failed_tasks for e in run.executors)
+                                             for t in ("preempt", "spot"))]
+    total_failed = sum(e.failed_tasks for e in preempted)
     if preempted and total_failed:
         out.append(OptFinding(
             "spot_preemption_cost",
@@ -288,7 +319,19 @@ def analyze_run(run: object) -> list[OptFinding]:
         busy_ms = sum(e.run_time_ms for e in execs)
         util = busy_ms / (reg_ms * cores) if reg_ms else 1.0
         idle_h = (reg_ms * cores - busy_ms) / 3_600_000 / cores
-        if reg_ms / 3_600_000 >= 20 and util < 0.4:
+        reg_h = reg_ms / 3_600_000
+        # An app that held a fleet and ran ZERO tasks is pure waste at ANY size.
+        if busy_ms == 0 and reg_h >= 2:
+            out.append(OptFinding(
+                "idle_reserved_executors",
+                f"{len(execs)} executors held {reg_h:.1f} executor-hours with ZERO tasks run",
+                "high",
+                f"The app registered {len(execs)} executors for {reg_h:.1f} executor-hours and "
+                "never ran a task - the whole allocation was billed for nothing.",
+                "Check why the driver allocated executors it never used (eager allocation before "
+                "a driver-side step, or a no-op run); lower minExecutors/initialExecutors.",
+                rec_type="infra"))
+        elif reg_h >= 20 and util < 0.4:
             removed = sum(1 for e in execs if e.removed_ts)
             tracking = props.get("spark.dynamicAllocation.shuffleTracking.enabled") == "true"
             hold = (" shuffleTracking pins executors whose shuffle blocks a live job still "
@@ -298,7 +341,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                 "idle_reserved_executors",
                 f"Executors {100 * util:.0f}% utilized: ~{idle_h:.0f} idle executor-hours held",
                 "high" if util < 0.25 else "medium",
-                f"{len(execs)} executors held {reg_ms / 3_600_000:.0f} executor-hours but task slots "
+                f"{len(execs)} executors held {reg_h:.0f} executor-hours but task slots "
                 f"were busy only {100 * util:.0f}% of that; {removed} were released before app "
                 f"end.{hold}",
                 "Fix the tail that keeps the final job alive (speculation for stragglers, skew "

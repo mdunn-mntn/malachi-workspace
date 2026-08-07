@@ -30,22 +30,35 @@ class JobReport:
         return sum(1 for f in self.findings if f.impact == "high")
 
     @property
+    def n_medium(self) -> int:
+        """Count of medium-impact findings (the ranking tiebreak)."""
+        return sum(1 for f in self.findings if f.impact == "medium")
+
+    @property
     def score(self) -> tuple:
-        """Rank key: most high-impact findings first, then total count."""
-        return (self.n_high, len(self.findings))
+        """Rank key: high-impact count, then medium, then total."""
+        return (self.n_high, self.n_medium, len(self.findings))
 
 
 def _event_logs(paths: list[str]) -> list[str]:
-    """Expand dirs/globs to event-log paths (v2 rolling dirs, `.zstd` files, plain JSON)."""
+    """Expand dirs/globs to event-log paths (v2 rolling dirs, `.zstd` files, plain JSON).
+
+    A dir is ONE rolling log only when it is named eventlog_v2_* or carries the appstatus_*
+    marker - merely containing events_* files is not enough (a flat download dir with loose
+    parts would otherwise be hijacked into one cross-job chimera). Other dirs expand
+    recursively; .inprogress logs are surfaced so the crawl can SHOW them as skipped.
+    """
     out = []
     for p in paths:
         if os.path.isdir(p):
-            # a v2 rolling-log dir is itself one log; a dir OF logs expands to its children
-            if glob.glob(os.path.join(p, "events_*")) or glob.glob(os.path.join(p, "appstatus_*")):
+            base = os.path.basename(p.rstrip("/"))
+            if base.startswith("eventlog_v2_") or glob.glob(os.path.join(p, "appstatus_*")):
                 out.append(p)
             else:
-                out += [c for c in glob.glob(os.path.join(p, "*"))
-                        if c.endswith(".zstd") or c.endswith(".json") or os.path.isdir(c)]
+                kids = glob.glob(os.path.join(p, "*"))
+                out += _event_logs([c for c in kids if os.path.isdir(c)])
+                out += [c for c in kids
+                        if c.endswith((".zstd", ".json", ".inprogress"))]
         else:
             out += glob.glob(p)
     return sorted(set(out))
@@ -56,6 +69,10 @@ def crawl(paths: list[str]) -> list[JobReport]:
     reports = []
     for log in _event_logs(paths):
         base = os.path.basename(log.rstrip("/"))
+        if log.endswith(".inprogress"):
+            reports.append(JobReport(
+                source=base, error="in-progress log (job still running or crashed mid-write)"))
+            continue
         try:
             run, findings = analyze_eventlog(log)
             reports.append(JobReport(source=base, findings=findings, app_name=run.app_name))
@@ -81,7 +98,8 @@ def render_crawl(reports: list[JobReport]) -> str:
             continue
         top = r.findings[0]
         by_type = ", ".join(sorted({f.rec_type for f in r.findings}))
-        label = r.app_name or r.source
+        # keep the source filename: recurring jobs share an app_name across many runs
+        label = f"{r.app_name} ({r.source})" if r.app_name else r.source
         lines.append(f"- {label} [{r.n_high} high, {len(r.findings)} total; {by_type}] "
                      f"-> top: {top.title}")
     return "\n".join(lines)

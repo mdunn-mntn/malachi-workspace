@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import os
 
+import pytest
+
 from airflow_optimizer.eventlog import ExecutorInfo, SparkRun, StageMetrics, parse_eventlog
 from airflow_optimizer.optimizations import analyze_run
 
@@ -40,8 +42,11 @@ def test_parse_storage_surface_real() -> None:
     assert run.cached_rdd_bytes > 0
 
 
-def test_detectors_flag_skew_on_real_run() -> None:
+def test_detectors_flag_skew_on_real_run(monkeypatch: pytest.MonkeyPatch) -> None:
     """analyze_run surfaces the skew as a code-type finding on the real log."""
+    import airflow_optimizer.optimizations as opt
+
+    monkeypatch.setattr(opt, "SKEW_MIN_TASK_MS", 0)  # tiny fixture; plumbing not thresholds
     findings = analyze_run(parse_eventlog(FIXTURE))
     assert any(f.key == "skew" and f.rec_type == "code" for f in findings)
 
@@ -52,7 +57,7 @@ def test_infra_and_failure_recommendation_types() -> None:
                    cached_rdd_bytes=40 * 1024**3)
     run.stages = [
         StageMetrics(stage_id=1, num_tasks=100, run_time_ms=100_000, gc_time_ms=30_000,
-                     fetch_failed=12, mem_spill=30 * 1024**3),
+                     fetch_failed=12, mem_spill=40 * 1024**3),
     ]
     run.executors = [ExecutorInfo(exec_id="2", removed_reason="spot instance preemption",
                                   failed_tasks=168)]
@@ -68,9 +73,10 @@ def test_straggler_vs_data_skew_discrimination() -> None:
     """Duration skew on uniform data = straggler (infra/speculation), not data skew (code)."""
     uniform_reads = [100] * 19 + [110]
     straggler_stage = StageMetrics(stage_id=6, num_tasks=20,
-                                   task_durs=[10] * 19 + [200], task_read_bytes=uniform_reads)
+                                   task_durs=[30_000] * 19 + [600_000],
+                                   task_read_bytes=uniform_reads)
     skewed_stage = StageMetrics(stage_id=7, num_tasks=20,
-                                task_durs=[10] * 19 + [200],
+                                task_durs=[30_000] * 19 + [600_000],
                                 task_read_bytes=[100] * 19 + [5000])
     run = SparkRun(spark_props={"spark.speculation": "false"},
                    stages=[straggler_stage, skewed_stage])
@@ -94,10 +100,12 @@ def test_idle_reserved_executors_detector() -> None:
     assert "shuffleTracking pins executors" in findings["idle_reserved_executors"].evidence
 
 
-def test_optimize_entrypoint_end_to_end() -> None:
+def test_optimize_entrypoint_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
     """The one-call entrypoint parses the real log and renders a grouped report."""
+    import airflow_optimizer.optimizations as opt
     from airflow_optimizer.optimize import optimize_run, render_report
 
+    monkeypatch.setattr(opt, "SKEW_MIN_TASK_MS", 0)
     findings = optimize_run(FIXTURE)
     assert any(f.key == "skew" for f in findings)
     report = render_report(findings)
@@ -141,10 +149,109 @@ def test_parse_v2_rolling_dir_reads_all_parts(tmp_path: os.PathLike[str]) -> Non
     assert run.duration_ms == 60000  # ApplicationEnd lives in the last part
 
 
-def test_fleet_crawl_ranks_worst_first() -> None:
+def test_multiframe_zstd_reads_all_frames(tmp_path: os.PathLike[str]) -> None:
+    """Concatenated zstd frames (real Spark logs) parse fully - not just frame 1."""
+    import json
+    import subprocess
+    from pathlib import Path
+
+    tmp_path = Path(tmp_path)
+    f1 = json.dumps({"Event": "SparkListenerApplicationStart", "App Name": "mf",
+                     "App ID": "app-1", "Timestamp": 1000}) + "\n"
+    f2 = json.dumps({"Event": "SparkListenerJobStart"}) + "\n" + json.dumps(
+        {"Event": "SparkListenerApplicationEnd", "Timestamp": 3000}) + "\n"
+    frames = b""
+    for chunk in (f1, f2):
+        frames += subprocess.run(["zstd", "-q", "-c"], input=chunk.encode(),
+                                 capture_output=True).stdout
+    log = tmp_path / "multiframe.zstd"
+    log.write_bytes(frames)
+    run = parse_eventlog(str(log))
+    assert run.app_id == "app-1"  # 'App ID' is the real field name, not 'appId'
+    assert run.jobs == 1 and run.duration_ms == 2000  # frame 2 content was read
+
+
+def test_corrupt_zstd_raises_not_clean(tmp_path: os.PathLike[str]) -> None:
+    """An undecodable .zstd surfaces as an error - never an empty 'clean' run."""
+    from pathlib import Path
+
+    import pytest
+
+    bad = Path(tmp_path) / "corrupt.zstd"
+    bad.write_bytes(b"\x28\xb5\x2f\xfd" + b"garbage-not-a-frame")
+    with pytest.raises(ValueError):
+        parse_eventlog(str(bad))
+
+
+def test_stage_retry_attempts_do_not_merge() -> None:
+    """A retried stage keeps only its last attempt's metrics (no double-count)."""
+    import json
+
+    events = [
+        {"Event": "SparkListenerTaskEnd", "Stage ID": 1, "Stage Attempt ID": 0,
+         "Task End Reason": {"Reason": "Success"},
+         "Task Info": {"Executor ID": "1", "Launch Time": 0, "Finish Time": 100},
+         "Task Metrics": {"Executor Run Time": 100,
+                          "Shuffle Write Metrics": {"Shuffle Bytes Written": 500}}},
+        {"Event": "SparkListenerStageCompleted",
+         "Stage Info": {"Stage ID": 1, "Stage Attempt ID": 0, "Number of Tasks": 1,
+                        "Failure Reason": "FetchFailed"}},
+        {"Event": "SparkListenerTaskEnd", "Stage ID": 1, "Stage Attempt ID": 1,
+         "Task End Reason": {"Reason": "Success"},
+         "Task Info": {"Executor ID": "1", "Launch Time": 0, "Finish Time": 50},
+         "Task Metrics": {"Executor Run Time": 50,
+                          "Shuffle Write Metrics": {"Shuffle Bytes Written": 700}}},
+        {"Event": "SparkListenerStageCompleted",
+         "Stage Info": {"Stage ID": 1, "Stage Attempt ID": 1, "Number of Tasks": 1}},
+    ]
+    import tempfile
+
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        f.write("\n".join(json.dumps(e) for e in events))
+        path = f.name
+    run = parse_eventlog(path)
+    (st,) = run.stages
+    assert st.shuffle_write_bytes == 700  # attempt 0's 500 not summed in
+    assert st.succeeded == 1 and st.num_tasks == 1
+
+
+def test_failed_tasks_do_not_pollute_skew() -> None:
+    """A long-running FAILED task must not drive skew/straggler ratios."""
+    import json
+    import tempfile
+
+    events = []
+    for _ in range(8):
+        events.append({"Event": "SparkListenerTaskEnd", "Stage ID": 2, "Stage Attempt ID": 0,
+                       "Task End Reason": {"Reason": "Success"},
+                       "Task Info": {"Executor ID": "1", "Launch Time": 0, "Finish Time": 100},
+                       "Task Metrics": {"Executor Run Time": 100}})
+    events.append({"Event": "SparkListenerTaskEnd", "Stage ID": 2, "Stage Attempt ID": 0,
+                   "Task End Reason": {"Reason": "ExceptionFailure"},
+                   "Task Info": {"Executor ID": "1", "Launch Time": 0, "Finish Time": 100000},
+                   "Task Metrics": {"Executor Run Time": 100000}})
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        f.write("\n".join(json.dumps(e) for e in events))
+        path = f.name
+    (st,) = parse_eventlog(path).stages
+    assert st.skew_ratio < 5  # the 1000x failed task is excluded
+    assert st.failed == 1
+
+
+def test_zero_median_ratios_return_one() -> None:
+    """A zero median (trivial stage) must not manufacture astronomical skew ratios."""
+    st = StageMetrics(stage_id=1, task_durs=[0, 0, 0, 400],
+                      task_read_bytes=[0, 0, 0, 345_427])
+    assert st.skew_ratio == 1.0
+    assert st.data_skew_ratio == 1.0
+
+
+def test_fleet_crawl_ranks_worst_first(monkeypatch: pytest.MonkeyPatch) -> None:
     """The crawl scans multiple event logs and ranks the one with findings first."""
+    import airflow_optimizer.optimizations as opt
     from airflow_optimizer.crawl import crawl, render_crawl
 
+    monkeypatch.setattr(opt, "SKEW_MIN_TASK_MS", 0)
     reports = crawl([FIXTURE, CACHE_FIXTURE])
     assert reports[0].source.endswith("eventlog.zstd")  # the skewed job ranks first
     assert reports[0].n_high >= 1

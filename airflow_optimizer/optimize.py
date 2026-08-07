@@ -8,6 +8,8 @@ FAILURE (route). One event log in, an engineer-ready optimization backlog out.
 
 from __future__ import annotations
 
+import re
+
 from .eventlog import parse_eventlog
 from .optimizations import OptFinding, analyze_plan, analyze_run
 
@@ -31,13 +33,16 @@ def optimize_run(eventlog_path: str) -> list[OptFinding]:
 
 
 def _dedup_rank(findings: list[OptFinding]) -> list[OptFinding]:
-    seen, out = set(), []
-    for f in findings:
-        if (f.key, f.title) not in seen:
-            seen.add((f.key, f.title))
-            out.append(f)
+    # Rank first so the higher-impact duplicate survives; dedup on (key, stage) so the
+    # same issue phrased differently collapses while different stages' findings both live.
     rank = {"high": 0, "medium": 1, "low": 2}
-    out.sort(key=lambda f: rank.get(f.impact, 3))
+    seen, out = set(), []
+    for f in sorted(findings, key=lambda f: rank.get(f.impact, 3)):
+        m = re.search(r"Stage (\d+)", f.title)
+        sig = (f.key, m.group(1) if m else f.title)
+        if sig not in seen:
+            seen.add(sig)
+            out.append(f)
     return out
 
 

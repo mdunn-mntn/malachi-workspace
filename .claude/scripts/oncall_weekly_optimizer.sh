@@ -7,9 +7,19 @@
 # Usage:
 #   oncall_weekly_optimizer.sh                 # crawl the live GCS prefix (default)
 #   oncall_weekly_optimizer.sh /path/to/logs   # crawl a local dir of event logs (testing)
+#   oncall_weekly_optimizer.sh --selftest      # hermetic regression check (no GCS needed)
 #
 # Auth : gsutil uses the user's gcloud creds (key-free, SSO). Stale creds -> exit 0 with a note.
 set -uo pipefail
+
+# A v2 rolling part must keep its eventlog_v2_* batch dir: flattened into one download dir,
+# the crawler reads every events_* part as ONE merged log (cross-batch spill sums, colliding
+# stage IDs) and standalone app-*.zstd logs beside them are never analyzed.
+dest_for() {
+    local root="$1" parent
+    parent="$(basename "$(dirname "$2")")"
+    if [[ "$parent" == eventlog_v2_* ]]; then echo "${root}/${parent}"; else echo "$root"; fi
+}
 
 WORKSPACE="/Users/malachi/Developer/work/mntn/workspace"
 PREFIX="${SPARK_EVENTS_PREFIX:-gs://mntn-data-archive-prod/spark-events}"
@@ -20,6 +30,40 @@ REPORT="${OUTDIR}/optimizer_backlog_${DATE}.md"
 
 cd "$WORKSPACE"
 mkdir -p "$OUTDIR"
+
+# ---- Self-check: replay the live download loop on a synthetic fleet (2 standalone apps +
+# 2 v2 rolling batches, cp standing in for gsutil cp) and assert the crawler sees 4 separate
+# jobs. The pre-fix flat copy merged every events_* part into 1 fake job (cron-flatten-1). --
+if [[ "${1:-}" == "--selftest" ]]; then
+    SRC="$(mktemp -d "${TMPDIR:-/tmp}/spark_selftest_src.XXXXXX")"
+    DL="$(mktemp -d "${TMPDIR:-/tmp}/spark_selftest_dl.XXXXXX")"
+    trap 'rm -rf "$SRC" "$DL"' EXIT
+    for app in app-1 app-2; do
+        printf '%s\n' "{\"Event\":\"SparkListenerApplicationStart\",\"App Name\":\"$app\",\"Timestamp\":1000}" \
+                      '{"Event":"SparkListenerApplicationEnd","Timestamp":2000}' > "$SRC/$app.zstd"
+    done
+    for b in aaa bbb; do
+        mkdir -p "$SRC/eventlog_v2_batch-$b"
+        printf '%s\n' "{\"Event\":\"SparkListenerApplicationStart\",\"App Name\":\"batch-$b\",\"Timestamp\":1000}" \
+            > "$SRC/eventlog_v2_batch-$b/events_1_batch-$b.zstd"
+        printf '%s\n' '{"Event":"SparkListenerApplicationEnd","Timestamp":2000}' \
+            > "$SRC/eventlog_v2_batch-$b/events_2_batch-$b.zstd"
+    done
+    [[ "$(dest_for /t "gs://b/p/app-1.zstd")" == "/t" ]] \
+        || { echo "[selftest] FAIL: standalone log not routed flat"; exit 1; }
+    [[ "$(dest_for /t "gs://b/p/eventlog_v2_batch-x/events_1_batch-x.zstd")" == "/t/eventlog_v2_batch-x" ]] \
+        || { echo "[selftest] FAIL: v2 part lost its batch dir"; exit 1; }
+    while IFS= read -r obj; do
+        dest="$(dest_for "$DL" "$obj")"
+        mkdir -p "$dest"
+        cp "$obj" "$dest/"
+    done < <(find "$SRC" -name '*.zstd' | sort)
+    head1="$(python3 -m airflow_optimizer.crawl "$DL" | head -n 1)"
+    [[ "$head1" == *"4 jobs scanned"* ]] \
+        || { echo "[selftest] FAIL: expected 4 jobs scanned, got: $head1"; exit 1; }
+    echo "[selftest] PASS: $head1"
+    exit 0
+fi
 
 # ---- Local-dir mode (testing): crawl a directory that already holds event logs. ----------
 if [[ $# -ge 1 && -d "$1" ]]; then
@@ -55,8 +99,10 @@ fi
 n=0
 while IFS= read -r obj; do
     [[ -z "$obj" ]] && continue
+    dest="$(dest_for "$TMP" "$obj")"
+    mkdir -p "$dest"
     # gsutil cp corrupts .zstd via the crc32c gatekeeper; check_hashes=never is required.
-    if gsutil -o "GSUtil:check_hashes=never" cp "$obj" "$TMP/" >/dev/null 2>&1; then
+    if gsutil -o "GSUtil:check_hashes=never" cp "$obj" "$dest/" >/dev/null 2>&1; then
         n=$((n + 1))
     fi
 done <<< "$listing"
