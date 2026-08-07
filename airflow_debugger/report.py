@@ -221,6 +221,13 @@ def build_troubleshooting(
             if f not in linked_paths:
                 lines.append(f"- {GITHUB_AIRFLOW_TI}/{f} (fixed by {known['inc']})")
 
+    perf = diag.get("perf_profile") or {}
+    if perf.get("findings"):
+        lines += ["", "Perf profile (event log)"]
+        lines += [f"- [{f['impact']}] {f['title']} - {f['fix']}" for f in perf["findings"]]
+    elif perf.get("error"):
+        lines += ["", f"Perf profile unavailable: {perf['error']}"]
+
     if matches:
         lines += [
             "",

@@ -180,6 +180,7 @@ class DataprocEvidence:
 
     engine: str = "dataproc"
     batch_id: str | None = None
+    batch_uuid: str | None = None
     state: str | None = None
     state_message: str | None = None
     application_id: str | None = None
@@ -205,6 +206,7 @@ def analyze_batch(
 
     ev.state = d.get("state")
     ev.state_message = d.get("stateMessage")
+    ev.batch_uuid = d.get("uuid")
     ev.ttl = (d.get("environmentConfig", {}).get("executionConfig", {}) or {}).get("ttl")
     ev.runtime_s = _runtime_seconds(d.get("createTime"), d.get("stateTime"))
     props = (d.get("runtimeConfig", {}) or {}).get("properties", {}) or {}

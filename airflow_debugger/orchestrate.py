@@ -15,10 +15,19 @@ from .report import build_report, build_troubleshooting
 _LOG_TAIL_CHARS = 4000  # raw log tail given to the LLM when signatures found nothing
 
 
-def investigate(log_path: str, use_llm: bool = True) -> dict:
+def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) -> dict:
     """Run the full chain on one failed-task log; return report + provenance."""
     parsed = parse_log_file(log_path)
     diag = diagnose(parsed)
+    if profile_perf:  # perf-shaped failures only (IMP-032); never on other classes
+        try:
+            from .perf_profile import profile
+
+            perf = profile(diag)
+        except Exception:
+            perf = None
+        if perf:
+            diag["perf_profile"] = perf
     ident = diag.get("identity", {})
     root = diag.get("root_signature") or {}
     spark = diag.get("spark") or {}
