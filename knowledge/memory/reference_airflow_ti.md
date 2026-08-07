@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: 60b2f7af-ea4c-4042-bcd9-027f6c6ad945
 doc_type: memory
-keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access, ExternalTaskSensor, skipped_states, failed_states, skip as failure, ExternalTaskFailedError, wait_fpa, globStatus, flat glob, fs.gs.glob.flat.enable, gcs list timeout, literal partition paths, augmentor_log glob, INC-012, PR 1176, basePath, getFileInfoInternal, root stat, directory marker, COLUMN_ALREADY_EXISTS, PR 1177, batch-id attach, create_batch_id, batch with given id already exists, ti_resources spark deploy lag]
+keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access, ExternalTaskSensor, skipped_states, failed_states, skip as failure, ExternalTaskFailedError, wait_fpa, globStatus, flat glob, fs.gs.glob.flat.enable, gcs list timeout, literal partition paths, augmentor_log glob, INC-012, PR 1176, basePath, getFileInfoInternal, root stat, directory marker, COLUMN_ALREADY_EXISTS, PR 1177, batch-id attach, create_batch_id, batch with given id already exists, ti_resources spark deploy lag, model_backfill.sh, backfill runbook, PR 1180]
 domain: [repos, infra]
 lifecycle: active
-last_verified: 2026-08-06
+last_verified: 2026-08-07
 ---
 ## Repo
 - **GitHub:** SteelHouse/airflow-ti
@@ -54,7 +54,7 @@ Three-layer feature store on GCP Dataproc Serverless via Airflow (Astronomer):
 3. **Compile:** `uv run python model_upload.py --dryrun` (validate)
 4. **Upload to dev:** `uv run python model_upload.py` (compiles + uploads to GCS dev)
 5. **Test on Dataproc:** `uv run python model_run.py {model_name} -a '{"run_date": "YYYY-MM-DD"}'` — submits to Dataproc Serverless, writes to dev bucket with branch suffix
-6. **Backfill:** run for multiple past dates to populate dev output
+6. **Backfill:** use `scripts/model_backfill.sh` + `docs/model_backfill.md` (merged airflow-ti#1180, 2026-08-07) — the canonical dev-run+copy method (seed/mirror/daily/monthly/copy modes, read-resolution rules). Detail: [[reference_airflow3_backfill_scoping]]
 7. **Verify:** check output in `gs://mntn-data-archive-dev/feature_store/...`
 8. **PR:** create PR, get Ryan's review
 9. **Move to prod:** after PR approved, copy backfilled data from dev to prod (or re-run in prod)

@@ -244,6 +244,12 @@ _(document the shadow-parity methodology + household-stability metric)_
 
 ## 8. Open Items / Follow-ups
 
+- **Review the ID team's pyspark household-resolution module before more FS work** (added 2026-08-07): a
+  shared IDs-in→households-out interface with graph-use crediting logs, intended to replace the FS
+  conversion piece — may supersede `household_resolution.py`. Requirement doc ambiguous; Sean awaiting
+  Jack's reply (dev-mntn-id thread). Read the doc, post questions.
+- **Dev cleanup pending user go:** ~2.7 TB backfill data in `mntn-data-archive-dev` (seed + L2/L3 copies).
+
 ### Status after 2026-08-03 research (what's resolved vs still open)
 **Research-resolved** (see §4a): PR #1156 is real/merged (Q1 — build on merged helpers, not a fresh branch;
 `(ip,guid)` L1 is for the GUID fast-follow, IPv4-only v1 uses the existing IP L1); the resolver interface is

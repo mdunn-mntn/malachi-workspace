@@ -1,12 +1,12 @@
 ---
 name: Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG
-description: The Astronomer Airflow-3 UI "Run Backfill" is whole-DAG only (no per-task selection); to backfill a few new models, run them in dev via model_run.py and gsutil-copy to prod, or build a dedicated backfill DAG. Plus the API path-prefix + safe-unpause heuristic.
+description: Airflow-3 UI backfill is whole-DAG only; the shipped method is scripts/model_backfill.sh (dev model_run.py + gcloud storage copy to prod, merged airflow-ti#1180). Read-resolution rules, PAM grants, graph build cadence, API path-prefix + safe-unpause.
 type: reference
 doc_type: memory
-keywords: [airflow 3 backfill, astronomer backfill UI, whole-dag backfill, feature_store_setup_model backfill, dev copy to prod, dedicated backfill DAG, base href api prefix, dagRuns api v2, non-terminal runs unpause, household FS backfill, AUDI-1170, pam grant, dataproc-runtime-actas, dataproc-submit, serviceAccountUser, model_run.py permissions]
+keywords: [airflow 3 backfill, astronomer backfill UI, whole-dag backfill, feature_store_setup_model backfill, dev copy to prod, dedicated backfill DAG, base href api prefix, dagRuns api v2, non-terminal runs unpause, household FS backfill, AUDI-1170, pam grant, dataproc-runtime-actas, dataproc-submit, serviceAccountUser, model_run.py permissions, graph build cadence, PATH_NOT_FOUND mirror dt, model_backfill.sh, PR 1180, monthly suffix dir]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-08-06
+last_verified: 2026-08-07
 ---
 **Astronomer Runtime 3.1-9 / Airflow 3.1.5.** Backfilling a *few new* models (e.g. the household `identity_graph_ip_household_id` → `guid_log_derived_household_id_vertical_id` → `guid_log_pivot_household_id_vertical_id`) into an existing multi-model DAG:
 

@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [no_emdash_no_namedrop, em-dash, en-dash, name-dropping, plain factual writing, mntn_xlsx.py demdash, attribute to tickets, house style, author credit line, dont say fires, jargon word choice]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-07-22
+last_verified: 2026-08-07
 ---
 In summaries, ticket docs, and shareable deliverables: **do not use em-dashes (—) or en-dashes (–)**, and **do not name-drop people** (colleagues, requesters, sources). Just factual information.
 
@@ -22,3 +22,5 @@ In summaries, ticket docs, and shareable deliverables: **do not use em-dashes (�
 **Enforced in the .xlsx builder (2026-07-22):** `lib/mntn_xlsx.py` now auto-strips em/en dashes on every written string (`_demdash()` -> spaced hyphen) across titles/methods/takeaways/cells/glossary/notes (SQL body + ASCII hyphens untouched). So any workbook built with `MntnWorkbook` is guaranteed em-dash-free; you don't have to scrub them by hand. Still write clean by default in chat, decks, and other prose. See [[reference_xlsx_master_format]].
 
 **Also don't name the requester/audience (reinforced 2026-07-21):** do NOT write "X asked for this" / "for X's request" in a shareable — keep who-it's-for generic ("the recurring question", "the request", "leadership"). The ONLY name allowed in an .xlsx is the author credit line (`Malachi Dunn · Audience Intelligence`, per [[reference_xlsx_master_format]]). This applies to the workbook content itself; naming people freely in chat/analysis is fine.
+
+- Reinforced 2026-08-07: PR bodies/descriptions count — a "(per <name>)" attribution had to be stripped from airflow-ti#1180.

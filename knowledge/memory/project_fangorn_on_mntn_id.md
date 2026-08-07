@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [fangorn on mntn id, audi-1049, household re-key, feature store, household_id, audi-1166, audi-1105, sean yang, airflow-ti, graph_translation_signal]
 domain: [project, identity, audience-scoring]
 lifecycle: active
-last_verified: 2026-07-29
+last_verified: 2026-08-07
 ---
 **AUDI-1049 "Fangorn on MNTN ID"** (epic owner Matt Brorby; ⚠ AUDI-1057 is a *Done* modeling spike, NOT the
 epic). Re-keys the Fangorn feature store + intent scoring **IP→MNTN ID (household)**, running parallel to the
@@ -116,3 +116,13 @@ table; multi-IP→household collapse function (Identity chose random-pick "for c
 quality call). Adjacent north-star thread = the Uplift/incrementality model RFD B (AUDI-1052, Matt) — trains on
 the same MID-keyed L3 tables. Related: [[reference_audience_intent_scoring_dag]] [[reference_airflow_ti]]
 [[reference_fangorn_two_model_passes]] [[project_incrementality_experiment]] [[reference_bidder_serving_stores]].
+
+**2026-08-07 status:** the 90-day backfill SHIPPED and is verified in prod (mirror 17 graph builds, L2/L3
+90/90 daily dt 2026-05-09..08-06, monthly Jun-01+Jul-01 both layers; Aug-01 monthly lands via the day-15
+snapshot DAG on Aug-15). Tooling merged upstream: airflow-ti#1180 (`scripts/model_backfill.sh` +
+`docs/model_backfill.md`). Remaining AUDI-1170 scope = the shadow-parity readout (the Sept-4 gate).
+**Watch:** the ID team (Weiang Li, under Jack) is building a shared pyspark module (DataFrame of IDs in →
+households out, with graph-use logging for crediting) intended to REPLACE the FS conversion piece — i.e.
+`utils_model/household_resolution.py` may be superseded. Requirement doc is ambiguous in places; Sean is
+awaiting Jack's clarification (dev-mntn-id thread, ~2026-08-05). Review before building more on
+household_resolution.py.
