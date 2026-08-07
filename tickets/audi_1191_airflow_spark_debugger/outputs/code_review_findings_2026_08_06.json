@@ -1,0 +1,371 @@
+[
+ {
+  "module": "databricks_rca.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/databricks_rca.py:90",
+  "claim": "The task-failure filter `if result and result != \"FAILED\": continue` only recognizes the literal result_state FAILED, so TIMEDOUT and CANCELED tasks are skipped entirely and produce zero per-task evidence.",
+  "failure_scenario": "A run killed by the Databricks job timeout returns state.result_state=\"TIMEDOUT\" on both run and task (verified by executing analyze_run against this shape): failed_tasks=[], get-run-output is never called, no error_trace_tail, no cluster termination check; root_error degrades to the run-level state_message (\"Run timed out after 7200s\"). Same for an Airflow on_kill-cancelled run (CANCELED).",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced by executing analyze_run with _dbx mocked to return a run whose task has state.result_state=\"TIMEDOUT\": output was failed_tasks=[], root_error='Run timed out after 7200s', notes=[], and no jobs get-run-output call was made (call log empty). Identical result with result_state=\"CANCELED\" (root_error='Run cancelled by user'). Trace: line 89 result=\"TIMEDOUT\" is truthy and != \"FAILED\", so line 90 continues past the task; TIMEDOUT and CANCELED are documented Databricks terminal result_state values, so real timeout/cancel failures yield zero per-task evidence and no cluster termination check."
+ },
+ {
+  "module": "databricks_rca.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/databricks_rca.py:89",
+  "claim": "Tasks with no result_state yet (life_cycle_state RUNNING/PENDING) pass the filter and are reported as failed tasks, with a guaranteed get-run-output CLI error per task.",
+  "failure_scenario": "The INC-009 pattern: Airflow marks the task failed while the Databricks run is still alive (the run later SUCCEEDED). Running analyze_run at pager time against the in-flight run (verified by execution: tasks with state={life_cycle_state:RUNNING}) yields one phantom failed_tasks entry per unfinished task with error=None plus a 'Run X is not in a terminal state' note each, misreporting a live-or-succeeding run as multi-task failure.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced by executing analyze_run against a run with 2 tasks in state={life_cycle_state:RUNNING} / PENDING (no result_state) and get-run-output returning the CLI's non-terminal error: output was 2 failed_tasks entries (task_key='model'/'post', error=None, trace=None) plus notes ['get-run-output(700) failed: Run 700 is not in a terminal state.', 'get-run-output(701) failed: Run 701 is not in a terminal state.']. Trace: line 89 result=None, line 90 `None and ...` is falsy so the task is NOT skipped. The scenario is real: on-call/incident_log.jsonl INC-009 (2026-07-31) records Airflow marking the task failed while Databricks run 65237255325756 was still running and later SUCCEEDED."
+ },
+ {
+  "module": "databricks_rca.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/databricks_rca.py:86",
+  "claim": "`run.get(\"tasks\")` uses only the first page of tasks; next_page_token is never followed, so a failed task at position >100 is invisible.",
+  "failure_scenario": "Installed CLI v0.298.0 help confirms get-run paginates tasks at 100 elements and requires --page-token. Verified by execution: a run with 100 SUCCESS tasks on page 1, next_page_token set, and the failed task on page 2 produces failed_tasks=[] and falls back to the run-level state_message with no trace.",
+  "verdict": "CONFIRMED",
+  "evidence": "Installed CLI (Databricks CLI v0.298.0) `jobs get-run --help` states: 'Large arrays in the results will be paginated when they exceed 100 elements... Use the next_page_token field... pass its value as the page_token in subsequent requests', with a --page-token flag (no auto-follow). The string next_page_token appears nowhere in databricks_rca.py. Reproduced by execution: a run payload with 100 SUCCESS tasks plus next_page_token set (failed task on page 2) produced failed_tasks=[], root_error='Task seg_101 failed' (run-level state_message only), notes=[], and no second get-run call with --page-token was issued."
+ },
+ {
+  "module": "databricks_rca.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/databricks_rca.py:96-102",
+  "claim": "A non-dict get-run-output payload (e.g. CLI stdout of literal `null`, parsed to None) is silently dropped: neither branch fires, no note is appended, contradicting the surface-every-CLI-error contract that line 78 enforces for get-run.",
+  "failure_scenario": "Verified by execution: _dbx returning None for get-run-output leaves ev.notes empty and the TaskFailure with error=None and no trace, with no indication evidence was lost; the analogous non-dict guard exists on the get-run path (line 78) but not here.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced by execution: with _dbx returning None for get-run-output on a genuinely FAILED task, the result was error=None, error_trace_tail=None, notes=[] \u2014 evidence silently lost with no note. Trace: line 97 `isinstance(out, dict) and not out.get(\"_cli_error\")` is False for None, and line 101 `elif isinstance(out, dict)` is also False, so neither branch fires. The input is within the module's own contract: _dbx is annotated `-> dict | list | None` (line 27) and json.loads('null') returns None (empty stdout is separately caught as a JSONDecodeError -> _cli_error dict). The get-run path guards non-dict at line 78; the get-run-output path does not. Low severity is fair \u2014 the triggering payload (literal null / non-dict JSON) is rare \u2014 but the misbehavior is concrete when it occurs."
+ },
+ {
+  "module": "incident_match.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/incident_match.py:31",
+  "claim": "_load() json.loads has no per-line error handling, so a single malformed JSONL line makes match() raise and crashes the entire investigate() chain (orchestrate.py has no try/except).",
+  "failure_scenario": "Append a truncated record ('{\"inc\": \"INC-013\", \"dag\": \"foo\", \"signa') to on-call/incident_log.jsonl \u2014 the exact residue of an interrupted /oncall write-back. Reproduced: match() raises json.JSONDecodeError('Unterminated string...'), and every subsequent RCA run on ANY log fails before build_report. Docstring only covers the absent-corpus case; corrupt corpus is fatal.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced against a scratch copy of the real corpus with the exact truncated line appended: match('tpa_ipdsc_export','wait_ds17_src','sensor timeout') raised json.JSONDecodeError('Unterminated string starting at: line 1 column 34 (char 33)'), and orchestrate.investigate() on the real log on-call/airflow_logs/2026-08-05/033816__tpa_ipdsc_export__wait_ds17_src__try1__failed.log crashed with the same exception (raised from json/decoder.py line 353) before build_report ran. Code trace confirms: incident_match.py:31 is a bare list comprehension json.loads(line) with no try/except, and orchestrate.py:31 calls match_incidents(...) unguarded at line 31, before report = build_report(diag) at line 32, so the corrupt corpus is fatal to every RCA run on any log. The docstring at incident_match.py:41 promises only 'empty if the corpus is absent'."
+ },
+ {
+  "module": "incident_match.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/incident_match.py:54",
+  "claim": "Jaccard denominator |q OR doc| is dominated by long real signatures (39-73 tokens in INC-005..INC-012), so text-only matches score below min_score=0.08 even at 100% query-token overlap \u2014 the matcher silently returns [] whenever dag/task identity is missing.",
+  "failure_scenario": "Reproduced on the real 2026-08-05 wait_ds17_src failed log: pipeline query is 'sensor-timeout sensor-timeout'; with dag=None/task=None (the tool's own historical bug class \u2014 dag_id regex rejecting quoted values), both tokens hit INC-010's doc yet score = 2/51 = 0.039 < 0.08, returning []. Even a perfect 6/6-token query vs INC-012 scores 0.0822 (one stray token from elimination). Overlap coefficient len(q&doc)/len(q) would score these 1.0.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced end-to-end. Running the real pipeline (diagnose(parse_log_file(...)) + orchestrate's query construction) on on-call/airflow_logs/2026-08-05/033816__tpa_ipdsc_export__wait_ds17_src__try1__failed.log yields query 'sensor-timeout sensor-timeout' (tokens {sensor, timeout}). Against the real corpus, both tokens are in INC-010's doc: |doc|=51, intersection=2, union=51, Jaccard=0.0392 < min_score=0.08, and match(None, None, query) returns [] despite 100% query-token overlap with the exactly-matching past incident. Sub-claim also verified: INC-012 |doc|=73, so a 6-token query fully contained in the doc scores 6/73=0.0822, barely above threshold. With identity present the same query scores 0.578 (boosts), proving the text-only path alone can never clear 0.08 against these real 39-73-token signatures; identity-extraction failure (the tool's documented historical bug class) silently yields zero matches."
+ },
+ {
+  "module": "incident_match.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/incident_match.py:55",
+  "claim": "The +0.30 dag-equality boost alone always clears min_score, so any dag with >=3 logged incidents fills all of top_k=3 with same-dag records regardless of relevance, crowding out the genuinely similar cross-dag incident.",
+  "failure_scenario": "Reproduced: match('keyword_ddp_reporting', 'export_spark_job', 'Dataproc batch cancelled at TTL shuffle spill') returns INC-006 (0.361, sensor timeout), INC-007 (0.338, OpenAI 400), INC-009 (0.31, pod eviction) \u2014 none related \u2014 while INC-005, the actual TTL/shuffle-spill incident (Jaccard 0.146), is dropped from the report entirely.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced against the real corpus: match('keyword_ddp_reporting', 'export_spark_job', 'Dataproc batch cancelled at TTL shuffle spill') returns exactly [INC-006 score 0.361 (AirflowSensorTimeout), INC-007 score 0.338 (OpenAI 400 quota), INC-009 score 0.310 (pod eviction)] \u2014 none TTL/shuffle-related. Per-record decomposition: INC-006 jaccard 0.061+0.30, INC-007 0.038+0.30, INC-009 0.010+0.30, while INC-005 (the actual 'Dataproc batch cancelled at 3h TTL ... shuffle spill' incident, tpa_mntn_id_export) has the highest raw Jaccard 0.146 but no boost, ranks 4th, and is cut by scored[:top_k] at line 70. Since 0.30 > min_score 0.08, the dag boost alone guarantees inclusion (line 55-56), so keyword_ddp_reporting's 3 logged incidents (INC-006/007/009) fill all top_k=3 slots regardless of relevance."
+ },
+ {
+  "module": "context_parse.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/context_parse.py:57",
+  "claim": "exc_text = str(exc) discards the exception CLASS name, so every signature that fingerprints a class name (external_task_failed on 'ExternalTaskFailedError', concurrent_delta_write, shuffle_fetch_failure, etc.) can never match in the callback tier even though parse.py matches it on the same incident's log.",
+  "failure_scenario": "Real incident 2026-08-05 wait_fpa (hashed_email_ds_26_signals): ctx['exception'] = ExternalTaskFailedError(\"Some of the external tasks ['dsid26_predactiv_processing'] in DAG fpa_site_visit_batch_serverless failed.\"). classify(str(exc)) -> None (verified), so parse_context returns airflow_signature=None; parse_log on the same log returns external_task_failed (verified). The in-callback tier silently loses the most common sensor-cascade signature family (INC-006/007/011). Fix shape: exc_text = f\"{type(exc).__name__}: {exc}\" when exc is a BaseException. The module's own tests mask this by passing exception as a plain string.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced with the real incident. The real 08-05 log (230648__hashed_email_ds_26_signals__wait_fpa__try2__failed.log, line 15) shows ctx['exception'] is an exception OBJECT: 'exception': ExternalTaskFailedError(\"Some of the external tasks ['dsid26_predactiv_processing'] in DAG fpa_site_visit_batch_serverless failed.\"). Executed: str(exc) yields only the message; classify(str(exc)) -> None; parse_context(ctx) -> airflow_signature=None. parse_log on the same log -> signature key 'external_task_failed'. With the fix shape f\"{type(exc).__name__}: {exc}\", classify -> Match(key='external_task_failed', matched_on='ExternalTaskFailedError'). Masking also verified: tests/test_context_parse.py _ctx types exc as str and passes strings that already embed the class name (e.g. 'airflow.exceptions.AirflowSensorTimeout: ...'); all 19 tests pass despite the bug."
+ },
+ {
+  "module": "context_parse.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/context_parse.py:41",
+  "claim": "Engine value drifts from parse.py for non-Spark tasks: _engine_for returns 'other' for any concrete class name, while parse_log returns 'unknown' for the identical failure because Airflow-3 logs contain no op_classpath (parse.py:69 'opc and \"Operator\" in opc' is False), so the two tiers report conflicting engines for the same incident.",
+  "failure_scenario": "Same real 2026-08-05 wait_fpa incident: parse_context(ctx) -> engine='other'; parse_log(same log) -> engine='unknown' (both verified by execution). Any consumer that compares/dedupes the first-look ParsedFailure against the deep-tier ParsedFailure (or incident records keyed on engine) sees a mismatch on every sensor/_PythonDecoratedOperator/GKEStartPodOperator failure \u2014 which is 4 of the 6 operator classes observed in the 08-05/08-06 prod logs.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced on the same real incident: parse_context(ctx with task=ExternalTaskSensor()) -> engine='other'; parse_log(230648__...wait_fpa__try2__failed.log) -> engine='unknown', operator=None. Verified grep across ALL on-call/airflow_logs/2026-08-05 and 2026-08-06 logs: zero op_classpath occurrences, so parse.py:69's 'other' branch is unreachable on Airflow-3 logs and engine stays 'unknown'. Observed failed-log operator classes = 6 (DataprocCreateBatchOperator, DbxDbtOperator, ExternalTaskSensor, GCSObjectsWithPrefixExistenceSensor, GKEStartPodOperator, _PythonDecoratedOperator); 4 of 6 are non-Spark, matching the claim. The line-32 docstring '(mirrors parse.parse_log)' is false for this class. Caveat: 'other' vs 'unknown' changes no branch in current route()/diagnose()/report.py (both fall through identically); the conflict is visible in the emitted engine field of the diagnosis/synth payload, not in control flow."
+ },
+ {
+  "module": "context_parse.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/context_parse.py:35",
+  "claim": "The '.dbx.' entry of _DATABRICKS_OPS is a dead branch in _engine_for: a Python class __name__ can never contain a dot, so a databricks operator identifiable only by its .dbx. module path (the reason that token exists in parse.py, which matches op_classpath/log body) routes to engine='other' in the callback tier.",
+  "failure_scenario": "A custom operator class defined under include/operators/dbx/ whose name lacks the three name tokens, e.g. class SubmitDbxJob: parse.py sees '.dbx.' in the classpath/traceback and routes 'databricks'; _engine_for('SubmitDbxJob') -> 'other' (verified by execution), so the callback tier mis-routes the engine and the report/deep-tier handoff loses the databricks hint.",
+  "verdict": "CONFIRMED",
+  "evidence": "Dead branch verified by execution: '.' in SubmitDbxJob.__name__ -> False (impossible for any class); _engine_for('SubmitDbxJob') -> 'other'. The reviewer's SubmitDbxJob is hypothetical, but a REAL victim exists: MntnKubePodOperator, defined at airflow-ti include/dbx/kube_operators.py:119 and used by real DAGs (dags/machine_learning/mntn_match_incrementals_fetch.py and _submit.py), contains none of DbxDbtOperator/DatabricksSubmitRun/ModelPysparkDbxJob. Real prod logs carry the module path in the body (verified: 5 logs across 08-05/08-06 contain 'include.dbx.kube_operators.DbxDbtOperator', and parse.py's hay=opc or text matches '.dbx.' there), so on an MntnKubePodOperator failure parse.py routes 'databricks' while _engine_for(type(task).__name__) routes 'other'."
+ },
+ {
+  "module": "context_parse.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/context_parse.py:60",
+  "claim": "parse_context reads the TI but ignores map_index (and is_mapped) even though the real Airflow-3 RuntimeTaskInstance carries both, so two failing map indexes of the same mapped task produce byte-identical ParsedFailure identities (parse.py is equally blind, and ParsedFailure has no field for it).",
+  "failure_scenario": "Real prod mapped-task failures exist on both sample days: on-call/airflow_logs/2026-08-05/110652__url_pattern_identification__run_spark_pattern_identification__map0__try2__failed.log and the 2026-08-06 equivalent. If map0 and map1 both fail, both callbacks emit dag_id/task_id/run_id/try_number-identical ParsedFailures; incident matching and reporting cannot distinguish which mapped instance failed (only the log_url note differs).",
+  "verdict": "CONFIRMED",
+  "evidence": "Executed: built two contexts differing only in ti.map_index (0 vs 1, is_mapped=True) for url_pattern_identification/run_spark_pattern_identification; asdict(parse_context(ctx0)) == asdict(parse_context(ctx1)) -> True (byte-identical, notes=[] both). Real-world grounding verified: mapped failure logs exist on both sample days (110652__...__map0__try2__failed.log on 08-05, 110640__ on 08-06) with is_mapped=True, map_index=0 in the log body; the DAG fans out via run_spark_pattern_identification.expand(config=advertiser_configs) (dags/attribution/url_pattern_identification.py:155); ParsedFailure (parse.py:31-43) has no map_index field; and the real RuntimeTaskInstance repr carries map_index/is_mapped but NO log_url attribute, so even the log_url note would not distinguish them. Caveat keeping this low: only map0 failed in the 2-day sample, so the two-indexes-failing precondition was not observed, though it is the normal failure mode for a fan-out hit by a systemic error."
+ },
+ {
+  "module": "report.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/report.py:75",
+  "claim": "Tail truncation (report[:499]+ellipsis) slices mid-URL, emitting a plausible-looking but wrong console deep link because the link is the last line and truncation is character-blind.",
+  "failure_scenario": "Real log on-call/airflow_logs/2026-08-06/013002__vertical_classification_api__ddp_vertical_classification_api__try1__failed.log: dbt_test_failure signature (302-char cause) + identity + fix line + Databricks link assembles to >500 chars; the emitted report ends 'https://1262887251702944.4.gcp.databricks.com/jobs/854367\u2026' (job_id cut mid-number; without job_id it ends 'run 4857687\u2026', run_id cut mid-number). Clicking navigates to a nonexistent/wrong job. No test covers the truncation path.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced end-to-end: `python3 -m airflow_debugger.report on-call/airflow_logs/2026-08-06/013002__...__failed.log` emitted a report whose last line is 'https://1262887251702944.4.gcp.databricks.com/jobs/794948\u2026' \u2014 the live-fetched job_id truncated after 6 digits and the '/runs/<run_id>' segment dropped entirely, i.e. a plausible-looking deep link to a nonexistent/wrong job. (Actual job_id starts 794948, not the reviewer's predicted 854367; the defect is otherwise exact.) Assembly: 95-char answer line + 301-char dbt_test_failure cause + 43-char fix line + full /jobs/<15-digit>/runs/<15-digit> link > 500, so report.py:75 cuts inside the URL. The only length test, airflow_debugger/tests/test_parse.py:95 (`assert len(r) <= 500`), uses a short abbreviated-cause diag ('K8s pod evicted or lost mid-run.') that never reaches the truncation branch."
+ },
+ {
+  "module": "report.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/report.py:73-75",
+  "claim": "Two signatures' likely_cause alone exceeds the 500 budget (gcs_list_timeout=543 chars, external_task_failed=599), so the fix-action and console-link lines are always silently dropped and the cause is cut mid-instruction.",
+  "failure_scenario": "Real log on-call/airflow_logs/2026-08-05/230648__hashed_email_ds_26_signals__wait_fpa__try2__failed.log matches external_task_failed; report caps at exactly 500 ending \"check the producer's source_available_<ds> log for 'N\u2026\", losing the skipped-vs-failed resolution steps and the 'Never clear-to-retry a skip' warning, the exact guidance that prevents a bad backfill (INC-011). Any gcs_list_timeout hit on a dataproc batch likewise loses both the fix line and the entire console link.",
+  "verdict": "CONFIRMED",
+  "evidence": "Measured in signatures.py: len(gcs_list_timeout.likely_cause)=543, len(external_task_failed.likely_cause)=599 \u2014 both alone exceed _MAX=500, so with any answer line the cut always lands inside the cause and the fix/link lines never survive. Reproduced on the real log: build_report(diagnose(parse_log_file('on-call/airflow_logs/2026-08-05/230648__hashed_email_ds_26_signals__wait_fpa__try2__failed.log'))) returns exactly 500 chars ending verbatim \"check the producer's source_available_<ds> log for 'N\u2026\" \u2014 the skipped-vs-failed resolution steps, the 'Never clear-to-retry a skip' warning, and the 'Not a code fix' line are all silently dropped."
+ },
+ {
+  "module": "report.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/report.py:69",
+  "claim": "The no-signature notes fallback reads only diag['spark']['notes'], but ParsedFailure.notes never enters the diagnosis dict and spark is None exactly when the parser wrote a note, so parser notes can never surface in a report.",
+  "failure_scenario": "Real logs on-call/airflow_logs/2026-08-05/045256__tpa_ipdsc_export__ipdsc_ds_17__try1__failed.log and 033824__tpa_ipdsc_export__ipdsc_ds_17__try1__upstream_failed.log parse to engine=dataproc, batch_id=None, notes=[\"dataproc engine but no 'Batch job <id>' line found\"]; diagnose() sets spark=None (route not called without an id) and drops parsed.notes, so build_report emits only 'RCA [low]: unknown task - unclassified' with zero explanation of why nothing was found.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced on both real logs: parse_log_file gives engine='dataproc', batch_id=None, notes=[\"dataproc engine but no 'Batch job <id>' line found\"], airflow_signature=None, dag_id/task_id=None. diagnose() (parse.py:114) skips route() without batch_id/dbx_run_id so diag['spark'] is None, and its returned dict contains no key carrying parsed.notes. build_report line 69 reads only (diag.get('spark') or {}).get('notes', []) -> ''. Actual output for both logs: 'RCA [low]: unknown task - unclassified' \u2014 the parser's diagnostic note is unreachable by construction (spark is populated only when a job id WAS found, i.e. exactly when no such note exists)."
+ },
+ {
+  "module": "report.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/report.py:35",
+  "claim": "_short_cause's regex \\[([A-Z0-9_]{4,})\\] rejects Spark 3.4+/Databricks dotted error classes because '.' is not in the character class and ']' must immediately follow, so the headline silently degrades to the generic sig_class.",
+  "failure_scenario": "root_error='[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column ... cannot be resolved' (the documented Databricks error-class format, also [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]) yields no match; the answer line reads 'query/schema-error' instead of the specific error code the docstring promises for Spark failures. Same defect class as the quoted-dag_id bug: a regex that misses a real, documented log shape.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced by running _short_cause: root_error='[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column ... cannot be resolved.' -> 'query/schema-error'; '[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] ...' -> 'query/schema-error'; undotted '[UNRESOLVED_COLUMN] ...' -> 'UNRESOLVED_COLUMN'. The regex at report.py:35 excludes '.' so the documented Spark 3.4+/Databricks CLASS.SUBCLASS error-condition format never matches, degrading the headline to sig_class against the docstring's promise ('the bracketed error code (Spark failures)'). The input shape is real, not invented: root_error is verbatim Databricks get-run-output error text (databricks_rca.py:98,119) and the tool's own analysis_exception signature (signatures.py:147) expects the UNRESOLVED_COLUMN family. Caveat on weight: no dotted class appears in the current sample-log corpus (grep found only undotted '[PATH_NOT_FOUND]'), consistent with the [low] rating."
+ },
+ {
+  "module": "orchestrate.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/orchestrate.py:48",
+  "claim": "Any truthy synthesize() return, including its error stub \"(LLM synthesis unavailable: ...)\" (synth.py:48), replaces the deterministic report and falsely sets confidence=\"llm\" and llm_used=True.",
+  "failure_scenario": "Unclassified failure (root_signature None), use_llm=True, anthropic SDK installed but auth/network fails (e.g. no ANTHROPIC_API_KEY on a key-free machine): reproduced by patching anthropic.Anthropic to raise; output was only '(LLM synthesis unavailable: FakeAuthError)' with confidence=llm, llm_used=True, discarding the valid 'RCA [low]: set_gaclid_enabled_flag/send_notification - unclassified' report.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced. anthropic is installed in this env; patched anthropic.Anthropic to raise FakeAuthError (the auth-fails path inside synth.py's try at lines 39-47) and ran investigate() on the real on-call/airflow_logs/2026-08-06/010810__set_gaclid_enabled_flag__send_notification__try2__failed.log, whose root_signature is None. Output: report='(LLM synthesis unavailable: FakeAuthError)', confidence='llm', llm_used=True. Same log with use_llm=False returns 'RCA [low]: set_gaclid_enabled_flag/send_notification - unclassified', which the truthy stub discards at orchestrate.py:48-49; lines 53 and 56 key confidence/llm_used off the same truthy stub."
+ },
+ {
+  "module": "orchestrate.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/orchestrate.py:31",
+  "claim": "match_incidents is called with no exception isolation, so a single malformed line in on-call/incident_log.jsonl (json.loads per line in incident_match.py:31) crashes investigate() before any report is returned.",
+  "failure_scenario": "Reproduced: corpus whose last line is the truncated append '{\"inc\": \"INC-013\", \"dag\": \"ga4\", \"task\"' makes investigate() on the real 2026-08-06 ga4 failed log raise JSONDecodeError, even though the deterministic diagnosis (RCA [high] auth) had already been computed; the docstring frames the matcher as an auxiliary attach step.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced. Copied the real corpus and appended the truncated line '{\"inc\": \"INC-013\", \"dag\": \"ga4\", \"task\"'; investigate() on the real on-call/airflow_logs/2026-08-06/114207__ga4__fetch_transaction_conversion_report__try2__failed.log raised json.decoder.JSONDecodeError ('Expecting ':' delimiter: line 1 column 40') with traceback orchestrate.py:31 -> incident_match.py:46 -> incident_match.py:31, before build_report at orchestrate.py:32 ever ran. With the intact corpus the identical log returns 'RCA [high]: ga4/fetch_transaction_conversion_report - auth' at confidence high, so a computed high-confidence diagnosis is lost to a crash in the auxiliary attach step."
+ },
+ {
+  "module": "orchestrate.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/orchestrate.py:26",
+  "claim": "The incident-match query includes diag[\"root_error\"], which is always None for dataproc because parse.py:140 reads spark.get(\"root_error\") but DataprocEvidence names the field error_text.",
+  "failure_scenario": "Verified on the real 2026-08-06 url_pattern_identification dataproc failure: diag['root_error'] is None while the spark bundle carries error_text; any dataproc failure whose error_text holds the exception (e.g. an OOM traceback) never contributes those tokens to incident matching, so past incidents on other DAGs sharing the error cannot match.",
+  "verdict": "CONFIRMED",
+  "evidence": "Confirmed. dataclasses.fields(DataprocEvidence) = [engine, batch_id, state, state_message, application_id, ttl, runtime_s, has_event_log, event_log_uri, spark_config, error_text, signature, notes] \u2014 no root_error, so asdict() can never produce that key and parse.py:140 (spark or {}).get('root_error') is structurally None for every dataproc bundle (DatabricksEvidence does have root_error, databricks_rca.py:69, so the key works only for databricks). Live run on the real 2026-08-06 url_pattern_identification log (batch url-pat-id-63736-202608061106, state CANCELLED): diag['root_error']=None; spark keys include error_text, not root_error. On my rerun error_text was also empty (Cloud Logging returned no driver log today), so I additionally drove the exact diagnose() path with a DataprocEvidence whose error_text held 'java.lang.OutOfMemoryError: Java heap space': diag['root_error'] stayed None and the orchestrate.py:21-30 incident-match query was '' \u2014 the OOM tokens never reach matching."
+ },
+ {
+  "module": "orchestrate.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/orchestrate.py:38-45",
+  "claim": "The evidence bundle passed to synthesize (and the diag passed to build_report) has no channel for ParsedFailure.notes, which diagnose() (parse.py:127-144) drops entirely.",
+  "failure_scenario": "Verified: a dataproc-operator log with no 'Batch job <id>' line (task failed before batch submission) sets parse note \"dataproc engine but no 'Batch job <id>' line found\", yet the report is a bare 'RCA [low]: ... - unclassified' and the LLM evidence is {engine: dataproc, spark: None} with no explanation of why the Spark layer is empty, so the fallback LLM reasons over silently incomplete evidence.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced. Fed parse_log() the real 2026-08-06 url_pattern_identification log with its 'Batch job' lines removed (failure-before-batch-submission shape): parsed.engine='dataproc', batch_id=None, parsed.notes=[\"dataproc engine but no 'Batch job <id>' line found\"]. diagnose() output has no 'notes' key (parse.py:127-144 never copies parsed.notes), the evidence dict built exactly as orchestrate.py:38-45 contains the note string nowhere (json dump checked; spark=None, spark_outcome='none'), and build_report() emits the bare 'RCA [low]: url_pattern_identification/run_spark_pattern_identification - unclassified' (report.py:69 only reads spark-level notes, and spark is None). The why-Spark-is-empty explanation is silently lost to both the report and the LLM fallback."
+ },
+ {
+  "module": "parse.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/parse.py:73",
+  "claim": "The dataproc batch-id regex 'Batch job (\\S+)' is case-sensitive and matches only the completion wording, so real failed runs (which log 'Starting batch <id>' and lowercase 'batch job <id>' and die before the capital 'Batch job <id> completed.' line) yield batch_id=None and the failed batch is never routed to the Dataproc analyzer.",
+  "failure_scenario": "Real prod log on-call/airflow_logs/2026-08-05/045256__tpa_ipdsc_export__ipdsc_ds_17__try1__failed.log: contains 'Starting batch ipd-ds-17-x5m-20260804-023500-1' and 'Waiting for the completion of batch job ipd-ds-17-x5m-20260804-023500-1' but no capital 'Batch job' line; parse_log_file returns engine=dataproc, batch_id=None, note \"dataproc engine but no 'Batch job <id>' line found\", airflow_signature=None, so diagnose() produces no Spark RCA and no root signature for a genuine failed batch (also reproduced on 033824__tpa_ipdsc_export__ipdsc_ds_17__try1__upstream_failed.log; the sibling success log 050343 shows 'Batch job ... completed.' is emitted only on success).",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced by running parse_log_file on on-call/airflow_logs/2026-08-05/045256__tpa_ipdsc_export__ipdsc_ds_17__try1__failed.log: output engine='dataproc', batch_id=None, notes=[\"dataproc engine but no 'Batch job <id>' line found\"], airflow_signature=None. The log contains 'Starting batch ipd-ds-17-x5m-20260804-023500-1' (line 18) and lowercase 'completion of batch job ...' (line 22) but no capital 'Batch job' line. Sibling success log 050343...try3__success.log has 'Batch job ipd-ds-17-vwf-20260804-023500-3 completed.' (line 23) and parses batch_id correctly, proving the capital wording is success-only. With batch_id=None, diagnose() line 114 gate (parsed.batch_id or parsed.dbx_run_id) is False, so spark=None and build_report on this real failed run emits 'RCA [low]: unknown task - unclassified' \u2014 no Dataproc RCA. Also reproduced on 033824...try1__upstream_failed.log (identical output)."
+ },
+ {
+  "module": "parse.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/parse.py:56-58",
+  "claim": "The run_id regex matches the k8s-sanitized pod-label dict ('run_id': 'scheduled__2026-08-05T1530000000-1182d226a') which appears earlier in the log than the real run_id, so parse returns a mangled identifier that does not exist as an Airflow run_id.",
+  "failure_scenario": "7 of 9 real failed logs across 2026-08-05 and 2026-08-06 (all DbxDbtOperator vertical_classification_api logs plus the GKEStartPodOperator ga4 log): e.g. 163001__vertical_classification_api__ddp_vertical_classification_api__try1__failed.log line 13 'Building pod ... with labels: {... 'run_id': 'scheduled__2026-08-05T1530000000-1182d226a' ...}' is matched first, while the true run_id 'scheduled__2026-08-05T15:30:00+00:00' (manifest value, log line 60) is ignored; the report and incident record carry a run_id that cannot be looked up in the Airflow UI/API.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced: parse_log_file on 2026-08-05/163001__vertical_classification_api__ddp_vertical_classification_api__try1__failed.log returns run_id='scheduled__2026-08-05T1530000000-1182d226a' \u2014 the k8s label-sanitized value from the 'Building pod ... with labels:' dict at log line 13. The true run_id 'scheduled__2026-08-05T15:30:00+00:00' appears in the RuntimeTaskInstance dump at line 60 but re.search returns the earlier match. Cross-checked against the 2026-08-06 _manifest.jsonl: ga4/fetch_transaction_conversion_report true run_id is 'scheduled__2026-08-05T11:00:00+00:00' while parse returns 'scheduled__2026-08-05T1100000000-f04472be1'. Running parse over all failed logs in both date dirs shows exactly 7 logs return a mangled hash-suffixed run_id (all 6 vertical_classification_api ddp logs plus both ga4 logs minus overlap: 114128, 163001-0805, 233207, 013002, 114207, 163001-0806, 223103). The reviewer's '7 of 9' denominator is loose (I count 16 failed/upstream_failed logs across both days) but the defect and the 7 mangled outputs are exactly as claimed."
+ },
+ {
+  "module": "parse.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/parse.py:57",
+  "claim": "The run_id fallback regex hardcodes the 'scheduled__' prefix (and the primary 'dagrun_id=' key appears in zero real logs), so any manually triggered or backfill re-run parses run_id=None \u2014 the same one-shape-only defect class as the validated quoted-dag_id bug.",
+  "failure_scenario": "Reproduced: parse_log on the exact INC-012 RuntimeTaskInstance log shape with run_id='manual__2026-08-06T12:34:56+00:00' returns run_id=None; a manual clear/re-run of a failed task (the standard on-call action per the runbook) produces exactly this run_id shape, leaving the failure's identity without a run_id.",
+  "verdict": "CONFIRMED",
+  "evidence": "Both premises verified. (1) grep -rl 'dagrun_id=' over both log dirs: 0 files of 64, so the primary alternative never fires on real logs. (2) Ran parse_log on the real RuntimeTaskInstance log shape (lifted verbatim from a prod log) with run_id='manual__2026-08-06T12:34:56+00:00': result run_id=None while dag_id='vertical_classification_api', task_id='ddp_vertical_classification_api', try_number=2 all parse fine \u2014 line 57's pattern requires the literal prefix (scheduled__[^'\"\\s]+), so manual__/backfill__ run_ids can never match. A manual clear/re-run is the standard on-call action, so the failure mode is realistic, not hypothetical."
+ },
+ {
+  "module": "parse.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/parse.py:62-70",
+  "claim": "'op_classpath=' appears in zero of the 62 real prod logs, so p.operator is always None and the engine='other' branch (line 69-70, the sensor/python/pod classification the comment promises) is unreachable \u2014 real non-Spark failures classify as 'unknown'.",
+  "failure_scenario": "Real failed logs 2026-08-06/114207__ga4__fetch_transaction_conversion_report__try2__failed.log (manifest operator GKEStartPodOperator, operator name present in the log body) and 010810__set_gaclid_enabled_flag__send_notification__try2__failed.log (_PythonDecoratedOperator) both return engine='unknown' instead of 'other', so the report cannot distinguish 'confirmed non-Spark task' from 'could not classify', and the operator field is empty in every real diagnosis.",
+  "verdict": "CONFIRMED",
+  "evidence": "grep -rl 'op_classpath=' across both log dirs: 0 of 64 .log files (reviewer said 62; the zero-occurrence fact holds either way). Since opc=None, line 69's guard 'elif opc and \"Operator\" in opc' can never be True, so engine='other' is dead code on every real log and p.operator is always None. Reproduced the concrete misclassification: parse_log_file on 2026-08-06/114207__ga4__fetch_transaction_conversion_report__try2__failed.log returns engine='unknown', operator=None even though 'GKEStartPodOperator' appears 9 times in the log body and in the manifest; same for 010810__set_gaclid_enabled_flag__send_notification__try2__failed.log (engine='unknown', operator=None, '_PythonDecoratedOperator' appears 4 times in the body)."
+ },
+ {
+  "module": "parse.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/parse.py:51-60",
+  "claim": "For the entire ModelPysparkBatchOperator log family the astronomer listener emits 'TaskInstance Details:' with no payload, so dag_id/task_id/run_id/try_number all parse as None (docstring promises 'Extracts identity'), and parse_log_file ignores the filename that encodes dag/task/try.",
+  "failure_scenario": "All 50 tpa_ipdsc_export logs from 2026-08-05, including the real failed run 045256__tpa_ipdsc_export__ipdsc_ds_17__try1__failed.log: grep confirms no 'dag_id', 'task_id', 'try_number', or 'RuntimeTaskInstance' text anywhere in the body; diagnose() emits identity all-None and build_report renders the failing task as 'unknown task' even though the dag, task, and try number are in the file path passed to parse_log_file.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced on the named failed run: 2026-08-05/045256__tpa_ipdsc_export__ipdsc_ds_17__try1__failed.log has zero occurrences of 'dag_id', 'task_id', 'try_number', or 'RuntimeTaskInstance' (grep -c = 0), and line 14 is 'astronomer.runtime.listener TaskInstance Details:' followed immediately by an unrelated operator line \u2014 no payload. parse_log_file returns dag_id/task_id/run_id/try_number all None; diagnose() identity is {dag_id:null, task_id:null, run_id:null, try_number:null}; build_report renders 'RCA [low]: unknown task - unclassified' (report.py:53 falls back to 'unknown task'). parse_log_file (parse.py:147-150) only reads file content, ignoring the path that encodes tpa_ipdsc_export/ipdsc_ds_17/try1. One scoping nit: 49 of the 50 tpa_ipdsc_export logs lack dag_id \u2014 the exception is 033816__wait_ds17_src (a sensor, not ModelPysparkBatchOperator), so the claim as scoped to the ModelPysparkBatchOperator family is accurate."
+ },
+ {
+  "module": "synth.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/synth.py:47-48 (consumed at orchestrate.py:48-49)",
+  "claim": "API errors (429, timeout, bad key) are swallowed into a truthy string '(LLM synthesis unavailable: <Type>)' that the caller cannot distinguish from a real RCA, so orchestrate.py replaces the valid deterministic report with the error note and stamps confidence='llm', llm_used=True.",
+  "failure_scenario": "CONFIRMED by simulation: with a fake anthropic client raising RateLimitError, synthesize() returned '(LLM synthesis unavailable: RateLimitError)' (truthy); orchestrate's `if llm_report: report = llm_report` then discards build_report(diag)'s output and the final report printed to the operator is the error note, marked llm_used=True. Same for APITimeoutError and AuthenticationError; only the exception type name survives (message dropped), so a bad key vs a transient 429 are indistinguishable and nothing is retried or logged.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced by running the module with a fake anthropic client. synthesize() with a client raising RateLimitError/APITimeoutError/AuthenticationError returned '(LLM synthesis unavailable: RateLimitError)' etc., all truthy, exception message dropped (only type(e).__name__ survives, synth.py:48). Then investigate() on the real log on-call/airflow_logs/2026-08-06/010810__set_gaclid_enabled_flag__send_notification__try2__failed.log with the raising client: build_report(diag) would have produced 'RCA [low]: set_gaclid_enabled_flag/send_notification - unclassified', but orchestrate.py:48-49 `if llm_report: report = llm_report` replaced it; actual return was report='(LLM synthesis unavailable: RateLimitError)', confidence='llm', llm_used=True. The operator-facing report is the error note, mislabeled as an LLM RCA."
+ },
+ {
+  "module": "synth.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/orchestrate.py:39-45 (the evidence bundle synthesize() receives; synth.py:35-45 forwards it verbatim)",
+  "claim": "The evidence bundle contains only deterministic-extraction fields and never any raw log excerpt, but the LLM path fires exactly when those fields are null, so the model receives an all-NULL bundle for real prod failures whose root cause is plainly written in the log.",
+  "failure_scenario": "CONFIRMED on real logs: on-call/airflow_logs/2026-08-06/010810__set_gaclid_enabled_flag__send_notification__try2__failed.log contains the root cause in plain text (SlackApiError 'not_in_channel' / 'channel_not_found') yet the bundle sent to the LLM is {\"engine\": \"unknown\", \"airflow_signature\": null, \"spark\": null, \"spark_outcome\": \"none\"} \u2014 parse_log() discards the log text and ParsedFailure keeps no excerpt, so the LLM has zero failure information and cannot produce an RCA. 15+ of the 2026-08-05/06 failed logs (all upstream_failed ones plus every unmatched-signature failure) hit this path; this is the 12-agent test's NULL-signals bug.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced on the real log 2026-08-06/010810__set_gaclid_enabled_flag__send_notification__try2__failed.log: the log contains the root cause in plain text (SlackApiError 'not_in_channel' at line 15, 'channel_not_found' at line 18), yet the bundle built exactly per orchestrate.py:39-45 is {identity: {dag_id, task_id, run_id, try_number}, engine: 'unknown', airflow_signature: null, spark: null, spark_outcome: 'none'} \u2014 identity only, zero failure information. root_signature=None so the LLM path fires on precisely these bundles. ParsedFailure (parse.py:30-43) has no excerpt field; parse_log() discards the text. Sweep of all failed/upstream_failed logs across 2026-08-05 and 2026-08-06: 25 total, 20 with airflow_signature=None, of which 10 also have no Spark job id and are therefore guaranteed all-null bundles (the other 10 have Spark job ids whose downstream RCA may add evidence). The claim's '15+' overstates the guaranteed count (10 guaranteed, up to 20), but the defect is real and reproduced on the named log."
+ },
+ {
+  "module": "synth.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/synth.py:35-37",
+  "claim": "json.dumps(...)[:_MAX_INPUT] slices the serialized JSON at 12000 chars, silently producing invalid JSON and always dropping similar_past_incidents (serialized last) whenever the evidence is large.",
+  "failure_scenario": "CONFIRMED by test: evidence with a 13000-char spark root_error (routine for a Databricks run_output traceback) yields a 12000-char payload where json.loads fails ('Unterminated string') and 'similar_past_incidents' is entirely absent \u2014 the past-incident matches the incident matcher computed never reach the model, with no truncation marker telling the model the input was cut.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced: evidence with a 13000-char spark root_error yields a payload of exactly 12000 chars; json.loads(payload) raises JSONDecodeError 'Unterminated string starting at: line 1 column 108'; the string 'similar_past_incidents' and the match content ('INC-42') are entirely absent from the payload (dict key order puts evidence first, matches last, so the slice always eats matches first); no truncation marker is appended, so the model has no signal the input was cut."
+ },
+ {
+  "module": "synth.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/synth.py:40-43,49-50",
+  "claim": "max_tokens=1024 is a shared cap on adaptive-thinking tokens plus visible text on claude-opus-4-8, and the code never checks stop_reason, so a thinking-heavy turn can truncate or omit the text block and synthesize() silently returns a clipped report or None as if the model declined.",
+  "failure_scenario": "PLAUSIBLE: on Opus 4.8 thinking tokens count against max_tokens; a complex evidence bundle that spends ~1000 tokens thinking leaves the answer truncated mid-sentence (stop_reason='max_tokens') or with no text block at all, in which case line 49 yields '' and line 50 returns None \u2014 the API call is paid for but the report is dropped with no signal distinguishing it from a deliberate non-answer.",
+  "verdict": "CONFIRMED",
+  "evidence": "Code path reproduced with a mocked response: with stop_reason='max_tokens' and content containing only a thinking block (the shape the Messages API returns when the token budget is exhausted during thinking), line 49 yields '' and line 50 returns None \u2014 indistinguishable from a deliberate non-answer; with a mid-sentence-clipped text block the clipped string is returned verbatim. inspect.getsource(synthesize) confirms 'stop_reason' is never referenced. The API-side premise is verified against current Anthropic API documentation (claude-api skill): on adaptive-thinking models max_tokens is a hard cap on thinking plus response text, and thinking is billed/spent even with the default display='omitted', so a complex 12KB evidence bundle can consume most of 1024 tokens thinking. Not live-reproduced against the API (no paid call made), but the exact line trace plus documented token accounting establish the failure."
+ },
+ {
+  "module": "synth.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/synth.py:29-34,50",
+  "claim": "Docstring promises 'a <=500-char RCA, or a short note if the LLM is unavailable' but the code returns up to 600 chars (slice [:600]) and the ImportError path returns None rather than a note.",
+  "failure_scenario": "CONFIRMED by test: a 700-char model reply is returned at 600 chars, breaking the tool's documented <=500-char report contract (report.py callers and Jira-comment caps assume 500); when the anthropic package is missing the function returns None, so an operator sees confidence 'low' with no indication the LLM layer was never attempted.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced: docstring reads 'Return a <=500-char RCA, or a short note if the LLM is unavailable.'; a 700-char mocked model reply is returned at len 600 (text.strip()[:600], synth.py:50), exceeding the promised 500; with sys.modules['anthropic']=None forcing ImportError, synthesize() returns None (synth.py:33-34), not a note \u2014 so an operator sees confidence 'low' with no indication the LLM layer was never attempted. The 500-char contract is real elsewhere in the tool: report.py:18 enforces _MAX=500 with truncation at report.py:75, and the README documents a <=500-char report, so a 501-600 char LLM report substituted at orchestrate.py:49 violates the documented tool contract."
+ },
+ {
+  "module": "dataproc_rca.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/dataproc_rca.py:214",
+  "claim": "The classify() call misclassifies the INC-012 driver-log shape as executor_lost (the documented red herring) instead of gcs_list_timeout, because _error_region collects the benign 'ERROR TaskSchedulerImpl: Lost executor ... spark scale down' lines (they hit the 'ERROR' marker) and signatures.py orders executor_lost (index 6) before gcs_list_timeout (index 20), with classify returning the first list-order match.",
+  "failure_scenario": "Reproduced end-to-end with the real INC-012 evidence (runbook line 121: driver log 'full of' Lost-executor lines, then 'Error listing gs://mntn-data-archive-prod/augmentor_log/region=' -> 'SocketTimeoutException: Read timed out'): analyze_batch on a describe+log mock of batch mntn-select-2026-08-06-1786049114 returns signature key executor_lost, matched_on 'Lost executor'. The runbook's own decision tree says 'Ignore Lost executor... benign decommissions, not the cause'. The gcs_list_timeout signature added FROM INC-012 can never fire on INC-012's actual mixed log text; the 19 green tests only exercise it on the isolated error line.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced end-to-end with the real INC-012 try1 driver log (scratchpad try1_driver.log, 48 'Lost executor' lines + 'Error listing gs://' + SocketTimeoutException): analyze_batch with mocked describe+logs in the --order desc shape _logging_messages actually emits (dataproc_rca.py:85) returned signature key 'executor_lost', matched_on 'Lost executor'. Indexes verified: executor_lost=6, gcs_list_timeout=20, classify returns first match, and classify() on text containing BOTH substrings returns executor_lost. The claimed marker-loop mechanism also verified: with 12 distinct Lost-executor lines and no Traceback header, _error_region's hits[:10] cap (line 134) fills entirely with Lost-executor lines and excludes 'Error listing' -> executor_lost. One overstatement: on ascending driveroutput order the rfind-Traceback branch (line 125) isolates the listing error and gcs_list_timeout DOES fire ('never fire' is too absolute), but ascending is not the ordering the code ingests."
+ },
+ {
+  "module": "dataproc_rca.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/dataproc_rca.py:84 (and note at :192)",
+  "claim": "_logging_messages discards the gcloud stderr ('stdout, _ = _run(...)'), so a failed CLI call is indistinguishable from zero log entries, and analyze_batch then emits the misleading note 'no driver log via Cloud Logging (check freshness window)'. This answers the INC-012 question: the filter and 45d freshness are correct (the identical filter pulled the full ds67 traceback and INC-005 error text live); INC-012 returned nothing because Cloud Logging egress from the Mac was transiently refused (runbook \u00a73 INC-012: 'a local/VPN condition, not perms') and the code swallowed that error and blamed the freshness window.",
+  "failure_scenario": "INC-012 live-fire 2026-08-06: gcloud logging read fails with a network/egress error (rc!=0), _run returns (None, err), line 84 throws err away, function returns '', line 192 appends 'check freshness window'. On-call reads the note, investigates the freshness/filter instead of retrying off-VPN or falling back to the staging driveroutput where the cause actually lived (logged as IMP-028).",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced: with subprocess.run mocked so 'gcloud logging read' returns rc=1 / stderr='HTTPSConnectionPool: Max retries exceeded / connection refused', _run returns (None, err), the discard at line 82 ('stdout, _ = _run(') throws err away, _logging_messages returns '', and analyze_batch output was error_text=None, notes=['no driver log via Cloud Logging (check freshness window)'] with zero trace of the CLI failure. Runbook \u00a73 INC-012 corroborates the real trigger ('Cloud Logging egress from the Mac was transiently refused ... a local/VPN condition, not perms'). Minor line-number imprecision only: the discard is at line 82, not 84."
+ },
+ {
+  "module": "dataproc_rca.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/dataproc_rca.py:179-183",
+  "claim": "has_event_log = bool(event_log_dir) or bool(hs) is wrong for PHS-path batches: a set sparkHistoryServerConfig peripheral does NOT mean a reachable event log exists (runbook \u00a73 INC-012: PHS-path event logs go to the PAM-gated temp bucket, NOT spark-events \u2014 'Do not expect an archive-bucket event log'), yet the True branch also suppresses the 'deep spill/skew profile unavailable' warning note; the module docstring (lines 13-15) claims the deep-dive is unavailable only 'when the History Server peripheral is omitted', which INC-012 disproved.",
+  "failure_scenario": "Reproduced with the INC-012 describe shape (peripheralsConfig.sparkHistoryServerConfig set, no spark:spark.eventLog.dir property): analyze_batch returns has_event_log=True, event_log_uri=None, notes=[] \u2014 the evidence bundle asserts a deep-dive event log is available when none is reachable, and time-window hunting in spark-events then finds a WRONG app's log (runbook: app-20260806205122216 fit the window but was site_network_hourly).",
+  "verdict": "REFUTED",
+  "evidence": "The claimed 'INC-012 describe shape (sparkHistoryServerConfig set, no spark:spark.eventLog.dir property)' is not the real shape. Live read-only describe of the actual batch (gcloud dataproc batches describe mntn-select-2026-08-06-1786049114) shows runtimeConfig.properties DOES contain spark:spark.eventLog.dir=gs://dataproc-temp-us-central1-995798185124-svhwvc6j/e8a9d9e3-.../spark-job-history alongside sparkHistoryServerConfig (persistent-history-cluster) \u2014 Dataproc populates eventLog.dir when a PHS is attached. On the real response the code takes the event_log_dir disjunct: has_event_log=True is literally true, and with an application_id it would emit event_log_uri pointing at the correct PAM-gated temp-bucket path (steering AWAY from the spark-events wrong-app trap, not into it). The bool(hs)-only branch that yields has_event_log=True/event_log_uri=None/notes=[] (which I did reproduce on the hypothesized shape) requires an API response unobserved in reality \u2014 a theoretical shape, no wrong output on the actual incident."
+ },
+ {
+  "module": "dataproc_rca.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/dataproc_rca.py:114 (except at :118)",
+  "claim": "_decode_app_id raises an uncaught IndexError when a line contains 'MCP_EVENT_LOGGING_CONFIG_BASE64' without a trailing colon (the membership check at :112 omits the colon the split at :114 requires), and an uncaught AttributeError at :116 when the base64 payload decodes to a non-dict \u2014 either crashes all of analyze_batch, breaking its 'never raises' deterministic-tool contract (same defect class as the fixed quoted-dag_id regex: parse assumption narrower than real log shapes).",
+  "failure_scenario": "Verified: _decode_app_id('spark.executorEnv.MCP_EVENT_LOGGING_CONFIG_BASE64=eyJ...') raises IndexError (env-var/conf-dump lines use '=', and Spark drivers echo conf/env at startup); _decode_app_id('MCP_EVENT_LOGGING_CONFIG_BASE64: ' + b64('[1,2]')) raises AttributeError. The except clause catches only (ValueError, JSONDecodeError), so one such line in the 80 fetched Cloud Logging messages aborts the whole RCA with a traceback instead of degrading to the regex fallback at :120.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced both crashes on the exact claimed inputs: _decode_app_id('spark.executorEnv.MCP_EVENT_LOGGING_CONFIG_BASE64=eyJ...') -> IndexError: list index out of range (line 112 checks membership without the colon that line 114's split('...BASE64:',1)[1] requires); _decode_app_id('MCP_EVENT_LOGGING_CONFIG_BASE64: '+b64('[1,2]')) -> AttributeError: 'list' object has no attribute 'get' (line 116). The except at 118 catches only (ValueError, JSONDecodeError) \u2014 neither is caught. End-to-end verified: analyze_batch with one such line among mocked Cloud Logging messages RAISED IndexError, and no caller contains it (parse.route() line 159 calls analyze_batch bare; orchestrate.py has no try/except), so the whole RCA aborts instead of degrading to the regex fallback at line 120. Frequency caveat: the only known emitter (utils_model spark_job_monitor.py:144) always writes the colon+dict form and no sample log under on-call/airflow_logs contains the crashing shapes, so the specific '=' env-echo line is unattested in this corpus \u2014 but the membership-vs-split inconsistency is a real reproduced crash on any such line."
+ },
+ {
+  "module": "dataproc_rca.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/dataproc_rca.py:61-62 and :72",
+  "claim": "When gcloud exits nonzero with empty stderr AND stdout, _run returns err='' which _describe's 'if err:' treats as success, so it json-parses 'or \"{}\"' into an empty dict and analyze_batch silently analyzes a phantom batch with no 'describe failed' note.",
+  "failure_scenario": "Verified with a mocked subprocess.run(returncode=1, stdout='', stderr='') (e.g. gcloud killed by a signal or a wrapper that eats stderr): analyze_batch returns state=None, signature=None with only the misleading 'no persistent event log' + 'check freshness window' notes \u2014 the describe failure is invisible, and the report reads as a batch that produced no evidence rather than a broken CLI call.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced: with subprocess.run mocked to returncode=1, stdout='', stderr='', line 62 returns (None, ('' or '').strip()[:400]) = (None, ''), _describe's 'if err:' (line 71) treats '' as falsy, json.loads(stdout or '{}') parses '{}' into {}, and analyze_batch('phantom-batch') returned state=None, signature=None, notes=['no persistent event log (eventLog.dir unset); deep spill/skew profile unavailable', 'no driver log via Cloud Logging (check freshness window)'] \u2014 no 'describe failed' note anywhere, so the broken CLI call reads as a batch that produced no evidence. Minor line-number imprecision: the 'if err:' is at line 71, not 72."
+ },
+ {
+  "module": "signatures.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/signatures.py:105",
+  "claim": "dbt_test_failure's alternation 'Completed with \\d+ error' matches dbt's generic failure summary printed for ANY dbt failure (model runtime crash, compile error), not just data-quality tests, so model crashes are classified as unfixable data-quality failures.",
+  "failure_scenario": "Real prod log on-call/airflow_logs/2026-08-06/013002__vertical_classification_api__ddp_vertical_classification_api__try1__failed.log: a Python model runtime crash ('Runtime Error in model ddp_vertical_classification_api ... ValueError: Too many signals to process 169643477') classify()s as dbt_test_failure, reporting 'a data-quality test tripped its threshold ... not an auto-fixable code crash' with programmatic_fix='no' \u2014 wrong class, wrong fixability, wrong routing for a code crash.",
+  "verdict": "CONFIRMED",
+  "evidence": "Reproduced against the real prod log: classify(open('on-call/airflow_logs/2026-08-06/013002__vertical_classification_api__ddp_vertical_classification_api__try1__failed.log').read()) returns key=dbt_test_failure, matched_on='Completed with 1 error', programmatic_fix='no'. The log's actual failure (lines 47-84) is 'Runtime Error in model ddp_vertical_classification_api ... ValueError: Too many signals to process 169643477' \u2014 a Python model crash, not a test. parse.py:88 classifies exactly this full text (engine default 'any'), so the prod path reports 'A dbt data-quality test tripped its threshold ... not an auto-fixable code crash' for a code crash: wrong class and wrong fixability."
+ },
+ {
+  "module": "signatures.py",
+  "severity": "high",
+  "file_line": "airflow_debugger/signatures.py:76",
+  "claim": "List order violates the docstring's 'most-specific first': executor_lost (index 6, pattern 'Lost executor') steals matches from gcs_list_timeout (index 20), even though gcs_list_timeout's own likely_cause text (lines 206-208) warns that benign 'Lost executor ... spark scale down' lines accompany GCS-list timeouts and are NOT the cause.",
+  "failure_scenario": "INC-012 shape: dataproc_rca._error_region collects every ERROR/'Caused by:' line into one blob, so a blob like 'ERROR TaskSchedulerImpl: Lost executor 3 ... spark scale down\\nCaused by: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/region=\\nCaused by: java.net.SocketTimeoutException: Read timed out' returns executor_lost (fix='no', 'OOM, spot preemption, or unhealthy node') instead of gcs_list_timeout (fix='sometimes', 're-run usually passes') \u2014 verified by running classify() on this blob.",
+  "verdict": "CONFIRMED",
+  "evidence": "Ran classify('ERROR TaskSchedulerImpl: Lost executor 3 ... spark scale down\\nCaused by: java.io.IOException: Error listing gs://mntn-data-archive-prod/augmentor_log/region=\\nCaused by: java.net.SocketTimeoutException: Read timed out') -> executor_lost, matched_on='Lost executor', fix='no', not gcs_list_timeout (fix='sometimes'). Premise verified: dataproc_rca.py _error_region (lines 124-134) collects ERROR/'Caused by:' lines into one blob classified at line 214; incident_log.jsonl INC-012 shows exactly this real shape ('Lost executor ... spark scale down' red herring + 'Error listing gs://' + SocketTimeoutException) and even records 'debugger taxonomy gained gcs_list_timeout signature' \u2014 yet on the very blob shape it was added for, the earlier generic signature wins and gcs_list_timeout is unreachable."
+ },
+ {
+  "module": "signatures.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/signatures.py:55",
+  "claim": "driver_oom's alternation 'Driver stacktrace.*OutOfMemory' with re.DOTALL matches every executor-side OOM, because standard Spark stage-failure logs always contain 'Driver stacktrace:' followed by 'Caused by: <the executor exception>', so driver_oom (index 3) steals shuffle_oom (index 4).",
+  "failure_scenario": "classify() on the canonical Spark log 'Job aborted due to stage failure ... SparkOutOfMemoryError: Unable to acquire 65536 bytes ...\\nDriver stacktrace:\\n at org.apache.spark.scheduler...\\nCaused by: org.apache.spark.memory.SparkOutOfMemoryError...' returns driver_oom ('Driver OOM, often after collect()/toPandas()') for a pure executor shuffle OOM \u2014 verified; matched_on shows 'Driver stacktrace:...' spanning to the Caused-by OutOfMemory.",
+  "verdict": "CONFIRMED",
+  "evidence": "Ran classify() on the canonical stage-failure blob ('Job aborted due to stage failure ... SparkOutOfMemoryError: Unable to acquire 65536 bytes ...\\nDriver stacktrace:\\n at org.apache.spark.scheduler...\\nCaused by: org.apache.spark.memory.SparkOutOfMemoryError...') -> driver_oom with matched_on='Driver stacktrace:\\n at org.apache.spark.scheduler.DAGScheduler.failJobAndIndependentStages\\nCaused by: org.apache.spark.m' \u2014 the DOTALL span from 'Driver stacktrace:' to the Caused-by executor OOM, exactly as claimed. classify() at signatures.py:267 applies re.DOTALL; driver_oom is checked before shuffle_oom, so a pure executor shuffle OOM is reported as 'Driver OOM, often after collect()/toPandas()'."
+ },
+ {
+  "module": "signatures.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/signatures.py:265",
+  "claim": "The engine filter makes quota_exhaustion and cluster_create_stockout (both engine='dataproc') unreachable from databricks_rca's classify(blob, engine='databricks'), but Databricks-on-GCP cluster launches fail with the same GCP quota/stockout codes, which land in the classified blob via termination_reason (databricks_rca.py:108-111).",
+  "failure_scenario": "classify('Cluster terminated. Reason: GCP_QUOTA_EXCEEDED. Insufficient CPU quota in region us-central1.', engine='databricks') returns None (verified), while engine='any' returns quota_exhaustion \u2014 a real Databricks capacity failure gets no signature at the RCA layer while the identical text matches at the parse.py layer (engine defaults to 'any'), an inconsistent verdict for the same failure.",
+  "verdict": "CONFIRMED",
+  "evidence": "Ran classify('Cluster terminated. Reason: GCP_QUOTA_EXCEEDED. Insufficient CPU quota in region us-central1.', engine='databricks') -> None; same text with engine='any' -> quota_exhaustion. Code path verified: databricks_rca.py:104-112 fetches clusters get -> termination_reason, json.dumps it into the blob, and calls classify(blob, engine='databricks'); signatures.py:265 skips both quota signatures because s.engine='dataproc' != 'databricks'. parse.py:88 classifies with default engine='any', so the identical text gets a signature at the parse layer but None at the RCA layer \u2014 inconsistent verdicts for the same GCP-generic quota text."
+ },
+ {
+  "module": "signatures.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/signatures.py:203",
+  "claim": "gcs_list_timeout's third alternation 'SocketTimeoutException: Read timed out' carries no GCS context (unlike the other two branches) and the signature is engine='any', so any generic JVM socket read timeout (JDBC, Hive metastore, HTTP client) classifies as a GCS listing timeout.",
+  "failure_scenario": "classify('java.sql.SQLException: could not read response\\nCaused by: java.net.SocketTimeoutException: Read timed out\\n at java.net.SocketInputStream.socketRead0', engine='databricks') returns gcs_list_timeout (verified), asserting a GCS glob flat-listing root cause and 'fs.gs.glob.flat.enable=false' fix for a database/network timeout that has nothing to do with GCS.",
+  "verdict": "CONFIRMED",
+  "evidence": "Ran classify('java.sql.SQLException: could not read response\\nCaused by: java.net.SocketTimeoutException: Read timed out\\n at java.net.SocketInputStream.socketRead0', engine='databricks') -> gcs_list_timeout, matched_on='SocketTimeoutException: Read timed out'. The blob contains no GCS reference at all, yet the report asserts a GCS glob flat-listing root cause with the fs.gs.glob.flat.enable=false fix. Lines 202-203 confirm the first two alternations are GCS-anchored ('Error listing gs://', 'GoogleCloudStorageImpl.listStorageObjects') while the third is a bare JVM timeout string, and the signature has engine='any' (default, line 25)."
+ },
+ {
+  "module": "signatures.py",
+  "severity": "medium",
+  "file_line": "airflow_debugger/signatures.py:164",
+  "claim": "ttl_exceeded's bare 'DEADLINE_EXCEEDED' alternation matches the generic gRPC client-side deadline status emitted by any GCP API call timeout, misreporting an API-layer timeout as the Spark job being killed at its TTL \u2014 contradicting dataproc_rca's own design note that TTL kills are detected structurally because log strings are unreliable.",
+  "failure_scenario": "classify('grpc._channel._InactiveRpcError: status = StatusCode.DEADLINE_EXCEEDED, details = \"Deadline Exceeded\" while calling google.cloud.dataproc get_batch') returns ttl_exceeded (verified) with cause 'Job cancelled at its TTL / wall-clock limit (often a perf regression)' for a client RPC that merely timed out polling.",
+  "verdict": "CONFIRMED",
+  "evidence": "Ran classify('grpc._channel._InactiveRpcError: status = StatusCode.DEADLINE_EXCEEDED, details = \"Deadline Exceeded\" while calling google.cloud.dataproc get_batch') -> ttl_exceeded, matched_on='DEADLINE_EXCEEDED', cause 'Job cancelled at its TTL / wall-clock limit (often a perf regression)' \u2014 for a client RPC poll that merely timed out. The contradicted design note exists verbatim at dataproc_rca.py:12-13: 'TTL kills are detected structurally (state CANCELLED + runtime ~= ttl), which is more reliable than any log string', with the structural check at lines 194-200 (_TTL_TOLERANCE)."
+ },
+ {
+  "module": "signatures.py",
+  "severity": "low",
+  "file_line": "airflow_debugger/signatures.py:76",
+  "claim": "executor_lost (index 6) also steals spot_preemption (index 7): a real preemption failure's YARN diagnostic contains 'ExecutorLostFailure ... was preempted' in one string, and the earlier generic signature wins.",
+  "failure_scenario": "classify('ExecutorLostFailure (executor 1 exited caused by one of the running tasks) Reason: Container container_1 on host wk-2 was preempted.') returns executor_lost (verified) instead of the specific infra/spot-preemption class; the specific signature can only win when no Lost-executor line accompanies the preemption message, which real Spark logs almost always include. Mitigated because executor_lost's cause text lists spot preemption as one possibility.",
+  "verdict": "CONFIRMED",
+  "evidence": "Ran classify('ExecutorLostFailure (executor 1 exited caused by one of the running tasks) Reason: Container container_1 on host wk-2 was preempted.') -> executor_lost, matched_on='ExecutorLostFailure', not spot_preemption \u2014 the specific 'was preempted' alternation (line 83) never gets tested because executor_lost is checked first and classify() returns the first match (line 269), violating the module docstring's 'Ordered most-specific first' (line 6). Mitigation as the claim states: executor_lost's cause text lists spot preemption as one possibility and both signatures have programmatic_fix='no'; spot_preemption also stays reachable via non-Spark-log strings (SPOT_INSTANCE_TERMINATION etc. in termination-reason blobs)."
+ }
+]
