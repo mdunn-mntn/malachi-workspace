@@ -22,6 +22,16 @@ from .signatures import classify
 PROFILE = "malachi@mountain.com"  # U2M OAuth; the DEFAULT profile is invalid
 _TRACE_TAIL = 2000  # chars of error_trace kept (tail-first)
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_FAILED_STATES = frozenset(
+    {
+        "FAILED",
+        "TIMEDOUT",
+        "CANCELED",
+        "MAXIMUM_CONCURRENT_RUNS_REACHED",
+        "UPSTREAM_FAILED",
+        "UPSTREAM_CANCELED",
+    }
+)
 
 
 def _dbx(*args: str, timeout: int = 90) -> dict | list | None:
@@ -83,11 +93,33 @@ def analyze_run(run_id: int) -> DatabricksEvidence:
     ev.run_name = run.get("run_name")
     ev.job_id = run.get("job_id")
     ev.state = run.get("state", {})
-    tasks = run.get("tasks") or [run]  # single-task runs carry state at the top level
+    tasks = list(run.get("tasks") or [])
+    token = run.get("next_page_token")
+    for _ in range(50):  # follow task pagination (CLI pages at 100); cap guards a bad token
+        if not token:
+            break
+        page = _dbx("jobs", "get-run", str(run_id), "--page-token", token)
+        if not isinstance(page, dict) or page.get("_cli_error"):
+            ev.notes.append(
+                f"get-run page failed: "
+                f"{page.get('_cli_error') if isinstance(page, dict) else page}"
+            )
+            break
+        tasks.extend(page.get("tasks") or [])
+        token = page.get("next_page_token")
+    if not tasks:
+        tasks = [run]  # single-task runs carry state at the top level
 
     for t in tasks:
-        result = (t.get("state") or {}).get("result_state")
-        if result and result != "FAILED":
+        state = t.get("state") or {}
+        result = state.get("result_state")
+        if not result:  # still RUNNING/PENDING: not a failure, do not report it as one
+            ev.notes.append(
+                f"task {t.get('task_key', '(single)')} not terminal "
+                f"(life_cycle_state={state.get('life_cycle_state')}); skipped"
+            )
+            continue
+        if result not in _FAILED_STATES:
             continue
         trun = t.get("run_id", run_id)
         tf = TaskFailure(task_key=t.get("task_key", "(single)"), run_id=trun)
@@ -100,6 +132,8 @@ def analyze_run(run_id: int) -> DatabricksEvidence:
             tf.error_trace_tail = trace[-_TRACE_TAIL:] or None
         elif isinstance(out, dict):
             ev.notes.append(f"get-run-output({trun}) failed: {out['_cli_error']}")
+        else:
+            ev.notes.append(f"get-run-output({trun}) returned non-dict payload: {str(out)[:100]}")
 
         if tf.cluster_id:
             cl = _dbx("clusters", "get", tf.cluster_id)

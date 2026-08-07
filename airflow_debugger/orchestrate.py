@@ -12,41 +12,57 @@ from .incident_match import match as match_incidents
 from .parse import diagnose, parse_log_file
 from .report import build_report
 
+_LOG_TAIL_CHARS = 4000  # raw log tail given to the LLM when signatures found nothing
+
 
 def investigate(log_path: str, use_llm: bool = True) -> dict:
     """Run the full chain on one failed-task log; return report + provenance."""
-    diag = diagnose(parse_log_file(log_path))
+    parsed = parse_log_file(log_path)
+    diag = diagnose(parsed)
     ident = diag.get("identity", {})
     root = diag.get("root_signature") or {}
+    spark = diag.get("spark") or {}
+    # dataproc bundles carry error_text/state_message, not root_error
+    root_error = diag.get("root_error") or spark.get("error_text") or spark.get("state_message")
     query = " ".join(
         filter(
             None,
             [
                 root.get("sig_class"),
-                diag.get("root_error"),
+                root_error,
                 (diag.get("airflow_signature") or {}).get("sig_class"),
             ],
         )
     )
-    matches = match_incidents(ident.get("dag_id"), ident.get("task_id"), query)
+    try:
+        matches = match_incidents(ident.get("dag_id"), ident.get("task_id"), query)
+    except Exception:  # a matcher crash degrades to no matches, never kills the diagnosis
+        matches = []
     report = build_report(diag)
 
-    llm_report = None
+    llm_report = llm_note = None
     if not root and use_llm:  # deterministic classifier found nothing -> synthesize
         from .synth import synthesize
 
-        llm_report = synthesize(
+        with open(log_path, encoding="utf-8", errors="replace") as f:
+            log_tail = f.read()[-_LOG_TAIL_CHARS:]
+        llm_report, llm_note = synthesize(
             {
                 "identity": ident,
                 "engine": diag.get("engine"),
                 "airflow_signature": diag.get("airflow_signature"),
                 "spark": diag.get("spark"),
                 "spark_outcome": diag.get("spark_outcome"),
+                "root_error": root_error,
+                "parse_notes": parsed.notes,
+                "log_tail": log_tail,
             },
             matches,
         )
         if llm_report:
             report = llm_report
+    if llm_note:
+        diag["llm_note"] = llm_note
 
     return {
         "report": report,

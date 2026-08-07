@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 _CORPUS = Path(__file__).resolve().parents[1] / "on-call" / "incident_log.jsonl"
@@ -28,7 +29,20 @@ def _tokens(text: str | None) -> set[str]:
 def _load() -> list[dict]:
     if not _CORPUS.exists():
         return []
-    return [json.loads(line) for line in _CORPUS.read_text().splitlines() if line.strip()]
+    records: list[dict] = []
+    for lineno, line in enumerate(_CORPUS.read_text().splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            rec = None
+        if isinstance(rec, dict):
+            records.append(rec)
+        else:
+            # one bad append (e.g. interrupted write-back) must not crash match()
+            print(f"incident_match: skipped malformed corpus line {lineno}", file=sys.stderr)
+    return records
 
 
 def match(
@@ -39,6 +53,7 @@ def match(
     min_score: float = 0.08,
 ) -> list[dict]:
     """Return the top-k most similar past incidents (empty if the corpus is absent)."""
+    q_text = _tokens(query_text)
     q = _tokens(" ".join(filter(None, [dag, task, query_text])))
     if not q:
         return []
@@ -51,10 +66,13 @@ def match(
         )
         if not doc:
             continue
-        score = len(q & doc) / len(q | doc)  # Jaccard
-        if dag and r.get("dag") == dag:
+        # overlap coefficient over the query, so long corpus signatures don't dilute the score
+        score = len(q & doc) / len(q)
+        # identity boosts need some query-text agreement, else same-dag noise clears min_score
+        boostable = not q_text or bool(q_text & doc)
+        if boostable and dag and r.get("dag") == dag:
             score += 0.30
-        if task and r.get("task") == task:
+        if boostable and task and r.get("task") == task:
             score += 0.20
         if score >= min_score:
             scored.append(

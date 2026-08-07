@@ -51,8 +51,7 @@ SIGNATURES: list[Signature] = [
     ),
     Signature(
         "driver_oom",
-        r"OutOfMemoryError: Java heap space|OutOfMemoryError: GC overhead|"
-        r"Driver stacktrace.*OutOfMemory",
+        r"OutOfMemoryError: Java heap space|OutOfMemoryError: GC overhead",
         "driver-oom",
         "Driver OOM, often after collect()/toPandas() pulling too much to the driver.",
         "sometimes",
@@ -72,18 +71,35 @@ SIGNATURES: list[Signature] = [
         "no",
     ),
     Signature(
-        "executor_lost",
-        r"ExecutorLostFailure|Slave lost|Lost executor|Executor heartbeat timed out",
-        "executor-lost",
-        "Executor lost: OOM, spot preemption, or an unhealthy node (disk >90%).",
-        "no",
-    ),
-    Signature(
         "spot_preemption",
         r"PREEMPTIBLE_WITH_FALLBACK|SPOT_INSTANCE_TERMINATION|was preempted|"
         r"spot instance.{0,40}(reclaim|terminat|preempt)|InsufficientInstanceCapacity",
         "infra/spot-preemption",
         "Spot/preemptible instance reclaimed mid-run.",
+        "no",
+    ),
+    Signature(
+        "gcs_list_timeout",
+        r"Error listing gs://|GoogleCloudStorageImpl\.listStorageObjects|"
+        r"gs://.{0,300}?SocketTimeoutException: Read timed out|"
+        r"SocketTimeoutException: Read timed out.{0,300}?gs://",
+        "transient-infra/gcs-listing",
+        "Driver-side GCS LIST timed out during input discovery - usually a glob the GCS connector "
+        "resolves by flat-listing the entire prefix (O(all history)) before filtering. Retries die "
+        "at a ~constant elapsed (same execution point). 'Lost executor ... spark scale down' lines "
+        "alongside are benign idle decommissions, NOT the cause. A re-run usually passes (list "
+        "latency is variable); durable fix is literal partition paths instead of a glob, or "
+        "fs.gs.glob.flat.enable=false. The evidence lives in the staging-bucket driveroutput, "
+        "not the Airflow log.",
+        "sometimes",
+    ),
+    Signature(
+        "executor_lost",
+        # benign dynamic-allocation decommissions log 'Lost executor ... spark scale down'
+        r"ExecutorLostFailure|Slave lost|Lost executor(?![^\n]*spark scale down)|"
+        r"Executor heartbeat timed out",
+        "executor-lost",
+        "Executor lost: OOM, spot preemption, or an unhealthy node (disk >90%).",
         "no",
     ),
     Signature(
@@ -102,8 +118,8 @@ SIGNATURES: list[Signature] = [
     ),
     Signature(
         "dbt_test_failure",
-        r"Failure in test |Completed with \d+ error|Got \d+ results, configured to fail if|"
-        r"\d+ of \d+ FAIL \d+",
+        # 'Completed with N error' is dbt's generic failure summary, not a test marker
+        r"Failure in test |Got \d+ results, configured to fail if|\d+ of \d+ FAIL \d+",
         "dbt-test/data-quality",
         "A dbt data-quality test tripped its threshold (the test query returned more failing "
         "rows than allowed, e.g. 'Got N results, configured to fail if >M'). The upstream data "
@@ -160,8 +176,10 @@ SIGNATURES: list[Signature] = [
     ),
     Signature(
         "ttl_exceeded",
-        r"cancelled.{0,20}(TTL|ttl)|exceeded.{0,20}ttl|wall.?clock.{0,20}(exceed|limit)|"
-        r"DEADLINE_EXCEEDED|reached its.{0,10}timeout",
+        # DEADLINE_EXCEEDED alone is any gRPC client timeout; require batch/TTL context
+        r"cancell(ed|ing).{0,20}(TTL|ttl)|exceeded.{0,20}ttl|wall.?clock.{0,20}(exceed|limit)|"
+        r"(\bbatch\b|\bttl\b).{0,60}DEADLINE_EXCEEDED|DEADLINE_EXCEEDED.{0,60}(\bbatch\b|\bttl\b)|"
+        r"reached its.{0,10}timeout",
         "ttl/wall-clock",
         "Job cancelled at its TTL / wall-clock limit (often a perf regression).",
         "sometimes",
@@ -182,9 +200,9 @@ SIGNATURES: list[Signature] = [
         "infra/zonal-stockout",
         "Dataproc/GCE could not get machines in the zone (transient GCP stockout). Usually "
         "self-recovers in ~1-2h; autozone re-picks. Delete any lingering ERROR cluster (it "
-        "self-blocks the retry on quota), then re-run.",
+        "self-blocks the retry on quota), then re-run. Also hits Databricks-on-GCP cluster "
+        "launches, so engine is 'any'.",
         "no",
-        "dataproc",
     ),
     Signature(
         "quota_exhaustion",
@@ -193,23 +211,9 @@ SIGNATURES: list[Signature] = [
         "infra/quota",
         "The request is at/over a regional quota ceiling (often a large cluster near 90%+ of "
         "N2_CPUS/DISKS_TOTAL_GB, or a prior failed cluster's VMs self-blocking the retry). "
-        "Raise quota / delete the lingering cluster / shrink the request.",
+        "Raise quota / delete the lingering cluster / shrink the request. Also hits "
+        "Databricks-on-GCP cluster launches, so engine is 'any'.",
         "no",
-        "dataproc",
-    ),
-    Signature(
-        "gcs_list_timeout",
-        r"Error listing gs://|GoogleCloudStorageImpl\.listStorageObjects|"
-        r"SocketTimeoutException: Read timed out",
-        "transient-infra/gcs-listing",
-        "Driver-side GCS LIST timed out during input discovery - usually a glob the GCS connector "
-        "resolves by flat-listing the entire prefix (O(all history)) before filtering. Retries die "
-        "at a ~constant elapsed (same execution point). 'Lost executor ... spark scale down' lines "
-        "alongside are benign idle decommissions, NOT the cause. A re-run usually passes (list "
-        "latency is variable); durable fix is literal partition paths instead of a glob, or "
-        "fs.gs.glob.flat.enable=false. The evidence lives in the staging-bucket driveroutput, "
-        "not the Airflow log.",
-        "sometimes",
     ),
     Signature(
         "sensor_timeout",

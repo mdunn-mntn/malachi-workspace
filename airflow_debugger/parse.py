@@ -11,6 +11,7 @@ the Spark engine, and pulls the downstream job id out of the log:
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import asdict, dataclass, field
 
@@ -35,6 +36,7 @@ class ParsedFailure:
     task_id: str | None = None
     run_id: str | None = None
     try_number: int | None = None
+    map_index: int | None = None  # mapped-task instance; -1 = not mapped
     operator: str | None = None
     engine: str = "unknown"  # dataproc | databricks | other | unknown
     batch_id: str | None = None  # dataproc
@@ -53,24 +55,37 @@ def parse_log(text: str) -> ParsedFailure:
     p = ParsedFailure()
     p.dag_id = _first(r"dag_id=['\"]?([A-Za-z0-9_.-]+)", text)
     p.task_id = _first(r"task_id=['\"]?([A-Za-z0-9_.-]+)", text)
-    p.run_id = _first(r"dagrun_id=(\S+)", text) or _first(
-        r"run_id['\"]?[=:]\s*['\"]?(scheduled__[^'\"\s]+)", text
+    # Prefer the real run_id (has colons / +00:00) over the k8s-sanitized pod-label value.
+    _rid_prefix = r"(?:scheduled|manual|backfill|dataset_triggered|asset_triggered)"
+    p.run_id = (
+        _first(r"dagrun_id=(\S+)", text)
+        or _first(rf"run_id['\"]?[=:]\s*['\"]?({_rid_prefix}__[^'\"\s]*[:+][^'\"\s]+)", text)
+        or _first(rf"run_id['\"]?[=:]\s*['\"]?({_rid_prefix}__[^'\"\s]+)", text)
     )
     tn = _first(r"try_number=(\d+)", text)
     p.try_number = int(tn) if tn else None
+    mi = _first(r"(?<!\w)map_index['\"]?[=:]\s*['\"]?(-?\d+)", text)
+    p.map_index = int(mi) if mi else None
 
     opc = _first(r"op_classpath=(\[[^\]]*\])", text)
-    p.operator = opc
-    hay = opc or text
+    # Airflow-3 logs carry no op_classpath; fall back to the operator logger name / Task repr.
+    p.operator = (
+        opc
+        or _first(r"airflow\.task\.operators\.([\w.]+)", text)
+        or _first(r"<Task\((\w+)\)", text)
+    )
+    hay = p.operator or text
     if any(o in hay for o in _DATABRICKS_OPS):
         p.engine = "databricks"
     elif any(o in hay for o in _DATAPROC_OPS):
         p.engine = "dataproc"
-    elif opc and "Operator" in opc:
-        p.engine = "other"  # sensor / python / pod — not a Spark job
+    elif p.operator and ("Operator" in p.operator or "Sensor" in p.operator):
+        p.engine = "other"  # sensor / python / pod, not a Spark job
 
     if p.engine == "dataproc":
-        p.batch_id = _first(r"Batch job (\S+)", text)
+        # Failed runs log 'Starting batch <id>' / lowercase 'batch job <id>' only;
+        # the capital 'Batch job <id>' wording is success-only.
+        p.batch_id = _first(r"[Bb]atch job (\S+)", text) or _first(r"Starting batch (\S+)", text)
         if not p.batch_id:
             p.notes.append("dataproc engine but no 'Batch job <id>' line found")
     elif p.engine == "databricks":
@@ -130,6 +145,7 @@ def diagnose(parsed: ParsedFailure) -> dict:
             "task_id": parsed.task_id,
             "run_id": parsed.run_id,
             "try_number": parsed.try_number,
+            "map_index": parsed.map_index,
         },
         "engine": parsed.engine,
         "airflow_signature": parsed.airflow_signature,
@@ -144,10 +160,24 @@ def diagnose(parsed: ParsedFailure) -> dict:
     }
 
 
+# airflow_pull.sh naming: <HHMMSS>__<dag>__<task>[__map<N>]__try<N>__<state>.log
+_FILENAME_RE = re.compile(
+    r"\d{6}__(?P<dag>.+?)__(?P<task>.+?)(?:__map(?P<map>\d+))?__try(?P<try>\d+)__\w+\.log$"
+)
+
+
 def parse_log_file(path: str) -> ParsedFailure:
-    """Parse a log file on disk."""
+    """Parse a log file on disk; the filename convention fills identity the body lacks."""
     with open(path, encoding="utf-8", errors="replace") as f:
-        return parse_log(f.read())
+        p = parse_log(f.read())
+    m = _FILENAME_RE.search(os.path.basename(path))
+    if m:
+        p.dag_id = p.dag_id or m.group("dag")
+        p.task_id = p.task_id or m.group("task")
+        p.try_number = p.try_number or int(m.group("try"))
+        if p.map_index is None and m.group("map") is not None:
+            p.map_index = int(m.group("map"))
+    return p
 
 
 def route(parsed: ParsedFailure) -> dict:

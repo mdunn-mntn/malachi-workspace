@@ -93,10 +93,48 @@ def test_no_exception_is_safe() -> None:
     assert p.engine == "dataproc"
 
 
+class ExternalTaskFailedError(Exception):
+    """Stand-in for airflow's class; only the NAME matters (real 08-05 wait_fpa shape)."""
+
+
+def test_exception_object_keeps_class_name() -> None:
+    """A real exception OBJECT classifies on its class name, not just str(exc)."""
+    # Real 2026-08-05 wait_fpa message: the class name is NOT in the message text.
+    exc = ExternalTaskFailedError(
+        "Some of the external tasks ['dsid26_predactiv_processing'] in DAG "
+        "fpa_site_visit_batch_serverless failed."
+    )
+    p = parse_context(_ctx(ExternalTaskSensor(), exc))
+    assert p.airflow_signature and p.airflow_signature["key"] == "external_task_failed"
+
+
+def test_dbx_module_path_routes_databricks() -> None:
+    """An operator identifiable only by its .dbx. module path routes to databricks."""
+
+    class MntnKubePodOperator:  # real class at airflow-ti include/dbx/kube_operators.py
+        pass
+
+    MntnKubePodOperator.__module__ = "include.dbx.kube_operators"
+    p = parse_context(_ctx(MntnKubePodOperator(), "boom"))
+    assert p.engine == "databricks"
+    assert p.operator == "MntnKubePodOperator"
+
+
+def test_map_index_distinguishes_mapped_failures() -> None:
+    """Two failing map indexes of the same mapped task produce distinct identities."""
+    p0 = parse_context(_ctx(ModelPysparkBatchOperator(), "x", map_index=0))
+    p1 = parse_context(_ctx(ModelPysparkBatchOperator(), "x", map_index=1))
+    assert p0.map_index == 0 and p1.map_index == 1
+    assert p0 != p1
+
+
 if __name__ == "__main__":
     test_databricks_engine_and_signature()
     test_dataproc_engine()
     test_sensor_routes_to_other_but_still_classifies()
     test_final_attempt_gate()
     test_no_exception_is_safe()
+    test_exception_object_keeps_class_name()
+    test_dbx_module_path_routes_databricks()
+    test_map_index_distinguishes_mapped_failures()
     print("OK - context_parse first-look tests passed")

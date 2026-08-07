@@ -59,7 +59,8 @@ def _run(cmd: list[str], timeout: int = 90) -> tuple[str | None, str | None]:
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         return None, str(e)
     if out.returncode != 0:
-        return None, (out.stderr or out.stdout).strip()[:400]
+        err = (out.stderr or out.stdout).strip()[:400]
+        return None, err or f"exit code {out.returncode} with no output"
     return out.stdout, None
 
 
@@ -76,15 +77,15 @@ def _describe(batch_id: str, project: str, region: str) -> tuple[dict | None, st
         return None, "describe: non-json output"
 
 
-def _logging_messages(batch_id: str, project: str) -> str:
+def _logging_messages(batch_id: str, project: str) -> tuple[str, str | None]:
     """Driver log lines via Cloud Logging (key-free; the GCS staging bucket is 403)."""
     filt = f'resource.type="cloud_dataproc_batch" AND resource.labels.batch_id="{batch_id}"'
-    stdout, _ = _run(
+    stdout, err = _run(
         ["gcloud", "logging", "read", filt, "--project", project,
          "--limit", str(_LOG_LIMIT), "--freshness", _LOG_FRESHNESS,
          "--order", "desc", "--format", "value(jsonPayload.message)"]
     )  # fmt: skip
-    return stdout or ""
+    return stdout or "", err
 
 
 def _ttl_seconds(ttl: str | None) -> int | None:
@@ -109,11 +110,11 @@ def _runtime_seconds(create: str | None, end: str | None) -> int | None:
 
 def _decode_app_id(text: str) -> str | None:
     for line in text.splitlines():
-        if "MCP_EVENT_LOGGING_CONFIG_BASE64" in line:
+        _, _, tail = line.partition("MCP_EVENT_LOGGING_CONFIG_BASE64:")
+        if tail:
             try:
-                b64 = line.split("MCP_EVENT_LOGGING_CONFIG_BASE64:", 1)[1].strip()
-                meta = json.loads(base64.b64decode(b64))
-                if meta.get("application_id"):
+                meta = json.loads(base64.b64decode(tail.strip()))
+                if isinstance(meta, dict) and meta.get("application_id"):
                     return meta["application_id"]
             except (ValueError, json.JSONDecodeError):
                 pass
@@ -182,12 +183,14 @@ def analyze_batch(
             "no persistent event log (eventLog.dir unset); deep spill/skew profile unavailable"
         )
 
-    logs = _logging_messages(batch_id, project)
+    logs, log_err = _logging_messages(batch_id, project)
     if logs:
         ev.application_id = _decode_app_id(logs)
         ev.error_text = _error_region(logs)
         if ev.has_event_log and ev.application_id and event_log_dir:
             ev.event_log_uri = f"{event_log_dir}/{ev.application_id}"
+    elif log_err:
+        ev.notes.append(f"driver log fetch failed: {log_err}")
     else:
         ev.notes.append("no driver log via Cloud Logging (check freshness window)")
 

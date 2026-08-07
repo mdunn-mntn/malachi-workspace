@@ -28,13 +28,13 @@ def _attr(obj: Any, name: str) -> Any:
     return getattr(obj, name, None)
 
 
-def _engine_for(operator: str | None) -> str:
-    """Map an operator class name to a Spark engine (mirrors parse.parse_log)."""
-    if not operator:
+def _engine_for(classpath: str | None) -> str:
+    """Map an operator class path (module + class name) to a Spark engine (mirrors parse.parse_log)."""
+    if not classpath:
         return "unknown"
-    if any(o in operator for o in _DATABRICKS_OPS):
+    if any(o in classpath for o in _DATABRICKS_OPS):
         return "databricks"
-    if any(o in operator for o in _DATAPROC_OPS):
+    if any(o in classpath for o in _DATAPROC_OPS):
         return "dataproc"
     # Any other concrete operator/sensor class is a non-Spark task; we still classify
     # its exception, just without engine correlation.
@@ -53,17 +53,24 @@ def parse_context(ctx: dict) -> ParsedFailure:
     task = ctx.get("task")
 
     operator = type(task).__name__ if task is not None else None
+    # Full module path so tokens like '.dbx.' can match (a class __name__ never has a dot).
+    classpath = f"{type(task).__module__}.{operator}" if task is not None else None
     exc = ctx.get("exception")
-    exc_text = str(exc) if exc else ""
+    if isinstance(exc, BaseException):
+        exc_text = f"{type(exc).__name__}: {exc}"  # keep the class name for classify()
+    else:
+        exc_text = str(exc) if exc else ""
 
     try_number = _attr(ti, "try_number")
+    map_index = _attr(ti, "map_index")
     p = ParsedFailure(
         dag_id=_attr(ti, "dag_id"),
         task_id=_attr(ti, "task_id"),
         run_id=_attr(dag_run, "run_id") or _attr(ti, "run_id"),
         try_number=int(try_number) if try_number is not None else None,
+        map_index=int(map_index) if map_index is not None else None,
         operator=operator,
-        engine=_engine_for(operator),
+        engine=_engine_for(classpath),
     )
     asig = classify(exc_text)
     p.airflow_signature = _asdict_match(asig) if asig else None

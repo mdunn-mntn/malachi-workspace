@@ -55,7 +55,7 @@ STEPS = [
      "(Dataproc vs Databricks), and extracts the downstream Spark job id (batch id / run id).",
      "parse.py:51", "airflow_debugger/parse.py#L51",
      "python3 -m airflow_debugger.tests.test_parse",
-     "Agent-tested 2026-08-06; quoted-identity gap found + FIXED same day (test_parse_quoted_identity)"),
+     "Adversarial review 2026-08-06: 9 parse defects fixed; real-log sweep 64/64 identity, 33/33 job ids"),
     ("D4", "Engine RCA",
      "Dataproc: batches describe + Cloud Logging traceback + structural TTL check (dataproc_rca.py:156). "
      "Databricks: jobs get-run + get-run-output on the TASK run id + cluster events (databricks_rca.py:74). "
@@ -68,7 +68,7 @@ STEPS = [
      "call. Each signature's programmatic-fix flag separates a fixable root cause from a downstream symptom.",
      "signatures.py:28", "airflow_debugger/signatures.py#L28",
      "python3 -m airflow_debugger.tests.test_signatures",
-     "19 cases; agent live-classified the INC-012 driver text -> gcs_list_timeout"),
+     "27 cases + order-integrity test; INC-012 mixed driver blob classifies correctly"),
     ("D6", "Past-incident match",
      "Lexical matcher over the local incident corpus (on-call/incident_log.jsonl) attaches the most similar past "
      "incidents to the verdict, so a repeat is recognized instantly.",
@@ -80,13 +80,13 @@ STEPS = [
      "code fix is possible + a deep link to the batch/run.",
      "report.py:50", "airflow_debugger/report.py#L50",
      "python3 -m airflow_debugger.report <log file>",
-     "Agent-tested 2026-08-06 on 2 real logs, both <=500 chars, header names dag/task"),
+     "2 real-log replays <=500 chars; truncation now URL-safe (never emits a cut link)"),
     ("D8", "LLM fallback",
      "ONLY when no signature matched: one bounded LLM synthesis call over the distilled evidence (synth.py:29). "
      "Everything before this is plain deterministic code, so known failures cost nothing and are instant.",
      "orchestrate.py:16", "airflow_debugger/orchestrate.py#L16",
      "python3 -m airflow_debugger.orchestrate <log>  (--no-llm to force it off)",
-     "Agent-tested 2026-08-06: real log = no LLM call; synthetic unknown error = fallback fired"),
+     "Deterministic report never replaced by an LLM error stub; unknown-sig fallback verified"),
 ]
 steps_df = pd.DataFrame(
     [{"Step": s, "Name": n, "What it does and how": w, "Code": d, "Test it": t, "Proven": p}

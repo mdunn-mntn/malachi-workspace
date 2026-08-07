@@ -6,7 +6,9 @@ The live INC-009 / INC-005 integration checks live in the ticket, not here.
 
 from __future__ import annotations
 
-from airflow_debugger.signatures import classify
+import re
+
+from airflow_debugger.signatures import SIGNATURES, classify
 
 CASES = [
     # (label, error_text, expected_key)
@@ -120,7 +122,66 @@ CASES = [
         "... Got 5580 results, configured to fail if >5000",
         "dbt_test_failure",
     ),
+    (
+        # INC-012 mixed driver blob (desc log order): benign scale-down decommissions must not
+        # steal the GCS-list-timeout verdict.
+        "inc012_mixed_driver_blob",
+        "Caused by: java.net.SocketTimeoutException: Read timed out\n"
+        "Caused by: java.io.IOException: Error listing "
+        "gs://mntn-data-archive-prod/augmentor_log/region=\n"
+        "ERROR TaskSchedulerImpl: Lost executor 7 (10.128.0.23:35249): "
+        "Executor decommission finished: spark scale down\n"
+        "ERROR TaskSchedulerImpl: Lost executor 3 (10.128.0.11:41213): "
+        "Executor decommission finished: spark scale down",
+        "gcs_list_timeout",
+    ),
+    (
+        # A preemption diagnostic inside an ExecutorLostFailure line is the specific cause.
+        "preempted_executor_lost",
+        "ExecutorLostFailure (executor 1 exited caused by one of the running tasks) "
+        "Reason: Container container_1 on host wk-2 was preempted.",
+        "spot_preemption",
+    ),
+    (
+        "real_executor_lost",
+        "ERROR TaskSchedulerImpl: Lost executor 5 (10.0.0.5): worker lost",
+        "executor_lost",
+    ),
+    (
+        # Canonical stage-failure relay: executor-side shuffle OOM, not a driver OOM.
+        "executor_shuffle_oom_stage_failure",
+        "Job aborted due to stage failure ... SparkOutOfMemoryError: Unable to acquire "
+        "65536 bytes of memory\nDriver stacktrace:\n"
+        " at org.apache.spark.scheduler.DAGScheduler.failJobAndIndependentStages\n"
+        "Caused by: org.apache.spark.memory.SparkOutOfMemoryError",
+        "shuffle_oom",
+    ),
+    ("driver_heap_oom", "java.lang.OutOfMemoryError: Java heap space", "driver_oom"),
+    ("ttl_cancelling_batch", "Cancelling batch as ttl exceeded", "ttl_exceeded"),
+    ("ttl_deadline_with_batch_context", "Batch expired: DEADLINE_EXCEEDED", "ttl_exceeded"),
+    (
+        # SocketTimeout bound to a nearby gs:// reference still reads as a GCS list timeout.
+        "gcs_socket_timeout_with_context",
+        "WARN GoogleCloudStorageFileSystem: list of gs://mntn-data-archive-prod/augmentor_log/ "
+        "failed\nCaused by: java.net.SocketTimeoutException: Read timed out",
+        "gcs_list_timeout",
+    ),
 ]
+
+# Real prod log shape (2026-08-06 ddp_vertical_classification_api): a dbt python model
+# RUNTIME crash, whose summary still says 'Completed with 1 error'. Must NOT classify as
+# dbt_test_failure (wrong class, wrong fixability).
+DBT_RUNTIME_CRASH = (
+    "01:41:07  1 of 1 ERROR creating python table model ml.ddp_vertical_classification_api "
+    "[ERROR in 559.22s]\n"
+    "01:41:08  Completed with 1 error, 0 partial successes, and 0 warnings:\n"
+    "01:41:08    Runtime Error in model ddp_vertical_classification_api "
+    "(models/vertical_categorization/ddp_vertical_classification_api.py)\n"
+    "  Python model failed with traceback as:\n"
+    "  ValueError: Too many signals to process 169643477 for period between "
+    "2026-08-06T00:30:00+00:00 and 2026-08-06T01:30:00+00:00\n"
+    "01:41:08  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 TOTAL=1"
+)
 
 
 def test_classifier_cases() -> None:
@@ -155,10 +216,78 @@ def test_pod_evict_not_mistaken_for_sensor_timeout() -> None:
     assert m is not None and m.key == "pod_evicted_404"
 
 
+def test_order_integrity() -> None:
+    """Every case's expected key is the FIRST match across the full ordered list."""
+    for label, text, expected in CASES:
+        hits = [
+            s.key for s in SIGNATURES if re.search(s.pattern, text, re.IGNORECASE | re.DOTALL)
+        ]
+        assert hits, f"{label}: no signature matched"
+        assert hits[0] == expected, f"{label}: {hits[0]} steals the match from {expected} ({hits})"
+
+
+def test_benign_scale_down_decommission_no_match() -> None:
+    """A blob of only benign 'spark scale down' decommissions is not executor_lost."""
+    blob = (
+        "ERROR TaskSchedulerImpl: Lost executor 7 (10.128.0.23:35249): "
+        "Executor decommission finished: spark scale down\n"
+        "ERROR TaskSchedulerImpl: Lost executor 3 (10.128.0.11:41213): "
+        "Executor decommission finished: spark scale down"
+    )
+    assert classify(blob) is None
+
+
+def test_dbt_runtime_crash_not_test_failure() -> None:
+    """A dbt model runtime crash ('Completed with 1 error') is not a data-quality test."""
+    m = classify(DBT_RUNTIME_CRASH)
+    assert m is None, f"expected no match, got {m.key}"
+
+
+def test_generic_socket_timeout_not_gcs() -> None:
+    """A JDBC/network read timeout with no GCS context is not gcs_list_timeout."""
+    blob = (
+        "java.sql.SQLException: could not read response\n"
+        "Caused by: java.net.SocketTimeoutException: Read timed out\n"
+        " at java.net.SocketInputStream.socketRead0"
+    )
+    assert classify(blob, engine="databricks") is None
+    assert classify(blob) is None
+
+
+def test_grpc_deadline_not_ttl() -> None:
+    """A client-side gRPC DEADLINE_EXCEEDED poll timeout is not a TTL kill."""
+    blob = (
+        "grpc._channel._InactiveRpcError: status = StatusCode.DEADLINE_EXCEEDED, "
+        'details = "Deadline Exceeded" while calling google.cloud.dataproc get_batch'
+    )
+    assert classify(blob) is None
+
+
+def test_gcp_capacity_signatures_reachable_from_databricks() -> None:
+    """GCP quota/stockout also terminates Databricks-on-GCP clusters (engine='any')."""
+    m = classify(
+        "Cluster terminated. Reason: GCP_QUOTA_EXCEEDED. "
+        "Insufficient CPU quota in region us-central1.",
+        engine="databricks",
+    )
+    assert m is not None and m.key == "quota_exhaustion"
+    m = classify(
+        "Cluster terminated. Reason: ZONE_RESOURCE_POOL_EXHAUSTED in us-central1-a.",
+        engine="databricks",
+    )
+    assert m is not None and m.key == "cluster_create_stockout"
+
+
 if __name__ == "__main__":
     test_classifier_cases()
     test_empty_returns_none()
     test_table_exists_beats_generic_analysis()
     test_path_not_found_beats_generic_analysis()
     test_pod_evict_not_mistaken_for_sensor_timeout()
+    test_order_integrity()
+    test_benign_scale_down_decommission_no_match()
+    test_dbt_runtime_crash_not_test_failure()
+    test_generic_socket_timeout_not_gcs()
+    test_grpc_deadline_not_ttl()
+    test_gcp_capacity_signatures_reachable_from_databricks()
     print(f"OK — {len(CASES)} classifier cases + edge cases passed")
