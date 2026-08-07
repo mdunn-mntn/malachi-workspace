@@ -292,7 +292,9 @@ def test_analyze_batch_surfaces_logging_stderr() -> None:
         "airflow_debugger.dataproc_rca.subprocess.run", side_effect=[describe, log_fail]
     ):
         ev = analyze_batch("mntn-select-2026-08-06-1786049114")
-    assert any(n.startswith("driver log fetch failed:") and "connection refused" in n for n in ev.notes)
+    assert any(
+        n.startswith("driver log fetch failed:") and "connection refused" in n for n in ev.notes
+    )
     assert not any("freshness" in n for n in ev.notes)
 
 
@@ -384,9 +386,7 @@ def test_dbx_rca_follows_next_page_token() -> None:
         ],
         "next_page_token": "tok1",
     }
-    page2 = {
-        "tasks": [{"task_key": "seg_101", "run_id": 801, "state": {"result_state": "FAILED"}}]
-    }
+    page2 = {"tasks": [{"task_key": "seg_101", "run_id": 801, "state": {"result_state": "FAILED"}}]}
     calls: list = []
 
     def fake(*args: str, timeout: int = 90) -> object:

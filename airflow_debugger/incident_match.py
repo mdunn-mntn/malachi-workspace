@@ -82,6 +82,8 @@ def match(
                     "ticket": r.get("ticket"),
                     "score": round(score, 3),
                     "signature": (r.get("signature") or "")[:160],
+                    "fix_pr": r.get("fix_pr"),
+                    "fix_files": r.get("fix_files"),
                 }
             )
     scored.sort(key=lambda x: x["score"], reverse=True)

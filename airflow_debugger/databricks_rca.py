@@ -101,8 +101,7 @@ def analyze_run(run_id: int) -> DatabricksEvidence:
         page = _dbx("jobs", "get-run", str(run_id), "--page-token", token)
         if not isinstance(page, dict) or page.get("_cli_error"):
             ev.notes.append(
-                f"get-run page failed: "
-                f"{page.get('_cli_error') if isinstance(page, dict) else page}"
+                f"get-run page failed: {page.get('_cli_error') if isinstance(page, dict) else page}"
             )
             break
         tasks.extend(page.get("tasks") or [])

@@ -76,12 +76,14 @@ STEPS = [
      "incident_match.py:34", "airflow_debugger/incident_match.py#L34",
      "python3 -m airflow_debugger.tests.test_incident_match",
      "Agent-tested 2026-08-06: INC-012 query -> INC-012 top match (0.605)"),
-    ("D7", "Report",
-     "BLUF/STAR report under 500 characters: root cause + confidence + affected file:line where known + whether a "
-     "code fix is possible + a deep link to the batch/run.",
-     "report.py:50", "airflow_debugger/report.py#L50",
-     "python3 -m airflow_debugger.report <log file>",
-     "2 real-log replays <=500 chars; truncation now URL-safe (never emits a cut link)"),
+    ("D7", "Report + troubleshooting pack",
+     "Two outputs. (1) BLUF report under 500 characters: root cause + confidence + fix flag + deep link. "
+     "(2) Troubleshooting pack (--troubleshoot): Problem, Solution with the known fix PR when a past incident "
+     "carries one (fix_pr in the corpus), and Code links built from the traceback (framework frames skipped, "
+     "file resolved against the airflow-ti tree, exact #L line).",
+     "report.py:144", "airflow_debugger/report.py#L144",
+     "python3 -m airflow_debugger.tests.test_report",
+     "Live on INC-013: repeat alert returns PR #1179 + all 3 fixed files + the #L30 traceback link"),
     ("D8", "LLM fallback",
      "ONLY when no signature matched: one bounded LLM synthesis call over the distilled evidence (synth.py:29). "
      "Everything before this is plain deterministic code, so known failures cost nothing and are instant.",
@@ -134,11 +136,15 @@ cases = pd.DataFrame([
      "DAG / task": "materialize_mntn_select / materialize", "What it read": "batch describe + staging driveroutput",
      "Tool verdict (output)": "Both tries died listing augmentor_log: the region glob lists every file (~17M) to find one hour. 'Lost executors' was a red herring (idle scale-downs).",
      "Confirmed by": "Fix PR #1176 merged (literal paths); corrected the thread's preemption theory"},
+    {"Incident": "INC-013", "Failure class": "GCS list timeout (sibling)", "Engine": "Dataproc",
+     "DAG / task": "fpa_site_visit_batch_serverless / dsid30_augmentor_log_processing", "What it read": "batch describe + Cloud Logging driver traceback",
+     "Tool verdict (output)": "Same listing timeout in a sibling augmentor_log reader (glob + basePath). Repo sweep found 2 more, one failing silently (mntn_global_data shipped a day with zero augmentor rows behind a green run).",
+     "Confirmed by": "Fix PR #1179 merged + prod-verified same morning (6-min run vs 19-min deaths)"},
 ])
 wb.table(
     "Incidents proven",
     cases,
-    finding="Six real prod incidents diagnosed correctly, including two where the tool corrected the first human read",
+    finding="Seven real prod incidents diagnosed correctly, including three where the tool corrected the first human read",
     method="Each row is a real failure the tool was run on. Tool verdict is the actual output; Confirmed by is the owner action or merged fix that proved it right.",
     kind="headline",
     widths={"Incident": 10, "Failure class": 20, "Engine": 12, "DAG / task": 34, "What it read": 30, "Tool verdict (output)": 58, "Confirmed by": 30},
@@ -185,6 +191,19 @@ wb.notes(
         ("Mechanism", "The path used region={east,west}, a pattern. Expanding it makes the GCS connector list every file under augmentor_log (~17M) just to find one hour. When that listing runs slow, the job dies. Measured: the exact-folder list is 18K names in 7s."),
         ("Verdict", "Not preemption, not lost executors: a fragile full-prefix listing hitting variable GCS latency. A re-run passes (latency varies), so it would keep paging until fixed."),
         ("Fix + outcome", "PR #1176: point the job at the two exact region folders instead of the pattern (plus a crash guard in the shared helper). Merged same day by the owning team. The hour hole was backfilled; signature gcs_list_timeout added so the next one is recognized instantly."),
+    ],
+)
+
+# ---------------------------------------------------------------- 5b. Worked example: troubleshooting pack
+wb.notes(
+    "Ex — Troubleshooting pack",
+    intro="The final step (D7, --troubleshoot): a repeat of INC-013's alert now comes back with the fix PR and code links ready to paste. Real output below.",
+    blocks=[
+        ("Command", "python3 -m airflow_debugger.orchestrate <failed log> --troubleshoot --no-llm. Same chain as always; the pack adds Problem / Solution / Code sections after the BLUF line."),
+        ("Problem", "The signature's cause line plus the exact text it matched on. If nothing matched, it says so honestly and points at the log tail instead of guessing."),
+        ("Solution (real output)", "Known fix: github.com/SteelHouse/airflow-ti/pull/1179 (INC-013, runbook §3). The PR comes from the incident corpus: each resolved incident stores fix_pr + fix_files, so a repeat alert is answered with the merged fix, not a fresh investigation."),
+        ("Code (real output)", ".../spark/fpa/dsid30_augmentor_log_processing.py#L30 straight from the traceback (framework frames skipped, resolved against the airflow-ti tree), plus the other files PR #1179 fixed."),
+        ("Why it works offline", "Everything comes from the corpus and the traceback: no LLM, no network beyond what the RCA already fetched. Tested in test_report.py; proven live on the real INC-013 log while both driver-log sources were unreachable."),
     ],
 )
 

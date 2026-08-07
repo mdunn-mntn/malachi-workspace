@@ -41,7 +41,7 @@ _DESCRIBE = {
 }
 
 
-def _patched(describe=None, logging=None, driveroutput=None):
+def _patched(describe=None, logging=None, driveroutput=None) -> tuple:  # noqa: ANN001
     """Swap the module's CLI-touching functions; return the originals for restore."""
     orig = (dataproc_rca._describe, dataproc_rca._logging_messages, dataproc_rca._driveroutput_text)
     if describe is not None:
@@ -53,7 +53,7 @@ def _patched(describe=None, logging=None, driveroutput=None):
     return orig
 
 
-def _restore(orig) -> None:
+def _restore(orig: tuple) -> None:
     dataproc_rca._describe, dataproc_rca._logging_messages, dataproc_rca._driveroutput_text = orig
 
 
@@ -65,6 +65,7 @@ def test_uri_parses_real_state_message() -> None:
 
 
 def test_uri_absent_returns_none() -> None:
+    """A stateMessage without a driveroutput URI (or None) yields None."""
     assert driveroutput_uri(None) is None
     assert driveroutput_uri("Batch was CANCELLED as ttl exceeded") is None
 
@@ -91,7 +92,10 @@ def test_fallback_403_degrades_to_actionable_note() -> None:
     orig = _patched(
         describe=lambda *a: (_DESCRIBE, None),
         logging=lambda *a: ("", None),
-        driveroutput=lambda uri: (None, "403 on the staging bucket; request the dataproc-debug PAM grant, then re-run"),
+        driveroutput=lambda uri: (
+            None,
+            "403 on the staging bucket; request the dataproc-debug PAM grant, then re-run",
+        ),
     )
     try:
         ev = analyze_batch("mntn-select-2026-08-06-1786049114")
@@ -104,7 +108,7 @@ def test_fallback_403_degrades_to_actionable_note() -> None:
 def test_no_fallback_when_logging_carries_error_text() -> None:
     """Cloud Logging already produced error text -> the staging bucket is not touched."""
 
-    def _must_not_run(uri):
+    def _must_not_run(uri: str) -> None:
         raise AssertionError("driveroutput fallback fired despite Logging error text")
 
     logs = "Traceback (most recent call last):\n  File x\nValueError: boom"

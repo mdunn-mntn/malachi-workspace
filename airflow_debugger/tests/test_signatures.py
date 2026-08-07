@@ -219,9 +219,7 @@ def test_pod_evict_not_mistaken_for_sensor_timeout() -> None:
 def test_order_integrity() -> None:
     """Every case's expected key is the FIRST match across the full ordered list."""
     for label, text, expected in CASES:
-        hits = [
-            s.key for s in SIGNATURES if re.search(s.pattern, text, re.IGNORECASE | re.DOTALL)
-        ]
+        hits = [s.key for s in SIGNATURES if re.search(s.pattern, text, re.IGNORECASE | re.DOTALL)]
         assert hits, f"{label}: no signature matched"
         assert hits[0] == expected, f"{label}: {hits[0]} steals the match from {expected} ({hits})"
 

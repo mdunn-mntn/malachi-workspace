@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from .incident_match import match as match_incidents
 from .parse import diagnose, parse_log_file
-from .report import build_report
+from .report import build_report, build_troubleshooting
 
 _LOG_TAIL_CHARS = 4000  # raw log tail given to the LLM when signatures found nothing
 
@@ -66,6 +66,7 @@ def investigate(log_path: str, use_llm: bool = True) -> dict:
 
     return {
         "report": report,
+        "troubleshooting": build_troubleshooting(diag, matches),
         "confidence": "high" if root else ("llm" if llm_report else "low"),
         "diagnosis": diag,
         "similar_incidents": matches,
@@ -79,13 +80,20 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     paths = [a for a in argv if not a.startswith("-")]  # flag-order robust
     if not paths:
-        print("usage: python -m airflow_debugger.orchestrate <airflow_log_file> [--no-llm]")
+        print(
+            "usage: python -m airflow_debugger.orchestrate <airflow_log_file>"
+            " [--no-llm] [--troubleshoot]"
+        )
         raise SystemExit(2)
     res = investigate(paths[0], use_llm="--no-llm" not in argv)
-    print(res["report"])
-    print("---")
-    print(f"confidence: {res['confidence']} | llm_used: {res['llm_used']}")
-    if res["similar_incidents"]:
-        print(
-            "similar: " + ", ".join(f"{m['inc']}({m['score']})" for m in res["similar_incidents"])
-        )
+    if "--troubleshoot" in argv:
+        print(res["troubleshooting"])
+    else:
+        print(res["report"])
+        print("---")
+        print(f"confidence: {res['confidence']} | llm_used: {res['llm_used']}")
+        if res["similar_incidents"]:
+            print(
+                "similar: "
+                + ", ".join(f"{m['inc']}({m['score']})" for m in res["similar_incidents"])
+            )

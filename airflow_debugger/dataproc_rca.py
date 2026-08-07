@@ -242,8 +242,15 @@ def analyze_batch(
             if text:
                 ev.application_id = ev.application_id or _decode_app_id(text)
                 ev.error_text = _error_region(text)
-                ev.notes.append("driver text read from staging driveroutput (Cloud Logging had none)")
-                if ev.has_event_log and ev.application_id and event_log_dir and not ev.event_log_uri:
+                ev.notes.append(
+                    "driver text read from staging driveroutput (Cloud Logging had none)"
+                )
+                if (
+                    ev.has_event_log
+                    and ev.application_id
+                    and event_log_dir
+                    and not ev.event_log_uri
+                ):
                     ev.event_log_uri = f"{event_log_dir}/{ev.application_id}"
             else:
                 ev.notes.append(f"driveroutput fallback failed: {do_err}")
