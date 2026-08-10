@@ -1101,6 +1101,12 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
     (BQ does not materialize CTEs) — count root-to-leaf paths to the external scan before launching;
     a 3-reference layout tripled one scan to ~30TB, fixed by pre-aggregating to one reference.
     (3) Dry runs over many URIs + huge wildcards can exceed 2 min — extend the timeout, don't skip.
+    (3b) **Dry runs on external tables report "lower bound of 0 bytes"** (BQ cannot pre-estimate GCS
+    scans) — the ">5GB dry-run abort" safety rule is unenforceable there; calibrate with a real 1-day
+    run and read actual bytes instead (AUDI-431, 2026-08-10). A def-FILE with
+    `hivePartitioningOptions: {mode: AUTO, sourceUriPrefix: …}` + `sourceUris: […/*.parquet]` gives a
+    usable `dt` partition column + pruning that the inline `name::PARQUET=uri` form cannot.
+    Also: SQL passed as a CLI arg must not START with a `--` comment line — bq parses it as a flag.
     (4) **Correlated scalar subqueries over an external-reading CTE MULTIPLY the re-reads** — a
     layout with ~9 textual references (each scalar subquery counts) expands to ~17 executions of
     the external subtree (est. 50-150TB; caught in review before launch, 2026-07-16). Single-pass
@@ -1151,6 +1157,17 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   unparseable / infra urls): Sovrn 71.4% (37.4M rows AND 5.5M of 7.9M daily IPs lost), Cybba 4.7%,
   33A API 2.3%, guid_log 19.1% (60M empty urls), others <1%. DS13-blocklist share: 33Across 29% (316M
   rows/day yahoo/aol!), 33A API 18%, Predactiv 14%. Bot-UA rows/day: 33Across 52.7M (4.9%). Klickly: zero drops.
+- **Ecommerce whitelist/blocklist state + wcv quality (AUDI-431, 2026-08-10):** both list files
+  (`…/ecommerce_domain_whitelist/`) sat untouched 2025-09-23 → 2026-08-10 (TI-200 was the last refresh);
+  wcv last refreshed 2025-11-07. `aol.com`/`yahoo.com` ARE in the blocklist CSV (why they never appear in
+  `missing_domains` yet still get scored daily by `ddp_url_verticals`, which consumes no blocklist).
+  **wcv misclassification is severe at the traffic head:** double-LLM audit of the top-500 wcv domains by
+  7d traffic found 76 agreed-wrong verticals — yahoo.com→"Dating & Relationships" (2.33B urls/7d),
+  google.com→"Security Software", facebook.com→"B2B - Sales & Marketing", myshopify.com→"Family Planning",
+  cnn.com→"Learning & Eduction Technology" (that taxonomy typo is real in prod). These pollute
+  ip_vertical_associations at scale. Also: tldextract parse artifacts are STABLE high-volume strings —
+  `comhttps.` 793M rows/28d, `android-app.` 231M — and string-equality blocklistable (shipped `localhost.`
+  precedent). Corrections/refresh tracked in IMP-036/IMP-037.
 - **Consumer-side filters (what junk actually survives — Ryan Kleck Slack + airflow-ti code, 2026-07-10):**
   - **Vertical/DS13 path:** `aug_log_ip_vertical_id_hourly.py` hard-excludes `BLOCKED_DOMAIN_NAMES =
     ("yahoo.com", "aol.com", "easybrain.com")` (applied to registrable domain post-tldextract) + an
