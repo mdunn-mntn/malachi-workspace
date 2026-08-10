@@ -25,6 +25,8 @@ framing_state: locked
 - **What would change the answer:** Overlap gate nonzero (missing_domains does NOT exclude current lists) → stop, re-read prod code before adjudicating. Score coverage sparse (<50% of top-N with ≥30 scored URLs) → bands collapse to manual, deliverable becomes signal-sheet only. P90/P10 not re-derivable → fall back to prod's flat 0.4 with a wider manual band.
 
 ## 1. Introduction
+**What these domains are, in plain terms:** the sites people visit that MNTN's pipeline can't do anything with. When a visit signal arrives (someone hit nike.com/shoes), we extract the domain and try to categorize it. The domains in this ticket fail every step — not in the blocklist ("known not-ecommerce, skip"), not in the whitelist ("known ecommerce"), and not in the crawled domain→vertical map (wcv). Each one is re-scored by the ecommerce model every day and still yields no vertical for the IP: wasted compute, zero signal. This ticket ranks the most common of them and adjudicates each into blocklist (not a store), whitelist (is a store), or manual review.
+
 The vertical categorization pipeline (DS13) processes `site_visit_signal` URLs: domain → ecommerce blocklist check (stop) → whitelist check (= ecommerce) → else URL-only ecommerce model @0.4 → if ecomm, vertical lookup in `website_crawl_verticals` (wcv). Domains absent from wcv get no vertical. The `missing_domains` dbt model (TI-253, daily, `gs://mntn-data-archive-prod/vertical_categorizations/missing_domains/`) tracks svs domains not in wcv. Periodically the most-common ones must be re-adjudicated into the whitelist or blocklist so they stop being processed futilely (TI-200 was the Sep-2025 pass).
 
 ## 2. The Problem
