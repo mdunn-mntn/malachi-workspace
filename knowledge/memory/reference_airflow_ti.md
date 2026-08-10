@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: 60b2f7af-ea4c-4042-bcd9-027f6c6ad945
 doc_type: memory
-keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access, ExternalTaskSensor, skipped_states, failed_states, skip as failure, ExternalTaskFailedError, wait_fpa, globStatus, flat glob, fs.gs.glob.flat.enable, gcs list timeout, literal partition paths, augmentor_log glob, INC-012, PR 1176, basePath, getFileInfoInternal, root stat, directory marker, COLUMN_ALREADY_EXISTS, PR 1177, batch-id attach, create_batch_id, batch with given id already exists, ti_resources spark deploy lag, model_backfill.sh, backfill runbook, PR 1180, INC-013, PR 1179, dsid30 augmentor reader, silent try except degrade, mntn_global_data, feature_store_setup_model schedule, dt D+1 offset, catchup false latest interval only, bae_ip disabled, INC-015]
+keywords: [airflow-ti, feature store pipeline, dataproc serverless, ryan kleck, model_run.py, model_upload.py, backfill, feature_group, parquet schema gotchas, GCS feature store paths, persistent history server, PHS, spark event logging, spark-job-history, PR 1169, deploy to prod, spark eventLog, dataproc-debug pam, dataproc-temp bucket access, ExternalTaskSensor, skipped_states, failed_states, skip as failure, ExternalTaskFailedError, wait_fpa, globStatus, flat glob, fs.gs.glob.flat.enable, gcs list timeout, literal partition paths, augmentor_log glob, INC-012, PR 1176, basePath, getFileInfoInternal, root stat, directory marker, COLUMN_ALREADY_EXISTS, PR 1177, batch-id attach, create_batch_id, batch with given id already exists, ti_resources spark deploy lag, model_backfill.sh, backfill runbook, PR 1180, INC-013, PR 1179, dsid30 augmentor reader, silent try except degrade, mntn_global_data, feature_store_setup_model schedule, dt D+1 offset, catchup false latest interval only, bae_ip disabled, INC-015, retired model gcs dir, guid_log_derived_advertiser_id_dsc_id, conversion_log_derived_advertiser_id_dsc_id, guid_and_conv_log_derived_advertiser_id_dsc_id, false missing partition, dev not a mirror of prod]
 domain: [repos, infra]
 lifecycle: active
-last_verified: 2026-08-09
+last_verified: 2026-08-10
 ---
 ## Repo
 - **GitHub:** SteelHouse/airflow-ti
@@ -63,8 +63,9 @@ Three-layer feature store on GCP Dataproc Serverless via Airflow (Astronomer):
 
 ## GCS Paths
 - Prod: `gs://mntn-data-archive-prod/feature_store/feature_group_{N}_{type}/`
-- Dev: `gs://mntn-data-archive-dev/feature_store/feature_group_{N}_{type}/`
+- Dev: `gs://mntn-data-archive-dev/feature_store/feature_group_{N}_{type}/` — **NOT a mirror of prod.** 29 of 38 models compile with `read_location` = dev, so dev holds only hand-seeded backfill remnants; a dev run of an existing model reads stale/absent inputs. Census + inspection recipe: [[reference_airflow3_backfill_scoping]].
 - Branch-aware: dev outputs get `_{branch_suffix}` in dataset naming
+- **RETIRED models leave live-looking directories (INC-015, 2026-08-10).** `feature_group_2_derived/guid_log_derived_advertiser_id_dsc_id` and `.../conversion_log_derived_advertiser_id_dsc_id` stop at `dt=2026-02-08` — superseded by `guid_and_conv_log_derived_advertiser_id_dsc_id`, but the old prefixes still exist with historical data. A GCS-directory sweep for a missing partition flags them as gaps; they are not. **Always cross-check a "missing partition" against the DAG's actual task list before calling it a hole** (this corrected an "11 missing models" read to the true 9).
 
 ## Spark Config Placement (Ryan, 2026-04-07)
 - **`@compute.dataproc_batch(runtime_properties=...)`** — ONLY cluster infra settings: `dynamicAllocation.*`, `executor.cores`

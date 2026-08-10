@@ -146,7 +146,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_xlsx_master_format | reference | 2026-07-30 | [doc](memory/reference_xlsx_master_format.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-07-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
 | feedback_state_query_provenance | feedback | 2026-07-31 | [doc](memory/feedback_state_query_provenance.md) |
-| reference_airflow_log_puller | reference | 2026-07-31 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_aud22_geo_reporting_sync | reference | 2026-07-31 | [doc](memory/reference_aud22_geo_reporting_sync.md) |
 | reference_commit_gate | reference | 2026-07-31 | [doc](memory/reference_commit_gate.md) |
 | reference_data_eng_mcp | reference | 2026-07-31 | [doc](memory/reference_data_eng_mcp.md) |
@@ -165,19 +164,20 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | feedback_terse_chat_replies | feedback | 2026-08-06 | [doc](memory/feedback_terse_chat_replies.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
-| reference_gitignore_json_rule | reference | 2026-08-06 | [doc](memory/reference_gitignore_json_rule.md) |
 | feedback_exec_explainer_mechanism_only | feedback | 2026-08-07 | [doc](memory/feedback_exec_explainer_mechanism_only.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
 | project_airflow_optimizer | project | 2026-08-07 | [doc](memory/project_airflow_optimizer.md) |
 | project_fangorn_on_mntn_id | project | 2026-08-07 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-07 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |
-| Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-09 | [doc](memory/reference_airflow3_backfill_scoping.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-08-09 | [doc](memory/reference_airflow_ti.md) |
-| feedback_validated_is_not_correct | feedback | 2026-08-09 | [doc](memory/feedback_validated_is_not_correct.md) |
 | project_airflow_debugger | project | 2026-08-09 | [doc](memory/project_airflow_debugger.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-08-09 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |
+| Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-10 | [doc](memory/reference_airflow3_backfill_scoping.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-08-10 | [doc](memory/reference_airflow_ti.md) |
 | feedback_constrain_llm_to_real_taxonomy | feedback | 2026-08-10 | [doc](memory/feedback_constrain_llm_to_real_taxonomy.md) |
+| feedback_validated_is_not_correct | feedback | 2026-08-10 | [doc](memory/feedback_validated_is_not_correct.md) |
 | project_audi_431_list_refresh | project | 2026-08-10 | [doc](memory/project_audi_431_list_refresh.md) |
+| reference_airflow_log_puller | reference | 2026-08-10 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-10 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
+| reference_gitignore_json_rule | reference | 2026-08-10 | [doc](memory/reference_gitignore_json_rule.md) |

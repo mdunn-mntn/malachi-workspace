@@ -1,0 +1,153 @@
+vertical_id,vertical_name,bucket_id
+101000,Apparel & Accessories,101
+101001,Apparel & Accessories - Athletic & Outdoors,101
+101002,Apparel & Accessories - Costumes,101
+101003,Apparel & Accessories - Customized,101
+101004,Apparel & Accessories - Formal,101
+101005,Apparel & Accessories - Healthcare,101
+101006,Apparel & Accessories - Intimates,101
+101007,Apparel & Accessories - Kids,101
+101008,Apparel & Accessories - Luxury,101
+101009,Apparel & Accessories - Premium,101
+101010,Eyewear & Accessories,101
+101011,Footwear,101
+101012,Footwear - Athletic,101
+102000,Books,102
+102001,Live Music & Comedy,102
+102002,Museums & Art Galleries,102
+102003,Music & Instruments,102
+102004,Photography & Cameras,102
+102005,"Theatre, Dance, & Films",102
+103000,Auctions,103
+103001,Resale Marketplace,103
+104000,B2B - Accounting & Finance,104
+104001,B2B - Consulting Services,104
+104002,B2B - Data & Analytics,104
+104003,B2B - Engineering,104
+104004,B2B - Field Services,104
+104005,B2B - HR & Payroll,104
+104006,B2B - Healthcare,104
+104007,B2B - Hiring,104
+104008,B2B - Information Technology & Engineering,104
+104009,B2B - Insurance,104
+104010,"B2B - Logistics, Operations, & Manufacturing",104
+104011,B2B - Promotional Products & Displays,104
+104012,B2B - Sales & Marketing,104
+104013,B2B - Small Businesses,104
+104014,B2B - Workflow Automation,104
+105000,MNTN Matched Audience,105
+105000,Building Materials,105
+105001,Commercial Equipment,105
+105002,Industrial Equipment,105
+106000,Dental Care & Teeth Whitening,106
+107000,Colleges & Universities,107
+107001,K-12 Education & Tutoring,107
+107002,Learning & Eduction Technology,107
+107003,Office & School Supplies,107
+108000,Consumer Electronics,108
+108001,Mobile Phone Accessories,108
+108002,Security Software,108
+108003,Streaming Services,108
+109000,Job Search & Hiring,109
+109001,Job Training & Certification - Business,109
+109002,Job Training & Certification - Medical,109
+109003,Job Training & Certification - Tech,109
+110000,Amusement Parks & Attractions,110
+110001,Games & Comics,110
+110002,"Sewing, Arts, & Crafts",110
+110003,Zoos & National Parks,110
+111000,Banking,111
+111001,Credit Services,111
+111002,Financial Services & Software,111
+111003,Investments & Trading,111
+111004,Lending & Brokerage,111
+112000,Identification Services,112
+112001,Law Offices & Legal Services,112
+112002,Payment & Shipping,112
+113000,Fitness Equipment & Accessories,113
+113001,Fitness Studios,113
+113002,"Vitamins, Supplements & Health Stores",113
+113003,Weight Loss Services,113
+114000,Alcoholic Beverages,114
+114001,Beverage Retail,114
+114002,Coffee & Tea,114
+114003,Food Products,114
+114004,Groceries,114
+114005,Meal Subscriptions,114
+114006,Plant-Based & Specialty Foods,114
+115000,Gambling,115
+115001,Sports Betting,115
+116000,Flowers,116
+116001,Gifts & Specialty Stores,116
+117000,Health Insurance Services,117
+117001,Healthcare & Medications,117
+117002,Hospitals & Medical Centers,117
+117003,Medical Devices & Equipment,117
+117004,Mental Health & Addiction Services,117
+117005,Pharmacy & Healthcare Supplies,117
+117006,Senior Care & End of Life Planning,117
+118000,Event Planning & Weddings,118
+119000,Air Purifiers & Filters,119
+119001,Home Improvement & Hardware,119
+119002,Home Services & Repairs,119
+119003,Pool Supplies & Accessories,119
+119004,Security Products & Services,119
+120000,Furniture,120
+120001,Household Cleaning Products & Services,120
+120002,Household Goods,120
+120003,Household Goods - Fragrances,120
+120004,Kitchen & Cookware,120
+120005,Mattresses & Bedding,120
+120006,Outdoor Furniture & Goods,120
+120007,Stationary & Printing,120
+121000,Car Insurance,121
+121001,Insurance,121
+122000,"Family Planning, Maternity, & Infant Care",122
+122001,"Kids Toys, Games, & Books",122
+123000,"Trucking, Moving & Storage",123
+124000,Current Affairs,124
+124001,Emergency Preparedness,124
+125000,Charitable Organizations,125
+125001,Religion & Churches,125
+125002,Veterans Services,125
+126000,Cosmetics,126
+126001,Haircare,126
+126002,Mens Health & Personal Care,126
+126002,Men's Health & Personal Care,126
+126003,Perfume & Cologne,126
+126004,Self-Help / Improvement,126
+126005,Skincare,126
+126006,Womens Health & Personal Care,126
+126006,Women's Health & Personal Care,126
+127000,Pet Products & Services,127
+128000,Home Warranties,128
+128001,Real Estate & Builders,128
+129000,Casual Dining,129
+129001,Fast Casual Dining,129
+130000,Coupons & Deals,130
+130001,Jewelry & Watches,130
+131000,Dating & Relationships,131
+132000,Golfing,132
+132001,Sporting Goods,132
+132002,Sports Teams & Leagues,132
+133000,Biking,133
+133001,Boating & Water Sports,133
+133002,Electric Bikes & Scooters,133
+133003,"Hunting, Fishing, & Firearms",133
+133004,Outdoor Gear,133
+133005,Skiing & Snowboarding,133
+134000,Transportation Services,134
+135000,Airlines & Flight Booking Services,135
+135001,"Hotels, Resorts, & Accommodations",135
+135002,Luggage & Travel Accessories,135
+135003,Outdoor Accomodations & Camping,135
+135004,RVs & RV Accessories,135
+135004,RV's & RV Accessories,135
+135005,Travel Agencies & Services,135
+135006,Travel Destination Promotion,135
+136000,Disposal & Recycling Services,136
+136001,Energy Services,136
+136002,Internet Service Providers,136
+136003,Mobile Phone Service,136
+137000,Automobile Dealers,137
+137001,Automobile Parts & Services,137

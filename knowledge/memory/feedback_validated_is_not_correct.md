@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: feedback
 doc_type: memory
-keywords: [validated is not correct, happy path validation, full corpus sweep, adversarial code review, execution-verified claims, reproduce before it counts, order-integrity test, first-match-wins precedence, precedence rot, regression test per fix, classifier taxonomy review, fleet correctness, shared-resource sweep, call-site sweep, incomplete fix, fix recurrence, INC-012 v2, INC-013 payoff, silent try except degrade, silent green run data loss, test fixture realism, hardcoded fixture, fixture mirrors real data shape, fixture from desired answer, passing test masked defect]
+keywords: [validated is not correct, happy path validation, full corpus sweep, adversarial code review, execution-verified claims, reproduce before it counts, order-integrity test, first-match-wins precedence, precedence rot, regression test per fix, classifier taxonomy review, fleet correctness, shared-resource sweep, call-site sweep, incomplete fix, fix recurrence, INC-012 v2, INC-013 payoff, silent try except degrade, silent green run data loss, test fixture realism, hardcoded fixture, fixture mirrors real data shape, fixture from desired answer, passing test masked defect, green run not data landed, task duration proxy, anomalously fast task, retired model false gap]
 domain: [workflow, infra]
 lifecycle: active
-last_verified: 2026-08-09
+last_verified: 2026-08-10
 ---
 **"Validated on N incidents" is NOT "correct on the fleet."** A tool that has passed every live case it met can still be riddled with defects — the AUDI-1191 debugger had passed 6 live incidents and still held **40 execution-confirmed defects** when reviewed against the whole corpus (2026-08-06; 37 fixed same day).
 
@@ -29,4 +29,6 @@ Before calling a parser/classifier "working": sweep it against the full real cor
 
 **Addendum — a passing test can MASK a defect when the fixture encodes the desired answer, not the real data shape (IMP-030 hardening, 2026-08-09):** the basename-collision defect in the troubleshooting code-link resolver was covered by a green test — but the fixture hardcoded a repo map (basename → `spark/` path) that the real `_repo_paths()` never produces (`dags/` sorts first, so the real map points at the WRONG file). Build fixtures FROM the actual source (run the real producer, snapshot its output), not from the answer you want; an adversarial reviewer running the REAL resolver caught it same-day. Same law as the corpus sweep: a test that samples an invented shape proves the invented shape, nothing more.
 
-Related: [[feedback_self_qa_before_shipping]] (mechanize enforcement, verify the render), [[feedback_hold_evidenced_verdict]] (test-first verdicts), [[feedback_adversarial_workflow_authoring]] (multi-agent verify mechanics), [[project_airflow_debugger]] (the case).
+**Addendum — the same law read forward: a GREEN run is not proof the data landed (INC-015, 2026-08-10).** Airflow success is orchestration-level; INC-013 shipped a green run with zero rows. Output listing is the only proof, but when GCS is unreachable (expired gcloud SSO, PAM gap) **compare per-task DURATION against a known-good scheduled run** — an anomalously FAST task is the silent-degrade signature (INC-015's backfill tracked healthy: pivot 5.9m vs 6.5m, derived 7.0m vs 8.0m, L1 3.7m vs 4.1m). Treat it as a smell test that can only falsify, never confirm; list the output once access returns. Mirror rule for the other direction: an empty directory is not automatically a hole — retired models leave frozen live-looking prefixes, so check the DAG's task list before calling a gap.
+
+Related: [[feedback_self_qa_before_shipping]] (mechanize enforcement, verify the render), [[feedback_hold_evidenced_verdict]] (test-first verdicts), [[feedback_adversarial_workflow_authoring]] (multi-agent verify mechanics), [[project_airflow_debugger]] (the case), [[reference_oncall_runbook]] (§1 triage rules).
