@@ -131,7 +131,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_shared_worktree_commits | feedback | 2026-07-29 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_slack_reply_voice | feedback | 2026-07-29 | [doc](memory/feedback_slack_reply_voice.md) |
 | reference_data_pipeline_repo | reference | 2026-07-29 | [doc](memory/reference_data_pipeline_repo.md) |
-| reference_github_pr_no_clone | reference | 2026-07-29 | [doc](memory/reference_github_pr_no_clone.md) |
 | reference_hhst_pacing_lever | reference | 2026-07-29 | [doc](memory/reference_hhst_pacing_lever.md) |
 | reference_workflow_kit_porting | reference | 2026-07-29 | [doc](memory/reference_workflow_kit_porting.md) |
 | rubric_strategy | feedback | 2026-07-29 | [doc](memory/feedback_rubric_strategy.md) |
@@ -142,7 +141,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_audi_1175_ds14_scoring_cost | project | 2026-07-30 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | reference_bash_inline_unicode_gotcha | reference | 2026-07-30 | [doc](memory/reference_bash_inline_unicode_gotcha.md) |
 | reference_confluence_api_access | reference | 2026-07-30 | [doc](memory/reference_confluence_api_access.md) |
-| reference_fangorn_inference_dataproc | reference | 2026-07-30 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_openai_sdk_pagination | reference | 2026-07-30 | [doc](memory/reference_openai_sdk_pagination.md) |
 | reference_shopper_graph_deploy | reference | 2026-07-30 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-07-30 | [doc](memory/reference_xlsx_master_format.md) |
@@ -168,13 +166,15 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_terse_chat_replies | feedback | 2026-08-06 | [doc](memory/feedback_terse_chat_replies.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
 | reference_gitignore_json_rule | reference | 2026-08-06 | [doc](memory/reference_gitignore_json_rule.md) |
-| Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-07 | [doc](memory/reference_airflow3_backfill_scoping.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-08-07 | [doc](memory/reference_airflow_ti.md) |
 | feedback_exec_explainer_mechanism_only | feedback | 2026-08-07 | [doc](memory/feedback_exec_explainer_mechanism_only.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
-| feedback_validated_is_not_correct | feedback | 2026-08-07 | [doc](memory/feedback_validated_is_not_correct.md) |
-| project_airflow_debugger | project | 2026-08-07 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-08-07 | [doc](memory/project_airflow_optimizer.md) |
 | project_fangorn_on_mntn_id | project | 2026-08-07 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-07 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |
+| Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-09 | [doc](memory/reference_airflow3_backfill_scoping.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-08-09 | [doc](memory/reference_airflow_ti.md) |
+| feedback_validated_is_not_correct | feedback | 2026-08-09 | [doc](memory/feedback_validated_is_not_correct.md) |
+| project_airflow_debugger | project | 2026-08-09 | [doc](memory/project_airflow_debugger.md) |
+| reference_fangorn_inference_dataproc | reference | 2026-08-09 | [doc](memory/reference_fangorn_inference_dataproc.md) |
+| reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |

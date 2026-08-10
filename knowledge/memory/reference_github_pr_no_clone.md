@@ -5,12 +5,14 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [github mcp, search_code, get_file_contents, list_commits, commit permalink, blob sha, read prod source, code forensics, cite exact line, find the code, create_pull_request, create_or_update_file, create_branch, open pr without cloning, another team repo, cross-repo pr, shopper_graph, SteelHouse, org code search, lint_comms pr, coverage report non-blocking, required review gate, on-call durable fix pr, INC-006]
+keywords: [github mcp, search_code, get_file_contents, list_commits, commit permalink, blob sha, read prod source, code forensics, cite exact line, find the code, create_pull_request, create_or_update_file, create_branch, open pr without cloning, another team repo, cross-repo pr, shopper_graph, SteelHouse, org code search, lint_comms pr, coverage report non-blocking, required review gate, on-call durable fix pr, INC-006, ip allow list, ip allowlist enabled, vpn required github, git fetch push steelhouse, owner has an IP allow list]
 domain: [repos, workflow, infra]
 lifecycle: active
-last_verified: 2026-07-29
+last_verified: 2026-08-09
 ---
 The GitHub MCP tools reach every repo in the **`SteelHouse`** org (auth = `mdunn-mntn`, Targeting team) without a local clone — for READING prod source as well as opening PRs.
+
+**Local git access to SteelHouse remotes needs the VPN (confirmed 2026-08-09):** the org enforces a GitHub **IP allowlist** — a `git fetch`/`push` from a non-VPN home IP is rejected with "owner has an IP allow list enabled". Turn the VPN on before any fetch/push to a SteelHouse remote (e.g. the local `~/Developer/work/mntn/airflow-ti` clone).
 
 **READING / investigating prod source (answer "how does system X actually work / what's the exact value" from the code itself, and hand back a clickable line link).** Used 2026-07-30 to pin the DS14 build windows + serving TTL to source for a cross-team question:
 1. `search_code` scoped to the org with qualifiers: `org:SteelHouse filename:create_mntn_global_data_pyspark.py`, `org:SteelHouse repo:SteelHouse/membership-db data_source_ttls`, `org:SteelHouse path:spark <term>`. Run several term variants; do not stop at one query.

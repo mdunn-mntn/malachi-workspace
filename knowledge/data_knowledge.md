@@ -1048,6 +1048,12 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   serverless). `ENABLED_DSIDS = [23,25,26,28,30,36]`; per-DS lag hours (5x5=5h, augmentor/guid=1h, 33across=8h).
   Two outputs per vendor: stage-1 `gs://mntn-data-archive-{env}/fpa_vendor_log/data_source_id=NN/` (raw archive),
   stage-2 `…/signals/site_visit_signal/dt=/hh=/data_source_id=NN/`.
+- **`mntn-data-partners` lifecycle trap — static reference files expire at age 365 (INC-014, 2026-08-08):** the
+  bucket has an UNRESTRICTED age-365 Delete lifecycle rule (rule 1, no prefix filter), NO versioning, NO soft
+  delete — so **every static partner reference file dies on its 365-day birthday.** INC-014: the one-time
+  `partners/sharethis/categories` mapping (read by `spark/data_source/populate_data_source.py:1019` as a
+  pipe-delimited CSV segment→category map for DS17) was deleted by the rule → `PATH_NOT_FOUND` on a static path.
+  Dated hourly/daily feeds are unaffected (they age out by design). Incident detail: on-call runbook INC-014.
 - **Hourly partner delivery + benign short-circuit (INC-011, 2026-08-05):** each source drops HOURLY to
   `gs://mntn-data-partners/partners/<vendor>/dt=<YYYYMMDDHH>/` where `hh` = **UTC hour**; the producer
   `fpa_site_visit_batch_serverless` checks a data hour **~2h behind** the run's logical date. Per source, a

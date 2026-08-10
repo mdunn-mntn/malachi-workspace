@@ -3,10 +3,10 @@ name: Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a
 description: Airflow-3 UI backfill is whole-DAG only; the shipped method is scripts/model_backfill.sh (dev model_run.py + gcloud storage copy to prod, merged airflow-ti#1180). Read-resolution rules, PAM grants, graph build cadence, API path-prefix + safe-unpause.
 type: reference
 doc_type: memory
-keywords: [airflow 3 backfill, astronomer backfill UI, whole-dag backfill, feature_store_setup_model backfill, dev copy to prod, dedicated backfill DAG, base href api prefix, dagRuns api v2, non-terminal runs unpause, household FS backfill, AUDI-1170, pam grant, dataproc-runtime-actas, dataproc-submit, serviceAccountUser, model_run.py permissions, graph build cadence, PATH_NOT_FOUND mirror dt, model_backfill.sh, PR 1180, monthly suffix dir]
+keywords: [airflow 3 backfill, astronomer backfill UI, whole-dag backfill, feature_store_setup_model backfill, dev copy to prod, dedicated backfill DAG, base href api prefix, dagRuns api v2, non-terminal runs unpause, household FS backfill, AUDI-1170, pam grant, dataproc-runtime-actas, dataproc-submit, serviceAccountUser, model_run.py permissions, graph build cadence, PATH_NOT_FOUND mirror dt, model_backfill.sh, PR 1180, monthly suffix dir, paused dag grid gap, no dag run columns, deleted run history, task instances deleted, paused vs deleted indistinguishable, gcs output ground truth, INC-015]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-08-07
+last_verified: 2026-08-09
 ---
 **Astronomer Runtime 3.1-9 / Airflow 3.1.5.** Backfilling a *few new* models (e.g. the household `identity_graph_ip_household_id` → `guid_log_derived_household_id_vertical_id` → `guid_log_pivot_household_id_vertical_id`) into an existing multi-model DAG:
 
@@ -14,6 +14,8 @@ last_verified: 2026-08-07
 - **Historical household tasks show BLANK in a backfill** because those runs pin to the **old DAG bundle version** (pre-merge). To materialize new tasks historically you'd need "Run with latest bundle version" — but even then it's whole-DAG.
 - **Correct approaches (Ryan Kleck):** (a) run each model in **dev** via `python model_run.py <model_id> -a '{"run_date": d}'` looped over the dates, then **`gsutil` copy the new partitions dev→prod** ("big-ass script, run and walk away"); or (b) a **dedicated backfill DAG** (`schedule=None`, `catchup=False`, `Param(start,end)`, dynamic task-mapping over only the 3 models) that writes prod directly. `model_run.py` targets dev (`local_runner.py` hardcodes `env="dev"`).
 - **Order is fixed: mirror → L2 → L3.** The L2 reads the mirror with `optional=False`, so the L1 graph mirror MUST be backfilled first (prod had only 2 partitions). Mirror only needs ~13 weekly runs (skip 6 days between) since the graph is weekly. Graph depth reaches ~2026-04-20, so a full 90-day backfill is fine.
+
+**Grid forensics gotchas (INC-015, 2026-08-09):** (a) **paused days create NO dag-run columns** — the grid cannot show a pause gap, so a paused stretch is invisible (not rendered as failed/missing); (b) **deleting run history deletes the task instances too**, so per-day API pulls cannot distinguish "paused" from "deleted history" — **GCS/BQ output listing is the only ground truth for what data actually exists**; (c) the 90-day whole-DAG UI backfill on `feature_store_setup_model` is what started the INC-015 mess — avoid it on that DAG (runbook INC-015 decision tree).
 
 **Cleaning up a botched whole-DAG backfill (safe-unpause heuristic):**
 - A backfill triggered on a **paused** DAG "Completes" in seconds — it just registers the run records without executing tasks.
