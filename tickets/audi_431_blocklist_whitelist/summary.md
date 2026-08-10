@@ -60,12 +60,29 @@ The vertical categorization pipeline (DS13) processes `site_visit_signal` URLs: 
 - **List files + hygiene**: 1,641 BL adds + 15 WL adds (pre-QC) = 54.3% of 28d missing volume resolved; merged blocklist 3,105 domains; dedupe/disjoint/additions-only checks pass.
 - Hand-check: news/UGC brands correctly auto-BL (nytimes, huffpost, people, tumblr, live.com, allrecipes); .store-TLD content farms correctly BL; 3 of 15 auto_WL look like model over-scores on news/blog sites (proactiveinvestors.co.uk, immigrationnewscanada.ca, melhoresreceitas.blog) — QC workflow will adjudicate.
 
+### Phase 4b: QC + corrections workflow (45 agents, 2026-08-10)
+- **Adversarial QC**: auto_BL sample 0/100 disputed (band holds at 0%); auto_WL 5/15 disputed → demoted to manual (dogzonline.com.au breeder directory, adeecodedlife.com blog, proactiveinvestors.co.uk financial news, immigrationnewscanada.ca news, melhoresreceitas.blog recipes). All 3 pre-flagged suspects confirmed; the model over-scores content sites with commerce-shaped URL structures.
+- **Vertical corrections (double-LLM, judge + defend, wrong only on agreement)**: **76 of the top 500 wcv domains agreed-wrong**, 12 unsure. Head: yahoo.com→Dating & Relationships (2.33B urls/7d), google.com→Security Software, facebook.com→B2B Sales & Marketing, cnn.com→"Learning & Eduction Technology" (taxonomy typo is real), yahoo.net→Men's Health, myshopify.com→Family Planning, bing.com→Theatre/Dance/Films, timeanddate.com→Emergency Preparedness. Most suggested fix: "not verticalizable (portal/search/adtech/webmail/infrastructure)".
+
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+- **Deliverables** (all in `outputs/`, workbook in Drive `Tickets/AUDI-431/`):
+  - `audi_431_decision_sheet.csv` — 3,024 adjudicated rows, per-row band rule + designation source
+  - `audi_431_blocklist_additions.csv` (1,641) / `audi_431_whitelist_additions.csv` (10) — shipped format (headerless bare domains)
+  - `audi_431_ecommerce_blocklist.csv` — full merged replacement (3,105 = existing 1,464 + adds)
+  - `audi_431_vertical_corrections.csv` — top 500 wcv domains, 76 agreed-wrong with suggested verticals
+  - `AUDI-431 Blocklist Whitelist Reassessment.xlsx` — branded workbook (Decisions / Manual review / adds / Junk / Corrections / TI-200 / Impact / Queries / Read me)
+- **Impact**: auto-adds resolve **54.2% of 28d uncategorized visit volume**; manual band holds 40.2% (1,373 rows, volume-sorted, blank designation for hand review).
+- **Handoff**: Slack draft at `artifacts/audi_431_slack_handoff.md` — deploy mechanism + corrections mechanism are Ryan's call. Nothing deployed from this ticket.
+
+## 6. Questions Answered
+- **Q:** Which most-common missing domains belong on which list?
+  **A:** 1,641 confidently non-ecommerce → blocklist (incl. 24 stable parse-garbage strings); 10 confidently ecommerce → whitelist; 1,373 ambiguous ship blank, volume-sorted.
+- **Q:** Does prod missing_domains already exclude the lists (kill criterion)?
+  **A:** Yes — overlap gate 0/0/0; PR #102 anti-joins are live in prod.
+- **Q:** Which top-traffic wcv domains are misclassified?
+  **A:** 76 of top 500 (double-LLM agreement), led by yahoo.com/google.com/facebook.com carrying consumer verticals they shouldn't.
+- **Q:** What happened to TI-200's 149 'Unsure' rows?
+  **A:** All categorized by the 2025-11-07 crawl refresh; nothing left to adjudicate.
 
 ## 6. Questions Answered
 Specific questions that were resolved during this ticket:
@@ -73,7 +90,10 @@ Specific questions that were resolved during this ticket:
   **A:** {answer}
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Routed via /capture 2026-08-10: missing_domains GCS path + semantics, ddp_url_verticals schema + no-blocklist gotcha, list staleness dates, wcv misclassification findings.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+- **Malachi**: hand-fill the head of the Manual review tab (1,373 rows, volume-sorted) before shipping the lists.
+- **Ryan**: confirm deploy mechanism (bucket drop vs PR) and the corrections mechanism (vertical_manual_overrides/ vs is_manual_override) — Slack draft ready in artifacts/.
+- Whitelist adds carry no wcv vertical until the next crawl refresh — nominated as the backfill seed.
+- improvements_backlog: quarterly list-refresh cadence (pipeline now scripted end-to-end); wcv crawl backfill seeded with whitelist adds.

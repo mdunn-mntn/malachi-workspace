@@ -1,4 +1,4 @@
--- AUDI-431 Query B: traffic-ranked wcv-classified domains (corrections leg).
+-- audi_431_qb_wcv_traffic.sql: traffic-ranked wcv-classified domains (corrections leg)
 -- ddp = external table over ddp_url_verticals (hive-partitioned on dt, def in audi_431_ddp_external_def.json).
 -- Single external reference; dt filter prunes to the 7-day closed window.
 -- Keeps top 60 per vertical + global top 3000 server-side (QUALIFY) to bound output.

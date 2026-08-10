@@ -1,3 +1,4 @@
+-- audi_431_qa_score_aggregates.sql: per-candidate ecommerce_score aggregates (7d ddp_url_verticals)
 SELECT
   domain,
   COUNT(*) AS n_urls,
