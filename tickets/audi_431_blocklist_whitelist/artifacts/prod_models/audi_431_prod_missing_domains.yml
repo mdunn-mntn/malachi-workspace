@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: missing_domains
+    description: Output domains which are not being categorized using the anti join between the site visit signal table and the domain to vertical mapping
+    config:
+      submission_method: job_cluster
+      packages:
+        - tldextract==5.3.0
+        - cloudpickle>=3.1.1
+        - scikit-learn>=1.6.1
+        - mlflow>=2.22.0
+        - nltk>=3.9.3
+      job_cluster_config:
+        spark_version: 16.4.x-scala2.12
+        runtime_engine: STANDARD
+        kind: CLASSIC_PREVIEW
+        data_security_mode: DATA_SECURITY_MODE_DEDICATED
+        driver_node_type_id: c3d-standard-4
+        node_type_id: c3d-standard-8
+        policy_id: "{{ var('gcp_job_compute_policy_id') }}"
+        autoscale:
+          min_workers: 2
+          max_workers: 4
+        gcp_attributes:
+          availability: PREEMPTIBLE_WITH_FALLBACK_GCP
+          zone_id: auto
+          first_on_demand: 1
+        spark_conf:
+          spark.dynamicAllocation.shuffleTracking.enabled: true
+          spark.dynamicAllocation.enabled: true
+          spark.sql.shuffle.partitions: auto
+        custom_tags:
+          Squad: MLSQUAD
+          Env: "{{ target.name.replace('-','_').split('_')[0] | upper }}"
+          project: vertical_categorization
+      access_control_list:
+        [
+          {
+            group_name: users,
+            permission_level: "CAN_MANAGE_RUN"
+          }
+        ]

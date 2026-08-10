@@ -41,10 +41,13 @@ The vertical categorization pipeline (DS13) processes `site_visit_signal` URLs: 
 6. Deliverables: branded xlsx to Drive, list files, Jira comment, Slack handoff draft to Ryan; /capture.
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+### Phase 1: prod behavior verified (2026-08-10)
+- **Current prod `missing_domains.py` (SteelHouse/dbt main) anti-joins whitelist AND blocklist before the wcv anti-join** (PR #102 logic is live). Candidate universe = svs domains net of all three lists. The TI-253 vendored copy predates this. Copies of current prod models in `artifacts/prod_models/`.
+- **`ddp_url_verticals.py` (current prod)**: scores EVERY URL with MLflow `{env}.ml.ecommerce_classifier@champion` (no blocklist filter; whitelist is a LEFT join flag `is_whitelist`, not a filter). Output cols: `ip, domain, uid, time, vertical_id, bucket_id, vertical_name, is_ecommerce, is_in_vertical_mapping, data_source_id, input_timestamp, url, ecommerce_score, is_whitelist, dt`. `ECOMMERCE_THRESHOLD = 0.4`. `is_in_vertical_mapping` confirmed — Query A can filter in-scan without joining wcv.
+- **TGT-4016 thresholds re-derived from `tgt_4016_thresholds.ipynb` outputs**: P90 = 0.9181 (ecommerce-confident), P10 = 0.0002 (non-ecommerce-confident); URL-level distribution, n = 251.7M, 2025-05-12 snapshot. Prod's flat 0.4 sits between them.
+- Both list files in GCS dated 2025-09-23 (untouched since TI-200); wcv last refreshed 2025-11-07 (~1.42M domains).
+- `missing_domains` GCS: daily partitions 2025-11-02 → yesterday, ~2.5 MiB/day; model emits `domain, count` per dt (2-day read window per run, so adjacent partitions double-count a day; dedupe by (domain, dt) at read).
 
 ## 5. Solution
 What was done to resolve the issue:
