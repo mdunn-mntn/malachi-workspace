@@ -49,6 +49,17 @@ The vertical categorization pipeline (DS13) processes `site_visit_signal` URLs: 
 - Both list files in GCS dated 2025-09-23 (untouched since TI-200); wcv last refreshed 2025-11-07 (~1.42M domains).
 - `missing_domains` GCS: daily partitions 2025-11-02 → yesterday, ~2.5 MiB/day; model emits `domain, count` per dt (2-day read window per run, so adjacent partitions double-count a day; dedupe by (domain, dt) at read).
 
+### Phase 2-5: candidates, scores, bands (2026-08-10)
+- **Overlap gate 0/0/0** (candidates ∩ blocklist / whitelist / wcv) — kill criterion passed; prod missing_domains is net of all three lists as coded.
+- 28d window (2026-07-13 → 08-09): 1,072,286 distinct missing domains, 16.05B rows volume. Extremely head-heavy: 408 clean domains = 80% of volume.
+- Junk: 34,361 domains / 1.19B vol, almost all `trailing_dot` tldextract artifacts (`comhttps.` 793M, `android-app.` 231M). 24 stable ones (≥1M vol, ≥14d) = 7.1% of all missing volume → Blocklist adds per the `localhost.` precedent.
+- `aol.com`/`yahoo.com` absent from candidates because they ARE in the existing blocklist CSV (ddp_url_verticals still scores them daily — it consumes no blocklist).
+- **Query A** (7d ddp scores, 3,000 candidates, 109s): 100% coverage. Bands: auto_WL 15 (med≥0.9181 & pct_ge_04≥0.9), auto_BL 1,617 (med≤0.05 & pct_ge_04≤0.05 — <5% of URLs would clear prod's 0.4 gate), manual 1,368 (40.1% vol, blank designation for hand review, volume-sorted).
+- **Query B** (7d wcv-classified traffic, 15s): top-traffic wcv domains carry blatant vertical errors — yahoo.com→"Dating & Relationships" (2.33B urls/7d), google.com→"Security Software", outbrain.com→"B2B - Sales & Marketing", msn/foxnews/weather→"Current Affairs" (plausible) — top 500 sent to double-LLM corrections audit.
+- **TI-200 Unsure revisit self-resolved**: all 149 are now IN wcv (2025-11-07 crawl refresh categorized them); 9 also in blocklist, 24 in whitelist. Nothing to adjudicate.
+- **List files + hygiene**: 1,641 BL adds + 15 WL adds (pre-QC) = 54.3% of 28d missing volume resolved; merged blocklist 3,105 domains; dedupe/disjoint/additions-only checks pass.
+- Hand-check: news/UGC brands correctly auto-BL (nytimes, huffpost, people, tumblr, live.com, allrecipes); .store-TLD content farms correctly BL; 3 of 15 auto_WL look like model over-scores on news/blog sites (proactiveinvestors.co.uk, immigrationnewscanada.ca, melhoresreceitas.blog) — QC workflow will adjudicate.
+
 ## 5. Solution
 What was done to resolve the issue:
 - Code changes (PRs, commits)
