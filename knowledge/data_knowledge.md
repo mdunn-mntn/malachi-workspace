@@ -1164,8 +1164,11 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   **wcv misclassification is severe at the traffic head:** double-LLM audit of the top-500 wcv domains by
   7d traffic found 76 agreed-wrong verticals — yahoo.com→"Dating & Relationships" (2.33B urls/7d),
   google.com→"Security Software", facebook.com→"B2B - Sales & Marketing", myshopify.com→"Family Planning",
-  cnn.com→"Learning & Eduction Technology" (that taxonomy typo is real in prod). These pollute
-  ip_vertical_associations at scale. Also: tldextract parse artifacts are STABLE high-volume strings —
+  cnn.com→"Learning & Eduction Technology" (that taxonomy typo is real in prod). **But only 36 of the
+  76 are live**: `ip_vertical_associations.py` filters `is_ecommerce OR is_whitelist`, requires a non-null
+  vertical, then ANTI-JOINS the blocklist, so blocklisted domains (incl. yahoo.com, google.com) never reach
+  IP pairs. Live pollution = 413M urls/7d led by facebook.com. **Also: 362 domains are in BOTH the whitelist
+  and blocklist** (pre-existing in the 2025-09-23 files); blocklist is checked first everywhere, so it wins. Also: tldextract parse artifacts are STABLE high-volume strings —
   `comhttps.` 793M rows/28d, `android-app.` 231M — and string-equality blocklistable (shipped `localhost.`
   precedent). Corrections/refresh tracked in IMP-036/IMP-037.
 - **Consumer-side filters (what junk actually survives — Ryan Kleck Slack + airflow-ti code, 2026-07-10):**

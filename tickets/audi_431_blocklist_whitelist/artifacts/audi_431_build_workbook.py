@@ -105,17 +105,26 @@ def main() -> None:
              formats={"28d volume": FMT.INT, "Days seen": FMT.INT}, kind="detail",
              toc="Stable parse-garbage strings proposed for the blocklist")
 
-    cw = corr[["domain", "vertical_name", "final_verdict", "suggested_vertical", "n_urls",
+    n_live = int((corr["impact"] == "Live").sum())
+    cw = corr[["domain", "vertical_name", "final_verdict", "impact", "suggested_vertical", "n_urls",
                "judge_confidence", "defend_confidence", "judge_reason"]].copy()
-    cw.columns = ["Domain", "Current vertical", "Verdict", "Suggested vertical", "7d URLs",
+    cw.columns = ["Domain", "Current vertical", "Verdict", "Impact", "Suggested vertical", "7d URLs",
                   "Judge conf", "Defend conf", "Reason"]
     wb.table("Vertical corrections", cw,
-             finding=f"{(corr['final_verdict'] == 'wrong').sum()} of the top 500 wcv domains carry an indefensible vertical",
-             method="Two independent LLM passes (judge + defend); 'wrong' requires both to agree. Apply via is_manual_override / vertical_manual_overrides.",
+             finding=f"{n_live} wrong verticals are reaching IP associations today (36 of 76; the other 40 are blocklisted and inert)",
+             method="Two independent LLM passes (judge + defend); 'wrong' requires both. Suggested vertical is enum-constrained to the 152-name wcv roster. ip_vertical_associations anti-joins the blocklist, so blocklisted rows never reach IPs.",
              formats={"7d URLs": FMT.INT, "Judge conf": FMT.NUM2, "Defend conf": FMT.NUM2},
-             rag={"Verdict": lambda v: "NEG" if v == "wrong" else ("WARN" if v == "unsure" else None)},
-             kind="data", toc="Top-traffic wcv domains whose vertical is wrong",
+             rag={"Verdict": lambda v: "NEG" if v == "wrong" else ("WARN" if v == "unsure" else None),
+                  "Impact": lambda v: "NEG" if v == "Live" else None},
+             kind="data", toc="Top-traffic wcv domains whose vertical is wrong (Live rows are the actionable ones)",
              query="audi_431_qb_wcv_traffic.sql")
+
+    conflict = pd.read_csv(OUT / "audi_431_whitelist_blocklist_conflict.csv")
+    conflict.columns = ["Domain"]
+    wb.table("List conflicts", conflict,
+             finding=f"{len(conflict)} domains sit in BOTH the whitelist and the blocklist today",
+             method="Pre-existing contradiction in the shipped 2025-09-23 files, not introduced here. Blocklist wins at every consumer (checked first), so these are effectively blocked. Worth reconciling at deploy.",
+             kind="detail", toc="Domains in both lists (blocklist currently wins)")
 
     us = unsure[["domain_name", "vertical_name", "now_blocklist", "now_whitelist", "now_wcv"]].copy()
     us.columns = ["Domain", "TI-200 vertical", "In blocklist", "In whitelist", "In wcv"]
@@ -154,7 +163,7 @@ def main() -> None:
 
     wb.cover(takeaways=[
         f"{impact['bl_additions']} blocklist + {impact['wl_additions']} whitelist adds resolve {impact['pct_missing_volume_resolved']:.0%} of uncategorized visit volume",
-        f"{(corr['final_verdict'] == 'wrong').sum()} top-traffic wcv domains carry a wrong vertical (yahoo.com as Dating & Relationships leads)",
+        f"{int((corr['impact'] == 'Live').sum())} wrong verticals reach IP associations today (facebook.com as B2B Sales & Marketing leads); 40 more are blocklisted and inert",
         f"{len(man)} ambiguous domains ship blank for hand review, volume-sorted; every auto-decision carries its rule",
     ])
     path = wb.save_drive("AUDI-431", "Blocklist Whitelist Reassessment")

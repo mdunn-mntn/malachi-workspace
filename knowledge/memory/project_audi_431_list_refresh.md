@@ -11,8 +11,8 @@ lifecycle: active
 last_verified: 2026-08-10
 ---
 
-AUDI-431 (blocklist/whitelist re-assessment) delivered 2026-08-10: 1,641 blocklist + 10 whitelist auto-adds (54.2% of 28d uncategorized visit volume), 76 agreed-wrong wcv verticals in the top 500 by traffic, workbook in Drive `Tickets/AUDI-431/`.
+AUDI-431 (blocklist/whitelist re-assessment) delivered 2026-08-10: 1,641 blocklist + 10 whitelist auto-adds (54.2% of 28d uncategorized visit volume), 76 agreed-wrong wcv verticals in the top 500 by traffic (**only 36 live** — `ip_vertical_associations.py` anti-joins the blocklist, so the other 40 never reach IP pairs), plus a pre-existing defect: **362 domains sit in both the whitelist and the blocklist**. Workbook in Drive `Tickets/AUDI-431/`.
 
-**Why:** the lists went 11 months stale after TI-200; wcv head pollution (yahoo.com→Dating at 2.33B urls/7d) skews ip_vertical_associations.
+**Why:** the lists went 11 months stale after TI-200; the live wcv head pollution (facebook.com→B2B Sales & Marketing, 413M urls/7d across 36 domains) skews ip_vertical_associations.
 
 **How to apply:** two open handoffs — (1) Malachi hand-fills the head of the Manual review tab (1,373 blank rows, volume-sorted) before shipping; (2) Ryan confirms deploy mechanism (bucket drop vs PR) + corrections mechanism (`vertical_manual_overrides/` vs `is_manual_override`); Slack draft at `tickets/audi_431_blocklist_whitelist/artifacts/audi_431_slack_handoff.md`. Re-run quarterly with the scripts in that ticket's `artifacts/` ([[reference_jira_conventions]]; IMP-036/037).
