@@ -33,6 +33,14 @@ def main() -> None:
         sheet.loc[sheet["domain"].isin(demoted), ["designation", "designation_source", "band"]] = ["", "", "manual"]
         print(f"QC demotions applied: {n} rows -> manual")
 
+    hc_path = OUT / "audi_431_human_calls.csv"
+    if hc_path.exists():
+        hc = pd.read_csv(hc_path)
+        idx = sheet["domain"].isin(set(hc["domain"]))
+        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(hc["domain"], hc["designation"])))
+        sheet.loc[idx, "designation_source"] = "human"
+        print(f"human calls applied: {int(idx.sum())} rows")
+
     wl_add = sheet.loc[sheet["designation"] == "Whitelist", "domain"].drop_duplicates()
     bl_add = sheet.loc[sheet["designation"] == "Blocklist", "domain"].drop_duplicates()
 

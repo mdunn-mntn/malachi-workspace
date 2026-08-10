@@ -61,12 +61,27 @@ def main() -> None:
              query="audi_431_qa_score_aggregates.sql")
 
     man = slim(sheet[sheet["designation"] == ""]).drop(columns=["Designation", "Source", "Rule", "Band"])
-    wb.table("Manual review", man,
-             finding=f"{len(man)} ambiguous domains await a hand designation ({impact['manual_volume_share']:.0%} of volume)",
-             method="Scores inconclusive (between confident bands). Work top-down by volume; unfilled rows simply do not ship.",
-             formats=fmt, heat={"28d volume": "high"}, kind="data",
-             toc="The blank rows to hand-fill, volume-sorted",
+    ai_path = OUT / "audi_431_ai_review.csv"
+    man_rag = None
+    if ai_path.exists():
+        ai = pd.read_csv(ai_path)
+        ai.columns = ["Domain", "AI verdict", "AI conf", "AI reason"]
+        ai["AI verdict"] = ai["AI verdict"].map({"ecommerce": "Ecommerce", "not_ecommerce": "Not ecommerce", "unsure": "Unsure"})
+        man = man.merge(ai, on="Domain", how="left")
+        man_rag = {"AI verdict": lambda v: "POS" if v == "Ecommerce" else ("NEG" if v == "Not ecommerce" else ("WARN" if v == "Unsure" else None))}
+    man["Your call"] = None
+    ws_man = wb.table("Manual review", man,
+             finding=f"{len(man)} ambiguous domains await your call in the dropdown ({impact['manual_volume_share']:.0%} of volume)",
+             method="Scores inconclusive (between confident bands). AI verdict is ADVISORY - you decide. Pick Whitelist/Blocklist/Skip in 'Your call'; blank or Skip rows do not ship. Work top-down by volume.",
+             formats={**fmt, "AI conf": FMT.NUM2}, heat={"28d volume": "high"}, rag=man_rag, kind="data",
+             toc="Your review queue: AI advisory verdict + a dropdown for your decision",
              query="audi_431_qa_score_aggregates.sql")
+    from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.datavalidation import DataValidation
+    dv = DataValidation(type="list", formula1='"Whitelist,Blocklist,Skip"', allow_blank=True, showDropDown=False)
+    ws_man.add_data_validation(dv)
+    call_col = get_column_letter(list(man.columns).index("Your call") + 1)
+    dv.add(f"{call_col}5:{call_col}{4 + len(man)}")
 
     wl = slim(sheet[(sheet["designation"] == "Whitelist")])
     wb.table("Whitelist adds", wl,
