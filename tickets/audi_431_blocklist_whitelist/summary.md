@@ -75,6 +75,7 @@ The vertical categorization pipeline (DS13) processes `site_visit_signal` URLs: 
   - `AUDI-431 Blocklist Whitelist Reassessment.xlsx` — branded workbook (Decisions / Manual review / adds / Junk / Corrections / TI-200 / Impact / Queries / Read me)
 - **Impact**: auto-adds resolve **54.2% of 28d uncategorized visit volume**; manual band holds 40.2% (1,373 rows, volume-sorted, blank designation for hand review).
 - **Handoff**: Slack draft at `artifacts/audi_431_slack_handoff.md` — deploy mechanism + corrections mechanism are Ryan's call. Nothing deployed from this ticket.
+- **Manual-review loop (added 2026-08-10)**: every manual-band row now carries an **advisory AI verdict** (ecommerce / not ecommerce / unsure + confidence + one-line reason; 28-batch workflow, 1,372 of 1,373 covered, `thesprucepets.com` ships blank) plus a **"Your call" dropdown** (Whitelist / Blocklist / Skip, Excel data validation on K5:K1377). Verdict split: 1,230 not ecommerce, 106 unsure, 36 ecommerce. `artifacts/audi_431_ingest_reviews.py` reads the filled dropdown back out of the Drive workbook, writes `outputs/audi_431_human_calls.csv`, and re-runs the list builder so human calls flow into the additions files with `designation_source = human`.
 
 ## 6. Questions Answered
 - **Q:** Which most-common missing domains belong on which list?
