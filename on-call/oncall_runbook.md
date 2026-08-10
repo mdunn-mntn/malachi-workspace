@@ -1024,7 +1024,7 @@ gcloud storage ls "gs://mntn-data-partners/partners/predactiv/dt=2026080520/"   
 
 **Decision tree (next FS-related fangorn failure):** 1. Sensor timeout on `feature_store/...` dt → is `feature_store_setup_model` paused / which logical runs missed (`airflow_pull` per day)? 2. Drift code-9 → list the 3-day window's dt dirs; a hole = this incident. 3. Compute the first ref whose window clears the hole = self-heal date; backfill (single-date trigger of the missing LOGICAL date, dt = logical+1) only if you can't wait. 4. NEVER use the 90-day backfill UI on this DAG (that started this).
 
-**Durable fixes (owner Brian/ML):** existence-guard the drift read (filter existing dt paths, warn on holes) = the #1179 pattern; optional unpause checklist (verify next-run date + missed intervals after any pause).
+**Durable fixes (owner Brian/ML):** existence-guard the drift read (filter existing dt paths, warn on holes) = the #1179 pattern — **SHIPPED 2026-08-10 17:51Z: [targeting-infra-ml#85](https://github.com/SteelHouse/targeting-infra-ml/pull/85)** (`get_latest_paths()` lists existing `dt=` partitions ≤ run_date, takes latest LOOKBACK_DAYS — a hole slides the window instead of crashing; also default reference_date → 2026-08-09). **Post-#85 a missing FS day fails ONLY day 1** (ref-day sensor timeout + challenger), not the 3-day drift tail; drift silently computes on the latest existing days. Optional unpause checklist (verify next-run date + missed intervals after any pause) still open.
 
 ---
 
