@@ -54,28 +54,29 @@ def main() -> None:
              toc="Every adjudicated domain with its band, scores, and designation",
              query="audi_431_qa_score_aggregates.sql")
 
-    man = slim(sheet[sheet["designation"] == ""]).drop(columns=["Designation", "Source", "Rule", "Band"])
-    ai_path = OUT / "audi_431_ai_review.csv"
-    man_rag = None
-    if ai_path.exists():
-        ai = pd.read_csv(ai_path)
-        ai.columns = ["Domain", "AI verdict", "AI conf", "AI reason"]
-        ai["AI verdict"] = ai["AI verdict"].map({"ecommerce": "Ecommerce", "not_ecommerce": "Not ecommerce", "unsure": "Unsure"})
-        man = man.merge(ai, on="Domain", how="left")
-        man_rag = {"AI verdict": lambda v: "POS" if v == "Ecommerce" else ("NEG" if v == "Not ecommerce" else ("WARN" if v == "Unsure" else None))}
-    man["Your call"] = None
-    ws_man = wb.table("Manual review", man,
-             finding=f"{len(man)} ambiguous domains await your call in the dropdown ({impact['manual_volume_share']:.0%} of volume)",
-             method="What is left after every other pass: sites behind bot walls (Cloudflare) that no fetch could read, so neither the score nor a page view settles them. AI verdict is ADVISORY. Pick Whitelist/Blocklist/Skip in 'Your call'; blank or Skip rows do not ship.",
-             formats={**fmt, "AI conf": FMT.NUM2}, heat={"28d volume": "high"}, rag=man_rag, kind="data",
-             toc="Your review queue: AI advisory verdict + a dropdown for your decision",
-             query="audi_431_qa_score_aggregates.sql")
-    from openpyxl.utils import get_column_letter
-    from openpyxl.worksheet.datavalidation import DataValidation
-    dv = DataValidation(type="list", formula1='"Whitelist,Blocklist,Skip"', allow_blank=True, showDropDown=False)
-    ws_man.add_data_validation(dv)
-    call_col = get_column_letter(list(man.columns).index("Your call") + 1)
-    dv.add(f"{call_col}5:{call_col}{4 + len(man)}")
+    man = slim(sheet[sheet["designation"] == ""])
+    if len(man):
+        ai_path = OUT / "audi_431_ai_review.csv"
+        man_rag = None
+        if ai_path.exists():
+            ai = pd.read_csv(ai_path)
+            ai.columns = ["Domain", "AI verdict", "AI conf", "AI reason"]
+            ai["AI verdict"] = ai["AI verdict"].map({"ecommerce": "Ecommerce", "not_ecommerce": "Not ecommerce", "unsure": "Unsure"})
+            man = man.merge(ai, on="Domain", how="left")
+            man_rag = {"AI verdict": lambda v: "POS" if v == "Ecommerce" else ("NEG" if v == "Not ecommerce" else ("WARN" if v == "Unsure" else None))}
+        man["Your call"] = None
+        ws_man = wb.table("Manual review", man,
+                 finding=f"{len(man)} ambiguous domains await your call in the dropdown ({impact['manual_volume_share']:.0%} of volume)",
+                 method="What is left after every other pass: sites behind bot walls (Cloudflare) that no fetch could read, so neither the score nor a page view settles them. AI verdict is ADVISORY. Pick Whitelist/Blocklist/Skip in 'Your call'; blank or Skip rows do not ship.",
+                 formats={**fmt, "AI conf": FMT.NUM2}, heat={"28d volume": "high"}, rag=man_rag, kind="data",
+                 toc="Your review queue: AI advisory verdict + a dropdown for your decision",
+                 query="audi_431_qa_score_aggregates.sql")
+        from openpyxl.utils import get_column_letter
+        from openpyxl.worksheet.datavalidation import DataValidation
+        dv = DataValidation(type="list", formula1='"Whitelist,Blocklist,Skip"', allow_blank=True, showDropDown=False)
+        ws_man.add_data_validation(dv)
+        call_col = get_column_letter(list(man.columns).index("Your call") + 1)
+        dv.add(f"{call_col}5:{call_col}{4 + len(man)}")
 
     wl = slim(sheet[(sheet["designation"] == "Whitelist")])
     wb.table("Whitelist adds", wl,
@@ -159,7 +160,8 @@ def main() -> None:
     wb.cover(takeaways=[
         f"{impact['bl_additions']} blocklist + {impact['wl_additions']} whitelist adds resolve {impact['pct_missing_volume_resolved']:.0%} of uncategorized visit volume",
         f"{int((corr['impact'] == 'Live').sum())} wrong verticals reach IP associations today (facebook.com as B2B Sales & Marketing leads); 40 more are blocklisted and inert",
-        f"{len(man)} ambiguous domains ship blank for hand review, volume-sorted; every auto-decision carries its rule",
+        (f"{len(man)} ambiguous domains ship blank for hand review" if len(man)
+         else "Every candidate is adjudicated: no rows left undecided"),
     ])
     path = wb.save_drive("AUDI-431", "Blocklist Whitelist Reassessment")
     print(f"saved: {path}")
