@@ -126,6 +126,15 @@ All 1,883 remaining unverified blocklist rows fetched. **128 agents, 5,734 live 
 Tail resolution (2026-08-11): of the last 10, six were dead on inspection (3 no DNS on any resolver, 3 returning 404 via public DNS) so they blocklisted under the standing rule; the final 4 sat behind Cloudflare bot walls and **Malachi called them all non-ecommerce** (`onechicday.com` a fashion/news blog, plus `prettyinpink.ru`, `watchluna.com`, `streetscan.co.uk`), recorded as `designation_source: human`. The Manual review tab is now omitted from the workbook rather than shipped empty.
 **Verification standard achieved: every shipped designation is either score-banded with adversarial QC, or backed by a live page fetch citing what was seen; every whitelist entry is corroborated twice.**
 
+### Deploy-ready files built (2026-08-11) — this is ours, not a handoff
+Both prod files are now produced in full, not as additions lists:
+- `outputs/audi_431_ecommerce_blocklist.csv` — 1,464 -> **4,386** domains (67,864 bytes)
+- `outputs/audi_431_ecommerce_whitelist.csv.gz` — 3,310,123 -> **3,310,225** domains (26,302,971 bytes)
+
+Built strictly as **appends**: the original content is a byte-identical prefix of each new file (existing rows never reordered or removed), no duplicates, no CRLF, trailing newline, and the gzip is written with `mtime=0` and the inner filename `ecommerce_whitelist.csv` to match the shipped artifact.
+**The hygiene assertion caught a real trap:** a naive "blocklist and whitelist must be disjoint" check fails on the merged files, because **362 domains already sit in both lists** in prod (google.com, yahoo.com, myshopify.com among them). Those are carried forward untouched — the assertion is now "no NEW cross-list conflict", verified to equal exactly the pre-existing 362. Deliberately not reconciled here: blocklist is checked first at every verified consumer so it wins, and silently deleting 362 whitelist rows is a behavior change beyond this ticket's scope. Listed on the workbook's List conflicts tab.
+`build_lists.py` now emits both merged files on every run, so they can never drift from the decision sheet.
+
 ### Defect: the workbook silently shipped a stale view (caught by Malachi, fixed 2026-08-11)
 `build_workbook.py` re-read `audi_431_decision_sheet.csv` and applied ONLY the QC demotions, while `build_lists.py` applied the full overlay chain. Every rebuild after the promotion pass therefore wrote a fresh file with three-passes-stale contents — Whitelist tab showing 10 rows instead of 102, Manual review showing 1,373 instead of 10 — and I reported it as updated each time. The file mtime moved, so nothing looked wrong.
 **Root-cause fix:** `artifacts/audi_431_common.py` `load_designated_sheet()` is now the single resolver of designations (QC demotions -> ai-verified -> site-fetch -> sweep-fetch -> human, in order); both builders import it, so a new adjudication pass is registered once in `OVERLAYS` and cannot reach one output but not the other. Also fixed: the Blocklist adds tab filtered to `band == auto_blocklist` and showed 1,581 of the 2,912 shipping rows; it now shows all of them with a Source column.

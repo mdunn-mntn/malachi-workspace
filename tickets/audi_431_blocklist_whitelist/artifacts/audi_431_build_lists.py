@@ -35,7 +35,8 @@ def main() -> None:
 
     existing_bl = [l for l in (RAW / "ecommerce_blocklist.csv").read_text().splitlines() if l]
     with gzip.open(RAW / "ecommerce_whitelist.csv.gz", "rt") as fh:
-        existing_wl = {l.strip() for l in fh} - {""}
+        existing_wl_ordered = [l.strip() for l in fh if l.strip()]
+    existing_wl = set(existing_wl_ordered)
 
     assert not (set(wl_add) & set(bl_add)), "WL/BL overlap in proposals"
     assert not (set(bl_add) & set(existing_bl)), "BL adds already in existing blocklist"
@@ -45,14 +46,26 @@ def main() -> None:
 
     (OUT / "audi_431_blocklist_additions.csv").write_text("\n".join(bl_add) + "\n")
     (OUT / "audi_431_whitelist_additions.csv").write_text("\n".join(wl_add) + "\n")
+
+    # Deploy-ready replacements for BOTH prod files: original content untouched, adds appended.
     merged = existing_bl + [d for d in bl_add if d not in set(existing_bl)]
     (OUT / "audi_431_ecommerce_blocklist.csv").write_text("\n".join(merged) + "\n")
+    merged_wl = existing_wl_ordered + [d for d in wl_add if d not in existing_wl]
+    with open(OUT / "audi_431_ecommerce_whitelist.csv.gz", "wb") as raw:
+        with gzip.GzipFile(filename="ecommerce_whitelist.csv", mode="wb", fileobj=raw, mtime=0) as fh:
+            fh.write(("\n".join(merged_wl) + "\n").encode())
+    # 362 domains sit in BOTH prod lists already; carry that forward untouched, but never add to it
+    pre_conflict = set(existing_bl) & existing_wl
+    assert set(merged) & set(merged_wl) == pre_conflict, "introduced a NEW cross-list conflict"
+    assert merged[:len(existing_bl)] == existing_bl, "blocklist: existing rows moved"
+    assert merged_wl[:len(existing_wl_ordered)] == existing_wl_ordered, "whitelist: existing rows moved"
 
     vol = sheet.set_index("domain")["total_count"]
     impact = {
         "bl_additions": int(len(bl_add)),
         "wl_additions": int(len(wl_add)),
         "merged_blocklist_size": len(merged),
+        "merged_whitelist_size": len(merged_wl),
         "bl_volume_resolved": int(vol.loc[list(bl_add)].sum()),
         "wl_volume_resolved": int(vol.loc[list(wl_add)].sum()),
         "pct_missing_volume_resolved": round(float((vol.loc[list(bl_add)].sum() + vol.loc[list(wl_add)].sum()) / TOTAL_VOL), 4),
