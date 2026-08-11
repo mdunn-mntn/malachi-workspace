@@ -50,7 +50,15 @@ def main() -> None:
     assert not (set(bl_add) & set(existing_bl)), "BL adds already in existing blocklist"
     assert not (set(wl_add) & existing_wl), "WL adds already in existing whitelist"
     assert not (set(wl_add) & set(existing_bl)), "WL adds present in existing blocklist"
-    assert not (set(bl_add) & existing_wl), "BL adds present in existing whitelist"
+    # 3 wcv extras (smilewanted/pubfinity/mail.com - two adtech SSPs and a webmail) are wrongly
+    # whitelisted today. Blocklisting them is sufficient: the blocklist is checked FIRST at every
+    # verified consumer, so it wins. We deliberately do NOT delete the whitelist rows - this deploy
+    # stays strictly additive and reversible. It leaves them as known cross-list conflicts.
+    wcv_extra = set(pd.read_csv(OUT / "audi_431_extra_blocklist.csv")["domain"]) if extra.exists() else set()
+    unexpected_wl_conflict = (set(bl_add) & existing_wl) - wcv_extra
+    assert not unexpected_wl_conflict, f"BL adds present in existing whitelist: {sorted(unexpected_wl_conflict)[:5]}"
+    if set(bl_add) & existing_wl:
+        print(f"known cross-list conflicts created (blocklist wins): {sorted(set(bl_add) & existing_wl)}")
 
     (OUT / "audi_431_blocklist_additions.csv").write_text("\n".join(bl_add) + "\n")
     (OUT / "audi_431_whitelist_additions.csv").write_text("\n".join(wl_add) + "\n")
@@ -63,8 +71,12 @@ def main() -> None:
         with gzip.GzipFile(filename="ecommerce_whitelist.csv", mode="wb", fileobj=raw, mtime=0) as fh:
             fh.write(("\n".join(merged_wl) + "\n").encode())
     # 362 domains sit in BOTH prod lists already; carry that forward untouched, but never add to it
+    # 362 pre-existing conflicts carried forward + exactly the reviewed wcv extras (see above)
     pre_conflict = set(existing_bl) & existing_wl
-    assert set(merged) & set(merged_wl) == pre_conflict, "introduced a NEW cross-list conflict"
+    allowed_conflict = pre_conflict | (wcv_extra & existing_wl)
+    actual_conflict = set(merged) & set(merged_wl)
+    assert actual_conflict == allowed_conflict, (
+        f"unexpected cross-list conflict: {sorted(actual_conflict - allowed_conflict)[:5]}")
     assert merged[:len(existing_bl)] == existing_bl, "blocklist: existing rows moved"
     assert merged_wl[:len(existing_wl_ordered)] == existing_wl_ordered, "whitelist: existing rows moved"
 
@@ -74,9 +86,9 @@ def main() -> None:
         "wl_additions": int(len(wl_add)),
         "merged_blocklist_size": len(merged),
         "merged_whitelist_size": len(merged_wl),
-        "bl_volume_resolved": int(vol.loc[list(bl_add)].sum()),
-        "wl_volume_resolved": int(vol.loc[list(wl_add)].sum()),
-        "pct_missing_volume_resolved": round(float((vol.loc[list(bl_add)].sum() + vol.loc[list(wl_add)].sum()) / TOTAL_VOL), 4),
+        "bl_volume_resolved": int(vol.reindex(list(bl_add)).fillna(0).sum()),
+        "wl_volume_resolved": int(vol.reindex(list(wl_add)).fillna(0).sum()),
+        "pct_missing_volume_resolved": round(float((vol.reindex(list(bl_add)).fillna(0).sum() + vol.reindex(list(wl_add)).fillna(0).sum()) / TOTAL_VOL), 4),
         "manual_rows_remaining": int((sheet["designation"] == "").sum()),
         "manual_volume_share": round(float(sheet.loc[sheet["designation"] == "", "total_count"].sum() / TOTAL_VOL), 4),
     }
