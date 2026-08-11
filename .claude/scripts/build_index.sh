@@ -32,7 +32,15 @@ def parse_front_matter(path):
         # Strip a trailing inline YAML comment ( ' #...') on unquoted scalars AND on list values.
         # (Must run BEFORE the list-detection branch, or a commented '[...]' line fails the
         #  endswith(']') test and is mis-parsed as a scalar string — corrupting _TOPICS/_ROUTING.)
-        if val[:1] not in ('"', "'"):
+        if val[:1] == "[":
+            # A ' #' inside a bracketed list is data (e.g. 'PR #1'), not a comment. Only strip
+            # what follows the closing bracket.
+            close = val.rfind("]")
+            if close != -1:
+                tail = val[close + 1:]
+                hpos = tail.find(" #")
+                val = (val[:close + 1] + (tail[:hpos] if hpos != -1 else tail)).strip()
+        elif val[:1] not in ('"', "'"):
             hpos = val.find(" #")
             if hpos != -1:
                 val = val[:hpos].strip()
