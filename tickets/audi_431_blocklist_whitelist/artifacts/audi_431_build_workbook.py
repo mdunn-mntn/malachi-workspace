@@ -12,6 +12,8 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, "/Users/malachi/Developer/work/mntn/workspace")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from audi_431_common import load_designated_sheet  # noqa: E402
 from lib.mntn_xlsx import FMT, MntnWorkbook  # noqa: E402
 
 TICKET = Path(__file__).resolve().parents[1]
@@ -21,15 +23,7 @@ TOTAL_VOL = 16_046_965_205
 
 
 def main() -> None:
-    sheet = pd.read_csv(OUT / "audi_431_decision_sheet.csv")
-    sheet["designation"] = sheet["designation"].fillna("")
-    dem_path = OUT / "audi_431_qc_demotions.csv"
-    if dem_path.exists():
-        dem = pd.read_csv(dem_path)
-        demoted = set(dem["domain"])
-        sheet.loc[sheet["domain"].isin(demoted), "designation"] = ""
-        sheet.loc[sheet["domain"].isin(demoted), "band"] = "manual"
-        sheet.loc[sheet["domain"].isin(demoted), "designation_source"] = "qc-demoted"
+    sheet = load_designated_sheet()
     impact = json.loads((OUT / "audi_431_impact.json").read_text())
     qc = json.loads((OUT / "audi_431_qc_report.json").read_text())
     corr = pd.read_csv(OUT / "audi_431_vertical_corrections.csv")
@@ -90,11 +84,12 @@ def main() -> None:
              formats=fmt, kind="data", toc="Confident ecommerce additions",
              query="audi_431_qa_score_aggregates.sql")
 
-    bl = slim(sheet[(sheet["designation"] == "Blocklist") & (sheet["band"] == "auto_blocklist")])
+    bl = slim(sheet[sheet["designation"] == "Blocklist"])
     wb.table("Blocklist adds", bl,
-             finding=f"{len(bl)} domains are confidently non-ecommerce ({qc['bl_dispute_rate']:.1%} QC dispute rate)",
-             method="Median score <= 0.05 and <5% of URLs clear the prod 0.4 gate - the blocklist codifies what the model already decides, saving daily re-scoring.",
-             formats=fmt, kind="data", toc="Confident non-ecommerce additions",
+             finding=f"All {len(bl)} domains shipping to the blocklist, with the evidence behind each",
+             method="Source column says how each was decided: auto-score (median <= 0.05 and <5% of URLs clear the prod 0.4 gate), junk-rule (stable parse artifacts), ai-verified, or sweep-fetch (live page retrieved). 2,484 were individually fetched.",
+             formats=fmt, heat={"28d volume": "high"}, kind="data",
+             toc="Every blocklist addition and how it was decided",
              query="audi_431_qa_score_aggregates.sql")
 
     junk = sheet[sheet["band"] == "junk_rule"][["domain", "total_count", "days_seen", "junk_tier", "designation"]].copy()

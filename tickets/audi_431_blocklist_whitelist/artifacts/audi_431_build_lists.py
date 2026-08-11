@@ -12,9 +12,14 @@ byte-format identical to shipped files (bare domain per line, \n, no header).
 
 import gzip
 import json
+import sys
 from pathlib import Path
 
 import pandas as pd
+
+from audi_431_common import load_designated_sheet
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 TICKET = Path(__file__).resolve().parents[1]
 OUT = TICKET / "outputs"
@@ -23,48 +28,7 @@ TOTAL_VOL = 16_046_965_205
 
 
 def main() -> None:
-    sheet = pd.read_csv(OUT / "audi_431_decision_sheet.csv")
-    sheet["designation"] = sheet["designation"].fillna("")
-    # QC demotions (written by audi_431_apply_qc.py after the workflow) override designations
-    qc_path = OUT / "audi_431_qc_demotions.csv"
-    if qc_path.exists():
-        demoted = set(pd.read_csv(qc_path)["domain"])
-        n = sheet["domain"].isin(demoted).sum()
-        sheet.loc[sheet["domain"].isin(demoted), ["designation", "designation_source", "band"]] = ["", "", "manual"]
-        print(f"QC demotions applied: {n} rows -> manual")
-
-    promo_path = OUT / "audi_431_ai_promotions.csv"
-    if promo_path.exists():
-        promo = pd.read_csv(promo_path)
-        idx = sheet["domain"].isin(set(promo["domain"]))
-        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(promo["domain"], promo["designation"])))
-        sheet.loc[idx, "designation_source"] = "ai-verified"
-        print(f"AI-verified promotions applied: {int(idx.sum())} rows")
-
-    fetch_path = OUT / "audi_431_fetch_calls.csv"
-    if fetch_path.exists():
-        fc = pd.read_csv(fetch_path)
-        idx = sheet["domain"].isin(set(fc["domain"]))
-        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(fc["domain"], fc["designation"])))
-        sheet.loc[idx, "designation_source"] = "site-fetch"
-        print(f"live-site fetch calls applied: {int(idx.sum())} rows")
-
-    sweep_path = OUT / "audi_431_sweep_calls.csv"
-    if sweep_path.exists():
-        sw = pd.read_csv(sweep_path)
-        idx = sheet["domain"].isin(set(sw["domain"]))
-        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(sw["domain"], sw["designation"])))
-        sheet.loc[idx, "designation_source"] = "sweep-fetch"
-        print(f"sweep verdicts applied: {int(idx.sum())} rows "
-              f"({int((sw['designation'] == 'Whitelist').sum())} rescued to whitelist)")
-
-    hc_path = OUT / "audi_431_human_calls.csv"
-    if hc_path.exists():
-        hc = pd.read_csv(hc_path)
-        idx = sheet["domain"].isin(set(hc["domain"]))
-        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(hc["domain"], hc["designation"])))
-        sheet.loc[idx, "designation_source"] = "human"
-        print(f"human calls applied: {int(idx.sum())} rows")
+    sheet = load_designated_sheet()
 
     wl_add = sheet.loc[sheet["designation"] == "Whitelist", "domain"].drop_duplicates()
     bl_add = sheet.loc[sheet["designation"] == "Blocklist", "domain"].drop_duplicates()
