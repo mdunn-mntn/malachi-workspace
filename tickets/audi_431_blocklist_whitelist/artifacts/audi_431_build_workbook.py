@@ -144,6 +144,21 @@ def main() -> None:
              formats={"Count": FMT.INT, "Share": FMT.PCT1}, kind="detail",
              toc="What ships and how much of the gap it closes")
 
+    followups = pd.DataFrame([
+        ("AUDI-1202", "Quarterly refresh (due 2026-11-11)",
+         "Re-run this process. Runbook: documentation/runbooks/ecommerce_list_refresh_runbook.md"),
+        ("AUDI-1203", "Full audit of both lists (3.3M domains)",
+         "Whitelist error rate has never been measured. Plan: documentation/runbooks/ecommerce_list_full_audit_plan.md"),
+        ("Open", "365 domains in both lists",
+         "Blocklist wins so they are inert; reconciling is a deletion pass, not done here."),
+        ("Open", "10 wcv domains blocklisted, 26 corrected",
+         "Vertical overrides deployed; they take effect on the next wcv rebuild."),
+    ], columns=["Ticket", "Item", "Detail"])
+    wb.table("Follow-ups", followups,
+             finding="Two tech-debt tickets carry this forward, both self-contained for a cold start",
+             method="AUDI-1202 is the quarterly re-run (due 2026-11-11). AUDI-1203 is the full-corpus audit. Each links a runbook in the workspace repo with inputs, source-code map, scripts and the traps.",
+             kind="detail", toc="What happens next and who owns it")
+
     wb.sql_dir("Queries", str(Q),
                note="BigQuery external-table queries over GCS parquet (us-central1). Candidate build + list hygiene are pandas scripts in artifacts/.")
 

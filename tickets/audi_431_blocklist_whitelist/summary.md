@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-431: Make Changes to Blocklist or Whitelist"
-status: in_progress
+status: done
 date: 2026-08-10
 summary: "Re-assess most-common missing domains for whitelist/blocklist adds + wcv vertical corrections"
-result: "DEPLOYED 2026-08-11: 2,921 BL + 102 WL adds live in prod, 94.4% of uncategorized volume resolved, 76 real stores rescued"
+result: "DONE 2026-08-11: 2,931 BL + 102 WL adds live in prod (94.4% of uncategorized volume), 76 real stores rescued, 26 vertical overrides deployed; follow-ups AUDI-1202/1203"
 question: "Which of the top most-common missing domains (28d volume) belong on the ecommerce whitelist vs blocklist, and which top-traffic wcv domains carry a wrong vertical?"
 framing_state: locked
 ---
@@ -192,7 +192,24 @@ Specific questions that were resolved during this ticket:
 Routed via /capture 2026-08-10: missing_domains GCS path + semantics, ddp_url_verticals schema + no-blocklist gotcha, list staleness dates, wcv misclassification findings.
 
 ## 8. Open Items / Follow-ups
-- **Malachi**: hand-fill the head of the Manual review tab (1,373 rows, volume-sorted) before shipping the lists.
-- **Ryan**: confirm deploy mechanism (bucket drop vs PR) and the corrections mechanism (vertical_manual_overrides/ vs is_manual_override) — Slack draft ready in artifacts/.
-- Whitelist adds carry no wcv vertical until the next crawl refresh — nominated as the backfill seed.
-- improvements_backlog: quarterly list-refresh cadence (pipeline now scripted end-to-end); wcv crawl backfill seeded with whitelist adds.
+
+**Ticket closed 2026-08-11.** Everything adjudicated, everything deployed, nothing left undecided.
+
+### Carried forward as tech debt (both self-contained for a cold start)
+- **[AUDI-1202] Quarterly refresh, due 2026-11-11.** Re-run this process. Runbook:
+  `documentation/runbooks/ecommerce_list_refresh_runbook.md` — inputs, GitHub source-code map,
+  the 10 scripts in order, deploy safety, and the seven lessons that cost time.
+- **[AUDI-1203] Full audit of both lists (3.31M whitelist + 4,395 blocklist).** The whitelist error
+  rate has never been measured; AUDI-431 measured 3.06% on proposed blocklist rows. Plan:
+  `documentation/runbooks/ecommerce_list_full_audit_plan.md` — the scale constraint (naive sweep =
+  ~225k agents), the stratify-measure-then-targeted-sweep design, and the reusable harness.
+
+### Deliberately not done
+- **365 domains sit in both lists** (362 pre-existing + 3 reviewed this ticket). Blocklist is checked
+  first at every verified consumer so they are inert. Reconciling means deleting whitelist rows —
+  a deletion pass with its own rollback plan, out of scope here. Full list:
+  `outputs/audi_431_both_lists_detail.csv`.
+- **The 26 vertical overrides take effect on the next wcv rebuild**, which is manual and infrequent.
+  They are staged in prod, not live.
+- **Whitelist adds carry no vertical** until that same rebuild crawls them; the adds list is the
+  natural seed for it (IMP-037).
