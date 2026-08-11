@@ -1,13 +1,9 @@
 # MNTN Workspace Memory — hot tier (always loaded)
 
-> **This file is the HOT TIER: only facts relevant to (nearly) every session.** Everything else is
-> grep-on-demand and costs 0 tokens until you reach for it:
-> - **Find a fact:** grep `knowledge/_ROUTING.md` for your term → open the one `memory/<file>.md` it names.
-> - **Browse all memory:** `knowledge/_MEMORY_INDEX.md` (by domain) · lifecycle/refresh queue: `knowledge/_MEMORY_LIFECYCLE.md`.
-> - **Add a memory:** `/capture` writes `knowledge/memory/<slug>.md` (`doc_type: memory` + keywords). New facts do **NOT** get a line in this file — only genuinely always-on ones do. That is what keeps this file small and the index unbounded.
+> **HOT TIER — only facts relevant to (nearly) every session.** Everything else is grep-on-demand at 0 tokens: grep `knowledge/_ROUTING.md` → open the one `memory/<file>.md` it names; browse `_MEMORY_INDEX.md`, refresh queue `_MEMORY_LIFECYCLE.md`. `/capture` writes new memory; a new fact gets a `_ROUTING` entry, **not** a line here. Only genuinely always-on rules earn a line. [[project_hot_path_budget]]
 
 ## Data docs (git source of truth)
-- `knowledge/data_catalog.md` — schemas, partitions, clustering, join keys, query tips · `knowledge/data_knowledge.md` — business logic, gotchas, architecture, tribal knowledge · `knowledge/strategic_north_star.md` — Q2 OKR leverage filter (read at session start; evaluate every task against it).
+- `data_catalog.md` schemas/partitions/join keys · `data_knowledge.md` business logic + gotchas · `strategic_north_star.md` OKR leverage filter (all under `knowledge/`).
 
 ## Always-on working rules (how I write & work)
 - **BLUF / terse.** Lead every human-facing comm (chat, Jira, Slack, deck, standup) with the conclusion; cut filler. Terse Comms caps apply to Jira/PR/commit/xlsx. **Slack thread replies = human prose** (conversational, contractions, no em-dashes, few colons, plain statements), not the bulleted Jira shape. [[feedback_bluf_communication]] [[feedback_terse_chat_replies]] [[feedback_slack_reply_voice]] [[feedback_terse_tickets]]

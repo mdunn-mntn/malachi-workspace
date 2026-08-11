@@ -18,10 +18,12 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | Stop | — | `comms_cap_reminder.sh` | soft nudge to keep outward-facing writing terse | no |
 | Stop | — | `oncall_triage_reminder.sh` | advisory on-call-triage reminder | no |
 
-## Scripts (22)
+## Scripts (28)
 
 | script | what it does |
 |--------|--------------|
+| `airflow_api.py` | stdlib-only Astro (Airflow 3.x) REST client for the on-call log puller |
+| `airflow_pull.sh` | pull Astronomer (Airflow 3) task logs for a day + a completion sensor for on-call |
 | `audit_structure.py` | meticulous, deterministic structure audit against folder_definitions.md |
 | `bq_introspect.sh` | Introspect a BigQuery dataset -> per-table catalog docs under knowledge/bq/<dataset>/. Regenerates the AUTO:SCHEMA block + derived front-matter… |
 | `bq_run.sh` | BQ query wrapper that captures performance metrics Usage: bash .claude/scripts/bq_run.sh [--ticket TI-XXX] [--label "description"] [bq query flags]… |
@@ -37,21 +39,26 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `lint_memory.py` | linter + one-shot migrator for auto-memory files (knowledge/memory/*.md) |
 | `lint_tickets.py` | ticket front-matter linter (the work-side mirror of lint_coverage.py) |
 | `new_ticket.sh` | scaffold a ticket folder that conforms to folder_definitions.md, one command |
+| `oncall_daily_rca.sh` | Daily retrospective RCA over the on-call/paging DAGs (AUDI-1191 trust-building) |
+| `oncall_weekly_optimizer.sh` | Weekly Spark fleet optimizer (AUDI-1191) |
+| `package_kit.sh` | extract, sanitize, and assemble a portable copy of the AI Workflow Kit |
 | `perf_digest.py` | Deterministic aggregation over knowledge/bq/bq_perf_log.jsonl for the perf-analyst |
 | `pi_run_workflow_audit.sh` | weekly DETERMINISTIC workflow-audit signal capture on the Pi |
 | `request_digest.py` | mine the request log for recurring work shapes; PROPOSE (never create) a skill |
 | `share_deck.sh` | Share an HTML presentation deck via GitHub Gist + githack rendering Usage: bash .claude/scripts/share_deck.sh path/to/deck_standalone.html Creates a… |
+| `stall_monitor.sh` | the ONE correct stall-detector for background/async work on this Mac |
 | `transcribe.sh` | Transcribe Zoom meeting recordings using both providers, pick the best Usage: bash .claude/scripts/transcribe.sh "2026-03-30 11.33.01 Discuss… |
 | `verify.sh` | the AI Workflow Kit "doctor" |
 | `workflow_audit.sh` | deterministic signal aggregator for the weekly System-retro loop |
 
-## Skills (5)
+## Skills (6)
 
 | skill | description |
 |-------|-------------|
 | `/capture` | Sweep the current session for everything learned and route each fact to its correct home — the knowledge/*.md docs, the active ticket's summary.md… |
 | `/frame` | Frame a ticket BEFORE work starts — agree the single question it answers, why it matters, what "done" looks like, and how we'll answer it |
 | `/oncall` | Handle an on-call alert end-to-end AND enforce the write-back so the runbook gets smarter every time |
+| `/present` | Build any deck, chart set, or *_presentation.md to the MNTN standard — resolving persuasion-vs-plain-facts by audience, applying the playbook and… |
 | `/transcribe` | Transcribe the newest unprocessed Zoom recording (or a named one) and file it correctly |
 | `/workflow-audit` | The System-retro loop — the workflow reviews itself |
 
