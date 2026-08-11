@@ -4,7 +4,7 @@ title: "AUDI-431: Make Changes to Blocklist or Whitelist"
 status: in_progress
 date: 2026-08-10
 summary: "Re-assess most-common missing domains for whitelist/blocklist adds + wcv vertical corrections"
-result: "94.2% of uncategorized volume resolved; 2,988 BL + 26 WL adds pending Ryan deploy"
+result: "94.2% of uncategorized volume resolved; 2,912 BL + 102 WL adds, 76 real stores rescued; pending Ryan deploy"
 question: "Which of the top most-common missing domains (28d volume) belong on the ecommerce whitelist vs blocklist, and which top-traffic wcv domains carry a wrong vertical?"
 framing_state: locked
 ---
@@ -91,8 +91,8 @@ Malachi asked whether verdicts were name-based or knowledge-based. **Honest answ
 - **We are scoring domains that do not exist.** `cootlogix.com` (88M rows/28d, rank 19) returns a Wix "ConnectYourDomain Error" 404 on every path — no site is connected. `o11.tech` has no A record. 9 of the 41 high-share domains were dead/unreachable.
 - Real shops found by fetching that no score band would have caught: `buytavio.com`, `callascleaneats.com`, `docsdiesel.com`, `homeviable.com`, `mynuora.com`, `onuia.com`, `pixelframe.design`, `saxon-brands.com`, `seranova.com`, `telcom-data.com`, `tryrovina.com`.
 
-### Final state (2026-08-11)
-**2,988 blocklist + 26 whitelist adds resolve 94.2% of 28d uncategorized visit volume.** Merged blocklist = 4,452 domains. **10 rows (0.18% of volume) remain** — all unfetchable, listed in the Manual review tab.
+### Final state (superseded by the Phase 9 sweep below)
+2,988 blocklist + 26 whitelist adds; 94.2% of volume; 10 rows remaining.
 
 ### Phase 8: blocklist audit — the promoted rows needed checking too (2026-08-11, Malachi's call)
 Malachi asked whether the confidence-promoted rows should also be verified. Exposure: **2,483 of the 2,988 blocklist adds had never been individually checked** — 866 AI-promoted (basis = a no-web-access verdict + a 150-row sample) and 1,617 score-band (basis = the model itself, med<=0.05 & pct_ge_04<=0.05).
@@ -114,6 +114,16 @@ Malachi asked whether his own Pi-hole was making live domains look dead to the f
 - Re-fetched all 27 via `curl --resolve <d>:443:<public_ip>`: **13 returned HTTP 200, and ZERO had any cart/checkout/WooCommerce/Shopify signal.** They are adult sites, Indonesian piracy/manga readers, video-viral pages and adtech. All belong on the blocklist regardless, so **the contamination changed no outcome here** — but it would in any task whose domain set is not junk.
 - `cootlogix.com` stays confirmed dead: even via public DNS it returns a Wix "ConnectYourDomain Error" 404.
 - Durable lesson captured: memory `reference_pihole_dns_contaminates_fetch` (never accept "unreachable" from a fetch agent on this Mac without the DNS diff). Files: `outputs/audi_431_dns_check.csv`, `outputs/audi_431_pihole_recheck.csv`.
+
+### Phase 9: exhaustive sweep + FINAL STATE (2026-08-11)
+All 1,883 remaining unverified blocklist rows fetched. **128 agents, 5,734 live fetches, 0 errors, ~2h.** Combined with the audit sample, **2,484 proposed blocklist rows were individually checked**.
+- **76 real stores rescued from the blocklist to the whitelist — a 3.06% false-blocklist rate**, carrying 156M rows/28d that would have been permanently discarded. 91 were claimed, 15 rejected by the independent confirm fetch (affiliate-only, off-domain storefronts, content subscriptions).
+- **The blind spot held exactly as predicted: creator blogs with an attached shop.** Recipe/craft/travel blogs selling their own goods on a shop subdomain or `/shop`: `keviniscooking.com`, `dimitrasdishes.com`, `hearthookhome.com`, `homesteadandchill.com`, `pantrymama.com`, `amigurumicorner.com`, `butterwithasideofbread.com`, `joyfilledeats.com`, `aspicyperspective.com`. Plus mainstream publishers with first-party Shopify stores: `bonappetit.com`, `newyorker.com`, `lemonde.fr` (boutique.lemonde.fr), `sfchronicle.com`, `mysanantonio.com`, `goheels.com`.
+- The confirm stage earned its place by catching the near-misses: `theatlantic.com` and `fextralife.com` redirect to third-party retailers (zazzle, creator-spring) so they stay blocklisted, and `harpersbazaar.com`/`popularmechanics.com` sell only magazine subscriptions.
+- **165 unreachable** across the sweep (6.6%), net of the Pi-hole correction above.
+
+**FINAL: 2,912 blocklist + 102 whitelist adds resolve 94.2% of 28d uncategorized visit volume.** Merged blocklist = 4,376 domains. **10 rows (0.18% of volume) remain** — all genuinely unfetchable, in the Manual review tab.
+**Verification standard achieved: every shipped designation is either score-banded with adversarial QC, or backed by a live page fetch citing what was seen; every whitelist entry is corroborated twice.**
 - **Handoff**: Slack draft at `artifacts/audi_431_slack_handoff.md` — deploy mechanism + corrections mechanism are Ryan's call. Nothing deployed from this ticket.
 - **Manual-review loop (added 2026-08-10)**: every manual-band row now carries an **advisory AI verdict** (ecommerce / not ecommerce / unsure + confidence + one-line reason; 28-batch workflow, 1,372 of 1,373 covered, `thesprucepets.com` ships blank) plus a **"Your call" dropdown** (Whitelist / Blocklist / Skip, Excel data validation on K5:K1377). Verdict split: 1,230 not ecommerce, 106 unsure, 36 ecommerce. `artifacts/audi_431_ingest_reviews.py` reads the filled dropdown back out of the Drive workbook, writes `outputs/audi_431_human_calls.csv`, and re-runs the list builder so human calls flow into the additions files with `designation_source = human`.
 
