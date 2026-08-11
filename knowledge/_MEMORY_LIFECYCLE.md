@@ -31,7 +31,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference-segment-quality-framework-ds-agnostic | reference | 2026-06-05 | [doc](memory/reference_segment_quality_framework_ds_agnostic.md) |
 | airflow-ti-cross-repo-python-dependency-pattern | reference | 2026-06-08 | [doc](memory/reference_airflow_ti_cross_repo_deps.md) |
 | airflow-ti-production-pipeline-safety | feedback | 2026-06-08 | [doc](memory/feedback_airflow_prod_safety.md) |
-| reference_bidder_serving_stores | reference | 2026-06-09 | [doc](memory/reference_bidder_serving_stores.md) |
 | compass-mntn-infra-investigator-atlas-code-mcp | reference | 2026-06-10 | [doc](memory/reference_compass.md) |
 | cuped-needs-randomization | feedback | 2026-06-10 | [doc](memory/feedback_cuped_needs_randomization.md) |
 | ti-956-paused-2026-06-10 | project | 2026-06-10 | [doc](memory/project_ti_956_paused.md) |
@@ -166,7 +165,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_exec_explainer_mechanism_only | feedback | 2026-08-07 | [doc](memory/feedback_exec_explainer_mechanism_only.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
 | project_airflow_optimizer | project | 2026-08-07 | [doc](memory/project_airflow_optimizer.md) |
-| project_fangorn_on_mntn_id | project | 2026-08-07 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-07 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |
 | project_airflow_debugger | project | 2026-08-09 | [doc](memory/project_airflow_debugger.md) |
@@ -182,7 +180,9 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_one_resolver_for_shared_state | feedback | 2026-08-11 | [doc](memory/feedback_one_resolver_for_shared_state.md) |
 | feedback_terse_chat_replies | feedback | 2026-08-11 | [doc](memory/feedback_terse_chat_replies.md) |
 | project_audi_431_list_refresh | project | 2026-08-11 | [doc](memory/project_audi_431_list_refresh.md) |
+| project_fangorn_on_mntn_id | project | 2026-08-11 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | project_hot_path_budget | project | 2026-08-11 | [doc](memory/project_hot_path_budget.md) |
+| reference_bidder_serving_stores | reference | 2026-08-11 | [doc](memory/reference_bidder_serving_stores.md) |
 | reference_build_index_frontmatter_parsing | reference | 2026-08-11 | [doc](memory/reference_build_index_frontmatter_parsing.md) |
 | reference_pihole_dns_contaminates_fetch | reference | 2026-08-11 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
 | reference_test_budget_from_rates | reference | 2026-08-11 | [doc](memory/reference_test_budget_from_rates.md) |

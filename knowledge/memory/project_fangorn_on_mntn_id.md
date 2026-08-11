@@ -6,10 +6,10 @@ metadata:
   type: project
   originSessionId: 1e31df63-2e33-4ee1-ad1b-7fc2395f8bb7
 doc_type: memory
-keywords: [fangorn on mntn id, audi-1049, household re-key, feature store, household_id, audi-1166, audi-1105, sean yang, airflow-ti, graph_translation_signal]
+keywords: [fangorn on mntn id, audi-1049, household re-key, feature store, household_id, audi-1166, audi-1105, audi-1167, audi-1170, sean yang, airflow-ti, graph_translation_signal, mntn_graph, graph_interface, household_resolution.py, bidder parity, id-service, IdTypeFamily]
 domain: [project, identity, audience-scoring]
 lifecycle: active
-last_verified: 2026-08-07
+last_verified: 2026-08-11
 ---
 **AUDI-1049 "Fangorn on MNTN ID"** (epic owner Matt Brorby; ⚠ AUDI-1057 is a *Done* modeling spike, NOT the
 epic). Re-keys the Fangorn feature store + intent scoring **IP→MNTN ID (household)**, running parallel to the
@@ -33,7 +33,8 @@ HHID ~85% stable/30d, guid_log-only/DS46 scope, bidder-alignment risk) are in `k
 
 **Post-sync updates (Slack, 2026-07-29):** Sept-4 scope narrowing to **simplest end-to-end** (Matt's
 anti-scope-creep) — PUNT DS13/19/46 replication, bidder-resolution alignment, full IPv6, non-IPv4 households.
-Identifier scope = IPv4 (`id_type=30`) + maybe **GUID (`id_type=42`)**; `guid_log` has NO IPv6 (IPv6 only for
+Identifier scope = IPv4 (`id_type=30`) + maybe **GUID (`id_type=41` = `MNTN_GUID`; corrected 2026-08-11 from a
+verbal "42", which is `GA_CLIENT_ID`)**; `guid_log` has NO IPv6 (IPv6 only for
 augmentor_log, excluded), so IPv6 is moot for v1. **NEW requirement lands on the FS work:** log every
 ID→household translation → `dw-main-silver.identity.graph_translation_signal` (Weiang Li dev, modeled on
 `hashed_email_signal`) for **graph-vendor crediting** (required even though FS sources only internal logs); ID
@@ -121,8 +122,24 @@ the same MID-keyed L3 tables. Related: [[reference_audience_intent_scoring_dag]]
 90/90 daily dt 2026-05-09..08-06, monthly Jun-01+Jul-01 both layers; Aug-01 monthly lands via the day-15
 snapshot DAG on Aug-15). Tooling merged upstream: airflow-ti#1180 (`scripts/model_backfill.sh` +
 `docs/model_backfill.md`). Remaining AUDI-1170 scope = the shadow-parity readout (the Sept-4 gate).
-**Watch:** the ID team (Weiang Li, under Jack) is building a shared pyspark module (DataFrame of IDs in →
-households out, with graph-use logging for crediting) intended to REPLACE the FS conversion piece — i.e.
-`utils_model/household_resolution.py` may be superseded. Requirement doc is ambiguous in places; Sean is
-awaiting Jack's clarification (dev-mntn-id thread, ~2026-08-05). Review before building more on
-household_resolution.py.
+**RESOLVED 2026-08-11 — the shared library does NOT supersede `household_resolution.py`.** The ID team's
+module shipped (`gs://mntn-data-archive-prod/identity_resources/graph_interface/mntn_graph.zip`, Confluence
+`3739484272`, Weiang Li). It is **translation only**: `ids_to_households()` left-joins one snapshot and returns
+EVERY matching edge, explicitly "does not select the best match, deduplicate, or drop unmatched rows." So it
+replaces the read+join layer; winner selection/dedup/aggregation stay ours, and **AUDI-1167 is the consumer
+half, not a placeholder to delete**. Sean's plan = wrap the library inside `household_resolution.py` so
+downstream FS jobs don't change (right call — keeps resolution as one chokepoint). **The AUDI-1170
+shadow-parity baseline does not move.** Adoption gaps: no >14d staleness guard, no point-in-time `as_of` on the
+top-line API (only `graph_version` / caller-supplied `graph_df` — so keep feeding it the L1 mirror for
+backfills), `_keep_max` costs a Spark agg per call, and `id_date_col` leaks later knowledge when resolving past
+dates. **`IdTypeFamily.IP` (3000) is buggy** — it expands to {30,31,32}, pulling in IPv6 and synthetic IP_DAY,
+whereas idg has Ipv4=3000={30,32} and Ipv6=3100. Always pass `IdType.IPV4` explicitly.
+
+**Bidder parity settled from source 2026-08-11 (Brian's blocker).** We are NOT backwards: the graph parquet's
+`ConfidenceScore` is a probability (higher better), Bigtable stores a lower-is-better `raw_score` only for
+rowkey sorting and id-service inverts it (`10_000 − raw_score`), so our `max(confidence)` picks the bidder's
+household. **One real divergence: the equal-confidence tiebreak** — the bidder takes the LOWEST `household_id`
+(rowkey lexicographic, first row wins), ours takes the highest. One-line fix. Also: the bidder applies **no
+confidence floor and never reads `is_shared`**, so any threshold or shared-IP filter we add is a deliberate
+break from 1:1. Detail in `knowledge/data_knowledge.md` § "MNTN ID (household) re-keying" and ticket §7j.
+Related: [[reference_bidder_serving_stores]].

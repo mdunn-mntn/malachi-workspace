@@ -69,7 +69,8 @@ _(add Identity Graph table schema + as-of semantics to `data_catalog.md`)_
   the ML model → leave it out.**
 - **Identifier scope (Slack 2026-07-29, corrects the IPv6 note):** `guid_log` has **no IPv6** → IPv6 is moot for
   the guid_log-only v1 (only matters if augmentor_log is added). But `guid_log` carries **`guid` = graph
-  `id_type=42`**, not scoped into the current IPv4-only design. **Open for Sept-4: bake GUID into the L1 keyset
+  `id_type=41` (`MNTN_GUID`; corrected 2026-08-11 from "42" = `GA_CLIENT_ID`, see epic §7j)**, not scoped into
+  the current IPv4-only design. **Open for Sept-4: bake GUID into the L1 keyset
   as a 2nd identifier?** Initial version covers only households with an IPv4 (non-IPv4 households punted).
 - **IPv4-only v1 leaves the guid_log L1 UNTOUCHED (Ryan, epic §7d):** for v1 you edit only L2/L3 to add the
   graph join; the **keyset-struct rebuild of L1 is the FAST-FOLLOW**, not this ticket's v1 deliverable. This

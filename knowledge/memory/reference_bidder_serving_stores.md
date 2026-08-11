@@ -1,15 +1,15 @@
 ---
 name: reference_bidder_serving_stores
-description: "Bidder serving-store architecture — Aerospike household profile (key=IP), scores live in GCS not MemDB, ScyllaDB raw-wins spend pipeline, team ownership/contacts"
+description: "Bidder serving-store architecture — Aerospike household profile (key=IP), scores in GCS not MemDB, ScyllaDB raw-wins pipeline, id-service Bigtable ID→household resolution rule, ownership/contacts"
 metadata: 
   node_type: memory
   type: reference
   originSessionId: eee87269-027a-4bd9-9df4-5666d4c3fde9
 doc_type: memory
-keywords: [bidder serving stores, Aerospike, household-profile, GCS scores, ScyllaDB, Redis, rtb namespace, holdout_cids, MembershipDB, Eric membership consumer]
+keywords: [bidder serving stores, Aerospike, household-profile, GCS scores, ScyllaDB, Redis, rtb namespace, holdout_cids, MembershipDB, Eric membership consumer, id-service, Bigtable household resolution, raw_score inversion, confidence tiebreak, bidder parity]
 domain: [bidding, infra]
 lifecycle: active
-last_verified: 2026-06-09
+last_verified: 2026-08-11
 ---
 Bidder team system design (Abbas + Ryan walkthrough, 2026-06-09, TI-1016). Full detail in `knowledge/data_knowledge.md` § "Bidder System Design & Caching Architecture" and `tickets/ti_1016_memdb_bidder_cache_optimization/`.
 
@@ -22,6 +22,20 @@ Bidder team system design (Abbas + Ryan walkthrough, 2026-06-09, TI-1016). Full 
 - **ScyllaDB = raw wins (spend pipeline).** Notification service (HTTP webhook) → ScyllaDB (dedup) → Kafka → 3 aggregators {frequency, spend, logs→GCS}, ~1 min end-to-end. Logs aggregator's GCS output is the upstream of BQ spend/win tables.
 - **Redis = slow-changing static data** (flight budgets/thresholds/weights), pulled on a 5–10 min cron (not real-time → stopped flights can spend ~10 min more).
 - **Migration:** Aerospike → ScyllaDB + Redis (Aerospike expensive / poor support). Treat Aerospike = current, Scylla = future.
+
+**id-service = ID→household resolution at auction time (Bigtable, `SteelHouse/id-service/src/bigtable.rs`,
+source-verified 2026-08-11).** Distinct from the Aerospike profile cache above. Rowkey =
+`id|id_type|version|experiment|confidence_score|household_id`, zero-padded confidence, read in lexicographic
+order so **the first row is the best match**. Bigtable stores a **lower-is-better `raw_score`** (a sort
+encoding inherited from the graph); `resolve_household_id` picks the lowest raw score across all
+caller-supplied identities (strict `<`, so **first-wins on ties in the caller's identity order**) and inverts
+on the way out (`confidence_score = 10_000 − raw_score`) so callers see higher-is-better 0–10000. **The graph's
+own parquet `ConfidenceScore` is a probability (higher better)**, so `max(probability)` ≡ `min(raw_score)` —
+same winner. **Two things the bidder does NOT do: no confidence floor, and it never reads `is_shared`** (a
+confidence-0 match still resolves). **Equal-confidence tiebreak = LOWEST `household_id`** (next rowkey
+segment) — airflow-ti `utils_model/household_resolution.py` takes the highest, the one real parity gap for the
+Fangorn-on-MNTN-ID feature store. Per-identity timeout, partial results returned on partial timeout.
+See [[project_fangorn_on_mntn_id]].
 
 **Latency budgets:** Mountain Bidder ~200 ms; Beeswax 15 ms timeout (Beeswax = proxy/middleman in front of the exchanges). SSPs: Magnite, Index Exchange, Freewheel, Pubmatic.
 

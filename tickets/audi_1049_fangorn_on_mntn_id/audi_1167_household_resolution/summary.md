@@ -77,5 +77,10 @@ _(document the resolution semantics + shared-IP cutoff + fan-out guard)_
   interface** (current-graph selection + translation logging) ~end of next week; **Sean drops it into the FS
   code**; Weiang → Sean to spec the event schema. Resolution is where translation happens → this logging lands
   in the `resolve_households()` path.
-- **GUID (id_type=42)** may be a 2nd resolution identifier (guid_log carries guid); IPv6 moot for v1 (no IPv6
-  in guid_log). See epic §7c.
+- **GUID (id_type=41 `MNTN_GUID`; corrected 2026-08-11 from "42" = `GA_CLIENT_ID`)** may be a 2nd resolution
+  identifier (guid_log carries guid); IPv6 moot for v1 (no IPv6 in guid_log). See epic §7c and §7j.
+- **NOT superseded by the ID team's library (2026-08-11).** `mntn_graph` does translation only (returns every
+  matching edge, no winner selection, no dedup, no drop). This ticket owns the consumer half. Plan of record
+  (Sean): wrap the library inside `household_resolution.py` so downstream FS jobs don't change. **Known fix to
+  make: the equal-confidence tiebreak takes the highest `household_id`, the bidder takes the lowest.** Full
+  audit in epic §7j.

@@ -3455,9 +3455,13 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   pipeline re-keyed to MNTN ID using the simplest logic (Ryan's smoke-test logic). **PUNT:** DS13/DS19/DS46
   replication to MNTN ID, the **bidder-resolution alignment** (our IP→HHID must match the bidder's or scores
   are unreliable), full **IPv6**, and **non-IPv4 households**. v1 covers only households that have an IPv4.
-- **Identifier scope = IPv4 (30) + maybe GUID (42), NOT IPv6:** `guid_log` has **no IPv6** (IPv6 only matters
+- **Identifier scope = IPv4 (30) + maybe GUID (41), NOT IPv6:** `guid_log` has **no IPv6** (IPv6 only matters
   once `augmentor_log` enters training, excluded from v1), but `guid_log` carries **`guid` = graph
-  `id_type=42`**, which the initial IPv4-only design didn't scope. Open: bake GUID into the L1 keyset for Sept-4?
+  `id_type=41` (`MNTN_GUID`)**, which the initial IPv4-only design didn't scope. Open: bake GUID into the L1
+  keyset for Sept-4? **(Corrected 2026-08-11: previously recorded as `id_type=42` from a verbal note. idg
+  `IDType.scala` has `MNTN_GUID = 41` and `GA_CLIENT_ID = 42`, and 42 carries a Google-Analytics-specific
+  validation pattern. airflow-ti already uses the right one — `guid_log_ip_guid_advertiser_id.py` passes
+  `IdType.MNTN_GUID`.)**
 - **NEW crediting requirement on AUDI (Jack Barbey / Luis Chelala):** the FS must **log every ID→household
   translation event** → `dw-main-silver.identity.graph_translation_signal` (Weiang Li dev; modeled on
   `hashed_email_signal`) so **graph vendors get credited** — required even though the FS sources only internal
@@ -3547,6 +3551,51 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   `models/feature_store/feature_group_2_derived/guid_log_derived_ip_vertical_id.py`** (airflow-ti), then GROUP BY
   household. Resolves the HLL question (merge, don't sum) and confirms the re-key is a real change (improves the
   multi-IP case + the lookback).
+- **How the BIDDER resolves a household, and where our feature-store resolution diverges (verified from
+  `SteelHouse/id-service` + `SteelHouse/idg` source, 2026-08-11).** This is the "our IP→HHID must match the
+  bidder's" alignment item, answered:
+  - **Confidence direction is consistent — `max(confidence)` is correct, not backwards.** The graph parquet's
+    `ConfidenceScore` (`gs://identity-graph-prod/mntn-graph/household_graph_parquet`) is a `DoubleType`
+    **probability** = `candidate_set_probability × conditional_candidate_household_probability` (idg
+    `docs/ConfidenceScores.md`; schema `graph/datasets/graphDatasets.scala`), so **higher = better**. The
+    Bigtable serving copy stores a **lower-is-better `raw_score`** purely so rowkeys sort, and id-service
+    inverts it on the way out (`confidence_score = 10_000 − raw_score`, `src/bigtable.rs`). Picking
+    `max(probability)` therefore selects the same household as the bidder's `min(raw_score)`.
+  - **Bidder rowkey = `id|id_type|version|experiment|confidence_score|household_id`**, read in lexicographic
+    order, **first row wins**. So on an equal-confidence tie the bidder takes the **LOWEST `household_id`**.
+    airflow-ti `utils_model/household_resolution.py` takes the **highest** (`F.max(F.struct(confidence_score,
+    household_id, …))`). **Real 1:1 divergence, one-line fix.**
+  - **Across identifiers the bidder uses strict `<`** (`bigtable.rs` `resolve_household_id`), i.e. first-wins
+    on ties in the caller's input order — the same semantics as our ordered `id_columns` priority. Already
+    aligned.
+  - **The bidder applies NO confidence floor and NEVER reads `is_shared`** (zero references in `bigtable.rs`).
+    A confidence-0 match still resolves to a household. So any `min_confidence` or shared-IP filter on the
+    feature-store side is a **deliberate** departure from bidder parity — defensible on feature quality, but
+    name it. Bears on the ~9.5% of current IPv4 rows flagged shared.
+  - **Structural non-parity that no code change fixes:** the bidder resolves live against Bigtable at auction
+    time; the feature store resolves against a weekly parquet snapshot (up to ~6d stale). Exact parity is not
+    reachable — align the *rule*, not the instant.
+- **`IdTypeFamily` codes: idg is authoritative and the shared library disagrees (2026-08-11).** idg
+  `IDType.scala` defines `Family.Ipv4 = 3000` covering **`{IPV4 30, IP_DAY 32}`** and `Family.Ipv6 = 3100` as a
+  **separate** family. The ID team's `mntn_graph` pyspark library derives families as *tens-bucket × 1000*, so
+  its `IdTypeFamily.IP` (3000) expands to `{30, 31, 32}` — silently including IPv6 **and** the synthetic
+  `IP_DAY` rows (idg: "synthetic IP identifier used during graph generation to represent (IP, day)"), with no
+  3100 so IPv6 can't be requested alone. Families 1000/2000/4000/5000/6000 agree; **IP is the only break**.
+  **Always pass `IdType.IPV4` explicitly, never the family.** Full id_type list: 10/11/12/13 hardware,
+  20/21/22/23 email, 30 IPv4, 31 IPv6, 32 IP_DAY, 40 COOKIE, **41 MNTN_GUID**, 42 GA_CLIENT_ID, 50 LUID,
+  60 PHONE_SHA256.
+- **The ID team's `mntn_graph` library does NOT do resolution (2026-08-11).** Distributed at
+  `gs://mntn-data-archive-prod/identity_resources/graph_interface/mntn_graph.zip` (Confluence `3739484272`).
+  `ids_to_households()` / `households_to_ids()` read one snapshot, left-join it onto the caller's DataFrame and
+  return **every** matching edge — "intentionally does not: select the best match, deduplicate matches, drop
+  unmatched rows." Row count fans out on multi-match. It replaces the *read+join* layer only; winner selection,
+  dedup, thresholds and aggregation stay in `utils_model/household_resolution.py`. Known gaps vs our module: no
+  staleness guard (ours fails if the newest snapshot is >14d old), no point-in-time `as_of` on the top-line API
+  (only `graph_version` or a caller-supplied `graph_df`), and `_keep_max` runs a Spark aggregation per call
+  where ours lists Hive partitions. Its `id_date_col` option matches the edge window *inside the latest
+  snapshot*, which leaks later knowledge when resolving a past date — do not use it for backfills. Optional
+  `log_table` writes raw translation output to `gs://mntn-data-archive-prod/identity_resources/graph_logs/…`,
+  which is the feed for graph-vendor crediting.
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

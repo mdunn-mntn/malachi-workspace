@@ -273,9 +273,10 @@ tests**. **PUNT to later:** DS13/DS19/DS46 replication to MNTN ID (Ryan said the
 unreliable — IP_1→HHID_1 vs HHID_2), full **IPv6**, and **non-IPv4 households**. Initial version covers only
 households that have an **IPv4**.
 
-**Identifier scope — GUID (id_type=42), not IPv6 (Sean):** `guid_log` has **no IPv6 data** at all, so IPv6 is
+**Identifier scope — GUID (id_type=41), not IPv6 (Sean):** `guid_log` has **no IPv6 data** at all, so IPv6 is
 only relevant once `augmentor_log` is added to training (excluded from v1). But `guid_log` carries **`guid`,
-which IS an identifier in the graph — `id_type=42`** — and the current FS design scoped only IPv4. **Open for
+which IS an identifier in the graph — `id_type=41` (`MNTN_GUID`; corrected 2026-08-11 from a verbal "42",
+which is `GA_CLIENT_ID` — see §7j)** — and the current FS design scoped only IPv4. **Open for
 Sept-4: whether to bake GUID into L1 as a 2nd identifier.** (This corrects §7b's "IPv6 = L1 rebuild" framing —
 for the guid_log-only scope, IPv6 is moot; GUID is the real question.)
 
@@ -459,6 +460,82 @@ The 4-case read (§7f) was **confirmed "100% right" by Ryan Kleck.** The thread 
   L1 that supports Ryan's GUID fast-follow). Sean asked if Malachi/Brian need it → **decide from the L2/L3
   design** (for IPv4-only v1 you likely don't need the guid grain yet).
 
+## 7j. ID team's `mntn_graph` graph_interface library + bidder-parity audit (Slack #dev-audi-mntn-id, 2026-08-11)
+
+**Trigger:** Sean Yang circulated the ID team's shared pyspark library (Weiang Li, under Jack Barbey) as "the
+source of truth to resolve household (instead of using our own `household_resolution.py`)." Artifact =
+`gs://mntn-data-archive-prod/identity_resources/graph_interface/mntn_graph.zip` (8,982 B, rewritten
+2026-08-10 19:20Z — it is actively changing). Confluence design doc `3739484272` (Identity space). Databricks
+volume copies at `/Volumes/dev/identity/libs/mntn_graph.zip` and `/Volumes/dev/identity/libs/airflow_ti_household.zip`
+(the second is a snapshot of our repo file and is NOT published to GCS — read it from airflow-ti, not the volume).
+
+**It does NOT supersede `household_resolution.py` — it replaces only the read+join layer.** Verified in both
+the code (`mntn_graph/graph.py`) and the doc: "The library only performs ID translation. It intentionally does
+not: select the 'best' match, deduplicate matches, drop unmatched rows. Those decisions remain with the
+consumer." `ids_to_households()` left-joins one graph snapshot and returns **every** matching edge, so row
+count fans out on multi-match. So **AUDI-1167 is the consumer half, not a placeholder to delete**, and the
+AUDI-1170 shadow-parity baseline does **not** move on resolution semantics. Sean's stated plan (2026-08-11) is
+to keep `household_resolution.py` and wrap the library inside it so downstream FS jobs don't change — correct
+call, because it keeps resolution as a single chokepoint, which is what bidder parity requires.
+
+**Gaps vs our module (raise in review before adopting):**
+- **No staleness guard.** Ours raises if the newest snapshot is >14d old (`MAX_GRAPH_STALENESS_DAYS`, graph
+  rebuilds weekly). The library's `reader._select_snapshot` silently takes the latest — a stalled graph build
+  would resolve against stale data with no signal.
+- **No point-in-time `as_of` on the top-line API.** `GraphConfig.as_of` exists in `reader.py`, but
+  `ids_to_households()` only accepts `graph_version` (a build id) or a caller-supplied `graph_df`. Backfilling
+  over `as_of_date` needs "newest snapshot ≤ run date" — that is exactly AUDI-1170. Workaround: keep passing
+  the L1 mirror as `graph_df`, which the shipped code already does.
+- **`_keep_max` runs a Spark aggregation over the export per call**, twice (asOfDate, then revision). Ours
+  lists Hive partitions on the filesystem (`_list_partition_values`). A 90-day backfill pays that 180×.
+- **`id_date_col` is the one option that WOULD move the baseline.** It matches the edge validity window
+  *inside the one selected snapshot*; closed intervals in a current snapshot are history as restated by
+  today's build, so using them to resolve a past date leaks later knowledge. Ours reads that date's own
+  snapshot instead (`household_resolution.py` docstring, "Point-in-time reads"). Do not adopt `id_date_col`
+  without a parity run.
+
+**Bidder parity — Brian McAdams's blocker ("our approach and bidding's must be 1:1"), settled from code
+2026-08-11.** Read `SteelHouse/id-service/src/bigtable.rs` and `SteelHouse/idg`:
+- **We are NOT backwards.** The graph parquet's `ConfidenceScore` is a `DoubleType` **probability**
+  (`candidate_set_probability × conditional_candidate_household_probability`, idg `docs/ConfidenceScores.md`,
+  schema in `graph/datasets/graphDatasets.scala`), so higher = better. Bigtable's `raw_score` is
+  lower-is-better purely as a rowkey sort encoding, and id-service inverts it on the way out
+  (`10_000 − raw_score`, `bigtable.rs:1131`). So our `max(confidence_score)` picks the same household as the
+  bidder's `row.key.raw_score < b.key.raw_score` (`bigtable.rs:1082-1087`).
+- **One real divergence — the tiebreak direction.** The Bigtable rowkey is
+  `id|id_type|version|experiment|confidence_score|household_id`, read in lexicographic order with the first
+  row winning, so on an equal-confidence tie the bidder takes the **lowest** `household_id`. Ours takes the
+  **highest**: `F.max(F.struct(confidence_score, household_id, is_shared))` in `load_graph_ids` dedupe
+  (`household_resolution.py:242-248`) and the same shape in the `greatest()` ranking struct (L350-361).
+  One-line fix to make the tiebreak 1:1.
+- **Cross-identifier tiebreak already matches.** The bidder's strict `<` means first-wins on ties in the
+  caller's `identities` input order — the same semantics as our ordered `id_columns` `-priority` field.
+- **The bidder applies neither a confidence floor nor an `is_shared` filter.** Zero references to
+  `is_shared`/threshold/`min_conf` anywhere in `bigtable.rs`; a confidence-0 match still resolves. So any
+  `min_confidence` or shared-IP filter we add is a **deliberate** break from 1:1 (possibly right for feature
+  quality, but it must be a named decision, not a default). Bears directly on the ~9.5%-shared IPv4 rows.
+- **Structural non-parity no library choice fixes:** the bidder resolves live against Bigtable at auction
+  time; we resolve against a weekly parquet snapshot (up to ~6d stale). Exact parity is not reachable.
+
+**`IdTypeFamily` is wrong in the library and in the Confluence doc (answers Sean's Q4).** idg `IDType.scala`
+has `Family.Ipv4 = 3000` covering **`{IPV4 30, IP_DAY 32}`** and `Family.Ipv6 = 3100` as a **separate**
+family. The library derives families as tens-bucket × 1000 (`id_types.codes_for_family`), so
+`IdTypeFamily.IP` (3000) expands to `{30, 31, 32}` — it silently pulls in IPv6 **and** the synthetic
+`IP_DAY` rows (idg: "synthetic IP identifier used during graph generation to represent (IP, day)"), and 3100
+doesn't exist so IPv6 can't be selected on its own. Every other family (1000/2000/4000/5000/6000) happens to
+agree; IP is the only break. **Action: pass `IdType.IPV4` explicitly, never the family.**
+
+**Correction — GUID is `id_type=41`, not 42.** `MNTN_GUID = 41`; `GA_CLIENT_ID = 42` (idg `IDType.scala`, and
+42 carries a Google-Analytics-specific validation pattern). airflow-ti already uses the right one:
+`guid_log_ip_guid_advertiser_id.py:41` passes `[("guid", IdType.MNTN_GUID), ("ip", IdType.IPV4)]`. The "42"
+recorded in §7c/§7d and the 1166/1167 cards traces to a verbal note and is wrong. Worth one confirmation with
+Sean in case he meant GA client ids specifically.
+
+**Open (asked of Jack Barbey / Weiang Li, Sean's 2026-08-11 post, still unanswered):** is returning all
+candidates the intended use case; what confidence 0 means and whether a threshold applies; how to handle
+`is_shared=True`; the family definition conflict. The first three now have code-derived answers above — the
+remaining genuine question is whether the ID team *intends* the bidder's no-filter behavior to be the standard.
+
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
 persuadables audience).** Fangorn ranks propensity (ROC-AUC 0.96) but the High band (~78% of volume) returns
@@ -485,3 +562,13 @@ MID-keyed L3 tables you're building** — keep your L3 schema uplift-friendly. M
 ## 9. Data Documentation Updates
 _(record here what gets added to `knowledge/data_catalog.md` / `data_knowledge.md` as the build progresses —
 Identity Graph tables schema, as-of join cost, resolution-rate findings, collapse-function study.)_
+
+- **2026-08-11 → `knowledge/data_knowledge.md` § "MNTN ID (household) re-keying of the feature store":** added
+  (a) how the bidder resolves a household and where FS resolution diverges (confidence direction, the
+  `household_id` tiebreak gap, no floor / no `is_shared` filter, live-vs-snapshot structural non-parity);
+  (b) the `IdTypeFamily` conflict between idg and the shared library plus the full id_type list; (c) what the
+  ID team's `mntn_graph` library does and does not do, with its adoption gaps. Corrected the
+  `GUID = id_type 42` line to 41 (`MNTN_GUID`).
+- **2026-08-11 → memory:** `reference_bidder_serving_stores` gained the id-service Bigtable resolution rule;
+  `project_fangorn_on_mntn_id` updated (library does not supersede `household_resolution.py`; bidder parity
+  settled; id_type correction). No new memory file — both facts had an existing home.
