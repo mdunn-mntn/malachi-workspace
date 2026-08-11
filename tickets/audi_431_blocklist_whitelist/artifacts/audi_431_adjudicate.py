@@ -50,6 +50,9 @@ def main() -> None:
         (j["junk_tier"] == "trailing_dot")
         & (j["total_count"] >= 1_000_000)
         & (j["days_seen"] >= 14)
+        # a bare "." is a degenerate parse (empty domain AND empty suffix), not a matchable
+        # string like "localhost." — never ship it to a prod list
+        & (j["domain"].str.len() > 1)
     ].copy()
     stable_junk["band"] = "junk_rule"
     stable_junk["band_rule"] = "stable trailing-dot parse artifact ('localhost.' precedent)"
