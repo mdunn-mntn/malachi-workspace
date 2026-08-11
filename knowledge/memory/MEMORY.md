@@ -26,6 +26,7 @@
 - **Self-review** — update `self_review/self_review_2.md` after every ticket; argue the rubric (Speed/Craft/Adaptability). [[feedback_self_review_habit]] [[feedback_rubric_strategy]]
 - **Tickets** — `/frame` opens (framing gate blocks in_progress), `/capture` closes; don't extend stale/reassigned tickets. [[reference_ticket_framing_gate]] [[feedback_dont_extend_old_tickets]]
 - **On-call** — any alert → `/oncall`; log to §3 incident + §2 signature + incident_log.jsonl; never hot-patch prod. [[reference_oncall_runbook]]
+- **Hot path is a budget** — CLAUDE.md holds behavioral rules + pointers only; new procedure goes in a skill or knowledge doc. A rule may only move off-hot if a real trigger reloads it. [[project_hot_path_budget]]
 
 ## Stack, SQLMesh + critical gotchas (full detail in git knowledge/data_catalog.md + data_knowledge.md)
 - **Stack:** bronze.integrationprod (Postgres CDC dims) · bronze.raw (events 10–90d TTL) → SQLMesh → silver.logdata/summarydata/aggregates · silver.core (views over integrationprod.core_*). silver=dw-main-silver, bronze=dw-main-bronze; clean name → versioned sqlmesh__*.
