@@ -1,6 +1,17 @@
+---
+doc_type: reference
+title: "Folder definitions — where every file belongs"
+description: "Authoritative folder-by-folder placement rules, ticket folder structure, epic nesting, and naming conventions for the workspace"
+keywords: [folder definitions, where does this file go, file placement, ticket folder structure, epic nesting, folder naming, naming convention, lowercase underscores, ticket scaffold, new_ticket.sh, meetings naming, artifacts, outputs, queries]
+domain: [workflow]
+lifecycle: active
+last_verified: 2026-08-11
+---
+
 # Folder Definitions — MNTN Workspace
 
 Every folder has an explicit definition. When in doubt about where something goes, check here first.
+**This file is the authority on placement and naming.** The CLAUDE.md files carry only the one-line naming rule and point here.
 
 ---
 
@@ -67,6 +78,8 @@ ti_xxx_name/
 └── artifacts/     ← everything else: notebooks, PDFs, Python scripts, Word docs, PNGs
 ```
 
+**`presentation.md` is NOT required** (decided 2026-08-11, resolving a contradiction between the two CLAUDE.md files). `summary.md` is the only required doc. Build a `*_presentation.md` in `artifacts/` only when presenting to a group, briefing leadership, or asked for slides — run `/present`.
+
 **Scaffold it in one command:** `.claude/scripts/new_ticket.sh <folder_name> [--summary "..."]`
 (validates the name, creates the subdirs, prefills lint-passing front-matter, refreshes `tickets/INDEX.md`).
 Add `--parent <epic_folder>` for an epic child, `--epic` for an epic folder itself. See the script header for flags.
@@ -114,7 +127,8 @@ front-matter point to; the iterations stay alongside. This is a **convention, no
 - Otter.ai transcripts (`.txt`)
 - Manual meeting notes
 - Zoom transcript files (`.vtt`)
-- Named with ticket prefix: `ti_xxx_meeting_person_n.txt`
+- Named `ti_xxx_NN_description_YYYY_MM_DD.txt` — `NN` is a per-ticket sequence number so the folder sorts chronologically even with several meetings on one day.
+- Produced by `.claude/scripts/transcribe.sh` (or `/transcribe`, which names and files them to this convention automatically).
 
 ### `artifacts/`
 **Everything else that isn't a SQL query or a query result.** This is the catch-all for deliverables and supporting files.

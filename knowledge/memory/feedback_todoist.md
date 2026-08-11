@@ -22,7 +22,11 @@ Cross-session context does NOT live in Todoist — it lives in git history, each
 ## from feedback_todoist_eat_that_frog.md
 
 ## Scope
-Only manage tasks in the **MNTN section** (ID: `6cwmRpfXpCxQ5G9M`) of the **MindWyre project** (ID: `6cwm8mmPrVChhGrM`) in Todoist. **Always filter by `section_id`** on every list call — never query the full project. Silently ignore tasks from any other section. Never reference, display, or acknowledge non-MNTN tasks.
+Only manage tasks in the **MNTN section** (ID: `6cwmRpfXpCxQ5G9M`) of the **MindWyre project** (ID: `6cwm8mmPrVChhGrM`) in Todoist. The **Backlog section** is `6cwmRpcPvQhfQGpv`. **Always filter by `section_id`** on every list call — never query the full project. Silently ignore tasks from any other section. Never reference, display, or acknowledge non-MNTN tasks.
+
+**Duplicate tasks are bugs.** Always list the section and check for an existing match before creating anything. Titles must be clear and actionable ("Pull BUK keyword lists for beta advertisers", not "do the thing").
+
+**MCP server:** `/Users/malachi/Developer/work/mntn/workspace/todoist-mcp-transfer/mcp-server/`, registered globally.
 
 ## Core Philosophy
 - The "frog" is the biggest, most important task Malachi is most likely to procrastinate on. Always identify it and schedule it first.

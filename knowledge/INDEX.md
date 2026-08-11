@@ -373,4 +373,5 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 - [Improvements Backlog](../improvements_backlog.md) — Single lightweight tracker for improvement ideas / durable fixes / tech-debt we want to remember but not put on the Jira board yet. On-call durable-fixes feed it; so can anything. Promote a row to Jira only when it's actually prioritized.  ·  _verified 2026-08-09_
 
 ## reference
+- [Folder definitions — where every file belongs](folder_definitions.md) —   ·  _verified 2026-08-11_
 - [Retrieval Eval Probes — cold-start regression suite](eval_probes.md) — Cold-start retrieval probes: a fresh chat using only START_HERE + _ROUTING + tickets/INDEX must reach each probe's targets. Every real cold-start miss becomes a new probe here.

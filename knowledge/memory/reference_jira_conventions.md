@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing]
 domain: [jira-process]
 lifecycle: active
 last_verified: 2026-08-05
@@ -184,6 +184,38 @@ TAR team Jira best practices: `documentation/architecture/TAR-JIRA Best Practice
 - Update tickets before standup and planning meetings (status, not data entry in meetings)
 
 **Boards, Spikes & sprints (AUDI-1148, 2026-07-22):** Spikes + sprints live in **AUDI** (Scrum board **1814**, active sprint via `GET /rest/agile/1.0/board/1814/sprint?state=active`). **INCR is a Kanban board (3013) with NO sprints and NO Spike issue type** — file spike/sprint work under AUDI even when it's incrementality work. AUDI issue types: Spike=`11467`, Task=3, Story=6, Bug=1, Epic=27. **An AUDI Spike requires only project + issuetype + summary** — Story Points, PMO Rep, Developer, Release Type are NOT required for a Spike (unlike Tasks). **Spike routing is org-forced to AUDI (verified 2026-08-05):** issuetype `11467` exists in BOTH the TI and AUDI create-meta, and POSTing `project={key:"TI"}` + `issuetype={id:"11467"}` still lands the issue in the **AUDI** project regardless of the create-project key — I posted project TI and got key `AUDI-1195`. So "file a TI spike" resolves to AUDI; matches the CLAUDE.md convention that spikes file under AUDI. Add to sprint: `POST /rest/agile/1.0/sprint/<sid>/issue {"issues":["AUDI-XXXX"]}`. Attach files: `POST /rest/api/2/issue/AUDI-XXXX/attachments` with header `X-Atlassian-Token: no-check` + `-F "file=@path"` (multiple `-F` OK); replace a stale attachment by `DELETE /rest/api/2/attachment/<attid>` first (updating the local file does NOT update the Jira copy).
+
+## Comment cadence + template (migrated from global CLAUDE.md §9, 2026-08-11)
+
+**When to post:** end of a work session (what was accomplished, what's next), ticket completion (final summary, key findings, follow-up tickets needed), and the moment a blocker is hit (what's blocked, what's needed to unblock). Nothing else.
+
+**Comment shape (wiki markup, lint with `.claude/scripts/lint_comms.py --kind comment|completion`):**
+```
+*[Progress Update | Completed | Blocked]: YYYY-MM-DD*
+
+Answer line: the one thing the reader needs, stated first.
+
+h3. Done
+* Bullet one
+
+h3. Key Findings (if applicable)
+* *Bold label:* Finding details
+
+h3. Next
+* Bullet one
+```
+
+**Link other tickets as** `[TI-XXX|https://mntn.atlassian.net/browse/TI-XXX]` in curl-posted wiki markup (in the MCP tool that syntax renders literal — use the bare key there).
+
+**Ticket-create payload (REST v2, Task):**
+```bash
+curl -s -u "malachi@mountain.com:${JIRA_API_TOKEN}" \
+  -X POST -H "Content-Type: application/json" \
+  "https://mntn.atlassian.net/rest/api/2/issue" \
+  -d '{"fields": {"project": {"key": "TI"}, "issuetype": {"name": "Task"}, "summary": "Title", "description": "wiki markup here", "assignee": {"accountId": "712020:3c684a7b-50a1-4639-8cb1-e488aca288e7"}, "customfield_10012": 3, "customfield_15612": {"id": "17863"}, "labels": ["q2_2026"]}}'
+```
+
+**MCP auth (READ tools only).** Before using any `mcp__jira__*` read tool, call `mcp__jira___internal_jira_set_auth` with `baseUrl` https://mntn.atlassian.net, `email` malachi@mountain.com, `apiToken` from `$JIRA_API_TOKEN`, `persist=false`. Writes never go through MCP.
 
 ## from reference_jira_search_api_v3.md
 
