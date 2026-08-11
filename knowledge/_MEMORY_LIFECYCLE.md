@@ -176,12 +176,12 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | airflow-ti-repo-and-deployment | reference | 2026-08-10 | [doc](memory/reference_airflow_ti.md) |
 | feedback_constrain_llm_to_real_taxonomy | feedback | 2026-08-10 | [doc](memory/feedback_constrain_llm_to_real_taxonomy.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-10 | [doc](memory/feedback_validated_is_not_correct.md) |
-| project_audi_431_list_refresh | project | 2026-08-10 | [doc](memory/project_audi_431_list_refresh.md) |
 | reference_airflow_log_puller | reference | 2026-08-10 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-10 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_gitignore_json_rule | reference | 2026-08-10 | [doc](memory/reference_gitignore_json_rule.md) |
 | feedback_one_resolver_for_shared_state | feedback | 2026-08-11 | [doc](memory/feedback_one_resolver_for_shared_state.md) |
 | feedback_terse_chat_replies | feedback | 2026-08-11 | [doc](memory/feedback_terse_chat_replies.md) |
+| project_audi_431_list_refresh | project | 2026-08-11 | [doc](memory/project_audi_431_list_refresh.md) |
 | project_hot_path_budget | project | 2026-08-11 | [doc](memory/project_hot_path_budget.md) |
 | reference_build_index_frontmatter_parsing | reference | 2026-08-11 | [doc](memory/reference_build_index_frontmatter_parsing.md) |
 | reference_pihole_dns_contaminates_fetch | reference | 2026-08-11 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
