@@ -14,7 +14,7 @@ Separate finding you'll want to see: of the top 500 highest-traffic domains that
 
 One more thing I tripped over: 362 domains are in both the whitelist and the blocklist right now, including google.com, yahoo.com and myshopify.com. That predates this work (it's in the files you shipped last September). Blocklist is checked first so it wins and the whitelist entry does nothing, but you may want to reconcile them while we're in there. List is in the workbook.
 
-Everything is in the workbook in Drive (Tickets/AUDI-431), decision sheet with per-row reasons, the two additions files in the exact shipped format, and the corrections list. About 1,370 genuinely ambiguous domains are in a manual tab sorted by volume, I'll work through the head of that before we ship.
+Everything is in the workbook in Drive (Tickets/AUDI-431): decision sheet with per-row reasons and evidence, the two additions files in the exact shipped format, and the corrections list. Only 10 domains are still undecided and they are the ones nothing could fetch, so this is ready whenever you are.
 
 Two questions:
 1. Same deploy as last time, drop the updated CSVs into vertical_categorizations/ecommerce_domain_whitelist/? The blocklist file I built is a full merged replacement (your 1,464 + the adds).
