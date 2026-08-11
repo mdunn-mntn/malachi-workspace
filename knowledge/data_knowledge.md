@@ -1157,6 +1157,23 @@ The **site-visit-signal pipeline** is the substrate feeding MNTN Matched's domai
   unparseable / infra urls): Sovrn 71.4% (37.4M rows AND 5.5M of 7.9M daily IPs lost), Cybba 4.7%,
   33A API 2.3%, guid_log 19.1% (60M empty urls), others <1%. DS13-blocklist share: 33Across 29% (316M
   rows/day yahoo/aol!), 33A API 18%, Predactiv 14%. Bot-UA rows/day: 33Across 52.7M (4.9%). Klickly: zero drops.
+- **How a domain's vertical is actually SET (traced in code, AUDI-431, 2026-08-11).** The wcv map is
+  built by the airflow-ti batch chain `spark/vertical_classification/`: `distinct_site_visit_signal_domains.py`
+  (31d svs, DS23 excluded) -> ecommerce filter -> Common Crawl homepage HTML (`prepare_html_content.py`,
+  fed by `dags/targeting/fetch_common_crawl.py`) -> **`submit_html_content.py` posts the HTML to the OpenAI
+  BATCH API** (key from Vault `ti_openai_api_key`) -> `fetch_vertical_response.py` collects the JSON ->
+  **`update_website_verticals.py` writes `vertical_categorizations/website_crawl_verticals/`**.
+  **Precedence at the merge (the part that matters):** it unions prior verticals + newly classified +
+  `vertical_manual_overrides/`, then keeps ONE row per domain via
+  `Window.partitionBy("domain_name").orderBy(desc("is_manual_override"), desc("last_modified_ts"))` —
+  so a **manual override always beats the classifier**, regardless of recency, and ties break on newest.
+  It also writes a rollback copy of the prior state to `website_crawl_verticals_rollback/dt=<run>/` first.
+  Newly classified rows land with `is_manual_override = 0`.
+  **Separate live path:** `SteelHouse/dbt ml_squad/models/vertical_categorization/ddp_vertical_classification_api.py`
+  posts svs URLs to the `ip-vertical-classification.in.mountain.com` service (`/api/v1/predict_ecomm_bulk`
+  then `/api/v1/lookup_bulk`); it is a lookup against the same map, not a second classifier.
+  `domain_vertical_mappings.py` is a downstream rollup of `ddp_url_verticals_filtered` (max-by-dt per
+  domain), NOT the source of the vertical.
 - **Ecommerce whitelist/blocklist state + wcv quality (AUDI-431, 2026-08-10):** both list files
   (`…/ecommerce_domain_whitelist/`) sat untouched 2025-09-23 → 2026-08-10 (TI-200 was the last refresh);
   wcv last refreshed 2025-11-07. `aol.com`/`yahoo.com` ARE in the blocklist CSV (why they never appear in
