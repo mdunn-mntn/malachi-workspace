@@ -4,7 +4,7 @@ Hey Ryan, I finished the blocklist/whitelist re-assessment (AUDI-431). The lists
 
 What I've got:
 
-3,014 adds that resolve 94% of the current uncategorized visit volume: 2,912 blocklist and 102 whitelist.
+3,024 adds that resolve 94% of the current uncategorized visit volume: 2,922 blocklist and 102 whitelist. Nothing is left undecided.
 
 The part worth your attention: I ended up fetching every proposed blocklist domain rather than trusting the classifier or my own read of the domain name, and that caught 76 real stores we would have permanently blocked. A 3% error rate on 2,484 checked. They are almost all creator blogs running their own shop on a subdomain or /shop, so anything judging by the homepage sees recipes and moves on. keviniscooking.com sells spice rubs, hearthookhome.com has 224 crochet patterns on WooCommerce, pantrymama.com sells cookbooks. Also some mainstream ones with first-party Shopify stores: bonappetit.com, newyorker.com, sfchronicle.com, lemonde.fr, goheels.com. Every one of those is now on the whitelist instead, and each was confirmed twice by separate fetches.
 

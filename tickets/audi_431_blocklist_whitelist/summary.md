@@ -122,7 +122,8 @@ All 1,883 remaining unverified blocklist rows fetched. **128 agents, 5,734 live 
 - The confirm stage earned its place by catching the near-misses: `theatlantic.com` and `fextralife.com` redirect to third-party retailers (zazzle, creator-spring) so they stay blocklisted, and `harpersbazaar.com`/`popularmechanics.com` sell only magazine subscriptions.
 - **165 unreachable** across the sweep (6.6%), net of the Pi-hole correction above.
 
-**FINAL: 2,912 blocklist + 102 whitelist adds resolve 94.2% of 28d uncategorized visit volume.** Merged blocklist = 4,376 domains. **10 rows (0.18% of volume) remain** — all genuinely unfetchable, in the Manual review tab.
+**FINAL: 2,922 blocklist + 102 whitelist adds resolve 94.4% of 28d uncategorized visit volume.** Merged blocklist = 4,386 domains. **Zero rows undecided.**
+Tail resolution (2026-08-11): of the last 10, six were dead on inspection (3 no DNS on any resolver, 3 returning 404 via public DNS) so they blocklisted under the standing rule; the final 4 sat behind Cloudflare bot walls and **Malachi called them all non-ecommerce** (`onechicday.com` a fashion/news blog, plus `prettyinpink.ru`, `watchluna.com`, `streetscan.co.uk`), recorded as `designation_source: human`. The Manual review tab is now omitted from the workbook rather than shipped empty.
 **Verification standard achieved: every shipped designation is either score-banded with adversarial QC, or backed by a live page fetch citing what was seen; every whitelist entry is corroborated twice.**
 
 ### Defect: the workbook silently shipped a stale view (caught by Malachi, fixed 2026-08-11)
