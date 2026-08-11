@@ -33,6 +33,14 @@ def main() -> None:
         sheet.loc[sheet["domain"].isin(demoted), ["designation", "designation_source", "band"]] = ["", "", "manual"]
         print(f"QC demotions applied: {n} rows -> manual")
 
+    promo_path = OUT / "audi_431_ai_promotions.csv"
+    if promo_path.exists():
+        promo = pd.read_csv(promo_path)
+        idx = sheet["domain"].isin(set(promo["domain"]))
+        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(promo["domain"], promo["designation"])))
+        sheet.loc[idx, "designation_source"] = "ai-verified"
+        print(f"AI-verified promotions applied: {int(idx.sum())} rows")
+
     hc_path = OUT / "audi_431_human_calls.csv"
     if hc_path.exists():
         hc = pd.read_csv(hc_path)
