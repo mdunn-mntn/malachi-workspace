@@ -4,6 +4,11 @@
 set -uo pipefail
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 
+# Safe pull: only when the tree is clean, so overnight Pi commits land without clobbering local work.
+if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 && [[ -z "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]]; then
+  git -C "$ROOT" pull --quiet origin main >/dev/null 2>&1 && echo "Git      : pulled origin/main (tree was clean)"
+fi
+
 echo "── AI Workflow Kit ─────────────────────────────────────────────"
 echo "Retrieval: CLAUDE.md → knowledge/START_HERE.md → _ROUTING.md (keyword→doc) /"
 echo "           bq/_TOPICS.md (by domain) / bq/_CATALOG_INDEX.md → the one doc. Load indexes, not the tree."

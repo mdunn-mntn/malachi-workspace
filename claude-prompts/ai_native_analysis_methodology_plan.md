@@ -97,7 +97,7 @@ the *order* is invariant and no rung is skipped — it is only sometimes cheap.
 | 5 | **Triangulate** | A *second, independent* estimate of the headline number — a different method (DiD ↔ CausalImpact) or a different table (clickpass ↔ conversion ↔ all_facts) — and the agreement/disagreement between them. | A surprising number may not pass this rung on one method alone (§5). Disagreement is investigated, not averaged away. | TI-961 Tier 2 +27% DiD≈CI; AUDI-1070 signature reproduced across three tables. |
 | 6 | **Quantify uncertainty** | SE / 95% CI / p-value on the headline estimate, **on both methods**, plus the explicit **bias direction** ("lower bound because IP rotation attenuates toward zero"). | No point estimate ships without its interval. Ratio metrics use simulation/bootstrap, never a normal-approx SE that can explode. | TI-961 hand-rolled CrI blew up to +681%; fixed with N=2000 simulation. |
 | 7 | **Pre-empt objections** | A written **adversarial Q&A**: every way the number could be wrong (leakage, survivorship, unequal buckets, selection, confound, artifact), each answered with evidence. | Required for any T2+ claim; mandatory for shocking numbers. Fresh-context adversarial review encouraged. | TI-804's objection Q&A (temporal leakage, IP rotation, bucket sizes) defended 184×. |
-| 8 | **Visualize + register** | Tufte-clean chart(s) — one number per point, direct-labeled, finding-as-title — each entered in the **Chart & Evidence Registry** (§6) with its claim ID and provenance chain. | A chart with no registry entry / broken provenance chain fails the build. | Visualization Standards; the dataviz skill; the "keep track of / share" requirement. |
+| 8 | **Visualize + register** | Tufte-clean chart(s) — one number per point, direct-labeled, finding-as-title — each entered in the **Chart & Evidence Registry** (§6) with its claim ID and provenance chain. | A chart with no registry entry / broken provenance chain fails the build. | MNTN chart standards (memory `reference_deck_standards`, via `/present`); the dataviz skill; the "keep track of / share" requirement. |
 | 9 | **Grade the claim** | A **claim ledger entry**: the statement, the number, the confidence **tier** (§4), the rungs completed, the provenance chain, the bias direction. | The linter blocks a tier higher than the rungs earn (§4, §8). This is the final gate before the number may enter a deliverable. | TI-896 correctly downgraded to "directional" when ROAS CIs overlapped. |
 
 **Why a ladder and not a checklist:** a checklist can be completed in any order and its items rationalized
@@ -205,7 +205,7 @@ literally cannot ship a number you cannot trace to a query.
 ```
 
 **Generate** — charts are produced by a committed `scripts/generate_charts.py` reading `data/final/*.csv`
-(never hardcoded numbers), following the existing Visualization Standards (Tufte: maximize data-ink,
+(never hardcoded numbers), following the MNTN chart standards in memory `reference_deck_standards` (reached via `/present`) (Tufte: maximize data-ink,
 color encodes meaning, lie-factor = 1 with linear scales, finding-as-title, direct-labeled points,
 one-line interpretation). The `dataviz` skill is invoked before the first line of chart code.
 
