@@ -4,7 +4,7 @@ title: "AUDI-431: Make Changes to Blocklist or Whitelist"
 status: in_progress
 date: 2026-08-10
 summary: "Re-assess most-common missing domains for whitelist/blocklist adds + wcv vertical corrections"
-result: "in progress"
+result: "94.2% of uncategorized volume resolved; 2,988 BL + 26 WL adds pending Ryan deploy"
 question: "Which of the top most-common missing domains (28d volume) belong on the ecommerce whitelist vs blocklist, and which top-traffic wcv domains carry a wrong vertical?"
 framing_state: locked
 ---
@@ -82,6 +82,17 @@ The vertical categorization pipeline (DS13) processes `site_visit_signal` URLs: 
   - **`buyrexroth.com` is the counter-case worth keeping:** med_score 0.33 with 0.03% of URLs over the cutoff, yet verifiably a direct-sales Rexroth parts store with prices, cart and order history. A classifier miss that the whitelist exists to correct.
   - **Blocklist: 1,016 promoted, 0 disputes across a 150-row two-lens stratified sample** (top-50 by volume + 100 random). Band held.
   - Remaining 352 = 106 AI-unsure + 214 low-confidence not-ecommerce + 31 low-confidence ecommerce + 3 refuted whitelist candidates + 1 unreviewed (`thesprucepets.com`).
+
+### Phase 7: live-site fetch of every on-the-fence domain (2026-08-11, per Malachi)
+Malachi asked whether verdicts were name-based or knowledge-based. **Honest answer: the first AI pass had NO web access** — it used prior knowledge for recognised sites and domain-name semantics + score signals otherwise, which is exactly why 106 came back unsure. Standing rule he then set: **fetch them all; when a domain is not clearly a shop, side with blocklist.**
+- Two workflows, 31 agents, ~950 live fetches. Every verdict cites what was seen on the page. Whitelist requires corroboration (2 agreeing lenses, or fetch + independent confirm); not-a-shop / unreachable / disagreement -> Blocklist.
+- **342 of 352 resolved: 11 real shops, 331 blocklist.** 10 left blank (nothing fetchable at all).
+- **`pct_ge_04` near 100% is NOT evidence of a shop — at any median.** Of the 41 high-share holdouts, only 2 were real stores. A prediction made in this ticket that the 12 with median >= 0.80 would be genuine catalogs was WRONG (1 of 12); one real shop (`seranova.com`) sat at median 0.44. The population is content farms, MFA article sites, video/stream players, scraper tools, classifieds and dead domains.
+- **We are scoring domains that do not exist.** `cootlogix.com` (88M rows/28d, rank 19) returns a Wix "ConnectYourDomain Error" 404 on every path — no site is connected. `o11.tech` has no A record. 9 of the 41 high-share domains were dead/unreachable.
+- Real shops found by fetching that no score band would have caught: `buytavio.com`, `callascleaneats.com`, `docsdiesel.com`, `homeviable.com`, `mynuora.com`, `onuia.com`, `pixelframe.design`, `saxon-brands.com`, `seranova.com`, `telcom-data.com`, `tryrovina.com`.
+
+### Final state (2026-08-11)
+**2,988 blocklist + 26 whitelist adds resolve 94.2% of 28d uncategorized visit volume.** Merged blocklist = 4,452 domains. **10 rows (0.18% of volume) remain** — all unfetchable, listed in the Manual review tab.
 - **Handoff**: Slack draft at `artifacts/audi_431_slack_handoff.md` — deploy mechanism + corrections mechanism are Ryan's call. Nothing deployed from this ticket.
 - **Manual-review loop (added 2026-08-10)**: every manual-band row now carries an **advisory AI verdict** (ecommerce / not ecommerce / unsure + confidence + one-line reason; 28-batch workflow, 1,372 of 1,373 covered, `thesprucepets.com` ships blank) plus a **"Your call" dropdown** (Whitelist / Blocklist / Skip, Excel data validation on K5:K1377). Verdict split: 1,230 not ecommerce, 106 unsure, 36 ecommerce. `artifacts/audi_431_ingest_reviews.py` reads the filled dropdown back out of the Drive workbook, writes `outputs/audi_431_human_calls.csv`, and re-runs the list builder so human calls flow into the additions files with `designation_source = human`.
 
