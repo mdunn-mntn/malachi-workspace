@@ -4,62 +4,118 @@ title: "[SPIKE] Lapsed-advertiser incrementality-test eligibility"
 status: backlog
 date: 2026-08-11
 summary: "Can a churned advertiser be screened for a ghost-bid lift test from their last-active window? Required-spend heuristic from IVR/CVR."
-result: "not started"
-question: ""
+result: "tooling built and regression-tested; blocked on the advertiser id from Al"
+question: "For an advertiser who has stopped spending, can we still compute what an 8-week ghost-bid lift test would cost, from their last-active visit and conversion rates?"
 framing_state: draft
 ---
 
 # [SPIKE] Lapsed-advertiser incrementality-test eligibility
 
-**Jira:** https://mntn.atlassian.net/browse/AUDI
+**Jira:** not yet filed — draft in §5
 **Status:** backlog
 **Date Started:** 2026-08-11
 **Assignee:** Malachi
 
 ---
 ## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+- **Question (the unknown):** For an advertiser who has stopped spending, can we still compute what an 8-week ghost-bid lift test would cost — from their last-active visit and conversion rates — well enough to decide whether to pitch them?
+- **Goal (why / the decision):** Al Beretta has a churned advertiser who left over MNTN's *legacy* incrementality story and is a plausible win-back on the new ghost-bid methodology. The decision: is this advertiser worth re-approaching with a test offer, and at what budget. Ties to the Q2 north star — incrementality is Kale's stated #1 priority, and this is the retention/win-back edge of it.
+- **Objective (done-when):** A required 8-week test budget for the named advertiser at 5% and 10% relative IVR MDE, with their historical typical monthly spend beside it so the gap reads as an ask; plus a stated answer on whether spend can be predicted from VR/CR at all. Binary: the workbook exists with those numbers, or it doesn't.
+- **Approach (how):** Fork the INCR-75 metrics pull, re-anchored from `CURRENT_DATE()` onto the advertiser's last-active window; feed `p_visit` / `p_cvr` / `cpm` / `imps_per_ip` into TI-884's `spend_required()`. Assumptions resolved empirically first: (a) does `cost_impression_log` actually retain the historical window, (b) does a spend-history source exist that isn't frozen, (c) do VR and CR carry any real signal about spend.
+- **What would change the answer:** If the advertiser's last-active window has under 100 visiting IPs, the IVR is too unstable to quote and the whole exercise is not answerable for them (INCR-75 `MIN_VISITING_IPS`). If their last-active window predates 2023-10-01, the CIL floor blocks it outright.
 
 ## 1. Introduction
-Brief context: what system/feature/data is involved, and why this ticket exists.
+INCR-75 produced the eligible-advertiser list for ghost-bid lift tests (2,009 delivering → 1,287 eligible; Top 28 / Mid 152 / Low 1,090 after the measured-lift fold). That screen covers **currently delivering** advertisers only. Al Beretta asked what it would take to screen a churned one, phrasing it as "a quick heuristic on spend based on Visit and Conversion rate."
 
 ## 2. The Problem
-What exactly is broken, unclear, or needed? Include:
-- Symptoms observed
-- Who reported it / who it affects
-- Impact (data quality, revenue, user experience, etc.)
+The churned advertiser is absent from the list, and the reason is widely misread as a spend threshold. It is not — INCR-75 deliberately made spend **scored, not cut**. The exclusion is structural: the universe CTE reads `cost_impression_log` over the trailing 30 days with `HAVING SUM(impressions_ip) > 0`, so an advertiser with no recent delivery never enters the funnel at all.
+
+Separately, Al's framing has a direction problem worth settling rather than quietly working around: visit rate and conversion rate are **ratios**, so they carry almost no information about how much an advertiser spends.
 
 ## 3. Plan of Action
-Numbered steps of the approach taken. Updated as the plan evolves.
-1. Step one
-2. Step two
-3. ...
+1. Verify the three data assumptions empirically before building anything.
+2. Fork `incr_75_advertiser_metrics.sql`, re-anchored on the advertiser's last-active day.
+3. Regression-test the fork against a live advertiser already in the INCR-75 output.
+4. Wrap TI-884's `spend_required()` for the required-budget numbers.
+5. Test whether VR/CR predict spend, on the 2,009-advertiser INCR-75 cohort.
+6. Branded `.xlsx` + a Slack reply to Al.
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+### The assumed data blocker does not exist
+`incr_75_advertiser_metrics.sql` carried the header comment *"cost_impression_log has 90-day TTL."* **It is wrong.** `INFORMATION_SCHEMA.PARTITIONS` on `sqlmesh__logdata.logdata__cost_impression_log__2498930125`: **1,047 partitions, min 2023-10-01, 77,588,957,435 rows, no TTL.** Probed `clickpass_log` and `ui_conversions` directly on 2024-06-12, 2025-01-15, 2025-06-11, 2026-01-14, 2026-06-10 — all five days return data in both. Every input to the screen is recomputable at any window back to the CIL floor. The stale comment is the single thing that made this ask look expensive; corrected in both that file and TI-1019's.
+
+### The real trap is the spend-history source
+INCR-75's 12-month monthly-spend CTE reads `aggregates.agg__daily_sum_by_campaign`, which is **frozen: 242 partitions, 2025-09-01 → 2026-04-30**. Any trailing or lapsed window returns zero rows. Replacement is `summarydata.sum_by_advertiser_by_day` — advertiser × day grain, 2024-01-01 → current, fresh, `require_partition_filter=TRUE`, and ~613x cheaper on narrow columns than `SELECT *`. Note its floor (2024-01-01) is later than CIL's (2023-10-01), so an advertiser who lapsed before 2024 has delivery data but no spend-pattern history.
+
+### PSA exclusion bug in INCR-75 (no impact on the result)
+The filter `advertiser_id != 90` is a **no-op**: advertiser 90 has no row in `integrationprod.advertisers` and zero CIL rows. The real PSA account is **9090** ("Public Service Announcement", `active=TRUE, deleted=FALSE, is_test=FALSE`), which entered the universe and passed F1 and F2. It was removed at F3 only because `p_visit = 0.0`. The 2,009 universe and 554 F3 removals each include PSA by one; **the 1,287 eligible set is unaffected.** Fixed to `!= 9090`; logged in INCR-75's summary.
+
+### The fork reproduces the grain
+Ran the fork for BoggBag (46426) pinned to INCR-75's own window, 2026-05-26..2026-06-25:
+
+| metric | INCR-75 | fork | delta |
+|---|---:|---:|---:|
+| cpm | 12.3467 | 12.3273 | −0.16% |
+| imps_per_ip | 3.6513 | 3.6467 | −0.12% |
+| p_visit | 0.10936 | 0.10914 | −0.21% |
+| p_cvr | 0.005165 | 0.005219 | +1.04% |
+| spend_30d | 44,688 | 45,394 | +1.58% |
+| impressions_30d | 3,619,444 | 3,682,439 | +1.74% |
+| converting_ips_30d | 5,120 | 5,270 | +2.93% |
+
+The **rate** columns — the ones that feed the power calc — reproduce within 0.21%. Volume columns run +1.6–2.9% because INCR-75 caught 2026-06-25 mid-day and that partition is now complete; conversions drift most, consistent with the documented attribution backfill. Grain unchanged.
+
+### VR and CR cannot predict spend
+On the 1,566 INCR-75 advertisers with `spend_30d > $1,000` and `IVR > 0`, OLS on `log(spend_30d)`:
+
+| model | R² |
+|---|---:|
+| ~ log(IVR) | 0.045 |
+| ~ log(CVR) | 0.098 |
+| ~ log(IVR) + log(CVR) | **0.100** |
+| ~ IVR + CVR (levels) | 0.013 |
+
+Pearson r: log(IVR) +0.212, log(CVR) +0.314. Within any single IVR decile, spend spans **15–66x** from p10 to p90, while the median moves only ~3x across the entire IVR range. Chart: `artifacts/audi_xxx_chart_vr_cr_spend.png`.
+
+### The rule of thumb is delivery-shape-conditional
+At $30 CPM and 15 imps-per-IP, 8-week budget ≈ **$14,100 ÷ IVR** for a 5% relative MDE. That shortcut is **only** valid at those defaults. BoggBag runs $12.33 CPM and 3.65 imps/IP, where the bare shortcut is **10x too high**. General form: `$14,100 / IVR × (CPM/30) × (impsPerIP/15)`. The script prints the scaled version so the bare one can't be quoted by accident.
+
+### A lapsed advertiser cannot reach Top tier
+INCR-75's final tier is POWER × CONFIRMED-LIFT. `confirmed +` needs ≥20 holdout visits at p<.05 from a live ghost-bid holdout. A non-delivering advertiser generates no bids, so no measured lift exists and none can. **Ceiling is Mid**, on the a-priori power gate alone.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+Built and regression-tested, blocked only on the advertiser id:
+
+| Artifact | What it does |
+|---|---|
+| `queries/audi_xxx_last_active.sql` | Resolves last-active day + delivering-day count + lifetime spend |
+| `queries/audi_xxx_lapsed_advertiser_metrics.sql` | The forked metrics pull, windowed on literals |
+| `artifacts/audi_xxx_run_metrics.py` | Two-step driver; dry-runs and enforces a scan ceiling |
+| `artifacts/audi_xxx_required_spend.py` | Wraps TI-884; IVR 5%/10%, CVR 15% informational, direct 56d cross-check, tier ceiling |
+| `artifacts/audi_xxx_vr_cr_spend_check.py` | The R²=0.10 evidence + decile chart |
+| `artifacts/audi_xxx_build_xlsx.py` | Branded workbook; builds with or without an advertiser id |
+
+**Two-step by design:** BigQuery cannot prune partitions on a date derived from a subquery. Resolving the window and the metrics in one statement scanned 39.5 GB; splitting them and substituting literals brings it to 5.5 GB for a single advertiser.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Why is the churned advertiser not on the eligible list?
+  **A:** Not a spend threshold. The universe CTE requires delivery in the trailing 30 days, so they never enter the funnel.
+- **Q:** Can we recover their visit and conversion rates after they stopped?
+  **A:** Yes, back to 2023-10-01. CIL has no TTL; clickpass_log and ui_conversions both carry years.
+- **Q:** Can spend be estimated from visit and conversion rate?
+  **A:** No. R² = 0.10; spend spans 15–66x within a single visit-rate decile.
+- **Q:** What can be computed instead?
+  **A:** The spend a test would *require* — `spend_required()`, which already existed in TI-884 and produced INCR-75's `budget_for_mde_ivr_*` columns.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Pending `/capture`:
+- `cost_impression_log` has **no** 90-day TTL (floor 2023-10-01, 1,047 partitions).
+- `agg__daily_sum_by_campaign` is frozen at 2026-04-30; use `sum_by_advertiser_by_day` for advertiser × day spend from 2024-01-01.
+- PSA is advertiser **9090**, not 90.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+- **Blocked:** the advertiser id from Al. One query and one script run once it lands.
+- Jira `[SPIKE]` not yet filed — draft ready, awaiting confirm.
+- If the advertiser lapsed before 2024-01-01, the spend-pattern CTE returns nothing and the "vs typical month" comparison falls back to the window's own spend.
+- Whole-cohort version (every advertiser delivering since 2024-01-01 but not in the last 30d) is a natural follow-on; scoped out deliberately.
