@@ -92,9 +92,14 @@ def main() -> None:
     check(len(set(new_wl)) == len(new_wl), "whitelist has no duplicates",
           f"{len(new_wl) - len(set(new_wl))} dupes")
     pre = set(old_bl) & set(old_wl)
-    check(set(new_bl) & set(new_wl) == pre, "no NEW cross-list conflict",
-          f"{len((set(new_bl) & set(new_wl)) - pre)} new")
-    print(f"        ({len(pre)} pre-existing cross-list conflicts carried forward unchanged)")
+    extra_p0 = OUT / "audi_431_extra_blocklist.csv"
+    reviewed = ({d.encode() for d in pd.read_csv(extra_p0)["domain"]} & set(old_wl)) if extra_p0.exists() else set()
+    unexpected = (set(new_bl) & set(new_wl)) - pre - reviewed
+    check(not unexpected, "no UNREVIEWED cross-list conflict", f"{sorted(unexpected)[:5]}")
+    print(f"        ({len(pre)} pre-existing conflicts carried forward unchanged)")
+    warn(bool(reviewed), "reviewed cross-list conflicts added",
+         f"{sorted(d.decode() for d in reviewed)} - wrongly whitelisted adtech/webmail; "
+         f"blocklisted (wins first) rather than deleted, keeping this deploy additive")
 
     print("\nSYNTAX")
     for name, adds in (("blocklist", add_bl), ("whitelist", add_wl)):
@@ -116,6 +121,18 @@ def main() -> None:
     sheet = load_designated_sheet(verbose=False)
     dec = dict(zip(sheet["domain"], sheet["designation"]))
     src = dict(zip(sheet["domain"], sheet["designation_source"]))
+    # Second legitimate source: wcv entries with no honest vertical, decided on the corrections leg.
+    # They are NOT missing_domains candidates so they never appear in the decision sheet; their
+    # evidence lives in audi_431_extra_blocklist.csv (domain + the wcv vertical removed + reason).
+    extra_p = OUT / "audi_431_extra_blocklist.csv"
+    extra = pd.read_csv(extra_p) if extra_p.exists() else pd.DataFrame(columns=["domain", "reason"])
+    for _, r in extra.iterrows():
+        dec.setdefault(r["domain"], "Blocklist")
+        src.setdefault(r["domain"], r.get("source", "wcv-not-verticalizable"))
+    check(extra.empty or extra["reason"].astype(str).str.strip().ne("").all(),
+          "every wcv-sourced blocklist add carries a written reason")
+    print(f"        ({len(extra)} wcv-sourced adds, evidence in audi_431_extra_blocklist.csv)")
+
     for name, adds, want in (("blocklist", add_bl, "Blocklist"), ("whitelist", add_wl, "Whitelist")):
         orphan = [d for d in adds if dec.get(d.decode()) != want]
         nosrc = [d for d in adds if not str(src.get(d.decode(), "")).strip()]
