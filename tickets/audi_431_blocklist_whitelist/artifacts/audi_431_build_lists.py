@@ -49,6 +49,15 @@ def main() -> None:
         sheet.loc[idx, "designation_source"] = "site-fetch"
         print(f"live-site fetch calls applied: {int(idx.sum())} rows")
 
+    sweep_path = OUT / "audi_431_sweep_calls.csv"
+    if sweep_path.exists():
+        sw = pd.read_csv(sweep_path)
+        idx = sheet["domain"].isin(set(sw["domain"]))
+        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(sw["domain"], sw["designation"])))
+        sheet.loc[idx, "designation_source"] = "sweep-fetch"
+        print(f"sweep verdicts applied: {int(idx.sum())} rows "
+              f"({int((sw['designation'] == 'Whitelist').sum())} rescued to whitelist)")
+
     hc_path = OUT / "audi_431_human_calls.csv"
     if hc_path.exists():
         hc = pd.read_csv(hc_path)
