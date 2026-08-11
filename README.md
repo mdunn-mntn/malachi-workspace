@@ -109,13 +109,22 @@ workspace/
 │       ├── outputs/
 │       ├── meetings/
 │       └── artifacts/
+├── on-call/                     ← oncall_runbook.md, incident_log.jsonl, raw alert logs (see /oncall)
 ├── documentation/
 │   ├── architecture/            ← system diagrams, pipeline overviews
 │   ├── data/                    ← vendor data dictionaries, reference CSVs
-│   ├── docs/                    ← written docs about systems, pipelines, processes
+│   ├── docs/                    ← the task-reference shelf (playbook, revealjs, xlsx standard, method guides)
 │   └── misc/                    ← catch-all; zoom recordings go in misc/zoom_recordings/
-└── claude-prompts/              ← planning files and session prompt templates
+├── lib/                         ← shared Python (mntn_xlsx.py — the branded .xlsx builder)
+├── workflows/                   ← ARCHITECTURE.md, agent pass runbooks, ingest guides
+├── self_review/                 ← performance self-assessment (gitignored, never committed)
+├── slack_bot/                   ← DECOMMISSIONED 2026-06-10 (security policy — do not rebuild)
+└── claude-prompts/              ← planning files, prompt templates, workflow_audits/
 ```
+
+The two `CLAUDE.md` files are deliberately small: hot-path rules only. Anything procedural lives in a
+skill (`/frame` `/capture` `/oncall` `/present` `/transcribe` `/workflow-audit`); anything referential
+lives in `knowledge/` and is reached by grepping `knowledge/_ROUTING.md`.
 
 ---
 
