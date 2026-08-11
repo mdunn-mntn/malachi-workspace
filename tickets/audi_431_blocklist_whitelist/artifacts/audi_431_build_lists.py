@@ -41,6 +41,14 @@ def main() -> None:
         sheet.loc[idx, "designation_source"] = "ai-verified"
         print(f"AI-verified promotions applied: {int(idx.sum())} rows")
 
+    fetch_path = OUT / "audi_431_fetch_calls.csv"
+    if fetch_path.exists():
+        fc = pd.read_csv(fetch_path)
+        idx = sheet["domain"].isin(set(fc["domain"]))
+        sheet.loc[idx, "designation"] = sheet.loc[idx, "domain"].map(dict(zip(fc["domain"], fc["designation"])))
+        sheet.loc[idx, "designation_source"] = "site-fetch"
+        print(f"live-site fetch calls applied: {int(idx.sum())} rows")
+
     hc_path = OUT / "audi_431_human_calls.csv"
     if hc_path.exists():
         hc = pd.read_csv(hc_path)
