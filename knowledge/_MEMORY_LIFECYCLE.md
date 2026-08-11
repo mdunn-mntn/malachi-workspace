@@ -162,7 +162,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | background_work_liveness | feedback | 2026-08-06 | [doc](memory/feedback_background_work_liveness.md) |
 | feedback_hold_evidenced_verdict | feedback | 2026-08-06 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
-| feedback_terse_chat_replies | feedback | 2026-08-06 | [doc](memory/feedback_terse_chat_replies.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
 | feedback_exec_explainer_mechanism_only | feedback | 2026-08-07 | [doc](memory/feedback_exec_explainer_mechanism_only.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
@@ -181,3 +180,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_airflow_log_puller | reference | 2026-08-10 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-10 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_gitignore_json_rule | reference | 2026-08-10 | [doc](memory/reference_gitignore_json_rule.md) |
+| feedback_terse_chat_replies | feedback | 2026-08-11 | [doc](memory/feedback_terse_chat_replies.md) |
