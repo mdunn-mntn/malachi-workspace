@@ -33,6 +33,14 @@ def main() -> None:
     wl_add = sheet.loc[sheet["designation"] == "Whitelist", "domain"].drop_duplicates()
     bl_add = sheet.loc[sheet["designation"] == "Blocklist", "domain"].drop_duplicates()
 
+    # Domains sourced from the wcv corrections leg, not from missing_domains, so they never
+    # appear in the decision sheet: wcv entries with no honest vertical (portals/webmail/adtech).
+    extra = OUT / "audi_431_extra_blocklist.csv"
+    if extra.exists():
+        ex = pd.read_csv(extra)["domain"]
+        bl_add = pd.concat([bl_add, ex]).drop_duplicates()
+        print(f"wcv-sourced blocklist additions: {len(ex)}")
+
     existing_bl = [l for l in (RAW / "ecommerce_blocklist.csv").read_text().splitlines() if l]
     with gzip.open(RAW / "ecommerce_whitelist.csv.gz", "rt") as fh:
         existing_wl_ordered = [l.strip() for l in fh if l.strip()]

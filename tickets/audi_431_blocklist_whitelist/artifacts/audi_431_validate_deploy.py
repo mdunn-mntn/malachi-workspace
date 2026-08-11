@@ -130,6 +130,9 @@ def main() -> None:
          f"{sorted(plat_bl & PLATFORM_BLOCK_REVIEWED)} - blankets every tenant, reviewed and intended")
     check(not (set(add_wl) & PLATFORMS), "no hosting/platform apex added to whitelist",
           f"{sorted(set(add_wl) & PLATFORMS)}")
+    big = sorted({d for d in add_bl} & {b"facebook.com", b"bing.com", b"mail.com", b"viber.com"})
+    warn(bool(big), "very-high-traffic domains blocklisted",
+         f"{[d.decode() for d in big]} - portals/webmail with no honest vertical, decided 2026-08-11")
     short = [d for d in add_bl + add_wl if len(d.split(b".")[0]) <= 2]
     warn(bool(short), "very short labels added", f"{short[:8]}")
 
