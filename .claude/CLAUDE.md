@@ -25,7 +25,7 @@ Design: `workflows/ARCHITECTURE.md`. Operator guide for the deterministic layer:
 - `improvements_backlog.md` — log durable fixes / tech debt here (one row). Never open a Jira ticket by reflex.
 - `documentation/docs/` is the task-reference shelf. It is deliberately NOT in `_ROUTING.md`, so **grep will not find it.** Run `ls documentation/docs/` and open the matching file BEFORE building a deck/RevealJS, an `.xlsx` deliverable, a causal/DiD analysis, a vendor valuation or DDP quality score, or a rollout design.
 - `lib/mntn_xlsx.py` — the shared branded `.xlsx` builder (`MntnWorkbook`). The default shareable deliverable.
-- `.claude/scripts/` — `bq_run.sh` (all BQ), `new_ticket.sh`, `airflow_pull.sh` (on-call logs), `transcribe.sh`, `package_kit.sh`, `share_deck.sh`. Usage lives in each script's header/`--help` and its memory doc.
+- `.claude/scripts/` — `bq_run.sh` (all BQ), `new_ticket.sh`, `airflow_pull.sh` (on-call logs), `transcribe.sh`, `package_kit.sh`, `share_deck.sh`, **`stall_monitor.sh`** (the ONE correct background-work stall detector — call it from every `Monitor` instead of hand-writing an mtime check; `find -newermt` errors on this Mac and silently makes every poll read as idle). Usage lives in each script's header/`--help` and its memory doc.
 - `slack_bot/` DECOMMISSIONED 2026-06-10. MNTN security policy: no local Slack apps / API keys. Do not rebuild (memory `reference_pi5_server`).
 - Everything else is reachable by grepping `knowledge/_ROUTING.md` (keyword → doc; folds in memory, tickets, runbooks) or `knowledge/START_HERE.md` (task → doc). Folder placement: `knowledge/folder_definitions.md`. Structure: `README.md`.
 
