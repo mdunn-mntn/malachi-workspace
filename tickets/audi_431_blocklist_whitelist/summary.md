@@ -4,7 +4,7 @@ title: "AUDI-431: Make Changes to Blocklist or Whitelist"
 status: in_progress
 date: 2026-08-10
 summary: "Re-assess most-common missing domains for whitelist/blocklist adds + wcv vertical corrections"
-result: "94.2% of uncategorized volume resolved; 2,912 BL + 102 WL adds, 76 real stores rescued; pending Ryan deploy"
+result: "DEPLOYED 2026-08-11: 2,921 BL + 102 WL adds live in prod, 94.4% of uncategorized volume resolved, 76 real stores rescued"
 question: "Which of the top most-common missing domains (28d volume) belong on the ecommerce whitelist vs blocklist, and which top-traffic wcv domains carry a wrong vertical?"
 framing_state: locked
 ---
@@ -134,6 +134,18 @@ Both prod files are now produced in full, not as additions lists:
 Built strictly as **appends**: the original content is a byte-identical prefix of each new file (existing rows never reordered or removed), no duplicates, no CRLF, trailing newline, and the gzip is written with `mtime=0` and the inner filename `ecommerce_whitelist.csv` to match the shipped artifact.
 **The hygiene assertion caught a real trap:** a naive "blocklist and whitelist must be disjoint" check fails on the merged files, because **362 domains already sit in both lists** in prod (google.com, yahoo.com, myshopify.com among them). Those are carried forward untouched — the assertion is now "no NEW cross-list conflict", verified to equal exactly the pre-existing 362. Deliberately not reconciled here: blocklist is checked first at every verified consumer so it wins, and silently deleting 362 whitelist rows is a behavior change beyond this ticket's scope. Listed on the workbook's List conflicts tab.
 `build_lists.py` now emits both merged files on every run, so they can never drift from the decision sheet.
+
+### DEPLOYED to prod (2026-08-11 22:02 UTC)
+Ownership correction from Malachi: this is ours to ship, not Ryan's. Deployed with a pre-deploy gate + rollback path.
+
+**`artifacts/audi_431_validate_deploy.py` is the gate** (STRUCTURE / SYNTAX / PROVENANCE / BLAST RADIUS / SANITY / FORMAT; non-zero exit blocks the ship). It caught one **real defect** and two of its own bugs:
+- **REAL:** a bare `.` was in the blocklist additions — a degenerate tldextract output (empty domain AND empty suffix) that reached the junk tier alongside the legitimate `comhttps.`-style artifacts. Fixed at source in `audi_431_adjudicate.py` (`domain.str.len() > 1`), not patched in the file. Blocklist adds 2,922 -> 2,921.
+- Validator bug: the domain regex rejected the trailing-dot artifacts, which are a **shipped convention** (`localhost.` is in the prod file). Now allowed via `ARTIFACT_RE`.
+- Validator bug: the gzip inner-filename check sliced a fixed 32-byte window and truncated the name. Now parses the FNAME field properly.
+- **Judgment call surfaced, not silenced:** `wordpress.com` and `pages.dev` are platform apexes, and tldextract collapses EVERY tenant to the apex (`myblog.wordpress.com` -> `wordpress.com`), so blocklisting them blankets all tenants. Kept, because a vertical assigned at the apex would mislabel every tenant equally and prod already blocklists `myshopify.com` on the same basis; both fetched and confirmed as platform landing pages. Recorded as `PLATFORM_BLOCK_REVIEWED` so an *unreviewed* platform apex still fails the gate.
+
+**Deploy:** originals backed up to `.../ecommerce_domain_whitelist/backup_pre_audi431_2026-08-11/` first (rollback = copy those two objects back). Then uploaded.
+**Post-deploy verification (re-downloaded from GCS, not assumed):** live SHA256 matches the validated local bytes for both files; blocklist 1,464 -> **4,385**, whitelist 3,310,123 -> **3,310,225**; original content is an exact prefix of both; spot-checks confirm `keviniscooking.com`/`bonappetit.com`/`sfchronicle.com` live on the whitelist, `nytimes.com`/`cootlogix.com`/`onechicday.com` live on the blocklist, and the bare `.` absent.
 
 ### Defect: the workbook silently shipped a stale view (caught by Malachi, fixed 2026-08-11)
 `build_workbook.py` re-read `audi_431_decision_sheet.csv` and applied ONLY the QC demotions, while `build_lists.py` applied the full overlay chain. Every rebuild after the promotion pass therefore wrote a fresh file with three-passes-stale contents — Whitelist tab showing 10 rows instead of 102, Manual review showing 1,373 instead of 10 — and I reported it as updated each time. The file mtime moved, so nothing looked wrong.
