@@ -9,6 +9,14 @@ question: "{one line: the single falsifiable question this ticket answers — <=
 framing_state: draft    # draft | locked | skip: <reason>  — /frame locks it; gate blocks status:in_progress while draft
 ---
 
+<!-- STANDARD FOR THIS FILE — summary.md is the complete analytical record and the ONE place the
+     terseness rules do NOT apply. Audience: future you and anyone picking the work up cold.
+     Include every finding, dead end, failed approach, assumption, gotcha, and open question, with
+     exact unrounded numbers and all caveats. SQL column names, jargon, and length are all fine.
+     It is a living doc: update it the same beat a finding lands, never write-once. A stale summary
+     is a bug. The persuasion artifact is a separate document (`artifacts/*_presentation.md`, built
+     via /present) and it never contradicts this file. -->
+
 # {TICKET-ID}: {Title}
 
 **Jira:** {link}

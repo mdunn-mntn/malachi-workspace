@@ -4,7 +4,7 @@ description: Decks: Tufte+RevealJS standards, share via share_deck.sh githack (a
 metadata:
   type: reference
 doc_type: memory
-keywords: [deck standards, tufte, revealjs, share_deck.sh, githack, htmlpeek, pagedrop, no matplotlib titles, author name malachi dunn, no named attributions, chart color meaning]
+keywords: [deck standards, chart, chart generation, charts, helvetica, dpi, generate_charts, data-ink, chartjunk, small multiples, deck, tufte, revealjs, share_deck.sh, githack, htmlpeek, pagedrop, no matplotlib titles, author name malachi dunn, no named attributions, chart color meaning]
 domain: [workflow]
 lifecycle: active
 last_verified: 2026-07-10
@@ -146,3 +146,16 @@ When building or editing any shared / external-facing artifact, never include na
 **Exception:** speaker self-attributions ("I measured...", "we found...") and direct quotes the user explicitly drafted stay as-is.
 
 **Standing carve-out (2026-05-08):** the user's own name — **Malachi Dunn** — must always appear on the first/title slide of any deck. See `feedback_author_name_on_first_slide.md`. This is an explicit, durable exception. Other people's names still don't appear in shared artifacts.
+
+## Chart generation standards (migrated from project CLAUDE.md, 2026-08-11)
+
+Applies to every chart that ships in a deck, presentation, or ticket artifact.
+
+- **Font:** Helvetica Neue (or the system equivalent). Never matplotlib defaults.
+- **Background:** light off-white `#FAFAFA`, not pure white.
+- **Resolution:** 200 DPI minimum for PNGs.
+- **Reproducibility:** every chart set gets a `generate_charts.py` in the ticket's `artifacts/`, reading data from `outputs/*.csv`. Never hardcode the numbers in the script.
+- **Titles state the finding, not the metric** — "Top-Ranked Keywords Drive 184x More Visits", not "Visit Rate by Keyword Rank Bucket". Subtitle carries one gray line of context/methodology. **Exception:** on a deck slide the slide headline already carries the finding, so the chart itself gets no title (see the no-double-titles section above); the finding-as-title rule applies to standalone PNGs and doc-assembly.
+- **Tufte, non-negotiable:** maximize data-ink (no gridlines, borders, fills, legends, 3D, shadows — direct-label instead); color encodes meaning only (one accent for the insight, navy supporting, gray context); lie factor 1 (linear scales for exec audiences, never a log scale that flattens a real effect); annotate every chart with a one-line business implication; small multiples beat one overloaded chart past ~5 categories; put the number on the mark.
+- **Output pair:** static PNGs (`artifacts/ti_xxx_chart_*.png`) always; a RevealJS HTML deck additionally when presenting live.
+- **Workflow:** analysis to `outputs/*.csv` → write `generate_charts.py` → check against the chartjunk list → build the deck if presenting live → reference the charts from both `summary.md` and the presentation.
