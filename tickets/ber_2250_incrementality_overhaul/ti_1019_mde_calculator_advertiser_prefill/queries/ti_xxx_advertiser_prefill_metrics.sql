@@ -8,10 +8,13 @@
 --     (fresh through "today"). aggregates.agg__daily_sum_by_campaign is currently
 --     stale (max day 2026-04-30 as of 2026-06-04 — > 1 month behind), so we don't
 --     use it for the recent window.
---   - 12-month monthly spend pattern → agg__daily_sum_by_campaign is still fine
---     here: the pattern is what we care about, not the most recent month.
---   - cost_impression_log has 90-day TTL; clickpass_log and ui_conversions are
---     longer-lived but we only need 30d.
+--   - 12-month monthly spend pattern → agg__daily_sum_by_campaign is NO LONGER
+--     fine: it is frozen at 2026-04-30 (effective start 2025-09-01), so any
+--     trailing window returns zero rows. Use summarydata.sum_by_advertiser_by_day
+--     (advertiser x day, 2024-01-01 onward, fresh).
+--   - cost_impression_log has NO TTL (floor 2023-10-01, verified via
+--     INFORMATION_SCHEMA.PARTITIONS 2026-08-11); clickpass_log and ui_conversions
+--     also carry years of history. The earlier "90-day TTL" note was wrong.
 
 DECLARE end_date   DATE DEFAULT CURRENT_DATE();
 DECLARE start_30d  DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY);

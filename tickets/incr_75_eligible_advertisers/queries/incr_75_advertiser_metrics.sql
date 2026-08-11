@@ -17,7 +17,10 @@
 --   - 30d metrics → cost_impression_log / clickpass_log / ui_conversions (fresh).
 --   - 12mo monthly-spend pattern → agg__daily_sum_by_campaign (stale ~1mo but the
 --     pattern, not the latest month, is what we need).
---   - cost_impression_log has 90-day TTL; 56-day window sits safely inside.
+--   - cost_impression_log has NO TTL (fixed floor 2023-10-01, ~1,047 partitions,
+--     verified via INFORMATION_SCHEMA.PARTITIONS 2026-08-11). An earlier comment
+--     here claimed a 90-day TTL — it was wrong, and it made historical windows
+--     look impossible. Any window back to 2023-10-01 is queryable.
 
 -- (Single statement — no DECLARE/script mode, so --format=csv returns clean CSV.)
 WITH
@@ -34,7 +37,7 @@ ad_ip_30d AS (
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE DATE(time) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AND CURRENT_DATE()
     AND advertiser_id IS NOT NULL
-    AND advertiser_id != 90              -- PSA: intentionally serves to holdouts
+    AND advertiser_id != 9090            -- PSA: intentionally serves to holdouts
   GROUP BY 1, 2
 ),
 -- 2. Visiting IPs (advertiser, ip), trailing 30d.
@@ -57,7 +60,7 @@ served_56d AS (
   FROM `dw-main-silver.logdata.cost_impression_log`
   WHERE DATE(time) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 56 DAY) AND CURRENT_DATE()
     AND advertiser_id IS NOT NULL
-    AND advertiser_id != 90
+    AND advertiser_id != 9090
   GROUP BY 1
 ),
 -- 5. Per-advertiser 30d rollup.

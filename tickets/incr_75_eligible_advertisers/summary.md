@@ -93,6 +93,8 @@ The team needs a defensible, ranked shortlist of advertisers to offer lift studi
 
 Per the user's "score, don't hard-cut" decision, spend / IVR-position / powerability are **scored** (not eliminated) within the eligible set.
 
+**PSA-exclusion bug, found and fixed 2026-08-11 (no impact on the eligible list).** The query excluded `advertiser_id != 90`, but **advertiser 90 does not exist** — it has no row in `integrationprod.advertisers` and zero rows in `cost_impression_log`. The real PSA account is **9090** ("Public Service Announcement"), which is `active=TRUE, deleted=FALSE, is_test=FALSE`, so it entered the universe and passed F1 and F2. It was removed at F3 only because its `p_visit = 0.0`. **Net effect: the 2,009 universe and the 554 F3 removals each include PSA by one; the 1,287 eligible set is unaffected.** The filter is now `!= 9090` in `queries/incr_75_advertiser_metrics.sql`. A re-run would report 2,008 → 1,841 → 1,287. Verified: `SELECT advertiser_id, COUNT(*) FROM cost_impression_log WHERE DATE(time)='2026-08-05' AND advertiser_id IN (90,9090)` returns only 9090 (2,275 impressions).
+
 ### Value tiers (of the 1,287 eligible)
 - **Top = 56** — powered at 5% IVR MDE at normal spend, mid-spend, movable IVR, low saturation. *Run these first.*
 - **Mid = 266** — powered at 10% at normal spend (or 5% with an easy/stretch bump).
