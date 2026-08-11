@@ -66,7 +66,7 @@ def main() -> None:
     man["Your call"] = None
     ws_man = wb.table("Manual review", man,
              finding=f"{len(man)} ambiguous domains await your call in the dropdown ({impact['manual_volume_share']:.0%} of volume)",
-             method="Scores inconclusive (between confident bands). AI verdict is ADVISORY - you decide. Pick Whitelist/Blocklist/Skip in 'Your call'; blank or Skip rows do not ship. Work top-down by volume.",
+             method="What is left after every other pass: sites behind bot walls (Cloudflare) that no fetch could read, so neither the score nor a page view settles them. AI verdict is ADVISORY. Pick Whitelist/Blocklist/Skip in 'Your call'; blank or Skip rows do not ship.",
              formats={**fmt, "AI conf": FMT.NUM2}, heat={"28d volume": "high"}, rag=man_rag, kind="data",
              toc="Your review queue: AI advisory verdict + a dropdown for your decision",
              query="audi_431_qa_score_aggregates.sql")
