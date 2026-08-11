@@ -93,6 +93,20 @@ Malachi asked whether verdicts were name-based or knowledge-based. **Honest answ
 
 ### Final state (2026-08-11)
 **2,988 blocklist + 26 whitelist adds resolve 94.2% of 28d uncategorized visit volume.** Merged blocklist = 4,452 domains. **10 rows (0.18% of volume) remain** — all unfetchable, listed in the Manual review tab.
+
+### Phase 8: blocklist audit — the promoted rows needed checking too (2026-08-11, Malachi's call)
+Malachi asked whether the confidence-promoted rows should also be verified. Exposure: **2,483 of the 2,988 blocklist adds had never been individually checked** — 866 AI-promoted (basis = a no-web-access verdict + a 150-row sample) and 1,617 score-band (basis = the model itself, med<=0.05 & pct_ge_04<=0.05).
+Stratified fetch-audit, 300 sampled per tier (top-50 by volume + 250 random), 39 agents, ~1,500 fetches:
+
+| Tier | Sampled | Real stores found | Rate | 95% upper | Implied misses in tier |
+|---|---|---|---|---|---|
+| AI-promoted (no web access) | 300 of 866 | 8 | 2.7% | 5.2% | up to 45 |
+| Score-band med<=0.05 | 300 of 1,617 | 1 | 0.3% | 1.9% | up to 30 |
+
+**Both tiers breach the 1% sweep threshold, so the answer to "should we check these too" is empirically yes.** Up to ~75 real retailers would otherwise have been silently discarded.
+- **The systematic blind spot: content sites with a store attached.** Every AI-tier miss is a blog running its own WooCommerce/Shopify shop — `dimitrasdishes.com` and `keviniscooking.com` (recipe blogs selling spice rubs), `hearthookhome.com` (224 crochet-pattern products), `homesteadandchill.com` (handmade skincare), `modernmrsdarcy.com`, `thehawaiivacationguide.com` (itineraries), `stotranidhi.com` (26-title imprint), `musescore.com` (sheet music). A no-web-access reviewer sees recipes, calls it a blog, and never checks `/shop`.
+- **7.2% of audited domains (43 of 600) are unreachable** — dead domains still being scored daily.
+- Exhaustive sweep of the remaining 1,883 launched, with the blind spot written into the prompt (check `/shop`, `/store`, shop subdomain, and the nav before calling anything not-ecommerce).
 - **Handoff**: Slack draft at `artifacts/audi_431_slack_handoff.md` — deploy mechanism + corrections mechanism are Ryan's call. Nothing deployed from this ticket.
 - **Manual-review loop (added 2026-08-10)**: every manual-band row now carries an **advisory AI verdict** (ecommerce / not ecommerce / unsure + confidence + one-line reason; 28-batch workflow, 1,372 of 1,373 covered, `thesprucepets.com` ships blank) plus a **"Your call" dropdown** (Whitelist / Blocklist / Skip, Excel data validation on K5:K1377). Verdict split: 1,230 not ecommerce, 106 unsure, 36 ecommerce. `artifacts/audi_431_ingest_reviews.py` reads the filled dropdown back out of the Drive workbook, writes `outputs/audi_431_human_calls.csv`, and re-runs the list builder so human calls flow into the additions files with `designation_source = human`.
 
