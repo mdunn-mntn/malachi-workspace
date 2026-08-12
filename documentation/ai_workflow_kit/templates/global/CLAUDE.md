@@ -14,7 +14,8 @@ Every session in a workspace running the AI Workflow Kit:
 
 ### 2. Commit and push constantly
 After every meaningful action (a finding documented, a file created, a doc updated), commit and push:
-`git add . && git commit -m "<terse subject>" && git push`. Small, frequent commits. Never ask "should I
+`git add <your paths> && git commit -m "<terse subject>" && git push`. Stage your paths, never `git add .` —
+concurrent agent sessions can share one working tree. Small, frequent commits. Never ask "should I
 commit?" — just do it. No `Co-Authored-By` lines.
 
 ### 3. Update documentation without being asked

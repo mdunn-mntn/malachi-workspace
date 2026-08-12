@@ -101,8 +101,11 @@ Report the locked frame back in five lines (Question / Goal / Objective / Approa
 then commit:
 
 ```bash
-cd /Users/malachi/Developer/work/mntn/workspace && git add . && \
+cd /Users/malachi/Developer/work/mntn/workspace && \
+  git add tickets/<ticket>/ && \
   git commit -m "TI-XXX: frame — lock §0 (question/goal/objective/approach)" && git push origin main
 ```
+
+**Stage the paths you touched — never `git add .`/`-A`.** Other Claude sessions share this working tree, so a blanket add sweeps their in-flight edits into your commit (observed twice, most recently 2026-08-12, in both directions). `git diff --cached --name-only` before committing. See [[feedback_shared_worktree_commits]].
 
 If the ticket was skipped, say so with the reason and commit the `skip:` state the same way.

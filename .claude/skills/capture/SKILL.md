@@ -159,10 +159,12 @@ Always state the "nothing to add" destinations too — that's the *verification*
 proof the sweep looked everywhere, not just where it found something.
 
 Then commit and push everything in one commit (per the workspace constant-commit rule). Memory files
-now live in the repo at `knowledge/memory/`, so `git add .` versions them like any other change:
+now live in the repo at `knowledge/memory/`, so they version like any other change.
+**Stage the paths you touched — never `git add .`/`-A`.** Other Claude sessions share this working tree, so a blanket add sweeps their in-flight edits into your commit (observed twice, most recently 2026-08-12, in both directions). `git diff --cached --name-only` before committing. See [[feedback_shared_worktree_commits]].
 
 ```bash
-cd /Users/malachi/Developer/work/mntn/workspace && git add . && \
+cd /Users/malachi/Developer/work/mntn/workspace && \
+  git add knowledge/ tickets/<active>/ && git diff --cached --name-only && \
   git commit -m "TI-XXXX: capture — <one-line of what was logged/corrected>" && \
   git push origin main
 ```

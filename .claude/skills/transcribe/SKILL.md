@@ -100,7 +100,8 @@ of the meeting + any knowledge flagged. Then commit and push (the transcript, th
 any doc/summary updates from Step 5) in one commit:
 
 ```bash
-cd /Users/malachi/Developer/work/mntn/workspace && git add . && \
+cd /Users/malachi/Developer/work/mntn/workspace && \
+  git add tickets/<ticket>/ knowledge/ && git diff --cached --name-only && \
   git commit -m "TI-XXXX: transcribe <meeting> → <ticket>/meetings/ + log" && \
   git push origin main
 ```
