@@ -47,6 +47,8 @@ keywords: [mde calculator, ivr baseline, power analysis, graph.visits, usersreac
 **Story Points:** 2
 **Assignee:** Malachi
 
+**Coverage gap found 2026-08-12 (AUDI-1204):** the embedded `window.ADVERTISERS` array is 879 **currently-delivering** advertisers only, so any lapsed/churned advertiser is absent (confirmed for Mockingbird 39568). Al Beretta wants exactly that population for revenue-churn win-back. The 12 embedded fields map 1:1 onto the AUDI-1204 lapsed-metrics query, so the fix is a cohort run windowed on each advertiser's last-active day plus a `lastActive` label, not new logic. Note the gist URL is secret-but-public: adding churned-account revenue widens what a leaked link exposes.
+
 **Live URL (secret gist, share via link only):**
 https://gist.githack.com/mdunn-mntn/2d362849df017fa243eef03bb61cdfbb/raw/ti_xxx_mde_calculator_prefill.html
 
