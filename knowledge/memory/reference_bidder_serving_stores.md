@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [bidder serving stores, Aerospike, household-profile, GCS scores, ScyllaDB, Redis, rtb namespace, holdout_cids, MembershipDB, Eric membership consumer, id-service, Bigtable household resolution, raw_score inversion, confidence tiebreak, bidder parity]
 domain: [bidding, infra]
 lifecycle: active
-last_verified: 2026-08-11
+last_verified: 2026-08-12
 ---
 Bidder team system design (Abbas + Ryan walkthrough, 2026-06-09, TI-1016). Full detail in `knowledge/data_knowledge.md` § "Bidder System Design & Caching Architecture" and `tickets/ti_1016_memdb_bidder_cache_optimization/`.
 
@@ -31,8 +31,15 @@ encoding inherited from the graph); `resolve_household_id` picks the lowest raw 
 caller-supplied identities (strict `<`, so **first-wins on ties in the caller's identity order**) and inverts
 on the way out (`confidence_score = 10_000 − raw_score`) so callers see higher-is-better 0–10000. **The graph's
 own parquet `ConfidenceScore` is a probability (higher better)**, so `max(probability)` ≡ `min(raw_score)` —
-same winner. **Two things the bidder does NOT do: no confidence floor, and it never reads `is_shared`** (a
-confidence-0 match still resolves). **Equal-confidence tiebreak = LOWEST `household_id`** (next rowkey
+same winner. **Two things the bidder does NOT do at read time: no confidence floor, and `bigtable.rs` never
+references `is_shared`** (a confidence-0 match still resolves). ⚠ **The `is_shared` half is contradicted by
+the ID team (Jack Barbey, Slack 2026-08-12): "the shared IDs will now not be used to match to households by
+default. Non-shared IDs will only map to a single household at a time."** Both statements hold only if shared
+edges are dropped **upstream, when the Bigtable serving copy is loaded**, rather than filtered on read — the
+code finding is that the read path has no `is_shared` logic, not that shared edges reach it. **Unresolved:
+read the id-service Bigtable loader.** Until then treat "the bidder ignores `is_shared`" as read-path-only,
+and do not cite it to justify keeping shared IPs in the feature store. **Equal-confidence tiebreak = LOWEST
+`household_id`** (next rowkey
 segment) — airflow-ti `utils_model/household_resolution.py` takes the highest, the one real parity gap for the
 Fangorn-on-MNTN-ID feature store. Per-identity timeout, partial results returned on partial timeout.
 See [[project_fangorn_on_mntn_id]].

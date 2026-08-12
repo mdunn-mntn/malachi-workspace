@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [fangorn on mntn id, audi-1049, household re-key, feature store, household_id, audi-1166, audi-1105, audi-1167, audi-1170, sean yang, airflow-ti, graph_translation_signal, mntn_graph, graph_interface, household_resolution.py, bidder parity, id-service, IdTypeFamily]
 domain: [project, identity, audience-scoring]
 lifecycle: active
-last_verified: 2026-08-11
+last_verified: 2026-08-12
 ---
 **AUDI-1049 "Fangorn on MNTN ID"** (epic owner Matt Brorby; ⚠ AUDI-1057 is a *Done* modeling spike, NOT the
 epic). Re-keys the Fangorn feature store + intent scoring **IP→MNTN ID (household)**, running parallel to the
@@ -143,3 +143,23 @@ household. **One real divergence: the equal-confidence tiebreak** — the bidder
 confidence floor and never reads `is_shared`**, so any threshold or shared-IP filter we add is a deliberate
 break from 1:1. Detail in `knowledge/data_knowledge.md` § "MNTN ID (household) re-keying" and ticket §7j.
 Related: [[reference_bidder_serving_stores]].
+
+**ID team answered Sean's four questions (Slack, Weiang Li 2026-08-11 / Jack Barbey 2026-08-12) — two answers
+move the design.** (1) Returning every candidate edge WAS the intended v1 design ("essentially a left join").
+(2) **`confidence_score` is a model confidence, not a match flag — confidence 0 is a real edge, do not treat it
+as unmatched**; the ID team prescribes no threshold. (3) **`IdTypeFamily` defect confirmed by the author and
+being fixed** to `IPV4 = 3000 = {30, 32}` with `ipv6 = 3100` as its own family — our from-source finding was
+accepted upstream; keep passing `IdType.IPV4` explicitly until it ships. (4) **THE BIG ONE: the ID team
+committed to updating the graph interface to match the ID Service logic the bidder calls** — shared IDs will
+NOT match households by default, non-shared IDs map to a SINGLE household (consumers stop picking a winner),
+and multi-identifier resolution moves into the library (`ids_to_households(id_cols = {"IP" -> IPLike, "GUID"
+-> CookieLike})` → one household per row by confidence, explode first for multiple). Prompted by Brian
+McAdams's governance push ("there should at least be a standardized way or list of standardized ways") and
+Sean's single-source-of-truth ask. **NOT SHIPPED — do not design against it yet.** When it lands: the
+equal-confidence `household_id` tiebreak fix goes moot for non-shared IDs (hold it), the AUDI-1167 shared-IP
+cutoff becomes a parity check rather than a tuning knob, and the ~9.5%-shared IPv4 rows become an expected,
+named exclusion line in the AUDI-1170 shadow-parity readout. ⚠ **One contradiction to settle first:**
+`id-service/src/bigtable.rs` has zero `is_shared` references (read-path verified), while Jack says the ID
+Service excludes shared IDs — both hold only if the filter is upstream at Bigtable load. **Read the loader.**
+Second consumer: Alex Knorr is importing the library into the Fangorn-scoring Databricks notebook off Ryan's
+job. Detail in `knowledge/data_knowledge.md` § "MNTN ID (household) re-keying" and epic §7j/§9.

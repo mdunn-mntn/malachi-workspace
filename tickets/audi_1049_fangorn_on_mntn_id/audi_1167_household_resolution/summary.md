@@ -44,7 +44,10 @@ households on a given date, and (d) works both same-day (daily run) and interval
 ## 3. Plan of Action
 1. `resolve_households(df, ip_col, date_col)` → `+mntn_id, resolution_status`.
 2. Same-day equi-join variant (daily) + interval-join variant (backfill, start/end_time × as_of_date).
-3. Shared-IP rule: `confidence_score` cutoff for `is_shared` rows (cutoff = a §6.4 decision — measure sensitivity).
+3. Shared-IP rule: `confidence_score` cutoff for `is_shared` rows (cutoff = a §6.4 decision — measure
+   sensitivity). **May collapse to a parity check (2026-08-12, see §8):** the ID team is changing the graph
+   interface so shared IDs do not match households by default. If that ships, the cutoff stops being a
+   tuning knob and becomes "match the ID Service" — measure the audience-size delta, don't tune it.
 4. Unresolved tagging → coverage metrics; fan-out guard assertion.
 5. Unit tests (clean, shared, unresolved, fan-out cases).
 
@@ -84,3 +87,20 @@ _(document the resolution semantics + shared-IP cutoff + fan-out guard)_
   (Sean): wrap the library inside `household_resolution.py` so downstream FS jobs don't change. **Known fix to
   make: the equal-confidence tiebreak takes the highest `household_id`, the bidder takes the lowest.** Full
   audit in epic §7j.
+- **The library is moving toward the ID Service — hold the tiebreak fix (Jack Barbey, Slack 2026-08-12; epic
+  §7j).** After Sean and Brian McAdams pushed for a single source of truth, the ID team committed to updating
+  the graph interface to match the logic the ID Service (and therefore the bidder) uses: **shared IDs will not
+  match households by default**, **non-shared IDs will map to a single household at a time**, and
+  **multi-identifier resolution moves into the library** (`ids_to_households(id_cols = {"IP" -> IPLike,
+  "GUID" -> CookieLike})` → one household per row by confidence; explode first for multiple). Not shipped yet.
+  Effects on this ticket when it lands:
+  - The **equal-confidence `household_id` tiebreak** goes moot for non-shared IDs — do not spend the one-line
+    fix until the returned shape is known.
+  - The **shared-IP cutoff (§3.3)** becomes alignment rather than a tuning decision.
+  - The **ordered `id_columns` priority** in the shipped `resolve_households()` already matches the library's
+    per-row highest-confidence-identifier rule, so Ryan Kleck's GUID fast-follow has a home either way.
+  - `household_resolution.py` keeps the wrapper role and sheds winner-selection.
+- **Confidence semantics settled (Weiang Li, 2026-08-12):** `confidence_score` is a **model confidence, not a
+  match flag** — higher = more trust, and **confidence 0 is a real matched edge, not "unmatched."** The ID team
+  prescribes no threshold. Any `min_confidence` we pass is our own decision and departs from the bidder, which
+  applies none. Do not add a default floor to `resolve_households()`.

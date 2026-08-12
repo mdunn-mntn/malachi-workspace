@@ -244,10 +244,24 @@ _(document the shadow-parity methodology + household-stability metric)_
 
 ## 8. Open Items / Follow-ups
 
-- **Review the ID team's pyspark household-resolution module before more FS work** (added 2026-08-07): a
-  shared IDs-in→households-out interface with graph-use crediting logs, intended to replace the FS
-  conversion piece — may supersede `household_resolution.py`. Requirement doc ambiguous; Sean awaiting
-  Jack's reply (dev-mntn-id thread). Read the doc, post questions.
+- ~~**Review the ID team's pyspark household-resolution module before more FS work**~~ **DONE 2026-08-11,
+  answers received 2026-08-12.** It does **not** supersede `household_resolution.py` — the shipped build is
+  translation only. Full audit + the ID team's replies in epic §7j. **Effect on the shadow-parity readout (the
+  Sept-4 gate): the baseline does not move today, but three lines of the readout are now pre-written.**
+  - **Shared-IP exclusion is expected alignment, not an unexplained gap.** Jack Barbey (2026-08-12) is
+    changing the interface so shared IDs do not match households by default, matching the ID Service the
+    bidder calls. The **~9.5% of IPv4 rows flagged shared** must still be reported as a **named line** in the
+    household-vs-IP audience-size comparison — the audience genuinely shrinks — but it is labelled
+    "resolution parity with the bidder," not "coverage loss."
+  - **Non-shared IDs will map to a single household**, so the resolution/coverage split reports one household
+    per resolved row by construction. The fan-out guard stays as an assertion, not a tuning surface.
+  - **Do not report a confidence floor.** `confidence_score` is a model confidence, not a match flag —
+    confidence 0 is a real edge (Weiang Li, 2026-08-12) — and the bidder applies no floor. If any
+    `min_confidence` appears in the shadow run it is a deliberate choice and gets its own line.
+  - **Open, gates the parity claim:** the code read found zero `is_shared` references in
+    `id-service/src/bigtable.rs`, while Jack says the ID Service excludes shared IDs. Both hold only if the
+    filter is applied upstream when Bigtable is loaded. **Read the id-service Bigtable loader before the
+    readout asserts shared-IP parity either way.**
 - **Dev cleanup pending user go:** ~2.7 TB backfill data in `mntn-data-archive-dev` (seed + L2/L3 copies).
 
 ### Status after 2026-08-03 research (what's resolved vs still open)

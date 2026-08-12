@@ -3572,6 +3572,14 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
     A confidence-0 match still resolves to a household. So any `min_confidence` or shared-IP filter on the
     feature-store side is a **deliberate** departure from bidder parity — defensible on feature quality, but
     name it. Bears on the ~9.5% of current IPv4 rows flagged shared.
+    **OPEN — contradicted by the ID team (Jack Barbey, Slack 2026-08-12):** "the shared IDs will now not be
+    used to match to households by default. Non-shared IDs will only map to a single household at a time."
+    Both can hold if shared IDs are dropped *upstream* of the Bigtable serving copy rather than filtered in
+    `bigtable.rs` — the read finding is that `bigtable.rs` contains no `is_shared` logic, not that shared
+    edges reach it. **Resolve by checking what the id-service loader writes to Bigtable before treating a
+    shared-IP filter as either alignment or a break.** If Jack's description holds, excluding shared IPs
+    becomes *parity*, not a departure, and the equal-confidence `household_id` tiebreak above goes moot for
+    non-shared IDs.
   - **Structural non-parity that no code change fixes:** the bidder resolves live against Bigtable at auction
     time; the feature store resolves against a weekly parquet snapshot (up to ~6d stale). Exact parity is not
     reachable — align the *rule*, not the instant.
@@ -3581,7 +3589,11 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   its `IdTypeFamily.IP` (3000) expands to `{30, 31, 32}` — silently including IPv6 **and** the synthetic
   `IP_DAY` rows (idg: "synthetic IP identifier used during graph generation to represent (IP, day)"), with no
   3100 so IPv6 can't be requested alone. Families 1000/2000/4000/5000/6000 agree; **IP is the only break**.
-  **Always pass `IdType.IPV4` explicitly, never the family.** Full id_type list: 10/11/12/13 hardware,
+  **Always pass `IdType.IPV4` explicitly, never the family.** **Confirmed by the library author and being
+  fixed (Weiang Li, Slack 2026-08-12): "I need to make a ipv6=3100 as its own family and remove ipv6 (31)
+  from the ipv4 (3000) family, so IPV4 = 3000 = {30, 32}"** — i.e. the library converges on idg. Until that
+  ships, the explicit-`IdType` rule stands; after it ships the family is safe but the explicit form still
+  costs nothing. Full id_type list: 10/11/12/13 hardware,
   20/21/22/23 email, 30 IPv4, 31 IPv6, 32 IP_DAY, 40 COOKIE, **41 MNTN_GUID**, 42 GA_CLIENT_ID, 50 LUID,
   60 PHONE_SHA256.
 - **The ID team's `mntn_graph` library does NOT do resolution (2026-08-11).** Distributed at
@@ -3596,6 +3608,24 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   snapshot*, which leaks later knowledge when resolving a past date — do not use it for backfills. Optional
   `log_table` writes raw translation output to `gs://mntn-data-archive-prod/identity_resources/graph_logs/…`,
   which is the feed for graph-vendor crediting.
+- **`confidence_score` is a model confidence, NOT a match flag — do not treat 0 as unmatched** (Weiang Li,
+  Slack 2026-08-12, answering the question directly). Higher = more trust, lower = less trust; a
+  confidence-0 row is still a real matched edge. The ID team prescribes **no threshold** — any cutoff is a
+  consumer decision, and per the bidder-parity bullet above the bidder itself applies none.
+- **The library is a moving target, and it is moving toward the ID Service (Jack Barbey, Slack 2026-08-12).**
+  Returning every candidate edge was the intended v1 design ("essentially a left join … it's still up to
+  downstream teams to build their own logic" — Weiang Li), but after Sean Yang and Brian McAdams pushed on
+  single-source-of-truth resolution, the ID team committed to **updating the graph interface to match the
+  logic the ID Service uses — the same path the bidder calls**. Three consequences for the feature store:
+  (1) **shared IDs will not match households by default**; (2) **non-shared IDs will map to a single
+  household at a time**, so consumers no longer pick a winner; (3) **multi-identifier resolution moves into
+  the library** — `ids_to_households(id_cols = {"IP" -> IPLike, "GUID" -> CookieLike})` resolves several
+  identifier columns to **one** household **per row** by confidence (explode first if you want a row to
+  reach multiple households), which is the same semantics as our ordered `id_columns` priority. **None of
+  this has shipped** — the version reviewed on 2026-08-11 is translation-only. Do not design against the
+  described behavior until it lands, but expect `household_resolution.py` to shed winner-selection when it
+  does. Governance context: Brian McAdams — consumer-side resolution rules "can lead to some very divergent
+  reporting / performance … there should at least be a standardized way or list of standardized ways."
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

@@ -531,10 +531,57 @@ agree; IP is the only break. **Action: pass `IdType.IPV4` explicitly, never the 
 recorded in §7c/§7d and the 1166/1167 cards traces to a verbal note and is wrong. Worth one confirmation with
 Sean in case he meant GA client ids specifically.
 
-**Open (asked of Jack Barbey / Weiang Li, Sean's 2026-08-11 post, still unanswered):** is returning all
-candidates the intended use case; what confidence 0 means and whether a threshold applies; how to handle
-`is_shared=True`; the family definition conflict. The first three now have code-derived answers above — the
-remaining genuine question is whether the ID team *intends* the bidder's no-filter behavior to be the standard.
+**ANSWERED by the ID team (Slack, 2026-08-11 21:59 Weiang Li / 2026-08-12 12:09 Jack Barbey).** Sean's four
+questions all came back, and two answers change what is written above.
+
+1. **Is returning all candidates intended? Yes** — for the shipped version. "It's essentially a left join,
+   your input df plus the graph columns, all matches kept … it's still up to downstream teams to build their
+   own logic in their specific use case" (Weiang). Confirms the code reading; the module is graph access plus
+   usage logging, nothing more.
+2. **What does confidence 0 mean? It is a model confidence, not a match flag** — "higher = more trust, lower
+   = less trust, don't treat 0 as 'unmatched'" (Weiang). A confidence-0 row is a real edge. **No ID-team
+   threshold exists**, so any cutoff we apply is ours to justify — consistent with the bidder applying none.
+3. **How to handle `is_shared=True`? Superseded inside 24h.** Weiang (8/11): consumer's choice, keep or drop
+   per use case. Jack (8/12): the interface will be changed so **shared IDs are not used to match households
+   by default**.
+4. **The `IdTypeFamily` conflict: confirmed, and the library is being fixed to match idg** — "you're right, I
+   need to make a ipv6=3100 as its own family and remove ipv6 (31) from the ipv4 (3000) family, so IPV4 =
+   3000 = {30, 32}" (Weiang). Our from-source finding was accepted upstream. Keep passing `IdType.IPV4`
+   explicitly until the fix ships.
+
+**The design-relevant answer — the ID team is absorbing the resolution standard into the library (Jack
+Barbey, 2026-08-12).** Prompted by Sean asking how to reach a single source of truth and Brian McAdams
+warning that consumer-side rules "can lead to some very divergent reporting / performance … there should at
+least be a standardized way or list of standardized ways," Jack committed to **updating the graph interface
+to match the logic the ID Service uses — the same path the bidder calls**:
+- **Shared IDs will not be used to match to households by default.**
+- **Non-shared IDs will only map to a single household at a time**, so consumers stop picking a winner.
+- **Multi-identifier resolution moves into the library:**
+  `ids_to_households(id_cols = {"IP" -> IPLike, "GUID" -> CookieLike})` resolves several identifier columns
+  to **one** household **per row**, higher-confidence identifier winning; explode first if a row should reach
+  multiple households. Same semantics as our ordered `id_columns` priority, and it is the natural home for
+  Ryan Kleck's GUID fast-follow.
+
+**What this changes for us, once it ships (it has NOT shipped — the 2026-08-11 review above is of the
+translation-only build):**
+- A shared-IP filter stops being "a deliberate break from 1:1" and becomes **alignment**. The
+  `is_shared`-cutoff decision carried in AUDI-1167 §3.3 shrinks from a tuning exercise to a parity check.
+- The equal-confidence `household_id` tiebreak divergence (ours highest, bidder lowest) **goes moot for
+  non-shared IDs** if the library returns one household. Hold the one-line fix until the shape is known.
+- The ~9.5%-shared IPv4 rows become an **expected exclusion** in the AUDI-1170 shadow-parity readout, not an
+  unexplained coverage gap — but they still have to be reported as a named line, since audience size moves.
+- `household_resolution.py` keeps its wrapper role (Sean's plan) and sheds winner-selection later.
+
+**One contradiction to resolve, do not paper over it.** The code read (2026-08-11) found **zero** `is_shared`
+references in `SteelHouse/id-service/src/bigtable.rs` — the bidder applies no shared filter at read time.
+Jack says the ID Service does not match shared IDs. Both hold if shared edges are dropped **upstream**, when
+the serving copy is loaded into Bigtable, rather than at read. **Next step: read the id-service Bigtable
+loader** and confirm which. Until then, treat "the bidder ignores `is_shared`" as read-path-verified only.
+
+**Second consumer to keep in the loop:** Alex Knorr is importing the library into the Databricks notebook
+that generates Fangorn scores off Ryan's job, to translate IP→household there. Weiang also published a
+comparison notebook (library vs the current `resolve_household`). Databricks volume copies:
+`/Volumes/dev/identity/libs/mntn_graph.zip`, `/Volumes/dev/identity/libs/airflow_ti_household.zip`.
 
 ## 8. Adjacent north-star thread — the Uplift model (RFD B), for awareness
 **RFD B "Fangorn-Like Incrementality (Uplift) Model" (Matt Brorby, DRAFT, recommends Option 2 — additive
@@ -572,3 +619,12 @@ Identity Graph tables schema, as-of join cost, resolution-rate findings, collaps
 - **2026-08-11 → memory:** `reference_bidder_serving_stores` gained the id-service Bigtable resolution rule;
   `project_fangorn_on_mntn_id` updated (library does not supersede `household_resolution.py`; bidder parity
   settled; id_type correction). No new memory file — both facts had an existing home.
+- **2026-08-12 → `knowledge/data_knowledge.md` § "MNTN ID (household) re-keying of the feature store":** the
+  ID team's answers to Sean's four questions. Added (a) `confidence_score` is a model confidence, not a match
+  flag — confidence 0 is a real edge and no ID-team threshold exists; (b) the ID team committed to updating
+  the graph interface to match the ID Service (shared IDs excluded by default, non-shared IDs → one
+  household, multi-identifier resolution inside the library), with a NOT-YET-SHIPPED caveat; (c) the
+  `IdTypeFamily` IP-family defect is confirmed by the author and being fixed to `IPV4 = 3000 = {30, 32}`;
+  (d) flagged the `is_shared` contradiction between the `bigtable.rs` read (no filter) and Jack's statement,
+  with the upstream-loader hypothesis and the check that settles it. Ticket cards 1167 and 1170 updated for
+  the consequences.
