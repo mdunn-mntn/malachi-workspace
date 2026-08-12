@@ -11,7 +11,7 @@
 - **MNTN only** — never mention IPSOS or other orgs; Todoist = MNTN section of MindWyre, on-request only. [[feedback_mntn_only]] [[feedback_todoist]]
 - **Simple & factual** — simplest deliverable, no invented terms/columns, plain facts + caveats, no unsolicited next-steps. **No internal vocabulary the artifact doesn't define** (code constants, tier labels, function names); **annotations carry fact only** (composition/benchmark/unit), never interpretation. [[feedback_minimize_complexity]] [[feedback_facts_not_presentation]] [[feedback_no_unsolicited_suggestions]]
 - **Sparse code comments** — one line max if ever; write self-documenting code, put the why in the PR/commit/ticket, not block comments. [[feedback_sparse_code_comments]]
-- **Hold the evidenced verdict** — don't fold to a domain owner's plausible-but-hedged pushback; treat it as a hypothesis, keep the evidenced answer, settle it with a discriminating test. [[feedback_hold_evidenced_verdict]]
+- **Hold the evidenced verdict** — don't fold to a domain owner's plausible-but-hedged pushback; treat it as a hypothesis, keep the evidenced answer, settle it with a discriminating test. Same on the write side: contradictions append, never overwrite. [[feedback_hold_evidenced_verdict]] [[feedback_contradictions_are_appended]]
 - **Rank descending** — primary metric, most on top, every table/chart. [[feedback_rank_desc_always]]
 - **Default deliverable = branded `.xlsx`** to the Drive mount `My Drive/Tickets/<KEY>/` (lib/mntn_xlsx.py). [[feedback_xlsx_default_output]] [[reference_xlsx_master_format]]
 - **IPs from source log tables**, never proxies (CIL). [[feedback_source_table_ips]]

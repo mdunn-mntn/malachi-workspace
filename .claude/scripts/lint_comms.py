@@ -19,8 +19,13 @@ Caps (chars / words / bullets):
   pr_comment   500 / 75  / 5    PR review comment or reply
   commit       500 / 75  / 6    commit message; subject (first line) also capped at 72 chars
 
+The word cap is the one that bites: every kind is calibrated at ~6.7 chars/word and ordinary
+prose runs ~6.2, so the char cap almost never fires first. Stats print words first, and any
+over-cap result prints a cut plan (binding cap, how much to cut, the fattest sentences).
+
 Usage:
   lint_comms.py --kind comment --file draft.txt
+  lint_comms.py --kind commit --file msg.txt --suggest   # cut plan even when already under
   echo "text"           | lint_comms.py --kind comment
   lint_comms.py --kind completion --body "..."
   lint_comms.py --from-json --file payload.json      # parse a Jira REST v2 payload
@@ -172,7 +177,7 @@ def lint_text(text, kind):
             )
         if bullets > cap["bullets"]:
             violations.append(f"{bullets} bullets (cap {cap['bullets']})")
-        stats = f"{chars} chars / {words} words / {bullets} bullets  (cap {cap['chars']}/{cap['words']}/{cap['bullets']})"
+        stats = f"{words} words / {chars} chars / {bullets} bullets  (cap {cap['words']}/{cap['chars']}/{cap['bullets']})"
 
     if kind == "commit" and lines and len(lines[0]) > COMMIT_SUBJECT_CAP:
         violations.append(
@@ -195,7 +200,69 @@ def lint_text(text, kind):
     return violations, warnings, stats
 
 
-def _report(label, text, kind):
+def _sentences(text):
+    """Split into countable units: bullets stay whole, prose rejoins wrapped lines then splits on . ! ?
+
+    Hard-wrapped prose must be rejoined first, or every continuation line reads as its own
+    sentence and the ranking points at line breaks instead of at real sentences.
+    """
+    units, para = [], []
+
+    def flush():
+        if para:
+            joined = " ".join(para)
+            units.extend(u.strip() for u in re.split(r"(?<=[.!?])\s+", joined) if u.strip())
+            para.clear()
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            flush()
+        elif stripped.startswith(("*", "-", "•")):
+            flush()
+            units.append(stripped)
+        else:
+            para.append(stripped)
+    flush()
+    return units
+
+
+def cut_plan(text, kind):
+    """How to get under cap: the binding cap, how much to cut, and the fattest units to cut from.
+
+    The word cap binds first for ordinary prose (every kind is calibrated at ~6.7 chars/word,
+    real prose runs ~6.2), so trimming characters alone spends iterations without moving the
+    number that fails. This says which cap is actually binding and where the words are.
+    """
+    if kind in LINE_KINDS:
+        return []
+    cap = CAPS[kind]
+    words, chars = len(text.split()), len(text)
+    over = {
+        "words": words - cap["words"],
+        "chars": chars - cap["chars"],
+    }
+    binding = max(over, key=lambda k: over[k] / cap[k])  # most-exceeded relative to its own cap
+    out = []
+    if over[binding] > 0:
+        out.append(f"binding cap = {binding}: cut {over[binding]} {binding}")
+        slack = {k: -v for k, v in over.items() if v < 0}
+        if slack:
+            out.append(
+                "  slack elsewhere: " + ", ".join(f"{v} {k} to spare" for k, v in slack.items())
+            )
+    else:
+        out.append(f"under cap — closest is {binding} ({-over[binding]} to spare)")
+    ranked = sorted(_sentences(text), key=lambda u: -len(u.split()))[:3]
+    if ranked:
+        out.append("  fattest units (cut here):")
+        for u in ranked:
+            preview = u if len(u) <= 72 else u[:69] + "..."
+            out.append(f"    {len(u.split()):3d}w  {preview}")
+    return out
+
+
+def _report(label, text, kind, suggest=False):
     violations, warnings, stats = lint_text(text, kind)
     status = "OVER" if violations else "OK"
     print(f"[{kind}{('/' + label) if label else ''}] {stats}  {status}")
@@ -203,6 +270,9 @@ def _report(label, text, kind):
         print(f"VIOLATION {label or kind}: {v}", file=sys.stderr)
     for w in warnings:
         print(f"TRIM {label or kind}: {w}", file=sys.stderr)
+    if violations or suggest:
+        for line in cut_plan(text, kind):
+            print(f"  {line}", file=sys.stderr)
     return bool(violations)
 
 
@@ -282,6 +352,9 @@ def run_hook():
                 print(f"  VIOLATION {v}", file=sys.stderr)
             for w in warnings:
                 print(f"  TRIM {w}", file=sys.stderr)
+            if violations:
+                for line in cut_plan(text, kind):
+                    print(f"  {line}", file=sys.stderr)
     print("  → over cap? cut to the answer line + Done/Next. See CLAUDE.md §9.", file=sys.stderr)
     return 0  # advisory: never block a post. Change to `return 2` to make it a hard gate.
 
@@ -303,6 +376,11 @@ def main():
         action="store_true",
         help="PreToolUse hook mode: lint a Jira curl on stdin, never block",
     )
+    ap.add_argument(
+        "--suggest",
+        action="store_true",
+        help="always print the cut plan (binding cap + fattest units), not only when over",
+    )
     args = ap.parse_args()
 
     if args.hook:
@@ -319,10 +397,14 @@ def main():
         payload = json.loads(raw, strict=False)
         failed = False
         for label, text, kind in _jobs_from_payload(payload):
-            failed |= _lint_title(text) if label == "summary/title" else _report(label, text, kind)
+            failed |= (
+                _lint_title(text)
+                if label == "summary/title"
+                else _report(label, text, kind, args.suggest)
+            )
         return 1 if failed else 0
 
-    return 1 if _report("", raw, args.kind) else 0
+    return 1 if _report("", raw, args.kind, args.suggest) else 0
 
 
 if __name__ == "__main__":

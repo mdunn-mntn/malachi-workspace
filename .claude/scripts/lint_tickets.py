@@ -55,15 +55,31 @@ def front_matter(path):
 
 FRAMING_STATES = {"draft", "locked", "skip"}
 
+# The framing gate was built 2026-07-24. Cards dated before it never had a framing_state to omit,
+# and they will not be backfilled — warning on each of them every run produced ~84 permanent lines
+# that nobody could ever clear, which trains you to skip the linter's output. They are counted, not
+# listed (use --all for the list). A card dated on or after the gate with no framing_state is a real
+# miss and still warns by name.
+FRAMING_GATE_DATE = "2026-07-24"
+
+
+def _is_grandfathered(fm):
+    d = str(fm.get("date") or "")
+    return bool(re.match(r"\d{4}-\d{2}-\d{2}", d)) and d < FRAMING_GATE_DATE
+
 
 def check(path, rel):
-    """Return (violations, warnings) — both lists of message strings."""
+    """Return (violations, warnings, grandfathered) — lists of message strings."""
     fm = front_matter(path)
-    v, w = [], []
+    v, w, g = [], [], []
     if fm is None:
-        return [
-            f"{rel}: no YAML front-matter (add the ticket card block — see folder_definitions.md)"
-        ], w
+        return (
+            [
+                f"{rel}: no YAML front-matter (add the ticket card block — see folder_definitions.md)"
+            ],
+            w,
+            g,
+        )
     dt = fm.get("doc_type")
     if dt not in ("ticket", "epic"):
         v.append(f"{rel}: doc_type={dt!r} (must be ticket|epic)")
@@ -89,9 +105,11 @@ def check(path, rel):
     if fs_raw is None:
         # legacy card — never block; nudge only when it's actually being worked
         if st in ("in_progress", "done"):
-            w.append(
-                f"{rel}: no framing_state (legacy card) — run /frame to add §0 Framing (Question/Goal/Objective/Approach)"
-            )
+            msg = f"{rel}: no framing_state (legacy card) — run /frame to add §0 Framing (Question/Goal/Objective/Approach)"
+            if _is_grandfathered(fm):
+                g.append(msg)
+            else:
+                w.append(msg)
     else:
         state, _, reason = fs_raw.partition(":")
         state, reason = state.strip(), reason.strip()
@@ -112,7 +130,7 @@ def check(path, rel):
                     v.append(
                         f"{rel}: framing_state=locked but question missing/placeholder — a locked frame must state its question"
                     )
-    return v, w
+    return v, w, g
 
 
 def cards():
@@ -139,19 +157,36 @@ def cards():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
-    ap.parse_args()
+    ap.add_argument(
+        "--all",
+        action="store_true",
+        help=f"also list the pre-{FRAMING_GATE_DATE} legacy cards (normally counted, not listed)",
+    )
+    args = ap.parse_args()
     all_cards = cards()
-    violations, warnings = [], []
+    violations, warnings, grandfathered = [], [], []
     for path, rel in all_cards:
-        v, w = check(path, rel)
+        v, w, g = check(path, rel)
         violations += v
         warnings += w
+        grandfathered += g
     for msg in warnings:
         print(f"WARN {msg}", file=sys.stderr)
+    if grandfathered:
+        if args.all:
+            for msg in grandfathered:
+                print(f"LEGACY {msg}", file=sys.stderr)
+        else:
+            print(
+                f"LEGACY {len(grandfathered)} card(s) predate the framing gate ({FRAMING_GATE_DATE}) "
+                f"— not backfilled by design; --all to list",
+                file=sys.stderr,
+            )
     for msg in violations:
         print(f"VIOLATION {msg}", file=sys.stderr)
     print(
-        f"lint_tickets --check: {len(all_cards)} cards, {len(violations)} violation(s), {len(warnings)} warning(s)."
+        f"lint_tickets --check: {len(all_cards)} cards, {len(violations)} violation(s), "
+        f"{len(warnings)} warning(s), {len(grandfathered)} legacy."
     )
     return 1 if violations else 0
 
