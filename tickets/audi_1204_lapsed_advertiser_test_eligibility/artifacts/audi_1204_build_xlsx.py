@@ -24,7 +24,6 @@ from ti_884_mde_calculator import mde_binomial  # noqa: E402
 
 ALPHA, POWER, HOLDOUT_FRAC, VAR_REDUCTION = 0.05, 0.80, 0.10, 1.0
 TEST_MONTHS = 56 / 30.4
-SATURATED_IVR = 0.12          # INCR-75 IVR_SATURATED
 COHORT_CPM, COHORT_IMPS = 27.54, 3.30   # median, $25-60k/30d band
 
 
@@ -45,30 +44,26 @@ def profile_df(m, spend_rows):
                                  alpha=ALPHA, power=POWER, var_reduction=VAR_REDUCTION)
     return pd.DataFrame([
         {"Measure": "Vertical", "Value": m["vertical_buckets"], "Note": "not B2B"},
-        {"Measure": "Last active", "Value": m["window_end"],
-         "Note": f"lapsed {lapsed} days ({lapsed/30.4:.1f} months)"},
+        {"Measure": "Last active", "Value": m["window_end"], "Note": f"{lapsed} days ago"},
         {"Measure": "Measurement window", "Value": f"{m['window_start']} to {m['window_end']}",
-         "Note": "their last 30 delivering days"},
+         "Note": "last 30 delivering days"},
         {"Measure": "Visit rate (IVR)", "Value": f"{ivr*100:.2f}%",
-         "Note": f"{int(m['visiting_ips_30d']):,} visiting of {served:,.0f} served IPs"
-                 + ("  |  above the 12% saturation band" if ivr > SATURATED_IVR else "")},
+         "Note": f"{int(m['visiting_ips_30d']):,} visiting of {served:,.0f} served IPs"},
         {"Measure": "Conversion rate (CVR)", "Value": f"{cvr*100:.3f}%",
          "Note": f"{int(m['converting_ips_30d']):,} converting IPs"},
         {"Measure": "CPM", "Value": f"${float(m['cpm']):.2f}",
-         "Note": f"cohort median ${COHORT_CPM:.2f} for this spend band"},
+         "Note": f"cohort median ${COHORT_CPM:.2f}"},
         {"Measure": "Impressions per IP", "Value": f"{float(m['imps_per_ip']):.2f}",
          "Note": f"cohort median {COHORT_IMPS:.2f}"},
-        {"Measure": "56-day distinct-IP reach", "Value": f"{reach56:,.0f}",
-         "Note": "the direct power cross-check denominator"},
+        {"Measure": "56-day distinct-IP reach", "Value": f"{reach56:,.0f}", "Note": ""},
         {"Measure": "Detectable at that reach", "Value": f"{mde_direct*100:.2f}%",
-         "Note": "relative IVR MDE, no extrapolation - the defensible number"},
-        {"Measure": "Final month spend", "Value": f"${float(m['spend_30d']):,.0f}",
-         "Note": "their exit run-rate"},
+         "Note": "relative IVR MDE"},
+        {"Measure": "Final month spend", "Value": f"${float(m['spend_30d']):,.0f}", "Note": ""},
         {"Measure": "Peak month spend", "Value": f"${float(m['max_month_spend']):,.0f}", "Note": ""},
         {"Measure": "Typical active month", "Value": f"${float(m['typical_active_month_spend']):,.0f}",
-         "Note": f"median across {m['active_months_count']} active months; they ramped up before pausing"},
+         "Note": f"median of {m['active_months_count']} active months"},
         {"Measure": "IPs needed for a 5% test", "Value": f"{ips_5pct:,.0f}",
-         "Note": "total across both arms at a 10% holdout"},
+         "Note": "both arms, 10% holdout"},
     ])
 
 
@@ -174,10 +169,10 @@ def main():
         ("MDE is relative, not percentage points",
          "A 5% MDE on a 12.93% visit rate means detecting a move to 13.58%, a 5% proportional lift. "
          "It does not mean 17.93%. Every budget here is sized to that relative target."),
-        ("A lapsed advertiser cannot reach Top tier",
-         "INCR-75 tiers on power x confirmed ghost-bid lift. Confirmed lift needs a live holdout, and "
-         "an advertiser who is not delivering has no bids. Best achievable is Mid, on power alone. "
-         "They re-qualify for Top once they resume and accumulate holdout visits."),
+        ("A powered test is not the same as proven incrementality",
+         "These numbers show a test would be big enough to detect a 5% lift. They do not show MNTN is "
+         "incremental for this advertiser. That needs a live holdout, which needs them delivering, so "
+         "it can only be measured once they resume."),
         ("Conversions are out of reach; this is a visit test",
          "Their conversion baseline is 0.082%, about 160x below their visit rate, so a conversion-powered "
          "test would need roughly $325k/month. Conversion figures are reported for context and are "
@@ -186,14 +181,14 @@ def main():
          "Their campaigns span objectives 1,4,5,6,7 including retargeting, which would have inflated "
          "the baseline. In the measured window 285,905 of 285,910 served IPs were prospecting "
          "(objectives 1,5,6) and retargeting delivered nothing, so 12.93% needs no adjustment."),
-        ("A high visit rate is not purely good news",
-         "At 12.93% they sit just inside the saturation band INCR-75 penalizes above 12%. It makes them "
-         "easy to measure, but the rule exists because a high baseline leaves less headroom to move. "
-         "Expect a smaller proportional lift than a mid-range advertiser."),
-        ("The budget figures are an optimistic floor; the reach figure is not",
-         "Impressions-per-IP is measured over 30 days and grows with a longer window, so spend_required "
-         "understates how far a real 8-week budget stretches. The direct 56-day MDE on the profile tab "
-         "uses observed reach with no extrapolation and is the number to defend."),
+        ("A high visit rate cuts both ways",
+         "At 12.93%, a large share of the people we serve already visit the site. That makes the test "
+         "cheap to power, but leaves less room to move, so expect a smaller proportional lift than "
+         "from an advertiser in the 3-6% range."),
+        ("The budget figures are an optimistic floor",
+         "Impressions per IP is measured over 30 days and grows with a longer window, so these budgets "
+         "understate how far a real 8-week spend stretches. The 56-day figure on the profile tab uses "
+         "observed reach with no extrapolation."),
         ("The baseline is as of April-May 2026",
          "Rates come from their last active window, 98 days before this was built. If the site, pricing, "
          "creative or offer changed since, the baseline moves and so does the budget."),
@@ -211,13 +206,13 @@ def main():
             f"{who} needs ${ivr5['Monthly needed']:,.0f}/month for a 5% visit-lift test, "
             f"against the ${float(m['spend_30d']):,.0f} they were running.",
             "Their own last 8 weeks of delivery would have powered it, with no budget increase at all.",
-            "Ceiling is Mid tier while they stay paused, and it has to be a visit test, not conversions.",
+            "This has to be a visit-lift test. Detecting a conversion lift would need about $325k a month.",
         ]
     else:
         takeaways = [
             "Required test budget scales as 1 over visit rate; the calculator already existed in TI-884.",
             "Visit and conversion rate explain 10% of spend, so they cannot be used to estimate it.",
-            "A lapsed advertiser tops out at Mid tier: confirmed lift needs a live holdout.",
+            "A powered test is not proven incrementality: that needs a live holdout, so it waits on them resuming.",
         ]
     wb.cover(takeaways=takeaways)
 
