@@ -84,7 +84,42 @@ At $30 CPM and 15 imps-per-IP, 8-week budget ≈ **$14,100 ÷ IVR** for a 5% rel
 ### A lapsed advertiser cannot reach Top tier
 INCR-75's final tier is POWER × CONFIRMED-LIFT. `confirmed +` needs ≥20 holdout visits at p<.05 from a live ghost-bid holdout. A non-delivering advertiser generates no bids, so no measured lift exists and none can. **Ceiling is Mid**, on the a-priori power gate alone.
 
-### Advertiser 39568 — conditional answer pending BigQuery (2026-08-12)
+### Advertiser 39568 = Mockingbird — RESULT (2026-08-12)
+
+**Verdict: powered for a 5% relative visit-lift test at $16.1k/month, well under the $40k they were running. Tier = Mid (the lapsed ceiling).**
+
+Window resolved automatically to their last-active 30 days, **2026-04-07..2026-05-06**. Lapsed **98 days** (3.2 months). First active 2025-02-11, 148 delivering days, lifetime spend $164,825 across 6 active months.
+
+| Metric | Value |
+|---|---|
+| Vertical | Kids & Family (not B2B) |
+| IVR (`p_visit`) | **12.93%** (36,965 visiting of 285,909 served IPs) |
+| CVR (`p_cvr`) | 0.082% (234 converting IPs) |
+| CPM | **$96.28** |
+| imps/IP | **1.46** |
+| 56-day distinct-IP reach | 433,042 |
+| Final month spend | **$40,143** (max month $40,668) |
+| Typical active month (6-mo median) | $26,916 |
+
+**Required 8-week test budget**
+
+| Target | Total | Per month | vs their $40k exit rate |
+|---|---:|---:|---|
+| IVR 5% relative MDE | $29,687 | **$16,116** | clears, 60% headroom |
+| IVR 10% relative MDE | $7,422 | $4,029 | clears, 90% headroom |
+| CVR 15% relative MDE | $597,947 | $324,600 | not feasible — informational only |
+
+**Direct 56-day cross-check passes independently.** At their own observed 433,042-IP reach, with no imps/IP extrapolation, the relative IVR MDE is **3.68%** — already below the 5% credible threshold. This is the defensible number: it does not rely on the optimistic-floor assumption baked into `spend_required`.
+
+**Al's "$40k a month" reconciles to their exit run-rate, not their average.** Their final 30 days ran $40,143 and their peak month $40,668, but the 6-month median was $26,916 — they ramped up before pausing. The workbook compares against the $26,916 median (the INCR-75 convention); against the $40k Al remembers, the headroom is larger still. Either way it clears.
+
+#### Caveats that came out of the pull
+- **The all-funnel-vs-prospecting risk was checked and does not apply.** Their campaign dimension spans objectives 1,4,5,6,7, and a ghost-bid holdout is prospecting-only by construction, so an all-funnel IVR would have overstated the testable baseline. In this window delivery was **99.9% prospecting**: 285,905 of 285,910 served IPs on objectives 1/5/6, with obj_7 contributing 5 IPs and the retargeting campaigns delivering nothing. **12.93% is the prospecting IVR.** Query logged.
+- **IVR 12.93% sits just inside INCR-75's saturation penalty band** (`IVR_SATURATED = 0.12`). The scoring rule penalizes very high visit rates on the reasoning that there is less headroom left to move. It makes them highly *detectable* but is a mild negative on expected lift size. Not a blocker; state it rather than selling a high visit rate as unambiguously good.
+- **$96.28 CPM is 3.5x the $27.54 median** for the $25–60k/30d band, paired with an unusually low 1.46 imps/IP. Confirmed **not** a MNTN Select blended-CPM artifact — they are `product_id = 1` (PTV). They buy expensive, low-frequency reach. Since budget scales linearly with CPM, this is what makes their required spend higher than their high IVR alone would suggest.
+- **My pre-auth conditional call was too pessimistic, in the right direction.** Using the cohort-median shape I put the 5% MDE threshold at 3.73% IVR and called it "a coin flip." Their real shape differs sharply (CPM 3.5x higher, imps/IP 0.44x, net 1.59x), which lifts the threshold at their shape to ~5.9% — but their 12.93% IVR clears it comfortably regardless. The conservative "don't quote a tier yet" hold was correct.
+
+### Advertiser 39568 — conditional pre-answer, superseded by the result above (2026-08-12)
 Al's advertiser is **AID 39568**, last running **~$40k/month** before they paused. Confirmed **not present** in `incr_75_advertiser_metrics.csv`, so their rates have never been measured and must come from the metrics pull. **BigQuery is blocked on an expired gcloud refresh token** (`gcloud auth login` needed; non-interactive session cannot complete it).
 
 What is answerable now, by inverting the power calc (`artifacts/audi_xxx_budget_feasibility.py`). $40k/mo = **$73,684** over an 8-week test. Using the median delivery shape of the **176 INCR-75 advertisers in the $25–60k/30d band** (CPM **$27.54**, **3.30** imps/IP) as the prior:
@@ -131,12 +166,9 @@ Pending `/capture`:
 - PSA is advertiser **9090**, not 90.
 
 ## 8. Open Items / Follow-ups
-- **BLOCKED on auth, not on work.** AID 39568 received 2026-08-12; the gcloud refresh token expired overnight and `bq` cannot reauthenticate non-interactively. Unblock with `gcloud auth login`, then:
-  ```
-  python3 artifacts/audi_xxx_run_metrics.py 39568
-  python3 artifacts/audi_xxx_required_spend.py 39568
-  python3 artifacts/audi_xxx_build_xlsx.py 39568 --ticket <KEY> --drive
-  ```
+- **Jira `[SPIKE]` not filed.** Draft ready (393 chars, lint-clean); needs a key before the workbook goes to Drive via `--drive`.
+- **Slack reply to Al not sent.** Draft ready; now carries the actual numbers.
+- Auth blocker on 2026-08-12 resolved (expired gcloud refresh token). Note for future sessions: test it with a bare `gcloud auth print-access-token`, NOT wrapped in `timeout` — macOS has no `timeout`, so the wrapper fails with exit 127 and reads as an auth failure.
 - If their last-active window predates 2024-01-01, the spend-pattern CTE returns nothing and "vs typical month" falls back to the window's own spend. Al's "$40k/month" is the fallback anchor.
 - Jira `[SPIKE]` not yet filed — draft ready, awaiting confirm.
 - If the advertiser lapsed before 2024-01-01, the spend-pattern CTE returns nothing and the "vs typical month" comparison falls back to the window's own spend.
