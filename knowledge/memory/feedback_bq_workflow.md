@@ -85,3 +85,10 @@ the **MCP `mcp__bigquery__query`** tool (has a ~1 GB billed cap, so filter/parti
 rollup tables), or from Python with `from google.cloud import bigquery; bigquery.Client(project=…)` (ADC).
 For a reproducible pull that also builds an xlsx, the Python-client path is cleanest (`gcloud auth
 application-default print-access-token` confirms ADC is live). Don't ask the user to re-auth mid-task.
+
+**Three `bq_run.sh` invocation footguns, all hit 2026-08-12 (AUDI-1204).**
+- **Pass the SQL as the LAST POSITIONAL ARG, never on stdin.** The wrapper fingerprints `BQ_ARGS[-1]` as the SQL for the perf log; piping via `< file` gives it no SQL, and `bq` reads nothing. Use `SQL=$(cat f.sql); bq_run.sh ... "$SQL"`.
+- **A SQL string starting with a `--` comment line is parsed as a CLI FLAG** and aborts with `FATAL Flags parsing error: Unknown command line flag`. Start the string at `WITH`/`SELECT` and move the header comment inside, or below the first statement line.
+- **Always pass `--project_id=dw-main-silver`.** The wrapper defaults that variable for its own logging but does not forward it to `bq`, and the shell's gcloud default project is `mntn-coredw-prod`, where the account has no `bigquery.jobs.create` → `Access Denied`.
+
+**`INFORMATION_SCHEMA.PARTITIONS` returns ZERO rows for a view.** Physical `sqlmesh__*` names taken from a table doc can themselves be views (`clickpass_log`, `ui_conversions` both returned 0 partitions this way) — an empty result means "not a partitioned base table", NOT "no data". Verify coverage by counting rows on sampled literal dates instead.
