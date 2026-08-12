@@ -1,23 +1,23 @@
 ---
 doc_type: ticket
 title: "[SPIKE] Lapsed-advertiser incrementality-test eligibility"
-status: backlog
+status: done
 date: 2026-08-11
 summary: "Can a churned advertiser be screened for a ghost-bid lift test from their last-active window? Required-spend heuristic from IVR/CVR."
-result: "tooling built and regression-tested; blocked on the advertiser id from Al"
+result: "Mockingbird (39568) powered for a 5% relative visit-lift test at $16.1k/mo vs the $40.1k they ran; tier caps at Mid while paused"
 question: "For an advertiser who has stopped spending, can we still compute what an 8-week ghost-bid lift test would cost, from their last-active visit and conversion rates?"
-framing_state: draft
+framing_state: locked
 ---
 
 # [SPIKE] Lapsed-advertiser incrementality-test eligibility
 
-**Jira:** not yet filed — draft in §5
-**Status:** backlog
+**Jira:** https://mntn.atlassian.net/browse/AUDI-1204
+**Status:** done
 **Date Started:** 2026-08-11
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
+## 0. Framing
 - **Question (the unknown):** For an advertiser who has stopped spending, can we still compute what an 8-week ghost-bid lift test would cost — from their last-active visit and conversion rates — well enough to decide whether to pitch them?
 - **Goal (why / the decision):** Al Beretta has a churned advertiser who left over MNTN's *legacy* incrementality story and is a plausible win-back on the new ghost-bid methodology. The decision: is this advertiser worth re-approaching with a test offer, and at what budget. Ties to the Q2 north star — incrementality is Kale's stated #1 priority, and this is the retention/win-back edge of it.
 - **Objective (done-when):** A required 8-week test budget for the named advertiser at 5% and 10% relative IVR MDE, with their historical typical monthly spend beside it so the gap reads as an ask; plus a stated answer on whether spend can be predicted from VR/CR at all. Binary: the workbook exists with those numbers, or it doesn't.
@@ -76,7 +76,7 @@ On the 1,566 INCR-75 advertisers with `spend_30d > $1,000` and `IVR > 0`, OLS on
 | ~ log(IVR) + log(CVR) | **0.100** |
 | ~ IVR + CVR (levels) | 0.013 |
 
-Pearson r: log(IVR) +0.212, log(CVR) +0.314. Within any single IVR decile, spend spans **15–66x** from p10 to p90, while the median moves only ~3x across the entire IVR range. Chart: `artifacts/audi_xxx_chart_vr_cr_spend.png`.
+Pearson r: log(IVR) +0.212, log(CVR) +0.314. Within any single IVR decile, spend spans **15–66x** from p10 to p90, while the median moves only ~3x across the entire IVR range. Chart: `artifacts/audi_1204_chart_vr_cr_spend.png`.
 
 ### The rule of thumb is delivery-shape-conditional
 At $30 CPM and 15 imps-per-IP, 8-week budget ≈ **$14,100 ÷ IVR** for a 5% relative MDE. That shortcut is **only** valid at those defaults. BoggBag runs $12.33 CPM and 3.65 imps/IP, where the bare shortcut is **10x too high**. General form: `$14,100 / IVR × (CPM/30) × (impsPerIP/15)`. The script prints the scaled version so the bare one can't be quoted by accident.
@@ -122,7 +122,7 @@ Window resolved automatically to their last-active 30 days, **2026-04-07..2026-0
 ### Advertiser 39568 — conditional pre-answer, superseded by the result above (2026-08-12)
 Al's advertiser is **AID 39568**, last running **~$40k/month** before they paused. Confirmed **not present** in `incr_75_advertiser_metrics.csv`, so their rates have never been measured and must come from the metrics pull. **BigQuery is blocked on an expired gcloud refresh token** (`gcloud auth login` needed; non-interactive session cannot complete it).
 
-What is answerable now, by inverting the power calc (`artifacts/audi_xxx_budget_feasibility.py`). $40k/mo = **$73,684** over an 8-week test. Using the median delivery shape of the **176 INCR-75 advertisers in the $25–60k/30d band** (CPM **$27.54**, **3.30** imps/IP) as the prior:
+What is answerable now, by inverting the power calc (`artifacts/audi_1204_budget_feasibility.py`). $40k/mo = **$73,684** over an 8-week test. Using the median delivery shape of the **176 INCR-75 advertisers in the $25–60k/30d band** (CPM **$27.54**, **3.30** imps/IP) as the prior:
 
 | Target | Minimum visit rate for $40k/mo to power it |
 |---|---|
@@ -140,12 +140,12 @@ Built and regression-tested, blocked only on the advertiser id:
 
 | Artifact | What it does |
 |---|---|
-| `queries/audi_xxx_last_active.sql` | Resolves last-active day + delivering-day count + lifetime spend |
-| `queries/audi_xxx_lapsed_advertiser_metrics.sql` | The forked metrics pull, windowed on literals |
-| `artifacts/audi_xxx_run_metrics.py` | Two-step driver; dry-runs and enforces a scan ceiling |
-| `artifacts/audi_xxx_required_spend.py` | Wraps TI-884; IVR 5%/10%, CVR 15% informational, direct 56d cross-check, tier ceiling |
-| `artifacts/audi_xxx_vr_cr_spend_check.py` | The R²=0.10 evidence + decile chart |
-| `artifacts/audi_xxx_build_xlsx.py` | Branded workbook; builds with or without an advertiser id |
+| `queries/audi_1204_last_active.sql` | Resolves last-active day + delivering-day count + lifetime spend |
+| `queries/audi_1204_lapsed_advertiser_metrics.sql` | The forked metrics pull, windowed on literals |
+| `artifacts/audi_1204_run_metrics.py` | Two-step driver; dry-runs and enforces a scan ceiling |
+| `artifacts/audi_1204_required_spend.py` | Wraps TI-884; IVR 5%/10%, CVR 15% informational, direct 56d cross-check, tier ceiling |
+| `artifacts/audi_1204_vr_cr_spend_check.py` | The R²=0.10 evidence + decile chart |
+| `artifacts/audi_1204_build_xlsx.py` | Branded workbook; builds with or without an advertiser id |
 
 **Two-step by design:** BigQuery cannot prune partitions on a date derived from a subquery. Resolving the window and the metrics in one statement scanned 39.5 GB; splitting them and substituting literals brings it to 5.5 GB for a single advertiser.
 

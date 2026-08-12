@@ -4,9 +4,9 @@ Al's ask reads as "estimate spend from VR and CR". This tests that directly on
 the 2,009-advertiser INCR-75 cohort. No BigQuery — the metrics CSV already has
 spend, IVR and CVR side by side.
 
-  python3 audi_xxx_vr_cr_spend_check.py
+  python3 audi_1204_vr_cr_spend_check.py
 
-Writes outputs/audi_xxx_vr_cr_spend_check.csv and the decile chart.
+Writes outputs/audi_1204_vr_cr_spend_check.csv and the decile chart.
 """
 import csv
 from pathlib import Path
@@ -77,7 +77,7 @@ def main():
               f"p10=${p10:>9,.0f}  p50=${p50:>9,.0f}  p90=${p90:>11,.0f}  "
               f"p90/p10={p90/max(p10,1):.0f}x")
 
-    out = TICKET / "outputs" / "audi_xxx_vr_cr_spend_check.csv"
+    out = TICKET / "outputs" / "audi_1204_vr_cr_spend_check.csv"
     with open(out, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(deciles[0].keys()))
         w.writeheader()
@@ -107,7 +107,7 @@ def main():
     ax.grid(axis="y", color="#EEEEEE", linewidth=0.8)
     ax.set_axisbelow(True)
     fig.tight_layout()
-    png = TICKET / "artifacts" / "audi_xxx_chart_vr_cr_spend.png"
+    png = TICKET / "artifacts" / "audi_1204_chart_vr_cr_spend.png"
     fig.savefig(png, facecolor="#FAFAFA")
     print(f"\n[ok] wrote {out}\n[ok] wrote {png}")
 

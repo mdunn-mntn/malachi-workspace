@@ -2,10 +2,10 @@
 
 Wraps TI-884's calculator; the math lives there, not here.
 
-  python3 audi_xxx_required_spend.py <advertiser_id>
+  python3 audi_1204_required_spend.py <advertiser_id>
 
-Reads outputs/audi_xxx_metrics_<id>.csv from audi_xxx_run_metrics.py and writes
-outputs/audi_xxx_required_spend_<id>.csv.
+Reads outputs/audi_1204_metrics_<id>.csv from audi_1204_run_metrics.py and writes
+outputs/audi_1204_required_spend_<id>.csv.
 """
 import argparse
 import csv
@@ -49,9 +49,9 @@ def main():
     ap.add_argument("advertiser_id", type=int)
     a = ap.parse_args()
 
-    src = TICKET / "outputs" / f"audi_xxx_metrics_{a.advertiser_id}.csv"
+    src = TICKET / "outputs" / f"audi_1204_metrics_{a.advertiser_id}.csv"
     if not src.exists():
-        sys.exit(f"missing {src} — run audi_xxx_run_metrics.py {a.advertiser_id} first")
+        sys.exit(f"missing {src} — run audi_1204_run_metrics.py {a.advertiser_id} first")
     r = list(csv.DictReader(open(src)))[0]
 
     ivr, cvr = float(r["p_visit"]), float(r["p_cvr"])
@@ -114,7 +114,7 @@ def main():
     else:
         print(f"\nCVR: no_data ({converting} converting IPs < {MIN_CONVERTING_IPS})")
 
-    dest = TICKET / "outputs" / f"audi_xxx_required_spend_{a.advertiser_id}.csv"
+    dest = TICKET / "outputs" / f"audi_1204_required_spend_{a.advertiser_id}.csv"
     with open(dest, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(out[0].keys()))
         w.writeheader()

@@ -6,7 +6,7 @@ lands. Solves spend_required() for p:
   budget = k(1-p)/p  where  k = z^2/(mde^2 h(1-h)) * (1-h) * imps * cpm/1000
   => p = k / (budget + k)
 
-  python3 audi_xxx_budget_feasibility.py <monthly_budget> [--cpm N] [--imps N]
+  python3 audi_1204_budget_feasibility.py <monthly_budget> [--cpm N] [--imps N]
 
 Defaults to the median delivery shape of advertisers in the $25-60k/30d band
 from the INCR-75 cohort. Pass the advertiser's real CPM and imps/IP once known.

@@ -1,6 +1,6 @@
 """Build the AUDI lapsed-advertiser eligibility workbook.
 
-  python3 audi_xxx_build_xlsx.py [advertiser_id] [--ticket AUDI-XXXX] [--drive]
+  python3 audi_1204_build_xlsx.py [advertiser_id] [--ticket AUDI-1204] [--drive]
 
 Without an advertiser_id it builds only what does not depend on one: the
 IVR-to-budget curve, the VR/CR evidence, and the method sheet.
@@ -48,9 +48,9 @@ def curve_df():
 
 
 def evidence_df():
-    d = pd.DataFrame(rows(OUT / "audi_xxx_vr_cr_spend_check.csv"))
+    d = pd.DataFrame(rows(OUT / "audi_1204_vr_cr_spend_check.csv"))
     if d.empty:
-        sys.exit("run audi_xxx_vr_cr_spend_check.py first")
+        sys.exit("run audi_1204_vr_cr_spend_check.py first")
     return pd.DataFrame({
         "Visit-rate band": [f"{float(a)*100:.2f}-{float(b)*100:.2f}%"
                             for a, b in zip(d["ivr_low"], d["ivr_high"])],
@@ -118,7 +118,7 @@ def budget_df(d, m):
 
 
 def funnel_df(aid):
-    d = rows(OUT / f"audi_xxx_funnel_split_{aid}.csv")
+    d = rows(OUT / f"audi_1204_funnel_split_{aid}.csv")
     if not d:
         return None
     return pd.DataFrame([{
@@ -135,12 +135,12 @@ def funnel_df(aid):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("advertiser_id", nargs="?", type=int, default=None)
-    ap.add_argument("--ticket", default="AUDI-XXXX")
+    ap.add_argument("--ticket", default="AUDI-1204")
     ap.add_argument("--drive", action="store_true")
     a = ap.parse_args()
 
-    m = (rows(OUT / f"audi_xxx_metrics_{a.advertiser_id}.csv") or [None])[0] if a.advertiser_id else None
-    spend = rows(OUT / f"audi_xxx_required_spend_{a.advertiser_id}.csv") if a.advertiser_id else []
+    m = (rows(OUT / f"audi_1204_metrics_{a.advertiser_id}.csv") or [None])[0] if a.advertiser_id else None
+    spend = rows(OUT / f"audi_1204_required_spend_{a.advertiser_id}.csv") if a.advertiser_id else []
     who = m["advertiser_name"] if m else "pending advertiser"
 
     wb = MntnWorkbook(
@@ -240,8 +240,8 @@ def main():
     ]
     wb.notes("Method & caveats", blocks=blocks, toc="How to read these numbers")
 
-    qs = ["audi_xxx_last_active.sql", "audi_xxx_lapsed_advertiser_metrics.sql",
-          "audi_xxx_funnel_split_check.sql"]
+    qs = ["audi_1204_last_active.sql", "audi_1204_lapsed_advertiser_metrics.sql",
+          "audi_1204_funnel_split_check.sql"]
     wb.sql("Queries", "\n\n".join((TICKET / "queries" / q).read_text() for q in qs),
            note="Window resolution, the metrics pull, and the prospecting-share check.")
 
@@ -265,7 +265,7 @@ def main():
     if a.drive:
         p = wb.save_drive(a.ticket, "Lapsed Advertiser Test Eligibility")
     else:
-        p = wb.save_local(str(OUT / "audi_xxx_lapsed_advertiser_eligibility.xlsx"))
+        p = wb.save_local(str(OUT / "audi_1204_lapsed_advertiser_eligibility.xlsx"))
     print(f"[ok] {p}")
 
 

@@ -4,7 +4,7 @@ Two-step by design: BigQuery cannot prune partitions on a date derived from a
 subquery, so step 1 resolves the window and step 2 substitutes it as a literal.
 Collapsing these into one statement scans the whole table.
 
-  python3 audi_xxx_run_metrics.py <advertiser_id> [--window-end YYYY-MM-DD]
+  python3 audi_1204_run_metrics.py <advertiser_id> [--window-end YYYY-MM-DD]
 
 --window-end pins the window instead of deriving it, which is how the fork is
 regression-tested against a live advertiser already in INCR-75.
@@ -69,7 +69,7 @@ def resolve_window(aid, pinned_end):
         print(f"[info] window pinned to {end} (regression mode)")
         return end, None
 
-    sql = render("audi_xxx_last_active.sql",
+    sql = render("audi_1204_last_active.sql",
                  ADVERTISER_ID=aid, HISTORY_FLOOR=HISTORY_FLOOR,
                  TODAY=date.today().isoformat())
     rows = csv_rows(run_sql(sql, f"last-active day for advertiser {aid}"))
@@ -105,7 +105,7 @@ def main():
     if win56_start < date.fromisoformat(CIL_FLOOR):
         sys.exit(f"56d reach window starts {win56_start}, before the CIL floor {CIL_FLOOR}")
 
-    sql = render("audi_xxx_lapsed_advertiser_metrics.sql",
+    sql = render("audi_1204_lapsed_advertiser_metrics.sql",
                  ADVERTISER_ID=a.advertiser_id,
                  WIN_START=win_start, WIN_END=end,
                  WIN56_START=win56_start, SPEND_HIST_START=hist_start)
@@ -122,7 +122,7 @@ def main():
     if not rows:
         sys.exit(f"no rows for advertiser {a.advertiser_id} in {win_start}..{end}")
 
-    dest = Path(a.out) if a.out else TICKET / "outputs" / f"audi_xxx_metrics_{a.advertiser_id}.csv"
+    dest = Path(a.out) if a.out else TICKET / "outputs" / f"audi_1204_metrics_{a.advertiser_id}.csv"
     with open(dest, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         w.writeheader()
