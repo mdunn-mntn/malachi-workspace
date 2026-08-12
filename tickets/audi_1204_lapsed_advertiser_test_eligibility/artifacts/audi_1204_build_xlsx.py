@@ -130,7 +130,8 @@ def main():
             "Required spend", bdf,
             finding=(f"{who} needs ${ivr5['Required monthly']:,.0f}/month; "
                      f"they were running ${float(m['spend_30d']):,.0f}"),
-            method="Two-proportion binomial power (TI-884); 8 weeks, 10% holdout, 80% power.",
+            method=("Two-proportion binomial power (TI-884). 8-week test, 10% holdout, alpha .05, "
+                    "power .80, no variance reduction. See Read me for definitions."),
             formats={"Target MDE": FMT.PCT2, "Baseline rate": FMT.PCT2, "IPs needed": FMT.INT,
                      "8-wk test budget": FMT.USD, "Required monthly": FMT.USD,
                      "vs typical month": FMT.MULT, "vs exit run-rate": FMT.MULT},
@@ -141,7 +142,8 @@ def main():
         wb.table(
             "Advertiser profile", profile_df(m),
             finding="Their last 8 weeks of delivery would have powered this test",
-            method="Their last 30 delivering days; rates are distinct visiting over distinct served IPs.",
+            method=("Their last 30 delivering days. Rates are per-IP probabilities: distinct visiting "
+                    "over distinct served IPs. Cohort medians = 176 advertisers at $25-60k/30d."),
             toc="Who they are and what they delivered",
         )
         fdf = funnel_df(a.advertiser_id)
@@ -149,13 +151,42 @@ def main():
             wb.table(
                 "Funnel check", fdf,
                 finding="Delivery was 99.9% prospecting, so the visit rate stands",
-                method="Ghost-bid holdouts are prospecting-only; prospecting = objective_id IN (1,5,6).",
+                method=("A ghost-bid holdout is prospecting-only, so an all-funnel rate would overstate "
+                        "the testable baseline. Prospecting = objective_id IN (1,5,6)."),
                 formats={"Served IPs": FMT.INT, "Impressions": FMT.INT, "Spend": FMT.USD,
                          "CPM": FMT.USD, "Visiting IPs": FMT.INT, "Visit rate": FMT.PCT2},
                 toc="Is this really a prospecting visit rate?",
             )
 
 
+
+    wb.glossary(
+        "Read me",
+        intro=f"{a.ticket}.  How the required-test-budget numbers were produced and how to read them.",
+        rows=[
+            ("How to read this", ""),
+            ("Relative MDE", "The smallest lift a test could detect, as a % OF the baseline rate. A 5% MDE "
+                             "on a 12.93% visit rate means detecting a move to 13.58%, not to 17.93%."),
+            ("Visit rate (IVR)", "Distinct IPs that visited the site over distinct IPs served an ad, in the "
+                                 "measurement window. A per-IP probability, the grain the power calculator needs."),
+            ("Required monthly", "The 8-week test budget spread over 1.84 months. Compare it to what they "
+                                 "actually ran, not to a target."),
+            ("Method & sources", ""),
+            ("Power calculation", "Two-proportion binomial (TI-884 mde_calculator). 10% holdout is fixed "
+                                  "platform-wide, not a per-test knob, so power comes from campaign size only."),
+            ("Direct 56-day MDE", "What their own observed 8-week reach could already detect, with no "
+                                  "impressions-per-IP extrapolation. The defensible number; the budget figures "
+                                  "are an optimistic floor."),
+            ("Spend", "media + data + platform, from cost_impression_log. Monthly history from "
+                      "sum_by_advertiser_by_day (advertiser x day, 2024-01-01 onward)."),
+            ("Coverage & window", ""),
+            ("Measurement window", "Their last 30 delivering days, resolved automatically from the last day "
+                                   "with impressions. They paused after it, so nothing newer exists."),
+            ("Why a lapsed advertiser", "The INCR-75 eligible list only covers advertisers that delivered in "
+                                        "the trailing 30 days. Spend was scored there, never cut."),
+        ],
+        toc="Definitions and how the numbers were produced",
+    )
 
     blocks = [
         ("MDE is relative, not percentage points",
