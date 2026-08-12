@@ -196,7 +196,7 @@ wb.glossary(
 wb.cover(
     takeaways=[
         "A failed Airflow task goes in; a root-cause report with the affected file comes out, for both Dataproc and Databricks.",
-        "Proven on six real prod incidents, including two where the tool corrected the first human diagnosis (INC-011 skip-vs-fail, INC-012 list timeout); both fixes merged.",
+        "Proven on six real prod incidents, including two where it corrected the first human diagnosis; both fixes merged.",
         "Deterministic-first and key-free: known failures resolve instantly with no LLM call and no stored tokens.",
     ]
 )

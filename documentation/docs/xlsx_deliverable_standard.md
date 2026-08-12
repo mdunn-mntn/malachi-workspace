@@ -73,6 +73,8 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 | `sql(name, sql_text, note)` | The SQL behind the numbers, monospaced. | light grey |
 | `notes(name, blocks, intro)` | Long-form method & caveats, `(heading, body)` blocks. | light grey |
 
+**Cover takeaways — guideline, warns but does not block.** Three (Rule of Three; a 4th is silently dropped), each **≤160 chars**, each leading with its number. Range across the reference workbooks: AUDI-1204 89–96, AUDI-1172 104–155. `cover()` prints to stderr past either bound. Deliberately softer than the subtitle caps: a long takeaway is a judgment call, a 382-char method line is not.
+
 ### Plain language and fact-only annotations (applies to every artifact, not just xlsx)
 
 Two rules from global `CLAUDE.md` §9, restated here because workbooks break them most often:

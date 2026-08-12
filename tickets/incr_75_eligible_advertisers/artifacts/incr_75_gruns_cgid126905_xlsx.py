@@ -177,7 +177,7 @@ wb.sql("Queries", SQL, note="Run 2026-07-22. The gold rollup reproduces the silv
 
 wb.cover(takeaways=[
     "Incremental visit lift is +15% but not significant (95% CI −32% to +63%, only 19 holdout visits) — the campaign is too small to resolve it.",
-    "The audience is ~100% unscored (\"no-score\") households: it excludes high AND mid intent. Unscored / reach audiences don't drive incremental lift, so ~0 is the expected result here, not +15%.",
+    "The audience is ~100% unscored households (it excludes high AND mid intent), and unscored reach does not drive incremental lift, so ~0 is expected.",
     "Raw visit rate ~0.2% and CPV ~$11 (vs the $2.50 goal) are low by design for a cold, intent-excluded audience.",
 ])
 

@@ -320,6 +320,29 @@ class MntnWorkbook:
                     f"to the Read me / Method tab (see AUDI-1172)",
                 )
 
+    # Guideline, not a gate: the cover is the most-read text in the workbook, and it was the one
+    # surface with no length feedback at all. Range from the reference workbooks: AUDI-1204 89-96
+    # chars, AUDI-1172 104-155. Warn past 160 rather than blocking — a long takeaway is a judgment
+    # call, unlike a 382-char method line.
+    TAKEAWAY_SOFT_CAP = 160
+
+    def _check_takeaways(self, takeaways: list[str]) -> None:
+        import sys
+
+        if len(takeaways) > 3:
+            print(
+                f"[mntn_xlsx] cover: {len(takeaways)} takeaways — only the first 3 render "
+                "(Rule of Three). Cut to the three that change what the reader does.",
+                file=sys.stderr,
+            )
+        for i, tk in enumerate(takeaways[:3], 1):
+            if len(tk) > self.TAKEAWAY_SOFT_CAP:
+                print(
+                    f"[mntn_xlsx] cover: takeaway {i} is {len(tk)} chars (guideline "
+                    f"{self.TAKEAWAY_SOFT_CAP}) — lead with the number and stop.",
+                    file=sys.stderr,
+                )
+
     def _titleblock(self, ws: Worksheet, finding: str, method: str, ncols: int = 1) -> None:
         """Finding-led title (states the finding) + grey italic methodology line.
 
@@ -1043,7 +1066,9 @@ class MntnWorkbook:
     def cover(self, takeaways: list[str] | None = None, name: str = "Overview") -> Worksheet:
         """Create the branded cover and move it to the front. Builds the clickable contents
         from every sheet added so far. takeaways = up to 3 headline bullets (Rule of Three)."""
-        takeaways = (takeaways or [])[:3]
+        takeaways = takeaways or []
+        self._check_takeaways(takeaways)
+        takeaways = takeaways[:3]
         ws = self._new_sheet(name, "cover")
         span = 8
         wide = get_column_letter(span)

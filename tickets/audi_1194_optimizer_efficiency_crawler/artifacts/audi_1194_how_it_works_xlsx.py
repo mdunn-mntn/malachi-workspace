@@ -213,10 +213,9 @@ wb.glossary(
 # ---------------------------------------------------------------- Cover (LAST)
 wb.cover(
     takeaways=[
-        "Checks every Spark job that ran GREEN for hidden waste, on both Dataproc and Databricks, and ranks a fleet backlog worst-first.",
-        "First live ask (intent_score_map) root-caused same-morning: a straggler pinned 240 executors at 32% utilization, ~$175 of a ~$260 run idle - recs verified against Spark source before sending.",
-        "Hardened by a 48-log adversarial pass: 41 execution-confirmed defects fixed, incl. one that silently blanked every log when the zstd package is installed.",
-        "All plain code, key-free; a daily sweep costs ~1 CPU-minute. Remaining work is one IAM grant + Databricks wiring, not capability.",
+        "Checks every Spark job that ran GREEN for hidden waste on both engines, ranks a fleet backlog worst-first, key-free at ~1 CPU-minute a sweep.",
+        "First live ask root-caused same-morning: a straggler pinned 240 executors at 32% utilization, ~$175 of a ~$260 run idle.",
+        "Hardened by a 48-log adversarial pass: 41 execution-confirmed defects fixed, one of which silently blanked every log.",
     ]
 )
 
