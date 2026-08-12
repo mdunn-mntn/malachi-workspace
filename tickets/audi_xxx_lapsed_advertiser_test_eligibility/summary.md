@@ -84,6 +84,22 @@ At $30 CPM and 15 imps-per-IP, 8-week budget ≈ **$14,100 ÷ IVR** for a 5% rel
 ### A lapsed advertiser cannot reach Top tier
 INCR-75's final tier is POWER × CONFIRMED-LIFT. `confirmed +` needs ≥20 holdout visits at p<.05 from a live ghost-bid holdout. A non-delivering advertiser generates no bids, so no measured lift exists and none can. **Ceiling is Mid**, on the a-priori power gate alone.
 
+### Advertiser 39568 — conditional answer pending BigQuery (2026-08-12)
+Al's advertiser is **AID 39568**, last running **~$40k/month** before they paused. Confirmed **not present** in `incr_75_advertiser_metrics.csv`, so their rates have never been measured and must come from the metrics pull. **BigQuery is blocked on an expired gcloud refresh token** (`gcloud auth login` needed; non-interactive session cannot complete it).
+
+What is answerable now, by inverting the power calc (`artifacts/audi_xxx_budget_feasibility.py`). $40k/mo = **$73,684** over an 8-week test. Using the median delivery shape of the **176 INCR-75 advertisers in the $25–60k/30d band** (CPM **$27.54**, **3.30** imps/IP) as the prior:
+
+| Target | Minimum visit rate for $40k/mo to power it |
+|---|---|
+| 10% relative MDE | **0.96%** |
+| 5% relative MDE | **3.73%** |
+
+Comparator visit rates in that spend band: p25 1.59% / **median 3.77%** / p75 8.68%.
+
+**Verdict: the 10% MDE almost certainly clears at their old budget** — 0.96% sits below the 25th percentile. **The 5% MDE is a coin flip**, needing 3.73% against a comparator median of 3.77%. Since `can_hit_ivr_5pct_8w` is the gate that separates Mid from Low, their tier hinges on a number we do not yet have. Do not quote a tier to Al until the pull runs.
+
+Sensitivity at that shape: 5% MDE costs **$96k/mo** at p25 IVR, **$40k/mo** at median, **$16k/mo** at p75. The spread is the reason to measure rather than estimate.
+
 ## 5. Solution
 Built and regression-tested, blocked only on the advertiser id:
 
@@ -115,7 +131,13 @@ Pending `/capture`:
 - PSA is advertiser **9090**, not 90.
 
 ## 8. Open Items / Follow-ups
-- **Blocked:** the advertiser id from Al. One query and one script run once it lands.
+- **BLOCKED on auth, not on work.** AID 39568 received 2026-08-12; the gcloud refresh token expired overnight and `bq` cannot reauthenticate non-interactively. Unblock with `gcloud auth login`, then:
+  ```
+  python3 artifacts/audi_xxx_run_metrics.py 39568
+  python3 artifacts/audi_xxx_required_spend.py 39568
+  python3 artifacts/audi_xxx_build_xlsx.py 39568 --ticket <KEY> --drive
+  ```
+- If their last-active window predates 2024-01-01, the spend-pattern CTE returns nothing and "vs typical month" falls back to the window's own spend. Al's "$40k/month" is the fallback anchor.
 - Jira `[SPIKE]` not yet filed — draft ready, awaiting confirm.
 - If the advertiser lapsed before 2024-01-01, the spend-pattern CTE returns nothing and the "vs typical month" comparison falls back to the window's own spend.
 - Whole-cohort version (every advertiser delivering since 2024-01-01 but not in the last 30d) is a natural follow-on; scoped out deliberately.
