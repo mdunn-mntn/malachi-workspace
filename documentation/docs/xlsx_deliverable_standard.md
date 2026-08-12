@@ -73,6 +73,19 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 | `sql(name, sql_text, note)` | The SQL behind the numbers, monospaced. | light grey |
 | `notes(name, blocks, intro)` | Long-form method & caveats, `(heading, body)` blocks. | light grey |
 
+### Tab title + method subtitle caps (HARD — the build refuses to write the file)
+
+**`finding` ≤ 125 chars · `method` ≤ 200 chars.** Enforced in `MntnWorkbook.table()` via `_check_titleblock`; over-cap raises at `save_*()` and no file is produced. Derived from **AUDI-1172 `Select vs Non-Select Incrementality.xlsx`, the hand-edited reference workbook** (finding 72–122, method 91–192) and capped just above its longest.
+
+**The pattern that makes ~130 chars enough: state the basis, then delegate.** Almost every 1172 method line ends `"... See Read me for definitions."` or `"... See Read me / Method for the formula."` The subtitle says what the numbers are and on what basis; the *why*, the formula, and the caveats live on the **Read me** and **Method & caveats** tabs. Two consequences worth stating plainly:
+
+- A method line that needs >200 chars is a signal you are missing a **Read me** tab, not that the cap is wrong. Add `glossary()` and delegate.
+- Do **not** over-correct to a bare 70 chars either. 1172's median method line is ~130 and carries real content (grain, window, weighting). Terse is not the same as uninformative.
+
+`finding` states the answer **with its number** ("Select prospecting drives ~5x the relative visit lift of non-Select (+23% vs +5%)"), not the topic.
+
+**Why this is a hard fail and not a lint rule:** these two fields went uncapped until 2026-08-12 and practice drifted to a 382-char method line, because the only guidance was one short example in this doc and nothing ever checked. A doc rule that is not enforced decays; a build that will not produce a file cannot be ignored.
+
 **Read-me / notes length caps (Terse Comms Standard — global `CLAUDE.md §9`).** Lead every section with its answer, then stop. Two surfaces, two caps, both checkable with `.claude/scripts/lint_comms.py`:
 - **Terse notes cell** (`--kind xlsx`): ≤12 lines, ≤200 chars/line — clipped facts, one per line.
 - **Narrative "Read me" explainer sheet** (`--kind xlsx_explainer`): ≤6 sections, ≤320 chars/section — plain-English prose, but each `(heading, body)` block leads with the answer. Do NOT compress an explainer to the notes-cell cap; do trim each block ~40-50% versus a first draft. Canonical example: the Gruns `Read me` (`incr_75_gruns_cgid126905_xlsx.py`), 5 sections, longest 313 chars.

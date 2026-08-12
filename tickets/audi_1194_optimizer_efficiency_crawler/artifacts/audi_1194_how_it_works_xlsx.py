@@ -68,8 +68,8 @@ ws_steps = wb.table(
     "How it works",
     steps_df,
     finding="Four small steps: acquire, parse, detect, rank — all plain code, no LLM anywhere",
-    method="Sweeps jobs that SUCCEEDED (the failure debugger is AUDI-1191, its own workbook). Code links to the exact "
-           "source line on GitHub (mdunn-mntn/malachi-workspace). Test it = the command that exercises just that step.",
+    method="Sweeps jobs that SUCCEEDED (the failure debugger is AUDI-1191). Code links to the exact source "
+           "line on GitHub. Test it = the command that exercises just that step.",
     kind="headline",
     widths={"Step": 6, "Name": 22, "What it does and how": 64, "Code": 24, "Test it": 44, "Proven": 26},
     toc="The step map — every chunk, how it's done, the code link, and how to test it",
@@ -114,7 +114,7 @@ wb.table(
     "Real findings",
     finds,
     finding="The first prod crawl found a 242x skew nobody was looking for — on jobs that all show green",
-    method="From the 2026-08-07 corpus crawl of 48 real prod event logs (99 findings, 68 high) + the intent_score_map live ask + the Databricks demo on the INC-009 job. Every number is from a real run.",
+    method="From the 2026-08-07 crawl of 48 real prod event logs (99 findings, 68 high), plus the intent_score_map ask and the INC-009 Databricks demo. Every number is from a real run.",
     kind="headline",
     widths={"Job": 30, "Engine": 11, "Group": 9, "Finding (real numbers)": 52, "Fix": 42, "Status": 26},
     toc="What it has already found on real prod jobs",
@@ -140,7 +140,7 @@ wb.table(
     "Detector catalog",
     dets,
     finding="Thirteen detectors: eight read how the job RAN, five read what the plan INTENDED",
-    method="Hand-maintained list matching airflow_optimizer/optimizations.py (analyze_run + analyze_plan). Plan detectors currently match Databricks EXPLAIN COST text only (OSS Dataproc format is IMP-033). Each finding carries real measured numbers and a concrete fix.",
+    method="Hand-maintained list matching airflow_optimizer/optimizations.py. Each finding carries real measured numbers and a concrete fix. See Method for the Databricks-only plan caveat.",
     kind="data",
     widths={"Detector": 22, "Reads": 16, "Flags": 52, "Typical fix": 40},
     toc="What each detector looks for and the fix it recommends",

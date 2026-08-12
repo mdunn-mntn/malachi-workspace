@@ -295,6 +295,30 @@ class MntnWorkbook:
             setattr(ws.page_margins, side, 0.4)
         return ws
 
+    # Derived from AUDI-1172 (the hand-edited reference workbook): finding 72-122, method 91-192.
+    # Capped a little above its longest so the reference passes, anything wordier fails.
+    FINDING_CAP = 125
+    METHOD_CAP = 200
+
+    def _check_titleblock(self, sheet: str, finding: str, method: str) -> None:
+        """Hard-fail an over-long tab title or method subtitle.
+
+        These went uncapped until 2026-08-12 and drifted to 382 chars. A long method line is
+        always detail that belongs on the Read me or Method tab; the subtitle should state the
+        basis and delegate, e.g. "... See Read me for definitions."
+        """
+        for label, text, cap in (
+            ("finding", finding, self.FINDING_CAP),
+            ("method", method, self.METHOD_CAP),
+        ):
+            n = len(text or "")
+            if n > cap:
+                self._issue(
+                    sheet,
+                    f"{label} is {n} chars (cap {cap}) — state the basis and delegate the detail "
+                    f"to the Read me / Method tab (see AUDI-1172)",
+                )
+
     def _titleblock(self, ws: Worksheet, finding: str, method: str, ncols: int = 1) -> None:
         """Finding-led title (states the finding) + grey italic methodology line.
 
@@ -604,6 +628,7 @@ class MntnWorkbook:
         heat = heat or {}
         rag = rag or {}
         signal = signal or {}
+        self._check_titleblock(name, finding, method)
         ws = self._new_sheet(name, "headline" if kind == "headline" else kind)
         ncols = len(df.columns)
         self._titleblock(ws, finding, method, ncols)

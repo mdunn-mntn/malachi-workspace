@@ -67,7 +67,7 @@ def main() -> None:
         man["Your call"] = None
         ws_man = wb.table("Manual review", man,
                  finding=f"{len(man)} ambiguous domains await your call in the dropdown ({impact['manual_volume_share']:.0%} of volume)",
-                 method="What is left after every other pass: sites behind bot walls (Cloudflare) that no fetch could read, so neither the score nor a page view settles them. AI verdict is ADVISORY. Pick Whitelist/Blocklist/Skip in 'Your call'; blank or Skip rows do not ship.",
+                 method="What is left after every other pass: bot-walled sites no fetch could read. AI verdict is ADVISORY. Pick Whitelist/Blocklist/Skip in 'Your call'; blank rows do not ship.",
                  formats={**fmt, "AI conf": FMT.NUM2}, heat={"28d volume": "high"}, rag=man_rag, kind="data",
                  toc="Your review queue: AI advisory verdict + a dropdown for your decision",
                  query="audi_431_qa_score_aggregates.sql")
@@ -88,7 +88,7 @@ def main() -> None:
     bl = slim(sheet[sheet["designation"] == "Blocklist"])
     wb.table("Blocklist adds", bl,
              finding=f"All {len(bl)} domains shipping to the blocklist, with the evidence behind each",
-             method="Source column says how each was decided: auto-score (median <= 0.05 and <5% of URLs clear the prod 0.4 gate), junk-rule (stable parse artifacts), ai-verified, or sweep-fetch (live page retrieved). 2,484 were individually fetched.",
+             method="Source column says how each was decided; 2,484 were individually fetched. See Read me for what each source value means.",
              formats=fmt, heat={"28d volume": "high"}, kind="data",
              toc="Every blocklist addition and how it was decided",
              query="audi_431_qa_score_aggregates.sql")
@@ -108,7 +108,7 @@ def main() -> None:
                   "Judge conf", "Defend conf", "Reason"]
     wb.table("Vertical corrections", cw,
              finding=f"{n_live} wrong verticals are reaching IP associations today (36 of 76; the other 40 are blocklisted and inert)",
-             method="Two independent LLM passes (judge + defend); 'wrong' requires both. Suggested vertical is enum-constrained to the 152-name wcv roster. ip_vertical_associations anti-joins the blocklist, so blocklisted rows never reach IPs.",
+             method="Two independent LLM passes (judge + defend); 'wrong' requires both. See Read me for the roster constraint and how blocklisted rows are kept off IPs.",
              formats={"7d URLs": FMT.INT, "Judge conf": FMT.NUM2, "Defend conf": FMT.NUM2},
              rag={"Verdict": lambda v: "NEG" if v == "wrong" else ("WARN" if v == "unsure" else None),
                   "Impact": lambda v: "NEG" if v == "Live" else None},

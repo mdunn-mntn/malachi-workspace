@@ -99,8 +99,8 @@ ws_steps = wb.table(
     "How it works",
     steps_df,
     finding="Every step is a small, separately testable chunk of plain code",
-    method="Fires on failures only (the success-sweep optimizer is AUDI-1194, its own workbook). Code links to the "
-           "exact source line on GitHub (mdunn-mntn/malachi-workspace). Test it = the command that exercises just that step.",
+    method="Fires on failures only (the success-sweep optimizer is AUDI-1194). Code links to the exact source "
+           "line on GitHub. Test it = the command that exercises just that step.",
     kind="headline",
     widths={"Step": 6, "Name": 22, "What it does and how": 64, "Code": 22, "Test it": 44, "Proven": 26},
     toc="The step map — every chunk, how it's done, the code link, and how to test it",

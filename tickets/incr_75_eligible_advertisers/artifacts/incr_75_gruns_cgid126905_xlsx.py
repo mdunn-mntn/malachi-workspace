@@ -98,9 +98,8 @@ SIGN_PCT = "+0.0%;-0.0%"
 wb.table(
     "Incremental lift", lift_df,
     finding="Incremental visit lift is +15%, but not distinguishable from zero on this campaign",
-    method=("Served 0.103% vs holdout 0.089% = +15% relative, 95% CI [−32%, +63%], p = 0.53. Holdout = ~9% of prospects bid on but "
-            "never served; visit = within 7 days of first bid; window Jun 24 – Jul 14. Only 19 holdout visits, so underpowered. "
-            "Matches the ghost-bid pipeline and the gold rollup exactly."),
+    method=("Served 0.103% vs holdout 0.089% = +15% relative, 95% CI [−32%, +63%], p = 0.53. Only 19 holdout "
+            "visits, so underpowered. See Method for the window and definitions."),
     formats={"Prospects reached": FMT.INT, "Visits": FMT.INT, "Visit rate": FMT.PCT3,
              "Lift vs holdout": SIGN_PCT},
     kind="headline",
@@ -110,10 +109,8 @@ wb.table(
 wb.table(
     "Performance", perf_df,
     finding="A 44-day, $33K CTV flight; the prospecting stage ran a 0.19% visit rate — low by design",
-    method=("Flight to date Jun 8 – Jul 22, 2026. Spend = media + data + platform. Visits = MNTN view-through (industry-standard: "
-            "last-touch + competing). CPV = spend ÷ visits ($2.50 goal). Stage = who the campaign targets: Prospecting = new "
-            "audience; Exposed to Prior Ad = already saw an ad; Has a Prior VV = already visited. The high-intent exclusion and "
-            "the holdout apply to Prospecting only."),
+    method=("Flight to date Jun 8 – Jul 22, 2026. Spend = media + data + platform; visits = MNTN view-through; "
+            "CPV = spend / visits ($2.50 goal). See Method for the stage definitions."),
     formats={"Impressions": FMT.INT, "Households reached": FMT.INT, "Spend": FMT.USD0,
              "Visits": FMT.INT, "Visit rate": FMT.PCT2, "CPV": FMT.USD2, "Conv.": FMT.INT},
     heat={"Visit rate": "high"},
