@@ -20,12 +20,10 @@ sys.path.insert(0, str(WS))
 sys.path.insert(0, str(WS / "tickets" / "ber_2250_incrementality_overhaul"
                       / "ti_884_power_sample_size_analysis" / "artifacts"))
 from lib.mntn_xlsx import FMT, MntnWorkbook  # noqa: E402
-from ti_884_mde_calculator import mde_binomial, spend_required  # noqa: E402
+from ti_884_mde_calculator import mde_binomial  # noqa: E402
 
 ALPHA, POWER, HOLDOUT_FRAC, VAR_REDUCTION = 0.05, 0.80, 0.10, 1.0
 TEST_MONTHS = 56 / 30.4
-REF_CPM, REF_IMPS = 30.0, 15.0
-CURVE_IVR = [0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.13]
 SATURATED_IVR = 0.12          # INCR-75 IVR_SATURATED
 COHORT_CPM, COHORT_IMPS = 27.54, 3.30   # median, $25-60k/30d band
 
@@ -34,32 +32,6 @@ def rows(path):
     return list(csv.DictReader(open(path))) if path.exists() else []
 
 
-def curve_df():
-    out = []
-    for p in CURVE_IVR:
-        r = {"Visit rate": p}
-        for label, t in (("8-wk budget @ 5% MDE", 0.05), ("8-wk budget @ 10% MDE", 0.10)):
-            r[label] = spend_required(p, t, cpm=REF_CPM, alpha=ALPHA, power=POWER,
-                                      holdout_frac=HOLDOUT_FRAC, var_reduction=VAR_REDUCTION,
-                                      impressions_per_ip=REF_IMPS)["spend_dollars"]
-        r["Monthly @ 5% MDE"] = r["8-wk budget @ 5% MDE"] / TEST_MONTHS
-        out.append(r)
-    return pd.DataFrame(out)
-
-
-def evidence_df():
-    d = pd.DataFrame(rows(OUT / "audi_1204_vr_cr_spend_check.csv"))
-    if d.empty:
-        sys.exit("run audi_1204_vr_cr_spend_check.py first")
-    return pd.DataFrame({
-        "Visit-rate band": [f"{float(a)*100:.2f}-{float(b)*100:.2f}%"
-                            for a, b in zip(d["ivr_low"], d["ivr_high"])],
-        "Advertisers": d["n"].astype(int),
-        "Spend p10": d["spend_p10"].astype(float),
-        "Spend median": d["spend_p50"].astype(float),
-        "Spend p90": d["spend_p90"].astype(float),
-        "p90 / p10": d["p90_over_p10"].astype(float),
-    })
 
 
 def profile_df(m):
@@ -156,11 +128,9 @@ def main():
         ivr5 = bdf[(bdf["Metric"] == "IVR") & (bdf["Target MDE"] == 0.05)].iloc[0]
         wb.table(
             "Required spend", bdf,
-            finding=(f"{who} needs ${ivr5['Required monthly']:,.0f}/month to detect a 5% visit lift; "
+            finding=(f"{who} needs ${ivr5['Required monthly']:,.0f}/month; "
                      f"they were running ${float(m['spend_30d']):,.0f}"),
-            method=("TI-884 two-proportion binomial power. 8 weeks, 10% holdout, alpha .05, power .80, "
-                    "no variance reduction. MDE is RELATIVE to the baseline rate, not percentage points: "
-                    "a 5% MDE on a 12.93% visit rate means detecting a move to 13.58%."),
+            method="Two-proportion binomial power (TI-884); 8 weeks, 10% holdout, 80% power.",
             formats={"Target MDE": FMT.PCT2, "Baseline rate": FMT.PCT2, "IPs needed": FMT.INT,
                      "8-wk test budget": FMT.USD, "Required monthly": FMT.USD,
                      "vs typical month": FMT.MULT, "vs exit run-rate": FMT.MULT},
@@ -170,49 +140,22 @@ def main():
         )
         wb.table(
             "Advertiser profile", profile_df(m),
-            finding=("Their own last 8 weeks of delivery would have powered this test on its own"),
-            method=("Measured over their last 30 delivering days. Rates are per-IP probabilities: "
-                    "distinct visiting-and-served IPs over distinct served IPs, the grain the power "
-                    "calculator requires. Cohort medians are the 176 advertisers at $25-60k/30d."),
+            finding="Their last 8 weeks of delivery would have powered this test",
+            method="Their last 30 delivering days; rates are distinct visiting over distinct served IPs.",
             toc="Who they are and what they delivered",
         )
         fdf = funnel_df(a.advertiser_id)
         if fdf is not None:
             wb.table(
                 "Funnel check", fdf,
-                finding="Delivery was 99.9% prospecting, so the visit rate needs no adjustment",
-                method=("A ghost-bid holdout is prospecting-only by construction, so an all-funnel "
-                        "visit rate would overstate the testable baseline. This advertiser's campaigns "
-                        "span objectives 1,4,5,6,7 including retargeting, but only prospecting "
-                        "(1,5,6) delivered in the window. Prospecting = objective_id IN (1,5,6)."),
+                finding="Delivery was 99.9% prospecting, so the visit rate stands",
+                method="Ghost-bid holdouts are prospecting-only; prospecting = objective_id IN (1,5,6).",
                 formats={"Served IPs": FMT.INT, "Impressions": FMT.INT, "Spend": FMT.USD,
                          "CPM": FMT.USD, "Visiting IPs": FMT.INT, "Visit rate": FMT.PCT2},
                 toc="Is this really a prospecting visit rate?",
             )
 
-    wb.table(
-        "Budget curve", curve_df(),
-        finding="Required budget scales as 1 over visit rate: halve the visit rate, double the budget",
-        method=(f"Reference delivery shape: ${REF_CPM:.0f} CPM, {REF_IMPS:.0f} impressions per IP. "
-                "Scale by (their CPM/30) x (their imps-per-IP/15). These reference figures are NOT "
-                "this advertiser's - see the profile tab for theirs."),
-        formats={"Visit rate": FMT.PCT2, "8-wk budget @ 5% MDE": FMT.USD,
-                 "8-wk budget @ 10% MDE": FMT.USD, "Monthly @ 5% MDE": FMT.USD},
-        heat={"8-wk budget @ 5% MDE": "low"},
-        toc="What any visit rate costs to test",
-    )
 
-    wb.table(
-        "Why not estimate spend", evidence_df(),
-        finding="Visit and conversion rate explain 10% of spend, so they cannot imply what an advertiser spends",
-        method=("1,566 delivering advertisers from the INCR-75 screen with 30-day spend over $1,000. "
-                "OLS on log(spend): log(IVR) R2 .04, log(CVR) R2 .10, both together R2 .10. Rates are "
-                "scale-free, so two advertisers at the same visit rate can differ 15-66x in spend."),
-        formats={"Spend p10": FMT.USD, "Spend median": FMT.USD, "Spend p90": FMT.USD,
-                 "p90 / p10": FMT.MULT, "Advertisers": FMT.INT},
-        heat={"p90 / p10": "low"},
-        toc="Why spend cannot be predicted from rates",
-    )
 
     blocks = [
         ("MDE is relative, not percentage points",
