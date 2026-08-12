@@ -39,10 +39,11 @@ CAPS = {
     "description": {"chars": 400, "words": 60, "bullets": 4},
     "xlsx": {"chars": 200, "words": 30, "lines": 12},  # terse notes cell; chars = per-line cap
     "xlsx_explainer": {
-        "chars": 320,
-        "words": 55,
-        "lines": 7,
-    },  # narrative Read-me sheet; chars = per-section cap, lines = sections
+        "chars": 340,
+        "words": 60,
+        "lines": 10,
+    },  # narrative Read-me / Method sheet; chars = per-section cap, lines = sections.
+    # Caps track AUDI-1172 (the reference workbook): 9 sections, longest body 330 chars.
     "pr": {
         "chars": 900,
         "words": 130,

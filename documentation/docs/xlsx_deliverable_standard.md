@@ -88,7 +88,7 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 
 **Read-me / notes length caps (Terse Comms Standard — global `CLAUDE.md §9`).** Lead every section with its answer, then stop. Two surfaces, two caps, both checkable with `.claude/scripts/lint_comms.py`:
 - **Terse notes cell** (`--kind xlsx`): ≤12 lines, ≤200 chars/line — clipped facts, one per line.
-- **Narrative "Read me" explainer sheet** (`--kind xlsx_explainer`): ≤6 sections, ≤320 chars/section — plain-English prose, but each `(heading, body)` block leads with the answer. Do NOT compress an explainer to the notes-cell cap; do trim each block ~40-50% versus a first draft. Canonical example: the Gruns `Read me` (`incr_75_gruns_cgid126905_xlsx.py`), 5 sections, longest 313 chars.
+- **Narrative "Read me" / "Method & caveats" sheet** (`--kind xlsx_explainer`): ≤10 sections, ≤340 chars/section — plain-English prose, but each `(heading, body)` block leads with the answer. Do NOT compress an explainer to the notes-cell cap; do trim each block ~40-50% versus a first draft. Caps track **AUDI-1172**, the reference workbook: 9 sections, longest 330 chars. (The doc previously said ≤6 while the code enforced 7, and both were tighter than the reference.)
 
 ---
 
@@ -303,7 +303,7 @@ Every existing builder re-run picks up the new look automatically. That is the p
   can't silently sprawl into prose — move why/how reasoning to the Method tab. Warns, never truncates;
   raise the caps per-call if a deliverable genuinely needs it. Trimmed the AUDI-1172 Read me (Rel lift was
   516ch). Glossary cap sits alongside the existing notes-cell (≤12 lines · ≤200 chars/line) and narrative
-  explainer (≤6 sections · ≤320 chars/section) caps.
+  explainer (≤10 sections · ≤340 chars/section) caps.
 - **2026-07-28 · v11** — Heat/scaling colors reworked. (a) The magnitude `heat=` ramp is a SEQUENTIAL
   single-hue Mountain **Green** ramp light→dark (a brief Mountain Blue trial was rejected — green is the
   table color). (b) NEW `signal=` mode for signed EFFECT/LIFT columns — semantic, not a plain gradient:

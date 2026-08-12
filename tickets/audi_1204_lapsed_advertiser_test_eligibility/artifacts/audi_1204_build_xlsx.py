@@ -81,8 +81,8 @@ def budget_df(d, m):
             "IPs needed": float(r["required_ips"]),
             "8-wk test budget": float(r["test_budget_8wk"]),
             "Required monthly": monthly,
-            "vs typical month": monthly / typical if typical else None,
-            "vs exit run-rate": monthly / exit_rate if exit_rate else None,
+            "Share of typical": monthly / typical if typical else None,
+            "Share of exit rate": monthly / exit_rate if exit_rate else None,
             "Verdict": ("informational only" if r["metric"] == "CVR"
                         else "clears" if monthly <= exit_rate else "needs a budget increase"),
         })
@@ -134,7 +134,7 @@ def main():
                     "power .80, no variance reduction. See Read me for definitions."),
             formats={"Target MDE": FMT.PCT2, "Baseline rate": FMT.PCT2, "IPs needed": FMT.INT,
                      "8-wk test budget": FMT.USD, "Required monthly": FMT.USD,
-                     "vs typical month": FMT.MULT, "vs exit run-rate": FMT.MULT},
+                     "Share of typical": FMT.PCT0, "Share of exit rate": FMT.PCT0},
             heat={"Required monthly": "low"},
             kind="headline",
             toc="What a test would cost",

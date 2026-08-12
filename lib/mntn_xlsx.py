@@ -115,6 +115,7 @@ class _Fmt:
     INT: str = "#,##0"
     NUM1: str = "0.0"
     NUM2: str = "0.00"
+    PCT0: str = "0%"
     PCT1: str = "0.0%"
     PCT2: str = "0.00%"
     PCT3: str = "0.000%"
@@ -781,7 +782,7 @@ class MntnWorkbook:
         toc: str = "How to read this workbook",
         body_width: int = 104,
         max_def_chars: int = 220,
-        max_entries: int = 14,
+        max_entries: int = 18,
     ) -> Worksheet:
         """Two-column term/definition sheet (term bold in A, definition wrapped in B).
         A row of ('', '') renders a blank spacer; a row of ('Header', '') renders a section band.
