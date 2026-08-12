@@ -4,7 +4,7 @@ title: "[SPIKE] Lapsed-advertiser incrementality-test eligibility"
 status: done
 date: 2026-08-11
 summary: "Can a churned advertiser be screened for a ghost-bid lift test from their last-active window? Required-spend heuristic from IVR/CVR."
-result: "Mockingbird (39568) powered for a 5% relative visit-lift test at $16.1k/mo vs the $40.1k they ran; tier caps at Mid while paused"
+result: "Mockingbird (39568) powered for a 5% relative visit-lift test at $16.1k/mo vs the $40.1k they ran; tier caps at Mid while paused. Delivered AUDI-1204."
 question: "For an advertiser who has stopped spending, can we still compute what an 8-week ghost-bid lift test would cost, from their last-active visit and conversion rates?"
 framing_state: locked
 ---
@@ -136,7 +136,7 @@ Comparator visit rates in that spend band: p25 1.59% / **median 3.77%** / p75 8.
 Sensitivity at that shape: 5% MDE costs **$96k/mo** at p25 IVR, **$40k/mo** at median, **$16k/mo** at p75. The spread is the reason to measure rather than estimate.
 
 ## 5. Solution
-Built and regression-tested, blocked only on the advertiser id:
+Delivered. Jira [AUDI-1204](https://mntn.atlassian.net/browse/AUDI-1204) (Spike, sprint 8270); workbook attached and at `My Drive/Tickets/AUDI-1204/`.
 
 | Artifact | What it does |
 |---|---|
@@ -146,6 +146,8 @@ Built and regression-tested, blocked only on the advertiser id:
 | `artifacts/audi_1204_required_spend.py` | Wraps TI-884; IVR 5%/10%, CVR 15% informational, direct 56d cross-check, tier ceiling |
 | `artifacts/audi_1204_vr_cr_spend_check.py` | The R²=0.10 evidence + decile chart |
 | `artifacts/audi_1204_build_xlsx.py` | Branded workbook; builds with or without an advertiser id |
+| `artifacts/audi_1204_budget_feasibility.py` | Inverts the power calc: does a known budget support a test, and at what visit rate |
+| `queries/audi_1204_funnel_split_check.sql` | Prospecting-vs-retargeting split; proves the visit rate is testable |
 
 **Two-step by design:** BigQuery cannot prune partitions on a date derived from a subquery. Resolving the window and the metrics in one statement scanned 39.5 GB; splitting them and substituting literals brings it to 5.5 GB for a single advertiser.
 
@@ -160,16 +162,18 @@ Built and regression-tested, blocked only on the advertiser id:
   **A:** The spend a test would *require* — `spend_required()`, which already existed in TI-884 and produced INCR-75's `budget_for_mde_ivr_*` columns.
 
 ## 7. Data Documentation Updates
-Pending `/capture`:
-- `cost_impression_log` has **no** 90-day TTL (floor 2023-10-01, 1,047 partitions).
-- `agg__daily_sum_by_campaign` is frozen at 2026-04-30; use `sum_by_advertiser_by_day` for advertiser × day spend from 2024-01-01.
-- PSA is advertiser **9090**, not 90.
+Captured 2026-08-12:
+- `cost_impression_log` has **no** 90-day TTL (floor 2023-10-01, 1,047 partitions) — corrected in `data_catalog.md`, `data_knowledge.md`, and both metrics SQL headers.
+- `agg__daily_sum_by_campaign` is **frozen** at 2026-04-30, not merely lagging; use `sum_by_advertiser_by_day` (2024-01-01+) for advertiser × day spend. The prior advice to use it for "trailing-12mo patterns" now returns zero rows and was corrected.
+- PSA is advertiser **9090**, not 90 — `advertiser_id != 90` is a silent no-op. Fixed in INCR-75's query and logged in its summary.
+- New memory `reference_test_budget_from_rates` (rates predict required test spend, never spend) and `reference_xlsx_subtitle_caps`.
+- Methodology written to `experimentation.md` § "Screening a LAPSED advertiser".
+
+**Workspace tooling change that came out of this ticket.** `MntnWorkbook.table()` now hard-fails on `finding` > 125 chars or `method` > 200 (`_check_titleblock`), derived from the hand-edited AUDI-1172 reference workbook. Those two fields had never been capped and practice had drifted to 382 chars. 8 over-cap lines across 4 existing workbooks were trimmed; `lint_comms.py --kind xlsx_explainer` and `glossary(max_entries)` were realigned to 1172 as well; `FMT.PCT0` added.
 
 ## 8. Open Items / Follow-ups
-- **Jira `[SPIKE]` not filed.** Draft ready (393 chars, lint-clean); needs a key before the workbook goes to Drive via `--drive`.
-- **Slack reply to Al not sent.** Draft ready; now carries the actual numbers.
-- Auth blocker on 2026-08-12 resolved (expired gcloud refresh token). Note for future sessions: test it with a bare `gcloud auth print-access-token`, NOT wrapped in `timeout` — macOS has no `timeout`, so the wrapper fails with exit 127 and reads as an auth failure.
-- If their last-active window predates 2024-01-01, the spend-pattern CTE returns nothing and "vs typical month" falls back to the window's own spend. Al's "$40k/month" is the fallback anchor.
-- Jira `[SPIKE]` not yet filed — draft ready, awaiting confirm.
-- If the advertiser lapsed before 2024-01-01, the spend-pattern CTE returns nothing and the "vs typical month" comparison falls back to the window's own spend.
-- Whole-cohort version (every advertiser delivering since 2024-01-01 but not in the last 30d) is a natural follow-on; scoped out deliberately.
+- **Slack reply to Al — not sent, needs a human.** Draft carries the real numbers. No send path from here: the Slack bot was decommissioned 2026-06-10 and MNTN policy rules out rebuilding it.
+- **Whole-lapsed-cohort version** — every advertiser delivering since 2024-01-01 but not in the last 30 days. Deliberately scoped out; now a small change since everything runs off one advertiser id. Would turn this from one answer into a standing win-back list.
+- **Cover takeaways are still uncapped.** 1204 runs 89–96 chars and 1172 104–155, so a convention exists but nothing enforces it — the same condition that let the method subtitles drift. Open whether to cap count and length.
+- If an advertiser lapsed before 2024-01-01, the spend-pattern CTE returns nothing (that is `sum_by_advertiser_by_day`'s floor, earlier than CIL's 2023-10-01) and the comparison falls back to the window's own spend.
+- Auth gotcha for future sessions: test gcloud with a bare `gcloud auth print-access-token`, **not** wrapped in `timeout` — macOS has no `timeout`, so the wrapper exits 127 and reads as an auth failure. This cost a false "reauthenticate" hand-back on 2026-08-12.
