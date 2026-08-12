@@ -123,8 +123,11 @@ def main():
 
     powered5 = any(o["metric"] == "IVR" and o["target"] == "5pct"
                    and o["required_monthly"] <= typical * (1 + ASK_STRETCH) for o in out)
-    print(f"\na-priori tier ceiling: {'Mid' if powered5 else 'Low'} "
-          "(Top needs a confirmed ghost-bid lift, impossible while not delivering)")
+    verdict = ("a 5% test would be adequately powered" if powered5
+               else "not powered for a 5% test at their spend")
+    print(f"\n{verdict}. Proving they are incremental needs a live holdout, "
+          "so it waits on them resuming.")
+    print(f"  (INCR-75 a-priori tier: {'Mid' if powered5 else 'Low'}; Top also needs a confirmed lift)")
 
     # The "$14,100 / IVR" shortcut is only valid at $30 CPM / 15 imps-per-IP.
     # Print the scaled form so nobody quotes the bare version at an advertiser

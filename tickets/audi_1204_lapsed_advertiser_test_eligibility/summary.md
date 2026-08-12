@@ -4,7 +4,7 @@ title: "[SPIKE] Lapsed-advertiser incrementality-test eligibility"
 status: done
 date: 2026-08-11
 summary: "Can a churned advertiser be screened for a ghost-bid lift test from their last-active window? Required-spend heuristic from IVR/CVR."
-result: "Mockingbird (39568) powered for a 5% relative visit-lift test at $16.1k/mo vs the $40.1k they ran; tier caps at Mid while paused. Delivered AUDI-1204."
+result: "Mockingbird (39568) powered for a 5% relative visit-lift test at $16.1k/mo vs the $40.1k they ran; proving incrementality still needs a live holdout. Delivered AUDI-1204."
 question: "For an advertiser who has stopped spending, can we still compute what an 8-week ghost-bid lift test would cost, from their last-active visit and conversion rates?"
 framing_state: locked
 ---
@@ -143,7 +143,7 @@ Delivered. Jira [AUDI-1204](https://mntn.atlassian.net/browse/AUDI-1204) (Spike,
 | `queries/audi_1204_last_active.sql` | Resolves last-active day + delivering-day count + lifetime spend |
 | `queries/audi_1204_lapsed_advertiser_metrics.sql` | The forked metrics pull, windowed on literals |
 | `artifacts/audi_1204_run_metrics.py` | Two-step driver; dry-runs and enforces a scan ceiling |
-| `artifacts/audi_1204_required_spend.py` | Wraps TI-884; IVR 5%/10%, CVR 15% informational, direct 56d cross-check, tier ceiling |
+| `artifacts/audi_1204_required_spend.py` | Wraps TI-884; IVR 5%/10%, CVR 15% informational, direct 56d cross-check |
 | `artifacts/audi_1204_vr_cr_spend_check.py` | The R²=0.10 evidence + decile chart |
 | `artifacts/audi_1204_build_xlsx.py` | Branded workbook; builds with or without an advertiser id |
 | `artifacts/audi_1204_budget_feasibility.py` | Inverts the power calc: does a known budget support a test, and at what visit rate |
