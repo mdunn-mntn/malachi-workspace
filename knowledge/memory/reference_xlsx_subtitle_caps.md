@@ -22,4 +22,8 @@ last_verified: 2026-08-12
 
 **Column-direction trap (same review):** a ratio column formatted `FMT.MULT` reads as "higher is better" by convention. AUDI-1204 showed required-spend ÷ their-typical-month as `0.6x`, where LOWER is better, with nothing stating the direction — and it duplicated the Verdict column. Fixed to `Share of typical` as a plain percent (60%, and 1206% for the out-of-reach CVR row); added `FMT.PCT0`. **Rule: express a sub-1 ratio as a percentage, or rename the header so the good direction is unambiguous.**
 
-See [[reference_xlsx_master_format]], [[feedback_xlsx_default_output]].
+**No internal vocabulary in reader-facing workbook text (2026-08-12, two corrections in one review).** A workbook may only use a term it defines on its own tabs. Both offenders came from borrowing INCR-75's scoring code: **"above the 12% saturation band"** (its `IVR_SATURATED` constant) and **"Ceiling is Mid tier"** (its Top/Mid/Low tiering) — the second was on the COVER, in a workbook with no tier column anywhere. Replacements are plain statements of the same fact: "a large share of the people we serve already visit the site"; "a powered test is not the same as proven incrementality, that needs a live holdout." Same test for code identifiers: `spend_required` in prose became "these budgets".
+
+**Note / annotation columns carry FACT ONLY.** A `Note` is one of three things: composition ("36,965 visiting of 285,909 served IPs"), a benchmark ("cohort median $27.54"), or a unit qualifier ("both arms, 10% holdout"). Never interpretation. Cut on sight: "the defensible number", "the direct power cross-check denominator", "they ramped up before pausing", "their exit run-rate". If the label already says it, the Note is empty. Interpretation belongs in Method & caveats, where it gets room to be justified.
+
+See [[reference_xlsx_master_format]], [[feedback_xlsx_default_output]], [[feedback_minimize_complexity]].
