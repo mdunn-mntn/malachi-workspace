@@ -23,6 +23,11 @@ The moment a session produces durable, non-obvious knowledge, write it to the ri
 `knowledge/memory/<slug>.md`) and commit. Don't propose and wait — write it, commit it, note what changed.
 Treat stale docs as a bug: if a doc says "investigating X" but X is resolved, fix the line in place.
 
+**But a contradiction is appended, never an overwrite.** When a new claim conflicts with something already
+recorded from source, keep both, label each one's evidence, state the hypothesis that reconciles them, and
+name the check that settles it. Only equal-or-better evidence may replace a fact: a person's word does not
+delete a line verified in code or data, and newer is not truer. The disagreement is usually the finding.
+
 ### 4. Follow structure + naming conventions
 All lowercase, underscores (never dashes) as word separators. Ticket folders: `<prefix>_<number>_<short>`.
 Each ticket folder holds `summary.md` + `queries/ outputs/ meetings/ artifacts/`. See the workspace
