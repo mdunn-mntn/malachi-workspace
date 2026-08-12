@@ -40,3 +40,18 @@ no-score → ~0 expected") was stated in one plain sentence instead. When in dou
 - Applies to xlsx sheets, decks, tickets, docs. See [[feedback_doc_style]], [[feedback_xlsx_default_output]],
   [[feedback_terse_tickets]], [[feedback_facts_not_presentation]].
 - **Triage asks to the MINIMAL necessary set before handing them to a human (2026-07-29).** Asked for "questions to bring to Matt," I gave 23; Malachi pushed back twice ("are they really all necessary?"). The right output was ~1: before asking a person, first (a) verify empirically what you can (I verified the bidder-leg myself and it flipped the premise), (b) route documented questions to Compass / the catalog, and (c) hand the human ONLY the genuine judgment/tribal-knowledge unknowns, tagged by owner (us / Compass / the-human). Don't dump the full brainstorm; deliver the filtered short list. Same spirit as [[feedback_no_unsolicited_suggestions]] and [[feedback_terse_chat_replies]].
+
+## Two rules that apply to EVERYTHING generated, not just xlsx (2026-08-12, AUDI-1204)
+
+Malachi: *"I want it to be consistent everywhere."* These govern every artifact — xlsx, decks, Jira, Slack, PRs, commits, docs, chat.
+
+**1. Never use internal vocabulary the artifact doesn't define.** If a term comes from code or config — a constant name, a tier label, a function or script name, an internal column name — it cannot appear in reader-facing text unless that same artifact defines it. Say the thing plainly instead. Two live misses in one review, both borrowed from INCR-75's scoring code into a workbook that never mentions tiers:
+- *"above the 12% saturation band"* (its `IVR_SATURATED` constant) → **"a large share of the people we serve already visit the site"**
+- *"Ceiling is Mid tier while they stay paused"* — **on the cover**, in a workbook with no tier column → **"a powered test is not the same as proven incrementality; that needs a live holdout"**
+- `spend_required` sitting in prose → **"these budgets"**
+
+The test: would the reader have to open a Python file to know what this word means? Then it is not a word, it is a variable.
+
+**2. An annotation carries FACT ONLY — never interpretation.** A Note, caption, label, footnote, or sub-line is exactly one of three things: **composition** ("36,965 visiting of 285,909 served IPs"), a **benchmark** ("cohort median $27.54"), or a **unit qualifier** ("both arms, 10% holdout"). If the label already says it, the annotation is empty. Interpretation moves to the section that has room to justify it (Method & caveats, the analysis body). Cut on sight: *"the defensible number"*, *"the direct power cross-check denominator"*, *"they ramped up before pausing"*, *"their exit run-rate"*, *"worth knowing"*.
+
+Both are now in global `CLAUDE.md` §9 Delete-on-sight. Enforcement for the xlsx surface: [[reference_xlsx_subtitle_caps]].

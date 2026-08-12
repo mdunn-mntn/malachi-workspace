@@ -73,6 +73,13 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 | `sql(name, sql_text, note)` | The SQL behind the numbers, monospaced. | light grey |
 | `notes(name, blocks, intro)` | Long-form method & caveats, `(heading, body)` blocks. | light grey |
 
+### Plain language and fact-only annotations (applies to every artifact, not just xlsx)
+
+Two rules from global `CLAUDE.md` §9, restated here because workbooks break them most often:
+
+- **Never use internal vocabulary this workbook doesn't define.** A constant name, tier label, function or script name, or internal column name cannot appear in reader-facing text unless a tab defines it. If the reader would have to open a source file to decode the word, it is a variable, not a word. Real misses: *"above the 12% saturation band"* (INCR-75's `IVR_SATURATED`) and *"Ceiling is Mid tier"* on a cover, in a workbook with no tier column.
+- **A `Note` column carries fact only** — composition ("36,965 visiting of 285,909 served IPs"), a benchmark ("cohort median $27.54"), or a unit qualifier ("both arms, 10% holdout"). If the label already says it, leave the Note empty. Interpretation goes on Method & caveats where it has room to be justified.
+
 ### Tab title + method subtitle caps (HARD — the build refuses to write the file)
 
 **`finding` ≤ 125 chars · `method` ≤ 200 chars.** Enforced in `MntnWorkbook.table()` via `_check_titleblock`; over-cap raises at `save_*()` and no file is produced. Derived from **AUDI-1172 `Select vs Non-Select Incrementality.xlsx`, the hand-edited reference workbook** (finding 72–122, method 91–192) and capped just above its longest.
