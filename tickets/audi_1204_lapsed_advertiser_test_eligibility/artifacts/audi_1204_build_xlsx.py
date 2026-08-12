@@ -34,11 +34,13 @@ def rows(path):
 
 
 
-def profile_df(m):
+def profile_df(m, spend_rows):
     ivr, cvr = float(m["p_visit"]), float(m["p_cvr"])
     served = float(m["distinct_ips_30d"])
     reach56 = float(m["distinct_ips_56d"])
     lapsed = (date.today() - date.fromisoformat(m["window_end"])).days
+    ips_5pct = float(next((r["required_ips"] for r in spend_rows
+                           if r["metric"] == "IVR" and r["target"] == "5pct"), 0) or 0)
     _, mde_direct = mde_binomial(reach56 * (1 - HOLDOUT_FRAC), reach56 * HOLDOUT_FRAC, ivr,
                                  alpha=ALPHA, power=POWER, var_reduction=VAR_REDUCTION)
     return pd.DataFrame([
@@ -65,43 +67,35 @@ def profile_df(m):
         {"Measure": "Peak month spend", "Value": f"${float(m['max_month_spend']):,.0f}", "Note": ""},
         {"Measure": "Typical active month", "Value": f"${float(m['typical_active_month_spend']):,.0f}",
          "Note": f"median across {m['active_months_count']} active months; they ramped up before pausing"},
+        {"Measure": "IPs needed for a 5% test", "Value": f"{ips_5pct:,.0f}",
+         "Note": "total across both arms at a 10% holdout"},
     ])
 
 
 def budget_df(d, m):
-    typical = float(m["typical_active_month_spend"])
+    """Five columns: what we would detect, the two budget views, and one spend anchor.
+
+    Anchor is their exit run-rate (the last 30 delivering days), not the multi-month
+    median — it is what they were actually running when they paused. The typical-month
+    figure lives on the profile tab so only one denominator appears here.
+    """
     exit_rate = float(m["spend_30d"])
+    label = {("IVR", "5pct"): "5% visit lift", ("IVR", "10pct"): "10% visit lift",
+             ("CVR", "15pct"): "15% conversion lift"}
     out = []
     for r in d:
         monthly = float(r["required_monthly"])
         out.append({
-            "Metric": r["metric"],
-            "Target MDE": {"5pct": 0.05, "10pct": 0.10, "15pct": 0.15}[r["target"]],
-            "Baseline rate": float(r["baseline_rate"]),
-            "IPs needed": float(r["required_ips"]),
-            "8-wk test budget": float(r["test_budget_8wk"]),
-            "Required monthly": monthly,
-            "Share of typical": monthly / typical if typical else None,
-            "Share of exit rate": monthly / exit_rate if exit_rate else None,
-            "Verdict": ("informational only" if r["metric"] == "CVR"
-                        else "clears" if monthly <= exit_rate else "needs a budget increase"),
+            "What we'd detect": label.get((r["metric"], r["target"]),
+                                          f"{r['target']} {r['metric']}"),
+            "8-wk budget": float(r["test_budget_8wk"]),
+            "Monthly needed": monthly,
+            f"Share of their ${exit_rate:,.0f}": monthly / exit_rate if exit_rate else None,
+            "Verdict": ("out of reach" if r["metric"] == "CVR"
+                        else "clears" if monthly <= exit_rate else "needs an increase"),
         })
     return pd.DataFrame(out)
 
-
-def funnel_df(aid):
-    d = rows(OUT / f"audi_1204_funnel_split_{aid}.csv")
-    if not d:
-        return None
-    return pd.DataFrame([{
-        "Funnel stage": r["funnel"],
-        "Served IPs": int(r["served_ips"]),
-        "Impressions": int(r["impressions"]),
-        "Spend": float(r["spend"]),
-        "CPM": float(r["cpm"]),
-        "Visiting IPs": int(r["visiting_ips"]),
-        "Visit rate": float(r["ivr_pct"]) / 100,
-    } for r in d])
 
 
 def main():
@@ -125,38 +119,26 @@ def main():
 
     if m and spend:
         bdf = budget_df(spend, m)
-        ivr5 = bdf[(bdf["Metric"] == "IVR") & (bdf["Target MDE"] == 0.05)].iloc[0]
+        ivr5 = bdf[bdf["What we'd detect"] == "5% visit lift"].iloc[0]
+        share_col = [c for c in bdf.columns if c.startswith("Share of")][0]
         wb.table(
             "Required spend", bdf,
-            finding=(f"{who} needs ${ivr5['Required monthly']:,.0f}/month; "
+            finding=(f"{who} needs ${ivr5['Monthly needed']:,.0f}/month; "
                      f"they were running ${float(m['spend_30d']):,.0f}"),
             method=("Two-proportion binomial power (TI-884). 8-week test, 10% holdout, alpha .05, "
                     "power .80, no variance reduction. See Read me for definitions."),
-            formats={"Target MDE": FMT.PCT2, "Baseline rate": FMT.PCT2, "IPs needed": FMT.INT,
-                     "8-wk test budget": FMT.USD, "Required monthly": FMT.USD,
-                     "Share of typical": FMT.PCT0, "Share of exit rate": FMT.PCT0},
-            heat={"Required monthly": "low"},
+            formats={"8-wk budget": FMT.USD, "Monthly needed": FMT.USD, share_col: FMT.PCT0},
+            heat={"Monthly needed": "low"},
             kind="headline",
             toc="What a test would cost",
         )
         wb.table(
-            "Advertiser profile", profile_df(m),
+            "Advertiser profile", profile_df(m, spend),
             finding="Their last 8 weeks of delivery would have powered this test",
             method=("Their last 30 delivering days. Rates are per-IP probabilities: distinct visiting "
                     "over distinct served IPs. Cohort medians = 176 advertisers at $25-60k/30d."),
             toc="Who they are and what they delivered",
         )
-        fdf = funnel_df(a.advertiser_id)
-        if fdf is not None:
-            wb.table(
-                "Funnel check", fdf,
-                finding="Delivery was 99.9% prospecting, so the visit rate stands",
-                method=("A ghost-bid holdout is prospecting-only, so an all-funnel rate would overstate "
-                        "the testable baseline. Prospecting = objective_id IN (1,5,6)."),
-                formats={"Served IPs": FMT.INT, "Impressions": FMT.INT, "Spend": FMT.USD,
-                         "CPM": FMT.USD, "Visiting IPs": FMT.INT, "Visit rate": FMT.PCT2},
-                toc="Is this really a prospecting visit rate?",
-            )
 
 
 
@@ -200,6 +182,10 @@ def main():
          "Their conversion baseline is 0.082%, about 160x below their visit rate, so a conversion-powered "
          "test would need roughly $325k/month. Conversion figures are reported for context and are "
          "never a pass/fail gate."),
+        ("The visit rate is prospecting-only, as a ghost-bid test requires",
+         "Their campaigns span objectives 1,4,5,6,7 including retargeting, which would have inflated "
+         "the baseline. In the measured window 285,905 of 285,910 served IPs were prospecting "
+         "(objectives 1,5,6) and retargeting delivered nothing, so 12.93% needs no adjustment."),
         ("A high visit rate is not purely good news",
          "At 12.93% they sit just inside the saturation band INCR-75 penalizes above 12%. It makes them "
          "easy to measure, but the rule exists because a high baseline leaves less headroom to move. "
@@ -220,10 +206,9 @@ def main():
            note="Window resolution, the metrics pull, and the prospecting-share check.")
 
     if m and spend:
-        bdf = budget_df(spend, m)
-        ivr5 = bdf[(bdf["Metric"] == "IVR") & (bdf["Target MDE"] == 0.05)].iloc[0]
+        ivr5 = bdf[bdf["What we'd detect"] == "5% visit lift"].iloc[0]
         takeaways = [
-            f"{who} needs ${ivr5['Required monthly']:,.0f}/month for a 5% visit-lift test, "
+            f"{who} needs ${ivr5['Monthly needed']:,.0f}/month for a 5% visit-lift test, "
             f"against the ${float(m['spend_30d']):,.0f} they were running.",
             "Their own last 8 weeks of delivery would have powered it, with no budget increase at all.",
             "Ceiling is Mid tier while they stay paused, and it has to be a visit test, not conversions.",
