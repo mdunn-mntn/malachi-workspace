@@ -67,6 +67,22 @@ else
 fi
 say "  revert: rm \"$NATIVE\"  (then restore .backup-presymlink if present)"
 
+# 4b. Cross-harness wiring: one rules file, one skills dir ---------------------
+# AGENTS.md is the cross-vendor standard (Codex, Cursor, Copilot, Windsurf, Cline read it natively).
+# Symlink rather than copy so the rules can never drift between tools. See BLUEPRINT.md §6.
+hr; say "[harness] wiring the portable instruction + skill paths"
+if [ -e CLAUDE.md ] || [ -L CLAUDE.md ]; then
+  say "  CLAUDE.md exists — left alone (make it a symlink to AGENTS.md to keep one copy)"
+else
+  ln -s AGENTS.md CLAUDE.md && say "  CLAUDE.md -> AGENTS.md"
+fi
+mkdir -p .agents
+if [ -e .agents/skills ] || [ -L .agents/skills ]; then
+  say "  .agents/skills exists — left alone"
+else
+  ln -s ../.claude/skills .agents/skills && say "  .agents/skills -> ../.claude/skills  (Codex + Cursor read this path)"
+fi
+
 # 5. Generate indexes ----------------------------------------------------------
 hr; say "[index] building indexes + component manifest"
 bash .claude/scripts/build_index.sh || say "  (build_index returned non-zero)"

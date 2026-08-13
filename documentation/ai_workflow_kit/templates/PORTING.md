@@ -36,6 +36,29 @@ bash bootstrap.sh --with-global    # ALSO install your personal ~/.claude/ frame
 The `global/` layer (your `~/.claude/CLAUDE.md`, settings, MCP snippet) installs only with `--with-global`,
 backs up anything it replaces, and never copies the live task-manager token (fill it yourself).
 
+## 1b. Which agent are you running this under?
+
+The load-bearing machinery is git, shell, python, and markdown, so it runs under any of them
+unchanged. Only the instruction file and the automation registration differ.
+
+`bootstrap.sh` wires the portable paths for you:
+- **`AGENTS.md` at the repo root** is the canonical rules file, written to the cross-vendor
+  [agents.md](https://agents.md/) standard. `CLAUDE.md` is symlinked to it, so there is one copy and
+  it cannot drift.
+- **`.agents/skills → .claude/skills`** so Codex and Cursor find the same procedures Claude Code uses.
+
+| Harness | Extra step |
+|---|---|
+| **Claude Code** | none — `.claude/settings.json` already registers the hooks |
+| **Codex CLI** | re-register the same hook scripts in `.codex/hooks.json`, then trust them via `/hooks`. Skills are invoked `$name`. See `BLUEPRINT.md` §7 |
+| **Cursor** | reads `AGENTS.md` and `.agents/skills/` already; register hooks in `.cursor/hooks.json` |
+| **Copilot** | reads `AGENTS.md`; hooks go in `.github/hooks/*.json` |
+| **Gemini CLI** | add `"context": {"fileName": ["AGENTS.md", "GEMINI.md"]}` to `.gemini/settings.json` |
+| **Aider** | add `read: AGENTS.md` to `.aider.conf.yml` |
+
+Whatever the harness, the commit gate, the doctor, the index generator, and every linter work with no
+changes at all. Full matrix and per-harness gotchas: `documentation/ai_workflow_kit/BLUEPRINT.md` §6.
+
 ---
 
 ## 2. Fill-in table — every placeholder, where it lives, what to set it to
@@ -64,6 +87,8 @@ single one. Placeholders only matter when you actually run the subsystem that re
 ## 3. Toolchain
 
 - **Required:** `git`, `python3` (stdlib only — no pip install needed for the core kit).
+- **Recommended for the gate:** `pip install 'ruff>=0.16,<0.17'` — the commit gate lints and formats
+  staged durable Python. It skips the step silently when ruff is absent, so this is optional.
 - **Recommended:** `jq` (bq wrapper), `gh` (GitHub MCP + deck sharing), `node`/`npx` (MCP servers).
 - **Warehouse module (optional):** `bq` + `gcloud` (Google Cloud SDK).
 - **Transcription (optional):** `ffmpeg` + either an OpenAI key or `mlx-whisper` (Apple Silicon).
@@ -110,7 +135,7 @@ single one. Placeholders only matter when you actually run the subsystem that re
   `bq_run.sh` (perf + provenance log); disable it by removing its block from `.claude/settings.json`.
 - **Branded .xlsx builder** (`lib/xlsx_builder.py`, class `BrandWorkbook`). Swap the `BRAND` hex dict (or
   drop `lib/assets/brand.json` + `lib/assets/logo.png`) for your palette/logo — no code edit needed.
-  Demo: `python3 lib/xlsx_demo.py`.
+  (The demo script is not in the bundle; see §8.)
 - **Meeting transcription** (`.claude/scripts/transcribe.sh`, `/transcribe`). Needs `ffmpeg` + an OpenAI
   key or `mlx-whisper`. Set `<PYTHON311>` and your recordings dir.
 - **Slack knowledge bot** (`slack_bot/`). Runs on an always-on host. See `slack_bot/RECOVERY.md`: create a

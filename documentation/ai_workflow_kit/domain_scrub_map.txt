@@ -51,6 +51,10 @@ INC-002	INC-000
 # --- frame skill experiment examples ---
 A/B, holdout, vendor lift, BUK, BER-2250	A/B test, holdout, vendor lift
 
+# --- hardcoded ticket paths inside shipped machinery (must precede the generic ti_/audi_ rows) ---
+audi_1194_optimizer_efficiency_crawler	proj_150_example
+audi_1191_oncall_rca	proj_151_example
+
 # --- transcribe / new_ticket ticket examples ---
 audi_1070_02_quick_sync_incrementality_2026_07_02	proj_110_02_quick_sync_topic_2026_07_02
 ber_2250_.../ti_835_...	proj_200_.../proj_120_...

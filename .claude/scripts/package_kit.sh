@@ -27,8 +27,10 @@ RS=(rsync -a --exclude='__pycache__' --exclude='*.pyc')
 mkdir -p "$B/lib"; cp "$SRC/lib/mntn_xlsx.py" "$B/lib/mntn_xlsx.py"   # xlsx_demo dropped (adtech sample data)
 "${RS[@]}" --exclude='logs' "$SRC/slack_bot/" "$B/slack_bot/"
 mkdir -p "$B/documentation/ai_workflow_kit"
-cp "$SRC/documentation/ai_workflow_kit/README.md" "$SRC/documentation/ai_workflow_kit/INSTRUCTION_INVENTORY.md" "$B/documentation/ai_workflow_kit/"
+cp "$SRC/documentation/ai_workflow_kit/README.md" "$SRC/documentation/ai_workflow_kit/INSTRUCTION_INVENTORY.md" \
+   "$SRC/documentation/ai_workflow_kit/BLUEPRINT.md" "$B/documentation/ai_workflow_kit/"
 cp "$SRC/.mcp.json" "$B/.mcp.json"
+cp "$SRC/pyproject.toml" "$B/pyproject.toml"   # ruff/mypy config; verify.sh runs ruff and needs it
 # knowledge/ structure + templates only (NO content docs)
 mkdir -p "$B/knowledge/bq" "$B/knowledge/runbooks" "$B/knowledge/decisions" "$B/knowledge/memory" "$B/on-call"
 cp "$SRC/knowledge/bq/_TABLE_TEMPLATE.md" "$B/knowledge/bq/_TABLE_TEMPLATE.md"
@@ -36,7 +38,8 @@ cp "$SRC/knowledge/runbooks/_TEMPLATE.md" "$B/knowledge/runbooks/_TEMPLATE.md"
 cp "$SRC/knowledge/decisions/_TEMPLATE.md" "$B/knowledge/decisions/_TEMPLATE.md"
 
 # 2. Overlay generic seeds (replace content-heavy files) -----------------------
-cp "$TPL/CLAUDE.template.md"     "$B/.claude/CLAUDE.md"
+cp "$TPL/AGENTS.template.md"     "$B/AGENTS.md"          # canonical, harness-neutral rules (agents.md standard)
+cp "$TPL/CLAUDE.template.md"     "$B/.claude/CLAUDE.md"  # Claude-Code-specific addendum; points at AGENTS.md
 cp "$TPL/MEMORY.seed.md"         "$B/knowledge/memory/MEMORY.md"
 cp "$TPL/START_HERE.seed.md"     "$B/knowledge/START_HERE.md"
 cp "$TPL/oncall_runbook.seed.md" "$B/on-call/oncall_runbook.md"
@@ -97,6 +100,12 @@ IDENT = [("mntn_xlsx_demo", "xlsx_demo"), ("mntn_xlsx", "xlsx_builder"),
          ("MntnWorkbook", "BrandWorkbook"), ("mntn_logo", "logo")]
 XLSX = {os.path.join(B, "lib", "xlsx_builder.py")}
 
+# pyproject's ruff/mypy keys name the source lib + the dropped demo; repoint at the bundle's reality
+PYPROJ = os.path.join(B, "pyproject.toml")
+PYPROJ_SUBS = [('"lib/mntn_xlsx_demo.py" = ', '"lib/xlsx_builder.py" = '),
+               ("lib/mntn_xlsx.py", "lib/xlsx_builder.py"),
+               ("mntn_xlsx.table", "xlsx_builder.table")]
+
 # repoint the ONE content-coupled self-test prompt at a generic seed memory's keywords
 SELFTEST = os.path.join(B, ".claude", "scripts", "hooks_selftest.sh")
 SELFTEST_OLD = "who owns MNTN frequency capping and what is the counter key"
@@ -122,6 +131,9 @@ for dp, _, fns in os.walk(B):
                 s = s.replace(f, r)
         if p == SELFTEST:
             s = s.replace(SELFTEST_OLD, SELFTEST_NEW)
+        if p == PYPROJ:
+            for f, r in PYPROJ_SUBS:
+                s = s.replace(f, r)
         for f, r in pairs:                 # sanitize map (strip secrets)
             s = s.replace(f, r)
         for f, r in dpairs:                # domain scrub (strip job context)
@@ -133,6 +145,16 @@ for dp, _, fns in os.walk(B):
             changed += 1
 print(f"  transformed {changed} file(s)")
 PY
+
+# 5b. Normalize renamed Python so the in-bundle ruff check is stable ------------
+# The identifier renames above reflow lines; ruff format owns wrapping, so re-run it here rather
+# than shipping a bundle whose own doctor fails on formatting the packager caused.
+if command -v ruff >/dev/null 2>&1; then
+  ruff format --force-exclude "$B/lib/xlsx_builder.py" >/dev/null 2>&1 || true
+  ruff check --fix --force-exclude "$B/lib/xlsx_builder.py" >/dev/null 2>&1 || true
+else
+  say "  (ruff not installed — skipping bundle format normalization)"
+fi
 
 # 6. Permissions + regenerate indexes/manifest in-bundle -----------------------
 chmod +x "$B/.claude/hooks/"* "$B/.claude/scripts/"*.sh "$B/.githooks/"* "$B/bootstrap.sh" 2>/dev/null || true

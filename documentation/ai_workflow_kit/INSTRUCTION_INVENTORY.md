@@ -21,6 +21,17 @@ set the model starts every session with), then skim `COMPONENTS.md` for the enfo
 
 These five are the entire always-resident instruction set. Anything not here is retrieved on demand.
 
+**Keep it a budget.** Every line here is paid for on every request, and instruction files are capped
+in practice — Codex truncates the combined `AGENTS.md` set at 32 KiB by default, Windsurf caps global
+rules at 6,000 characters. Past the cap, rules are silently cut off. New procedure belongs behind a
+trigger, not inlined into these five. A rule may leave the always-on set only when a real trigger
+reloads it at the right moment; a rule moved to a file nothing ever opens has been deleted, not moved.
+
+**Portable projection.** These rules ship as a single root `AGENTS.md`
+(`templates/AGENTS.template.md`), written to the cross-vendor `agents.md` standard that Codex, Cursor,
+Copilot, Windsurf, and Cline read natively; `CLAUDE.md` is a symlink to it so there is exactly one
+copy. The vendor-neutral design of everything below is `BLUEPRINT.md`.
+
 ## 2. On-demand — retrieved, never loaded whole
 
 The scaling trick: the indexes are **grepped, not ingested**, so they grow without bounding context.

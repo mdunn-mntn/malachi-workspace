@@ -14,6 +14,21 @@ base **without** drowning it in context or letting the docs rot. Two ideas do al
 > [`COMPONENTS.md`](COMPONENTS.md). Replace every `<placeholder>` with your own values, and run the
 > **Sanitization checklist** at the bottom before sharing your own copy.
 
+### Which file do you want?
+
+| You want | Read |
+|---|---|
+| **The pattern, so you can build it in Codex / Cursor / anything** | **[`BLUEPRINT.md`](BLUEPRINT.md)** — vendor-neutral: the four loops, the layer model, 28 primitives, the portability ladder, a harness matrix, and a concrete Codex adapter |
+| This kit as shipped, and how to adopt it | this file |
+| Every component, generated from the files | [`COMPONENTS.md`](COMPONENTS.md) |
+| The complete instruction set, as a review surface | [`INSTRUCTION_INVENTORY.md`](INSTRUCTION_INVENTORY.md) |
+| To stand it up on a fresh machine | [`templates/PORTING.md`](templates/PORTING.md) |
+
+**Not on Claude Code?** The load-bearing machinery here is git, shell, python, and markdown — it runs
+anywhere. The rules ship as [`templates/AGENTS.template.md`](templates/AGENTS.template.md), written
+to the cross-vendor [agents.md](https://agents.md/) standard that Codex, Cursor, Copilot, Windsurf,
+and Cline all read natively. `BLUEPRINT.md` §6–7 has the per-harness mapping.
+
 ---
 
 ## The two layers
@@ -87,11 +102,16 @@ placeholders `PORTING.md` lists. See memory `reference_workflow_kit_porting`.
 **By hand (equivalent steps, if you prefer):**
 1. Copy `.claude/` (hooks, scripts, skills, agents, `settings.json`), `.githooks/`, and a `knowledge/`
    seed (`START_HERE.md` + the front-matter conventions) into your repo.
-2. Replace placeholders: `<your-workspace-path>`, `<JIRA_ACCOUNT_ID>`, `<JIRA_CUSTOMFIELD_*>`,
-   `<TODOIST_PROJECT_ID>`, `<GIT_REMOTE>`, `<DATA_WAREHOUSE_PROFILE>`, `<TEAM_NAMES>`.
-3. `chmod +x .claude/hooks/* .claude/scripts/* .githooks/*` and run `.claude/scripts/install_git_hooks.sh`.
-4. Run `.claude/scripts/build_index.sh` and `.claude/scripts/build_kit_manifest.sh` to generate indexes.
-5. Run `.claude/scripts/verify.sh` — it should pass clean.
+2. Put the rules at the repo root as `AGENTS.md` and symlink `CLAUDE.md → AGENTS.md`, so every
+   harness reads one copy. Symlink `.agents/skills → .claude/skills` so Codex and Cursor find the
+   same procedures. (`bootstrap.sh` does both.)
+3. Replace placeholders: `<WORKSPACE_PATH>`, `<WORK_EMAIL>`, `<JIRA_BASE_URL>`, `<GCP_PROJECT>`,
+   `<BQ_REGION>`, `<GIT_REMOTE>`, `<ORG>` — full table in `templates/PORTING.md` §2.
+4. `chmod +x .claude/hooks/* .claude/scripts/* .githooks/*` and run `.claude/scripts/install_git_hooks.sh`.
+5. Run `.claude/scripts/build_index.sh` and `.claude/scripts/build_kit_manifest.sh` to generate indexes.
+6. Run `.claude/scripts/verify.sh` — it should pass clean. Optionally
+   `pip install 'ruff>=0.16,<0.17'` so the gate's Python lint/format step runs too (it skips silently
+   when ruff is absent).
 
 ## Sanitization checklist (run before sharing YOUR copy)
 

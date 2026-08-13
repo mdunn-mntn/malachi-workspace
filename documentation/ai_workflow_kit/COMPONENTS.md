@@ -18,7 +18,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | Stop | — | `comms_cap_reminder.sh` | soft nudge to keep outward-facing writing terse | no |
 | Stop | — | `oncall_triage_reminder.sh` | advisory on-call-triage reminder | no |
 
-## Scripts (28)
+## Scripts (30)
 
 | script | what it does |
 |--------|--------------|
@@ -44,9 +44,11 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `package_kit.sh` | extract, sanitize, and assemble a portable copy of the AI Workflow Kit |
 | `perf_digest.py` | Deterministic aggregation over knowledge/bq/bq_perf_log.jsonl for the perf-analyst |
 | `pi_run_workflow_audit.sh` | weekly DETERMINISTIC workflow-audit signal capture on the Pi |
+| `preflight.sh` | probe the session's external dependencies, correctly |
 | `request_digest.py` | mine the request log for recurring work shapes; PROPOSE (never create) a skill |
 | `share_deck.sh` | Share an HTML presentation deck via GitHub Gist + githack rendering Usage: bash .claude/scripts/share_deck.sh path/to/deck_standalone.html Creates a… |
 | `stall_monitor.sh` | the ONE correct stall-detector for background/async work on this Mac |
+| `sync_global_claude_md.sh` | version-control the ONE instruction file that lives outside the repo |
 | `transcribe.sh` | Transcribe Zoom meeting recordings using both providers, pick the best Usage: bash .claude/scripts/transcribe.sh "2026-03-30 11.33.01 Discuss… |
 | `verify.sh` | the AI Workflow Kit "doctor" |
 | `workflow_audit.sh` | deterministic signal aggregator for the weekly System-retro loop |
