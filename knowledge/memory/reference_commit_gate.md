@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [commit gate, pre-commit hook, commit-msg hook, githooks, core.hooksPath, verify.sh, verify.sh --fix, git commit --no-verify, staged-scoped, index freshness, lint_comms subject 72, build_kit_manifest, hooks_selftest, COMPONENTS.md, forced formatting, ruff, ruff check, ruff format, durable python lint]
 domain: [workflow, infra]
 lifecycle: active
-last_verified: 2026-07-31
+last_verified: 2026-08-12
 ---
 
 The repo has a flake8-style commit gate (built 2026-07-29), enabled per-clone with `.claude/scripts/install_git_hooks.sh` (sets `core.hooksPath=.githooks`). Active on the Mac and the Pi.
@@ -21,4 +21,4 @@ The repo has a flake8-style commit gate (built 2026-07-29), enabled per-clone wi
 
 **Related tooling:** `verify.sh` = the doctor (full / `--staged` / `--fix`); `hooks_selftest.sh` tests the 9 harness hooks; `build_kit_manifest.sh` generates `documentation/ai_workflow_kit/COMPONENTS.md` (drift-proof component inventory); `workflow_audit.sh §11` runs `verify.sh` whole-repo weekly. Full docs: `.claude/README.md`, `documentation/ai_workflow_kit/`. Related: [[reference_workflow_audit_loop]], [[feedback_shared_worktree_commits]].
 
-**Tunable (design decision, 2026-07-29):** the commit-msg body-length cap (500 chars / 6 bullets) is the softest rule; the user deferred relaxing it. If it ever causes friction, relax `commit-msg` to block ONLY on em-dash + subject >72 (the pure-formatting rules) and demote body-length to a warning. Em-dash and subject ≤72 stay hard rules regardless. Validated end-to-end in a fresh session 2026-07-29 (7/7 acceptance: gate blocks bad file + em-dash msg, verify.sh green, manifest idempotent, 12/12 hooks).
+**Tunable (design decision, 2026-07-29) — friction hit 2026-08-12, and the fix was diagnostics, not relaxation.** One capture commit took nine rewrite passes to land. Root cause was not the cap's height but that the **word** cap (75) binds before the char cap (500) for ordinary prose, so every character trimmed moved the wrong number. `lint_comms.py` now reports words first and prints a cut plan (binding cap + the three fattest sentences) on any over-cap result; the same message then took two passes. **The caps stay where they are** — revisit relaxing `commit-msg` to em-dash + subject-only ONLY if friction recurs with the cut plan in place. Em-dash and subject ≤72 stay hard rules regardless. See [[feedback_terse_tickets]]. Validated end-to-end in a fresh session 2026-07-29 (7/7 acceptance: gate blocks bad file + em-dash msg, verify.sh green, manifest idempotent, 12/12 hooks).
