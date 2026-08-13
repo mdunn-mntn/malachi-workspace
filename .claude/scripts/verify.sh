@@ -132,6 +132,9 @@ if [ "$MODE" != "--staged" ]; then
   python3 "$S/audit_structure.py" --json /tmp/verify_struct.json >/dev/null 2>&1 || true
   hi=$(python3 -c "import json;d=json.load(open('/tmp/verify_struct.json'));f=d if isinstance(d,list) else d.get('findings',[]);print(sum(1 for x in f if x.get('severity')=='high'))" 2>/dev/null || echo "?")
   echo "  · structure: ${hi} high-severity finding(s) — advisory (propose-only; see workflow_audit §1)"
+  # ~/.claude/CLAUDE.md is the only instruction file with no git history. Advisory, never a gate:
+  # it is the user's file across all projects and may legitimately change mid-session.
+  gdrift=$(bash "$S/sync_global_claude_md.sh" --check 2>&1) || echo "  · $gdrift"
 fi
 
 if [ "$FAIL" -ne 0 ]; then
