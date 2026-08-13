@@ -22,12 +22,12 @@ base **without** drowning it in context or letting the docs rot. Two ideas do al
 | This kit as shipped, and how to adopt it | this file |
 | Every component, generated from the files | [`COMPONENTS.md`](COMPONENTS.md) |
 | The complete instruction set, as a review surface | [`INSTRUCTION_INVENTORY.md`](INSTRUCTION_INVENTORY.md) |
-| To stand it up on a fresh machine | [`templates/PORTING.md`](templates/PORTING.md) |
+| To stand it up on a fresh machine | `PORTING.md` — at the bundle root; `templates/PORTING.md` in this source repo |
 
 **Not on Claude Code?** The load-bearing machinery here is git, shell, python, and markdown — it runs
-anywhere. The rules ship as [`templates/AGENTS.template.md`](templates/AGENTS.template.md), written
-to the cross-vendor [agents.md](https://agents.md/) standard that Codex, Cursor, Copilot, Windsurf,
-and Cline all read natively. `BLUEPRINT.md` §6–7 has the per-harness mapping.
+anywhere. The rules ship as `AGENTS.md` at the bundle root (generated from
+`templates/AGENTS.template.md` here), written to the cross-vendor [agents.md](https://agents.md/)
+standard that Codex, Cursor, Copilot, Windsurf, and Cline all read natively. `BLUEPRINT.md` §6–7 has the per-harness mapping.
 
 ---
 
@@ -70,7 +70,8 @@ against source; a doc is "stale" when the schema moved after the last human veri
   self-test). Modes: full / `--staged` / `--fix`.
 - **The commit gate** (`.githooks/`, self-contained, zero dependencies):
   - `pre-commit` → `verify.sh --staged`: blocks only on violations in files THIS commit stages, plus
-    a staged doc whose regenerated index isn't re-staged. Pre-existing debt never blocks unrelated work.
+    a staged doc whose regenerated index isn't re-staged, plus a staged durable Python file that
+    fails ruff lint or format (skipped silently when ruff is absent). Pre-existing debt never blocks unrelated work.
   - `commit-msg` → a terse-comms linter (subject cap, style rules).
   - Enable once: `git config core.hooksPath .githooks`. Bypass an emergency commit with `--no-verify`.
 - **Weekly audit** — `workflow_audit.sh` rolls up every read-only check (structure, tickets, KB health,
@@ -89,16 +90,15 @@ merges are always a human motion. See `COMPONENTS.md` for the live list.
 
 ## Adopt it (setup)
 
-**One command (recommended).** `bash .claude/scripts/package_kit.sh [OUT_DIR]` emits a sanitized,
+**On the SOURCE machine** (this repo only — neither the packager nor the scrub maps ship in the
+bundle). `bash .claude/scripts/package_kit.sh [OUT_DIR]` emits a sanitized,
 **domain-blind**, generic-seeded `ai-workflow-kit/` bundle (+ `.tar.gz`) — built for cross-job transfer.
 It copies the machinery, applies two ordered maps (`sanitize_map.txt` strips literal secrets;
 `domain_scrub_map.txt` strips job/domain context — table/pipeline/incident names + the taxonomy), overlays
 the generic seeds in `templates/`, regenerates indexes + this inventory, and **refuses to emit unless BOTH
-gates pass**: a secrets sweep AND a domain-blind sweep (plus an in-bundle `verify.sh`). On the target
-machine: unpack, then `bash bootstrap.sh` (repo layer) or `bash bootstrap.sh --with-global` (also installs
+gates pass**: a secrets sweep AND a domain-blind sweep (plus an in-bundle `verify.sh`). **On the TARGET machine:** unpack, then `bash bootstrap.sh` (repo layer) or `bash bootstrap.sh --with-global` (also installs
 your personal `~/.claude/` framework, backing up existing files, token never copied), and fill the
-placeholders `PORTING.md` lists. See memory `reference_workflow_kit_porting`.
-
+placeholders `PORTING.md` lists. 
 **By hand (equivalent steps, if you prefer):**
 1. Copy `.claude/` (hooks, scripts, skills, agents, `settings.json`), `.githooks/`, and a `knowledge/`
    seed (`START_HERE.md` + the front-matter conventions) into your repo.

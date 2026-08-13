@@ -76,6 +76,12 @@ The headline: MM vs 3P visit rate, CPV and ROAS by vertical	The headline: cohort
 # --- instruction inventory example ---
 holdout formula, advertiser IDs	domain formulas, entity IDs
 
+# --- industry / vendor names that reveal the stack or the vertical ---
+the adtech-sample 	the example-data 
+adtech	example-domain
+a narrow Databricks smoke-test one-off	a one-off vendor smoke test
+Databricks	a vendor platform
+
 # --- residual business-term catch-alls (ordered last; neutral) ---
 Incrementality	Experiments
 incrementality	experiments

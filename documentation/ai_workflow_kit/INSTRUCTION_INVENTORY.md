@@ -46,8 +46,8 @@ The scaling trick: the indexes are **grepped, not ingested**, so they grow witho
 See [`COMPONENTS.md`](COMPONENTS.md) (generated) for the exact hooks / scripts / skills / agents / indexes.
 The load-bearing enforcement:
 - **Commit gate** (`.githooks/`, enabled via `git config core.hooksPath .githooks`): `pre-commit` runs
-  `verify.sh --staged` (front-matter linters + index-freshness, staged-scoped); `commit-msg` runs
-  `lint_comms.py --kind commit`. A malformed staged file or a bad commit message cannot be committed.
+  `verify.sh --staged` (front-matter linters + index-freshness + ruff on staged durable Python,
+  staged-scoped); `commit-msg` runs `lint_comms.py --kind commit`. A malformed staged file or a bad commit message cannot be committed.
 - **`verify.sh`** — the doctor: the single "run every deterministic check" entry point.
 - **Periodic review** — `workflow_audit.sh` (weekly on the Pi, key-free) rolls up every read-only check
   incl. `## 11 Kit compliance` (whole-repo `verify.sh`); `/workflow-audit` reasons over it, propose-only.

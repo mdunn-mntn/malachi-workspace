@@ -29,9 +29,9 @@ say "[transcription — optional]"
 need ffmpeg "audio chunking" || true
 say "[python libs — optional, only if you use those subsystems]"
 python3 - <<'PY' || true
-import importlib
+import importlib.util
 for mod, why in [("openpyxl",".xlsx builder"),("pandas",".xlsx builder"),("numpy",".xlsx builder"),
-                 ("slack_sdk","slack bot"),("anthropic","slack bot"),("yaml","slack bot")]:
+                 ("PyYAML","config files")]:
     ok = importlib.util.find_spec(mod) is not None
     print(f"  {'ok  ' if ok else 'MISS'} {mod}  ({why})")
 PY
@@ -87,7 +87,10 @@ fi
 hr; say "[index] building indexes + component manifest"
 bash .claude/scripts/build_index.sh || say "  (build_index returned non-zero)"
 bash .claude/scripts/build_kit_manifest.sh || say "  (build_kit_manifest returned non-zero)"
-git add -A 2>/dev/null || true   # stage so verify's index-freshness (git diff) has a baseline
+# explicit paths, never `git add -A` — the rule this kit ships in AGENTS.md 3 applies to itself.
+git add .claude .githooks .agents knowledge tickets workflows lib on-call documentation global \
+        AGENTS.md CLAUDE.md README.md PORTING.md bootstrap.sh .gitignore .mcp.json pyproject.toml \
+        2>/dev/null || true   # baseline for verify's index-freshness (git diff) comparison
 
 # 6. Verify --------------------------------------------------------------------
 hr; say "[verify] running the deterministic doctor"
@@ -117,7 +120,7 @@ fi
 
 # 7. Next steps ----------------------------------------------------------------
 hr; say "Placeholders still to fill (edit these, then re-run verify):"
-grep -rIl -- '<[A-Z_]*>' .claude .mcp.json config.env 2>/dev/null | sed 's/^/  /' | sort -u | head -40
+grep -rIl -- '<[A-Z_]*>' .claude .mcp.json 2>/dev/null | sed 's/^/  /' | sort -u | head -40
 say ""
 say "Then: gcloud auth login (+ application-default login) · gh auth login · set JIRA_API_TOKEN ·"
 say "      authorize claude.ai connectors · fill .claude/scripts/config.env · see PORTING.md."

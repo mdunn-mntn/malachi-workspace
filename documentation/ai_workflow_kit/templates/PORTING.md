@@ -67,11 +67,11 @@ Find them all: `grep -rIn -- '<[A-Z_]*>' .claude .mcp.json .claude/scripts/confi
 
 | Placeholder | Set to | Lives in |
 |---|---|---|
-| `<WORKSPACE_PATH>` | your checkout path (or leave the self-resolving `$(git rev-parse …)` already substituted in scripts) | skills, `slack_bot/config.yaml` |
+| `<WORKSPACE_PATH>` | your checkout path (or leave the self-resolving `$(git rev-parse …)` already substituted in scripts) | skills |
 | `<WORK_EMAIL>` | your work email | skills, `lib/`, drive mount |
 | `<JIRA_BASE_URL>` / `<JIRA_HOST>` | `https://<you>.atlassian.net` / `<you>.atlassian.net` | `new_ticket.sh`, `frame` skill |
-| `<GCP_PROJECT>` / `<GCP_PROJECT_BRONZE>` | your BigQuery project(s) | `config.env`, `.mcp.json` |
-| `<BQ_REGION>` | your dataset region, e.g. `us-central1` | `config.env`, `.mcp.json` |
+| `<GCP_PROJECT>` / `<GCP_PROJECT_BRONZE>` | your warehouse project, plus a second one for raw/landing data if you split them (leave blank if not) | `config.env`, `.mcp.json` |
+| `<BQ_REGION>` | the region your datasets live in | `config.env`, `.mcp.json` |
 | `<DATASETS>` | comma-separated datasets to introspect | `config.env` |
 | `<GH_USER>` | your GitHub user (deck-sharing gists) | `share_deck.sh` |
 | `<AUDIT_HOST>` / `<AUDIT_HOST_IP>` / `<AUDIT_SSH_KEY>` / `<AUDIT_REPO>` | your always-on audit host, or delete the Pi cron (see §6) | `pi_run_workflow_audit.sh` |
@@ -93,7 +93,6 @@ single one. Placeholders only matter when you actually run the subsystem that re
 - **Warehouse module (optional):** `bq` + `gcloud` (Google Cloud SDK).
 - **Transcription (optional):** `ffmpeg` + either an OpenAI key or `mlx-whisper` (Apple Silicon).
 - **.xlsx builder (optional):** `pip install openpyxl pandas numpy`.
-- **Slack bot (optional):** `pip install -r slack_bot/requirements.txt` (`slack-sdk anthropic pyyaml`).
 
 ---
 
@@ -129,8 +128,9 @@ single one. Placeholders only matter when you actually run the subsystem that re
 ## 6. Subsystems (all shipped as sanitized skeletons — activate what you need)
 
 - **Warehouse module.** Fill `config.env` (`GCP_PROJECT`, `BQ_REGION`, `DATASETS`). Keep
-  `WAREHOUSE_PROFILE=generic` unless your `silver.*` objects are views over versioned physical tables
-  (then `sqlmesh`, and the cataloger will resolve view→physical). If you don't query a warehouse, ignore
+  `WAREHOUSE_PROFILE=generic` unless your query-facing objects are views over versioned physical tables
+  produced by a transformation framework; then set the matching profile and the cataloger resolves
+  view→physical. If you don't query a warehouse, ignore
   it — nothing else depends on it. The `enforce_bq_wrapper` hook forces every query through
   `bq_run.sh` (perf + provenance log); disable it by removing its block from `.claude/settings.json`.
 - **Branded .xlsx builder** (`lib/xlsx_builder.py`, class `BrandWorkbook`). Swap the `BRAND` hex dict (or
@@ -138,9 +138,6 @@ single one. Placeholders only matter when you actually run the subsystem that re
   (The demo script is not in the bundle; see §8.)
 - **Meeting transcription** (`.claude/scripts/transcribe.sh`, `/transcribe`). Needs `ffmpeg` + an OpenAI
   key or `mlx-whisper`. Set `<PYTHON311>` and your recordings dir.
-- **Slack knowledge bot** (`slack_bot/`). Runs on an always-on host. See `slack_bot/RECOVERY.md`: create a
-  Slack app, put `SLACK_BOT_TOKEN` + `ANTHROPIC_API_KEY` in an env file, `pip install -r requirements.txt`,
-  schedule `run_daily.py`. Optional — the core kit doesn't need it.
 - **Weekly audit cron** (`.claude/scripts/pi_run_workflow_audit.sh`). Deploy to any always-on host that
   can pull the repo; it runs ONLY the key-free deterministic aggregator and commits a dated
   `signals_<date>.md` (never put an API key on that host). Fill `<AUDIT_HOST>`/`<AUDIT_REPO>`. Or skip it
@@ -159,9 +156,10 @@ single one. Placeholders only matter when you actually run the subsystem that re
 ## 8. Intentionally dropped in this port (add back if you want them)
 
 The prior job's business content (`knowledge/*` prose docs, real memory facts, real tickets/incidents), the
-licensed brand assets (`lib/assets/`), the vendored task-manager MCP build, `settings.local.json`
-(per-machine), the self-review, a narrow Databricks smoke-test one-off, and — for domain-blindness — the
+licensed brand assets (`lib/assets/`), the vendored task-manager MCP build, `slack_bot/` (a local app holding a long-lived model API key is
+the pattern this kit retired), `settings.local.json`
+(per-machine), the self-review, a one-off vendor smoke test, and — for domain-blindness — the
 two most example-dense design docs (`workflows/INGEST_GUIDE.md`, `workflows/bq_velocity_provenance_plan.md`)
-and the adtech-sample `lib/xlsx_demo.py`. The `slack_bot/` recovery note was replaced with a generic one.
-The machinery that operated on all of it shipped; only the job-specific payload was left behind. To harden
-further, extend `documentation/ai_workflow_kit/domain_scrub_map.txt` and re-run the packager.
+and the example-data `lib/xlsx_demo.py`.
+The machinery that operated on all of it shipped; only the job-specific payload was left behind. To harden further, the SENDER re-runs the packager from the source repo with an extended domain scrub
+map; neither the packager nor the maps ship in this bundle.

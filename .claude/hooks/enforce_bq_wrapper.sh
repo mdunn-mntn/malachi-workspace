@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PreToolUse:Bash — block a raw `bq ... query` so every real query goes through .claude/scripts/bq_run.sh
-# (dry-run gate + cost logging + net-new-table detection). Reads the tool-call JSON on stdin.
+# (cost + provenance logging + net-new-table detection). Reads the tool-call JSON on stdin.
 # exit 2 + stderr = block the call and feed the message back to the model; exit 0 = allow.
 # Defensive: any parse failure or non-match exits 0 (never wedges the session).
 set -uo pipefail

@@ -8,7 +8,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 
 | event | matcher | script | what it does | can block? |
 |-------|---------|--------|--------------|------------|
-| PreToolUse | Bash | `enforce_bq_wrapper.sh` | Bash — block a raw `bq … query` so every real query goes through .claude/scripts/bq_run.sh (dry-run gate + cost logging + net-new-table detection) | yes (exit 2) |
+| PreToolUse | Bash | `enforce_bq_wrapper.sh` | Bash — block a raw `bq … query` so every real query goes through .claude/scripts/bq_run.sh (cost + provenance logging + net-new-table detection) | yes (exit 2) |
 | PreToolUse | Bash | `comms_lint_precheck.sh` | when a Bash command is a Jira REST v2 write (comment or issue-create curl), lint the payload against the Terse Comms Standard BEFORE it posts | no |
 | PostToolUse | Bash | `flag_net_new_tables.sh` | Bash — after a scripts/bq_run.sh call, flag any referenced table that has no catalog doc into knowledge/bq/_UNDOCUMENTED.queue (the… | no |
 | UserPromptSubmit | — | `memory_recall.py` | deterministic per-prompt memory recall | no |

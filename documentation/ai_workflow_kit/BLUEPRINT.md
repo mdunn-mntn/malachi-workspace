@@ -168,14 +168,14 @@ feature — in every case there is one, which is the point.
 | 10 | **Scaffolder** | One command creates a conforming work folder: validated name, fixed subfolders, a record file with front-matter that already passes the linter. | L1 | — |
 | 11 | **Framing gate** | Five agreed lines (question, why, done-when, approach, kill criteria) written before work starts; a linter blocks the status change while they're draft. | L1+L2 | — |
 | 12 | **Living record** | One canonical file per unit of work, updated in the same beat as the finding. A stale record is a bug. | L2 | — |
-| 13 | **Anti-sprawl layout** | A whitelist of permitted subfolders; phases are headers, never directories; flat, monotonically numbered artifacts. Enforced by a linter. | L1 | — |
+| 13 | **Anti-sprawl layout** | A whitelist of permitted subfolders; phases are headers, never directories; flat, monotonically numbered artifacts. Enforced at creation by the scaffolder; **audited propose-only** afterwards, since carving out an exception is a judgement call. | L1 | — |
 | 14 | **Capture** | A triggered sweep that routes the session's new facts to their home docs, corrects now-false lines, updates the record, rebuilds indexes, commits. | L3/L4 | A numbered checklist in the instruction file + a session-end reminder |
 
 ### Safety and cost
 
 | # | Primitive | Function | Layer | Substitute if absent |
 |---|---|---|---|---|
-| 15 | **The wrapper** | Every expensive or risky external call goes through one script that estimates first, aborts over a threshold, runs, then records real cost and provenance to an append-only log. | L1 | — |
+| 15 | **The wrapper** | Every expensive or risky external call goes through one script that runs it and records real cost, provenance, and the inputs it touched to an append-only log. Whether it also *gates* (estimate first, abort over a threshold) is a separate decision — instrumentation and enforcement are different jobs, and this kit ships only the first. | L1 | — |
 | 16 | **The block** | A pre-execution check that refuses the raw command so the wrapper cannot be bypassed. | L4 → L1 | A shell alias/function that shadows the raw command, plus a loud instruction-file rule and a periodic audit that greps history for bypasses |
 | 17 | **Log then digest** | Never reason over raw logs. A deterministic aggregator produces the tables; the model curates only the conclusions, on cadence. | L1 | — |
 | 18 | **Provenance card** | Any number that leaves the system can name the query, the run, and the filters that produced it. | L1 | — |
@@ -188,7 +188,7 @@ feature — in every case there is one, which is the point.
 | 20 | **Commit gate** | Git `pre-commit` runs the doctor on staged files; `commit-msg` lints the message. Staged-scoped, so pre-existing debt never blocks unrelated work. Bypass exists and is loud. | L0/L1 | — (works in every harness, every editor, every CI) |
 | 21 | **The doctor** | One command that runs every deterministic check. Modes: full, staged, `--fix`. The single entry point the gate and the audit both reuse. | L1 | — |
 | 22 | **Generated inventory** | The component list is generated from the actual files. A diff means someone added a component without updating the docs. | L1 | — |
-| 23 | **Role separation** | Author, adversarial reviewer, and fixer are *different contexts*. The reviewer gets the artifact and the source, never the author's reasoning, and is told to assume it's wrong. Reviewers have no write capability. | L4 → L3 | Run the roles sequentially in fresh sessions; capability isolation degrades to a prompt rule plus the commit gate |
+| 23 | **Role separation** | Author, adversarial reviewer, and fixer are *different contexts*. The reviewer gets the artifact and the source, never the author's reasoning, and is told to assume it's wrong. Reviewers ship without file-editing tools; where a shell remains, the real boundary is a **file boundary** — the reviewer writes a findings file and only the fixer may touch the artifact. | L4 → L3 | Run the roles sequentially in fresh sessions; the file boundary survives unchanged, which is why it is the one to rely on |
 | 24 | **Propose-only kernel** | The self-improvement loop may read, append, and suggest. It has no delete or merge authority over knowledge or instructions. | L3 | — |
 | 25 | **Request mining** | Log a keyword-only fingerprint of each request (never the raw text); mine for recurring shapes; **propose** a new procedure when one recurs. | L1 | — |
 | 26 | **Liveness monitoring** | Every background task is paired with a stall detector, because a *hung* task sends no completion signal — only a finished one does. Poll the task's output mtimes; alert on idle, not on slow. | L1 | — |
@@ -238,7 +238,7 @@ natively, so one instruction file covers most of the field.
 |---|---|---|---|---|
 | **Codex CLI** | **yes** (+ higher-priority `AGENTS.override.md`) | `AGENTS.md` | concatenated root→cwd, later wins | `~/.codex/AGENTS.md` |
 | **Cursor** | **yes** | `.cursor/rules/*.mdc` | nested files combine, specific wins | User Rules live in the UI, not a file |
-| **Copilot** | **yes** (nearest wins, then `CLAUDE.md`, then `GEMINI.md`) | `.github/copilot-instructions.md` | path-scoped `*.instructions.md`, additive | `~/.copilot/copilot-instructions.md` |
+| **Copilot** | **yes** (nearest `AGENTS.md` wins; `CLAUDE.md` and `GEMINI.md` are read too and combined) | `.github/copilot-instructions.md` | path-scoped `*.instructions.md`, additive | `~/.copilot/copilot-instructions.md` |
 | **Windsurf / Devin** | **yes** (case-insensitive) | `.devin/rules/*.md` | subdirectory file gets an auto glob | `~/.codeium/windsurf/memories/global_rules.md` |
 | **Cline** | **yes** | `.clinerules/` (all `.md`/`.txt` combined) | workspace beats global | `~/.agents/AGENTS.md` |
 | **Gemini CLI** | **opt-in** — set `context.fileName` in `.gemini/settings.json` | `GEMINI.md` | hierarchical, all concatenated | `~/.gemini/GEMINI.md` |
@@ -256,12 +256,12 @@ ln -s AGENTS.md CLAUDE.md
 
 | Capability | Codex CLI | Cursor | Copilot | Gemini CLI | Windsurf | Cline | Aider |
 |---|---|---|---|---|---|---|---|
-| **Named procedures** | Skills: `.agents/skills/<n>/SKILL.md`, `$name` or `/skills` | Skills: `.cursor/skills/`, `.agents/skills/` — **also reads `.claude/skills/` and `.codex/skills/`** | `*.prompt.md` in `.github/prompts/` | TOML in `.gemini/commands/` | `.windsurf/workflows/*.md` | `.clinerules/workflows/*.md` | `--load` replay only |
+| **Named procedures** | Skills: `.agents/skills/<n>/SKILL.md`, `$name` or `/skills` | Skills: `.cursor/skills/`, `.agents/skills/` — also reads `.claude/skills/` and `.codex/skills/` | Skills: `.github/skills/`, `.agents/skills/`, `.claude/skills/`; `*.prompt.md` in `.github/prompts/` | Skills: `.gemini/skills/`, aliased `.agents/skills/`; TOML commands in `.gemini/commands/` | `.windsurf/workflows/*.md` | `.clinerules/workflows/*.md` | `--load` replay only |
 | **Event hooks** | 11 events, `.codex/hooks.json` or `[hooks]` in config | 20+ events, `.cursor/hooks.json` | `.github/hooks/*.json` (VS Code also reads `.claude/settings.json`) | `hooks` in `settings.json`, 11 events | 12 events, `.windsurf/hooks.json` | plugin hook stages | **none** (`--lint-cmd`/`--test-cmd` only) |
 | **Blocking hook** | `PreToolUse` → `permissionDecision:"deny"`, or exit 2 | pre-hooks block | `preToolUse` | `BeforeTool` | pre-hooks, exit 2 | yes | — |
-| **Subagents** | built-in + custom TOML in `.codex/agents/` | yes | custom `.agent.md` | — | — | — | — |
+| **Subagents** | built-in + custom TOML in `.codex/agents/` | yes | custom `.agent.md` | built-in + custom `.gemini/agents/*.md` | yes | yes (read-only) | — |
 | **MCP** | `[mcp_servers.*]` in config.toml | `.cursor/mcp.json` | repo settings / `.mcp.json` | `mcpServers` in settings.json | `~/.codeium/windsurf/mcp_config.json` | `~/.cline/mcp.json` | **none** |
-| **Headless / CI** | `codex exec` (`--json`, `--output-schema`) | `cursor-agent -p` | `copilot -p --no-ask-user` | `gemini -p` | Devin CLI (separate product) | `cline "<task>"` | `aider -m --yes` |
+| **Headless / CI** | `codex exec` (`--json`, `--output-schema`) | `cursor-agent -p` | `copilot -p --no-ask-user` | `gemini -p` | Devin CLI (separate product) | `cline "<task>"` | `aider -m --yes-always` |
 
 **Read this matrix as confirmation of §3, not as a shopping list.** Every harness above has hooks,
 procedures, and MCP in some form — and every one spells them differently, caps them differently, and
@@ -273,12 +273,15 @@ will rename them again next year. That is exactly why the load-bearing machinery
   `project_doc_max_bytes`, **32 KiB by default**. Windsurf caps global rules at 6,000 characters and
   workspace rules at 12,000 per file. The hot-path budget (§4.27) is not a stylistic preference —
   past the cap your rules are silently cut off.
-- **Skills directories overlap on purpose.** `.agents/skills/` is read by both Codex and Cursor, and
-  Cursor additionally reads `.claude/skills/` and `.codex/skills/`. Pick `.agents/skills/` for
-  anything you want portable.
-- **Hook config is per-vendor and unshareable.** The *scripts* port unchanged (JSON on stdin, JSON on
-  stdout, exit 2 to block, in every implementation above). Only the registration file differs. Write
-  the scripts to be harness-neutral and keep a thin per-harness registration.
+- **`.agents/skills/` is the portable path.** Codex, Cursor, Gemini CLI, and Copilot CLI all read it
+  (Gemini as an alias for `.gemini/skills/`). Cursor additionally reads `.claude/skills/` and
+  `.codex/skills/`; Copilot additionally reads `.github/skills/` and `.claude/skills/`. One directory,
+  four harnesses — this is the single highest-leverage portability choice in the kit.
+- **Hook config is per-vendor and unshareable.** The *scripts* port unchanged — JSON on stdin, JSON on
+  stdout, exit 2 to block — across Codex, Cursor, Copilot, Gemini CLI, and Windsurf. Only the
+  registration file differs, so write harness-neutral scripts and keep a thin per-harness registration.
+  **Cline is the exception:** its hooks are in-process TypeScript SDK plugins, not command scripts, so
+  a shell hook needs a shim there.
 - **Hooks are a guardrail, not a boundary.** Codex's own docs say so: hosted tools like web search
   don't go through the local tool-hook path, so `PreToolUse` cannot see them. Anything that must be
   enforced belongs at rung 1 or 2 of the ladder (§5).
@@ -312,8 +315,8 @@ The set is built **once per session launch**, not per turn — restart to reload
 
 ### 7.2 Procedures → skills
 
-Move each triggered procedure to a skill directory. Codex and Cursor both read `.agents/skills/`, so
-this is the portable home:
+Move each triggered procedure to a skill directory. Codex, Cursor, Gemini CLI, and Copilot CLI all
+read `.agents/skills/`, so this is the portable home:
 
 ```
 .agents/skills/
@@ -474,7 +477,7 @@ The expensive lessons, stated so you can skip paying for them.
 | **Over-automation of a human loop** | The agent silently maintains someone's planning tool / task list, and the human stops planning | Some tools are the human's. Read and write them only on explicit request |
 | **Deference to authority over evidence** | A confident but hedged correction from a domain owner overwrites a fact verified against source | Treat it as a hypothesis. Keep the evidenced answer, record both, name the discriminating test |
 | **Reviewer capture** | The reviewer sees the author's reasoning and rubber-stamps it | Fresh context, artifact and source only, told to assume it's wrong, no write capability |
-| **Cost surprises** | An unbounded query or job runs before anyone estimates it | Estimate-first is in the wrapper, not in the instructions |
+| **Cost surprises** | An unbounded query or job runs before anyone estimates it | Put estimate-first in the wrapper. An instruction to dry-run is a wish (see the ladder, §5) — and a wrapper that only *logs* cost tells you what you already spent |
 | **Skipped framing** | Work starts on a vague ask and ends with a deliverable nobody wanted | The framing gate blocks the status change. The skip hatch must state its reason |
 | **Verbosity creep** | Every artifact grows a preamble, a recap, and a "let me know if" | Hard caps, checked by a linter, applied before it posts |
 | **The unclearable warning list** | A new rule makes hundreds of existing records print a warning on every run; a wall nobody can clear trains everyone to skip the linter | Give every warning list a grandfather date or an expiry. Collapse legacy violations into one counted line |

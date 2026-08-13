@@ -37,7 +37,7 @@ the single doctor. Run `build_index.sh` after any `knowledge/` change.
 
 | Surface | Where | Portable equivalent |
 |---|---|---|
-| Skills (`/frame`, `/capture`, `/oncall`, `/workflow-audit`) | `.claude/skills/*/SKILL.md` | `bootstrap.sh` symlinks `.agents/skills` here, which Codex and Cursor read |
+| Skills (live list in `COMPONENTS.md`) | `.claude/skills/*/SKILL.md` | `bootstrap.sh` symlinks `.agents/skills` here, which Codex and Cursor read |
 | Event hooks | `.claude/settings.json` → `.claude/hooks/*` | same scripts, re-registered per harness (`BLUEPRINT.md` §6) |
 | Subagents, one job each | `.claude/agents/*.md` | see `workflows/agent_pass_runbook.md` |
 | Per-user overrides | `.claude/settings.local.json` (git-ignored) | — |
@@ -87,9 +87,9 @@ name, creates the fixed subfolders, and writes a `summary.md` that already passe
 ## Warehouse module (optional)
 
 If this workspace queries a data warehouse, every query goes through `.claude/scripts/bq_run.sh`
-(dry-run gate, cost + provenance logging; the net-new hook flags undocumented tables). Set project,
+(cost + provenance logging; the net-new hook flags undocumented tables). Set project,
 region, and datasets in `.claude/scripts/config.env`. Keep `WAREHOUSE_PROFILE=generic` unless your
-`silver.*` objects are views over versioned physical tables (then set `sqlmesh`). If this workspace
+query-facing objects are views over versioned physical tables produced by a transformation framework (then set the matching profile). If this workspace
 does not touch a warehouse, ignore this module — nothing else depends on it.
 
 ## Git

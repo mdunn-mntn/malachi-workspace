@@ -22,7 +22,7 @@ cd "$ROOT"
 GEN_INDEXES=(knowledge/INDEX.md knowledge/_ROUTING.md knowledge/_MEMORY_INDEX.md \
   knowledge/_MEMORY_LIFECYCLE.md knowledge/_MEMORY_RECALL.tsv knowledge/bq/_CATALOG_INDEX.md \
   knowledge/bq/_TOPICS.md knowledge/bq/_COVERAGE.md knowledge/decisions/INDEX.md \
-  knowledge/runbooks/INDEX.md tickets/INDEX.md)
+  knowledge/runbooks/INDEX.md tickets/INDEX.md documentation/ai_workflow_kit/COMPONENTS.md)
 
 if [ "$MODE" = "--fix" ]; then
   python3 "$S/lint_memory.py" --fix >/dev/null 2>&1 || true
@@ -37,6 +37,7 @@ if [ "$MODE" = "--fix" ]; then
     fi
   fi
   bash "$S/build_index.sh" >/dev/null 2>&1 || true
+  bash "$S/build_kit_manifest.sh" >/dev/null 2>&1 || true
   git add "${GEN_INDEXES[@]}" 2>/dev/null || true
   echo "verify --fix: ran lint_memory --fix, ruff format+fix on staged durable py, rebuilt indexes, staged changes."
   exit 0
@@ -111,10 +112,11 @@ fi
 # --- index freshness: regenerate, then any generated index that differs from what's staged/committed
 #     is out of sync. In --staged, skip entirely unless a front-matter-bearing doc is staged.
 #     (Assumes the `git add .` workflow: working tree ≈ index at commit time.) ---
-if [ "$MODE" = "--staged" ] && ! grep -qE '^(knowledge/|on-call/.*\.md$|tickets/.*/summary\.md$|[^/]+\.md$)' <<<"$STAGED"; then
+if [ "$MODE" = "--staged" ] && ! grep -qE '^(knowledge/|on-call/.*\.md$|tickets/.*/summary\.md$|[^/]+\.md$|\.claude/(hooks|scripts|skills|agents)/)' <<<"$STAGED"; then
   pass "index freshness (no front-matter docs staged)"
 else
   bash "$S/build_index.sh" >/dev/null 2>&1 || true
+  bash "$S/build_kit_manifest.sh" >/dev/null 2>&1 || true
   if git diff --quiet -- "${GEN_INDEXES[@]}"; then
     pass "index freshness"
   else

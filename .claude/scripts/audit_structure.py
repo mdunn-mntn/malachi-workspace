@@ -37,6 +37,11 @@ DEPTH_FLAG = 5  # tracked path segments (ROOT-relative) beyond this → flag for
 BLESSED_ROOT = {
     ".claude",
     ".gitignore",
+    "AGENTS.md",  # cross-vendor rules file; CLAUDE.md symlinks to it
+    "CLAUDE.md",
+    ".agents",  # symlink -> .claude/skills, read by Codex/Cursor/Gemini/Copilot
+    ".githooks",
+    "pyproject.toml",
     "knowledge",
     "tickets",
     "documentation",

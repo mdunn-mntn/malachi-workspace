@@ -90,29 +90,32 @@ Lowercase and underscores only, no dashes. One folder per unit of work; scaffold
 scaffolder script, never by hand. Phases are **headers inside a file**, never folders. Artifact
 folders stay flat with monotonic `NN_slug.ext` names.
 
-Full rules: `knowledge/folder_definitions.md`.
+Scaffold with `.claude/scripts/new_ticket.sh <folder_name>`, which encodes these rules.
 
 ## 7. Triggered procedures
 
 Multi-step work with judgement in it lives in a named procedure, not in this file. Harnesses invoke
 them differently — the procedure file is the source of truth either way.
 
-Each procedure is one directory holding a `SKILL.md`. Put them in `.agents/skills/` — Codex and
-Cursor both read that path, so one copy serves both.
+Each procedure is one directory holding a `SKILL.md`, kept in `.claude/skills/`. `bootstrap.sh`
+symlinks `.agents/skills → .claude/skills`, and Codex, Cursor, Gemini CLI, and Copilot CLI all read
+`.agents/skills/` — so one copy serves every harness.
 
 | Procedure | Fires when |
 |---|---|
 | **frame** | before work starts on any new unit of work |
 | **capture** | at any stopping point, or when a durable fact lands |
 | **oncall** | an alert fired and something is degraded |
-| **audit** | weekly, or when the system feels wrong |
+| **workflow-audit** | weekly, or when the system feels wrong |
 
 | Harness | How to invoke |
 |---|---|
 | Claude Code | `/frame` (skills in `.claude/skills/`) |
 | Codex CLI | `$frame` or the `/skills` picker; Codex also selects a skill implicitly when the task matches its `description` |
 | Cursor | reads `.agents/skills/`, `.cursor/skills/`, and `.claude/skills/` |
-| Anything else | **open `.agents/skills/<name>/SKILL.md` and follow it step by step** |
+| Gemini CLI | reads `.agents/skills/` (alias of `.gemini/skills/`) |
+| Copilot CLI | reads `.agents/skills/`, `.github/skills/`, and `.claude/skills/` |
+| Anything else | **open `.claude/skills/<name>/SKILL.md` and follow it step by step** |
 
 That last row is always available. A procedure is a file; the worst case is reading it yourself.
 
@@ -158,7 +161,8 @@ Exception: identifiers are retrieval keys, so keep the exact string in analytica
 ## 10. Safety rails
 
 - **Every expensive or risky external call goes through its wrapper script**, never raw. The wrapper
-  estimates first, aborts over a threshold, and logs real cost and provenance.
+  logs real cost and provenance. It does **not** estimate for you — dry-run an unfamiliar call
+  yourself before running it wide.
 - **Read-only against production by default.** No schema changes, no writes, no deletes without an
   explicit ask.
 - **Never hot-patch production to silence an alert.** Diagnose, then clear, re-run, or route to the

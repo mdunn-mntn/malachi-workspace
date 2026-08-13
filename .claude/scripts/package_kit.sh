@@ -18,14 +18,14 @@ rm -rf "$B"; mkdir -p "$B"
 
 # 1. Copy machinery (allowlist; exclude local/secret/content) ------------------
 RS=(rsync -a --exclude='__pycache__' --exclude='*.pyc')
-"${RS[@]}" --exclude='settings.local.json' --exclude='CLAUDE.md' --exclude='databricks_setup.md' \
+"${RS[@]}" --exclude='settings.local.json' --exclude='CLAUDE.md' --exclude='global_claude_md_snapshot.md' \
+           --exclude='databricks_setup.md' \
            --exclude='scripts/databricks_smoke.py' --exclude='scripts/package_kit.sh' "$SRC/.claude/" "$B/.claude/"
 "${RS[@]}" "$SRC/.githooks/" "$B/.githooks/"
 # workflows: drop the two dense MNTN-example docs (plan + ingest war-stories); keep design + agent runbook
 "${RS[@]}" --exclude='bq_velocity_provenance_plan.md' --exclude='INGEST_GUIDE.md' "$SRC/workflows/" "$B/workflows/"
 "${RS[@]}" "$SRC/tickets/_template/" "$B/tickets/_template/"
 mkdir -p "$B/lib"; cp "$SRC/lib/mntn_xlsx.py" "$B/lib/mntn_xlsx.py"   # xlsx_demo dropped (adtech sample data)
-"${RS[@]}" --exclude='logs' "$SRC/slack_bot/" "$B/slack_bot/"
 mkdir -p "$B/documentation/ai_workflow_kit"
 cp "$SRC/documentation/ai_workflow_kit/README.md" "$SRC/documentation/ai_workflow_kit/INSTRUCTION_INVENTORY.md" \
    "$SRC/documentation/ai_workflow_kit/BLUEPRINT.md" "$B/documentation/ai_workflow_kit/"
@@ -47,7 +47,6 @@ cp "$TPL/README.seed.md"         "$B/README.md"
 cp "$TPL/PORTING.md"             "$B/PORTING.md"
 cp "$TPL/bootstrap.sh"           "$B/bootstrap.sh"
 cp "$TPL/memory_examples/"*.md   "$B/knowledge/memory/"
-cp "$TPL/slack_recovery.seed.md" "$B/slack_bot/RECOVERY.md"   # replace the MNTN decommission note (names Compass + channels)
 # global/ layer — the sanitized personal ~/.claude/ framework (bootstrap installs with --with-global)
 mkdir -p "$B/global"
 cp "$TPL/global/CLAUDE.md" "$TPL/global/settings.json" "$TPL/global/mcp_servers.json" "$TPL/global/README.md" "$B/global/"
@@ -92,6 +91,14 @@ def load(path):
         if f:
             out.append((f, r))
     return out
+import re as _re
+# Tracker IDs (PROJ-1234) name the issuing org's projects. Scrub by SHAPE so new prefixes can't leak.
+_SAFE = {"ISO", "SHA", "UTF", "RFC", "HTTP", "TLS", "AES", "RSA", "SQL", "CSV", "API", "GPT",
+         "DAG", "MD", "JSON", "YAML", "TOML", "CI", "CD", "US", "EU", "UTC", "PY", "JS", "TS"}
+_TICKET = _re.compile(r"\b([A-Z][A-Z0-9]{1,5})-([0-9]{2,5})\b")
+def scrub_ticket_ids(text):
+    return _TICKET.sub(lambda m: m.group(0) if m.group(1) in _SAFE else "<TICKET>", text)
+
 pairs = load(MAP)     # sanitize: strip literal secrets
 dpairs = load(DMAP)   # domain scrub: strip job/domain context
 
@@ -138,6 +145,7 @@ for dp, _, fns in os.walk(B):
             s = s.replace(f, r)
         for f, r in dpairs:                # domain scrub (strip job context)
             s = s.replace(f, r)
+        s = scrub_ticket_ids(s)            # domain scrub, by shape: any PROJ-1234 tracker ID
         if p in WS_FILES:                  # self-resolving workspace root
             s = s.replace(WS_OLD, WS_NEW)
         if s != s0:
@@ -175,7 +183,8 @@ if grep -rInEi -e 'spend_log' -e 'logdata' -e 'summarydata' -e 'integrationprod'
    -e 'fangorn' -e 'ipdsc' -e 'bombora' -e 'shopper_graph' -e '[^a-z]compass[^a-z]' -e 'incrementality' \
    -e 'conquest' -e '[^a-z]WGU[^a-z]' -e 'win_logs' -e 'bid_logs' -e '[^a-z]bidder' -e 'INC-00[1-9]' \
    -e '[^a-z]BUK[^a-z]' -e '[^a-z]ROAS[^a-z]' -e '[^a-z]CPV[^a-z]' -e 'audi_[0-9]' -e 'ber_[0-9]' \
-   -e 'ti_[0-9][0-9][0-9]' "$B" ; then
+   -e 'ti_[0-9][0-9][0-9]' -e 'ad-?tech' -e 'databricks' -e 'snowflake' \
+   -e '[A-Z]{3,5}-[0-9]{3,4}' "$B" ; then
   say "FAIL: job/domain context leaked (above). Extend domain_scrub_map.txt and re-run."; exit 1; fi
 say "  clean: no job/domain context found"
 
