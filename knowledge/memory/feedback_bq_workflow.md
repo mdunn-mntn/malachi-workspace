@@ -29,6 +29,8 @@ bash .claude/scripts/bq_run.sh --ticket "TI-XXX" --label "description" \
 
 Schema inspection and dry runs can still use plain `bq` (no perf logging needed for those).
 
+`bq_run.sh` is **pure instrumentation by design** — no cost gate, no warning, no preemption (its own header says so). Four docs claimed it had a "dry-run gate"; none of them was true. Dry-running an unfamiliar query is on you, not on the wrapper. See [[feedback_verify_claims_against_code]].
+
 Periodically review the perf log for patterns (expensive tables, high slot usage, low cache hit rates) and add findings to data_catalog.md / data_knowledge.md.
 
 ## from feedback_no_polling.md
