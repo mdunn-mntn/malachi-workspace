@@ -120,8 +120,9 @@ Grep your copy for each and confirm zero hits (or replace with a placeholder):
 - Ticketing IDs and secrets: account IDs, custom-field IDs, API tokens, work emails.
 - Task-manager IDs (project/section), chat/SSO IDs.
 - Always-on-runner details: hostnames, SSH, cron paths, and confirm **no API key** lives there.
+- Hardware or home-lab hints in script names and prose (a host nickname is a personal detail).
 - Personal/performance content (self-reviews), leadership/coworker names.
-- Commercial-sensitive rules: pricing/take-rate/willingness-to-pay logic.
+- Commercial-sensitive business logic: pricing and margin rules, internal formulas.
 - Proprietary domain constants (internal formulas, entity IDs, table floors) baked into `MEMORY.md`.
 - Git remote URLs.
 

@@ -20,8 +20,8 @@ Two layers. Design: `workflows/ARCHITECTURE.md`. Operator guide: `.claude/README
   logs, detects, generates, and blocks. Keeps the indexes true.
 
 **Retrieval (load indexes, not the tree):** `knowledge/START_HERE.md` → the generated maps
-`_ROUTING.md` (keyword→doc), `_MEMORY_INDEX.md`, and (warehouse module) `bq/_TOPICS.md`,
-`bq/_CATALOG_INDEX.md`, `bq/_COVERAGE.md` → the one doc, or one `##` section of it.
+`_ROUTING.md` (keyword→doc), `_MEMORY_INDEX.md`, and (warehouse module, if enabled) the
+catalog, topic, and coverage indexes under `knowledge/bq/` → the one doc, or one `##` section of it.
 
 **Auto-memory:** cross-session facts live in `knowledge/memory/` (in git; the native memory dir is a
 reverse-symlink to it, recreated per machine by `bootstrap.sh`). Each file carries `doc_type: memory`
@@ -87,7 +87,7 @@ name, creates the fixed subfolders, and writes a `summary.md` that already passe
 ## Warehouse module (optional)
 
 If this workspace queries a data warehouse, every query goes through `.claude/scripts/bq_run.sh`
-(cost + provenance logging; the net-new hook flags undocumented tables). Set project,
+(cost + provenance logging; a post-tool hook appends any table it sees that has no doc yet to the documentation queue). Set project,
 region, and datasets in `.claude/scripts/config.env`. Keep `WAREHOUSE_PROFILE=generic` unless your
 query-facing objects are views over versioned physical tables produced by a transformation framework (then set the matching profile). If this workspace
 does not touch a warehouse, ignore this module — nothing else depends on it.

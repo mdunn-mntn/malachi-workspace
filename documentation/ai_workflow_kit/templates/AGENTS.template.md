@@ -156,7 +156,9 @@ reader would have to open a source file to decode the word, it's a variable, not
 Exception: identifiers are retrieval keys, so keep the exact string in analytical records and
 `knowledge/` — pair it with the plain phrasing rather than dropping it.
 
-**Lint before posting:** `python3 .claude/scripts/lint_comms.py --kind <kind> --file draft.txt`.
+**Lint before posting:** `python3 .claude/scripts/lint_comms.py --kind <kind> --file draft.txt`,
+where `<kind>` is one of `comment | completion | description | pr | pr_comment | commit` (`--help`
+lists them all with each cap).
 
 ## 10. Safety rails
 

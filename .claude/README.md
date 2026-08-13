@@ -41,6 +41,12 @@ Nothing else to wire up. (`jq`, `python3`, `bq` must be on PATH — same as the 
 - `scripts/hooks_selftest.sh` — exercises all 9 harness hooks with synthetic inputs; asserts exit code + output. Run inside `verify.sh` (full) and `workflow_audit.sh §11`.
 - `scripts/build_kit_manifest.sh` — regenerates `documentation/ai_workflow_kit/COMPONENTS.md` from the actual files (the drift-proof component inventory). Idempotent.
 - `scripts/install_git_hooks.sh` — one-time: `git config core.hooksPath .githooks` (activate the commit gate).
+- `scripts/preflight.sh` — probe each external dependency bare (never wrapped in a helper that may not
+  exist), reporting the probe's own exit code plus a fix line. Run it first when a session's tooling looks broken.
+- `scripts/stall_monitor.sh <dir> [idle_min] [poll_s]` — the ONE correct background-work stall detector.
+  Call it from every `Monitor`; hand-written mtime checks have silently reported idle five times.
+- `scripts/sync_global_claude_md.sh [--check|--restore]` — snapshot `~/.claude/CLAUDE.md`, the one
+  instruction file with no git history. `verify.sh` reports drift; the snapshot never ships in a bundle.
 
 ## Commit gate (staged-scoped, self-contained; ruff optional)
 The gate lives in committed `.githooks/` and is activated once per clone with

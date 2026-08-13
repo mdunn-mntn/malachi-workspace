@@ -73,8 +73,10 @@ knowledge/.request_log.jsonl
 !knowledge/_MEMORY_RECALL.tsv
 GI
 
-# 4. Rename xlsx code identifiers (before sanitize, so the org-word rule can't corrupt them) ---
+# 4. Rename code identifiers that carry the origin (before sanitize, so the org-word rule cannot
+#    corrupt them). The audit-runner name identified a personal always-on host. ---
 mv "$B/lib/mntn_xlsx.py" "$B/lib/xlsx_builder.py"
+mv "$B/.claude/scripts/pi_run_workflow_audit.sh" "$B/.claude/scripts/run_workflow_audit_remote.sh"
 
 # 5. All text transforms in one deterministic python pass ----------------------
 python3 - "$B" "$MAP" "$DMAP" <<'PY'

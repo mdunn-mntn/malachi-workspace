@@ -68,13 +68,13 @@ Find them all: `grep -rIn -- '<[A-Z_]*>' .claude .mcp.json .claude/scripts/confi
 | Placeholder | Set to | Lives in |
 |---|---|---|
 | `<WORKSPACE_PATH>` | your checkout path (or leave the self-resolving `$(git rev-parse …)` already substituted in scripts) | skills |
-| `<WORK_EMAIL>` | your work email | skills, `lib/`, drive mount |
-| `<JIRA_BASE_URL>` / `<JIRA_HOST>` | `https://<you>.atlassian.net` / `<you>.atlassian.net` | `new_ticket.sh`, `frame` skill |
+| `<WORK_EMAIL>` | your work email | skills, `lib/`, the cloud-storage output path (if you use one) |
+| `<JIRA_BASE_URL>` / `<JIRA_HOST>` | your tracker's base URL and host. The shipped integration targets a Jira-style REST API; for another tracker, swap the curl calls in `new_ticket.sh` and the frame procedure | `new_ticket.sh`, `frame` skill |
 | `<GCP_PROJECT>` / `<GCP_PROJECT_BRONZE>` | your warehouse project, plus a second one for raw/landing data if you split them (leave blank if not) | `config.env`, `.mcp.json` |
 | `<BQ_REGION>` | the region your datasets live in | `config.env`, `.mcp.json` |
 | `<DATASETS>` | comma-separated datasets to introspect | `config.env` |
 | `<GH_USER>` | your GitHub user (deck-sharing gists) | `share_deck.sh` |
-| `<AUDIT_HOST>` / `<AUDIT_HOST_IP>` / `<AUDIT_SSH_KEY>` / `<AUDIT_REPO>` | your always-on audit host, or delete the Pi cron (see §6) | `pi_run_workflow_audit.sh` |
+| `<AUDIT_HOST>` / `<AUDIT_HOST_IP>` / `<AUDIT_SSH_KEY>` / `<AUDIT_REPO>` | your always-on audit host, or delete the weekly audit cron (see §6) | `pi_run_workflow_audit.sh` |
 | `<PYTHON311>` | your python3.11 path (local-whisper transcription) | `transcribe.sh` |
 | `<ORG>` / `<org>` / `<ORG_DOMAIN>` | your org name / domain (prose + comments) | throughout |
 
@@ -119,7 +119,7 @@ single one. Placeholders only matter when you actually run the subsystem that re
    automatically. Capture cross-session facts with `/capture` (writes a `memory/<slug>.md`, rebuilds the index).
 4. **Define your own `doc_type`s** if the built-ins (`bq_table`, `memory`, `runbook`, `decision`, `ticket`)
    don't fit — `build_index.sh` indexes any doc_type; add templates under `knowledge/`.
-5. **Run the loop.** New work: `new_ticket.sh <id> "<desc>"` → `/frame <id>` (agree the question, the gate
+5. **Run the loop.** New work: `new_ticket.sh <folder_name> --title "<title>"` → `/frame <id>` (agree the question, the gate
    blocks `in_progress` until locked) → do the work → `/capture` (route what you learned home). Any alert:
    `/oncall`. Weekly: `/workflow-audit` (propose-only system retro).
 
@@ -159,7 +159,7 @@ The prior job's business content (`knowledge/*` prose docs, real memory facts, r
 licensed brand assets (`lib/assets/`), the vendored task-manager MCP build, `slack_bot/` (a local app holding a long-lived model API key is
 the pattern this kit retired), `settings.local.json`
 (per-machine), the self-review, a one-off vendor smoke test, and — for domain-blindness — the
-two most example-dense design docs (`workflows/INGEST_GUIDE.md`, `workflows/bq_velocity_provenance_plan.md`)
+two most example-dense internal design docs
 and the example-data `lib/xlsx_demo.py`.
 The machinery that operated on all of it shipped; only the job-specific payload was left behind. To harden further, the SENDER re-runs the packager from the source repo with an extended domain scrub
 map; neither the packager nor the maps ship in this bundle.
