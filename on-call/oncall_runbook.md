@@ -1131,6 +1131,18 @@ All three DAGs have now produced incidents: **INC-012** (mntn-select), **INC-016
 
 **Interaction with #1195 worth knowing:** now that retries mint fresh batch ids, a retry runs a REAL 12-minute job instead of dying in 6 seconds. Correct behaviour, but a persistent failure now costs roughly 3x the Dataproc spend rather than failing cheap.
 
+**⚠ THE RE-RUN TRAP (cost the most time on 2026-08-15, applies to EVERY DAG of this shape).** After merging a config fix, clearing the Dataproc task does NOT pick it up, and neither does "Run with latest bundle version". Three separate caches, only one of which the bundle version controls:
+
+| Task | Caches in XCom | Clearing it gets you |
+|---|---|---|
+| `create_batch` | the **whole batch spec incl. `runtime_config`** (driver memory, TTL, spark props) | the new config |
+| `create_batch_id` | just the batch id string | a new batch id (unnecessary post-#1195, try_number already does it) |
+| `materialize` alone | nothing | the OLD spec, re-submitted |
+
+On 2026-08-15 the dag run WAS correctly on the post-merge bundle (`bundle_version=21:54:01Z`, after the 21:53:28Z merge) and the task still submitted `driver.memory=9600m`, because `create_batch` last ran at 12:45 and its XCom had no `driver.memory` key at all, so Dataproc applied its 9600m default. **Fix = clear `create_batch` WITH downstream** (proven: `create_batch` try 2 at 22:16:32Z → batch reported `16g`/`4g` → 7.1 min → `hh=11` landed 77 objects / 6.15 GiB, matching neighbours). A fresh triggered run with `{"dt":..., "hhs":[...]}` works too, since it rebuilds everything.
+
+**⚠ NEVER clear a task whose batch is still running.** It cancels the in-flight batch, and Airflow records the try as **SUCCESS with no output**. Observed here: batch `...-1786831127-3` went `CANCELLED` at 22:01:24Z while Airflow showed try 3 green in 2:28, and `hh=11` stayed empty. **A materialize success under ~3 min is a lie** (healthy ~7 min); always confirm the `hh=` partition in GCS, never the green tick.
+
 **Decision tree (next `materialize_*` repeated failure):** 1. Compare failed vs healthy batch durations. Constant interval = resource ceiling; variable = data. 2. Get `driveroutput` before theorising (`gcloud pam grants create --entitlement=dataproc-debug --location=global --project=mntn-prj-prod-00`; approval is quick, grant lasts 4h). 3. Reads logged OK + OOM in `map-output-dispatcher` = driver heap vs shuffle partitions. 4. Raise memory on the ONE DAG, never in shared `get_config`. 5. Re-run missing `hh=` only after the bundle refresh (verify the batch reports the new `driver.memory`).
 
 ---
