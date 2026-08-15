@@ -135,6 +135,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | `tpa_ipdsc_export / ipdsc_ds_17` | `AnalysisException: [PATH_NOT_FOUND] Path does not exist: gs://mntn-data-partners/partners/sharethis/categories` (a STATIC path, not a dated partition). | The bucket's unrestricted age-365 Delete lifecycle rule removed the one-time static mapping file on its 365-day birthday; no versioning, no soft delete. Not a code change, not a late delivery. | **real_upstream_failure** — re-obtain from the partner; exempt static reference files from the age rule. Every static file in `mntn-data-partners` has the same expiry. | INC-014 |
 | `fangorn_inference_pipeline_run / daily_drift_pipeline` (+ challenger sensor) | Sensor timeout on `feature_store/feature_group_3_pivoted/.../dt=<ds>/_SUCCESS`, then drift code 9 daily; driver: `[PATH_NOT_FOUND] .../dt=<missing day>`. | One missing FS day (producer DAG paused, catchup=False skipped it) sits inside drift's LOOKBACK_DAYS=3 literal-path window; each daily run fails until the window clears the hole. | **real_upstream_failure** — compute the self-heal date from the window; single-date FS trigger only if it can't wait; durable = existence-guard the drift read (owner). | INC-015 |
 | `tpa_ipdsc_export / tpa_export` | Alert quotes `exited with 137 code ... potentially signifies a memory pressure` on **try 2+**, but try 1 ran ~44 min and tries 2+ die in 6-18s. Tries 2+ logs say verbatim `Batch with given id already exists.` / `Attaching to the job ... if it is still running.` | TWO stacked failures. (1) Driver SIGKILL 137 on try 1, which here landed AFTER the write completed. (2) The batch id is minted by upstream `create_batch_id__2` and cached in XCom; that task does NOT re-run on a downstream retry, so every retry reattaches to the failed batch and inherits its error. The 137 in the try-2 alert is INHERITED text, not a fresh OOM. | **transient_infra + dag_bug** — check GCS for `_SUCCESS` + object count BEFORE re-running (the work may already be done). To genuinely re-run, clear `create_batch_id__2` WITH downstream so a fresh id is minted (deleting the Dataproc batch also frees the id). Never read the retry's 137 as a second OOM. | INC-016 |
+| `materialize_mntn_first_party / materialize` (hourly `50 * * * *`) | Alert on **try 2 of 3**, `Batch job mntn-first-party-<dt>-<epoch> failed with error: Google Cloud Dataproc Agent reports job failure` (boilerplate). try 1 ~1.8m real, tries 2-3 die in 6-12s with `Batch with given id already exists.` / `Attaching to the job ...`. | Same shared-helper defect as INC-016: `create_batch_id` is an `@task` (`include/util/dag_vars.py:31`) that runs ONCE and caches the id in XCom, so every retry reattaches to the failed batch. try 1's real cause is PAM-gated in the staging bucket's `driveroutput.*`. | **transient_infra (cause UNCONFIRMED) + dag_bug.** 1 failure in 100 runs, next hour green, prior 7 days all 24/24 hours. **This DAG does NOT self-heal** (each run owns exactly one `hh`), so the failed hour stays missing until re-run. Re-run = clear `create_batch_id` **WITH downstream**. | INC-017 |
 
 ---
 
@@ -1075,6 +1076,34 @@ gcloud storage ls "gs://mntn-data-partners/partners/predactiv/dt=2026080520/"   
 **Evidence-preservation lesson:** deleting the failed Dataproc batch (the standard way to free the id) also destroys its driver output, which is the only place the OOM's real cause lives. Capture `driverOutputResourceUri` BEFORE deleting, else the memory fix stays a guess.
 
 **Decision tree (next `tpa_export` 137 / instant-fail):** 1. Read try 1's duration. A long try 1 + seconds-long later tries = this incident, NOT a repeated OOM. 2. **Check GCS first**: `_SUCCESS` present and object count matching a neighbouring day (5002) means the work is DONE, so just mark the task success rather than re-running 400 GiB. 3. If it must re-run, clear `create_batch_id__2` WITH downstream (or delete the Dataproc batch to free the id). 4. Never conclude "not OOM" from the fast retries alone; and never conclude "OOM fixed" from a success unless you confirm the batch's actual `runtimeConfig.properties`.
+
+---
+
+### INC-017 — `materialize_mntn_first_party` `materialize` — the INC-016 retry defect on a THIRD DAG, leaving an hourly data hole
+
+**Date:** 2026-08-15 (alert 2026-08-14 17:50 PT) · **Alert:** `[prod] Airflow Targeting FAILURE [materialize_mntn_first_party/materialize]`, `Try 2 of 3: Batch job mntn-first-party-2026-08-15-1786758616 failed`. **STATUS: OBSERVED — retry defect + data hole confirmed; try 1's root cause UNCONFIRMED (driver output is PAM-gated).**
+
+**Verdict: `transient_infra` (unconfirmed) amplified by `dag_bug` (shared batch-id helper).**
+
+| Evidence | Value |
+|---|---|
+| try 1 / 2 / 3 | failed 1.8m · failed 0.1m · failed 0.2m → retries exhausted, dag run `failed` |
+| try 2+ log, verbatim | `Batch with given id already exists.` + `Attaching to the job mntn-first-party-2026-08-15-1786758616 if it is still running.` |
+| Batch lifetime | created 01:50:25Z, FAILED 01:52:02Z (97s) |
+| Rarity | **1 failure in the last 100 runs**; next hour (01:50) green |
+| Data | `ipdsc_mntn_first_party/dt=2026-08-15/` has ONLY `hh=01`. **`hh=00` is MISSING.** dt=08-08..08-14 all 24/24, so no accumulated debt |
+
+**Why this one does NOT self-heal (unlike the daily DAGs).** `get_hhs` returns `[dag_run.data_interval_start.hour]`, so each hourly run owns exactly ONE `hh=`. The failed 00:50 run owned `hh=00`; the 01:50 run that succeeded only wrote `hh=01`. Nothing re-covers the lost hour. Contrast INC-015, where a daily window slid over the hole on its own.
+
+**⚠ SYSTEMIC: this is ONE shared helper, not three separate bugs.** `create_batch_id` (`include/util/dag_vars.py:31`) is `@task`-decorated, so it runs once per dag-run and every downstream retry re-reads the same id from XCom. **Five prod call sites**, all with dead retries:
+`dags/targeting/materialize_mntn_first_party_dag.py:71` (`mntn-first-party`) · `dags/tpa_export/materialize_mntn_select.py:76` (`mntn-select`) · `dags/tpa_export/tpa_ipdsc_export.py:309/458/502` (`ipdsc`, `ipdsc-geo`, `tpa-export`).
+All three DAGs have now produced incidents: **INC-012** (mntn-select), **INC-016** (tpa-export), **INC-017** (mntn-first-party). One fix in the helper closes all five. Tracked as **IMP-042** (and read its ⚠ ordering note vs IMP-041 before shipping).
+
+**Recovery (fills `hh=00`):** clear `create_batch_id` **with downstream** on run `scheduled__2026-08-15T00:50:00+00:00` so a fresh id is minted. Clearing ONLY `materialize` re-attaches to the failed batch and dies in seconds. Alternative: delete the Dataproc batch to free the id (but that destroys `driveroutput`, the only copy of the root cause — capture it first).
+
+**Root cause still open.** The Airflow log is boilerplate; the real error is in `gs://dataproc-staging-us-central1-995798185124-d8mf0cme/.../driveroutput.*`, which returns `403 storage.objects.list denied` without the **`dataproc-debug` PAM grant** (same wall as INC-012). Given 1/100 rarity, a single re-run is the sanctioned action; request PAM only if it recurs.
+
+**Decision tree (next `materialize_*` / `tpa_export` instant-fail):** 1. Read try 1's duration; long try 1 + seconds-long retries = this defect, and the alert's quoted error on try 2+ is INHERITED, not fresh. 2. Check the `hh=`/`dt=` output for a hole before assuming the work is lost or done. 3. Re-run by clearing `create_batch_id` WITH downstream. 4. Capture `driveroutput` BEFORE deleting any batch.
 
 ---
 
