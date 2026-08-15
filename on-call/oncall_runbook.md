@@ -1081,7 +1081,9 @@ gcloud storage ls "gs://mntn-data-partners/partners/predactiv/dt=2026080520/"   
 
 ### INC-017 — `materialize_mntn_first_party` `materialize` — the INC-016 retry defect on a THIRD DAG, leaving an hourly data hole
 
-**Date:** 2026-08-15 (alert 2026-08-14 17:50 PT) · **Alert:** `[prod] Airflow Targeting FAILURE [materialize_mntn_first_party/materialize]`, `Try 2 of 3: Batch job mntn-first-party-2026-08-15-1786758616 failed`. **STATUS: OBSERVED — retry defect + data hole confirmed; try 1's root cause UNCONFIRMED (driver output is PAM-gated).**
+**Date:** 2026-08-15 (alert 2026-08-14 17:50 PT) · **Alert:** `[prod] Airflow Targeting FAILURE [materialize_mntn_first_party/materialize]`, `Try 2 of 3: Batch job mntn-first-party-2026-08-15-1786758616 failed`. **STATUS: RESOLVED 2026-08-15 — hole filled, fix PR open; try 1's root cause remains UNCONFIRMED (driver output is PAM-gated).**
+
+**Recovery verified:** clearing `create_batch_id` WITH downstream minted a fresh id and try 4 succeeded. `dt=2026-08-15/hh=00` now holds **5002 objects / 25.10 GiB** (written 03:33Z), in band against hh=01 23.07 GiB and the prior day's 22.80 / 26.25 GiB. Day is complete. **Durable fix: [airflow-ti#1195](https://github.com/SteelHouse/airflow-ti/pull/1195)** templates `batch_id` with `task_instance.try_number` on both materialize DAGs (the `tpa_export_enrich` pattern), so retries mint a new batch instead of reattaching. Scoped to the two materialize DAGs (both write `.mode("overwrite")`, no skip path); the three `tpa_ipdsc_export` sites still need IMP-041's `_SUCCESS` gate first.
 
 **Verdict: `transient_infra` (unconfirmed) amplified by `dag_bug` (shared batch-id helper).**
 
