@@ -1112,7 +1112,7 @@ All three DAGs have now produced incidents: **INC-012** (mntn-select), **INC-016
 
 ### INC-018 — `materialize_mntn_select` `materialize` — driver MapOutputTracker OOM, 5 failures + 5 hour holes
 
-**Date:** 2026-08-15 · **Alerts:** 5 x `[prod] Airflow Targeting FAILURE [materialize_mntn_select/materialize]` (runs 11:45, 15:45, 16:45, 17:45, 18:45Z). **STATUS: RESOLVED (fix merged 21:53:28Z); hour re-runs OUTSTANDING.**
+**Date:** 2026-08-15 · **Alerts:** 5 x `[prod] Airflow Targeting FAILURE [materialize_mntn_select/materialize]` (runs 11:45, 15:45, 16:45, 17:45, 18:45Z). **STATUS: CLOSED 2026-08-15. Fix merged 21:53:28Z, prod-verified, all 5 hour holes refilled.** Post-fix batch reported `driver.memory=16g`/`4g` and finished in 7.1 min (vs 12-min OOMs). dt=2026-08-15 now complete through hh=20: every hour 77 objects, 5.90-7.92 GiB on a smooth diurnal curve, with the five refilled hours (11, 15, 16, 17, 18) sitting exactly between their neighbours.
 
 **Verdict: capacity `dag_bug`.** Driver output (PAM-gated staging bucket) is unambiguous: the GCS reads succeed (`Found data in bidder_auction_events` / `augmentor_log` for the hour), then `java.lang.OutOfMemoryError: Java heap space` repeatedly in `map-output-dispatcher-*` threads. That is the driver's MapOutputTracker serialising shuffle map statuses, with `spark.driver.memory=9600m` and `spark.sql.shuffle.partitions=5000`.
 
