@@ -136,6 +136,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | `fangorn_inference_pipeline_run / daily_drift_pipeline` (+ challenger sensor) | Sensor timeout on `feature_store/feature_group_3_pivoted/.../dt=<ds>/_SUCCESS`, then drift code 9 daily; driver: `[PATH_NOT_FOUND] .../dt=<missing day>`. | One missing FS day (producer DAG paused, catchup=False skipped it) sits inside drift's LOOKBACK_DAYS=3 literal-path window; each daily run fails until the window clears the hole. | **real_upstream_failure** — compute the self-heal date from the window; single-date FS trigger only if it can't wait; durable = existence-guard the drift read (owner). | INC-015 |
 | `tpa_ipdsc_export / tpa_export` | Alert quotes `exited with 137 code ... potentially signifies a memory pressure` on **try 2+**, but try 1 ran ~44 min and tries 2+ die in 6-18s. Tries 2+ logs say verbatim `Batch with given id already exists.` / `Attaching to the job ... if it is still running.` | TWO stacked failures. (1) Driver SIGKILL 137 on try 1, which here landed AFTER the write completed. (2) The batch id is minted by upstream `create_batch_id__2` and cached in XCom; that task does NOT re-run on a downstream retry, so every retry reattaches to the failed batch and inherits its error. The 137 in the try-2 alert is INHERITED text, not a fresh OOM. | **transient_infra + dag_bug** — check GCS for `_SUCCESS` + object count BEFORE re-running (the work may already be done). To genuinely re-run, clear `create_batch_id__2` WITH downstream so a fresh id is minted (deleting the Dataproc batch also frees the id). Never read the retry's 137 as a second OOM. | INC-016 |
 | `materialize_mntn_first_party / materialize` (hourly `50 * * * *`) | Alert on **try 2 of 3**, `Batch job mntn-first-party-<dt>-<epoch> failed with error: Google Cloud Dataproc Agent reports job failure` (boilerplate). try 1 ~1.8m real, tries 2-3 die in 6-12s with `Batch with given id already exists.` / `Attaching to the job ...`. | Same shared-helper defect as INC-016: `create_batch_id` is an `@task` (`include/util/dag_vars.py:31`) that runs ONCE and caches the id in XCom, so every retry reattaches to the failed batch. try 1's real cause is PAM-gated in the staging bucket's `driveroutput.*`. | **transient_infra (cause UNCONFIRMED) + dag_bug.** 1 failure in 100 runs, next hour green, prior 7 days all 24/24 hours. **This DAG does NOT self-heal** (each run owns exactly one `hh`), so the failed hour stays missing until re-run. Re-run = clear `create_batch_id` **WITH downstream**. | INC-017 |
+| `materialize_mntn_select / materialize` (hourly `45 * * * *`) | Repeated `Dataproc Agent reports job failure` on try 1, batches dying at a **constant ~12.0-12.6 min** while healthy hours finish in ~7 min. Airflow log is boilerplate; driver output shows the GCS reads SUCCEEDING, then `java.lang.OutOfMemoryError: Java heap space` in `map-output-dispatcher` threads. | Driver-side MapOutputTracker OOM: `spark.driver.memory=9600m` against `spark.sql.shuffle.partitions=5000`. Map-status memory scales with map tasks x reduce partitions, so the driver sat at its ceiling and tips over on heavier hours (intermittent, not every hour). NOT a GCS listing timeout (INC-012) and NOT the batch-id defect. | **transient_infra trending to dag_bug (capacity).** Constant death interval = resource ceiling, not a data bug. Pull `driveroutput` (needs `dataproc-debug` PAM) before theorising. Fix = raise driver memory for the one DAG ([#1198](https://github.com/SteelHouse/airflow-ti/pull/1198), 16g + 4g). Re-run missing `hh=` only AFTER the bundle refreshes, else they OOM again. | INC-018 |
 
 ---
 
@@ -1106,6 +1107,31 @@ All three DAGs have now produced incidents: **INC-012** (mntn-select), **INC-016
 **Root cause still open.** The Airflow log is boilerplate; the real error is in `gs://dataproc-staging-us-central1-995798185124-d8mf0cme/.../driveroutput.*`, which returns `403 storage.objects.list denied` without the **`dataproc-debug` PAM grant** (same wall as INC-012). Given 1/100 rarity, a single re-run is the sanctioned action; request PAM only if it recurs.
 
 **Decision tree (next `materialize_*` / `tpa_export` instant-fail):** 1. Read try 1's duration; long try 1 + seconds-long retries = this defect, and the alert's quoted error on try 2+ is INHERITED, not fresh. 2. Check the `hh=`/`dt=` output for a hole before assuming the work is lost or done. 3. Re-run by clearing `create_batch_id` WITH downstream. 4. Capture `driveroutput` BEFORE deleting any batch.
+
+---
+
+### INC-018 — `materialize_mntn_select` `materialize` — driver MapOutputTracker OOM, 5 failures + 5 hour holes
+
+**Date:** 2026-08-15 · **Alerts:** 5 x `[prod] Airflow Targeting FAILURE [materialize_mntn_select/materialize]` (runs 11:45, 15:45, 16:45, 17:45, 18:45Z). **STATUS: RESOLVED (fix merged 21:53:28Z); hour re-runs OUTSTANDING.**
+
+**Verdict: capacity `dag_bug`.** Driver output (PAM-gated staging bucket) is unambiguous: the GCS reads succeed (`Found data in bidder_auction_events` / `augmentor_log` for the hour), then `java.lang.OutOfMemoryError: Java heap space` repeatedly in `map-output-dispatcher-*` threads. That is the driver's MapOutputTracker serialising shuffle map statuses, with `spark.driver.memory=9600m` and `spark.sql.shuffle.partitions=5000`.
+
+| Signal | Value |
+|---|---|
+| Failed batch durations | 12.0, 12.0, 12.2, 12.5, 12.6 min (**constant**) |
+| Healthy batch durations | 6.6, 7.1, 7.4 min |
+| Prior 8 days | 24/24 success every day, so this is a newly-crossed ceiling, not a regression |
+| Data | `ipdsc_mntn_select/dt=2026-08-15` missing **hh=11, 15, 16, 17, 18** |
+
+**A constant death interval means a resource ceiling, not a data bug.** A data- or content-dependent failure varies in runtime; a driver filling a fixed heap at a steady rate does not. Two hypotheses were wrong before the driver output was read: (a) a GCS listing timeout recurrence (INC-012) — refuted, the reads logged success; (b) caused by the batch-id change #1195 — refuted, ten runs passed on the new ids first, the ids render correctly, and the OOM is in shuffle machinery.
+
+**Fix:** [airflow-ti#1198](https://github.com/SteelHouse/airflow-ti/pull/1198) merged 2026-08-15 21:53:28Z sets `spark.driver.memory=16g` + `memoryOverhead=4g` on this DAG only (NOT in shared `get_config`, which every ipdsc job uses). Matches the `driver.cores=4` shape shipped for `tpa_export` in #1188, and the commented-out DS47 precedent at `include/spark/data_source/ipdsc_emr_cluster.py:26`.
+
+**⚠ Headroom, not a trend fix.** Map-status memory keeps growing with volume. If this recurs, the real lever is lowering `spark.sql.shuffle.partitions` for this job rather than climbing driver memory again.
+
+**Interaction with #1195 worth knowing:** now that retries mint fresh batch ids, a retry runs a REAL 12-minute job instead of dying in 6 seconds. Correct behaviour, but a persistent failure now costs roughly 3x the Dataproc spend rather than failing cheap.
+
+**Decision tree (next `materialize_*` repeated failure):** 1. Compare failed vs healthy batch durations. Constant interval = resource ceiling; variable = data. 2. Get `driveroutput` before theorising (`gcloud pam grants create --entitlement=dataproc-debug --location=global --project=mntn-prj-prod-00`; approval is quick, grant lasts 4h). 3. Reads logged OK + OOM in `map-output-dispatcher` = driver heap vs shuffle partitions. 4. Raise memory on the ONE DAG, never in shared `get_config`. 5. Re-run missing `hh=` only after the bundle refresh (verify the batch reports the new `driver.memory`).
 
 ---
 
