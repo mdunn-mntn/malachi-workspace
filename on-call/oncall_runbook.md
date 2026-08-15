@@ -93,6 +93,10 @@ don't hot-patch. The INC entry records "routed to ticket TI-XXX"; it doesn't do 
      run is the cheap proxy** — an anomalously FAST task is the silent-degrade signature. INC-015's
      backfill checked out because durations tracked the healthy run (pivot 5.9m vs 6.5m, derived 7.0m vs
      8.0m, L1 3.7m vs 4.1m). It is a smell test, not proof — still list the output when access returns.
+   - **A recovery action can MANUFACTURE a false green.** Clearing a task whose backing Dataproc batch is
+     still RUNNING cancels that batch, and Airflow records the new try as SUCCESS with no output (INC-018:
+     try 3 green in 2:28 against a ~7 min healthy run, batch `CANCELLED`, partition still empty). Never
+     clear a task that is still doing real work, and verify a re-run by its output partition.
    - **Not every empty directory is a hole: cross-check against the DAG's actual task list first.**
      Retired models leave live-looking GCS prefixes frozen at their last write (INC-015: two
      `*_derived_advertiser_id_dsc_id` dirs dead since 2026-02-08, superseded by a merged model), so a

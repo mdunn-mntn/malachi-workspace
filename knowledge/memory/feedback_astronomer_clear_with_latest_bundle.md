@@ -1,14 +1,18 @@
 ---
 name: Astronomer/Airflow — clear failed task with "Run with latest bundle version"
-description: When clearing a failed task instance after merging a code fix, ALWAYS check "Run with latest bundle version" in the Clear Task Instance dialog. Otherwise the cleared run uses the old (buggy) bundle and fails again.
+description: "Clearing a failed task after a merged fix: tick Run with latest bundle version, but that is necessary NOT sufficient. A config fix also needs the upstream builder task cleared, and never clear a task whose job is still running."
 type: feedback
 originSessionId: a9ed5a72-6c04-4040-b0b7-be132df0762a
 doc_type: memory
-keywords: [astronomer clear task, run with latest bundle version, airflow UI, clear task instance, upstream_failed cascade, deploy_prod.yaml, heal window, TI-931]
+keywords: [astronomer clear task, run with latest bundle version, airflow UI, clear task instance, upstream_failed cascade, deploy_prod.yaml, heal window, TI-931, bundle version necessary not sufficient, create_batch cached spec, xcom cached batch spec, clear the producer task, config rerun trap, clear running task false success, cancelled batch green tick, INC-018]
 domain: [workflow, infra]
 lifecycle: active
-last_verified: 2026-05-05
+last_verified: 2026-08-15
 ---
+> **CORRECTION 2026-08-15 (INC-018): the bundle checkbox is NECESSARY, NOT SUFFICIENT.** It refreshes the DAG bundle, and nothing else. If an upstream `@task` already built and CACHED the artifact the failing task consumes — most importantly `create_batch`, which caches the **whole Dataproc batch spec including `runtime_config`** (driver memory, ttl, spark props) in XCom — then clearing the consumer with the box ticked still replays the OLD cached artifact. Proven on 2026-08-15: the run was on the post-merge bundle and the task still submitted the pre-fix `driver.memory=9600m`. **Rule: after a CONFIG fix, clear the PRODUCER task WITH downstream** (or trigger a fresh run with params), not just the task that failed. Mechanism + the three caches: [[reference_airflow_ti]].
+>
+> **Also NEVER clear a task whose backing job is still RUNNING** — the clear cancels the in-flight batch and Airflow records that try as SUCCESS with zero output. A suspiciously fast green (INC-018: 2:28 against a ~7 min healthy run) is that lie. Confirm the output partition, not the tick: [[feedback_validated_is_not_correct]].
+
 When clearing a failed task instance in the prod Astronomer / Airflow UI after a code fix has been merged + deployed (`deploy_prod.yaml` green → bundle version bumped), **always check "Run with latest bundle version"** in the Clear Task Instance dialog.
 
 **Why:** without it, the cleared task re-runs using whatever bundle version was active when the task originally ran (the OLD code with the bug). The clear succeeds technically but the task fails again with the same error. Easy to miss in the dialog because it's a single checkbox at the bottom, separate from the prominent toggles (Past / Future / Upstream / Downstream / Clear only failed tasks).
@@ -22,6 +26,7 @@ When clearing a failed task instance in the prod Astronomer / Airflow UI after a
    - Toggle **Downstream** on (so cascade-blocked Layer-2 `*_failed (upstream)` tasks clear too)
    - Leave Past / Future / Upstream / Clear only failed tasks **off**
    - **Check "Run with latest bundle version"** ← this is the easy-to-miss critical step
+   - **If the fix was CONFIG (not model `.py` logic), clear the upstream builder task instead** (`create_batch` and friends) with Downstream on — see the correction at the top
 6. Click Confirm.
 7. Watch the task flip red X → white (queued) → blue (running) → green ✓.
 

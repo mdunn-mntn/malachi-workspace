@@ -8,7 +8,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | memory | type | last_verified | doc |
 |--------|------|---------------|-----|
 | Don't propose naive pre/post for advertiser-level analyses | feedback | 2026-05-01 | [doc](memory/feedback_no_naive_pre_post.md) |
-| Astronomer/Airflow — clear failed task with "Run with latest bundle version | feedback | 2026-05-05 | [doc](memory/feedback_astronomer_clear_with_latest_bundle.md) |
 | Ticket + comment + PR writing rule — clarity, brevity, what/where/why/how | feedback | 2026-05-05 | [doc](memory/feedback_ticket_writing_rule.md) |
 | CausalImpact / pre-post viz: aggregate-only at chart level | feedback | 2026-05-08 | [doc](memory/feedback_causal_impact_viz_simplicity.md) |
 | project-advertiser-high-liveness-filter | project | 2026-05-27 | [doc](memory/project_advertiser_high_liveness_filter.md) |
@@ -167,7 +166,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-10 | [doc](memory/reference_airflow3_backfill_scoping.md) |
 | feedback_constrain_llm_to_real_taxonomy | feedback | 2026-08-10 | [doc](memory/feedback_constrain_llm_to_real_taxonomy.md) |
-| feedback_validated_is_not_correct | feedback | 2026-08-10 | [doc](memory/feedback_validated_is_not_correct.md) |
 | reference_airflow_log_puller | reference | 2026-08-10 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-10 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_gitignore_json_rule | reference | 2026-08-10 | [doc](memory/reference_gitignore_json_rule.md) |
@@ -190,5 +188,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ticket_framing_gate | reference | 2026-08-12 | [doc](memory/reference_ticket_framing_gate.md) |
 | reference_workflow_kit_porting | reference | 2026-08-12 | [doc](memory/reference_workflow_kit_porting.md) |
 | reference_xlsx_subtitle_caps | reference | 2026-08-12 | [doc](memory/reference_xlsx_subtitle_caps.md) |
+| Astronomer/Airflow — clear failed task with "Run with latest bundle version | feedback | 2026-08-15 | [doc](memory/feedback_astronomer_clear_with_latest_bundle.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-15 | [doc](memory/reference_airflow_ti.md) |
 | background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |
+| feedback_validated_is_not_correct | feedback | 2026-08-15 | [doc](memory/feedback_validated_is_not_correct.md) |
