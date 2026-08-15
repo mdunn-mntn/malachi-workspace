@@ -154,7 +154,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
 | reference-ddp-billing-logic | reference | 2026-08-05 | [doc](memory/reference_ddp_billing_logic.md) |
 | reference-mntn-google-drive-access | reference | 2026-08-05 | [doc](memory/reference_mntn_google_drive_access.md) |
-| background_work_liveness | feedback | 2026-08-06 | [doc](memory/feedback_background_work_liveness.md) |
 | feedback_hold_evidenced_verdict | feedback | 2026-08-06 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
@@ -167,7 +166,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_fangorn_inference_dataproc | reference | 2026-08-09 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-10 | [doc](memory/reference_airflow3_backfill_scoping.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-08-10 | [doc](memory/reference_airflow_ti.md) |
 | feedback_constrain_llm_to_real_taxonomy | feedback | 2026-08-10 | [doc](memory/feedback_constrain_llm_to_real_taxonomy.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-10 | [doc](memory/feedback_validated_is_not_correct.md) |
 | reference_airflow_log_puller | reference | 2026-08-10 | [doc](memory/reference_airflow_log_puller.md) |
@@ -192,3 +190,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ticket_framing_gate | reference | 2026-08-12 | [doc](memory/reference_ticket_framing_gate.md) |
 | reference_workflow_kit_porting | reference | 2026-08-12 | [doc](memory/reference_workflow_kit_porting.md) |
 | reference_xlsx_subtitle_caps | reference | 2026-08-12 | [doc](memory/reference_xlsx_subtitle_caps.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-08-15 | [doc](memory/reference_airflow_ti.md) |
+| background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |

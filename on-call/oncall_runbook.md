@@ -1075,7 +1075,7 @@ gcloud storage ls "gs://mntn-data-partners/partners/predactiv/dt=2026080520/"   
 
 **Evidence-preservation lesson:** deleting the failed Dataproc batch (the standard way to free the id) also destroys its driver output, which is the only place the OOM's real cause lives. Capture `driverOutputResourceUri` BEFORE deleting, else the memory fix stays a guess.
 
-**Decision tree (next `tpa_export` 137 / instant-fail):** 1. Read try 1's duration. A long try 1 + seconds-long later tries = this incident, NOT a repeated OOM. 2. **Check GCS first**: `_SUCCESS` present and object count matching a neighbouring day (5002) means the work is DONE, so just mark the task success rather than re-running 400 GiB. 3. If it must re-run, clear `create_batch_id__2` WITH downstream (or delete the Dataproc batch to free the id). 4. Never conclude "not OOM" from the fast retries alone; and never conclude "OOM fixed" from a success unless you confirm the batch's actual `runtimeConfig.properties`.
+**Decision tree (next `tpa_export` 137 / instant-fail):** 1. Read try 1's duration. A long try 1 + seconds-long later tries = this incident, NOT a repeated OOM. 2. **Check GCS first**: `_SUCCESS` present and object count matching a neighbouring day (5002) means the work is DONE, so just mark the task success rather than re-running 400 GiB. **Both `ip_data_staging/` and `ip_data/` retain only ~6 days**, so this check works for the current incident but CANNOT audit whether an older run shipped. 3. If it must re-run, clear `create_batch_id__2` WITH downstream (or delete the Dataproc batch to free the id). 4. Never conclude "not OOM" from the fast retries alone; and never conclude "OOM fixed" from a success unless you confirm the batch's actual `runtimeConfig.properties`.
 
 ---
 
