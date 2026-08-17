@@ -239,6 +239,32 @@ footprint is 4 audience uploads and ~214K impressions/week, so the absolute doll
 (`ddp_winners_imp.impression_cnt = 1/N` over `ad_served_id`). All three columns are upper bounds and
 the ratios between them are the durable result, not the absolute dollars.
 
+### 4.8 Leg 2 is working in the 2026-08-13 build, and it is not redundant
+
+Measured on `ddp_crm_graph_cpm` (216,409 rows):
+
+| check | result |
+|---|---|
+| rows with empty `leg1_graph_dsids` | 0 |
+| rows with empty `leg2_graph_dsids` | 0 (0.0%) |
+| rows where leg 2 contributes a vendor leg 1 did **not** already carry | **49,016 (22.7%)** |
+
+Two consequences.
+
+**The `graph_version` join-loss concern does not reproduce in this build.** Leg 2 is populated on every
+row, so the equality join is not silently discarding the window here. That was a source-reading concern
+about PR #24, which ranges `ats` and `gts` independently over 30 days; the 2026-08-13 iteration carries
+`auction_signal_timestamp` on `ddp_crm_graph_matches_cpm`, so it appears to have reworked the time
+handling. **Re-test against whatever SQL is actually proposed for merge** rather than treating this as
+cleared for PR #24.
+
+**Per-touchpoint vs per-vendor crediting is worth 22.7% of impressions.** On roughly a fifth of DS63
+impressions, the segment-translation touchpoint credits a vendor the auction touchpoint does not. PR #24
+flattens both legs into one `array_agg(distinct ...)`, so that vendor is credited once regardless; the
+2026-08-13 build keeps the legs separable. The design doc's worked example ("all four of these vendors
+should be recorded and credited") implies per-touchpoint. This is a policy decision with a measured
+price tag, not a code-style choice, and it is the right question for the ID/AUDI meeting.
+
 ## 5. Solution
 What was done to resolve the issue:
 - Code changes (PRs, commits)

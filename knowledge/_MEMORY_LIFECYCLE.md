@@ -125,7 +125,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | dataproc-cost-awareness | feedback | 2026-07-29 | [doc](memory/feedback_dataproc_cost_awareness.md) |
 | feedback_attribution | feedback | 2026-07-29 | [doc](memory/feedback_attribution.md) |
 | feedback_shared_worktree_commits | feedback | 2026-07-29 | [doc](memory/feedback_shared_worktree_commits.md) |
-| feedback_slack_reply_voice | feedback | 2026-07-29 | [doc](memory/feedback_slack_reply_voice.md) |
 | reference_data_pipeline_repo | reference | 2026-07-29 | [doc](memory/reference_data_pipeline_repo.md) |
 | reference_hhst_pacing_lever | reference | 2026-07-29 | [doc](memory/reference_hhst_pacing_lever.md) |
 | rubric_strategy | feedback | 2026-07-29 | [doc](memory/feedback_rubric_strategy.md) |
@@ -192,5 +191,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | airflow-ti-repo-and-deployment | reference | 2026-08-15 | [doc](memory/reference_airflow_ti.md) |
 | background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-15 | [doc](memory/feedback_validated_is_not_correct.md) |
+| feedback_slack_reply_voice | feedback | 2026-08-17 | [doc](memory/feedback_slack_reply_voice.md) |
 | reference_airflow_ti_dev_testing | reference | 2026-08-17 | [doc](memory/reference_airflow_ti_dev_testing.md) |
 | reference_guid_geos_summary_pipeline | reference | 2026-08-17 | [doc](memory/reference_guid_geos_summary_pipeline.md) |
