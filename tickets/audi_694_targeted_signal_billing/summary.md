@@ -1,29 +1,28 @@
 ---
 doc_type: ticket
 title: "AUDI-694: Update targeted_signal to Handle Billing"
-status: backlog
+status: in_progress
 date: 2026-08-17
 summary: "DDP vendor crediting as CRM inclusions migrate DS4 -> DS63; review of the unmerged DS63 crediting PR"
 result: "Phase 1 done: PR bae-sql-utility#24 cannot execute (references translation_date; the signals expose translation_timestamp). Free-log and 33Across-dedup defects confirmed against the live registry. Dollar sizing blocked on enriched_impressions access."
 question: "What must change in DDP vendor crediting as CRM inclusion audiences migrate DS4 -> DS63, and what is it worth?"
-framing_state: draft
+framing_state: locked
 ---
 
 # AUDI-694: Update targeted_signal to Handle Billing
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-694
-**Status:** backlog
+**Status:** in_progress
 **Date Started:** 2026-08-17
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+## 0. Framing
+- **Question (the unknown):** As CRM inclusion audiences migrate DS4 -> DS63, which sources should sit in the divisor that splits a credited impression, and what does each candidate rule pay the affected vendors versus the DS4 leg it replaces?
+- **Goal (why / the decision):** Pick the divisor rule for the graph crediting leg before DS63 GA, as an engineering consistency call with Wei and Jack (the graph leg should count sources the way the MNTN-Matched leg does). No DS63 credit has ever been billed, so the first bill sets the precedent for every future graph vendor credit including MNTN ID. Ties to the vendor-cost workstream (AUDI-1089 -> AUDI-1111 -> AUDI-1113, $768,916/yr preemption already BAE-confirmed) and gates ID-407.
+- **Objective (done-when):** The three divisor rules priced on real DS63 output, a written recommendation, and a recorded decision from Wei/Jack/AUDI. Closes when the decision exists in writing and the arithmetic defects are either fixed in the merge candidate or logged with an owner. Ships no code: implementation routes to AUDI-1145.
+- **Approach (how):** Price the rules off `dw-main-gold.reporting.ddp_crm_graph_cpm` (real DS63 output, already built) rather than rebuilding from raw. Confirm the billable roster and its dedup pairs in `integrationprod.direct_data_partners`. Use `enriched_impressions` (PAM grant 5d0f053c) for the scope volume, the DS4/DS63 dual-run split, the DS47 negative, and the zero-cpm-filler counterfactual against `ddp_all_matches_cpm_202607`. Assumptions to resolve first: which SQL is actually the merge candidate (PR #24 cannot compile and is not the 2026-08-13 build); whether DS47 ever reaches `category_info`; whether the winner-split grain changes the rule ratios.
+- **What would change the answer:** No result stops the work, because the rule must be settled before the first DS63 bill. The deadline is DS63 GA, not a volume threshold. The recommendation itself flips if the cross-provider winner split (`impression_cnt = 1/N` over `ad_served_id`) compresses the 4.7x gap between billable-only and MM-parity to something immaterial, or if the free logs turn out not to be genuine substitutes for deepsync on these impressions, which would undercut applying the AUDI-1113 preemption rule to the graph path.
 
 ## 1. Introduction
 Brief context: what system/feature/data is involved, and why this ticket exists.
