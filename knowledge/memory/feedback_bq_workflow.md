@@ -6,7 +6,7 @@ metadata:
   type: feedback
   originSessionId: cc00f377-b575-43ed-84cf-3e31ce190e7a
 doc_type: memory
-keywords: [bq_run.sh, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook]
+keywords: [bq_run.sh, project_id required, mntn-coredw-prod access denied, bigquery.jobs.create permission, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook]
 domain: [bigquery, workflow]
 lifecycle: active
 last_verified: 2026-07-28
@@ -26,6 +26,14 @@ bash .claude/scripts/bq_run.sh --ticket "TI-XXX" --label "description" \
   --use_legacy_sql=false --format=prettyjson --max_rows=100 --project_id=dw-main-silver \
   'SQL HERE'
 ```
+
+**`--project_id` is mandatory, not optional (2026-08-17).** The wrapper parses `--project_id` only to
+label the perf-log record; it does NOT inject one into the `bq` call. Omit it and the job runs against the
+gcloud default project, which is `mntn-coredw-prod`, and dies with `Access Denied: Project
+mntn-coredw-prod: User does not have bigquery.jobs.create permission`. The error names a project you never
+referenced, so it reads like a permissions problem rather than a missing flag. Always pass
+`--project_id=dw-main-silver` (or bronze). Cross-project `INFORMATION_SCHEMA` reads still work from any one
+billing project, so pick one and fully-qualify the rest.
 
 Schema inspection and dry runs can still use plain `bq` (no perf logging needed for those).
 

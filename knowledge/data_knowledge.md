@@ -532,7 +532,7 @@ Zach explained the full IP column taxonomy on 2026-02-25 call and confirmed in d
 
 **Rule:** Use `ip` for analysis. `bid_ip` to trace back to bid time. `impression_ip` as non-CTV fallback. `original_ip` only for pre-relay audit.
 
-### Audience UI "Site Visitors > Geography" — the Other bucket is non-US by design (PS-8614, 2026-08-17)
+### Audience UI "Site Visitors > Geography" — the Other bucket is non-US by design (PS-8614 / AUDI-1207, 2026-08-17)
 
 The regions breakdown in Audience > Segments > Site Visitors reads **Postgres `geo.guid_geos_summary`**
 (ti_core_db, NOT BigQuery) and buckets each row's `iso_code` against a fixed list of US state codes.

@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [guid_geos_summary, guid_geos_raw, geo.guid_geos_summary, site visitors geography, audience UI geography, regions breakdown, Other bucket, unknown geography, iso_code NULL, AUDIENCE_REGIONS, getAudienceTotals, gary-ql, PS-8614, Apollo.io, advertiser 33129, databricks_guid_geos, guid_geos_summary_to_integration, build_guid_geos_summary, ml_squad tpa, network_locations region join, location_ids 237, mntn-data-archive-prod, 8-day retention, truncated daily, 7-day sum distinct IPs, non-US traffic, Bryce Wagg, Richie Gonzalez, Katia Podtynov]
+keywords: [guid_geos_summary, guid_geos_raw, geo.guid_geos_summary, site visitors geography, audience UI geography, regions breakdown, Other bucket, unknown geography, iso_code NULL, AUDIENCE_REGIONS, getAudienceTotals, gary-ql, PS-8614, AUDI-1207, Apollo.io, advertiser 33129, databricks_guid_geos, guid_geos_summary_to_integration, build_guid_geos_summary, ml_squad tpa, network_locations region join, location_ids 237, mntn-data-archive-prod, 8-day retention, truncated daily, 7-day sum distinct IPs, non-US traffic, Bryce Wagg, Richie Gonzalez, Katia Podtynov]
 domain: [data-catalog, geo, infra, routing-people]
 lifecycle: active
 last_verified: 2026-08-17
@@ -38,6 +38,9 @@ decomposition table, and the measured baselines live in `knowledge/data_knowledg
 
 **Known measurement caveat (logged as IMP-045):** `count` is a **7-day SUM of per-day distinct IPs**, not
 7-day distinct IPs, so the widget overstates unique visitors by the repeat-visit factor.
+
+**Tracking ticket: AUDI-1207** (Spike, 0 SP, Done) — full record, the three queries and a re-runnable
+script live in `tickets/audi_1207_ps_8614_site_visitor_geography/`.
 
 **Worked example (PS-8614, 2026-08-17):** Apollo.io (AID 33129) reported 89% Other. Measured 8.4% US state
 / 5.3% no geo match / 86.4% non-US, the non-US half being India 57% and Philippines 31% — an offshore

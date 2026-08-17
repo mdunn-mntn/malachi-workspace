@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation]
 domain: [jira-process]
 lifecycle: active
 last_verified: 2026-08-05
@@ -184,6 +184,21 @@ TAR team Jira best practices: `documentation/architecture/TAR-JIRA Best Practice
 - Update tickets before standup and planning meetings (status, not data entry in meetings)
 
 **Boards, Spikes & sprints (AUDI-1148, 2026-07-22):** Spikes + sprints live in **AUDI** (Scrum board **1814**, active sprint via `GET /rest/agile/1.0/board/1814/sprint?state=active`). **INCR is a Kanban board (3013) with NO sprints and NO Spike issue type** — file spike/sprint work under AUDI even when it's incrementality work. AUDI issue types: Spike=`11467`, Task=3, Story=6, Bug=1, Epic=27. **An AUDI Spike requires only project + issuetype + summary** — Story Points, PMO Rep, Developer, Release Type are NOT required for a Spike (unlike Tasks). **Spike routing is org-forced to AUDI (verified 2026-08-05):** issuetype `11467` exists in BOTH the TI and AUDI create-meta, and POSTing `project={key:"TI"}` + `issuetype={id:"11467"}` still lands the issue in the **AUDI** project regardless of the create-project key — I posted project TI and got key `AUDI-1195`. So "file a TI spike" resolves to AUDI; matches the CLAUDE.md convention that spikes file under AUDI. Add to sprint: `POST /rest/agile/1.0/sprint/<sid>/issue {"issues":["AUDI-XXXX"]}`. Attach files: `POST /rest/api/2/issue/AUDI-XXXX/attachments` with header `X-Atlassian-Token: no-check` + `-F "file=@path"` (multiple `-F` OK); replace a stale attachment by `DELETE /rest/api/2/attachment/<attid>` first (updating the local file does NOT update the Jira copy).
+
+**Retroactive 0-SP spike for unticketed investigation time (AUDI-1207, 2026-08-17).** When a question
+arrives outside the board (a Slack ask, a PS escalation) and eats real time before anyone thinks to open a
+ticket, log it afterwards as an **AUDI Spike with `customfield_10012: 0`** rather than leaving it invisible
+or back-dating an estimate. Zero points says "this consumed a session but is not sprint capacity we
+planned," which is the honest signal. Set `framing_state: "skip: retroactive — <why>"` in the local
+`summary.md`; the framing gate is a pre-work ceremony and cannot apply to work already finished.
+
+**Verified create-and-close path for an AUDI Spike (AUDI-1207, 2026-08-17):** `POST /rest/api/2/issue` with
+`project={"key":"AUDI"}`, `issuetype={"id":"11467"}`, plus `customfield_10012`, `customfield_15612`
+(`{"id":"17863"}` = Bryce) and `labels:["q3_2026"]` all accepted in the same payload. Then
+`POST /rest/agile/1.0/sprint/<sid>/issue` (204). The Done transition on a Spike is listed as
+**`6 Close`**, not "Done" — same id, different label, and it takes `resolution={"id":"10000"}` straight
+from Open with **no `Developer` field required** (that block only bites the `In Review` route). Active
+sprint at the time: board 1814 → sprint 8270.
 
 ## Comment cadence + template (migrated from global CLAUDE.md §9, 2026-08-11)
 

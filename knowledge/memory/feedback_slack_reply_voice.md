@@ -6,10 +6,10 @@ metadata:
   type: feedback
   originSessionId: b9798d39-963b-4b08-ba77-d3be373da680
 doc_type: memory
-keywords: [slack reply voice, slack thread reply, human prose not AI, no em-dashes, BLUF, conversational, not the Jira bullet shape, live channel credibility, state what it is not what it isnt, no negation lists, plainify analyst jargon, no regression time-travel restamped, cut redundant assertions, no appended ownership routing]
+keywords: [slack reply voice, slack thread reply, human prose not AI, no em-dashes, BLUF, conversational, not the Jira bullet shape, live channel credibility, state what it is not what it isnt, no negation lists, plainify analyst jargon, no regression time-travel restamped, cut redundant assertions, no appended ownership routing, no hard-wrapped drafts, paste-ready formatting, one line per paragraph, queries only ask]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-07-29
+last_verified: 2026-08-17
 ---
 Slack replies must read like a person typed them, not like an AI report. Malachi flagged the on-call INC-005 draft as "sounds like AI" and specifically called out em-dashes and colon-heavy formatting.
 
@@ -45,5 +45,13 @@ Slack replies must read like a person typed them, not like an AI report. Malachi
 - **Don't invent compound coinages.** "pre-flip", "propagated in", "resolved through", "stale" were all flagged. Say it plainly: "the Jun-29 value", "the change isn't in memdb's copy", "the older value".
 - **Don't presume alignment with the reader's own artifact.** "maps exactly to your drift image" was cut. State the finding and let them see it matches.
 - **State provenance in the reply.** If a value came from their image and I only queried the geo tables, say so ("I'm inferring memdb's build from the metro it resolved to, not reading memdb directly"). See [[feedback_state_query_provenance]].
+
+**Extra lesson from the PS-8614 reply (2026-08-17).**
+- **Never hard-wrap a Slack draft.** I handed over a draft wrapped at ~80 chars inside a code fence; pasted
+  into Slack it kept my line breaks and came out mid-sentence ragged ("gives it an odd shape"). Put **one
+  line per paragraph** with blank lines between, and let Slack reflow it. Same fix applies to anything the
+  reader will paste onward.
+- **When the ask is "just the queries," send only the queries.** One `--` comment line above each saying
+  what it does, nothing else. No prose intro per query, no results, no setup narrative.
 
 **Key distinction.** This is different from the Terse Comms Standard for Jira comments, which stays scaffolded (Answer line, then Done, then Next bullets, in wiki markup). Both are BLUF. Slack is human prose, Jira is structured. See [[feedback_bluf_communication]], [[feedback_terse_chat_replies]], [[feedback_terse_tickets]].
