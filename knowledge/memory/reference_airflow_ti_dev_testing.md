@@ -1,0 +1,27 @@
+---
+name: reference_airflow_ti_dev_testing
+description: "How to actually test an airflow-ti DAG on the dev Astro deployment: astro deploy --dags silently omits include/ (ImportError + stale DAG), the git bundle re-syncs from main HOURLY and reverts your deploy mid-test, dev ipdsc holds only data_source_id 4 and 43, and how to run 3 tasks without the 20-task fan-out."
+metadata:
+  node_type: memory
+  type: reference
+doc_type: memory
+keywords: [airflow-ti dev testing, dev deployment cmcvcbd3j03vk01p91ksvm1vd, astro deploy --dags, dags only deploy, include not deployed, ImportError cannot import name, is_stale true, DAG not found 404, dag bundle version, git integration hourly sync, bundle reverted to main, dag_versions pinned at creation, neutralize fan-out, mark tasks success, targeted dag test, tpa_ipdsc_export dev, dev ipdsc data_source_id 4 43, tpa_export_data_sources param, sh-dw-external-tables-dev, PR 1196 validation, batch_id_for_try, dataproc staging PAM 403, ci_cd_enforcement false]
+domain: [infra, repos, workflow]
+lifecycle: active
+last_verified: 2026-08-17
+---
+Validated end-to-end on 2026-08-17 while dev-testing [airflow-ti#1196](https://github.com/SteelHouse/airflow-ti/pull/1196).
+
+**Dev deployment:** `cmcvcbd3j03vk01p91ksvm1vd` (name `dev`, `ci_cd_enforcement: false`, `dag_deploy_enabled: true`), API base `https://cmcvcbd3j03vk01p91ksvm1vd.vd.astronomer.run/dksvm1vd/api/v2`. Prod is `cmd6bd10c0gl901rfuokgryiq` and DOES enforce CI/CD, so a manual `astro deploy` is a dev-only move.
+
+**⚠ TRAP 1 — `astro deploy --dags` ships ONLY `dags/`.** `include/` lives in the Docker image at `/usr/local/airflow/include/`. A DAG that references a new helper (e.g. `batch_id_for_try` added to `include/util/dag_vars.py`) deploys BROKEN: the DAG file lands, the helper does not, and Airflow marks the DAG `is_stale: True` with `ImportError: cannot import name 'batch_id_for_try' from 'include.util.dag_vars'`. **A stale DAG returns HTTP 404 "DAG not found" on POST `/dagRuns`**, which reads like the DAG is missing rather than broken. Fix: full `astro deploy <id> --force` (builds and pushes the image, ~10 min). Only use `--dags` when the change is confined to `dags/`.
+
+**⚠ TRAP 2 — the dev DAG bundle re-syncs from `main` EVERY HOUR and silently reverts your deploy.** The deployment tracks an Astro git bundle named `main`. Observed bundle versions: `2026-08-17T18:36:02Z` (v107, my `astro deploy`) then `2026-08-17T19:36:07Z` (v108, the hourly sync = unmodified `origin/main`). **A dag run pins its bundle version at creation** (`GET /dags/<id>/dagRuns/<run>` → `dag_versions[].bundle_version`), so runs created before and after the sync execute DIFFERENT CODE with no visible signal. This nearly produced a false test result: a run created at 19:37 ran plain `main` while I believed it was on the branch, and the only tell was the Dataproc batch-id SHAPE changing between two supposedly identical runs. **Always assert `dag_versions[].bundle_version` on every run you draw a conclusion from, and finish a dev test inside one hour or re-deploy.** Confirm the live code directly with `GET /dagSources/<dag_id>` and grep for your symbol. The IMAGE is not reverted by the bundle sync, so once the image carries `include/`, a quick `--dags` re-deploy restores the branch DAGs in ~40s.
+
+**Running a few tasks without the whole DAG.** Airflow 3 rejects a manual trigger on a paused DAG (404), so you must unpause. `tpa_ipdsc_export` has 41 tasks and 15 `ipdsc_ds_*` roots that fire immediately. Recipe: POST the dagRun, poll `/taskInstances` until TIs exist (they appear within ~1s of creation), then `PATCH .../taskInstances/<task_id>` with `{"new_state":"success"}` for every task you do NOT want, then `POST /dags/<id>/clearTaskInstances` on the ones you do. Tasks already running when you patch keep going (one stray `ipdsc_ds_49` batch ran anyway), so patch fast. Use a `logical_date` no existing run holds or the POST 409s on a unique constraint.
+
+**Dev has almost no ipdsc input.** `gs://mntn-data-archive-dev/ipdsc/dt=<D>/` holds ONLY `data_source_id=4` and `43`, on every date checked. The export wants 17 sources, so `tpa_export` **cannot succeed in dev with the default list** — it dies `AnalysisException: [PATH_NOT_FOUND] ... /ipdsc/dt=<D>/data_source_id=8`, identically on `main` and on any branch. Pass `conf={"tpa_export_data_sources":[4,43]}` to get a real success (produced 559 objects / 12.79 GiB in 3m08s). Sink is correctly env-scoped: the rendered spec carries `-o gs://sh-dw-external-tables-dev` and `--environment dev`, so a dev run cannot touch the prod export bucket. Read the rendered spec from `create_export_batch`'s XCom BEFORE letting the Dataproc task run.
+
+**Spark scripts deploy separately from DAGs.** `spark/` goes to `gs://mntn-data-archive-<env>/ti_resources/spark/` via the `deploy_dev.yaml` GitHub workflow (`workflow_dispatch` accepts a `--ref`), NOT via `astro deploy`. The hourly bundle sync does NOT revert it. So a test can end up running `main`'s DAG against your branch's spark script; check both halves.
+
+**Dev Dataproc staging bucket is PAM-gated**, same as prod: `dataproc-staging-us-central1-411678625229-3h93pjqd` 403s on `storage.objects.list` AND on a direct `cat` of `driveroutput.000000000`. Plan to prove behavior from batch state + GCS output rather than driver logs unless you hold a grant. See [[reference_airflow_ti]], [[feedback_background_work_liveness]].
