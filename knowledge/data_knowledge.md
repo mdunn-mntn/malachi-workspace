@@ -532,6 +532,54 @@ Zach explained the full IP column taxonomy on 2026-02-25 call and confirmed in d
 
 **Rule:** Use `ip` for analysis. `bid_ip` to trace back to bid time. `impression_ip` as non-CTV fallback. `original_ip` only for pre-relay audit.
 
+### Audience UI "Site Visitors > Geography" — the Other bucket is non-US by design (PS-8614, 2026-08-17)
+
+The regions breakdown in Audience > Segments > Site Visitors reads **Postgres `geo.guid_geos_summary`**
+(ti_core_db, NOT BigQuery) and buckets each row's `iso_code` against a fixed list of US state codes.
+Anything else falls into **Other**. `iso_code` is NULL for every non-US visitor, so **Other = non-US
+traffic + IPs that do not resolve at all**. A high Other share is a property of the advertiser's
+audience, not a pipeline fault.
+
+**Pipeline (3 hops, two owning teams):**
+1. dbt python model `guid_geos_raw` (repo `SteelHouse/dbt`, `ml_squad/models/tpa/`, **ML squad**),
+   run hourly by airflow-ti DAG `databricks_guid_geos`. Reads `gs://mntn-data-archive-prod/guid_log/dt=/hh=`,
+   IPv4 only (`ip LIKE '%.%.%.%'`, so IPv6 visitors are dropped before the join), masks each IP to a
+   network, joins `network_locations` INNER to `location_data` postal rows (`location_type_id=7`) on
+   (postal_code, geoname_id), then LEFT joins the US-state rows (`location_type_id=5 AND
+   country_iso_code='US'`) on `region` to attach `iso_code`. Unmatched IPs are re-attached with NULL
+   `location_ids`/`name`/`iso_code`. Output: `gs://mntn-data-archive-prod/guid_geos_raw/dt=/hh=`, **8-day
+   GCS retention**.
+2. airflow-ti DAG `guid_geos_summary_to_integration` (**TGT / targeting**, daily) runs Dataproc
+   `spark/targeting/build_guid_geos_summary.py`, which reads **up to 7 days** of those partitions and
+   writes distinct-IP counts to `test.stg_guid_geos_summary`.
+3. The same DAG TRUNCATEs `geo.guid_geos_summary` and re-inserts `SUM(count)` per
+   (advertiser_id, iso_code) stamped `CURRENT_DATE`.
+
+**Two consequences of hop 2/3 (both verified):**
+- `geo.guid_geos_summary` holds **one snapshot only**. It is truncated daily, so it carries no history and
+  cannot answer "when did this start". Combined with the 8-day GCS retention on `guid_geos_raw`, **8 days is
+  the maximum lookback** for any onset question on this metric.
+- `count` is a **7-day SUM of per-day distinct IPs**, not distinct IPs over 7 days. A visitor active on
+  five days counts five times, so the widget's totals overstate unique users.
+
+**Diagnosing a "too much Other" report** — the raw GCS parquet is queryable as a BQ external table
+(hive-partitioned on dt/hh; the `sourceUris` must exclude Databricks `_started_*`/`_committed_*` marker
+files, e.g. one `dt=X/hh=Y/*.parquet` URI per hour, since BQ allows only one wildcard per URI).
+`location_ids` is the `location_data.hierarchy` chain, and **`237` = United States**, which splits NULL
+`iso_code` into three distinct causes:
+
+| `iso_code` NULL and... | meaning |
+|---|---|
+| `location_ids` empty/NULL | IP had no geo match at all (unresolvable) |
+| `237` present in `location_ids` | resolved to a US location but no state matched — a real lookup defect |
+| `237` absent | non-US visitor — expected |
+
+**Baseline (2026-08-16, advertiser-IP pairs):** platform-wide 71.3% US state / 10.6% no match /
+17.9% non-US, i.e. **~29% Other is normal**. Apollo.io (AID 33129) was 8.4% / 5.3% / **86.4% non-US**
+(India 57%, Philippines 31%, Vietnam 2%) and flat at 86-92% across all 8 retained days. The
+US-but-no-state bucket was **zero rows for every advertiser**, so the region-name join is not defective.
+Geo-resolution logic unchanged since 2025-09-23; airflow-ti side unchanged since 2026-06-24 (a revert).
+
 ### icloud_ tables
 `icloud_vv_log`, `icloud_guids`, `icloud_ipv4`, `icloud_ipv6` relate to Apple iCloud Private Relay
 traffic handling. IPs from iCloud relay require special treatment for geo-targeting.
