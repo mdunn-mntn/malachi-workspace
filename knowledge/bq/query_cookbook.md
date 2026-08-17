@@ -184,6 +184,85 @@ Cost/shape (perf log): ~74 GB / ~3s wall over 7 days (all_facts is DAY-partition
 1-day `--phase sample` probe predicts it). Caveat seen in the wild: some advertisers show conversions/revenue
 but 0 last-touch visits (pixel/attribution config), and ROAS blends view- + click-through order value.
 
+### A9. Site-Visitor geography — why an advertiser's "Other" bucket is large (PS-8614)
+The Audience UI reads Postgres `geo.guid_geos_summary`, which is truncated and rebuilt daily, so any
+"is this a regression / when did it start" question has to run against the hourly parquet that feeds it:
+`gs://mntn-data-archive-prod/guid_geos_raw/dt=/hh=`, **8-day retention**. Mechanism and baselines:
+`knowledge/data_knowledge.md` § "Audience UI Site Visitors > Geography".
+
+**External-table setup (two footguns).** BigQuery allows **one wildcard per source URI**, and the path
+contains Databricks `_started_*`/`_committed_*` markers that fail Parquet parsing. So enumerate hour
+directories and glob `*.parquet` inside each, rather than a single recursive wildcard:
+
+```bash
+gsutil ls -d "gs://mntn-data-archive-prod/guid_geos_raw/dt=*/hh=*" | sed 's:/*$::' \
+| python3 -c 'import json,sys; json.dump({"sourceFormat":"PARQUET",
+  "sourceUris":[l.strip()+"/*.parquet" for l in sys.stdin if l.startswith("gs://")],
+  "hivePartitioningOptions":{"mode":"AUTO",
+    "sourceUriPrefix":"gs://mntn-data-archive-prod/guid_geos_raw/"}}, sys.stdout)' > ggr_def.json
+# then: bq query --location=us-central1 --external_table_definition=ggr::ggr_def.json --use_legacy_sql=false '<sql>'
+```
+
+**Regression test — advertiser vs platform, per day** (~2 GB/day scanned, all 8 days ≈ 17 GB):
+
+```sql
+WITH pairs AS (
+  SELECT dt, advertiser_id, ip, MAX(IF(iso_code IS NULL OR iso_code = '', 1, 0)) AS null_iso
+  FROM ggr GROUP BY dt, advertiser_id, ip
+)
+SELECT dt, scope, pairs, null_pairs, ROUND(100 * null_pairs / pairs, 2) AS pct_other FROM (
+  SELECT dt, 'platform' AS scope, COUNT(*) AS pairs, SUM(null_iso) AS null_pairs FROM pairs GROUP BY dt
+  UNION ALL
+  SELECT dt, 'advertiser', COUNT(*), SUM(null_iso) FROM pairs WHERE advertiser_id = <aid> GROUP BY dt
+) ORDER BY scope, dt;
+```
+
+**The discriminator — is it a defect or just non-US?** `iso_code` is populated only for US states, so NULL
+alone proves nothing. `location_ids` is the `location_data.hierarchy` chain and **`237` = United States**,
+which splits NULL into three causes. Only `us_but_no_state` is a pipeline defect:
+
+```sql
+WITH r AS (
+  SELECT advertiser_id, ip, iso_code,
+         ARRAY_LENGTH(location_ids.list) AS n_loc,
+         EXISTS(SELECT 1 FROM UNNEST(location_ids.list) e WHERE e.element = '237') AS has_us
+  FROM ggr WHERE dt = '<literal_day>'
+)
+SELECT IF(advertiser_id = <aid>, 'advertiser', 'all_others') AS scope,
+       CASE WHEN iso_code IS NOT NULL AND iso_code <> '' THEN '1_us_state_resolved'
+            WHEN IFNULL(n_loc, 0) = 0                    THEN '2_no_geo_match_at_all'
+            WHEN has_us                                  THEN '3_us_but_no_state (DEFECT)'
+            ELSE                                              '4_non_us (expected Other)'
+       END AS cause,
+       COUNT(DISTINCT CONCAT(CAST(advertiser_id AS STRING), '|', ip)) AS ip_adv_pairs
+FROM r GROUP BY scope, cause ORDER BY scope, cause;
+```
+
+**Country mix of the non-US half** — resolve the first hierarchy element against country rows:
+
+```sql
+WITH r AS (
+  SELECT ip, location_ids.list[SAFE_OFFSET(0)].element AS country_loc_id
+  FROM ggr
+  WHERE dt = '<literal_day>' AND advertiser_id = <aid>
+    AND (iso_code IS NULL OR iso_code = '') AND ARRAY_LENGTH(location_ids.list) > 0
+  GROUP BY ip, country_loc_id
+)
+SELECT COALESCE(c.location, CONCAT('location_id ', r.country_loc_id)) AS country, c.country_iso_code,
+       COUNT(*) AS distinct_ips, ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS pct_of_non_us
+FROM r
+LEFT JOIN (SELECT DISTINCT location_id, location, country_iso_code
+           FROM `dw-main-bronze.geo.location_data` WHERE location_type_id = 2) c
+  ON CAST(r.country_loc_id AS INT64) = c.location_id
+GROUP BY 1, 2 ORDER BY distinct_ips DESC LIMIT 15;
+```
+
+Measured 2026-08-16: platform 71.3% US state / 10.6% no match / 17.9% non-US, and the defect bucket was
+**zero rows for every advertiser**. Apollo.io (33129) was 8.4% / 5.3% / 86.4% non-US. Reconciliation check
+before trusting the external read: the 7-day sum of these per-day pair counts matched the Postgres table
+to within 0.5pp (88.5% vs 88.0%), because `guid_geos_summary.count` is itself a 7-day sum of daily
+distinct IPs.
+
 ---
 
 ## §B — Before → after tuning wins
