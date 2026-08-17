@@ -1,9 +1,13 @@
+.TABLES
+coredw.usage_reporting_data
 integrationprod.archives_advertiser_archives
 integrationprod.archives_advertiser_configuration_archives
 integrationprod.archives_audience_segment_archives
 integrationprod.audience_advertiser_configurations
 integrationprod.direct_data_partners
 integrationprod.ui_audience_uploads
+reporting.__TABLES__
+reporting.ddp_crm_graph_cpm
 reporting.ddp_mm_winners_imp_*
 reporting.ddp_mm_winners_imp_202606
 reporting.lift__ghost_bid_rollup
