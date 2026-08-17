@@ -56,11 +56,18 @@ Neither column exists. `INFORMATION_SCHEMA.COLUMNS` on `dw-main-silver.identity`
 | `graph_translation_signal` | translation_id, data_source_category_id, data_source_id, targeted_id, targeted_id_type, household_id, graph_version, graph_data_sources, **translation_timestamp** |
 
 The column is `translation_timestamp` (TIMESTAMP) on both. PR #24 would fail at compile with
-`Unrecognized name: translation_date`. **Nobody has executed this PR against real data.** It has been
-sitting in review for 19 days as the blocking item on ID-407.
+`Unrecognized name: translation_date`.
 
-Consequence for the ticket: the correct near-term output is a design review of PR #24, not only a
-dollar estimate.
+**Refined 2026-08-17 (see 4.7): `translation_date` never existed.** The pre-refactor dev tables from
+2026-08-02/03 (`identity__graph_translation_signal__2646043435__dev`, `__1231710114__dev`) also carry
+`translation_timestamp`, so this is not bit-rot from the ID-421 model refactor of 2026-08-05. But the
+gold output tables `ddp_graph_matches*` **do exist and are populated** (built 2026-08-10), and a newer
+iteration exists (2026-08-13). So an adapted version has been run locally; the SQL sitting in the
+GitHub PR is not the SQL that was executed, and it is not the current design either.
+
+Consequence for the ticket: **the artifact under BAE review is stale.** Reviewing PR #24 as written
+reviews the wrong thing. The near-term output is a design review against the 2026-08-13 iteration,
+plus the divisor decision in 4.7.
 
 ### 4.1 The umbrella views read only CRM — the crediting logs from our own DAGs go nowhere
 
@@ -184,6 +191,53 @@ rollout boundary, on a self-reported meter.
   only, DS4 is retained for inclusions, and the config column is `crm_exclusion_data_source`. An
   excluded household is never served, so it generates no impression to credit. If that holds, the
   ticket's literal premise has no billing impact and the exposure is entirely DS63.
+
+### 4.7 MEASURED — the divisor choice moves deepsync's bill by 4.7x, and preemption by 259x
+
+The `ddp_crm_graph_cpm` table in `dw-main-gold.reporting` (built 2026-08-13, covering
+dt 2026-08-06..2026-08-12) is a **newer iteration than PR #24**: it carries `leg1_graph_dsids` and
+`leg2_graph_dsids` as separate arrays alongside the combined `graph_dsids`, i.e. it preserves the
+per-touchpoint split the design doc calls for and PR #24 flattens away. A sibling
+`ddp_crm_graph_matches_cpm` adds `type` and `auction_signal_timestamp`. Neither shape is in any open PR.
+
+Critically, its `graph_dsids` **retain the free and non-billable sources** — it does not apply the
+`external_reporting_required` filter that PR #24 applies before the divisor. So the real data lets the
+divisor question be priced directly.
+
+**Who actually enables a DS63 impression** (214,251 impressions, 7 days):
+
+| dsid | name | impressions | share | billing status |
+|---|---|---|---|---|
+| 30 | MNTN augmentor_log | 211,370 | 98.7% | free, internal |
+| 22 | Experian | 208,723 | 97.4% | flat_fee, `external_reporting_required = false` |
+| 29 | deepsync | 207,031 | 96.6% | **$0.50 fixed_cpm — the only per-impression-billable source** |
+| 58 | Audience Acuity | 205,681 | 96.0% | absent from `direct_data_partners` entirely |
+| 23 | guid_log | 175,981 | 82.1% | free, internal |
+
+Average 4.708 sources per impression (leg 1 auction 4.456, leg 2 graph translation 1.684).
+
+**The pricing consequence.** Deepsync is present on 209,076 of 216,409 match rows, and **99.6% of those
+(208,269) also carry a free log**. Its credited impression-share under the three candidate rules:
+
+| rule | deepsync shares | usage @ $0.50 CPM | vs PR #24 |
+|---|---|---|---|
+| **A. PR #24** — divisor counts billable partners only | 209,076.0 | $104.54 / week | 1.0x |
+| **B. MM parity** — all graph sources sit in the divisor | 44,626.8 | $22.31 / week | **0.21x (4.7x less)** |
+| **C. Full preemption** — free log present, paid vendor gets 0 | 807.0 | $0.40 / week | **0.004x (259x less)** |
+
+Under rule A, deepsync is the *sole* billable source on essentially every DS63 impression, so it takes
+100% of each one. That is not a rounding difference from the MM leg, it is a different pricing regime
+arriving silently with a data-source migration.
+
+**Scale anchor.** Deepsync bills through the legacy DS4 path today (`ddp_usage_report_ds29`):
+Jan-Jul 2026 = **$22,379.79**, roughly a $38K/yr run rate (2026-04 peaked at $8,886.14).
+`usage_reporting_data` has **no DS63 rows** — graph crediting has never been billed. Today's DS63
+footprint is 4 audience uploads and ~214K impressions/week, so the absolute dollars are small; the
+**multiplier is the finding**, and DS63 is targeted GA this quarter as the replacement for DS4.
+
+**Caveat on grain.** These figures are at the match grain, before the cross-provider winner split
+(`ddp_winners_imp.impression_cnt = 1/N` over `ad_served_id`). All three columns are upper bounds and
+the ratios between them are the durable result, not the absolute dollars.
 
 ## 5. Solution
 What was done to resolve the issue:
