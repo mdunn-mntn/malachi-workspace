@@ -46,3 +46,11 @@ The headline divisor finding (4.7x MM parity, 259x preemption) was measured with
 - 4h windows are the known constraint: IMP-011 records a `sqlmesh plan` failing because it ran >24h
   against 8h PAM windows. Scope each session to one question.
 - AUDI-1170 used ~4 grant windows for a backfill (`dataproc-runtime-actas` + `dataproc-submit`).
+
+## Submitted
+
+- **Grant ID:** `5d0f053c-4d4e-4e5b-8c94-c78ad1e66fef`
+- **Requested:** 2026-08-17 22:54:12 UTC by malachi@mountain.com
+- **State:** `APPROVAL_AWAITED` (DevOps). Request itself expires 2026-08-18 22:54 UTC if not actioned.
+- **Duration once approved:** 14400s (4h) from approval.
+- Check: `gcloud pam grants describe 5d0f053c-4d4e-4e5b-8c94-c78ad1e66fef --entitlement=bq-read --project=mntn-analytics-prod-01 --location=global --format="value(state)"`
