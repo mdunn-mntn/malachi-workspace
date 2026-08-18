@@ -134,8 +134,8 @@ Output: `outputs/audi_1208_vertical_sizes_2026_08_17.csv`. **These are the repor
 
 | cut | n | mean | median | Q1 | Q3 | min | max |
 |---|---|---|---|---|---|---|---|
-| verticals (6-digit) | 148 | 9,479,187 | 6,557,786 | 3,959,353 | 12,026,014 | 919,345 | 76,274,119 |
-| buckets (3-digit) | 37 | 25,952,755 | 20,852,312 | 11,362,823 | 33,340,029 | 2,546,637 | 88,832,335 |
+| verticals (6-digit) | 148 | 9,479,187 | 6,557,786 | 3,960,892 | 11,962,638 | 919,345 | 76,274,119 |
+| buckets (3-digit) | 37 | 25,952,755 | 20,852,312 | 12,756,804 | 33,091,717 | 2,546,637 | 88,832,335 |
 
 Largest verticals: `124000 Current Affairs` 76.3M · `101000 Apparel & Accessories` 44.3M · `104014 B2B - Workflow Automation` 42.3M · `114003 Food Products` 34.0M.
 Smallest: `101005 Apparel & Accessories - Healthcare` 0.92M · `128000 Home Warranties` 0.98M · `133005 Skiing & Snowboarding` 1.32M.
@@ -203,9 +203,9 @@ Perfect separation — every flat campaign is `funnel_level = 3`, and zero funne
 
 | cohort | audiences | mean | median | Q1 | Q3 | min | max |
 |---|---|---|---|---|---|---|---|
-| all MM prospecting | 2,063 | 4,772,375 | 3,553,726 | 1,644,679 | 5,958,157 | 0 | 41,760,550 |
-| no exclusions | 1,342 | 4,516,518 | 3,486,590 | 1,310,364 | 5,719,723 | 0 | 34,470,335 |
-| with exclusions | 721 | 5,248,601 | 3,725,338 | 2,273,025 | 6,832,458 | 0 | 41,760,550 |
+| all MM prospecting | 2,063 | 4,772,375 | 3,553,726 | 1,649,295 | 5,956,302 | 0 | 41,760,550 |
+| no exclusions | 1,342 | 4,516,518 | 3,486,590 | 1,321,361 | 5,718,105 | 0 | 34,470,335 |
+| with exclusions | 721 | 5,248,601 | 3,725,338 | 2,295,013 | 6,816,196 | 0 | 41,760,550 |
 
 Context, same 2,063: mean 51,321,823 IPs at any score (median 43,120,471); PP band (6666-8000) mean 6,313,960 / median 2,913,153. So HI is a mean 4.8M of a mean 51.3M scored pool.
 
@@ -263,7 +263,7 @@ The `Smallest` column reads 0 on every cohort. Not an artifact, and not "an audi
 
 This is the already-verified CLEAN RULE (AUDI-1083, `data_knowledge.md`): **HI = in vertical ∩ in keywords**; a vertical-only campaign has no keyword set, so every in-vertical IP is vertical-no-keyword and lands in PP (6666–8000), never HI. These are the "vertical only" / Peak-Performance-only configurations. They are not small: their total scored pool runs to a median 18.7M IPs (max 140.6M) and their PP band to a median 8.4M (max 97.5M). They are structurally capped one band below HI, by product design.
 
-**Consequence for the reported average, which is material.** Averaging in 156 structural zeros pulls the answer down. Excluding them: mean **5,162,773** (vs 4,772,375, **+8.2%**), median **3,767,051** (vs 3,553,726), Q1 2,354,653, Q3 6,276,546, min 7,845. A fourth row, `HI, only audiences that run keywords` (n=1,907), is now on the tab so both readings are visible; the three rows answering Paulo's literal wording are unchanged and still lead.
+**Consequence for the reported average, which is material.** Averaging in 156 structural zeros pulls the answer down. Excluding them: mean **5,162,773** (vs 4,772,375, **+8.2%**), median **3,767,051** (vs 3,553,726), Q1 2,355,197, Q3 6,275,898, min 7,845. A fourth row, `HI, only audiences that run keywords` (n=1,907), is now on the tab so both readings are visible; the three rows answering Paulo's literal wording are unchanged and still lead.
 
 Independent confirmation that the reported numbers are sound: this is the second mechanism found by interrogating an odd-looking value rather than shipping it (the first was the flat-10000 contamination, 4.10), and unlike that one it is **not** a defect — the zeros are correct and should stay in the "all MM audiences" row.
 
@@ -289,6 +289,17 @@ Ryan Kleck pushed back ("i don't really own that BQ table.. but maybe that's som
 **Downstream note, unchanged and still worth knowing:** two SQLMesh models read this external table with exact `year`/`month`/`day` filters — `aggregates.household_scores_by_campaign` (`enabled false`) and `aggregates.tpa_membership_updates_log_insegments` (`enabled TRUE`, `@daily`, filtering `@start_date - 1`). If the table ever *did* go blind, that second model would silently produce zero household scores. Not currently happening.
 
 **Lesson recorded:** a single 0-row result from a federated external table is not evidence of missing data. Re-run before concluding, and do not ship a root cause that is a guess dressed as a mechanism. I had this written into `data_catalog.md`, a memory file, the ticket, the workbook, and a Slack draft to a colleague before retesting it once.
+
+### 4.17 Quartile convention aligned to Spark, and the monitor change shipped as a PR
+Ryan: "yeah sure add them!!! more data is better!" PR **SteelHouse/airflow-ti#1204**, branch `AUDI-1208-vertical-size-quartiles`.
+
+**Convention bug caught while writing it.** Python's `statistics.quantiles(n=4)` defaults to **method="exclusive"**; Spark's `percentile()` is **linear interpolation** (numpy/R type-7). The workbook was built on the exclusive default, so the monitor would have printed different Q1/Q3 for the same day and looked like a contradiction. Immaterial for verticals (Q1 3,959,353 → 3,960,892, +0.04%) but **material for buckets, where n=37: Q1 11,362,823 → 12,756,804, a 12% shift.**
+
+**Resolved by moving the workbook onto the linear convention** (`method="inclusive"`), which is the standard and matches Spark. All quartiles in §4 above are restated to it. The Read me tab now names the convention. Everything else, mean/median/min/max/counts, is convention-independent and unchanged.
+
+**Monitor change:** a one-row `Vertical Size Distribution` table above the existing one, aggregating the already-cached `vertical_compare_df` (no extra read). Total row excluded via a new `TOTAL_VERTICAL_ID` constant. **Not executed against Spark: this Mac has no JVM** (`/usr/libexec/java_home` finds no runtime), so the PR says it needs a dev run before merge. Verified instead by reproducing the exact aggregation in Python against the real 2026-08-17 frame, matching the shipped numbers to the digit: 148 / 9,479,187 / 3,960,892 / 6,557,786 / 11,962,638 / 919,345 / 76,274,119, with the filter leaving exactly 148 of 149 rows.
+
+**Frame note verified from the SQL:** `vertical_compare_df` contains vertical rows plus one Total row only. Bucket-level rows never enter it (both rollup CTEs filter `LENGTH(...) > 3`; bucket counts live in the separate `bucket_distinct_today` CTE used for the coverage ratio). The `bucket_id IS NOT NULL` guard is therefore belt-and-braces, not load-bearing.
 
 ## 5. Solution
 **Delivered (rebuilt 2026-08-18: funnel_level=1 correction, re-audited, keyword cohort added; see 4.12, 4.15):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
@@ -323,10 +334,10 @@ Asked to confirm confidence, so the workbook was audited cell-by-cell against a 
 
 ## 6. Questions Answered
 - **Q:** What is the average size of all verticals, with quartiles?
-  **A:** Across all 148 DS13 verticals on 2026-08-17: mean 9,479,187 distinct IPs, median 6,557,786, Q1 3,959,353, Q3 12,026,014, min 919,345 (`101005 Apparel & Accessories - Healthcare`), max 76,274,119 (`124000 Current Affairs`). Buckets (37): mean 25,952,755, median 20,852,312, Q1 11,362,823, Q3 33,340,029.
+  **A:** Across all 148 DS13 verticals on 2026-08-17: mean 9,479,187 distinct IPs, median 6,557,786, Q1 3,960,892, Q3 11,962,638, min 919,345 (`101005 Apparel & Accessories - Healthcare`), max 76,274,119 (`124000 Current Affairs`). Buckets (37): mean 25,952,755, median 20,852,312, Q1 12,756,804, Q3 33,091,717.
 
 - **Q:** What is the average size of the HI subset of MM audiences, for audiences with no exclusions and for all MM audiences?
-  **A:** No exclusions (1,342 audiences): mean 4,516,518 IPs, median 3,486,590, Q1 1,310,364, Q3 5,719,723. All MM prospecting audiences (2,063): mean 4,772,375, median 3,553,726, Q1 1,644,679, Q3 5,958,157. Scope is `funnel_level = 1`; see 4.10 for why that filter is mandatory. **Both are pre-exclusion pools** — see the next question.
+  **A:** No exclusions (1,342 audiences): mean 4,516,518 IPs, median 3,486,590, Q1 1,321,361, Q3 5,718,105. All MM prospecting audiences (2,063): mean 4,772,375, median 3,553,726, Q1 1,649,295, Q3 5,956,302. Scope is `funnel_level = 1`; see 4.10 for why that filter is mandatory. **Both are pre-exclusion pools** — see the next question.
 
 - **Q:** Does carrying an exclusion shrink an audience's HI pool?
   **A:** These numbers cannot tell you, and they are not evidence that it does. `prospecting_join` discards the `include` flag before scoring, so exclusions are absent from the scoring path entirely and bind at bid time instead. The with-exclusion cohort actually reports a HIGHER median (3.73M vs 3.49M) purely because exclusions correlate with larger accounts.

@@ -14,11 +14,11 @@ Answers "how big is a vertical / an audience's High Intent pool" without re-runn
 
 | cut | n | mean | median | Q1 | Q3 | min | max |
 |---|---|---|---|---|---|---|---|
-| verticals (6-digit) | 148 | 9,479,187 | 6,557,786 | 3,959,353 | 12,026,014 | 919,345 | 76,274,119 |
-| buckets (3-digit) | 37 | 25,952,755 | 20,852,312 | 11,362,823 | 33,340,029 | 2,546,637 | 88,832,335 |
-| HI pool / prospecting audience | 2,063 | 4,772,375 | 3,553,726 | 1,644,679 | 5,958,157 | 0 | 41,760,550 |
-| — no exclusions | 1,342 | 4,516,518 | 3,486,590 | 1,310,364 | 5,719,723 | 0 | 34,470,335 |
-| — with exclusions | 721 | 5,248,601 | 3,725,338 | 2,273,025 | 6,832,458 | 0 | 41,760,550 |
+| verticals (6-digit) | 148 | 9,479,187 | 6,557,786 | 3,960,892 | 11,962,638 | 919,345 | 76,274,119 |
+| buckets (3-digit) | 37 | 25,952,755 | 20,852,312 | 12,756,804 | 33,091,717 | 2,546,637 | 88,832,335 |
+| HI pool / prospecting audience | 2,063 | 4,772,375 | 3,553,726 | 1,649,295 | 5,956,302 | 0 | 41,760,550 |
+| — no exclusions | 1,342 | 4,516,518 | 3,486,590 | 1,321,361 | 5,718,105 | 0 | 34,470,335 |
+| — with exclusions | 721 | 5,248,601 | 3,725,338 | 2,295,013 | 6,816,196 | 0 | 41,760,550 |
 
 Same 2,063 audiences at ANY score: mean 51,321,823 / median 43,120,471. Largest vertical
 `124000 Current Affairs` 76.3M; smallest `101005 Apparel & Accessories - Healthcare` 0.92M.
@@ -28,6 +28,9 @@ Same 2,063 audiences at ANY score: mean 51,321,823 / median 43,120,471. Largest 
 - **Never add category sizes.** An IP averages ~6.6 verticals, so the 148 sizes sum to ~1.40B against a
   214,079,274-IP base. Buckets are parents of verticals, so those don't sum either.
 - **Counting unit is the IP**, not households or people.
+- **Quartiles use LINEAR INTERPOLATION** (numpy/R type-7 = Spark `percentile()`), NOT Python's
+  `statistics.quantiles` default of `method='exclusive'`. On n=37 buckets the two differ 12% at Q1.
+  Pass `method='inclusive'` in Python so numbers agree with the monitor (airflow-ti PR #1204).
 - **156 of the 2,063 (7.6%) score exactly ZERO HI** — precisely the audiences with no DS19 keyword layer (156/156, no exceptions). HI needs vertical AND keywords, so a vertical-only campaign caps at PP. Excluding them: mean **5,162,773** / median **3,767,051** (+8.2% on the mean). Say which convention you used.
 - **The with-exclusion cohort's larger pool is vertical composition, not exclusions.** Those advertisers sit in verticals 27% bigger at the median; within-vertical the gap vanishes (higher in 12 of 25 verticals, median −2.8%, sign-test p=0.65).
 

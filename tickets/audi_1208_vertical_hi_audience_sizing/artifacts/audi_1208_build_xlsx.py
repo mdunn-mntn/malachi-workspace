@@ -13,7 +13,7 @@ OUT = f"{T}/outputs"
 
 def summarize(vals):
     v = sorted(vals)
-    q = s.quantiles(v, n=4)
+    q = s.quantiles(v, n=4, method="inclusive")  # linear interpolation; matches Spark percentile()
     return dict(n=len(v), mean=round(s.mean(v)), median=round(s.median(v)),
                 q1=round(q[0]), q3=round(q[2]), mn=v[0], mx=v[-1])
 
@@ -161,7 +161,7 @@ wb.glossary(
         ("", ""),
         ("Reading the numbers", ""),
         ("Mean vs median", "Both are given because the spread is wide. The mean sits well above the median, so a few very large entries pull it up."),
-        ("Quartiles", "Q1 and Q3 bound the middle half. Half of all entries fall between them, a quarter below Q1, a quarter above Q3."),
+        ("Quartiles", "Q1 and Q3 bound the middle half: half of all entries fall between them, a quarter below Q1, a quarter above Q3. Computed by linear interpolation, the same convention the daily vertical size monitor uses."),
         ("Exclusion", "A clause telling the platform to leave a group out, e.g. existing customers. 721 of 2,063 audiences had one."),
         ("Before exclusions", "Every High Intent figure counts the pool the platform could reach before any exclusion is subtracted. The after-exclusion pool is a separate number, not shown."),
         ("Keyword layer", "The campaign-level keyword targeting. High Intent requires it. An audience without it can still reach the band below, but never High Intent."),
