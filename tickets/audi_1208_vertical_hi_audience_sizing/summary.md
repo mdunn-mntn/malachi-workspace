@@ -4,7 +4,7 @@ title: "AUDI-1208: Vertical and MM HI audience sizing (mean + quartiles)"
 status: in_progress
 date: 2026-08-18
 summary: "Mean/quartile sizes for DS13 verticals and the HI subset of MM audiences"
-result: "in progress — vertical sizes done; HI subsets running"
+result: "Verticals mean 9.5M IPs / median 6.6M / Q1-Q3 4.0-12.0M (n=148); MM audience HI pool mean 18.3M / median 5.5M; exclusions are bid-time, so both cohorts are pre-exclusion"
 question: "What are the mean and quartile audience sizes of MNTN verticals, and of the HI subset of MM prospecting audiences, split by audiences with no exclusions vs all MM audiences?"
 framing_state: locked
 ---
@@ -128,18 +128,81 @@ Two consequences worth carrying forward:
 day prefix shows only `_SUCCESS` and the directory itself, which reads as "empty partition." Use
 `ls '<prefix>/**' | grep '\.parquet$'` to actually count files.
 
-## 5. Solution
 
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+### 4.7 Vertical + bucket sizes, distinct IPs, dt = 2026-08-17 (`ip_vertical_associations`, the monitor's own source)
+Output: `outputs/audi_1208_vertical_sizes_2026_08_17.csv`. **These are the reported numbers** — same source and same counting rule as Ryan's monitor, and the same day as the HI cut.
+
+| cut | n | mean | median | Q1 | Q3 | min | max |
+|---|---|---|---|---|---|---|---|
+| verticals (6-digit) | 148 | 9,479,187 | 6,557,786 | 3,959,353 | 12,026,014 | 919,345 | 76,274,119 |
+| buckets (3-digit) | 37 | 25,952,755 | 20,852,312 | 11,362,823 | 33,340,029 | 2,546,637 | 88,832,335 |
+
+Largest verticals: `124000 Current Affairs` 76.3M · `101000 Apparel & Accessories` 44.3M · `104014 B2B - Workflow Automation` 42.3M · `114003 Food Products` 34.0M.
+Smallest: `101005 Apparel & Accessories - Healthcare` 0.92M · `128000 Home Warranties` 0.98M · `133005 Skiing & Snowboarding` 1.32M.
+
+**Reconciliation against IPDSC DS13 (dt = 2026-08-16) — sources agree.** Median delta +1.90% for verticals (range −3.59% to +9.13%) and +1.77% for buckets (range +0.35% to +8.94%). The `dt`s differ by one day and vertical membership grows daily, so a small positive median delta is the expected shape. No structural divergence: IPDSC DS13 is a faithful downstream copy. Either source answers the question; `ip_vertical_associations` is preferred because it is what the monitor reports and it had the fresher partition.
+
+**Roster gotcha:** `integrationprod.fpa_advertiser_verticals` is one row per ADVERTISER (30,863 rows per `type`), not a vertical dimension. `SELECT DISTINCT vertical_id, vertical_name` gives 37 (`type = 0`) / 148 (`type = 1`) and matches `fpa_categories` exactly. Joining it undeduped fans the size table out — the monitor's JDBC subquery uses `SELECT DISTINCT` for exactly this reason. Also: the monitor filters `vertical_name != 'MNTN Matched Audience'`, but **no such row exists in the BQ copy** (0 rows match `%MNTN%` in either type), so that filter is a no-op here and the roster is the full 148.
+
+### 4.8 HI pool size per MM audience, 2026-08-17
+Grain = one active Stage-1 prospecting campaign (4,907 of them; the scoring pipeline's own active set). Every one carries MNTN Matched targeting (`has_mm_incl` TRUE for all 4,907), so there is no non-MM comparison cohort in this population. `prospecting_intent` and PACC join 1:1 with full overlap.
+
+| cohort | audiences | mean | median | Q1 | Q3 | min | max |
+|---|---|---|---|---|---|---|---|
+| all MM audiences | 4,907 | 18,280,569 | 5,531,138 | 2,663,819 | 21,394,484 | 0 | 178,048,203 |
+| no exclusions | 3,211 | 17,040,321 | 5,144,080 | 2,400,946 | 20,516,066 | 0 | 178,048,203 |
+| with exclusions | 1,696 | 20,628,706 | 6,201,842 | 3,057,384 | 24,182,556 | 0 | 177,293,701 |
+
+Context, same 4,907 audiences: mean 51,241,847 IPs at ANY score (median 43,223,724), so HI is a mean 18.3M of a mean 51.2M scored pool. `min = 0` is real — some active audiences reached no HI IP that day; they are kept in the counts, not dropped.
+
+Distinct-IP counts use `APPROX_COUNT_DISTINCT` (HLL, ~1% error) because one day is 251.6B rows. That error is negligible against a distribution whose mean is 3.3x its median.
+
+### 4.9 THE FINDING — exclusions are invisible to scoring, so neither cohort is post-exclusion
+The counter-intuitive result (audiences WITH exclusions show a **larger** HI median, 6.20M vs 5.14M) is not a data error. Read `models/audience_intent/prospecting_join.py` in `SteelHouse/airflow-ti`:
+
+```python
+active_campaign_categories = (
+    self.spark.read.parquet(f"{...}/prospecting_active_campaign_categories/year={year}/...")
+    .groupBy("advertiser_id", "campaign_group_id", "campaign_id", "campaign_template_id")
+    .agg(F.count("*").alias("_c"))
+    .drop("_c")
+)
+```
+
+The job groups PACC down to the campaign key and **throws away `include`, `data_source_id`, and `data_source_category_id`**. PACC is used purely as a dimension to fetch `campaign_template_id` / `funnel_level` (which decide whether a row keeps its pipeline score or is flattened to 10000), then LEFT-joined to the scores. `include = false` **never acts as a filter anywhere in the scoring path.**
+
+So every HI number above is the **pre-exclusion** pool, for both cohorts. Consequences:
+1. The no-exclusion vs with-exclusion split is a **cohort correlation, not an exclusion effect.** Audiences that carry exclusions are simply attached to larger/more mature accounts, which have bigger HI pools to begin with. The +1.06M median gap must NOT be read as "exclusions add reach" or as any cost of excluding.
+2. This is consistent with the already-recorded serve-time model: exclusions bind in the **bidder**, at bid time, on the DS the bidder evaluates (DS47 since the 2026-07-01 release) — see memory `reference_crm_exclusion_serve_time`. Scoring sizes the addressable universe; the bidder removes the excluded slice afterwards.
+3. **Answering Paulo's part 2b as a post-exclusion number is a materially different and much harder query** — it needs the exclusion sets resolved per campaign against IPDSC at the same `dt` and subtracted from the HI pool. Ryan Kleck flagged exactly this in-thread ("you're gonna have to like apply those exclusions somehow.. that's gonna be the worst part 2b") before both of us settled on the cohort reading. If Paulo wants the true post-exclusion HI size, that is a follow-on.
+
+PACC exclusion composition: 1,696 of 4,907 audiences (34.6%) carry at least one `include = false` clause.
+
+## 5. Solution
+**Delivered:** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
+
+The two Method & caveats blocks that lead the tab are the exclusion-mechanism caveat and the skew caveat — the two ways these numbers get misread.
+
+**Not delivered (out of scope, flagged to the requester):** the true post-exclusion HI pool size. See 4.9 item 3.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** What is the average size of all verticals, with quartiles?
+  **A:** Across all 148 DS13 verticals on 2026-08-17: mean 9,479,187 distinct IPs, median 6,557,786, Q1 3,959,353, Q3 12,026,014, min 919,345 (`101005 Apparel & Accessories - Healthcare`), max 76,274,119 (`124000 Current Affairs`). Buckets (37): mean 25,952,755, median 20,852,312, Q1 11,362,823, Q3 33,340,029.
+
+- **Q:** What is the average size of the HI subset of MM audiences, for audiences with no exclusions and for all MM audiences?
+  **A:** No exclusions (3,211 audiences): mean 17,040,321 IPs, median 5,144,080, Q1 2,400,946, Q3 20,516,066. All MM audiences (4,907): mean 18,280,569, median 5,531,138, Q1 2,663,819, Q3 21,394,484. **Both are pre-exclusion pools** — see the next question.
+
+- **Q:** Does carrying an exclusion shrink an audience's HI pool?
+  **A:** These numbers cannot tell you, and they are not evidence that it does. `prospecting_join` discards the `include` flag before scoring, so exclusions are absent from the scoring path entirely and bind at bid time instead. The with-exclusion cohort actually reports a HIGHER median (6.20M vs 5.14M) purely because exclusions correlate with larger accounts.
+
+- **Q:** Where in BQ do vertical sizes come from?
+  **A:** Two equivalent sources. `gs://mntn-data-archive-prod/vertical_categorizations/ip_vertical_associations/dt=<date>/` is what the existing `vertical_size_monitor` reads and is preferred. `dw-main-bronze.external.ipdsc__v1` filtered to `data_source_id = 13` is the downstream copy and agrees to a median 1.9% at one day's lag. `external_ddm.data_source_category_sizes` is 3P-only and does NOT work.
+
+- **Q:** How many verticals are there?
+  **A:** 148, plus 37 bucket parents and 1 root. Consistent across `integrationprod.fpa_categories` (`data_source_id = 13`) and `SELECT DISTINCT` on `integrationprod.fpa_advertiser_verticals` (`type = 1` / `type = 0`).
+
+- **Q:** Can the registered BQ external table be used for prospecting scores?
+  **A:** No, not for recent dates. `external.household_scoring__prospecting_intent__v1` returns 0 rows for August 2026 while the GCS partitions exist and are full. Use an inline `--external_table_definition` pointed at the day directory, and always pass `--location=us-central1`. See 4.5.
 
 ## 7. Data Documentation Updates
 What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
