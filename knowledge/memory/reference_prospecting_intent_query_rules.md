@@ -1,6 +1,6 @@
 ---
 name: reference_prospecting_intent_query_rules
-description: Two hard rules for querying prospecting_intent — scope to funnel_level 1 (or 1,2) or the S3 flat-10000 fakes 3.8x too much High Intent, and read GCS inline because the registered BQ external table is stuck ~5 weeks stale
+description: Scope prospecting_intent to funnel_level 1 (or 1,2) or the S3 flat-10000 fakes 3.8x too much High Intent; and never read a single 0-row result from the external table as missing data, it can be transient
 metadata:
   node_type: memory
   type: reference
@@ -10,7 +10,7 @@ domain: [audience-scoring, bigquery, data-catalog]
 lifecycle: active
 last_verified: 2026-08-18
 ---
-Two independent traps in `prospecting_intent` (`gs://household-scoring-prod/output/scoring/prospecting_intent/`). Both bite silently — neither errors. Verified AUDI-1208, 2026-08-18.
+Two traps in `prospecting_intent` (`gs://household-scoring-prod/output/scoring/prospecting_intent/`). Both bite silently. Verified AUDI-1208, 2026-08-18. **Trap 1 is a real, reproducible rule. Trap 2 was first written here as a structural bug and is RETRACTED — see below.**
 
 ## 1. Scope to `funnel_level = 1` (or `IN (1,2)`) or the HI band is fake
 `airflow-ti models/audience_intent/prospecting_join.py` keeps the pipeline score only when
@@ -28,26 +28,27 @@ inflated the mean HI pool per audience **3.8x** (18.3M, vs 4.8M once removed).
   contamination shows as an **empty 50-99% band plus a spike at exactly 100%**.
 - S1 vs S1+S2 barely matters (mean 4,772,375 vs 4,757,882). Only funnel 3 breaks it.
 
-## 2. The registered BQ external table is STUCK, not rolling
-`bronze.external.household_scoring__prospecting_intent__v1` is hive `mode: CUSTOM` with **no
-`{key:TYPE}` schema in its `sourceUriPrefix`**, and cannot see recent partitions. On 2026-08-18 it
-returned **0 rows for all of August** (burning 46,537 slot-sec, no pruning) while every GCS day held
-20,000 full parquet files; `LIMIT 5` came back `2026/07/13`, ~5 weeks stale. The partition format was
-never the problem (zero-padded STRING, `month='08'`) — file discovery is.
+## 2. A 0-row result from the external table can be TRANSIENT, not missing data
+**RETRACTED claim (was here 2026-08-18): "the registered table is stuck ~5 weeks stale."** Wrong, withdrawn same day.
 
-**Read the day directory inline instead:**
+- ~09:35 PT: `WHERE year='2026' AND month='08' AND day IN ('16','17')` → **0 rows** (exit 0, 7,302 slot-sec). `month='08'` alone → 0 rows (46,537 slot-sec). Bare `LIMIT 5` → `2026/07/13`.
+- ~11:15 PT: the **identical** query → `08-16 = 247,392,860,754` and `08-17 = 251,588,309,448` rows. Every July and August day probed came back.
+- The registered table's day-17 count **matches an independent inline-external read exactly**, so the data was consistent throughout.
+
+**Root cause not established.** The `sourceUriPrefix`/`{key:TYPE}` theory was a guess the retest disproved — the DDL form in `sqlmesh/dataform/external_tables/definitions/v1/` is correct. Probably a file-listing/metadata visibility lag; that is a hypothesis.
+
+**How to apply:** never conclude "no data" from one 0-row federated result. **Re-run it**, and check GCS with
+`gcloud storage ls '<day prefix>/**' | grep '\.parquet$'` (a plain `ls` of the day prefix shows only the
+directory and `_SUCCESS`, which looks empty). Reading a single day inline is still a good way to bound cost:
 ```
 --external_table_definition="pi::PARQUET=gs://household-scoring-prod/output/scoring/prospecting_intent/year=2026/month=08/day=17/*.parquet"
 ```
-- **Always pass `--location=us-central1`** on inline-external GCS queries or the job bills on-demand in
-  the US multi-region ([[reference_bq_location_reservation]], the AUDI-1089 ~$875 footgun).
+- **Always pass `--location=us-central1`** on inline-external GCS queries or the job bills on-demand in the
+  US multi-region ([[reference_bq_location_reservation]], the AUDI-1089 ~$875 footgun).
 - One day = **251.6B rows** (~19.4 TB). Aggregate with `APPROX_COUNT_DISTINCT`; never `SELECT *`.
-- `gcloud storage ls` of a day prefix shows only the dir and `_SUCCESS` and looks empty — count with
-  `ls '<prefix>/**' | grep '\.parquet$'`.
-- Same split applies to the sibling `prospecting_active_campaign_categories` under
-  `…/output/data_aggregation/` — read it inline too.
-
-**Treat any prior result that date-filtered the registered table for a recent window as suspect.**
+- **Two different objects, do not confuse them:** `household_scoring.prospecting_intent_daily` is NATIVE and holds
+  **one day only** (the `audience_intent` DAG's `export_intent` group rebuilds it and DELETEs every other
+  partition each run); `external.household_scoring__prospecting_intent__v1` is the GCS-backed full archive.
 
 **How to apply:** every `household_score` banding query off this source gets BOTH a `funnel_level`
 filter and an inline external definition. Root cause of trap 1 is the already-documented "S3 flattens

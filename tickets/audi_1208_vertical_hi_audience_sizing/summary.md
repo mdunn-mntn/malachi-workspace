@@ -100,7 +100,7 @@ Open item: run the reconciliation for the same `dt` and record the delta. If it 
 - **Exclusions + MM membership:** `gs://household-scoring-prod/output/data_aggregation/prospecting_active_campaign_categories/year=/month=/day=/*.parquet`. Columns: `advertiser_id`, `campaign_group_id`, `campaign_id`, `campaign_template_id`, `data_source_id`, `data_source_category_id`, `include` (BOOL), `is_active_campaign`. `include = false` **is** the exclusion clause — this is the `has_exclusion` column Ryan pointed at. Day 2026-08-17 rolls up to **4,907 active prospecting campaigns**.
 - HI band = `household_score BETWEEN 8001 AND 10000` (`HIGH_MIN`/`HIGH_MAX` in `household_score_distribution_monitor.py`; PP = 6666-8000, Mid = 3333-6665, Max Reach = 1-3332).
 
-### 4.5 GOTCHA — the registered BQ external table is stale past mid-July
+### 4.5 RETRACTED — the registered BQ external table is NOT stale (see 4.16)
 `dw-main-bronze.external.household_scoring__prospecting_intent__v1` is defined with
 `sourceUris = ['gs://household-scoring-prod/output/scoring/prospecting_intent/*.parquet']` and hive
 partitioning `mode: CUSTOM`, `sourceUriPrefix = 'gs://.../prospecting_intent/'` (no `{key:TYPE}` schema
@@ -267,8 +267,31 @@ This is the already-verified CLEAN RULE (AUDI-1083, `data_knowledge.md`): **HI =
 
 Independent confirmation that the reported numbers are sound: this is the second mechanism found by interrogating an odd-looking value rather than shipping it (the first was the flat-10000 contamination, 4.10), and unlike that one it is **not** a defect — the zeros are correct and should stay in the "all MM audiences" row.
 
+### 4.16 RETRACTION — §4.5's "the external table is stale past mid-July" was WRONG
+Ryan Kleck pushed back ("i don't really own that BQ table.. but maybe that's something you can look into???"), which prompted a retest. **The claim does not survive it.**
+
+| time (PT) | query | result |
+|---|---|---|
+| ~09:35 | `year='2026' AND month='08' AND day IN ('16','17')` | **0 rows** (exit 0, 7,302 slot-sec) |
+| ~09:38 | `year='2026' AND month='08'` grouped | **0 rows** (46,537 slot-sec) |
+| ~09:40 | bare `SELECT year, month, day … LIMIT 5` | `2026/07/13` |
+| ~11:15 | **identical** to the 09:35 query | `08-16 = 247,392,860,754`, `08-17 = 251,588,309,448` |
+| ~11:16 | wider probe, 7 July days + 4 August days | every day returned full counts |
+
+**Root cause NOT established.** My structural diagnosis (hive `mode: CUSTOM` with no `{key:TYPE}` in `sourceUriPrefix`) was a plausible-sounding guess, and the retest disproves it: the DDL at `sqlmesh/dataform/external_tables/definitions/v1/household_scoring__prospecting_intent__v1.sqlx` uses `hive_partition_uri_prefix = 'gs://household-scoring-prod/output/scoring/prospecting_intent'`, which is the correct DDL form. A file-listing/metadata visibility lag is the likely explanation but remains a hypothesis, not a finding.
+
+**The deliverable is unaffected, and this strengthens it.** Every AUDI-1208 number came from reading GCS directly via an inline external definition. The registered table's day-17 count now matches that inline read **exactly** (251,588,309,448), which is an independent confirmation of the scoring-side inputs.
+
+**Also corrected: two different objects were being conflated.** `dw-main-bronze.household_scoring.prospecting_intent_daily` is a NATIVE partitioned table that the `audience_intent` DAG rebuilds every run — the `export_intent` task group runs `create_daily_<source>` → `export_snapshot_<source>` → `delete_stale_partitions_<source>`, the last of which `DELETE`s every partition except the run date. It holds **one day only**. `external.household_scoring__prospecting_intent__v1` is the GCS-backed view of the full retained archive. Different objects, different retention.
+
+**Ownership, since Ryan says it is not his:** the DDL lives in the **sqlmesh** repo under `dataform/external_tables/definitions/v1/`, last moved by Scotty Pate (`b190f7e`, 2025-12-23). Ryan believes TI owns it and suggested asking Dustin. Moot for now — there is nothing to fix.
+
+**Downstream note, unchanged and still worth knowing:** two SQLMesh models read this external table with exact `year`/`month`/`day` filters — `aggregates.household_scores_by_campaign` (`enabled false`) and `aggregates.tpa_membership_updates_log_insegments` (`enabled TRUE`, `@daily`, filtering `@start_date - 1`). If the table ever *did* go blind, that second model would silently produce zero household scores. Not currently happening.
+
+**Lesson recorded:** a single 0-row result from a federated external table is not evidence of missing data. Re-run before concluding, and do not ship a root cause that is a guess dressed as a mechanism. I had this written into `data_catalog.md`, a memory file, the ticket, the workbook, and a Slack draft to a colleague before retesting it once.
+
 ## 5. Solution
-**Delivered (rebuilt 2026-08-18: funnel_level=1 correction, then re-audited; see 4.12):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
+**Delivered (rebuilt 2026-08-18: funnel_level=1 correction, re-audited, keyword cohort added; see 4.12, 4.15):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
 
 The two Method & caveats blocks that lead the tab are the exclusion-mechanism caveat and the skew caveat — the two ways these numbers get misread.
 

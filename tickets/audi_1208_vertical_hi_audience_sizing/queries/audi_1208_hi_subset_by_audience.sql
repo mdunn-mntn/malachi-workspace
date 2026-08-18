@@ -3,9 +3,9 @@
 -- HI band = household_score 8001-10000 (HIGH_MIN/HIGH_MAX in household_score_distribution_monitor.py).
 -- Source: gs://household-scoring-prod/output/scoring/prospecting_intent/year=2026/month=08/day=17/
 
--- The registered table dw-main-bronze.external.household_scoring__prospecting_intent__v1 CANNOT be
--- used: it returns 0 rows for August 2026 while the GCS partitions are full. Use an inline
--- --external_table_definition on the day directory, and pass --location=us-central1.
+-- Read via an inline --external_table_definition on the day directory, with --location=us-central1
+-- (required, or the job bills on-demand in the US multi-region). The registered table
+-- external.household_scoring__prospecting_intent__v1 also works and its counts match exactly.
 
 -- Query 1 - score pools per campaign. One day is 251.6B rows, hence APPROX_COUNT_DISTINCT.
 -- --external_table_definition="pi::PARQUET=gs://household-scoring-prod/output/scoring/prospecting_intent/year=2026/month=08/day=17/*.parquet"

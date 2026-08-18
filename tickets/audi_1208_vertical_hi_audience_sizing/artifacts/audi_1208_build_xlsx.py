@@ -203,7 +203,7 @@ wb.sql_dir(
         "audi_1208_vertical_sizes.sql": "-- audi_1208_vertical_sizes.sql - vertical + bucket sizes, distinct IPs",
         "audi_1208_hi_subset_by_audience.sql": "-- audi_1208_hi_subset_by_audience.sql - HI pool per MM audience + exclusion split",
     },
-    note="Both queries read GCS through an inline external table definition; the registered BigQuery table for scores cannot see partitions after mid-July 2026.",
+    note="Both queries read the scoring output straight from cloud storage through an inline table definition, so the numbers do not depend on any intermediate table.",
 )
 
 wb.cover(takeaways=[
