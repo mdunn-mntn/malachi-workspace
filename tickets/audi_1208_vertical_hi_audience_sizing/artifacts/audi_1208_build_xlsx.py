@@ -28,7 +28,11 @@ for r in csv.reader(open(f"{OUT}/audi_1208_hi_by_campaign_2026_08_17.csv")):
 flags = {}
 for r in csv.reader(open(f"{OUT}/audi_1208_campaign_exclusion_flags_2026_08_17.csv")):
     if len(r) >= 9:
-        flags[int(r[2])] = dict(mm=r[7].strip().lower() == "true", excl=r[8].strip().lower() == "true")
+        flags[int(r[2])] = dict(
+            mm=r[7].strip().lower() == "true",
+            excl=r[8].strip().lower() == "true",
+            kw="19" in {x.strip() for x in (r[10] if len(r) > 10 else "").split(",")},
+        )
 funnel = {}
 for r in csv.reader(open(f"{OUT}/audi_1208_campaign_funnel_levels.csv")):
     if len(r) >= 4:
@@ -56,6 +60,7 @@ for label, data in (
     ("HI, audiences with no exclusions", [c for c in mm if not c["excl"]]),
     ("HI, all MM audiences (incl. exclusions)", mm),
     ("HI, only audiences with exclusions", [c for c in mm if c["excl"]]),
+    ("HI, only audiences that run keywords", [c for c in mm if c["kw"]]),
 ):
     st = summarize([c["hi"] for c in data])
     rows_h.append({"Cohort": label, "Audiences": st["n"], "Mean IPs": st["mean"],
@@ -107,7 +112,7 @@ wb.table(
 wb.table(
     "HI pool sizes", df_h,
     finding="With no exclusions the mean HI pool is 4.5M IPs (median 3.5M); across all MM audiences it is 4.8M (median 3.6M)",
-    method="Distinct IPs scoring 8001-10000 per active prospecting audience, 2026-08-17. Read Method & caveats before quoting these.",
+    method="Distinct IPs scoring 8001-10000 per active prospecting audience, 2026-08-17. Counted BEFORE exclusions are applied. See Method & caveats.",
     formats=INT, kind="headline",
     toc="Answer to part 2: HI pool, no-exclusion vs all",
     query="audi_1208_hi_subset_by_audience.sql",
@@ -158,6 +163,8 @@ wb.glossary(
         ("Mean vs median", "Both are given because the spread is wide. The mean sits well above the median, so a few very large entries pull it up."),
         ("Quartiles", "Q1 and Q3 bound the middle half. Half of all entries fall between them, a quarter below Q1, a quarter above Q3."),
         ("Exclusion", "A clause telling the platform to leave a group out, e.g. existing customers. 721 of 2,063 audiences had one."),
+        ("Before exclusions", "Every High Intent figure counts the pool the platform could reach before any exclusion is subtracted. The after-exclusion pool is a separate number, not shown."),
+        ("Keyword layer", "The campaign-level keyword targeting. High Intent requires it. An audience without it can still reach the band below, but never High Intent."),
     ],
 )
 
@@ -165,30 +172,26 @@ wb.notes(
     "Method & caveats",
     intro="Read the first two blocks before quoting the High Intent numbers.",
     blocks=[
-        ("Exclusions are not subtracted from these HI pools",
-         "The scoring pipeline never applies them. It reads the campaign-category file only to look up a campaign's funnel level, and discards the include/exclude flag before scoring. Exclusions are enforced later, when the bidder decides what to buy."),
-        ("So the cohort split is a correlation, not an effect",
-         "Both cohorts report their pool before any exclusion is removed. Do not read the small gap between them as the cost of excluding."),
+        ("These pools are counted BEFORE exclusions are applied",
+         "For audiences that carry no exclusion that is the whole answer. For the 721 that do carry one, the after-exclusion pool is a different and smaller number that is not in this workbook. It is one query away; ask and it can be added."),
+        ("Why: exclusions never reach the scoring step",
+         "The pipeline reads the campaign-category file only to look up a campaign's funnel level, and discards the include/exclude flag before scoring. Exclusions are enforced later, when the bidder decides what to buy. So do not read the small gap between the cohorts as the cost of excluding."),
         ("The gap between the cohorts is which vertical they sell into",
-         "Advertisers that run an exclusion sit in verticals 27% larger at the median, which more than accounts for their 7% larger pool. Comparing only within the same vertical, the two cohorts are a coin flip: the larger side wins in 12 of 25 verticals."),
+         "Advertisers that run an exclusion sit in verticals 27% larger at the median, which more than accounts for their 7% larger pool. Comparing only within the same vertical the two cohorts are a coin flip: the larger side wins in 12 of 25 verticals."),
         ("Averages are the wrong summary here on their own",
          "Both distributions are strongly right-skewed. The mean vertical is 9.5M against a 6.6M median; the mean HI pool is 4.8M against a 3.6M median. The quartiles describe the portfolio, the mean describes its largest members."),
         ("Verticals and buckets do not sum",
          "A bucket is a vertical's parent, and an IP can sit in several verticals at once. Adding categories double-counts IPs. Every figure is a distinct count within its own category."),
         ("One day, not an average of days",
-         "2026-08-17 for every figure. Vertical totals drift about 2% day to day, so treat these as a current snapshot rather than a stable constant."),
-        ("Source of the vertical counts",
-         "The same daily file that feeds the existing vertical size monitor. A cross-check against the downstream copy of the same data for the prior day agreed to a median 1.9%, consistent with one day of growth."),
+         "2026-08-17 for every figure; totals drift about 2% day to day, so treat these as a current snapshot. Vertical counts come from the same daily file that feeds the existing vertical size monitor, and a cross-check against the downstream copy for the prior day agreed to a median 1.9%."),
         ("HI counts are approximate by design",
          "One day of scores is 251.6 billion rows, so distinct IPs are counted with an approximate method accurate to roughly 1%. That is far inside the spread being reported."),
+        ("The zero is real: 156 audiences cannot reach High Intent",
+         "High Intent means an IP is both in the advertiser's vertical AND matches the campaign's keywords. 156 of the 2,063 run no keyword layer, so by design they top out one band lower and score exactly zero High Intent. The match is exact, 156 of 156, with no exceptions either way."),
         ("The answer holds if you widen it past prospecting",
          "These rows are prospecting audiences. Including the next stage down the funnel adds 1,418 more and barely moves the answer: the mean goes from 4.77M to 4.76M and the median from 3.55M to 3.56M. Nothing here turns on where that line is drawn."),
         ("Later-stage campaigns are excluded, and must be",
          "The pipeline flattens the score to 10000 for anything past the prospecting stage, which would enter the High Intent band as its entire audience. On the day, 1,426 such campaigns scored 100% High Intent. Dropping them cuts the mean from 18.3M to 4.8M."),
-        ("What is counted as an audience",
-         "The 2,063 prospecting campaigns the pipeline actually intent-scored on the day. All 2,063 carry MNTN Matched targeting, so no non-MM comparison group exists here."),
-        ("Smallest HI pool is genuinely zero",
-         "Some active audiences reached no High Intent IPs at all on the day. Those are kept in the counts rather than dropped, so the minimum reads 0."),
     ],
 )
 
@@ -206,7 +209,7 @@ wb.sql_dir(
 wb.cover(takeaways=[
     "Verticals: mean 9.5M IPs, median 6.6M, middle half 4.0M to 12.0M, across all 148.",
     "HI pool: 4.5M mean with no exclusions, 4.8M across all MM audiences; medians 3.5M and 3.6M.",
-    "Exclusions are applied at bid time, not in scoring, so both cohorts are pre-exclusion pools.",
+"Every HI figure is counted before exclusions are applied; the after-exclusion pool is not in this workbook.",
 ])
 
 print(wb.save_drive("AUDI-1208", "Vertical and HI Audience Sizes"))

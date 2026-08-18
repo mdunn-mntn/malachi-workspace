@@ -251,6 +251,22 @@ So the cartesian product is 6 cells: 3 delivered, 2 trivially identical or deriv
 
 Method: take each of the 721 audiences' HI IP set, anti-join against IPDSC membership for that audience's exclusion `(data_source_id, data_source_category_id)` pairs at the same `dt`, recount distinct. Bounded work — 721 campaigns, HI band only, one `dt` — but it is a large join against a 251.6B-row day and needs its own run. Not attempted here; scope as a follow-on if the post-exclusion number is what is actually wanted.
 
+### 4.15 The zero minimum is real and has an exact mechanism: 156 audiences cannot reach HI
+The `Smallest` column reads 0 on every cohort. Not an artifact, and not "an audience with no people" — those audiences are large, they just cannot produce a High Intent IP.
+
+**156 of 2,063 prospecting audiences (7.6%) score exactly zero HI, and the set is EXACTLY the set that carries no DS19 keyword layer. 156 of 156, zero exceptions in either direction.**
+
+| cohort | n | HI == 0 | median HI | median PP |
+|---|---|---|---|---|
+| no DS19 in the include set | 156 | **156 (100%)** | 0 | 8,401,922 |
+| DS19 present | 1,907 | **0 (0%)** | 3,767,051 | 2,590,847 |
+
+This is the already-verified CLEAN RULE (AUDI-1083, `data_knowledge.md`): **HI = in vertical ∩ in keywords**; a vertical-only campaign has no keyword set, so every in-vertical IP is vertical-no-keyword and lands in PP (6666–8000), never HI. These are the "vertical only" / Peak-Performance-only configurations. They are not small: their total scored pool runs to a median 18.7M IPs (max 140.6M) and their PP band to a median 8.4M (max 97.5M). They are structurally capped one band below HI, by product design.
+
+**Consequence for the reported average, which is material.** Averaging in 156 structural zeros pulls the answer down. Excluding them: mean **5,162,773** (vs 4,772,375, **+8.2%**), median **3,767,051** (vs 3,553,726), Q1 2,354,653, Q3 6,276,546, min 7,845. A fourth row, `HI, only audiences that run keywords` (n=1,907), is now on the tab so both readings are visible; the three rows answering Paulo's literal wording are unchanged and still lead.
+
+Independent confirmation that the reported numbers are sound: this is the second mechanism found by interrogating an odd-looking value rather than shipping it (the first was the flat-10000 contamination, 4.10), and unlike that one it is **not** a defect — the zeros are correct and should stay in the "all MM audiences" row.
+
 ## 5. Solution
 **Delivered (rebuilt 2026-08-18: funnel_level=1 correction, then re-audited; see 4.12):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
 

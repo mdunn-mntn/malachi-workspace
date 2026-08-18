@@ -28,6 +28,8 @@ Same 2,063 audiences at ANY score: mean 51,321,823 / median 43,120,471. Largest 
 - **Never add category sizes.** An IP averages ~6.6 verticals, so the 148 sizes sum to ~1.40B against a
   214,079,274-IP base. Buckets are parents of verticals, so those don't sum either.
 - **Counting unit is the IP**, not households or people.
+- **156 of the 2,063 (7.6%) score exactly ZERO HI** — precisely the audiences with no DS19 keyword layer (156/156, no exceptions). HI needs vertical AND keywords, so a vertical-only campaign caps at PP. Excluding them: mean **5,162,773** / median **3,767,051** (+8.2% on the mean). Say which convention you used.
+- **The with-exclusion cohort's larger pool is vertical composition, not exclusions.** Those advertisers sit in verticals 27% bigger at the median; within-vertical the gap vanishes (higher in 12 of 25 verticals, median −2.8%, sign-test p=0.65).
 
 ## Where vertical sizes live
 `gs://mntn-data-archive-prod/vertical_categorizations/ip_vertical_associations/dt=<date>/` — what
