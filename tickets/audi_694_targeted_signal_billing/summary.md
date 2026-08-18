@@ -4,7 +4,7 @@ title: "AUDI-694: Update targeted_signal to Handle Billing"
 status: in_progress
 date: 2026-08-17
 summary: "DDP vendor crediting as CRM inclusions migrate DS4 -> DS63; review of the unmerged DS63 crediting PR"
-result: "Phase 1 done: PR bae-sql-utility#24 cannot execute (references translation_date; the signals expose translation_timestamp). Free-log and 33Across-dedup defects confirmed against the live registry. Dollar sizing blocked on enriched_impressions access."
+result: "DS47 has zero impressions, so the ticket as written is a no-op; all exposure is DS63. Two opposing defects measured: the divisor choice moves deepsync 4.7x (259x under preemption), and 39.3% of in-scope DS63 impressions get no crediting row at all. PR bae-sql-utility#24 cannot compile and is not the current design."
 question: "What must change in DDP vendor crediting as CRM inclusion audiences migrate DS4 -> DS63, and what is it worth?"
 framing_state: locked
 ---
@@ -263,6 +263,58 @@ flattens both legs into one `array_agg(distinct ...)`, so that vendor is credite
 2026-08-13 build keeps the legs separable. The design doc's worked example ("all four of these vendors
 should be recorded and credited") implies per-touchpoint. This is a policy decision with a measured
 price tag, not a code-style choice, and it is the right question for the ID/AUDI meeting.
+
+### 4.9 MEASURED (PAM grant 5d0f053c, 2026-08-17) — DS47 is empirically dead, and 39.3% of billable DS63 impressions are silently uncredited
+
+`enriched_impressions` turned out to be an **EXTERNAL BigLake table** over
+`gs://mntn-analytics-curated/...`, not a native table, which is why dry-run reports 0 bytes and
+`INFORMATION_SCHEMA.PARTITIONS` is empty. Real cost is ~2.4 GB/day with the `dt` hive filter.
+
+**DS47 never reaches the meter.** Daily counts of `data_source_id = 47` in `enriched_impressions`:
+
+| dt | DS4 | DS47 | DS63 |
+|---|---|---|---|
+| 2026-08-01 .. 08-05 | 1.35M – 1.71M/day | **0** | 0 |
+| 2026-08-06 | 1,603,786 | **0** | 28,733 |
+| 2026-08-07 | 1,515,611 | **0** | 112,703 |
+| 2026-08-08 | 1,590,101 | **0** | 80,049 |
+| 2026-08-09 | 1,439,998 | **0** | 79,743 |
+| 2026-08-10 | 1,423,562 | **0** | 68,858 |
+| 2026-08-11 | 1,380,714 | **0** | 165 |
+| 2026-08-12 | 1,495,760 | **0** | 6,476 |
+| 2026-08-13 .. 08-16 | 1.38M – 1.60M/day | **0** | 11,097 – 13,997 |
+
+Zero on every day checked, and zero on the 2026-07-15 spot check (where the full data_source_id mix
+was 19, 35, 46, 17, 13, 1, 4, 18). **This closes the ticket as literally written:** DS47 is
+exclusion-only, an excluded household is never served, and it therefore produces no impression to
+credit. Migrating DS4 to DS47 has no DDP billing impact. The entire exposure is DS63.
+
+**DS63 went live 2026-08-06** and is running ~11-14K impressions/day after an initial spike, against
+DS4's steady ~1.4-1.6M/day. So DS63 is currently under 1% of DS4 volume.
+
+**The missing zero-cpm filler, measured.** For 2026-08-06..08-12:
+
+| | impressions |
+|---|---|
+| DS63 total | 376,727 |
+| DS63 inside the billing scope (`channel_id=8, funnel_level=1, objective_id=1`) | 352,830 (93.7%) |
+| DS63 rows in `ddp_crm_graph_cpm` (the built crediting output) | 214,251 |
+| **in scope but with no crediting row at all** | **138,579 (39.3%)** |
+
+Two in five billable DS63 impressions never enter the crediting leg. Under the DS4 leg those
+impressions are deliberately inserted at cpm 0 (script L299-322) so they still compete in the OR
+groups, with the inline rationale *"to ensure we are not over crediting to TPA/MM Matches for CRM
+matches that don't have a valid targeted signal record in the lookback window."* The graph leg has no
+equivalent, so those 138,579 impressions hand their full share to whatever TPA/MM vendors are on them.
+
+This is the second money finding and it runs **opposite** to the divisor finding in 4.7: 4.7 says the
+graph leg over-credits deepsync on the impressions it does cover, 4.9 says it under-credits the CRM
+side entirely on 39.3% of impressions and over-credits TPA/MM there instead. Both need netting before
+any single dollar figure is quoted.
+
+**Caveat:** the 214,251 baseline is the crediting table as built on 2026-08-13, which may have run
+over a narrower window than the full 08-06..08-12 span. Re-measure against whatever SQL becomes the
+merge candidate before quoting 39.3% externally.
 
 ## 5. Solution
 What was done to resolve the issue:
