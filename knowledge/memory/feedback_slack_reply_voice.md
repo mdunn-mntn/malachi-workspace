@@ -55,3 +55,9 @@ Slack replies must read like a person typed them, not like an AI report. Malachi
   what it does, nothing else. No prose intro per query, no results, no setup narrative.
 
 **Key distinction.** This is different from the Terse Comms Standard for Jira comments, which stays scaffolded (Answer line, then Done, then Next bullets, in wiki markup). Both are BLUF. Slack is human prose, Jira is structured. See [[feedback_bluf_communication]], [[feedback_terse_chat_replies]], [[feedback_terse_tickets]].
+
+**Extra lessons from the airflow-ti PR-1196 thread (2026-08-17).**
+- **Everyday verbs beat vivid ones.** He rewrote my "minted" as "created" and my "burned" as "used" before sending. Words that sound sharp in a runbook read as showing off in a thread. Say created, used, started, finished.
+- **Single sentences.** His instruction was "to the point, succinct, single sentences, clear." One idea per sentence, no clauses stacked with commas or semicolons.
+- **State the caveat as its own short sentence, not a hedge inside another one.** "And yes, dev only had 2 of the 17 sources, so this tested the code, not the data." lands; folding it into the result sentence does not.
+- **Don't narrate the investigation's plumbing.** My first attempt explained the dev bundle re-syncing from main as if it were a finding. The reader only needed "one of my runs was actually running main's code, not the branch."
