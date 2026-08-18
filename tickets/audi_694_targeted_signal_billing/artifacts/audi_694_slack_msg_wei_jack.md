@@ -22,7 +22,15 @@ same thing today.
 Dollars are small right now since DS63 is only on four uploads, but no DS63 credit has ever been
 billed, so whatever ships first becomes the precedent for MNTN ID crediting too.
 
+Separately, about 39% of in-scope DS63 impressions aren't getting a crediting row at all, 138k of
+353k for the 6th through the 12th. On the DS4 leg those get inserted at zero cpm on purpose so they
+still compete and don't hand their share to TPA and MM. That one pushes the opposite direction from
+the divisor thing, which is why I don't want to quote a single number until we've agreed the rules.
+
 There's also a 33Across thing (DS40 credits to 28 but the graph leg counts them as two vendors, same
 issue BAE hit on BAE-4923) and a couple of others I can walk through.
+
+Oh and DS47 is a non-issue, zero impressions every day this month, so the original ticket premise
+turned out to be moot.
 
 Got an agenda written up, should be about 45 minutes. Any chance this week?
