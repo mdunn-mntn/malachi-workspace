@@ -22,7 +22,7 @@ framing_state: locked
 - **Goal (why / the decision):** Pick the divisor rule for the graph crediting leg before DS63 GA, **routed to Andy Everson as a contractual decision (Jack Barbey, 2026-08-18)** rather than the engineering-consistency call originally framed. Jack: "This is mostly a contractual question, so we want to make sure we are doing the right thing." AUDI-694 therefore supplies the priced options and the evidence; it does not pick the rule. NOTE: AUDI-1144 already queues an Andy conversation on free-log credit for the wider metered roster, and AUDI-1113's $768,916/yr preemption case is the same question at DS4/MM scale. One thread, not two. No DS63 credit has ever been billed, so the first bill sets the precedent for every future graph vendor credit including MNTN ID. Ties to the vendor-cost workstream (AUDI-1089 -> AUDI-1111 -> AUDI-1113, $768,916/yr preemption already BAE-confirmed) and gates ID-407.
 - **Objective (done-when):** The three divisor rules priced on real DS63 output, a written recommendation, and a recorded decision from Wei/Jack/AUDI. Closes when the decision exists in writing and the arithmetic defects are either fixed in the merge candidate or logged with an owner. Ships no code: implementation routes to AUDI-1145.
 - **Approach (how):** Price the rules off `dw-main-gold.reporting.ddp_crm_graph_cpm` (real DS63 output, already built) rather than rebuilding from raw. Confirm the billable roster and its dedup pairs in `integrationprod.direct_data_partners`. Use `enriched_impressions` (PAM grant 5d0f053c) for the scope volume, the DS4/DS63 dual-run split, the DS47 negative, and the zero-cpm-filler counterfactual against `ddp_all_matches_cpm_202607`. Assumptions to resolve first: which SQL is actually the merge candidate (PR #24 cannot compile and is not the 2026-08-13 build); whether DS47 ever reaches `category_info`; whether the winner-split grain changes the rule ratios.
-- **Decision owner (changed 2026-08-18):** Andy Everson, via a thread Jack is opening. Wei takes the PR/SQL repoint (ask 1), which unblocks ID-407 independently.
+- **Decision owner (resolved 2026-08-18):** Kale ruled the graph leg should use the same math as DDP crediting today, i.e. split the CPM across all vendors that supplied the data point (scenario B / MM parity). Andy deferred to Kale and Paulo. Free-log preemption (scenario C) remains open and is AUDI-1113's question, not this ticket's. Wei takes the PR/SQL repoint (ask 1), which unblocks ID-407 independently.
 - **What would change the answer:** No result stops the work, because the rule must be settled before the first DS63 bill. The deadline is DS63 GA, not a volume threshold. The recommendation itself flips if the cross-provider winner split (`impression_cnt = 1/N` over `ad_served_id`) compresses the 4.7x gap between billable-only and MM-parity to something immaterial, or if the free logs turn out not to be genuine substitutes for deepsync on these impressions, which would undercut applying the AUDI-1113 preemption rule to the graph path.
 
 ## 1. Introduction
@@ -316,6 +316,58 @@ any single dollar figure is quoted.
 **Caveat:** the 214,251 baseline is the crediting table as built on 2026-08-13, which may have run
 over a narrower window than the full 08-06..08-12 span. Re-measure against whatever SQL becomes the
 merge candidate before quoting 39.3% externally.
+
+### 4.10 Slack #identity-crediting + #dev-mntn-id, 2026-08-17/18 — the divisor question is effectively answered, and an unratified bill is about to go out
+
+**Kale answered the divisor question.** Asked what rule the graph leg should use, Kale McNaney:
+*"The way I'm familiar with us crediting DDP vendors today is by dividing the CPM up amongst all
+vendors that provided the same data point. So if its a $0.50 CPM and all 3 vendors provided the data
+we give each one $0.16 CPM credit. My gut says we should stick to the same math."* Later, pressed:
+*"why should it be any different from how we handle DDP crediting today?"*
+
+That is **scenario B in 4.7 (MM parity), not scenario A**, which is what PR #24 and the current graph
+leg implement. Measured consequence: deepsync's credit is 44,627 shares, not 209,076 — a 4.7x
+reduction from what the graph leg would pay as built. **The rule is decided; the code does not match
+it.** That is now a defect with a named owner rather than an open question.
+
+**What is still open** is the separate change Malachi raised: whether a paid vendor should get *zero*
+(not merely a diluted share) when our own free logs already cover the impression. That is AUDI-1113 /
+scenario C, worth $768,916/yr at MM scale, and Kale has not ruled on it. Andy Everson deferred to
+Kale and Paulo and floated a different answer entirely: *"getting DS and any future providers to a
+fixed model could make things much easier all around."* Jack raised the same third option (move
+DeepSync off CPM), plus a SOX-compliance argument for doing so.
+
+**URGENT — an unratified bill is in flight.** Maya Triman, 2026-08-17: *"We used the new signal logic
+from Jack and Wei as guidance to update our DDP script w/ CRM graph for the August payout."* So the
+August payout is being computed on graph crediting logic that (a) nobody has ratified, (b) implements
+scenario A against Kale's stated scenario B, and (c) carries the 39.3% uncredited gap from 4.9 and the
+33Across double-count from 4.4. Walkthrough is Monday; Malachi has no invite. **Getting the divisor
+rule and the defects in front of that meeting is the highest-value action on this ticket.**
+
+**Scope split, per Alyson (2026-08-18):** AUDI owns crediting when a household is added to an
+audience; Identity owns crediting when a household is resolved for bidding. Jack drew the same line
+differently and more usefully: **DDP vendors** supply the page-view data that puts identities into
+audiences; **graph vendors** supply the linkage data. AUDI-694 spans both, which is why it kept
+reading as two tickets.
+
+**AUDI-694's own deliverable is already built.** Wei named the three data sources from the design doc
+and mapped them to real objects:
+
+| design touchpoint | table | owner |
+|---|---|---|
+| DS1 — source that put the ID into the segment | `mntn-data-archive-prod/signals/identity_targeted_signal` | **AUDI (Sean, AUDI-953)** |
+| DS2 — source that translated the ID to a household | `dw-main-silver.identity.graph_translation_signal` | Identity |
+| DS3 — source that let the household be used in an auction | `dw-main-silver.identity.auction_translation_signal` | Identity |
+
+Sean confirmed: *"yes, mntn-data-archive-prod/signals/identity_targeted_signal converted ip to
+id+id_type pairs."* So the literal ask in the AUDI-694 title — reshape `targeted_signal` for graph
+billing — **was delivered by AUDI-953**. This corrects 4.5's concern that no DS1 carrier exists: the
+carrier exists on the AUDI side; what is missing is that nothing in the crediting SQL reads it, and
+`targeted_id_data_sources` is still absent from the Identity-side schema.
+
+**Process:** Mike Dolt flagged conflicting reports and asked to consolidate; discussion moved to
+#dev-mntn-id and a call is likely. Wei's stated timeline is **end of this month**, since DS63 is
+already rolled out (not globally) and using graph data.
 
 ## 5. Solution
 What was done to resolve the issue:
