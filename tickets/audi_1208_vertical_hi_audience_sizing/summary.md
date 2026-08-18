@@ -220,6 +220,37 @@ Adding `funnel_level = 2` barely moves it (n=3,481, mean 4,757,882, median 3,564
 
 So the vertical half needs no correction: the counts are exact `COUNT(DISTINCT ip)` (not approximate), the roster is complete with no unmapped ids, and there is no null or orphan contamination. An IP averages ~6.6 verticals, which is why the 148 vertical sizes sum to ~1.40B against a 214.08M IP base — categories overlap by design and must never be added.
 
+### 4.13 The with-exclusion HI gap is vertical composition, and it does NOT survive controlling for it
+Hypothesis raised 2026-08-18: exclusion-carrying audiences look bigger because their advertisers sit in bigger verticals. **Correct, and the control kills the gap entirely.** Reproducible: `artifacts/audi_1208_exclusion_confound.py` (reads only committed outputs), query `queries/audi_1208_exclusion_vertical_confound.sql`. Advertiser→vertical from `fpa_advertiser_verticals` `type=1`; 2,063/2,063 audiences resolved (100%).
+
+| median per audience | no exclusions (1,342) | with exclusions (721) | gap |
+|---|---|---|---|
+| advertiser's vertical size | 9,477,616 | 12,057,702 | **+27.2%** |
+| all scored IPs | 40,312,339 | 46,454,455 | +15.2% |
+| **HI pool** | 3,486,590 | 3,725,338 | **+6.8%** |
+| HI as share of its own scored pool | 9.2% | 8.4% | **−8.2%** |
+
+**The confound OVER-explains the gap.** Exclusion-carrying advertisers sit in verticals 27% bigger but show only a 6.8% bigger HI pool — and they convert their pool to HI slightly *less* efficiently (8.4% vs 9.2%). Also 40% of advertisers in above-median verticals carry an exclusion vs 30% in below-median ones, so the selection is real.
+
+**Within-vertical paired sign test (the discriminating test).** Restricting to the 25 verticals with ≥5 audiences on each side, the with-exclusion median HI is higher in **12 of 25** — a coin flip. Median within-vertical relative gap **−2.8%** (p25 −17%, p75 +22%), one-sided sign-test **p = 0.65**.
+
+**Verdict: no evidence of any exclusion-related difference in HI pool size.** The pooled +6.8% is composition — which vertical the advertiser is in — not anything about exclusions. This is a second, independent reason not to read the cohort split as an exclusion effect, on top of the mechanical reason in 4.9 (exclusions never enter scoring at all). The workbook's Method tab previously attributed the gap to "larger accounts"; that was a plausible guess, now replaced by the measured cause.
+
+### 4.14 Post-exclusion HI is ONE missing cell, and it is computable
+Restating the ask as a grid clarifies what is and isn't answered. Two independent dimensions: which audiences are in the cohort, and whether the HI count itself has the exclusions subtracted.
+
+| audience cohort | HI counted PRE-exclusion | HI counted POST-exclusion |
+|---|---|---|
+| no exclusions (1,342) | **delivered** | identical by definition — nothing to subtract |
+| with exclusions (721) | **delivered** | **MISSING — the only real gap** |
+| all MM (2,063) | **delivered** | derivable once the cell above exists |
+
+So the cartesian product is 6 cells: 3 delivered, 2 trivially identical or derived, **1 requiring new work** — the post-exclusion HI pool for the 721 audiences that carry an exclusion. This is the "worst part 2b" Ryan Kleck flagged.
+
+**Feasibility (checked 2026-08-18).** Exclusion clauses on those 721 audiences use these data sources: DS4 CRM (392 audiences), DS2 (348), DS35 LiveRamp (171), DS1 Oracle (91), DS18 Dstillery (29), DS17 ShareThis (11), DS43 (10). **All are resolvable in `ipdsc__v1` EXCEPT DS1** — Oracle is documented as not present in IPDSC (legacy/deprecated, still selectable in the buyer UI as dead-weight clauses). So **91 audiences carry at least one clause that excludes nobody**, which is itself worth reporting.
+
+Method: take each of the 721 audiences' HI IP set, anti-join against IPDSC membership for that audience's exclusion `(data_source_id, data_source_category_id)` pairs at the same `dt`, recount distinct. Bounded work — 721 campaigns, HI band only, one `dt` — but it is a large join against a 251.6B-row day and needs its own run. Not attempted here; scope as a follow-on if the post-exclusion number is what is actually wanted.
+
 ## 5. Solution
 **Delivered (rebuilt 2026-08-18: funnel_level=1 correction, then re-audited; see 4.12):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
 
