@@ -4,7 +4,7 @@
 Every hook, script, skill, and agent, read straight from the files. This is the drift-proof
 source of truth for the component counts (regenerate with `.claude/scripts/build_kit_manifest.sh`).
 
-## Hooks (9)
+## Hooks (11)
 
 | event | matcher | script | what it does | can block? |
 |-------|---------|--------|--------------|------------|
@@ -13,7 +13,9 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | PostToolUse | Bash | `flag_net_new_tables.sh` | Bash — after a scripts/bq_run.sh call, flag any referenced table that has no catalog doc into knowledge/bq/_UNDOCUMENTED.queue (the… | no |
 | UserPromptSubmit | — | `memory_recall.py` | deterministic per-prompt memory recall | no |
 | UserPromptSubmit | — | `log_request.py` | UserPromptSubmit hook | no |
+| UserPromptSubmit | — | `brevity_pointer.py` | put the cap in the last position before generation | no |
 | SessionStart | — | `session_start_routing.sh` | print a compact orientation so a fresh chat can route to the right doc without ingesting the whole knowledge base | no |
+| Stop | — | `chat_brevity_meter.py` | measure the reply that just shipped and record the verdict | no |
 | Stop | — | `capture_reminder.sh` | advisory capture-due reminder when knowledge is out of sync: the doc-debt queue is non-empty, or a knowledge doc changed since the last index build | no |
 | Stop | — | `comms_cap_reminder.sh` | soft nudge to keep outward-facing writing terse | no |
 | Stop | — | `oncall_triage_reminder.sh` | advisory on-call-triage reminder | no |

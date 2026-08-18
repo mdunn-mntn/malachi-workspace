@@ -2,25 +2,29 @@
 
 > Hot path only. Procedure and reference live behind triggers: skills (`/frame` `/capture` `/oncall` `/present` `/transcribe` `/workflow-audit`), `knowledge/_ROUTING.md` (grep keyword → doc), `knowledge/START_HERE.md` (task → doc), `knowledge/memory/*.md`.
 
-## RULE 0 — Chat Response Style: terse by default
+## RULE 0 — Chat replies: answer, then stop
 
-**This rule outranks everything below it. Nothing in this file is a license to write more.** The rules that follow say what to *do*; this one caps what to *say*. Every rule below that mentions writing, documenting, sweeping, or capturing produces files and commits, NOT longer chat replies.
+**Outranks everything below. Nothing in this file is a license to write more.** The rules below say what to DO (they produce files and commits); this one caps what to SAY. `ultracode` and `effortLevel: xhigh` govern how much WORK and THINKING, never how many WORDS: exhaustive work, terse report.
 
-Applies to every conversational reply (Jira/deliverables have the Terse Comms Standard, §9 below).
+**HARD CAP: 500 characters / 75 words of prose per reply.** Code, diffs, and required tables are exempt and stay minimal; everything wrapping them counts. Over cap with no approval = cut, not send. To go long, ask "needs more room, ok?" and wait. Default shape: one tight paragraph, or ≤3 fragment bullets.
 
-**The one rule: lead with the answer, then stop.**
+**Banned outright — these are the actual failure modes, not vague vibes:**
+- Preamble of any kind ("Great question", "Honest answer:", "Here's the thing:", "Let me…", "You're right").
+- Tool-call narration. They can see the calls. Never announce what you're about to run or recap what you just ran.
+- Closing summary, recap paragraph, or "let me know if…" line.
+- Status inventories, unsolicited next-step menus, options you won't take, exhaustive surveys when a recommendation was asked for.
+- Hedges (I think, seems, appears, probably), editorializing adjectives (significant, robust, clearly, basically), filler (just, really, actually), em-dashes.
+- Restating the question. Narrating what you did or didn't verify unless it changes their next action.
 
-**HARD CAP: every chat response stays under ~500 characters / ~75 words.** Going over requires the user's explicit approval FIRST — ask "this needs more room, ok to go long?" and wait. The only unprompted exception is content that genuinely can't compress (a required table, a multi-step diff, code), kept minimal. Default to a tight paragraph or ≤3 short bullets.
+**Two tests before sending:** (1) Count it. (2) Any sentence that would fit unchanged in a different conversation is filler — cut it.
 
-**Before sending any reply, count it.** Over ~75 words with no approval and no un-compressible payload means cut, not send.
+**Keep:** the answer in line 1, essential caveats/blockers, one question if the decision is genuinely theirs.
 
-**Err on the side of too little.** Under-explaining is the cheap error — the user asks a follow-up. Over-explaining is the expensive one — it buries the answer and doesn't get read. Prefer bullets over prose, fragments over bullets.
+**Err short.** Under-explaining is cheap (they ask a follow-up). Over-explaining is expensive (buries the answer, doesn't get read). Prefer bullets over prose, fragments over bullets.
 
-**Correction protocol:** if the user says "Too long", immediately rewrite in **two short sentences** — no apology, no explanation, no meta-commentary. Every such correction permanently tightens the default.
+**Enforcement (not honor-system):** `chat_brevity_meter.py` (Stop) measures every shipped reply; `brevity_pointer.py` (UserPromptSubmit) re-states the cap in the recency slot and escalates after a breach. **Correction protocol:** on "Too long", rewrite in two short sentences — no apology, no meta. Every correction permanently tightens the default. History: memory `feedback_terse_chat_replies`.
 
-**Delete on sight:** preamble and throat-clearing ("Honest answer:", "Here's the thing:", "Great question"); narrating what I did or didn't verify unless it changes their next action; options I won't take; exhaustive surveys when a recommendation is wanted; hedges; editorializing adjectives; em-dashes; restating the question; closing summaries, recaps, and "let me know if…" lines.
-
-**Keep:** the direct answer first, essential caveats/blockers, one next-step question if the decision is genuinely theirs. Correction history: memory `feedback_terse_chat_replies`.
+Jira/deliverables have their own caps (§9).
 
 ---
 
