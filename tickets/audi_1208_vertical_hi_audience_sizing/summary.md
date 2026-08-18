@@ -247,7 +247,15 @@ The two Method & caveats blocks that lead the tab are the exclusion-mechanism ca
   **A:** No, not for recent dates. `external.household_scoring__prospecting_intent__v1` returns 0 rows for August 2026 while the GCS partitions exist and are full. Use an inline `--external_table_definition` pointed at the day directory, and always pass `--location=us-central1`. See 4.5.
 
 ## 7. Data Documentation Updates
-Queued for `/capture`:
+**Routed 2026-08-18 (`/capture` complete).** What went where:
+
+- `knowledge/data_knowledge.md` — new: the S3-flat-10000 HI-contamination footgun + the funnel-scope rule + the detection tell (folded into the existing prospecting-scores-monitor findings block); new: exclusions invisible to scoring + the cohort-comparison trap; new: the AUDI-1208 sizing baseline with the never-add-category-sizes rule.
+- `knowledge/data_catalog.md` — **corrected** "152 verticals" → 148 distinct, with the 4-duplicate-id reconciliation appended and the AUDI-431 evidence preserved; **corrected** the `prospecting_intent` retention line ("10-day in BQ" → the BQ window is STUCK, not rolling) and flagged the external-table row; new CORRECTION block on reading the GCS day inline + the `--location=us-central1` requirement; enriched the `ip_vertical_associations` row as the vertical-SIZE source of truth (FLOAT cast, 6-vs-3-digit rule, integrity counts); new: `fpa_advertiser_verticals` is per-ADVERTISER (30,863/type), `SELECT DISTINCT` first.
+- `knowledge/memory/` — new `reference_prospecting_intent_query_rules`, `reference_exclusions_invisible_to_scoring`, `reference_vertical_hi_sizing_baseline`; **updated** `reference_prospecting_scores_gcs_monitor` (its "S3 flattens to 10,000" line now carries the downstream HI-band warning + cross-links; `last_verified` bumped to 2026-08-18).
+- `self_review/self_review_2.md` — 2026-08-18 entry (Craft x4, Speed, plus the improvement note on verifying before reporting).
+- Nothing to add for `mntn_business.md` or `experimentation.md`.
+
+Original queue, for reference:
 1. **`data_knowledge.md`** — any query banding `household_score` from `prospecting_intent` MUST scope to `funnel_level = 1` (or `IN (1,2)`) / `campaign_template_id = 10`. Everything else is flattened to 10000 by `prospecting_join` and enters the HI band as its whole audience. 2026-08-17: 1,426 of 4,907 campaigns, inflating the HI mean 3.8x. Tell = HI/all-scored ratio bimodal with an empty 50-99% middle.
 2. **`data_knowledge.md`** — exclusions (`include = false` in `prospecting_active_campaign_categories`) are **invisible to scoring**. `prospecting_join` groups PACC to the campaign key and drops `include`; exclusions bind in the bidder at serve time. Any "HI pool" from `prospecting_intent` is pre-exclusion for every campaign. Extends `reference_crm_exclusion_serve_time`.
 3. **`data_catalog.md`** — CORRECTION: `external.household_scoring__prospecting_intent__v1` returns **0 rows for Aug 2026** while the GCS partitions are full (hive `mode: CUSTOM` with no `{key:TYPE}` in `sourceUriPrefix`). Use an inline `--external_table_definition` on the day directory + `--location=us-central1`. Existing note says "~35 days active (10-day in BQ)" — the real BQ-visible ceiling was ~5 weeks stale.
