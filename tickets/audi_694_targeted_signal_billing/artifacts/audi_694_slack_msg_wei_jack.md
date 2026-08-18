@@ -11,6 +11,6 @@ DS63 and it's on 96.6% of impressions, but 99.6% of those also have guid or augm
 divisor pays it 4.7x what MM parity does, 259x what AUDI-1113 preemption does. Separately 39% of
 in-scope DS63 impressions get no crediting row at all, which pushes the other way.
 
-No DS63 credit has ever been billed, so whatever ships first sets the precedent for MNTN ID too.
+Whatever we pick sets the precedent for MNTN ID too.
 
 45 min this week? Agenda's written.
