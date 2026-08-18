@@ -51,6 +51,8 @@ Mens/Men's, `126006` Womens/Women's, `135004` RVs/RV's). The monitor's
 `vertical_name != 'MNTN Matched Audience'` filter therefore drops no vertical — it reports 148 too.
 **Count and join on `vertical_id`, never `vertical_name`.**
 
+**Cross-source:** Benny built a dashboard Paulo called complementary to this (flagged 2026-08-18, not reviewed). Check it before the next audience-sizing ask so the two don't diverge.
+
 **How to apply:** quote these directly for a sizing ask, then state the date. Before recomputing the HI
 half, read [[reference_prospecting_intent_query_rules]] (funnel scoping — the first pass here was 3.8x
 too high) and [[reference_exclusions_invisible_to_scoring]] (these pools are pre-exclusion).

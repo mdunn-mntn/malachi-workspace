@@ -1,7 +1,7 @@
 ---
 doc_type: ticket
 title: "AUDI-1208: Vertical and MM HI audience sizing (mean + quartiles)"
-status: in_progress
+status: done
 date: 2026-08-18
 summary: "Mean/quartile sizes for DS13 verticals and the HI subset of MM audiences"
 result: "Verticals mean 9.5M IPs / median 6.6M / Q1-Q3 4.0-12.0M (n=148); prospecting-audience HI pool mean 4.8M / median 3.6M / Q1-Q3 1.6-6.0M (n=2,063); exclusions are bid-time, so both cohorts are pre-exclusion"
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1208: Vertical and MM HI audience sizing (mean + quartiles)
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1208
-**Status:** in_progress
+**Status:** done
 **Date Started:** 2026-08-18
 **Assignee:** Malachi
 
@@ -369,7 +369,15 @@ Original queue, for reference:
 6. **New memory** — the AUDI-1208 sizing baseline (verticals mean 9.5M / median 6.6M; prospecting HI pool mean 4.8M / median 3.6M, 2026-08-17) so the next "how big is X" ask starts from a number.
 
 ## 8. Open Items / Follow-ups
-1. **Post-exclusion HI size is NOT answered** and is the one thing Paulo might actually have meant by 2b. Needs each campaign's exclusion sets resolved against IPDSC at the same `dt` and subtracted from its HI pool. Ryan Kleck called this the hard part in-thread. Scope as its own spike if asked.
-2. **Tell Ryan the registered `prospecting_intent` external table is blind past mid-July 2026.** It is a live prod table others may be querying and silently getting stale or empty results. Fix is a corrected hive `sourceUriPrefix`. Not hot-patched here.
-3. **Offer the quartile summary as a monitor addition.** Ryan said "quartile size, i'm not sure exactly how to do that???" — `vertical_size_monitor.py` already computes every per-vertical count, so a distribution strip (mean/median/Q1/Q3) on the existing email is a few lines of Spark. Would answer this class of ask standing, without a person.
-4. **Verify the 148/37 roster against Postgres.** The monitor filters `vertical_name != 'MNTN Matched Audience'`; no such row exists in the BQ mirror. If it exists in Postgres, the monitor reports 147 verticals where we report 148.
+**Ticket CLOSED 2026-08-18.** Paulo accepted the deliverable in #targeting-squad ("hell yeah, thank you") and noted that a dashboard Benny built covers complementary ground, so read the two together rather than as competing sources.
+
+1. **Post-exclusion HI size is NOT answered** and is the one cell of the ask's grid still open (see 4.14). Needs each campaign's exclusion sets resolved against `ipdsc__v1` at the same `dt` and subtracted from its HI pool; 721 audiences in scope, and 91 of them carry a DS1 Oracle clause that excludes nobody because Oracle is absent from IPDSC. Ryan Kleck called this the hard part in-thread. Scope as its own spike only if someone asks for the number.
+2. **RESOLVED (as a retraction).** The claim that the registered `prospecting_intent` external table was blind past mid-July was **wrong** — see 4.16. The identical query returned 0 rows at 09:35 and full counts at 11:15. Root cause never established; treat a single 0-row federated result as transient, re-run before concluding. Nothing to fix, nothing to escalate.
+3. **DONE.** Quartile strip added to `vertical_size_monitor.py`, PR [SteelHouse/airflow-ti#1204](https://github.com/SteelHouse/airflow-ti/pull/1204) on branch `AUDI-1208-vertical-size-quartiles`. **Awaiting review and a dev run** — this Mac has no JVM so the Spark aggregation was verified by reproducing it exactly in Python, not by executing it. Whoever merges should run it once in dev first.
+4. **Cross-check the 148 roster against Postgres.** Mostly answered: the `MNTN Matched Audience` name is an ALIAS on `vertical_id = 105000`, which also carries the real name "Building Materials", so the monitor's `vertical_name != 'MNTN Matched Audience'` filter drops no vertical and it reports 148 like us (4.11, and the `data_catalog` reconciliation). Confirm directly against CoreDB if anyone ever needs it to be airtight.
+5. **Benny's dashboard.** Paulo flagged it as complementary to this work. Not reviewed here. Worth a look before the next audience-sizing ask so the two don't diverge or duplicate.
+
+## 9. Related
+- Deliverable: `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx`
+- Code PR: [SteelHouse/airflow-ti#1204](https://github.com/SteelHouse/airflow-ti/pull/1204)
+- Memory: `reference_vertical_hi_sizing_baseline`, `reference_prospecting_intent_query_rules`, `reference_exclusions_invisible_to_scoring`
