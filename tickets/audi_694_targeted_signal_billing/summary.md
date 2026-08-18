@@ -369,6 +369,40 @@ carrier exists on the AUDI side; what is missing is that nothing in the creditin
 #dev-mntn-id and a call is likely. Wei's stated timeline is **end of this month**, since DS63 is
 already rolled out (not globally) and using graph data.
 
+### 4.11 Jack's ownership taxonomy, 2026-08-18 — and what it does to this ticket's scope
+
+Jack standardised the nomenclature, which finally separates the pieces:
+
+| list | what it is | needed for | owner |
+|---|---|---|---|
+| **Vendor List 1** | DDP vendors: who put the ID into a targeted segment | **MNTN ID only, NOT DS63** | **AUDI** (`identity_targeted_signal`, Sean) |
+| **Vendor List 2** | Graph vendors, encoding: who translated the ID into a household when building the audience | MNTN ID and DS63 | Identity |
+| **Vendor List 3** | Graph vendors, decoding: who let the household be targeted in an auction | MNTN ID and DS63 | Identity |
+
+**The consequential line: "This is needed for MNTN ID, but not DS63 because DS63 sources the input
+data from CRM lists."** DS63 has no DDP vendor behind the segment, because the segment *is* the
+advertiser's own uploaded CRM list. So everything measured in 4.7 through 4.9 on DS63 is Lists 2 and
+3, which are Identity's, not AUDI's.
+
+**Effect on AUDI-694.** The ticket's own deliverable is List 1, and List 1 does not apply until MNTN
+ID. Combined with 4.9 (DS47 has zero impressions) and 4.10 (Sean already shipped
+`identity_targeted_signal` under AUDI-953), the literal AUDI-694 scope is **delivered or not-yet-
+applicable on every branch**:
+
+- DS4 to DS47: no billing impact, DS47 never reaches the meter.
+- DS4 to DS63: real billing impact, but it is Lists 2/3 and belongs to Identity.
+- MNTN ID: List 1 applies and is AUDI's, and the table exists.
+
+What remains genuinely open and unowned are the two pieces Jack flagged: **assembly of the vendor
+lists** (BAE, transferring to AP?) and **the crediting business logic**. Jack asked Malachi directly
+whether the latter is what he is working on.
+
+**One correction owed to Jack's summary.** He wrote *"it sounds like Vendor List 1 will continue to be
+given fractional credit for a fixed CPM."* That is the status quo AUDI-1089/1111/1113 challenged:
+fractional credit is still paid to metered vendors on impressions our own free logs already cover,
+worth $768,916/yr at MM scale and independently reproduced by BAE on BAE-4923. Treating List 1
+crediting as settled re-adopts the defect by default.
+
 ## 5. Solution
 What was done to resolve the issue:
 - Code changes (PRs, commits)
