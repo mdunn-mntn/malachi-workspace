@@ -41,8 +41,8 @@ WHERE campaign_id IN (/* the 4,907 campaign_ids from query 2 */);
 -- scored IP set as High Intent. objective_id cannot catch it (all 4,907 are objective_id = 1).
 SELECT * FROM UNNEST([
   STRUCT('funnel_level = 1 (prospecting)' AS scope, 2063 AS campaigns,    0 AS flat_at_100pct),
-  STRUCT('funnel_level = 2 (MT-S2)',                 1418,               0),
-  STRUCT('funnel_level = 3 (MT-S3)',                 1426,            1426)
+  STRUCT('funnel_level = 2 (next stage down)',        1418,               0),
+  STRUCT('funnel_level = 3 (flattened to 10000)',    1426,            1426)
 ]);
 
 SELECT * FROM UNNEST([

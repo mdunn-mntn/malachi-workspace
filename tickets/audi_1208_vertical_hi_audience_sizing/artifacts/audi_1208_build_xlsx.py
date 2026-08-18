@@ -48,22 +48,22 @@ for label, data in (("Verticals (subindustry)", v6), ("Buckets (industry)", v3))
                    "Smallest": st["mn"], "Largest": st["mx"]})
 df_v = pd.DataFrame(rows_v)
 
-# Rows mirror the requester's two sub-asks verbatim, then repeat them one stage wider so the
-# sensitivity to the stage boundary is visible on the same tab.
+# Rows mirror the requester's two sub-asks verbatim. Prospecting only; the wider funnel reading
+# lives on Method & caveats as one sentence, not as a second set of rows.
 rows_h = []
-for stage_label, stages in (("Prospecting", (1,)), ("Prospecting + MT-S2", (1, 2))):
-    coh = [c for c in camps if c["mm"] and c["funnel"] in stages]
-    assert not [c for c in coh if c["hi"] == c["all_ips"]], "flat-10000 leaked into a cohort"
-    for label, data in (
-        ("HI, audiences with no exclusions", [c for c in coh if not c["excl"]]),
-        ("HI, all MM audiences (incl. exclusions)", coh),
-        ("HI, only audiences with exclusions", [c for c in coh if c["excl"]]),
-    ):
-        st = summarize([c["hi"] for c in data])
-        rows_h.append({"Cohort": label, "Stage": stage_label, "Audiences": st["n"],
-                       "Mean IPs": st["mean"], "Median IPs": st["median"],
-                       "Q1": st["q1"], "Q3": st["q3"], "Largest": st["mx"]})
+assert not [c for c in mm if c["hi"] == c["all_ips"]], "flat-10000 leaked into a cohort"
+for label, data in (
+    ("HI, audiences with no exclusions", [c for c in mm if not c["excl"]]),
+    ("HI, all MM audiences (incl. exclusions)", mm),
+    ("HI, only audiences with exclusions", [c for c in mm if c["excl"]]),
+):
+    st = summarize([c["hi"] for c in data])
+    rows_h.append({"Cohort": label, "Audiences": st["n"], "Mean IPs": st["mean"],
+                   "Median IPs": st["median"], "Q1": st["q1"], "Q3": st["q3"],
+                   "Smallest": st["mn"], "Largest": st["mx"]})
 df_h = pd.DataFrame(rows_h)
+
+wider = summarize([c["hi"] for c in camps if c["mm"] and c["funnel"] in (1, 2)])
 
 df_v_all = pd.DataFrame(
     [{"Vertical": n, "ID": i, "IPs": p} for i, n, p in sorted(v6, key=lambda x: -x[2])]
@@ -107,7 +107,7 @@ wb.table(
 wb.table(
     "HI pool sizes", df_h,
     finding="With no exclusions the mean HI pool is 4.5M IPs (median 3.5M); across all MM audiences it is 4.8M (median 3.6M)",
-    method="Distinct IPs scoring 8001-10000 per active MM audience, 2026-08-17. Widening a stage barely moves it. Read Method & caveats before quoting.",
+    method="Distinct IPs scoring 8001-10000 per active prospecting audience, 2026-08-17. Read Method & caveats before quoting these.",
     formats=INT, kind="headline",
     toc="Answer to part 2: HI pool, no-exclusion vs all",
     query="audi_1208_hi_subset_by_audience.sql",
@@ -147,7 +147,7 @@ wb.glossary(
         ("The two questions", ""),
         ("Vertical", "A subindustry targeting category, e.g. Food Products. 148 exist. Identified by a 6-digit id."),
         ("Bucket", "The industry parent of a vertical, e.g. Food & Beverage. 37 exist. Identified by a 3-digit id."),
-        ("Audience", "One active Stage-1 prospecting campaign and its targeting expression. 2,063 were live and prospecting-scored."),
+        ("Audience", "One active prospecting campaign and its targeting expression. 2,063 were live and intent-scored on the day."),
         ("Size", "Distinct IP addresses. Not households and not people; one home can hold several IPs over time."),
         ("", ""),
         ("Score bands", ""),
@@ -179,10 +179,12 @@ wb.notes(
          "The same daily file that feeds the existing vertical size monitor. A cross-check against the downstream copy of the same data for the prior day agreed to a median 1.9%, consistent with one day of growth."),
         ("HI counts are approximate by design",
          "One day of scores is 251.6 billion rows, so distinct IPs are counted with an approximate method accurate to roughly 1%. That is far inside the spread being reported."),
+        ("The answer holds if you widen it past prospecting",
+         "These rows are prospecting audiences. Including the next stage down the funnel adds 1,418 more and barely moves the answer: the mean goes from 4.77M to 4.76M and the median from 3.55M to 3.56M. Nothing here turns on where that line is drawn."),
         ("Later-stage campaigns are excluded, and must be",
          "The pipeline flattens the score to 10000 for anything past the prospecting stage, which would enter the High Intent band as its entire audience. On the day, 1,426 such campaigns scored 100% High Intent. Dropping them cuts the mean from 18.3M to 4.8M."),
         ("What is counted as an audience",
-         "The 2,063 Stage-1 campaigns the pipeline actually prospecting-scored on the day. All 2,063 carry MNTN Matched targeting, so no non-MM comparison group exists here."),
+         "The 2,063 prospecting campaigns the pipeline actually intent-scored on the day. All 2,063 carry MNTN Matched targeting, so no non-MM comparison group exists here."),
         ("Smallest HI pool is genuinely zero",
          "Some active audiences reached no High Intent IPs at all on the day. Those are kept in the counts rather than dropped, so the minimum reads 0."),
     ],
