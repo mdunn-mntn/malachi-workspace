@@ -30,3 +30,23 @@ GROUP BY 1, 2, 3, 4;
 
 -- The two results join 1:1 on campaign_id (4,907 campaigns each, full overlap on 2026-08-17).
 -- Cohorts: has_mm_incl = TRUE is every row; has_exclusion splits 3,211 none / 1,696 with.
+
+-- Query 3 — MANDATORY scope filter. Without it the HI band is contaminated.
+-- prospecting_join keeps the pipeline score only when campaign_template_id = 10 OR funnel_level IN (1,2);
+-- every other campaign has household_score FLATTENED to 10000, which lands its ENTIRE scored IP set
+-- inside the 8001-10000 band as fake High Intent. On 2026-08-17 that was 1,426 funnel_level=3 campaigns,
+-- all of them at hi_ips = all_ips exactly. Restrict to funnel_level = 1 for prospecting.
+SELECT campaign_id, funnel_level, objective_id, campaign_template_id
+FROM `dw-main-bronze.integrationprod.campaigns`
+WHERE campaign_id IN (/* the 4,907 campaign_ids from query 2 */);
+
+-- Verified separation on 2026-08-17: funnel 1 = 2,063 campaigns, 0 flat; funnel 2 = 1,418, 0 flat;
+-- funnel 3 = 1,426, ALL 1,426 flat. Reported figures use funnel_level = 1.
+
+-- Query 4 — integrity check on the vertical source (all clean on 2026-08-17):
+-- 2,375,803,803 rows / 214,079,274 distinct IPs / 185 distinct categories (148 verticals + 37 buckets)
+-- / 0 null ip / 0 null category id / every distinct IP sits in at least one vertical.
+SELECT COUNT(*) AS rows_, COUNT(DISTINCT ip) AS distinct_ips,
+       COUNT(DISTINCT data_source_category_id) AS distinct_cats,
+       COUNTIF(ip IS NULL) AS null_ip, COUNTIF(data_source_category_id IS NULL) AS null_cat
+FROM iva;

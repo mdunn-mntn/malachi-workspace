@@ -29,8 +29,16 @@ flags = {}
 for r in csv.reader(open(f"{OUT}/audi_1208_campaign_exclusion_flags_2026_08_17.csv")):
     if len(r) >= 9:
         flags[int(r[2])] = dict(mm=r[7].strip().lower() == "true", excl=r[8].strip().lower() == "true")
-camps = [dict(cid=c, **hi[c], **flags[c]) for c in set(hi) & set(flags)]
-mm = [c for c in camps if c["mm"]]
+funnel = {}
+for r in csv.reader(open(f"{OUT}/audi_1208_campaign_funnel_levels.csv")):
+    if len(r) >= 4:
+        funnel[int(r[0])] = dict(funnel=int(r[1]), tmpl=int(r[3]))
+keys = set(hi) & set(flags) & set(funnel)
+camps = [dict(cid=c, **hi[c], **flags[c], **funnel[c]) for c in keys]
+# prospecting_join flattens household_score to 10000 for any campaign that is not
+# template 10 / funnel 1-2, which would enter the 8001-10000 band as fake High Intent.
+mm = [c for c in camps if c["mm"] and c["funnel"] == 1]
+assert not [c for c in mm if c["hi"] == c["all_ips"]], "flat-10000 leaked into the prospecting cohort"
 
 rows_v = []
 for label, data in (("Verticals (subindustry)", v6), ("Buckets (industry)", v3)):
@@ -77,7 +85,7 @@ INT = {"Count": FMT.INT, "Audiences": FMT.INT, "Mean IPs": FMT.INT, "Median IPs"
 wb = MntnWorkbook(
     title="Vertical and HI Audience Sizes",
     ticket="AUDI-1208",
-    subtitle="Mean and quartile sizes for MNTN verticals and the High Intent pool per MM audience",
+    subtitle="Mean and quartile sizes for MNTN verticals and the High Intent pool per MM prospecting audience",
     period="Snapshot 2026-08-17",
     generated="2026-08-18",
 )
@@ -93,8 +101,8 @@ wb.table(
 
 wb.table(
     "HI pool sizes", df_h,
-    finding="MM audiences carry a mean 18.3M-IP High Intent pool, median 5.5M; exclusion cohorts differ little",
-    method="Distinct IPs scoring 8001-10000 per active Stage-1 prospecting campaign, 2026-08-17. See Method & caveats before quoting.",
+    finding="Prospecting audiences carry a mean 4.8M-IP High Intent pool, median 3.6M; the middle half spans 1.6M to 6.0M",
+    method="Distinct IPs scoring 8001-10000 per active Stage-1 prospecting audience, 2026-08-17. Read Method & caveats before quoting.",
     formats=INT, kind="headline",
     toc="Answer to part 2: how big is an audience's HI pool",
     query="audi_1208_hi_subset_by_audience.sql",
@@ -120,8 +128,8 @@ wb.table(
 
 wb.table(
     "Score bands", df_ctx,
-    finding="High Intent is a mean 18.3M of the mean 51.2M scored IPs an MM audience reaches",
-    method="Mean and median across the same 4,907 audiences, by score band, 2026-08-17. Bands do not sum to Any score.",
+    finding="High Intent is a mean 4.8M of the mean 51.3M scored IPs a prospecting audience reaches",
+    method="Mean and median across the same 2,063 prospecting audiences, by score band, 2026-08-17. Bands do not sum to Any score.",
     formats={"Mean IPs": FMT.INT, "Median IPs": FMT.INT}, kind="data",
     toc="HI in context of the other score bands",
     query="audi_1208_hi_subset_by_audience.sql",
@@ -134,7 +142,7 @@ wb.glossary(
         ("The two questions", ""),
         ("Vertical", "A subindustry targeting category, e.g. Food Products. 148 exist. Identified by a 6-digit id."),
         ("Bucket", "The industry parent of a vertical, e.g. Food & Beverage. 37 exist. Identified by a 3-digit id."),
-        ("Audience", "One active prospecting campaign and the targeting expression attached to it. 4,907 were live."),
+        ("Audience", "One active Stage-1 prospecting campaign and its targeting expression. 2,063 were live and prospecting-scored."),
         ("Size", "Distinct IP addresses. Not households and not people; one home can hold several IPs over time."),
         ("", ""),
         ("Score bands", ""),
@@ -144,7 +152,7 @@ wb.glossary(
         ("Reading the numbers", ""),
         ("Mean vs median", "Both are given because the spread is wide. The mean sits well above the median, so a few very large entries pull it up."),
         ("Quartiles", "Q1 and Q3 bound the middle half. Half of all entries fall between them, a quarter below Q1, a quarter above Q3."),
-        ("Exclusion", "A clause telling the platform to leave a group out, e.g. existing customers. 1,696 of 4,907 audiences had one."),
+        ("Exclusion", "A clause telling the platform to leave a group out, e.g. existing customers. 721 of 2,063 audiences had one."),
     ],
 )
 
@@ -166,8 +174,10 @@ wb.notes(
          "The same daily file that feeds the existing vertical size monitor. A cross-check against the downstream copy of the same data for the prior day agreed to a median 1.9%, consistent with one day of growth."),
         ("HI counts are approximate by design",
          "One day of scores is 251.6 billion rows, so distinct IPs are counted with an approximate method accurate to roughly 1%. That is far inside the spread being reported."),
+        ("Later-stage campaigns are excluded, and must be",
+         "The pipeline flattens the score to 10000 for anything past the prospecting stage, which would enter the High Intent band as its entire audience. On the day, 1,426 such campaigns scored 100% High Intent. Dropping them cuts the mean from 18.3M to 4.8M."),
         ("What is counted as an audience",
-         "The 4,907 campaigns the scoring pipeline treated as active prospecting on the day. Every one of them carries MNTN Matched targeting, so there is no non-MM comparison group available here."),
+         "The 2,063 Stage-1 campaigns the pipeline actually prospecting-scored on the day. All 2,063 carry MNTN Matched targeting, so no non-MM comparison group exists here."),
         ("Smallest HI pool is genuinely zero",
          "Some active audiences reached no High Intent IPs at all on the day. Those are kept in the counts rather than dropped, so the minimum reads 0."),
     ],
@@ -178,7 +188,7 @@ wb.sql_dir("Queries", f"{T}/queries",
 
 wb.cover(takeaways=[
     "Verticals: mean 9.5M IPs, median 6.6M, middle half 4.0M to 12.0M, across all 148.",
-    "HI pool per MM audience: mean 18.3M IPs, median 5.5M, middle half 2.7M to 21.4M.",
+    "HI pool per prospecting audience: mean 4.8M IPs, median 3.6M, middle half 1.6M to 6.0M.",
     "Exclusions are applied at bid time, not in scoring, so both cohorts are pre-exclusion pools.",
 ])
 

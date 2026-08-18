@@ -4,7 +4,7 @@ title: "AUDI-1208: Vertical and MM HI audience sizing (mean + quartiles)"
 status: in_progress
 date: 2026-08-18
 summary: "Mean/quartile sizes for DS13 verticals and the HI subset of MM audiences"
-result: "Verticals mean 9.5M IPs / median 6.6M / Q1-Q3 4.0-12.0M (n=148); MM audience HI pool mean 18.3M / median 5.5M; exclusions are bid-time, so both cohorts are pre-exclusion"
+result: "Verticals mean 9.5M IPs / median 6.6M / Q1-Q3 4.0-12.0M (n=148); prospecting-audience HI pool mean 4.8M / median 3.6M / Q1-Q3 1.6-6.0M (n=2,063); exclusions are bid-time, so both cohorts are pre-exclusion"
 question: "What are the mean and quartile audience sizes of MNTN verticals, and of the HI subset of MM prospecting audiences, split by audiences with no exclusions vs all MM audiences?"
 framing_state: locked
 ---
@@ -178,8 +178,50 @@ So every HI number above is the **pre-exclusion** pool, for both cohorts. Conseq
 
 PACC exclusion composition: 1,696 of 4,907 audiences (34.6%) carry at least one `include = false` clause.
 
+
+### 4.10 CORRECTION to 4.8 — the first HI figures were contaminated by flat-scored later-stage campaigns
+**4.8 stands as the record of what the unfiltered query returned; its numbers must not be quoted.** They were ~3.8x too high. Found by challenging the counter-intuitive result rather than shipping it.
+
+**The tell.** The HI/all-scored ratio per campaign is bimodal with an empty middle: 296 campaigns under 1%, 3,185 between 1% and 50%, **zero between 50% and 99%**, then **1,426 campaigns at exactly 100%**. A campaign whose every scored IP is High Intent is not a real audience shape.
+
+**The cause, from `prospecting_join.py`.** The job keeps the pipeline score only when
+`campaign_template_id == 10 OR funnel_level IN (1, 2)`; every other campaign has `household_score`
+**flattened to `REGULAR_SCORE_WITH_KEYWORD` = 10000**. A flat 10000 sits inside the 8001-10000 HI band, so
+those campaigns contribute their **entire** scored IP set as counterfeit High Intent.
+
+**Verified separation** (joining `integrationprod.campaigns.funnel_level` onto the 4,907, output `outputs/audi_1208_campaign_funnel_levels.csv`):
+
+| funnel_level | campaigns | flat at hi = all_ips |
+|---|---|---|
+| 1 (prospecting) | 2,063 | 0 |
+| 2 (MT-S2) | 1,418 | 0 |
+| 3 (MT-S3) | 1,426 | **1,426 (all)** |
+
+Perfect separation — every flat campaign is `funnel_level = 3`, and zero funnel-1/2 campaigns are flat. This reproduces the pipeline's own rule exactly, so the filter is not a heuristic. All 4,907 carry `objective_id = 1`, which is why objective_id could not have caught this (consistent with the standing "objective_id UNRELIABLE, use funnel_level" rule).
+
+**CORRECTED figures — `funnel_level = 1`, active MM prospecting audiences, 2026-08-17. These are the reported numbers.**
+
+| cohort | audiences | mean | median | Q1 | Q3 | min | max |
+|---|---|---|---|---|---|---|---|
+| all MM prospecting | 2,063 | 4,772,375 | 3,553,726 | 1,644,679 | 5,958,157 | 0 | 41,760,550 |
+| no exclusions | 1,342 | 4,516,518 | 3,486,590 | 1,310,364 | 5,719,723 | 0 | 34,470,335 |
+| with exclusions | 721 | 5,248,601 | 3,725,338 | 2,273,025 | 6,832,458 | 0 | 41,760,550 |
+
+Context, same 2,063: mean 51,321,823 IPs at any score (median 43,120,471); PP band (6666-8000) mean 6,313,960 / median 2,913,153. So HI is a mean 4.8M of a mean 51.3M scored pool.
+
+Adding `funnel_level = 2` barely moves it (n=3,481, mean 4,757,882, median 3,564,058), so the headline is not sensitive to the S1-vs-S1+S2 choice. It is *extremely* sensitive to leaving funnel 3 in.
+
+**4.9 survives unchanged.** With-exclusion audiences still report a higher median (3.73M vs 3.49M) and the pre-exclusion caveat is untouched — the exclusion mechanism finding was never a function of the contamination.
+
+**The builder now asserts this cannot regress:** `artifacts/audi_1208_build_xlsx.py` filters `funnel == 1` and then `assert not [c for c in mm if c["hi"] == c["all_ips"]]`.
+
+### 4.11 Vertical numbers independently verified (2026-08-17, integrity query)
+`ip_vertical_associations` at `dt = 2026-08-17`: 2,375,803,803 rows · **214,079,274 distinct IPs** · **185 distinct `data_source_category_id` = exactly 148 verticals + 37 buckets** · **0 null `ip`** · **0 null category id** · every distinct IP sits in at least one 6-digit vertical (`ips_in_any_vertical` = `distinct_ips`).
+
+So the vertical half needs no correction: the counts are exact `COUNT(DISTINCT ip)` (not approximate), the roster is complete with no unmapped ids, and there is no null or orphan contamination. An IP averages ~6.6 verticals, which is why the 148 vertical sizes sum to ~1.40B against a 214.08M IP base — categories overlap by design and must never be added.
+
 ## 5. Solution
-**Delivered:** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
+**Delivered (rebuilt 2026-08-18 with the funnel_level=1 correction):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
 
 The two Method & caveats blocks that lead the tab are the exclusion-mechanism caveat and the skew caveat — the two ways these numbers get misread.
 
@@ -190,10 +232,10 @@ The two Method & caveats blocks that lead the tab are the exclusion-mechanism ca
   **A:** Across all 148 DS13 verticals on 2026-08-17: mean 9,479,187 distinct IPs, median 6,557,786, Q1 3,959,353, Q3 12,026,014, min 919,345 (`101005 Apparel & Accessories - Healthcare`), max 76,274,119 (`124000 Current Affairs`). Buckets (37): mean 25,952,755, median 20,852,312, Q1 11,362,823, Q3 33,340,029.
 
 - **Q:** What is the average size of the HI subset of MM audiences, for audiences with no exclusions and for all MM audiences?
-  **A:** No exclusions (3,211 audiences): mean 17,040,321 IPs, median 5,144,080, Q1 2,400,946, Q3 20,516,066. All MM audiences (4,907): mean 18,280,569, median 5,531,138, Q1 2,663,819, Q3 21,394,484. **Both are pre-exclusion pools** — see the next question.
+  **A:** No exclusions (1,342 audiences): mean 4,516,518 IPs, median 3,486,590, Q1 1,310,364, Q3 5,719,723. All MM prospecting audiences (2,063): mean 4,772,375, median 3,553,726, Q1 1,644,679, Q3 5,958,157. Scope is `funnel_level = 1`; see 4.10 for why that filter is mandatory. **Both are pre-exclusion pools** — see the next question.
 
 - **Q:** Does carrying an exclusion shrink an audience's HI pool?
-  **A:** These numbers cannot tell you, and they are not evidence that it does. `prospecting_join` discards the `include` flag before scoring, so exclusions are absent from the scoring path entirely and bind at bid time instead. The with-exclusion cohort actually reports a HIGHER median (6.20M vs 5.14M) purely because exclusions correlate with larger accounts.
+  **A:** These numbers cannot tell you, and they are not evidence that it does. `prospecting_join` discards the `include` flag before scoring, so exclusions are absent from the scoring path entirely and bind at bid time instead. The with-exclusion cohort actually reports a HIGHER median (3.73M vs 3.49M) purely because exclusions correlate with larger accounts.
 
 - **Q:** Where in BQ do vertical sizes come from?
   **A:** Two equivalent sources. `gs://mntn-data-archive-prod/vertical_categorizations/ip_vertical_associations/dt=<date>/` is what the existing `vertical_size_monitor` reads and is preferred. `dw-main-bronze.external.ipdsc__v1` filtered to `data_source_id = 13` is the downstream copy and agrees to a median 1.9% at one day's lag. `external_ddm.data_source_category_sizes` is 3P-only and does NOT work.
@@ -205,7 +247,16 @@ The two Method & caveats blocks that lead the tab are the exclusion-mechanism ca
   **A:** No, not for recent dates. `external.household_scoring__prospecting_intent__v1` returns 0 rows for August 2026 while the GCS partitions exist and are full. Use an inline `--external_table_definition` pointed at the day directory, and always pass `--location=us-central1`. See 4.5.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Queued for `/capture`:
+1. **`data_knowledge.md`** — any query banding `household_score` from `prospecting_intent` MUST scope to `funnel_level = 1` (or `IN (1,2)`) / `campaign_template_id = 10`. Everything else is flattened to 10000 by `prospecting_join` and enters the HI band as its whole audience. 2026-08-17: 1,426 of 4,907 campaigns, inflating the HI mean 3.8x. Tell = HI/all-scored ratio bimodal with an empty 50-99% middle.
+2. **`data_knowledge.md`** — exclusions (`include = false` in `prospecting_active_campaign_categories`) are **invisible to scoring**. `prospecting_join` groups PACC to the campaign key and drops `include`; exclusions bind in the bidder at serve time. Any "HI pool" from `prospecting_intent` is pre-exclusion for every campaign. Extends `reference_crm_exclusion_serve_time`.
+3. **`data_catalog.md`** — CORRECTION: `external.household_scoring__prospecting_intent__v1` returns **0 rows for Aug 2026** while the GCS partitions are full (hive `mode: CUSTOM` with no `{key:TYPE}` in `sourceUriPrefix`). Use an inline `--external_table_definition` on the day directory + `--location=us-central1`. Existing note says "~35 days active (10-day in BQ)" — the real BQ-visible ceiling was ~5 weeks stale.
+4. **`data_catalog.md`** — vertical sizing source of truth: `gs://mntn-data-archive-prod/vertical_categorizations/ip_vertical_associations/dt=<date>/` (what `vertical_size_monitor.py` reads). IPDSC DS13 is the downstream copy, agrees to median +1.9% at one day's lag. Both give 148 verticals / 37 buckets.
+5. **`data_catalog.md`** — `integrationprod.fpa_advertiser_verticals` is one row per ADVERTISER (30,863 per `type`), not a vertical dim. `SELECT DISTINCT vertical_id, vertical_name` before joining or size tables fan out.
+6. **New memory** — the AUDI-1208 sizing baseline (verticals mean 9.5M / median 6.6M; prospecting HI pool mean 4.8M / median 3.6M, 2026-08-17) so the next "how big is X" ask starts from a number.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+1. **Post-exclusion HI size is NOT answered** and is the one thing Paulo might actually have meant by 2b. Needs each campaign's exclusion sets resolved against IPDSC at the same `dt` and subtracted from its HI pool. Ryan Kleck called this the hard part in-thread. Scope as its own spike if asked.
+2. **Tell Ryan the registered `prospecting_intent` external table is blind past mid-July 2026.** It is a live prod table others may be querying and silently getting stale or empty results. Fix is a corrected hive `sourceUriPrefix`. Not hot-patched here.
+3. **Offer the quartile summary as a monitor addition.** Ryan said "quartile size, i'm not sure exactly how to do that???" — `vertical_size_monitor.py` already computes every per-vertical count, so a distribution strip (mean/median/Q1/Q3) on the existing email is a few lines of Spark. Would answer this class of ask standing, without a person.
+4. **Verify the 148/37 roster against Postgres.** The monitor filters `vertical_name != 'MNTN Matched Audience'`; no such row exists in the BQ mirror. If it exists in Postgres, the monitor reports 147 verticals where we report 148.
