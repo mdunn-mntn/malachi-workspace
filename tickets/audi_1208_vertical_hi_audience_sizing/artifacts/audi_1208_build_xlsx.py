@@ -48,16 +48,21 @@ for label, data in (("Verticals (subindustry)", v6), ("Buckets (industry)", v3))
                    "Smallest": st["mn"], "Largest": st["mx"]})
 df_v = pd.DataFrame(rows_v)
 
+# Rows mirror the requester's two sub-asks verbatim, then repeat them one stage wider so the
+# sensitivity to the stage boundary is visible on the same tab.
 rows_h = []
-for label, data in (
-    ("All MM audiences", mm),
-    ("No exclusions", [c for c in mm if not c["excl"]]),
-    ("With exclusions", [c for c in mm if c["excl"]]),
-):
-    st = summarize([c["hi"] for c in data])
-    rows_h.append({"Cohort": label, "Audiences": st["n"], "Mean IPs": st["mean"],
-                   "Median IPs": st["median"], "Q1": st["q1"], "Q3": st["q3"],
-                   "Smallest": st["mn"], "Largest": st["mx"]})
+for stage_label, stages in (("Prospecting", (1,)), ("Prospecting + MT-S2", (1, 2))):
+    coh = [c for c in camps if c["mm"] and c["funnel"] in stages]
+    assert not [c for c in coh if c["hi"] == c["all_ips"]], "flat-10000 leaked into a cohort"
+    for label, data in (
+        ("HI, audiences with no exclusions", [c for c in coh if not c["excl"]]),
+        ("HI, all MM audiences (incl. exclusions)", coh),
+        ("HI, only audiences with exclusions", [c for c in coh if c["excl"]]),
+    ):
+        st = summarize([c["hi"] for c in data])
+        rows_h.append({"Cohort": label, "Stage": stage_label, "Audiences": st["n"],
+                       "Mean IPs": st["mean"], "Median IPs": st["median"],
+                       "Q1": st["q1"], "Q3": st["q3"], "Largest": st["mx"]})
 df_h = pd.DataFrame(rows_h)
 
 df_v_all = pd.DataFrame(
@@ -79,7 +84,7 @@ df_ctx = pd.DataFrame([
      "Mean IPs": st_all["mean"], "Median IPs": st_all["median"]},
 ])
 
-INT = {"Count": FMT.INT, "Audiences": FMT.INT, "Mean IPs": FMT.INT, "Median IPs": FMT.INT,
+INT = {"Count": FMT.INT, "Audiences": FMT.INT, "Largest": FMT.INT, "Mean IPs": FMT.INT, "Median IPs": FMT.INT,
        "Q1": FMT.INT, "Q3": FMT.INT, "Smallest": FMT.INT, "Largest": FMT.INT, "IPs": FMT.INT}
 
 wb = MntnWorkbook(
@@ -101,10 +106,10 @@ wb.table(
 
 wb.table(
     "HI pool sizes", df_h,
-    finding="Prospecting audiences carry a mean 4.8M-IP High Intent pool, median 3.6M; the middle half spans 1.6M to 6.0M",
-    method="Distinct IPs scoring 8001-10000 per active Stage-1 prospecting audience, 2026-08-17. Read Method & caveats before quoting.",
+    finding="With no exclusions the mean HI pool is 4.5M IPs (median 3.5M); across all MM audiences it is 4.8M (median 3.6M)",
+    method="Distinct IPs scoring 8001-10000 per active MM audience, 2026-08-17. Widening a stage barely moves it. Read Method & caveats before quoting.",
     formats=INT, kind="headline",
-    toc="Answer to part 2: how big is an audience's HI pool",
+    toc="Answer to part 2: HI pool, no-exclusion vs all",
     query="audi_1208_hi_subset_by_audience.sql",
 )
 
@@ -165,7 +170,7 @@ wb.notes(
         ("So the cohort split is a correlation, not an effect",
          "Both cohorts report their pool before any exclusion is removed. That is why audiences with exclusions look slightly larger, not smaller: larger accounts are likelier to run an exclusion. Do not read the gap as the cost of excluding."),
         ("Averages are the wrong summary here on their own",
-         "Both distributions are strongly right-skewed. The mean vertical is 9.5M against a 6.6M median; the mean HI pool is 18.3M against a 5.5M median. The quartiles describe the portfolio, the mean describes its largest members."),
+         "Both distributions are strongly right-skewed. The mean vertical is 9.5M against a 6.6M median; the mean HI pool is 4.8M against a 3.6M median. The quartiles describe the portfolio, the mean describes its largest members."),
         ("Verticals and buckets do not sum",
          "A bucket is a vertical's parent, and an IP can sit in several verticals at once. Adding categories double-counts IPs. Every figure is a distinct count within its own category."),
         ("One day, not an average of days",
@@ -183,12 +188,20 @@ wb.notes(
     ],
 )
 
-wb.sql_dir("Queries", f"{T}/queries",
-           note="Both queries need an inline external table definition; the registered BigQuery table for scores cannot see partitions after mid-July 2026.")
+wb.sql_dir(
+    "Queries", f"{T}/queries",
+    order=["audi_1208_vertical_sizes.sql", "audi_1208_hi_subset_by_audience.sql"],
+    collapse_aids=False,
+    headers={
+        "audi_1208_vertical_sizes.sql": "-- audi_1208_vertical_sizes.sql - vertical + bucket sizes, distinct IPs",
+        "audi_1208_hi_subset_by_audience.sql": "-- audi_1208_hi_subset_by_audience.sql - HI pool per MM audience + exclusion split",
+    },
+    note="Both queries read GCS through an inline external table definition; the registered BigQuery table for scores cannot see partitions after mid-July 2026.",
+)
 
 wb.cover(takeaways=[
     "Verticals: mean 9.5M IPs, median 6.6M, middle half 4.0M to 12.0M, across all 148.",
-    "HI pool per prospecting audience: mean 4.8M IPs, median 3.6M, middle half 1.6M to 6.0M.",
+    "HI pool: 4.5M mean with no exclusions, 4.8M across all MM audiences; medians 3.5M and 3.6M.",
     "Exclusions are applied at bid time, not in scoring, so both cohorts are pre-exclusion pools.",
 ])
 

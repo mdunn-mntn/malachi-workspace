@@ -221,11 +221,33 @@ Adding `funnel_level = 2` barely moves it (n=3,481, mean 4,757,882, median 3,564
 So the vertical half needs no correction: the counts are exact `COUNT(DISTINCT ip)` (not approximate), the roster is complete with no unmapped ids, and there is no null or orphan contamination. An IP averages ~6.6 verticals, which is why the 148 vertical sizes sum to ~1.40B against a 214.08M IP base — categories overlap by design and must never be added.
 
 ## 5. Solution
-**Delivered (rebuilt 2026-08-18 with the funnel_level=1 correction):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
+**Delivered (rebuilt 2026-08-18: funnel_level=1 correction, then re-audited; see 4.12):** `My Drive/Tickets/AUDI-1208/AUDI-1208 Vertical and HI Audience Sizes.xlsx` (branded, `lib/mntn_xlsx.py`). Builder: `artifacts/audi_1208_build_xlsx.py`. Tabs: Overview · Vertical sizes · HI pool sizes · All verticals (148, ranked) · All buckets (37, ranked) · Score bands · Read me · Method & caveats · Queries.
 
 The two Method & caveats blocks that lead the tab are the exclusion-mechanism caveat and the skew caveat — the two ways these numbers get misread.
 
 **Not delivered (out of scope, flagged to the requester):** the true post-exclusion HI pool size. See 4.9 item 3.
+
+### 4.12 Post-delivery audit — two more stale figures caught, and the HI tab restructured
+Asked to confirm confidence, so the workbook was audited cell-by-cell against a **recomputation from the committed CSVs that does not share code with the builder**. Two genuine defects, both stale numbers surviving the 4.10 correction:
+
+1. **`Method & caveats` skew block still read "the mean HI pool is 18.3M against a 5.5M median"** — the pre-correction figures, in reader-facing prose. Now 4.8M / 3.6M. (The neighbouring "cuts the mean from 18.3M to 4.8M" is correct; it describes the correction.)
+2. **A comment inside the shipped SQL still read "has_exclusion splits 3,211 none / 1,696 with"** — the unfiltered 4,907 cohort sizes. Now states the reported 1,342 / 721 and marks the old split contaminated.
+
+**Also found: the Queries tab was silently dropping content.** `MntnWorkbook.sql_dir()` has two behaviors that ate validation material: `_cap_comment_runs` trims any comment run past 3 lines (losing the `ip_vertical_associations` source path and the integrity numbers), and `collapse_aids=True` rewrites **any** `UNNEST([...])` into an AID placeholder — which swallowed the documentation literals added to replace those comments. Fixes: explicit `headers=` per file, `collapse_aids=False`, and the key facts restated as `SELECT * FROM UNNEST([STRUCT(...)])` so they are SQL and cannot be trimmed.
+
+**HI tab restructured to Paulo's wording.** Rows now read "HI, audiences with no exclusions" / "HI, all MM audiences (incl. exclusions)" / "HI, only audiences with exclusions", echoing the ask verbatim, and each repeats at a `Prospecting + MT-S2` stage so the funnel-boundary sensitivity is visible on the same tab. Row order mirrors the ask rather than ranking descending (a three-answer table keyed to a person's numbered questions is not a ranking; the detail tabs stay rank-desc).
+
+**Funnel 1 + 2 figures, for the wider "all MM audiences" reading:**
+
+| cohort | audiences | mean | median | Q1 | Q3 |
+|---|---|---|---|---|---|
+| no exclusions | 2,279 | 4,415,453 | 3,456,353 | 1,196,554 | 5,718,105 |
+| all MM | 3,481 | 4,757,882 | 3,564,058 | 1,576,308 | 6,021,987 |
+| with exclusions | 1,202 | 5,407,130 | 3,833,753 | 2,284,019 | 7,047,374 |
+
+**Audit result (8 checks, all pass), reproducible from the committed CSVs:** summary-table cells match recomputation · all 148 vertical rows exact · all 37 bucket rows exact · stale-figure sweep across every cell clean · Queries tab carries both filenames, both full SQL bodies, the source paths, the `funnel_level` filter, the `--location` requirement and the cohort literals · derived prose claims re-derived (83.0x, 4.5M, 4.8M, 51.3M) · zero flat-10000 leakage in any reported cohort.
+
+**Confidence, stated honestly.** The vertical half is exact (`COUNT(DISTINCT ip)`, integrity-checked, agrees with the independent monitor source). The HI half is exact in method but approximate in count (`APPROX_COUNT_DISTINCT`, ~1% HLL error) and is a one-day snapshot. The one thing that could still change the HI answer is a definitional call, not an arithmetic one: whether "MM audience" means the campaign grain used here or the `audience.audiences` entity. Both funnel readings are on the tab so that choice is visible rather than buried.
 
 ## 6. Questions Answered
 - **Q:** What is the average size of all verticals, with quartiles?
