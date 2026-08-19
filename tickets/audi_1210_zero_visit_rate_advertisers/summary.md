@@ -4,7 +4,7 @@ title: "[SPIKE] Advertisers spending with no measurable site visits"
 status: in_progress
 date: 2026-08-19
 summary: "Share of voice by advertiser: how much of their own site traffic MNTN touched, and who falls short of similar accounts"
-result: "26 advertisers spending $10k+ reach less of their site audience than three quarters of size-matched peers. Only 39 report no visits at all."
+result: "25 advertisers spending $10k+ reach less of their site audience than three quarters of size-matched peers. Only 39 report no visits at all."
 question: "Which advertisers are we failing to reach, once site traffic and site size are accounted for?"
 framing_state: "skip: diagnostic list, the deliverable is the list itself"
 ---
@@ -50,7 +50,7 @@ Ranking on raw share of voice selects large sites and nothing else: an unadjuste
 
 Of 1,859 live advertisers that served in the trailing 30 days: **1,649 scorable · 171 sites too quiet to score (under 1,000 visits) · 39 reporting no visits at all.**
 
-**26 advertisers spent $10,000 or more and sit in the bottom quartile of share of voice against size-matched peers.** Largest: ElevenLabs ($939k, 0.009%), onX Offroad ($51k, 0.139%), Benlysta ($49k, 0.138%), Re-Bath Oslund ($34k, 0.164%), MegaFood ($32k, 0.168%).
+**25 advertisers spent $10,000 or more and sit in the bottom quartile of share of voice against size-matched peers.** Largest: ElevenLabs ($939k, 0.025%), Policygenius ($76k, 0.336%), Benlysta ($49k, 0.370%), Metal Supermarkets ($35k, 0.348%), MegaFood ($32k, 0.236%). Lowest against peers: Front (8th percentile), Nili Lotan (12th), MegaFood (17th).
 
 The 39 reporting nothing at all remain the clearest setup question, though they are small: $82,479 of spend between them.
 
@@ -62,7 +62,18 @@ A low share of voice against size-matched peers can come from campaign configura
 
 **Why it matters beyond reporting:** an advertiser with no measurable visit rate cannot be screened for an incrementality lift test and cannot be shown a result. This was the largest single cut in the AUDI-1209 screening funnel, at 479 of 1,859.
 
-**One number to reconcile:** Johnny reads Re-Bath Cherry Hill's share of voice at 1.25%; this file reads 0.29%. Likely verified-visit counts against distinct matched IPs. Settle before either is quoted.
+**The definition, settled empirically (2026-08-19).** Johnny read Re-Bath Cherry Hill at 1.25%, this file read 0.29%. Rather than ask, both candidate numerators were computed on that one advertiser against the same denominator (221,337 reported site visits):
+
+| Numerator | 39510 | 66784 |
+|---|---|---|
+| Distinct matched IPs | 0.291% | 0.260% |
+| Matched clickpass rows | 0.336% | 0.315% |
+| All clickpass rows | 0.675% | 0.417% |
+| **Verified visits** (clicks + views + competing_views) | **1.269%** | **0.404%** |
+
+Verified visits reproduces Johnny's 1.25% and 0.5%. It is the client-facing Reporting figure, so the workbook now uses it. Distinct matched IPs undercounts on two grounds: a household visiting several times counts once, and the IP-level join misses cross-device.
+
+**This changes the reading of his example.** On the correct definition Re-Bath Cherry Hill sits at the **50th percentile** of its size peers, and Maurices at the 42nd. Both are ordinary. That was his point.
 
 ## 4. Deliverable
 

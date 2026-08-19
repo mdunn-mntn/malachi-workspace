@@ -43,7 +43,8 @@ def frame(rs, peers=True):
             "Advertiser ID": int(r["advertiser_id"]),
             "30-day spend": f(r, "spend_30d"),
             "Their site visits": int(f(r, "raw_visits_30d")),
-            "Visits we matched": int(f(r, "matched_ips_30d")),
+            "Our verified visits": int(f(r, "verified_visits_30d")),
+            "Matched IPs": int(f(r, "matched_ips_30d")),
             "Share of voice": f(r, "share_of_voice") or None,
             "Match rate": f(r, "match_rate"),
             "Served IPs": int(f(r, "served_ips_30d")),
@@ -84,13 +85,14 @@ df_pair = pd.DataFrame([{
     "Advertiser": r["advertiser_name"],
     "Advertiser ID": int(r["advertiser_id"]),
     "Their site visits": int(f(r, "raw_visits_30d")),
-    "Visits we matched": int(f(r, "matched_ips_30d")),
+    "Our verified visits": int(f(r, "verified_visits_30d")),
     "Match rate": f(r, "match_rate"),
     "Share of voice": f(r, "share_of_voice"),
     "Rank vs peers": f(r, "sov_percentile_vs_peers"),
 } for r in (pick("66784"), pick("39510")) if r])
 
-FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Visits we matched": FMT.INT,
+FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Our verified visits": FMT.INT,
+      "Matched IPs": FMT.INT,
       "Share of voice": FMT.PCT2, "Match rate": FMT.PCT2, "Served IPs": FMT.INT,
       "Rank vs peers": FMT.PCT0, "Advertiser ID": "0"}
 
@@ -113,8 +115,8 @@ wb.table(
 
 wb.table(
     "Why match rate alone misleads", df_pair,
-    finding="Maurices matches 3.2% of served IPs but reaches 0.26% of its site traffic; Re-Bath matches 0.13% and reaches 0.29%",
-    method="The account with the far worse match rate reaches a larger share of its site's audience. Match rate mostly tracks campaign size against site size.",
+    finding="Re-Bath has a 25x worse match rate than Maurices and reaches 3x more of its site's audience (1.27% against 0.40%)",
+    method="Share of voice ranks Re-Bath at the median of its size peers. Match rate mostly tracks campaign audience against site size. See Method & caveats.",
     formats=FM, kind="headline",
     toc="The two accounts that reframed this list",
 )
@@ -149,13 +151,14 @@ wb.glossary(
     intro="Two ratios sit side by side here and they answer different questions. One asks how much of what we served came back as a visit. The other asks how much of the advertiser's whole audience we touched at all.",
     rows=[
         ("Their site visits", "Every visit the advertiser's own pixel reported in 30 days, whether or not MNTN was involved."),
-        ("Visits we matched", "Served IPs we later saw on their site. Always a subset of their site visits."),
+        ("Our verified visits", "MNTN verified visits over the same 30 days: clicks plus views plus competing views. This is the client-facing Reporting figure."),
+        ("Matched IPs", "Distinct served IPs later seen on their site. Shown for context; it is smaller than verified visits because one household visiting repeatedly counts once."),
         ("Match rate", "Matched visits over IPs we served. Low mostly means we served a small audience against a large site."),
-        ("Share of voice", "Matched visits over the advertiser's total site visits. This is the share of their audience we reached."),
+        ("Share of voice", "Our verified visits over their total site visits. The share of their traffic that came through MNTN."),
         ("Rank vs peers", "Where this share of voice sits against advertisers with similarly sized sites. 20% means four in five peers reach more of their audience."),
         ("", ""),
         ("How to read a low number", ""),
-        ("A low match rate is usually not a fault", "Maurices matches 3.2% and Re-Bath Cherry Hill 0.13%, yet Re-Bath reaches a larger share of its site's audience. Campaign audience size against site size drives most of the spread."),
+        ("A low match rate is usually not a fault", "Maurices matches 3.2% and Re-Bath Cherry Hill 0.13%, yet Re-Bath reaches 1.27% of its site's audience against Maurices' 0.40%, and sits at the median of its size peers."),
         ("Compare within a size group", "Share of voice runs 1.1% at the smallest sites and 0.4% at the largest, so a raw comparison across the base would just select big sites."),
         ("Not scored", "An advertiser needs at least 1,000 reported site visits for the ratio to mean anything. Quieter ones are listed with the figure left blank."),
     ],
@@ -175,8 +178,8 @@ wb.notes(
          "Correlation of log site visits to log share of voice is -0.24, and median share of voice falls from 1.09% to 0.39% across the size range. Ranking on the raw figure would flag large sites and nothing else."),
         ("This is still a flag, not a verdict",
          "A low share of voice against peers can come from campaign configuration, audience quality, flight length or budget. It says the account is worth opening, not that anything is broken."),
-        ("One number to reconcile",
-         "Johnny reads share of voice for Re-Bath Cherry Hill at 1.25%; this file reads 0.29%. The likely difference is verified-visit counts against distinct matched IPs. Worth settling before either number is quoted."),
+        ("The share-of-voice definition, settled",
+         "An earlier version divided distinct matched IPs by site visits and read Re-Bath Cherry Hill at 0.29% against Johnny's 1.25%. Testing both numerators on that account resolved it: verified visits give 1.269% and matched IPs give 0.291%. Verified visits is the client-facing figure and is what this file now uses."),
         ("The 30-day window under-detects recent breakage",
          "An advertiser whose pixel went dark ten days ago still carries three weeks of earlier visits and stays off the flag. A shorter trailing window would surface those, at the cost of more advertisers reading zero by chance."),
     ],
@@ -188,7 +191,7 @@ wb.sql_dir("Queries", f"{T}/queries",
 wb.cover(takeaways=[
     f"{len(df_flag)} advertisers spent $10k or more and reach less of their own site audience than three quarters of similar accounts.",
     f"Only {len(dark)} of {len(rows):,} report no site visits at all; a low match rate is usually site size, not a defect.",
-    "Share of voice must be compared within a site-size group: it runs 1.1% at the smallest sites and 0.4% at the largest.",
+    "Share of voice is compared within a site-size group, and uses verified visits, the client-facing figure.",
 ])
 
 print("wrote", wb.save_drive("AUDI-1210", "Advertisers With No Measurable Visits"))
