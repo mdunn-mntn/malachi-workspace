@@ -1,5 +1,6 @@
-"""AUDI-1210 — advertisers spending with almost no attributed site visits, split by site traffic."""
+"""AUDI-1210 — how much of each advertiser's own site traffic MNTN touched, and who is short of peers."""
 import csv
+import statistics as st
 import sys
 
 import pandas as pd
@@ -9,12 +10,8 @@ from lib.mntn_xlsx import FMT, MntnWorkbook  # noqa: E402
 
 T = "/Users/malachi/Developer/work/mntn/workspace/tickets/audi_1210_zero_visit_rate_advertisers"
 GENERATED = "2026-08-19"
-
-READING = {
-    "Traffic exists, we are not matching it": "Traffic, no match",
-    "Site traffic is tiny": "Quiet site",
-    "Pixel reported nothing": "Pixel silent",
-}
+SPEND_FLOOR = 10_000
+PEER_CUT = 0.25
 
 
 def f(r, k):
@@ -24,150 +21,174 @@ def f(r, k):
         return 0.0
 
 
-rows = list(csv.DictReader(open(f"{T}/outputs/audi_1210_low_visit_rate_advertisers.csv")))
+rows = [r for r in csv.DictReader(open(f"{T}/outputs/audi_1210_share_of_voice.csv"))
+        if r.get("advertiser_id", "").isdigit()]
 rows.sort(key=lambda r: -f(r, "spend_30d"))
 
-# Where each match rate sits in the whole live base, so nobody reads 0.2% as alarming on its own.
-BASE = "/Users/malachi/Developer/work/mntn/workspace/tickets/incr_75_eligible_advertisers/outputs/incr_75_advertiser_metrics.csv"
-base_rates = sorted(f(r, "p_visit") for r in csv.DictReader(open(BASE)) if f(r, "distinct_ips_30d") >= 1000)
+scored = [r for r in rows if r["coverage"] == "Scored"]
+quiet = [r for r in rows if r["coverage"] == "Site too quiet to score"]
+dark = [r for r in rows if r["coverage"] == "Pixel reported nothing"]
+flagged = [r for r in scored
+           if f(r, "sov_percentile_vs_peers") < PEER_CUT and f(r, "spend_30d") >= SPEND_FLOOR]
+
+SIZE_LABEL = {"1": "Smallest fifth", "2": "Second fifth", "3": "Middle fifth",
+              "4": "Fourth fifth", "5": "Largest fifth"}
 
 
-def pctile(x):
-    lo = sum(1 for v in base_rates if v < x)
-    return lo / len(base_rates)
+def frame(rs, peers=True):
+    out = []
+    for r in rs:
+        d = {
+            "Advertiser": r["advertiser_name"],
+            "Advertiser ID": int(r["advertiser_id"]),
+            "30-day spend": f(r, "spend_30d"),
+            "Their site visits": int(f(r, "raw_visits_30d")),
+            "Visits we matched": int(f(r, "matched_ips_30d")),
+            "Share of voice": f(r, "share_of_voice") or None,
+            "Match rate": f(r, "match_rate"),
+            "Served IPs": int(f(r, "served_ips_30d")),
+        }
+        if peers:
+            d["Site size group"] = SIZE_LABEL.get(r["site_size_quintile"], None)
+            d["Rank vs peers"] = f(r, "sov_percentile_vs_peers") if r["coverage"] == "Scored" else None
+        out.append(d)
+    return pd.DataFrame(out)
 
 
-def frame(rs):
-    return pd.DataFrame([{
-        "Advertiser": r["advertiser_name"],
-        "Advertiser ID": int(r["advertiser_id"]),
-        "Reading": READING[r["reading"]],
-        "30-day spend": f(r, "spend_30d"),
-        "Their site visits": int(f(r, "raw_visits_30d")),
-        "Visits we matched": int(f(r, "visiting_ips_30d")),
-        "Match rate": f(r, "visit_rate"),
-        "Base percentile": pctile(f(r, "visit_rate")),
-        "Served IPs": int(f(r, "served_ips_30d")),
-        "Their conversions": int(f(r, "raw_conversions_30d")),
-        "Days with a visit": int(f(r, "days_with_any_visit")),
-        "Industry": None,
-    } for r in rs])
-
-
-mism = [r for r in rows if r["reading"] == "Traffic exists, we are not matching it"]
-quiet = [r for r in rows if r["reading"] == "Site traffic is tiny"]
-dark = [r for r in rows if r["reading"] == "Pixel reported nothing"]
-mism_big = [r for r in mism if f(r, "spend_30d") >= 10_000]
-
-df_mism_big = frame(mism_big)
+df_flag = frame(flagged)
 df_all = frame(rows)
-df_dark = frame(dark)
+df_dark = frame(dark, peers=False)
+
+# The size effect, stated as a table so the peer grouping is not a black box.
+by_q = []
+for q in ("1", "2", "3", "4", "5"):
+    g = [r for r in scored if r["site_size_quintile"] == q and f(r, "share_of_voice") > 0]
+    if not g:
+        continue
+    by_q.append({
+        "Site size group": SIZE_LABEL[q],
+        "Advertisers": len(g),
+        "Median site visits": int(st.median([f(r, "raw_visits_30d") for r in g])),
+        "Median share of voice": st.median([f(r, "share_of_voice") for r in g]),
+        "Median match rate": st.median([f(r, "match_rate") for r in g]),
+        "Median spend": st.median([f(r, "spend_30d") for r in g]),
+    })
+df_size = pd.DataFrame(by_q)
+
+# The two accounts Johnny used to make the point, side by side.
+def pick(aid):
+    return next((r for r in rows if r["advertiser_id"] == aid), None)
 
 
-def band(rs):
-    return {"Advertisers": len(rs), "30-day spend": sum(f(r, "spend_30d") for r in rs),
-            "Over $10k": sum(1 for r in rs if f(r, "spend_30d") >= 10_000)}
-
-
-df_sum = pd.DataFrame([
-    {"Reading": "Traffic, no match", "What it means":
-     "Their site gets real traffic and we attribute almost none of it", **band(mism)},
-    {"Reading": "Quiet site", "What it means":
-     "Under 1,000 site visits in 30 days, so there is little to attribute", **band(quiet)},
-    {"Reading": "Pixel silent", "What it means":
-     "Their pixel reported no visits at all in 30 days", **band(dark)},
-])
+df_pair = pd.DataFrame([{
+    "Advertiser": r["advertiser_name"],
+    "Advertiser ID": int(r["advertiser_id"]),
+    "Their site visits": int(f(r, "raw_visits_30d")),
+    "Visits we matched": int(f(r, "matched_ips_30d")),
+    "Match rate": f(r, "match_rate"),
+    "Share of voice": f(r, "share_of_voice"),
+    "Rank vs peers": f(r, "sov_percentile_vs_peers"),
+} for r in (pick("66784"), pick("39510")) if r])
 
 FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Visits we matched": FMT.INT,
-      "Match rate": FMT.PCT2, "Served IPs": FMT.INT, "Their conversions": FMT.INT,
-      "Days with a visit": FMT.INT, "Advertiser ID": "0", "Base percentile": FMT.PCT0}
+      "Share of voice": FMT.PCT2, "Match rate": FMT.PCT2, "Served IPs": FMT.INT,
+      "Rank vs peers": FMT.PCT0, "Advertiser ID": "0"}
 
 wb = MntnWorkbook(
-    title="Advertisers We Attribute Almost No Visits For",
+    title="Share of Voice by Advertiser",
     ticket="AUDI-1210",
-    subtitle="Live advertisers under a 0.5% match rate, split by whether their site has traffic at all",
+    subtitle="How much of each advertiser's own site traffic MNTN touched, and who falls short of similar accounts",
     period="Trailing 30 days to 2026-08-19",
     generated=GENERATED,
 )
 
 wb.table(
-    "Check these first", df_mism_big,
-    finding=f"{len(mism_big)} advertisers spent $10k or more and have real site traffic we are matching almost none of",
-    method="Their site visits come from the advertiser's own pixel. Visits we matched are served IPs later seen on their site. See Read me.",
+    "Check these first", df_flag,
+    finding=f"{len(df_flag)} advertisers spent $10k or more and touched less of their own site traffic than three quarters of similar accounts",
+    method="Share of voice is matched visits over the advertiser's own site visits, compared within a site-size group. See Read me.",
     formats=FM, heat={"30-day spend": "high"}, kind="headline",
-    toc="Start here: real traffic, no match, $10k or more",
-    query="audi_1210_zero_visit_rate_advertisers.sql",
+    toc="Start here: short of peers on share of voice, $10k or more",
+    query="audi_1210_share_of_voice.sql",
 )
 
 wb.table(
-    "Three readings", df_sum,
-    finding=f"Of {len(rows)} advertisers under a 0.5% match rate, {len(mism)} have traffic we are missing and only {len(dark)} have a silent pixel",
-    method="Every advertiser falls in exactly one reading. Split on their own reported site visits over the same 30 days.",
-    formats={"Advertisers": FMT.INT, "30-day spend": FMT.USD, "Over $10k": FMT.INT},
-    kind="headline", toc="How the 542 split, and which group matters",
+    "Why match rate alone misleads", df_pair,
+    finding="Maurices matches 3.2% of served IPs but reaches 0.26% of its site traffic; Re-Bath matches 0.13% and reaches 0.29%",
+    method="The account with the far worse match rate reaches a larger share of its site's audience. Match rate mostly tracks campaign size against site size.",
+    formats=FM, kind="headline",
+    toc="The two accounts that reframed this list",
 )
 
 wb.table(
-    "Pixel silent", df_dark,
-    finding=f"{len(dark)} advertisers reported no site visits at all, together spending ${sum(f(r, 'spend_30d') for r in dark):,.0f}",
-    method="Zero reported visits over 30 days. Small in number and in spend, but the clearest setup question.",
-    formats=FM, kind="data", toc="The advertisers reporting nothing at all",
+    "Share of voice by site size", df_size,
+    finding="Share of voice falls from 1.1% at the smallest sites to 0.4% at the largest, so it is only comparable within a size group",
+    method="All 1,649 scorable advertisers, split into five equal groups by their own site visits. Medians within each group.",
+    formats={"Advertisers": FMT.INT, "Median site visits": FMT.INT,
+             "Median share of voice": FMT.PCT2, "Median match rate": FMT.PCT2,
+             "Median spend": FMT.USD},
+    kind="data", toc="Why peers are matched on site size",
 )
 
 wb.table(
-    "Full list", df_all,
-    finding=f"All {len(df_all)} advertisers under a 0.5% match rate, largest spender first",
-    method="Every live, non-test advertiser that served an impression in the trailing 30 days and matched under 0.5%.",
-    formats=FM, kind="data", toc="The full list",
-    query="audi_1210_zero_visit_rate_advertisers.sql",
+    "Pixel reported nothing", df_dark,
+    finding=f"{len(df_dark)} advertisers reported no site visits at all, together spending ${sum(f(r, 'spend_30d') for r in dark):,.0f}",
+    method="Zero reported visits over 30 days. They cannot be scored on share of voice, and this is the clearest setup question in the file.",
+    formats=FM, kind="data", toc="Advertisers reporting nothing at all",
+)
+
+wb.table(
+    "Every advertiser", df_all,
+    finding=f"All {len(df_all):,} live advertisers that served in the last 30 days, largest spender first",
+    method=f"Includes the {len(quiet)} whose sites are too quiet to score and the {len(dark)} reporting nothing; both have no share-of-voice figure.",
+    formats=FM, kind="detail", toc="The full audit trail",
+    query="audi_1210_share_of_voice.sql",
 )
 
 wb.glossary(
     "Read me",
-    intro="Two visit numbers sit side by side here, and the gap between them is the question. One is the advertiser's own site traffic. The other is how much of it we could tie back to an ad we served.",
+    intro="Two ratios sit side by side here and they answer different questions. One asks how much of what we served came back as a visit. The other asks how much of the advertiser's whole audience we touched at all.",
     rows=[
-        ("Their site visits", "Every visit the advertiser's pixel reported in 30 days, whether or not MNTN was involved. This is their site traffic."),
-        ("Visits we matched", "Served IPs we later saw on their site. Always a subset of their site visits, so a small traffic number caps it arithmetically."),
-        ("Match rate", "Matched visits divided by served IPs, over 30 days. The live-base median is 2.0%."),
-        ("Base percentile", "Where this advertiser's match rate falls against all 1,798 live advertisers. 25% means three quarters of the base matches better."),
-        ("A note on scale", "This is a 30-day cumulative rate, not a daily one. Per campaign per day the median is 0.33%. So 0.2% daily is ordinary; 0.2% over 30 days is not."),
-        ("Days with a visit", "How many of the 30 days reported at least one visit. A handful of days points at a page that is rarely reached, not a dead pixel."),
+        ("Their site visits", "Every visit the advertiser's own pixel reported in 30 days, whether or not MNTN was involved."),
+        ("Visits we matched", "Served IPs we later saw on their site. Always a subset of their site visits."),
+        ("Match rate", "Matched visits over IPs we served. Low mostly means we served a small audience against a large site."),
+        ("Share of voice", "Matched visits over the advertiser's total site visits. This is the share of their audience we reached."),
+        ("Rank vs peers", "Where this share of voice sits against advertisers with similarly sized sites. 20% means four in five peers reach more of their audience."),
         ("", ""),
-        ("The three readings", ""),
-        ("Traffic, no match", "1,000 or more site visits and still under a 0.5% match rate. Their pixel works and something between the impression and the visit is not connecting. This is the group worth investigating."),
-        ("Quiet site", "Under 1,000 site visits in 30 days. Nothing to attribute. Not a defect, and worth knowing before anyone chases it."),
-        ("Pixel silent", "No reported visits at all. The clearest setup question, and the smallest group."),
+        ("How to read a low number", ""),
+        ("A low match rate is usually not a fault", "Maurices matches 3.2% and Re-Bath Cherry Hill 0.13%, yet Re-Bath reaches a larger share of its site's audience. Campaign audience size against site size drives most of the spread."),
+        ("Compare within a size group", "Share of voice runs 1.1% at the smallest sites and 0.4% at the largest, so a raw comparison across the base would just select big sites."),
+        ("Not scored", "An advertiser needs at least 1,000 reported site visits for the ratio to mean anything. Quieter ones are listed with the figure left blank."),
     ],
 )
 
 wb.notes(
     "Method & caveats",
-    intro="What changed from the first version of this list, and what it does and does not show.",
+    intro="This list has been recut twice. Both times an incoming point was right and changed which advertisers appear.",
     blocks=[
-        ("The first version of this list led with the wrong advertisers",
-         "It ranked purely on match rate and named Real Techniques, Food Lion and Valvoline as the likeliest pixel defects. Their own pixels report 55, 20 and 70 visits in 30 days. Those are quiet sites, not broken ones. Johnny Chen made the point that raw visits belong next to attributed ones, and he was right."),
-        ("Attributed visits cannot exceed site visits",
-         "A matched visit requires the advertiser's pixel to have reported that visit in the first place. So a low site-traffic number caps the match arithmetically and a zero match rate on 20 visits a month means nothing."),
-        ("The group that matters is the third one",
-         f"{len(mism)} advertisers have 1,000 or more reported site visits and still match under 0.5%, {len(mism_big)} of them spending $10k or more. EcoATM is the clearest: 8.4M site visits, 6,938 matched, 0.29%."),
-        ("This is a measurement flag, not a performance verdict",
-         "A low match rate says we cannot see the connection, not that the advertising failed. Identity matching, pixel placement, and cross-device traffic all sit between an impression and an attributed visit."),
-        ("Why it matters beyond reporting",
-         "An advertiser with no measurable visit rate cannot be screened for an incrementality lift test and cannot be shown a result. This was the largest single cut in the AUDI-1209 screening funnel, at 479 of 1,859 advertisers."),
-        ("The 0.5% cut is a soft edge, not an outlier line",
-         "496 of 1,798 live advertisers sit under it, so this list is the bottom 28% of the base rather than a small tail. That is why the first sheet conditions on real site traffic and $10k of spend instead of on the rate alone. Read the base percentile column before treating any single rate as abnormal."),
+        ("First cut ranked on visit rate alone and named the wrong accounts",
+         "It led with Real Techniques, Food Lion and Valvoline as likely pixel defects. Their own pixels report 55, 20 and 70 visits in 30 days. Those are quiet sites, not broken ones."),
+        ("Second cut added their site traffic, which was Johnny Chen's point",
+         "Matched visits are a subset of reported visits, so a zero match on 20 visits a month means nothing. That reclassified 171 advertisers as quiet sites."),
+        ("Third cut is share of voice, also his point",
+         "A low match rate reflects campaign audience against site size, not measurement. Share of voice asks the question that matters: of everyone who reached their site, how many came through us."),
+        ("Peers are matched on site size because share of voice shrinks with it",
+         "Correlation of log site visits to log share of voice is -0.24, and median share of voice falls from 1.09% to 0.39% across the size range. Ranking on the raw figure would flag large sites and nothing else."),
+        ("This is still a flag, not a verdict",
+         "A low share of voice against peers can come from campaign configuration, audience quality, flight length or budget. It says the account is worth opening, not that anything is broken."),
+        ("One number to reconcile",
+         "Johnny reads share of voice for Re-Bath Cherry Hill at 1.25%; this file reads 0.29%. The likely difference is verified-visit counts against distinct matched IPs. Worth settling before either number is quoted."),
         ("The 30-day window under-detects recent breakage",
-         "An advertiser whose pixel went dark ten days ago still carries three weeks of earlier visits and stays off this list. A shorter trailing window would surface those, at the cost of more advertisers reading zero by chance."),
+         "An advertiser whose pixel went dark ten days ago still carries three weeks of earlier visits and stays off the flag. A shorter trailing window would surface those, at the cost of more advertisers reading zero by chance."),
     ],
 )
 
 wb.sql_dir("Queries", f"{T}/queries",
-           note="The query behind this list. It runs standalone against BigQuery.")
+           note="The query behind every sheet. It runs standalone against BigQuery and returns the full base.")
 
 wb.cover(takeaways=[
-    f"{len(mism_big)} advertisers spent $10k or more, have real site traffic, and we match under 0.5% of it.",
-    f"Only {len(dark)} of the {len(rows)} have a genuinely silent pixel; {len(quiet)} simply have quiet sites.",
-    "EcoATM is the clearest case: 8.4M site visits in 30 days, 6,938 matched.",
+    f"{len(df_flag)} advertisers spent $10k or more and reach less of their own site audience than three quarters of similar accounts.",
+    f"Only {len(dark)} of {len(rows):,} report no site visits at all; a low match rate is usually site size, not a defect.",
+    "Share of voice must be compared within a site-size group: it runs 1.1% at the smallest sites and 0.4% at the largest.",
 ])
 
 print("wrote", wb.save_drive("AUDI-1210", "Advertisers With No Measurable Visits"))

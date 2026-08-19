@@ -3,9 +3,9 @@ doc_type: ticket
 title: "[SPIKE] Advertisers spending with no measurable site visits"
 status: in_progress
 date: 2026-08-19
-summary: "Live advertisers under a 0.5% visit rate, ranked by spend, for pixel-reporting triage"
-result: "542 advertisers under 0.5%; 208 with zero visits; 66 spending $10k+ in 30d. Handed to pixel ops to confirm cause."
-question: "Why are live advertisers spending real money with no site visits recorded against them?"
+summary: "Share of voice by advertiser: how much of their own site traffic MNTN touched, and who falls short of similar accounts"
+result: "26 advertisers spending $10k+ reach less of their site audience than three quarters of size-matched peers. Only 39 report no visits at all."
+question: "Which advertisers are we failing to reach, once site traffic and site size are accounted for?"
 framing_state: "skip: diagnostic list, the deliverable is the list itself"
 ---
 
@@ -24,35 +24,53 @@ Surfaced during the AUDI-1209 rerun. The lift-test screen drops any advertiser w
 
 ## 2. What was found
 
-**542 live advertisers sit under a 0.5% visit rate in the trailing 30 days. 208 of them show zero visits at all.** 66 spent $10,000 or more in that window.
+**The list was recut twice, and both recuts came from Johnny Chen. He was right both times.**
 
-| What we see | Advertisers | 30-day spend |
+**First cut (wrong).** Ranked on visit rate alone: 542 advertisers under 0.5%, led by Real Techniques, Food Lion and Valvoline, framed as likely pixel defects.
+
+**Second cut.** Johnny: attributed visits are a subset of the advertiser's own reported visits, so a zero match on a quiet site means nothing. Adding `raw_visits` from `summarydata.sum_by_advertiser_by_day` reclassified **171** advertisers as quiet sites, including all three named above. Their own pixels report 55, 20 and 70 visits in 30 days.
+
+**Third cut (current).** Johnny again: compare MNTN visits to the advertiser's total site visits, a share of voice, because a low match rate reflects campaign audience against site size rather than measurement. He showed it with a model account: **Maurices (66784) matches 3.15% of served IPs but reaches only 0.26% of its site traffic, while Re-Bath Cherry Hill (39510) matches 0.13% and reaches 0.29%.** The account with the far worse match rate reaches a larger share of its audience.
+
+### Share of voice shrinks with site size, so peers are matched on it
+
+Correlation of log site visits to log share of voice = **-0.24**. Medians by site-size quintile:
+
+| Site size group | Median site visits | Median share of voice |
 |---|---|---|
-| No visits at all | 208 | $704,378 |
-| Under 0.1% | 128 | $467,294 |
-| 0.1% to 0.5% | 206 | $1,717,436 |
+| Smallest fifth | 9,269 | 1.09% |
+| Second fifth | 59,683 | 0.91% |
+| Middle fifth | 218,520 | 0.77% |
+| Fourth fifth | 648,346 | 0.78% |
+| Largest fifth | 2,565,052 | 0.39% |
 
-Largest by spend, all with zero visits AND zero conversions: Real Techniques ($103.5k), Food Lion Assembly ($89.3k), Valvoline Instant Oil Change ($84.7k), Pacific Gas & Electric ($63.9k), WGU 67978 ($33.3k), Sight & Sound Theatres ($28.0k), Healthfirst ($25.3k).
+Ranking on raw share of voice selects large sites and nothing else: an unadjusted bottom-quartile cut flagged ElevenLabs, Buckle, Apollo.io, EcoATM and Owala purely for having huge sites. Within-quintile ranking drops them.
 
-**Verified directly, not inferred:** `clickpass_log` returns zero rows in the trailing 30 days for advertiser_ids 38016 (Food Lion), 48633 (Valvoline) and 67978 (WGU). The same query returns 5,585,215 rows for 31357 (Western Governors University), so the query and the window are fine. These advertisers genuinely have no visit rows.
+### The current answer
 
-Note 31357 "Western Governors University" and 67978 "WGU" are two different advertiser records. The first reports normally; the second reports nothing. That pair is the cleanest single test case to hand over.
+Of 1,859 live advertisers that served in the trailing 30 days: **1,649 scorable · 171 sites too quiet to score (under 1,000 visits) · 39 reporting no visits at all.**
+
+**26 advertisers spent $10,000 or more and sit in the bottom quartile of share of voice against size-matched peers.** Largest: ElevenLabs ($939k, 0.009%), onX Offroad ($51k, 0.139%), Benlysta ($49k, 0.138%), Re-Bath Oslund ($34k, 0.164%), MegaFood ($32k, 0.168%).
+
+The 39 reporting nothing at all remain the clearest setup question, though they are small: $82,479 of spend between them.
 
 ## 3. Reading
 
-A visit exists only when the advertiser's own site pixel fires and writes a `clickpass_log` row keyed to their advertiser id. No pixel row, no visit, whatever actually happened on their site. Zero visits **and** zero conversions together point at the pixel rather than at campaign performance.
+A visit exists only when the advertiser's own site pixel fires and writes a `clickpass_log` row keyed to their advertiser id. That makes matched visits a strict subset of reported visits, which is why the raw number has to sit beside the matched one.
 
-Not every zero is a defect. Utilities, grocery, and healthcare brands in this list may have no tracked transaction at all. The list is a measurement flag, not a performance verdict, and it says so on the workbook's Method tab.
+A low share of voice against size-matched peers can come from campaign configuration, audience quality, flight length or budget, exactly as Johnny said. It says the account is worth opening, not that anything is broken.
 
-**Why it matters beyond reporting:** an advertiser with no visit rate cannot be screened for an incrementality lift test and cannot be shown a result. This is the single largest cut in the AUDI-1209 screening funnel.
+**Why it matters beyond reporting:** an advertiser with no measurable visit rate cannot be screened for an incrementality lift test and cannot be shown a result. This was the largest single cut in the AUDI-1209 screening funnel, at 479 of 1,859.
+
+**One number to reconcile:** Johnny reads Re-Bath Cherry Hill's share of voice at 1.25%; this file reads 0.29%. Likely verified-visit counts against distinct matched IPs. Settle before either is quoted.
 
 ## 4. Deliverable
 
-`My Drive/Tickets/AUDI-1210/AUDI-1210 Advertisers With No Measurable Visits.xlsx` — <https://docs.google.com/spreadsheets/d/156p3OdtQBAWrVdrhqncTYRSnpHe0kc5U/edit>
+`My Drive/Tickets/AUDI-1210/AUDI-1210 Advertisers With No Measurable Visits.xlsx` — <https://docs.google.com/spreadsheets/d/1KpOHoI2yB0cbF6_pxIL5QyNCojsTh2sp/edit>
 
-Sheets: the $10k-and-up cut first, then a severity summary, then the full 542, a Read me, method notes, and the standalone SQL so the recipient can re-run it.
+Sheets: the 26 flagged accounts, the Maurices vs Re-Bath comparison that reframed the list, share of voice by site size, the 39 reporting nothing, the full 1,859, a Read me, method notes, and the standalone SQL.
 
-- Query: `queries/audi_1210_zero_visit_rate_advertisers.sql` (runs standalone, no dependencies)
+- Query: `queries/audi_1210_share_of_voice.sql` (runs standalone; returns the whole base with both ratios and both percentiles)
 - Builder: `artifacts/audi_1210_build_xlsx.py`
 
 ## 5. Open items
