@@ -27,6 +27,15 @@ def f(r, k):
 rows = list(csv.DictReader(open(f"{T}/outputs/audi_1210_low_visit_rate_advertisers.csv")))
 rows.sort(key=lambda r: -f(r, "spend_30d"))
 
+# Where each match rate sits in the whole live base, so nobody reads 0.2% as alarming on its own.
+BASE = "/Users/malachi/Developer/work/mntn/workspace/tickets/incr_75_eligible_advertisers/outputs/incr_75_advertiser_metrics.csv"
+base_rates = sorted(f(r, "p_visit") for r in csv.DictReader(open(BASE)) if f(r, "distinct_ips_30d") >= 1000)
+
+
+def pctile(x):
+    lo = sum(1 for v in base_rates if v < x)
+    return lo / len(base_rates)
+
 
 def frame(rs):
     return pd.DataFrame([{
@@ -37,6 +46,7 @@ def frame(rs):
         "Their site visits": int(f(r, "raw_visits_30d")),
         "Visits we matched": int(f(r, "visiting_ips_30d")),
         "Match rate": f(r, "visit_rate"),
+        "Base percentile": pctile(f(r, "visit_rate")),
         "Served IPs": int(f(r, "served_ips_30d")),
         "Their conversions": int(f(r, "raw_conversions_30d")),
         "Days with a visit": int(f(r, "days_with_any_visit")),
@@ -70,7 +80,7 @@ df_sum = pd.DataFrame([
 
 FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Visits we matched": FMT.INT,
       "Match rate": FMT.PCT2, "Served IPs": FMT.INT, "Their conversions": FMT.INT,
-      "Days with a visit": FMT.INT, "Advertiser ID": "0"}
+      "Days with a visit": FMT.INT, "Advertiser ID": "0", "Base percentile": FMT.PCT0}
 
 wb = MntnWorkbook(
     title="Advertisers We Attribute Almost No Visits For",
@@ -118,7 +128,9 @@ wb.glossary(
     rows=[
         ("Their site visits", "Every visit the advertiser's pixel reported in 30 days, whether or not MNTN was involved. This is their site traffic."),
         ("Visits we matched", "Served IPs we later saw on their site. Always a subset of their site visits, so a small traffic number caps it arithmetically."),
-        ("Match rate", "Matched visits divided by served IPs. The eligible-cohort median is about 2%."),
+        ("Match rate", "Matched visits divided by served IPs, over 30 days. The live-base median is 2.0%."),
+        ("Base percentile", "Where this advertiser's match rate falls against all 1,798 live advertisers. 25% means three quarters of the base matches better."),
+        ("A note on scale", "This is a 30-day cumulative rate, not a daily one. Per campaign per day the median is 0.33%. So 0.2% daily is ordinary; 0.2% over 30 days is not."),
         ("Days with a visit", "How many of the 30 days reported at least one visit. A handful of days points at a page that is rarely reached, not a dead pixel."),
         ("", ""),
         ("The three readings", ""),
@@ -142,6 +154,8 @@ wb.notes(
          "A low match rate says we cannot see the connection, not that the advertising failed. Identity matching, pixel placement, and cross-device traffic all sit between an impression and an attributed visit."),
         ("Why it matters beyond reporting",
          "An advertiser with no measurable visit rate cannot be screened for an incrementality lift test and cannot be shown a result. This was the largest single cut in the AUDI-1209 screening funnel, at 479 of 1,859 advertisers."),
+        ("The 0.5% cut is a soft edge, not an outlier line",
+         "496 of 1,798 live advertisers sit under it, so this list is the bottom 28% of the base rather than a small tail. That is why the first sheet conditions on real site traffic and $10k of spend instead of on the rate alone. Read the base percentile column before treating any single rate as abnormal."),
         ("The 30-day window under-detects recent breakage",
          "An advertiser whose pixel went dark ten days ago still carries three weeks of earlier visits and stays off this list. A shorter trailing window would surface those, at the cost of more advertisers reading zero by chance."),
     ],
