@@ -55,15 +55,15 @@ tot = sum(f(r, "spend_30d") for r in sub)
 df_sum = pd.DataFrame([
     {"What we see": "No visits at all", "Advertisers": n0,
      "30-day spend": spend0,
-     "Spending $10k or more": sum(1 for r in sub if int(r["visiting_ips_30d"]) == 0 and f(r, "spend_30d") >= 10_000)},
+     "Over $10k": sum(1 for r in sub if int(r["visiting_ips_30d"]) == 0 and f(r, "spend_30d") >= 10_000)},
     {"What we see": "Under 0.1%",
      "Advertisers": sum(1 for r in sub if 0 < f(r, "p_visit") < 0.001),
      "30-day spend": sum(f(r, "spend_30d") for r in sub if 0 < f(r, "p_visit") < 0.001),
-     "Spending $10k or more": sum(1 for r in sub if 0 < f(r, "p_visit") < 0.001 and f(r, "spend_30d") >= 10_000)},
+     "Over $10k": sum(1 for r in sub if 0 < f(r, "p_visit") < 0.001 and f(r, "spend_30d") >= 10_000)},
     {"What we see": "0.1% to 0.5%",
      "Advertisers": sum(1 for r in sub if 0.001 <= f(r, "p_visit") < 0.005),
      "30-day spend": sum(f(r, "spend_30d") for r in sub if 0.001 <= f(r, "p_visit") < 0.005),
-     "Spending $10k or more": sum(1 for r in sub if 0.001 <= f(r, "p_visit") < 0.005 and f(r, "spend_30d") >= 10_000)},
+     "Over $10k": sum(1 for r in sub if 0.001 <= f(r, "p_visit") < 0.005 and f(r, "spend_30d") >= 10_000)},
 ])
 
 FM = {"30-day spend": FMT.USD, "Impressions": FMT.INT, "Served IPs": FMT.INT,
@@ -91,7 +91,7 @@ wb.table(
     "Summary", df_sum,
     finding=f"{len(df)} live advertisers sit under a 0.5% visit rate, together spending ${tot:,.0f} over 30 days",
     method="Three bands of severity. An advertiser appears in exactly one.",
-    formats={"Advertisers": FMT.INT, "30-day spend": FMT.USD, "Spending $10k or more": FMT.INT},
+    formats={"Advertisers": FMT.INT, "30-day spend": FMT.USD, "Over $10k": FMT.INT},
     kind="data", toc="How many advertisers, and how much spend",
 )
 

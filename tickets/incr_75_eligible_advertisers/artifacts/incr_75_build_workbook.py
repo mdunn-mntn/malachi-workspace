@@ -107,8 +107,8 @@ def cand_rows(rows):
             "Score": num(r, "value_score"),
             "Monthly spend": num(r, "avg_monthly_spend"),
             "Visit rate": num(r, "ivr"),
-            "Smallest detectable lift": (num(r, "mde_ivr_at_normal_pct") or 0) / 100.0,
-            "8-week test budget": num(r, "budget_for_mde_ivr_5pct"),
+            "Detectable lift": (num(r, "mde_ivr_at_normal_pct") or 0) / 100.0,
+            "Test budget": num(r, "budget_for_mde_ivr_5pct"),
             "Powered at 5%": r.get("can_hit_ivr_5pct_8w"),
             "Measured lift": (rel / 100.0 if rel is not None else None),
             "Lift is real": "Yes" if r["current_lift_confirms"] == "confirmed +" else "No",
@@ -165,7 +165,7 @@ for spend in (10_000, 25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000):
     treated = (spend / m_cpm * 1000.0) / m_ipi
     holdout = treated * (0.10 / 0.90)
     _, rel = mde_binomial(treated, holdout, m_ivr, alpha=0.05, power=0.80, var_reduction=1.0)
-    curve.append({"8-week budget": spend, "Smallest detectable lift": rel,
+    curve.append({"Budget": spend, "Detectable lift": rel,
                   "Reachable IPs": int(treated + holdout)})
 df_curve = pd.DataFrame(curve)
 
@@ -184,10 +184,10 @@ wb.table(
     finding=f"{len(df_top)} advertisers can both power a 5% test in 8 weeks and already show a real lift",
     method=f"Advertisers delivering in the trailing 30 days, screened and ranked. Measured lift is the ghost-bid holdout, {WINDOW}. See Read me.",
     formats={"Score": FMT.NUM1, "Monthly spend": FMT.USD, "Visit rate": FMT.PCT2,
-             "Smallest detectable lift": PCT, "8-week test budget": FMT.USD,
+             "Detectable lift": PCT, "Test budget": FMT.USD,
              "Measured lift": PCT, "Conversion lift": PCT, "Held-out visits": FMT.INT},
     signal={"Measured lift": {"sig": "Lift is real"}},
-    heat={"Score": "high", "Smallest detectable lift": "low"},
+    heat={"Score": "high", "Detectable lift": "low"},
     kind="headline",
     toc="Start here: the shortlist for the beta",
     query="incr_75_advertiser_metrics.sql",
@@ -219,7 +219,7 @@ wb.table(
     finding=f"All {len(df_all_elig):,} eligible advertisers, ranked within tier by candidate score",
     method="Tier is power crossed with confirmed lift. Top needs both, Mid needs one, Low needs neither. Score ranks within a tier.",
     formats={"Score": FMT.NUM1, "Monthly spend": FMT.USD, "Visit rate": FMT.PCT2,
-             "Smallest detectable lift": PCT, "8-week test budget": FMT.USD,
+             "Detectable lift": PCT, "Test budget": FMT.USD,
              "Measured lift": PCT, "Conversion lift": PCT, "Held-out visits": FMT.INT},
     signal={"Measured lift": {"sig": "Lift is real"}},
     kind="data",
@@ -230,7 +230,7 @@ wb.table(
     "Budget and sensitivity", df_curve,
     finding=f"At the eligible-cohort median a 5% test needs roughly $250K over 8 weeks",
     method=f"Median cohort inputs: {m_ivr:.2%} visit rate, ${m_cpm:.2f} CPM, {m_ipi:.1f} impressions per IP, 10% holdout, 80% power.",
-    formats={"8-week budget": FMT.USD, "Smallest detectable lift": PCT, "Reachable IPs": FMT.INT},
+    formats={"Budget": FMT.USD, "Detectable lift": PCT, "Reachable IPs": FMT.INT},
     kind="data",
     toc="What a test costs at each level of sensitivity",
 )
@@ -258,8 +258,8 @@ wb.glossary(
         ("", ""),
         ("The forecast", ""),
         ("Visit rate", "Of the IPs an advertiser served in the last 30 days, the share that visited the site."),
-        ("Smallest detectable lift", "The smallest real lift a test could prove at this advertiser's normal 8-week spend. Lower is better. Relative, so 3% on a 1% visit rate means detecting 1.03%."),
-        ("8-week test budget", "Total spend needed over 8 weeks to detect a 5% lift. Compare it to monthly spend times 1.8."),
+        ("Detectable lift", "The smallest real lift a test could prove at this advertiser's normal 8-week spend. Lower is better. Relative, so 3% on a 1% visit rate means detecting 1.03%."),
+        ("Test budget", "Total spend needed over 8 weeks to detect a 5% lift. Compare it to monthly spend times 1.8."),
         ("Powered at 5%", "Whether normal 8-week spend already covers that budget."),
         ("", ""),
         ("Tiers", ""),

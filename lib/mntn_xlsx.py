@@ -447,12 +447,16 @@ class MntnWorkbook:
         df: pd.DataFrame,
         start_row: int,
         colw: dict[str, int],
-        per_line: float = 15.0,
-        pad: float = 8.0,
+        per_line: float = 16.5,
+        pad: float = 10.0,
         base: float = 30.0,
     ) -> None:
         """Size the HEADER row to the TALLEST wrapped header at its column width, so a column title never
-        clips (the old fixed 30pt row was the root cause of clipped headers). Bold ~11pt -> ~0.85 chars/unit."""
+        clips (the old fixed 30pt row was the root cause of clipped headers). Bold ~11pt -> ~0.85 chars/unit.
+
+        per_line/pad are set for GOOGLE SHEETS, the delivery surface, not desktop Excel: Sheets lays bold
+        11pt header text out slightly taller than Excel and clips the last line at an explicit row height
+        that Excel renders fine. A 3-line header at the old 15.0/8.0 lost its third line there."""
         maxlines = 1
         for col in df.columns:
             w = max(int(colw.get(col, 12) * 0.85), 4)
