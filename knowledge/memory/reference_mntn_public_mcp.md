@@ -87,28 +87,76 @@ issue from fails signature verification. The two documents also disagree on `gra
 `token_endpoint_auth_methods_supported`. **Not yet established** whether this breaks the Claude connection
 itself, since MCP clients usually hold the bearer rather than validate it. Reported to Benny 2026-08-19.
 
-## Evaluation status: NOT YET RUN
+## Tool surface (17 tools, inventoried 2026-08-19)
 
-Registered but **not yet authorized**, so nothing about its output is verified. The advertised prompts are
-week-to-date advertiser performance, active campaigns with month-to-date spend, last week's conversions by
-media market, and audiences linked to a campaign.
+`list_advertisers` `get_advertiser` · `list_campaigns` `get_campaign` `get_flight` · `list_audiences`
+`get_audience` `get_campaign_audience` `list_audience_campaigns` · `list_geo_lists`
+`get_geo_list_locations` `search_geo_locations` · `search_keywords` · `list_reference_data` ·
+`get_reporting_metadata` `run_report` · `submit_feedback`.
 
-The quickstart **ships no tool inventory**, so the callable surface is unknown until a client connects and
-introspects. That gap is itself a feedback item.
+`get_reporting_metadata` must be called before `run_report`; only its curated `Table.Column` tokens are
+accepted. Reporting metrics are `Graph.{Impressions, Spend, TVSpend, Visits, VisitRate, CostPerVisit,
+VisitAssists, Conversions, OrderValue, ConversionRate, AverageOrderValue, ConversionAssists, ROAS, CPA,
+UsersReached, TVCommercialsAired, Multi-Touch*}`; dimensions are `Graph.{Day,Week,Month,Quarter,Year}`
+plus `MarketingObjectiveInfo.Name`, `ChannelInfo.Name`, `CampaignInfo.Name`,
+`CreativeInfo.CreativeGroupName`, `StateInfo.Name`, `MediaMarketInfo.Name`, `CityInfo.Name`.
+`submit_feedback` is an in-band channel to MNTN engineering; it requires the user's explicit yes.
 
-Planned ground-truth diff (IMP-047), each item chosen because the warehouse answer is known and the
-metric is a documented trap:
+## Warehouse diff — the numbers are right (verified 2026-08-19)
 
-| Check | What would be wrong |
+WGU (advertiser 31357), 2026-08-01 to 2026-08-07, `run_report` against
+`silver.summarydata.sum_by_advertiser_by_day`:
+
+| Metric | Result across all 7 days |
 |---|---|
-| Conversions and revenue | using `ui_conversions.order_amt_usd`, which is always NULL, instead of `order_amt` |
-| Conversions by media market | metro resolution, the soft spot behind IMP-017 `location_data metro_id` |
-| Audiences on a campaign | returning `audiences` (templates) when the targeting lives in `audience_segments` |
-| New vs returning | inheriting the client JS pixel `is_new` mismatch, where 41 to 56 percent is normal |
-| Unique visitors across Sep 2025 | reading `agg__daily_sum_by_campaign`, where uniques collapse to ~0 |
-| Funnel stage split | keying on `objective_id`, which is unreliable, rather than `funnel_level` |
-| CTV vs display split | `channel_id` 8 is CTV, 1 is display |
+| Impressions | **exact** every day |
+| Spend | **exact** to the cent |
+| Visits | **exact** every day |
+| Conversions | **exact** every day |
+| UsersReached | within **-0.82% to +1.30%** of `HLL_COUNT.EXTRACT(uniques)`, i.e. inside HLL++ error |
+| OrderValue | `$0.00`, and the warehouse is genuinely 0 for WGU. **Not** the `order_amt_usd` trap |
 
-Ground truth comes from `bq_run.sh` only. Any confirmed disagreement is a customer-facing defect, not a
-beta nit, and gets appended to `knowledge/data_knowledge.md` beside the verified line rather than
-replacing it.
+**It reports the UI / `industry_standard` lens**, meaning default last-touch **plus `competing_*`**, not
+the raw last-touch headline. On 2026-08-01 that is 186,235 visits, and the default lens would have been
+158,821, a 17% gap. Matching the UI is the correct choice for a customer-facing API, and it means an MCP
+number can be compared to `views + clicks + competing_views` but never to `views + clicks` alone.
+
+A `MarketingObjectiveInfo.Name` x `ChannelInfo.Name` grid also matched the warehouse exactly on all four
+cells (Prospecting/Retargeting x Television/Multi-Touch), where `Television` is `channel_id = 8` and
+`Multi-Touch` is `channel_id = 1`. `MediaMarketInfo.Name` returns clean DMA labels with no "Other"
+bucket in the top 8, so it does not show the PS-8614 pattern; its values were **not** diffed.
+
+## Defect: a multi-dimension report silently drops a dimension by default
+
+`run_report` with `sum: ["MarketingObjectiveInfo.Name", "ChannelInfo.Name"]` and the default
+`fullName: false` returns rows keyed by the column **short** name. Both dimensions are named `name`, so
+they collapse into a single `Name` key and only the channel survives:
+
+```
+{"Impressions": "15,990,494", "Name": "Television"}
+{"Impressions": "18,178,330", "Name": "Television"}
+```
+
+Two rows, same label, different numbers, and the strategy is gone. The row totals are correct and the
+grid is complete, so nothing looks broken; the data is just unattributable. Setting **`fullName: true`**
+returns `MarketingObjectiveInfo.Name` and `ChannelInfo.Name` as separate keys and resolves it.
+
+**Always pass `fullName: true` when grouping by more than one dimension.** This is worst for an LLM
+client, which will narrate the collapsed rows confidently. Reported 2026-08-19.
+
+Minor: `MarketingObjectiveInfo.Name` help text says "Deprecated, use CampaignStrategyInfo.Name", but
+`CampaignStrategyInfo.Name` is not in the accepted token enum.
+
+## Join key: MCP "campaign" is our campaign_group
+
+Verified on 10 WGU campaigns: every MCP `campaign.id` resolves in `silver.public.campaign_groups` and
+**none** resolves in `silver.public.campaigns`. MNTN's public model is campaign owns flights, with no
+line item; our warehouse keeps an extra internal stage layer below it. So an MCP campaign id joins to
+`campaign_group_id`, never `campaign_id`.
+
+There is **no funnel-stage dimension** in the reporting catalog. MCP campaign 24081 covers internal
+campaigns spanning `objective_id` 1, 5, 6 and 7 and `funnel_level` 1 through 4, all flattened into the
+single strategy "Prospecting". The MCP `objective` field is correct at group grain, so the
+"`objective_id` is unreliable" caveat in `knowledge/data_knowledge.md` applies to the internal per-stage
+row, not to what this API returns.
+
