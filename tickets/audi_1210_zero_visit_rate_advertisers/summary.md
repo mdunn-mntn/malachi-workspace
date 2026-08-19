@@ -97,6 +97,12 @@ Imani Clark (Slack, 2026-08-19): the dark advertisers are "very likely advertise
 
 **Opt-out is no more common among the dark advertisers than in the base** (2.6% against 3.4%), so it does not explain them. And `tracking_pixel_status_id` = 10 for 38 of the 39, the same status essentially every live advertiser carries. Across the whole table status 9 is the bulk (33,340 rows against 4,354 at status 10), while live-serving advertisers are almost all 10, so 10 reads as the active state. These advertisers are marked as tracking normally and reporting nothing.
 
+**Stronger test: did they ever track? (2026-08-19)** An opt-out produces an advertiser that NEVER reported a visit. A defect produces one that reported visits and stopped. Over the trailing 12 months (`sum_by_advertiser_by_day`), of the 39: **6 never tracked at all · 33 tracked and stopped.** So opt-out cannot be the general explanation.
+
+But the volumes gut the alarm. Only **Dura Guard Roofing** is substantive: 7,338 visits over 12 months, last visit 2026-04-28. The other 32 recorded between 1 and 151 visits across the whole year, so their "stop date" is indistinguishable from a quiet site that happened to log nothing recently. Most last-visit dates cluster Apr-Jul 2026.
+
+**Net:** one clear breakage worth chasing (Dura Guard), six plausible opt-outs or never-installed, and the rest too small to call either way. The 25 peer-flagged advertisers on the main sheet remain the higher-value list.
+
 **Caveat before this is quoted back to Imani:** `conv_pixel_opt_out` is the CONVERSION pixel. The UI control she describes may be a separate visit-tracking setting that this table does not carry, and `pixel_id` is NULL for every row here so it cannot be used as a proxy. Johnny's team has the logs to settle it.
 
 ## 5. Open items
