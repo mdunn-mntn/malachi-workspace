@@ -103,6 +103,11 @@ the Fangorn / feature-store pipelines, and the source of the DS14 4-day freshnes
 - **`is_new`** — first cookie seen for this advertiser (new-visitor flag). **Rate depends on the base
   (verified 2026-07-15):** ~18% of rows are **NULL** (55.5M/308.4M); `AVG(CAST(is_new AS INT64))=0.200`
   → **~20% true among non-NULL rows**, i.e. **~16% of all rows**. Quote which base you mean.
+  **This is the client-JS pixel bit and it is guid/cookie-keyed** — one of five live NTB definitions,
+  and NOT the one behind the customer-facing `visit_facts.new_visitors` (that is IP-keyed, via
+  `ber_stg.visits__is_new_guid_flags`). Choosing guid vs IP moves the population count ~39%. See
+  `knowledge/data_knowledge.md` § "NTB (New-to-Brand)". **`logdata.guid_log__v3` (Pixel 3) carries the
+  column but it is 100% NULL** (177,944/177,944 rows on 2026-08-17) — Pixel 3 emits no NTB bit.
 - **`is_cookied`** — whether a tracking cookie was successfully set. Same ~18% NULL; `AVG=0.491`
   → **~49% true among non-NULL rows**, i.e. **~40% of all rows**.
 - **`is_control_group`** — holdout/PSA control flag; 0% true in the one-day sample (rarely set here).
@@ -188,6 +193,53 @@ the Fangorn / feature-store pipelines, and the source of the DS14 4-day freshnes
   - Actual billed: a ~6-narrow-column COUNT aggregate over one recent day billed **20.6 GB**.
 - **Rule:** select only the columns you need (`guid`/`ip`/`advertiser_id`/`time` are cheap; the JSON columns are
   ~50x); for anything beyond a few days, dedup early and/or read the GCS parquet on Databricks.
+
+## NTB / dedupe economics (measured 2026-08-19)
+
+There is **no deduped `(advertiser_id, ip, visit_date)` table in BigQuery**. The dedupe already exists
+outside BQ: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/guid_log_ip_advertiser_id/`
+(airflow-ti, `models/feature_store/feature_group_1_source/guid_log_ip_advertiser_id.py`) is a daily
+incremental Spark rollup at exactly `(ip, advertiser_id, dt)` — 293 unbroken partitions 2025-10-30 →
+2026-08-18, verified one row per pair, **99.89% of guid_log rows** (the gap is `pixel_isolation`
+advertisers: 6,874 vs 7,070). It drops `is_new`, and its `first_visit_time` is `min(time)` **within the
+day only** — no cross-day state. No registered BQ external table over it (precedent for registering one:
+`bronze.external.household_scoring__advertiser_intent__v1`).
+
+**Dedupe ratio:** 2026-08-17 — 313,074,682 guid_log rows → **64,851,398 distinct (advertiser_id, ip)**,
+i.e. **4.83x on rows, ~2 GB/day**. The saving is row count only; this query shape already touches 3 of 38
+columns, so there is no width saving to capture.
+
+**Scan cost of the NTB shape** (`SELECT DISTINCT advertiser_id, ip, DATE(time)`, dry-run):
+
+| window | scan |
+|---|---|
+| 1 day | 9.08 GB |
+| 30 day | 268 GB |
+| 90 day | 798 GB |
+| 365 day | 3.02 TiB |
+
+The 90-day figure independently reproduces the in-repo `~856 GiB/run` comment at
+`sqlmesh/models/dw-main-silver/enriched/lift__ghost_bid_visits.sql:89-93`. Against the existing parquet a
+90-day distinct-pair query ran in **16 s / 132.5 GB** vs **856 GB** off `guid_log` — 6.46x cheaper.
+Reservation capacity is prepaid, so quote slots, not dollars.
+
+**Do not build a permanent "ever seen" first-seen table.** Measured over 30 days: 1,087,636,226 cumulative
+distinct pairs, **74.2% appear on exactly one day**, p50 active days = 1, new-pair arrival flattening at
+~28.8M/day — that is IP churn, not new households. Extrapolates to ~20.9B rows / ~648 GB at guid_log's full
+717 days, and "have I ever seen this pair" has no pruning predicate, so a daily MERGE reads the whole
+target (~237 TB/yr vs ~3.5 TB/yr for the visit-day table). Every NTB decision in the repo is windowed
+anyway: `dw-main-silver.audience.advertiser_configurations.page_view_lookback_window` carries **11 distinct
+values, 30 → 365 days, explicit for 4,241 advertisers** (default 30) and **806 configs changed in the last
+90 days** — apply the window at read time, never bake it in.
+
+**`history.guid_log_physical` is unmanaged.** 365.8 TB / 107.5B rows, hand-created BASE TABLE (2026-04-22),
+read directly at `models/dw-main-silver/logdata/guid_log.sql:91`, produced by **no model in the repo**, and
+holding 4 months more history (back to 2024-09-01) than the `history/guid_log.sql` model that nominally
+covers it. Tech debt before anything durable depends on that leg.
+
+**`guid_log` and `guid_log__v3` are deliberately NOT unioned** — `logdata/guid_log__v3.sql:3-6` says so
+verbatim. Physical `raw__guid_log__v3` starts 2026-07-01. Any NTB model must union both and carry a
+`pixel_version`, or a migrating advertiser's lookback silently collapses to weeks.
 
 ## Example queries
 ```sql

@@ -219,6 +219,15 @@ The adhoc BQ reservation has limited slots. Running two 4+ TB queries concurrent
 (i.e., no prior recorded page view for that advertiser_id + guid combo). Appears in:
 clickpass_log, guid_log, cost_impression_log, visits, ui_visits.
 
+**`is_new` is not one metric — it is five, and two of them are IP-keyed, not guid-keyed.** Read
+§ "NTB (New-to-Brand)" below before quoting any `is_new` number. Full column inventory (swept
+`INFORMATION_SCHEMA.COLUMNS`, all three projects, 2026-08-19):
+`logdata` — `guid_log`, `guid_log__v3` (100% NULL), `clickpass_log`, `cost_impression_log`, `icloud_vv_log`;
+`summarydata` — `visits`, `ui_visits`, `guid_ip_log_visitors` (**SQL-derived, not the pixel bit**),
+`last_tv_touch_visits`; `enriched` — `lift__ghost_bid_visits`, `lift__holdout_visits`;
+`ber_stg` — `visits__visits`, `visit_sources__base`, `advertiser_sales_cycle__candidates`.
+The `*_facts` tables carry counts (`new_visitors`, `new_site_visitors`, `new_to_file`), not a flag.
+
 ### visit_facts vs visits vs ui_visits
 - `visits` (silver.summarydata): row-level, one row per visit event. Partitioned by time (DAY).
 - `ui_visits` (silver.summarydata): row-level VIEW on top of `visits`, used by the UI.
@@ -1054,6 +1063,39 @@ This means:
   this disagreement is real and expected; they represent different evaluation points
 - Cross-device visits are the primary driver of NTB misclassification (61.2% mutation rate when
   cross-device is involved)
+
+**APPENDED 2026-08-19 (Matt Brorby NTB-table-of-truth question) — the "no SQL can reproduce it"
+claim is true of the pixel bit only, and "Definitive Clarification" is now a misnomer.** Five NTB
+definitions ship in production simultaneously. The pixel bit (`guid_log.is_new`) is one of them;
+three of the other four ARE SQL-derived and reproducible, and the customer-facing number is one of
+those. Evidence class: read from the SQLMesh model source + measured in BigQuery this session.
+Both claims are kept — the original describes `guid_log.is_new`, the append describes the warehouse.
+
+| # | definition | where | key | how computed |
+|---|---|---|---|---|
+| 1 | pixel bit | `logdata.guid_log.is_new`, `clickpass_log.is_new`, `cost_impression_log.is_new`, `icloud_vv_log.is_new`; passed through as `site_facts.new_to_file` | guid/cookie | client-side JS, ~18% NULL, not SQL-reproducible |
+| 2 | session-gap + conversion suppression | `summarydata.guid_ip_log_visitors.is_new` | **IP** | `lag(time) OVER (PARTITION BY advertiser_id, ip)`, gap > per-advertiser `page_view_lookback_window`, minus prior `conversion_log` matches (`models/dw-main-silver/summarydata/guid_ip_log_visitors.sql:102,113-137,145-162`) |
+| 3 | prior-page-view probe (**the customer-facing one**) | `ber_stg.visits__is_new_guid_flags` → `visits.is_new` → `ui_visits` → `visit_facts.new_visitors` | **IP** | 515-day `guid_log` floor, hourly, `COUNT(DISTINCT l.ip) WHERE is_new` (`ber_stg/visit_facts__base.sql:63-65`) |
+| 4 | FPA-bleed audit | `gold.ddm.audit_95/96_prospecting_new_to_brand_*` | **IP** | `CASE WHEN rt.ip IS NOT NULL THEN 'FPA' ELSE 'NEW'` over 28d/45d, with a 3-day trailing gap |
+| 5 | lift readout | `gold.reporting.lift__ghost_bid_results` / `lift__ghost_bid_rollup` (`ntb_*` columns) | campaign aggregate | BER-2250 ghost-bid ITT stats, not a row flag |
+
+**The key choice moves the number ~39%.** Measured 2026-08-19 on 2026-08-17 with a 30-day prior
+window (job `perf_20260819_101922_57479`, 620.65 GB): guid-keyed new = **50,033,379**; IP-keyed new =
+**30,544,405**. They disagree on **31.1% of all tuples** and on **49.6% of everything either one calls
+new**, asymmetric **6.5:1** toward household-merge (an IP looks returning because a *different* device
+in the household visited). A guid is a device/cookie; an IP is a household. State which one any NTB
+number is on.
+
+**There is no `is_ntb` column anywhere.** Swept `region-us-central1.INFORMATION_SCHEMA.COLUMNS` across
+`dw-main-silver` + `dw-main-gold` + `dw-main-bronze`, 2026-08-19: zero hits on `is_ntb` or
+`new_to_brand` as a column name. The row-level flag is always `is_new`; `ntb_*` exists only on the four
+`gold.reporting.lift__*` tables above. `guid_log__v3.is_new` (Pixel 3) is **100% NULL** — 177,944/177,944
+rows on 2026-08-17 — so Pixel 3 emits no NTB bit at all.
+
+**Open, and it gates any new NTB work:** the canonical `New-to-Brand (NTB) Documentation.gdoc`
+(`tickets/ti_310_ntb_investigations/summary.md:83,109`) has still never been read into the workspace,
+and `knowledge/slack_review_queue.md:390-392` records an Identity-team-owned epic **ID-283 "NTB
+Experiment rollout"** that may already own a sixth definition.
 
 ### Clickpass vs guid attribution wedge inverts by funnel position (TI-837)
 Clickpass **over-credits** vs guid at high intent (~+24%: clickpass +4.17pp vs guid +3.36pp) but **under-credits** at

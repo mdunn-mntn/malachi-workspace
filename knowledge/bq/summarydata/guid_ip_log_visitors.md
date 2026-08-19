@@ -74,12 +74,25 @@ reach for `guid_log` (or its GCS archive) for longer lookback.
   `d41d8cd9-8f00-3204-a980-0998ecf8427e` (28,151 rows on 2026-07-15) — the empty-string MD5 with the version
   nibble forced to `3` and the variant nibble to `a`; treat it as "no/blank cookie." Note: the **raw**
   empty-string MD5 `d41d8cd9-8f00-b204-e980-0998ecf8427e` returns **0 rows** — do not filter on it.
-- **is_new** — BOOL, **never NULL** (0 nulls on the sample day). First cookie/first sighting of this GUID
-  for this advertiser (client-JS-pixel first-seen flag, same semantics as `guid_log.is_new`). ~9% true
-  (28.8M / 308M on 2026-07-15).
-- **is_new_gl** — BOOL, **nullable**. `_gl` = guid_log: whether this is a *new* GUID in `guid_log`
-  (first-page-view lineage). Distribution 2026-07-15: false 202M (66%), true 50.7M (16%), **NULL 55.5M (18%)**.
+- **is_new** — BOOL, **never NULL** (0 nulls on the sample day). ~9% true (28.8M / 308M on 2026-07-15).
+  **CORRECTED 2026-08-19 — this is NOT the pixel flag and it is NOT guid-keyed.** It is computed in SQL,
+  keyed on **(advertiser_id, ip)**, from the model source
+  (`sqlmesh/models/dw-main-silver/summarydata/guid_ip_log_visitors.sql`): a session-start test
+  `lag(timestamp_trunc(time, SECOND)) OVER (PARTITION BY advertiser_id, ip ORDER BY time)` where the gap
+  exceeds that advertiser's `page_view_lookback_window` (default 30 days, `:102`, `:113-116`), **minus**
+  IPs with a prior `conversion_log` match inside the advertiser's `conversion_lookback_window`
+  (`:117-137`, `:145-162`). The prior wording here ("first cookie/first sighting of this GUID … client-JS-pixel
+  first-seen flag, same semantics as `guid_log.is_new`") was wrong on all three counts — the pixel bit is
+  carried separately as `is_new_gl` (aliased at `:31`). Superseded, not deleted: the old claim came from
+  column-name inference, the new one from the model SQL.
+- **is_new_gl** — BOOL, **nullable**. `_gl` = guid_log: **this is the raw client-JS pixel bit**, aliased
+  straight from `guid_log.is_new` at `:31` — guid/cookie-keyed, and the one that is not SQL-reproducible.
+  Distribution 2026-07-15: false 202M (66%), true 50.7M (16%), **NULL 55.5M (18%)**.
   Treat NULL as "lineage undeterminable / no guid_log match," NOT as false.
+- **Which one do you want?** `is_new_gl` = device/cookie NTB (the pixel's opinion). `is_new` = household/IP
+  NTB with a per-advertiser window and conversion suppression. The two keys disagree by ~39% at the
+  population level — see `knowledge/data_knowledge.md` § "NTB (New-to-Brand)". Neither matches the
+  customer-facing `visit_facts.new_visitors`, which comes from `ber_stg.visits__is_new_guid_flags`.
 
 ## Joins & relationships
 - **`logdata.guid_log` (source / parent, 1:N)** — this table is distilled from guid_log page-view events.
@@ -140,6 +153,7 @@ WHERE time >= '2026-07-15' AND time < '2026-07-16'
 ## Observed facts
 <!-- OBSERVED:FACTS START -->
 <!-- capture/curator appends tribal findings here: `- YYYY-MM-DD: <fact verified against source>` -->
+- 2026-08-19: **CORRECTED `is_new` semantics from the model SQL** (Matt Brorby NTB-table-of-truth question). `is_new` is SQL-derived, IP-keyed (session gap vs `page_view_lookback_window` + conversion suppression); `is_new_gl` is the pixel bit. The prior "client-JS-pixel flag, same semantics as guid_log.is_new" line was inferred from the column name and is wrong. Also confirmed: the 120d TTL means this table cannot answer a 365-day NTB question at any price, and it is **event grain, not deduped** — it is NOT the (advertiser_id, ip, visit_date) table of truth.
 - 2026-07-19: 2026-07-15 partition verified against live source — 308,351,477 rows; **84,222,013 distinct (advertiser_id, ip, guid) tuples** (27.3%, ~3.66 rows/tuple, ~73% intra-day dup); **7,166 advertisers** (0 null); 51,173,629 guids; 32,310,082 ips. `is_new`: 0 NULL, 28,794,630 true (9.3%). `is_new_gl`: 55,524,546 NULL (18.0%) / 50,650,731 true (16.4%) / 202,176,200 false (65.6%). Blank-cookie guid = `d41d8cd9-8f00-3204-a980-0998ecf8427e` (28,151 rows); raw empty-string MD5 `...b204-e980...` = 0 rows. 185,693,303 guids (60.2%) are RFC-4122 v3. `epoch = UNIX_MICROS(time)` here and in `guid_log` (both microseconds).
 <!-- OBSERVED:FACTS END -->
 
