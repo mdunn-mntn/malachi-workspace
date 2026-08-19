@@ -146,7 +146,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 
 | `site_network_hourly / site_network_hourly` (hourly `50 * * * *`) | `503 Getting metadata from plugin failed with error: ('Unable to acquire impersonated credentials', ... "status": "UNAVAILABLE")`, **Try 0 of 1**, task dead in ~16s. Log stops right after `Starting batch sit-net-hou-fv2-<ts>` at the first `google.auth.default()` call. | GCP IAM credential-minting service returned 503 while the operator was impersonating the service account to submit the Dataproc batch. **No batch was ever created** (the failure precedes submission), so there is nothing to delete and no partial write. | **transient_infra, benign — verify, then no-op.** The model processes the **last 2 hours** every run, so each hour is written twice by consecutive runs; one lost run is covered by its neighbours. The DAG has `default_args={}` = **retries 0**, so a 16s blip pages a human for something one retry absorbs (IMP-044 / [airflow-ti#1202](https://github.com/SteelHouse/airflow-ti/pull/1202)). | INC-020 |
 
-| Any Targeting DAG, **`No exception message found`** + `Try 0 of N` | A burst of these across unrelated DAGs in one window (2026-08-19: `site_network_hourly`, `audience_intent/wait_for_ipdsc_geo`, `audience_intent/intent_score_map`, `tpa_ipdsc_export/ipdsc_ds_35`). Airflow has no exception because the worker died rather than the task raising. | Worker/pod loss, same class as INC-009's `Could not read served logs ... timed out`. Not a code fault, and a burst across unrelated DAGs is the tell: one deploy or one node went away, not four bugs. | **transient_infra.** Check whether the task already retried before touching anything: `GET /dags/<id>/dagRuns/<run>/taskInstances` and look for `try_number > 1` or `failures=none`. All four on 2026-08-19 recovered on their own. Only act if a task has retries=0 or exhausted them. | INC-021 |
+| Any Targeting DAG, **`No exception message found`** + `Try 0 of N` | A burst of these across unrelated DAGs in one window (2026-08-19: `site_network_hourly`, `audience_intent/wait_for_ipdsc_geo`, `audience_intent/intent_score_map`, `tpa_ipdsc_export/ipdsc_ds_35`). Airflow has no exception because the worker died rather than the task raising. | One cluster-level event: on 2026-08-19 all four ended within 40s of each other on 3+ distinct workers after 22min-2h32m of runtime, with empty try-1 logs. Not a code fault, not a deploy (nearest was 15h earlier). Trigger unverified, see INC-021. | **transient_infra.** Check whether the task already retried before touching anything: `GET /dags/<id>/dagRuns/<run>/taskInstances` and look for `try_number > 1` or `failures=none`. All four on 2026-08-19 recovered on their own. Only act if a task has retries=0 or exhausted them. | INC-021 |
 
 ---
 
@@ -1271,9 +1271,20 @@ gcloud storage ls -l "gs://mntn-data-archive-prod/ipdsc_site_network/site_networ
 
 ### INC-021 — four DAGs, `No exception message found` — worker-loss burst, all self-recovered, and the first payoff from IMP-044
 
-**Date:** 2026-08-19 · **Alerts:** four in one Slack batch at 11:40 PM PT, every one `Try 0 of N` / `No exception message found`: `site_network_hourly/site_network_hourly` (logical 2026-08-18 21:50 PT), `audience_intent/wait_for_ipdsc_geo` and `audience_intent/intent_score_map` (both logical 2026-08-17 17:08 PT), `tpa_ipdsc_export/ipdsc_ds_35` (logical 2026-08-17 19:35 PT). **STATUS: RESOLVED, no action taken, no data loss.**
+**Date:** 2026-08-19 · **Alerts:** four in one Slack batch at 11:40 PM PT, every one `Try 0 of N` / `No exception message found`: `site_network_hourly/site_network_hourly` (logical 2026-08-18 21:50 PT), `audience_intent/wait_for_ipdsc_geo` and `audience_intent/intent_score_map` (both logical 2026-08-17 17:08 PT), `tpa_ipdsc_export/ipdsc_ds_35` (logical 2026-08-17 19:35 PT). **STATUS: OBSERVED, not resolved — the trigger is platform-side and unverified. No action needed; all four recovered.**
 
-**Verdict: `transient_infra`.** Airflow reports `No exception message found` when the task did not raise. The worker running it went away, so there is no traceback to report. Four unrelated DAGs failing inside one window is the signature of one infrastructure event, not four bugs. Same family as INC-009 (`Could not read served logs ... timed out`).
+**Verdict: `transient_infra` (mechanism confirmed, trigger NOT).** The four tasks started 2h32m apart and ran for wildly different durations, then **all died within 40 seconds of each other**, across at least three different workers:
+
+| Task | try-1 start | try-1 end | worker | ran for |
+|---|---|---|---|---|
+| `ipdsc_ds_35` | 04:08:40 | **06:40:51** | 100.64.6.54 | 2h32m |
+| `site_network_hourly` | 05:50:01 | **06:40:11** | 100.64.2.3 | 50m |
+| `wait_for_ipdsc_geo` | 06:18:06 | **06:40:11** | 100.64.3.18 | 22m |
+| `intent_score_map` | 06:18:06 | **06:40:41** | 100.64.2.3 | 22m |
+
+Simultaneous death across **multiple distinct hosts** rules out a single pod eviction and rules out anything task-specific. This was one cluster-level event at **2026-08-19 06:40 UTC** (= 11:40 PM PT, exactly when the Slack batch fired). Three of the four try-1 logs are **completely empty** (2 lines, just the `::group::` markers), which is what you get when the worker dies without flushing — and is also why the alert says `No exception message found`: nothing raised, the process vanished.
+
+**What I could NOT determine:** what caused the 06:40 termination. It was **not a code deploy** — the most recent `Deploy to Prod` was 2026-08-18T15:15Z, about 15 hours earlier. That leaves an Astronomer platform event (node-pool recycle, maintenance, scheduler restart), which is not visible from the Airflow API. **To close this:** check the Astro UI deployment/cluster events for 2026-08-19 06:40 UTC, or ask Astronomer support. Until then this stays OBSERVED.
 
 **Every one had already recovered before triage finished:**
 
@@ -1294,7 +1305,13 @@ gcloud storage ls -l "gs://mntn-data-archive-prod/ipdsc_site_network/site_networ
 4. **Do not blame a recent merge by DAG name alone** — confirm the failing task is one the diff actually touched.
 5. Empty `--state failed` day-pulls are expected here: `airflow_pull.sh` filters on current state, so a recovered task no longer appears. Query the dag run directly instead.
 
-**Logs:** `airflow_pull.sh --date 2026-08-18 --state failed` and `--date 2026-08-19 --state failed` both returned unrelated tasks only, which is itself the confirmation that these four had recovered.
+**⚠ Method note — do not conclude "worker loss" from the alert text alone.** My first pass at this incident called it resolved on the strength of the `No exception message found` wording. That was an inference, not evidence. The empty logs prove only that nothing was written; the thing that actually established a single shared cause was **comparing try-1 `end_date` and `hostname` across all four tasks**, which is one API call per try:
+```
+GET /dags/<dag>/dagRuns/<run>/taskInstances/<task>/tries/<n>   -> state, start_date, end_date, hostname
+```
+Clustered end times + distinct hostnames = one platform event. Spread-out end times on one hostname = that worker. Same end time on one hostname = that pod.
+
+**Logs:** `airflow_pull.sh --state failed` returns nothing for these because it filters on CURRENT state and all four had recovered; query the dag run directly instead.
 
 ## 4. System reference (producer → consumer maps as we learn them)
 
