@@ -1,4 +1,4 @@
-"""AUDI-1210 — advertisers spending with no measurable site visits, for pixel triage."""
+"""AUDI-1210 — advertisers spending with almost no attributed site visits, split by site traffic."""
 import csv
 import sys
 
@@ -8,8 +8,13 @@ sys.path.insert(0, "/Users/malachi/Developer/work/mntn/workspace")
 from lib.mntn_xlsx import FMT, MntnWorkbook  # noqa: E402
 
 T = "/Users/malachi/Developer/work/mntn/workspace/tickets/audi_1210_zero_visit_rate_advertisers"
-SRC = "/Users/malachi/Developer/work/mntn/workspace/tickets/incr_75_eligible_advertisers/outputs/incr_75_advertiser_metrics.csv"
 GENERATED = "2026-08-19"
+
+READING = {
+    "Traffic exists, we are not matching it": "Traffic, no match",
+    "Site traffic is tiny": "Quiet site",
+    "Pixel reported nothing": "Pixel silent",
+}
 
 
 def f(r, k):
@@ -19,119 +24,126 @@ def f(r, k):
         return 0.0
 
 
-rows = list(csv.DictReader(open(SRC)))
+rows = list(csv.DictReader(open(f"{T}/outputs/audi_1210_low_visit_rate_advertisers.csv")))
+rows.sort(key=lambda r: -f(r, "spend_30d"))
 
 
-def flag(r):
-    vis = int(r["visiting_ips_30d"])
-    vr = f(r, "p_visit")
-    if vis == 0:
-        return "No visits at all"
-    if vr < 0.001:
-        return "Under 0.1%"
-    return "0.1% to 0.5%"
+def frame(rs):
+    return pd.DataFrame([{
+        "Advertiser": r["advertiser_name"],
+        "Advertiser ID": int(r["advertiser_id"]),
+        "Reading": READING[r["reading"]],
+        "30-day spend": f(r, "spend_30d"),
+        "Their site visits": int(f(r, "raw_visits_30d")),
+        "Visits we matched": int(f(r, "visiting_ips_30d")),
+        "Match rate": f(r, "visit_rate"),
+        "Served IPs": int(f(r, "served_ips_30d")),
+        "Their conversions": int(f(r, "raw_conversions_30d")),
+        "Days with a visit": int(f(r, "days_with_any_visit")),
+        "Industry": None,
+    } for r in rs])
 
 
-sub = [r for r in rows if f(r, "p_visit") < 0.005]
-sub.sort(key=lambda r: -f(r, "spend_30d"))
-df = pd.DataFrame([{
-    "Advertiser": r["advertiser_name"],
-    "Advertiser ID": int(r["advertiser_id"]),
-    "What we see": flag(r),
-    "30-day spend": f(r, "spend_30d"),
-    "Impressions": int(f(r, "impressions_30d")),
-    "Served IPs": int(f(r, "distinct_ips_30d")),
-    "Visiting IPs": int(r["visiting_ips_30d"]),
-    "Visit rate": f(r, "p_visit"),
-    "Converting IPs": int(r["converting_ips_30d"]),
-    "Industry": (r["vertical_buckets"] or "").split(" | ")[0] or None,
-} for r in sub])
+mism = [r for r in rows if r["reading"] == "Traffic exists, we are not matching it"]
+quiet = [r for r in rows if r["reading"] == "Site traffic is tiny"]
+dark = [r for r in rows if r["reading"] == "Pixel reported nothing"]
+mism_big = [r for r in mism if f(r, "spend_30d") >= 10_000]
 
-n0 = sum(1 for r in sub if int(r["visiting_ips_30d"]) == 0)
-spend0 = sum(f(r, "spend_30d") for r in sub if int(r["visiting_ips_30d"]) == 0)
-big = [r for r in sub if f(r, "spend_30d") >= 10_000]
-tot = sum(f(r, "spend_30d") for r in sub)
+df_mism_big = frame(mism_big)
+df_all = frame(rows)
+df_dark = frame(dark)
+
+
+def band(rs):
+    return {"Advertisers": len(rs), "30-day spend": sum(f(r, "spend_30d") for r in rs),
+            "Over $10k": sum(1 for r in rs if f(r, "spend_30d") >= 10_000)}
+
 
 df_sum = pd.DataFrame([
-    {"What we see": "No visits at all", "Advertisers": n0,
-     "30-day spend": spend0,
-     "Over $10k": sum(1 for r in sub if int(r["visiting_ips_30d"]) == 0 and f(r, "spend_30d") >= 10_000)},
-    {"What we see": "Under 0.1%",
-     "Advertisers": sum(1 for r in sub if 0 < f(r, "p_visit") < 0.001),
-     "30-day spend": sum(f(r, "spend_30d") for r in sub if 0 < f(r, "p_visit") < 0.001),
-     "Over $10k": sum(1 for r in sub if 0 < f(r, "p_visit") < 0.001 and f(r, "spend_30d") >= 10_000)},
-    {"What we see": "0.1% to 0.5%",
-     "Advertisers": sum(1 for r in sub if 0.001 <= f(r, "p_visit") < 0.005),
-     "30-day spend": sum(f(r, "spend_30d") for r in sub if 0.001 <= f(r, "p_visit") < 0.005),
-     "Over $10k": sum(1 for r in sub if 0.001 <= f(r, "p_visit") < 0.005 and f(r, "spend_30d") >= 10_000)},
+    {"Reading": "Traffic, no match", "What it means":
+     "Their site gets real traffic and we attribute almost none of it", **band(mism)},
+    {"Reading": "Quiet site", "What it means":
+     "Under 1,000 site visits in 30 days, so there is little to attribute", **band(quiet)},
+    {"Reading": "Pixel silent", "What it means":
+     "Their pixel reported no visits at all in 30 days", **band(dark)},
 ])
 
-FM = {"30-day spend": FMT.USD, "Impressions": FMT.INT, "Served IPs": FMT.INT,
-      "Visiting IPs": FMT.INT, "Visit rate": FMT.PCT2, "Converting IPs": FMT.INT,
-      "Advertiser ID": "0"}
+FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Visits we matched": FMT.INT,
+      "Match rate": FMT.PCT2, "Served IPs": FMT.INT, "Their conversions": FMT.INT,
+      "Days with a visit": FMT.INT, "Advertiser ID": "0"}
 
 wb = MntnWorkbook(
-    title="Advertisers With No Measurable Visits",
+    title="Advertisers We Attribute Almost No Visits For",
     ticket="AUDI-1210",
-    subtitle="Live advertisers whose served IPs almost never show a site visit, ranked by spend",
+    subtitle="Live advertisers under a 0.5% match rate, split by whether their site has traffic at all",
     period="Trailing 30 days to 2026-08-19",
     generated=GENERATED,
 )
 
 wb.table(
-    "Check these first", df[df["30-day spend"] >= 10_000],
-    finding=f"{len(big)} advertisers spent $10k or more in 30 days and show almost no site visits",
-    method="Visit rate is the share of served IPs seen visiting the advertiser's site in the same 30 days. Ranked by spend. See Read me.",
+    "Check these first", df_mism_big,
+    finding=f"{len(mism_big)} advertisers spent $10k or more and have real site traffic we are matching almost none of",
+    method="Their site visits come from the advertiser's own pixel. Visits we matched are served IPs later seen on their site. See Read me.",
     formats=FM, heat={"30-day spend": "high"}, kind="headline",
-    toc="The ones worth checking: $10k or more in spend",
+    toc="Start here: real traffic, no match, $10k or more",
     query="audi_1210_zero_visit_rate_advertisers.sql",
 )
 
 wb.table(
-    "Summary", df_sum,
-    finding=f"{len(df)} live advertisers sit under a 0.5% visit rate, together spending ${tot:,.0f} over 30 days",
-    method="Three bands of severity. An advertiser appears in exactly one.",
+    "Three readings", df_sum,
+    finding=f"Of {len(rows)} advertisers under a 0.5% match rate, {len(mism)} have traffic we are missing and only {len(dark)} have a silent pixel",
+    method="Every advertiser falls in exactly one reading. Split on their own reported site visits over the same 30 days.",
     formats={"Advertisers": FMT.INT, "30-day spend": FMT.USD, "Over $10k": FMT.INT},
-    kind="data", toc="How many advertisers, and how much spend",
+    kind="headline", toc="How the 542 split, and which group matters",
 )
 
 wb.table(
-    "Full list", df,
-    finding=f"All {len(df)} advertisers under a 0.5% visit rate, largest spender first",
-    method="Every live, non-test advertiser that served an impression in the trailing 30 days and sits under 0.5%.",
+    "Pixel silent", df_dark,
+    finding=f"{len(dark)} advertisers reported no site visits at all, together spending ${sum(f(r, 'spend_30d') for r in dark):,.0f}",
+    method="Zero reported visits over 30 days. Small in number and in spend, but the clearest setup question.",
+    formats=FM, kind="data", toc="The advertisers reporting nothing at all",
+)
+
+wb.table(
+    "Full list", df_all,
+    finding=f"All {len(df_all)} advertisers under a 0.5% match rate, largest spender first",
+    method="Every live, non-test advertiser that served an impression in the trailing 30 days and matched under 0.5%.",
     formats=FM, kind="data", toc="The full list",
     query="audi_1210_zero_visit_rate_advertisers.sql",
 )
 
 wb.glossary(
     "Read me",
-    intro="One question: these advertisers are spending, so why do we almost never see anyone visit their site?",
+    intro="Two visit numbers sit side by side here, and the gap between them is the question. One is the advertiser's own site traffic. The other is how much of it we could tie back to an ad we served.",
     rows=[
-        ("Served IPs", "Distinct IP addresses that received at least one impression in the last 30 days."),
-        ("Visiting IPs", "Of those, the ones later seen on the advertiser's own website."),
-        ("Visit rate", "Visiting IPs divided by served IPs. The eligible-cohort median is about 2%."),
-        ("How a visit is recorded", "A pixel on the advertiser's site fires and writes a row to clickpass_log, keyed to their advertiser id. No pixel row, no visit, regardless of what actually happened on their site."),
+        ("Their site visits", "Every visit the advertiser's pixel reported in 30 days, whether or not MNTN was involved. This is their site traffic."),
+        ("Visits we matched", "Served IPs we later saw on their site. Always a subset of their site visits, so a small traffic number caps it arithmetically."),
+        ("Match rate", "Matched visits divided by served IPs. The eligible-cohort median is about 2%."),
+        ("Days with a visit", "How many of the 30 days reported at least one visit. A handful of days points at a page that is rarely reached, not a dead pixel."),
         ("", ""),
-        ("What to check", ""),
-        ("No visits at all", "Zero visiting IPs against real impressions. The pixel is almost certainly not reporting."),
-        ("Under 0.1%", "A trickle. Consistent with a pixel on one page only, or one that fires on a fraction of sessions."),
-        ("0.1% to 0.5%", "Low but not impossible. Some verticals genuinely convert offline. Included so the cut is not arbitrary."),
-        ("Converting IPs", "Same idea for conversions. Zero visits AND zero conversions points at the pixel rather than at performance."),
+        ("The three readings", ""),
+        ("Traffic, no match", "1,000 or more site visits and still under a 0.5% match rate. Their pixel works and something between the impression and the visit is not connecting. This is the group worth investigating."),
+        ("Quiet site", "Under 1,000 site visits in 30 days. Nothing to attribute. Not a defect, and worth knowing before anyone chases it."),
+        ("Pixel silent", "No reported visits at all. The clearest setup question, and the smallest group."),
     ],
 )
 
 wb.notes(
     "Method & caveats",
-    intro="What this list is and is not.",
+    intro="What changed from the first version of this list, and what it does and does not show.",
     blocks=[
+        ("The first version of this list led with the wrong advertisers",
+         "It ranked purely on match rate and named Real Techniques, Food Lion and Valvoline as the likeliest pixel defects. Their own pixels report 55, 20 and 70 visits in 30 days. Those are quiet sites, not broken ones. Johnny Chen made the point that raw visits belong next to attributed ones, and he was right."),
+        ("Attributed visits cannot exceed site visits",
+         "A matched visit requires the advertiser's pixel to have reported that visit in the first place. So a low site-traffic number caps the match arithmetically and a zero match rate on 20 visits a month means nothing."),
+        ("The group that matters is the third one",
+         f"{len(mism)} advertisers have 1,000 or more reported site visits and still match under 0.5%, {len(mism_big)} of them spending $10k or more. EcoATM is the clearest: 8.4M site visits, 6,938 matched, 0.29%."),
         ("This is a measurement flag, not a performance verdict",
-         "A zero here says we cannot see visits, not that the advertising failed. Several of these are utilities, grocery and healthcare brands whose customers may never transact on a tracked page."),
-        ("The likeliest cause is the pixel",
-         "Visits come only from the advertiser's own site pixel, keyed to their advertiser id. If it is missing, blocked, or firing under a different id, the visit rate reads zero no matter what happened."),
-        ("Low spend is included but is not the point",
-         "The cut is the visit rate, not spend. Small advertisers with a handful of impressions can read zero by chance. Start with the $10k-and-up sheet."),
+         "A low match rate says we cannot see the connection, not that the advertising failed. Identity matching, pixel placement, and cross-device traffic all sit between an impression and an attributed visit."),
         ("Why it matters beyond reporting",
-         "A zero visit rate makes an advertiser unmeasurable for incrementality: it cannot be screened for a lift test and it cannot be shown a result. 479 advertisers were dropped from the lift-test screen for exactly this reason."),
+         "An advertiser with no measurable visit rate cannot be screened for an incrementality lift test and cannot be shown a result. This was the largest single cut in the AUDI-1209 screening funnel, at 479 of 1,859 advertisers."),
+        ("The 30-day window under-detects recent breakage",
+         "An advertiser whose pixel went dark ten days ago still carries three weeks of earlier visits and stays off this list. A shorter trailing window would surface those, at the cost of more advertisers reading zero by chance."),
     ],
 )
 
@@ -139,10 +151,9 @@ wb.sql_dir("Queries", f"{T}/queries",
            note="The query behind this list. It runs standalone against BigQuery.")
 
 wb.cover(takeaways=[
-    f"{len(big)} advertisers spent $10k or more in the last 30 days and show almost no site visits.",
-    f"{n0} show no visits at all, against ${spend0:,.0f} of spend.",
-    "Visits are only recorded by the advertiser's own site pixel, so the likeliest cause is pixel reporting.",
+    f"{len(mism_big)} advertisers spent $10k or more, have real site traffic, and we match under 0.5% of it.",
+    f"Only {len(dark)} of the {len(rows)} have a genuinely silent pixel; {len(quiet)} simply have quiet sites.",
+    "EcoATM is the clearest case: 8.4M site visits in 30 days, 6,938 matched.",
 ])
 
-path = wb.save_drive("AUDI-1210", "Advertisers With No Measurable Visits")
-print("wrote", path)
+print("wrote", wb.save_drive("AUDI-1210", "Advertisers With No Measurable Visits"))
