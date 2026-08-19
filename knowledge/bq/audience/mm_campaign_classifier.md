@@ -5,7 +5,7 @@ summary: "One row per active (Live) Stage-1 prospecting campaign, classified by 
 dataset: audience
 table: mm_campaign_classifier
 object_type: VIEW
-physical_table: sqlmesh__audience.audience__mm_campaign_classifier__2449582902
+physical_table: sqlmesh__audience.audience__mm_campaign_classifier__3945841201
 grain: "one row per campaign_id (an active Live Stage-1 / funnel_level=1 prospecting campaign)"
 partition_by: none
 require_partition_filter: false
@@ -139,6 +139,14 @@ the targeting is (`restriction_level`), and a battery of feature flags for the u
 - `advertiser_id` / `campaign_group_id` let you aggregate the classification up to advertiser or group level.
 
 ## Gotchas
+- **`tiers_reachable LIKE '%PP%'` is NOT a Peak Performance filter.** The string `HI·MI·MaxReach (no PP)`
+  contains the substring `PP`, so the LIKE matches 3,575 campaigns that reach no PP tier (verified 2026-08-19:
+  LIKE returns 6,226 vs the true 2,651). **Peak Performance = `has_ds13 OR has_ds46`** (DS13 = PP v1 anchor,
+  DS46 = PP v2 / Fangorn anchor). If you must use the string, use
+  `tiers_reachable IN ('HI·PP·MI·MaxReach','PP·MI (no HI)')`.
+- **`has_ds13` / `has_ds46` can be NULL**, not just TRUE/FALSE (2 rows on 2026-08-19: campaigns with no parsed
+  DS rows). `has_ds13 OR has_ds46` returns NULL for those, so they fall out of both sides of a boolean GROUP BY.
+  Wrap in `COALESCE(...,FALSE)` when the cut must be exhaustive.
 - **VIEW over a snapshot table, not history.** Every column is point-in-time "current" state (Live campaigns
   only). HHST especially (`hhst_current`) is thrashed daily — do not treat it as the value in effect on some
   past date. For audience-config change history use `audience.campaign_segment_history`.
@@ -180,6 +188,13 @@ GROUP BY 1, 2, 3;
 <!-- OBSERVED:COST END -->
 
 ## Observed facts
+- 2026-08-19 (spot-check, "is the job working?"): healthy + refreshing daily. Physical snapshot rebuilt
+  2026-08-19 00:13 UTC, **14,312 rows** (`_by_group` 13,398 @ 00:18 UTC) — note the snapshot hash moved
+  `2449582902` → **`3945841201`** since 2026-07-29, so the model was re-planned/redeployed in between.
+  mm_class: non_mm 8,086 / mmv2 3,575 / mm_flagship_fangorn 1,513 / mmv3 663 (519 HI-reaching + 144 PP-capped) /
+  fangorn_vertical_only 334 / mmv1 141. **Peak Performance (`has_ds13 OR has_ds46`) = 2,651 campaigns /
+  1,087 advertisers**; 2 rows NULL. Not a Dataproc/Spark job — SQLMesh FULL model, `cron '@daily'`, gateway
+  silver (`SteelHouse/sqlmesh` PR #1245).
 <!-- OBSERVED:FACTS START -->
 - 2026-07-29: grain verified 1:1 — 14,573 rows = 14,573 distinct campaign_id; 13,656 groups; 3,427 advertisers; all rows funnel_level=1.
 - 2026-07-29: mm_class distribution — non_mm 8,247 / mmv2 3,601 / mm_flagship_fangorn 1,575 / mmv3 650 / fangorn_vertical_only 358 / mmv1 142.
