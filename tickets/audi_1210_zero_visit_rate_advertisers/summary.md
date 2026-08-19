@@ -84,6 +84,21 @@ Sheets: the 26 flagged accounts, the Maurices vs Re-Bath comparison that reframe
 - Query: `queries/audi_1210_share_of_voice.sql` (runs standalone; returns the whole base with both ratios and both percentiles)
 - Builder: `artifacts/audi_1210_build_xlsx.py`
 
+## 4b. Imani's opt-out hypothesis — tested, does not hold
+
+Imani Clark (Slack, 2026-08-19): the dark advertisers are "very likely advertisers that opted out of a tracking pixel," and there is a field in the UI to select it. Checkable directly — `integrationprod.advertisers` carries `conv_pixel_opt_out`, `tracking_pixel_status_id` and `conversion_pixel_status_id`.
+
+| Group | n | `conv_pixel_opt_out` TRUE | `tracking_pixel_status_id` |
+|---|---|---|---|
+| Pixel reported nothing | 39 | 1 (2.6%) | 38 are 10, 1 is 11 |
+| Site too quiet to score | 171 | 7 (4.1%) | 170 are 10, 1 is 11 |
+| Flagged vs peers, $10k+ | 25 | 1 (4.0%) | all 25 are 10 |
+| All live advertisers | 1,859 | 64 (3.4%) | 1,848 are 10, 8 are 9, 3 are 11 |
+
+**Opt-out is no more common among the dark advertisers than in the base** (2.6% against 3.4%), so it does not explain them. And `tracking_pixel_status_id` = 10 for 38 of the 39, the same status essentially every live advertiser carries. Across the whole table status 9 is the bulk (33,340 rows against 4,354 at status 10), while live-serving advertisers are almost all 10, so 10 reads as the active state. These advertisers are marked as tracking normally and reporting nothing.
+
+**Caveat before this is quoted back to Imani:** `conv_pixel_opt_out` is the CONVERSION pixel. The UI control she describes may be a separate visit-tracking setting that this table does not carry, and `pixel_id` is NULL for every row here so it cannot be used as a proxy. Johnny's team has the logs to settle it.
+
 ## 5. Open items
 
 1. **Pixel ops to confirm the cause.** Ashley Pineda Varela owns `conversion_log` / pixel-firing routing per Zach Schoenberger (2026-05-06); Johnny is the immediate check. Start with WGU 67978 vs Western Governors University 31357.
