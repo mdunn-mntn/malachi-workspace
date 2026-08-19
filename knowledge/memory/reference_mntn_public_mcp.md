@@ -142,7 +142,10 @@ grid is complete, so nothing looks broken; the data is just unattributable. Sett
 returns `MarketingObjectiveInfo.Name` and `ChannelInfo.Name` as separate keys and resolves it.
 
 **Always pass `fullName: true` when grouping by more than one dimension.** This is worst for an LLM
-client, which will narrate the collapsed rows confidently. Reported 2026-08-19.
+client, which will narrate the collapsed rows confidently. Filed to MNTN engineering 2026-08-19 via the
+server's own `submit_feedback` tool, id **`fb_fea70a02-7235-46b3-a475-2f678049dcbd`**, category `bug`,
+severity `medium`. That tool posts under the **MNTN OAuth identity**, not the Claude account, and its
+contract requires showing the user the exact text and getting an explicit yes before sending.
 
 Minor: `MarketingObjectiveInfo.Name` help text says "Deprecated, use CampaignStrategyInfo.Name", but
 `CampaignStrategyInfo.Name` is not in the accepted token enum.

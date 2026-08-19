@@ -193,6 +193,7 @@ WHERE day BETWEEN DATE '2026-07-01' AND DATE '2026-07-10';
 
 ## Observed facts
 <!-- OBSERVED:FACTS START -->
+- 2026-08-19: MNTN's customer-facing Public MCP (`mcp.ex.mountain.com`) matches this table **exactly** for WGU (31357), 2026-08-01..07, on impressions, spend (to the cent), `views+clicks+competing_views` and `view_conversions+click_conversions+competing_view_conversions` — all 7 days. Confirms the UI/`industry_standard` lens at this rollup grain, so `all_facts` is not required to hit the client level for these four metrics. `Graph.UsersReached` = `HLL_COUNT.EXTRACT(uniques)` within -0.82%/+1.30% (HLL++ error). The data_knowledge §5f **1.276× factor is Avon-specific**: WGU is 1.173× on visits over this window. (IMP-047)
 <!-- capture/curator appends tribal findings here: `- YYYY-MM-DD: <fact verified against source>` -->
 <!-- OBSERVED:FACTS END -->
 
