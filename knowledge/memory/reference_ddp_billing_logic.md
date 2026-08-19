@@ -180,3 +180,17 @@ even when the FS sources only internal logs (the graph holds licensed-vendor dat
 via an ID-team pyspark interface. (2) **DDP-vendor crediting** — Fangorn uses NO DDP so it's unaffected, but
 **DS13/DS19 use DDP** and their crediting may need to change under MNTN ID (Alyson/Jack, open), by ~mid-October
 for real-campaign testing.
+
+## Graph era (AUDI-694, 2026-08-19)
+
+The single `targeted_signal` table no longer carries the whole story: under the graph it splits into three
+vendor lists (see [[reference_graph_vendor_crediting]]). DS47 and DS63 need **no** `targeted_signal` /
+`identity_targeted_signal` input — DS47 is exclusion-only and never served, DS63's segment is the advertiser's
+own CRM upload. List 1 applies only at MNTN ID, and `identity_targeted_signal` already delivers it.
+
+The `mm_dsid_count` lesson recurs verbatim in the graph leg: it counts raw `report_data_source_id`, so DS40
+(33Across API, `primary_data_source_id = 28`) takes two divisor slots instead of one — the BAE-4923 error
+rebuilt. `report_data_source_id = 35` also matches two registry rows (35 + 11 LiveRamp) with no dedup.
+
+**Running the script moved to AP (Maya Triman) from the August 2026 payout**, BAE supplying the updated
+version. Nobody owns the crediting *rules*; Kale's stated position is to keep today's fractional split.

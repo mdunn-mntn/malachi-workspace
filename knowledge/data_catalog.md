@@ -2361,7 +2361,7 @@ Small internal dataset for data usage reporting/auditing.
 ## DDP usage-reporting pipeline — input tables (billing-team doc 2026-07-20; schemas BQ-VERIFIED 2026-07-20)
 The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.xlsx`; full step map in
 `data_knowledge.md` § "Canonical DDP usage-reporting pipeline" + AUDI-1089 summary §4f). All confirmed via
-`bq show` on 2026-07-20 except `enriched_impressions` (access-denied — see below).
+`bq show` on 2026-07-20 except `enriched_impressions` (access resolved 2026-08-17 via the `bq-read` PAM entitlement — see below).
 - **`dw-main-bronze.external.targeted_signal`** — ⭐ **the row-level "used-signal" table, and it's queryable
   in BigQuery (was long believed Athena-only — corrected).** BQ external table over
   `gs://mntn-data-archive-prod/signals/targeted_signal/*.parquet`, **hive-partitioned (CUSTOM) on
@@ -2392,16 +2392,29 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
 - **`missing_domains`** (AUDI-431, 2026-08-10) — GCS parquet `gs://mntn-data-archive-prod/vertical_categorizations/missing_domains/dt=YYYY-MM-DD/`, daily since 2025-11-02, ~2.5 MiB/day. Cols in-file: `domain, count` (`dt` is dir-only — re-derive from path). = svs domains (DS23 excluded, tldextract eTLD+1) **net of blocklist + whitelist + wcv** (all three anti-joins live in prod `SteelHouse/dbt ml_squad/models/vertical_categorization/missing_domains.py`; verified overlap 0/0/0). Each run reads 2 days and dynamic-overwrites dt=D and D-1, so partition dt=D is finalized by the D+1 run. THE candidate source for list refreshes — 28d ≈ 87 MB local, no BQ scan needed.
 - **`ddp_url_verticals`** (AUDI-431, 2026-08-10) — GCS parquet `gs://mntn-data-archive-prod/vertical_categorizations/ddp_url_verticals/dt=…/`, live daily, ~113 GB/day. Cols: `ip, domain, uid, time, vertical_id, bucket_id, vertical_name, is_ecommerce, is_in_vertical_mapping, data_source_id, input_timestamp, url, ecommerce_score, is_whitelist` (+hive `dt`). Prod ecommerce-model scores for EVERY svs URL (MLflow `prod.ml.ecommerce_classifier@champion`, threshold 0.4) — `is_in_vertical_mapping` = wcv membership flag, so wcv joins are avoidable in-scan. **Consumes NO blocklist** (blocklisted domains like aol.com still scored daily, 47M urls/day) and whitelist is a LEFT-join flag, not a filter. Daily run overwrites dt=today AND yesterday — query a closed window ending dt ≤ D-2. BQ external table w/ `hivePartitioningOptions: AUTO` def-file works; 7d scan of domain+score+ip cols ≈ 109 s on the us-central1 reservation.
 - **`dw-main-bronze.coredw.usage_reporting_audits`** — audit/anomaly-gate table (documented above; 20 cols, 99 rows).
-- ⛔ **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the meter
+- ✅ **`mntn-analytics-prod-01.analytics_curated.enriched_impressions`** — the persisted intermediate the meter
   consumes (F1 impression ⋈ targeted segments ⋈ IPDSC; produced by the UI Audience Segment Reporting pipeline).
-  **Access Denied as of 2026-07-20** — cross-project (`mntn-analytics-prod-01`), locked by a recent security change.
-  **Read path: request PAM temp access.** Schema unverified until then (visible cols from a user query: `dt` DATE
-  partition, `data_source_id`, `ad_served_id`, `category_info` JSON).
+  **Access resolved 2026-08-17 (was Access Denied since 2026-07-20): PAM entitlement `bq-read` on project
+  `mntn-analytics-prod-01`** (`roles/bigquery.dataViewer` + `jobUser` + `connectionUser` + `storage.objectViewer`,
+  4h max, DevOps approve via Slack). Request:
+  `gcloud pam grants create --entitlement=bq-read --project=mntn-analytics-prod-01 --location=global --requested-duration=14400s --justification="..."`.
+  **It is an EXTERNAL BigLake table** over `gs://mntn-analytics-curated/...` via connection
+  `mntn-analytics-prod-01.us-central1.gcs_biglake`, hive-partitioned on `dt`, `metadata_cache_mode=AUTOMATIC`.
+  Two consequences: **`--dry_run` reports "lower bound of 0 bytes" and is useless for cost-gating**, and
+  **`INFORMATION_SCHEMA.PARTITIONS` returns zero rows** — neither means the table is empty. Real cost with a
+  `dt` filter is **~2.4 GB/day**; always filter `dt`.
+  **Verified schema (2026-08-17, 34 cols):** `time, hour, data_source_id, data_source_category_id
+  STRUCT<list ARRAY<STRUCT<element INT64>>>, advertiser_id, campaign_group_id, campaign_id, group_id,
+  creative_id, country, metro_id, region, city, domain, ip, guid, impression_id, ad_served_id, media_cost,
+  data_cost, fee_cost, partner_cost, media_spend, platform_spend, data_spend, publisher_type_id, unlinked,
+  objective_id, channel_id, category_info STRING, device_type, audience_id, dt DATE, hh STRING`.
+  Note it carries `objective_id` and `channel_id` **but not `funnel_level`** — that still needs the
+  `campaigns` join, which is why the billing script joins it.
   **Builder (found 2026-07-29):** `SteelHouse/data-pipeline/pyspark_pipelines/impression_enrichment.py`, prod config
   `conf/impression_enrichment/prod/config.yaml` — `lookback=2` (impression days), `ipdsc_lookback=35`,
   `dsid_block_list=[2,14,42]`, inputs all `dw-main-silver` (`logdata.cost_impression_log`, `public.campaigns/advertisers`,
   `summarydata.v_campaign_group_segment_history`, `ber_stg.category_facts__domain_x_publisher_types`) + ipdsc from
-  `gs://mntn-data-archive-prod/ipdsc`; writes `summarydata.enriched_impressions` bucketed by `ad_served_id` (600),
+  `gs://mntn-data-archive-prod/ipdsc`; writes bucketed by `ad_served_id` (600),
   partitioned `dt,hh`, **dynamic overwrite** on a rolling 2-day window. The `data_source_id` tag = what the campaign
   **targeted** (segment history); the ipdsc join is a **35-day BACKWARD** window (`ipdsc_dt BETWEEN to_date(time)-35d AND time`).
   **Key fact (verified 2026-07-29):** on healthy days enriched DS_x count ≈ that DS's campaigns' **served** impressions
@@ -3328,3 +3341,44 @@ inside the body are fine.
 multi-statement script and bq then echoes the statement text (ending `-- at [N:1]`) to stdout BEFORE the
 result rows — any `--format=csv > file.csv` redirect captures the SQL too. Keep queries meant for CSV
 capture single-statement; inline parameters as literals with a `-- PARAM` marker for runner substitution.
+
+### identity translation signals — the graph vendor-crediting inputs (AUDI-694, verified 2026-08-17)
+
+`dw-main-silver.identity.graph_translation_signal` and `...auction_translation_signal` are the two tables the
+graph crediting leg reads. Both are **VIEWS** that `SELECT *` from a single sqlmesh physical table
+(`identity__{graph,auction}_translation_crm__*`) — **there are no UNION ALL branches**, despite the view
+description promising them ("add UNION ALL branches here as new sources are onboarded"). Anything written by
+`mntn_graph.log_translation` to `gs://mntn-data-archive-{env}/identity_resources/{graph,auction}_logs/` is
+therefore **not readable through these views** until someone adds the branch.
+
+**Columns (both, 9 each) — the timestamp column is `translation_timestamp`, NOT `translation_date`:**
+- graph: `translation_id, data_source_category_id, data_source_id, targeted_id, targeted_id_type, household_id, graph_version, graph_data_sources ARRAY<INT64>, translation_timestamp`
+- auction: same but `output_id, output_id_type` in place of `targeted_id, targeted_id_type`
+
+`translation_date` has **never** existed — the pre-refactor dev tables from 2026-08-02/03 also carry
+`translation_timestamp`. Any SQL referencing `translation_date` cannot compile.
+**`targeted_id_data_sources` (the design doc's Vendor List 1 column) does not exist in this schema.**
+
+**Physical shape:** `PARTITION BY DATE(translation_timestamp)`, `CLUSTER BY data_source_id,
+data_source_category_id, {output,targeted}_id_type`, `partition_expiration_days=60`.
+**Each daily partition is a FULL SNAPSHOT of the live population, not that day's events** — row counts are
+near-identical day over day and creep upward: ~2.19B rows / 335 GB per day (auction), ~2.37B / 437 GB (graph),
+so ~20-26 TB retained each. A "30-day lookback" over these unions ~30 copies of the same population; scanning
+one column across 7 days is ~245 GB. **Use `INFORMATION_SCHEMA.PARTITIONS` (free) for counts, and prefer the
+already-materialised gold outputs (`dw-main-gold.reporting.ddp_crm_graph_cpm`) over re-scanning these.**
+
+`data_source_category_id` on these = the CRM `audience_upload_id`. `output_id_type = 30` (IPv4) is the only
+value produced today — the upstream `auction_translation_crm` model filters `g.id_type = 30`. Note
+`IdTypeFamily.IPV4` in `identity-graph-interface` covers **{30, 32}**, so a literal `= 30` filter downstream
+becomes lossy the moment an IP_DAY (32) source is unioned in.
+
+### dw-main-gold.reporting.ddp_crm_graph_cpm — the DS63 crediting output (2026-08-13 build)
+
+One row per DS63 impression with the credited graph vendors already assembled. Columns:
+`advertiser_id, campaign_id, time, ip, ad_served_id, data_source_id, data_source_category_id, and_seq, or_seq,
+dt, cpm, segment_name, graph_dsids ARRAY<INT64>, leg1_graph_dsids ARRAY<INT64>, leg2_graph_dsids ARRAY<INT64>`.
+Leg 1 = auction translation (household ⟶ IP at bid time), leg 2 = graph translation (segment ID ⟶ household).
+44 MB / 216,409 rows for dt 2026-08-06..08-12. **This is the cheap table to answer graph-crediting questions
+from** — it holds the impression join already, so most questions need no `enriched_impressions` access.
+Sibling `ddp_crm_graph_matches_cpm` adds `type` and `auction_signal_timestamp`. Its `graph_dsids` **retain**
+free/internal sources (23, 30, 58) and non-externally-reported partners (22), unlike `bae-sql-utility#24`.

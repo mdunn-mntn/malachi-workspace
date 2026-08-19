@@ -1294,3 +1294,33 @@ A wave of campaign groups (CGIDs) failed to sync to Beeswax following a DevOps c
 - **LiveRamp (3P interests, DS35) is an AGGREGATOR/marketplace** of ~200 partners' segment data,
   not a raw-data originator — its partners hold the underlying site-visit data; LiveRamp itself
   likely has no direct site-visit product to buy (Alex, AUDI-1089 team meeting 2026-07-13).
+
+- ## Graph crediting — ownership and the open pricing decision (Aug 2026)
+
+Crediting data vendors when the identity graph is in the bid path was split across five teams through Aug 2026
+and consolidated into the **#identity-crediting** Slack channel (created by Jack Barbey 2026-06-26) plus
+**#dev-mntn-id**. Ownership as settled 2026-08-19: AUDI logs Vendor List 1 (DDP), Identity logs Vendor Lists 2
+and 3 (graph), **AP runs the monthly DDP crediting script from the August payout** (Maya Triman) with BAE
+supplying the updated script. Whether AP also owns *graph* vendor crediting inside that same pipeline was
+raised by Jack and left unanswered by Mike Dolt.
+
+**The open pricing question:** under the graph, deepsync is the only CPM-billed vendor; everything else is
+fixed-cost. Jack put three options to Paulo, Kale and Andy Everson: (1) one combined vendor list, lowest-cost
+wins — which would drive deepsync's credit near zero; (2) keep encoding and decoding separate and credit each
+as half an impression — which Jack called the most fair but possibly infeasible under contract; (3) move
+deepsync and future graph vendors to a **fixed-cost** model, which also sidesteps a likely SOX-compliance
+burden on the crediting code. **Kale's position:** stick to today's math, divide the CPM across all vendors
+that provided the same data point. **Andy Everson:** defers to Kale and Paulo but favours option 3, "getting
+DS and any future providers to a fixed model could make things much easier all around." Unresolved as of
+2026-08-19; Maya's walkthrough of the updated script is the next forcing function.
+
+- ## GCP PAM entitlement for cross-project BigQuery reads
+
+`bq-read` is the entitlement that unlocks read access to another project's BigQuery data (verified on
+`mntn-analytics-prod-01`, 2026-08-17). It grants `roles/bigquery.dataViewer`, `jobUser`, `connectionUser` and
+`storage.objectViewer` for a **4h maximum**. Approval is a DevOps Slack action and can land in ~2 minutes.
+Discover what a project offers with
+`gcloud pam entitlements search --caller-access-type=grant-requester --project=<P> --location=global`.
+Other entitlements seen on that project: `breakglass-editor` (4h), `vm-ssh` (4h), `kms-decrypt` (30m).
+**Scope each session to one question** — a >4h job cannot finish inside one window (see IMP-011, where a
+`sqlmesh plan` needing >24h kept expiring against 8h windows).

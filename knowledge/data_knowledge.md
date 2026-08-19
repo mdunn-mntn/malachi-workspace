@@ -4971,3 +4971,77 @@ The attribution-independent "did this household visit the advertiser site" signa
 - **Unit = distinct visit-days per `(advertiser_id, ip, date)`** — dedup the raw page-views to visit-days so a household reading 6 pages counts as one visit-day.
 - **Use total visits (guid_log), NOT attributed VV (`ui_visits`), for a frequency experiment.** Attributed VV is biased in a frequency test because frequency drives last-touch attribution — the higher-frequency arm wins the attribution tiebreak, inflating its attributed visits independent of any real behavior change. Total visits is attribution-independent, so it isolates the causal effect.
 - **Caveat (TI-835):** total guid_log traffic barely moves with MNTN ads (~0% platform lift), so total-visit metrics suit **non-inferiority** readouts (stable = a safe cap) but are **insensitive for superiority**. Keep attributed VV as a diagnostic companion, not the headline. See [[reference_total_visit_signal]].
+
+### Graph vendor crediting — the Vendor List 1/2/3 taxonomy and who owns each (Jack Barbey, 2026-08-18/19)
+
+Once the identity graph is in the bid path, one impression's data provenance splits into **three** vendor
+lists. Jack standardised this nomenclature in #dev-mntn-id because five teams were talking past each other:
+
+| list | what it credits | needed for | logged by | source |
+|---|---|---|---|---|
+| **Vendor List 1 (DDP vendors)** | who supplied the page-view data that put an ID into a targeted segment | **MNTN ID only — NOT DS63** | **AUDI** | `gs://mntn-data-archive-prod/signals/identity_targeted_signal` (Sean, AUDI-953) |
+| **Vendor List 2 (graph, encoding)** | who supplied the linkage that translated an ID into a household when the audience was built | MNTN ID and DS63 | Identity | `dw-main-silver.identity.graph_translation_signal` |
+| **Vendor List 3 (graph, decoding)** | who supplied the linkage that let that household be targeted in an auction | MNTN ID and DS63 | Identity | `dw-main-silver.identity.auction_translation_signal` |
+
+**Why DS63 needs no List 1:** DS63 (CRM Inclusions) sources its input from the advertiser's own uploaded CRM
+list, so no DDP vendor sits behind the segment. This is the fact that closed AUDI-694 — AUDI owes nothing to
+DS63 or DS47 billing.
+
+**Ownership as settled 2026-08-19:** AUDI logs List 1. Identity logs Lists 2 and 3. **AP (Maya Triman) takes
+over running the monthly DDP crediting script from the August payout**, with BAE providing the updated
+script; ownership of *graph* vendor crediting inside that same pipeline was still unresolved (Jack asked, Mike
+Dolt did not know). The crediting **business rules** are decided in #identity-crediting, not by whoever runs
+the script. Supersedes the earlier reading that BAE owns the pipeline outright.
+
+**Under the graph, the old model breaks by design** (Jack): every linkage is co-mingled across providers
+during the graph build, so a link can no longer be attributed to a single provider the way
+`targeted_signal.source_data_source_id` did. That is the whole reason the one table split into three.
+
+### DS47 is exclusion-only and never reaches the meter (AUDI-694, verified 2026-08-17/18)
+
+`DS47 "CRM Identity Graph Generated"` replaces DS4 **for CRM exclusion only**; DS4 is retained for inclusions.
+Per `SteelHouse/dsanalysis:project-ds47-rollout/rollout_plan.md`: the per-advertiser switch is the
+`crm_exclusion_data_source` column on `audience.advertiser_configurations`, audience-service rewrites
+`data_source_id = 4 → configured` in generated segment expressions, **treat-crm only, not treat-crm-lookback**
+(decision D-3, 2026-05-15). Blind spot BS-14 states it plainly: an upload used as an **exclusion** matches IPs
+through DS47, the same upload used as an **inclusion** maps through DS4.
+
+**Empirical:** `data_source_id = 47` has **zero rows** in `enriched_impressions` on every day of
+2026-08-01..08-16 and on 2026-07-15. An excluded household is never served, so it produces no impression and
+no `category_info` entry — there is nothing to credit. **The DS4→DS47 migration has no DDP billing impact.**
+Caveat: absence from `enriched_impressions` is not independent proof (that table records what was *targeted*),
+so the mechanism above is the load-bearing evidence. If `crm_exclusion_data_source` is ever pointed at an
+inclusion path this flips — a standing DS47 count in `enriched_impressions` is the cheap monitor.
+
+**Do not use `external.audience__campaign_segment_history` to check this** — it contains only DS4 (10,370 rows
+/ 3,754 campaigns as of 2026-08), and carries neither DS47 nor DS63 even though DS63 is demonstrably live. It
+does not track the newer data sources.
+
+### DS63 (CRM Inclusions) — live 2026-08-06, and its crediting leg has four measured defects
+
+DS63 is the graph-based **inclusion** replacement for DS4. Live from 2026-08-06; ~11-14K impressions/day after
+an initial spike (peak 112,703 on 08-07) against DS4's steady ~1.4-1.6M/day, so **under 1% of DS4 volume**.
+93.7% of its impressions fall inside the billing scope (`channel_id=8, funnel_level=1, objective_id=1`).
+
+Measured on `ddp_crm_graph_cpm` (dt 2026-08-06..08-12, 214,251 impressions, AUDI-694):
+
+- **Deepsync (DS29) is the only per-impression-billable source on the graph path**, present on 96.6% of
+  impressions. Everything else enabling those impressions is free (augmentor_log 30 at 98.7%, guid_log 23 at
+  82.1%), flat-fee (Experian 22 at 97.4%), or absent from `direct_data_partners` entirely (Audience Acuity 58
+  at 96.0%). Average 4.7 sources per impression. **99.6% of deepsync-credited impressions also carry a free log.**
+- **The divisor choice is worth 4.7x.** Counting only billable partners (what `bae-sql-utility#24` does) gives
+  deepsync 209,076 shares; counting all graph sources the way the MM leg does gives 44,627; full free-log
+  preemption (AUDI-1113) gives 807. Kale McNaney ruled 2026-08-18 that the graph leg should use **the same
+  fractional math as DDP crediting today** — i.e. the middle option — which the leg as built does not do.
+- **39.3% of in-scope DS63 impressions get no crediting row at all** (138,579 of 352,830). The DS4 leg
+  deliberately inserts unmatched CRM impressions at cpm 0 *"to ensure we are not over crediting to TPA/MM
+  Matches"*; the graph leg has no equivalent, so those impressions hand their full share to TPA/MM. This runs
+  **opposite** to the divisor finding — net them before quoting any single figure.
+- **33Across is counted twice.** DS40 carries `primary_data_source_id = 28`, so it credits to DS28, but the
+  graph leg counts raw `report_data_source_id` where 28 and 40 are distinct. Same error BAE hit on BAE-4923.
+  Separately `report_data_source_id = 35` matches two registry rows (35 LiveRamp IP, 11 LiveRamp) and the
+  graph partner table does not dedup, so LiveRamp fans out. And variable-CPM partners (35, 51 Bombora) have a
+  null `fixed_cpm`, so they bill $0 while still occupying a divisor slot and diluting everyone else.
+
+Deepsync bills **$22,379.79 Jan–Jul 2026** (~$38K/yr) through the legacy DS4 path; `usage_reporting_data` has
+no DS63 rows, so graph crediting has never been billed. Dollars are small today; the multipliers are the point.
