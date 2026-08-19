@@ -235,3 +235,83 @@ Kirsa (incrementality team) asked for the data from "the Gruns campaign that ran
 - **Ghost-bid lift caveat (corrected per Matt's bias register):** the spurious-negative / inflated-holdout artifact is **bid-multiplicity (win-history-exit) selection, NOT frequency-cap asymmetry** (fcap is config-OFF for prospecting); de-bias by gating to clean `ghost_frac ∈ [.095,.11]`. Either way it affects the eventual *lift estimate*, not this *power* screen — eligibility ≠ guaranteed lift. Internal ghost-bid lift is ~0 (underpowered) today; power is the binding constraint, which is the whole reason this screen exists.
 - Prior-lift signal could be upgraded to Matt's production-ghost-bid FDR candidates (more current/platform-wide) — see Jira follow-up.
 - Hand the Top-tier shortlist to the LiftLab beta pipeline (Edgar von Trotha) / internal ghost-bid tests.
+
+---
+
+## 9. Rerun on current data — 2026-08-19
+
+Imani Clark asked for the analysis (Slack, 2026-08-19) to size where MNTN drives lift across the advertiser base and to pick beta advertisers. Rerun end to end on current data and rebuilt on the shared `lib/mntn_xlsx` format. **Headline: +4.7% incremental site-visit lift, not the +18.6% a naive full-window pool reports.**
+
+**Deliverable:** `My Drive/Tickets/INCR/INCR-75/INCR-75 Incrementality Lift Test Candidates.xlsx`
+(<https://docs.google.com/spreadsheets/d/1KoatqZq24_5QCCelg3DH15BpPtWv12lb/edit>). Builder `artifacts/incr_75_build_workbook.py`; the June hand-rolled `incr_75_build_xlsx.py` is superseded. June outputs archived at `outputs/_archive_2026_06/`.
+
+### 9.1 What changed in the numbers
+
+| | 2026-06/07 run | 2026-08-19 rerun |
+|---|---|---|
+| Universe (delivered 30d) | 2,009 | 1,859 |
+| Eligible | 1,270 | 1,215 |
+| Tier Top / Mid / Low | 28 / 152 / 1,090 | 81 / 207 / 927 |
+| Measured window | 06-23..07-01 (9d) | 06-23..07-07 (15d) |
+| Pooled visit lift | +3-5% (count pool) | **+4.66%**, CI [+4.35%, +4.96%], z=30.4 (log-RR, 1,054 advertisers) |
+| Pooled conversion lift | not computed | **+3.33%**, CI [+1.77%, +4.91%], z=4.2 (624 advertisers) |
+
+Top tripling (28 → 81) has two causes, both real: the window is 15 days not 9, so more advertisers reach a confirmed positive; and `typical_active_month_spend` now uses the advertiser-facing total (media + data + platform) instead of media only, so more advertisers clear the power gate at their actual spend.
+
+### 9.2 The entry-cohort window CANNOT be extended — it self-poisons
+
+The source table now holds 2026-06-22..2026-08-18 (58 days, 4.22B rows, 1,498 advertisers). **The usable window did not grow with it.** Naive pool over the full clean-of-left-edge window reads **+18.6%** (visits) — an artifact.
+
+Mechanism: the entry-cohort anchors each IP at its FIRST bid, forever. A holdout IP never wins, so it never exits the prospecting pool and is anchored almost immediately; treatment IPs churn and new ones keep arriving. Later entry cohorts are therefore increasingly treatment-only. Evidence (`outputs/incr_75_ghost_byday.csv`, query `incr_75_entry_cohort_byday_window.sql`):
+
+- observed ghost_frac falls monotonically **0.1054 (06-23) → 0.0836 (08-11)** against a FIXED 10% platform holdout;
+- measured rel lift climbs in lockstep **+2.8% → +16..26%**, peaking at +94% on 07-16;
+- holdout entries decay faster than treatment (8.2x vs 6.6x drop across the window) — the signature of holdout exhaustion, not of a lift trend.
+
+Same failure class as the June left-edge artifact (§4), opposite direction. **Rule: the entry-cohort estimate is valid only while observed ghost_frac sits in the clean 0.09-0.11 band. That ends 2026-07-07.** A longer window makes this estimator worse, not better. Windowed lift on this instrument is capped at ~15 days unless the anchor is redefined (e.g. re-entry allowed after a cooldown, or a served-grain ATT with IV).
+
+### 9.3 The MNTN Rust bidder leg (partner_id 79) is in the table and is not usable
+
+Partner 79 first appears the week of **2026-07-05** (superseding memory `reference_ghost_bid_lift_register`, which recorded it as not yet folded in as of 2026-08-03). Its observed ghost_frac is 0.066-0.083 from its FIRST week and it reads **+128% to +290%** rel lift. Excluded from every number here (`WHERE partner_id = 8`). Ask Matt Brorby whether the leg's holdout write path is wired before anyone quotes it.
+
+### 9.4 The persuadables gradient REVERSES under a correct relative-effect estimator
+
+**This contradicts a recorded, decision-driving finding. Both readings stand; the discriminating test was run.**
+
+Recorded (2026-06-25 register, refreshed 2026-07-24 for AUDI-789): Mid +9.2% · MaxReach +6.6% · PP +1.8% · High +1.7% · no_score +0.2% (dead) — "mid-intent carries the lift, unscored reach is incrementally dead."
+
+Rerun, clean window, pooled on the **log risk ratio** across advertisers within band (`incr_75_band_lift_clean.sql`, `artifacts/incr_75_lift_stats.py`):
+
+| Band | rel lift | 95% CI | z |
+|---|---|---|---|
+| Unscored | **+6.06%** | [+5.5%, +6.6%] | +21.3 |
+| Peak Performance | +3.78% | [+2.5%, +5.0%] | +6.1 |
+| High Intent | +2.93% | [+2.5%, +3.3%] | +15.3 |
+| Mid Intent | -0.05% | [-3.3%, +3.3%] | -0.0 |
+| Max Reach | -1.58% | [-6.3%, +3.3%] | -0.6 |
+
+**Discriminating test (run 2026-08-19, settles it):** re-estimate the SAME gold clean-gated `score_band` strata the register used, both ways.
+
+| Band | log-RR pool | register's estimator (abs-IVW ÷ base-IVW) |
+|---|---|---|
+| no_score | +23.8% (z=95.6) | +64.9% |
+| PP | +12.1% (z=20.7) | +60.2% |
+| High | +11.5% (z=69.9) | +29.5% |
+| MaxReach | +3.9% (z=2.9) | **+169.9%** |
+| Mid | +2.6% (z=3.2) | **+86.7%** |
+
+The register's estimator divides an inverse-variance-weighted ABSOLUTE effect by an inverse-variance-weighted BASE RATE. The IVW base rate is dominated by the lowest-variance strata and collapses (measured here to 0.0000-0.02% against true base rates of 0.08-1.1%), which inflates exactly the low-baseline bands — Mid (0.16% base) and MaxReach (0.08% base). That is the whole of the "mid-intent carries the lift" result. On the log risk ratio, which carries the relative effect and its variance together and needs no external baseline, the ordering on BOTH windows is: unscored highest, mid-intent/max-reach ~0.
+
+**So the reversal is an estimator correction on the same data, not a new-data disagreement.** What survives from the register: the *naive count pool* is also wrong (it reads +8.3% for unscored and +2.1% for Mid here — the register was right to reject it). What does not survive: the specific magnitudes and the "avoid top-intent, target mid-intent" ordering, and therefore the AUDI-789 WS1 warning built on it. Raised as an open item, not silently patched into the register.
+
+Caveat on both readings: this is bid-grain ITT (win-rate diluted), not served-grain ATT, and at these N's per-campaign significance counts are bias-floor inflated — read magnitude and CI, never sig-counts.
+
+### 9.5 Schema change found during the rerun
+
+`dw-main-silver.aggregates.agg__daily_sum_by_campaign` **no longer exists** (the whole `agg__*` family is gone from `silver.aggregates`; verified by `bq ls` 2026-08-19). The metrics query now takes the 12-month spend pattern from `silver.summarydata.sum_by_advertiser_by_day` — already advertiser grain, fresh through the current day, same spend columns. Its physical table REQUIRES a `day` filter for partition elimination, so the old unfiltered `MAX(day)` bounds probe is rejected; the window is anchored on `CURRENT_DATE()` instead.
+
+### 9.6 Open items from the rerun
+
+1. **Ask Matt Brorby** (a) whether partner 79's holdout write path is wired, and (b) whether the entry-cohort anchor can be redefined so a >15-day window is measurable.
+2. **AUDI-789 WS1 guidance needs revisiting** — the "a visit/spend-optimized scorer de-optimizes incrementality" warning rests on the reversed band ordering.
+3. Imani will want a fresh per-advertiser pull once the beta advertisers are chosen; that is `incr_75_entry_cohort_clean.sql` filtered to their IDs.

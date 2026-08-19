@@ -1,7 +1,14 @@
 """Definitive current-lift fold + STAGED measured-lift gate (per user, 2026-07-02).
 
-Measured lift = entry-anchored, EXCLUDING 2026-06-22, 7d-from-first-bid window
-(Matt Brorby). Source: silver enriched.lift__ghost_bid_visits (Beeswax/JVM leg).
+Measured lift = entry-anchored, 7d-from-first-bid window, entry dates 2026-06-23..
+2026-07-07, Beeswax leg (partner_id 8) only. Source: silver enriched.lift__ghost_bid_visits.
+
+Window note (2026-08-19 rerun): the table now holds 06-22..08-18, but the window does NOT
+extend. The entry-cohort design exhausts the holdout arm — a holdout IP never wins, so it
+never leaves the pool and is anchored almost immediately, while treatment IPs churn and new
+ones keep arriving. Observed holdout share falls 0.105 -> 0.084 against a fixed 10% platform
+holdout and measured lift inflates with it (+3% -> +25%). Valid only while the observed
+holdout share sits in the clean 0.09-0.11 band, which ends 2026-07-07.
 
 Staged gate applied on top of the a-priori (power/spend/prior) tiers:
   • EXCLUDE advertisers with a significant NEGATIVE measured lift (we've shown they
@@ -45,14 +52,27 @@ def stats(vt, nt, vh, nh):
 
 
 gi = lambda r, k: int(r[k])
-ex = {r["advertiser_id"]: r for r in load("incr_75_ghost_excl0622.csv")}
+
+
+def _conv(R):
+    """Conversion-arm read for the same clean cohort (new in the 2026-08 rerun)."""
+    if not R or gi(R, "n_h") == 0:
+        return dict(conv_rel_lift="", conv_z="", conv_holdout_count="")
+    _, rel, z, _, _, _ = stats(gi(R, "c_t"), gi(R, "n_t"), gi(R, "c_h"), gi(R, "n_h"))
+    return dict(
+        conv_rel_lift=(round(rel * 100, 1) if rel is not None else ""),
+        conv_z=(round(z, 2) if z is not None else ""),
+        conv_holdout_count=gi(R, "c_h"),
+    )
+ex = {r["advertiser_id"]: r for r in load("incr_75_ghost_clean_window.csv")}
 elig = load("incr_75_final_tiered.csv")           # a-priori eligible (1,287)
 allf = load("incr_75_all_flagged.csv")            # a-priori all (2,009)
 funnel = load("incr_75_funnel_counts.csv")
 
 MEAS_COLS = ["in_ghost_table", "current_lift_confirms", "current_rel_lift",
              "current_abs_lift_pp", "ghost_vis_clean", "current_z", "current_p",
-             "current_ci_low_pp", "current_ci_high_pp", "current_lift_source"]
+             "current_ci_low_pp", "current_ci_high_pp", "current_lift_source",
+             "conv_rel_lift", "conv_z", "conv_holdout_count"]
 
 
 def verdict(R):
@@ -100,7 +120,8 @@ for r in elig:
         current_p=(round(m["p"], 4) if m.get("p") is not None else ""),
         current_ci_low_pp=(round(m["lo"] * 100, 4) if m.get("lo") is not None else ""),
         current_ci_high_pp=(round(m["hi"] * 100, 4) if m.get("hi") is not None else ""),
-        current_lift_source="entry_cohort_excl_0622",
+        current_lift_source="entry_cohort_2026_06_23_to_07_07_partner8",
+        **_conv(inrow),
     )
     # value_score stays the ORIGINAL a-priori 0–100 quality score (user 2026-07-06: reverted the
     # lift-adjusted "new score" — measured lift lives in the [MEASURED NOW] columns + the tier gate, not the score).

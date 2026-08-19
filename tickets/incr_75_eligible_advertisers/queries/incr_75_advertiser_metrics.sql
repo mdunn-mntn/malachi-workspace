@@ -1,4 +1,4 @@
--- INCR-75: per-advertiser eligibility metrics for incrementality lift tests.
+-- incr_75_advertiser_metrics.sql — per-advertiser eligibility metrics: spend, visit rate, conversion rate, reach.
 --
 -- Fork of TI-1019 (ti_xxx_advertiser_prefill_metrics.sql). Differences:
 --   1. FULL universe — no >$1k spend floor (spend becomes a scored dimension,
@@ -15,8 +15,15 @@
 --
 -- Source notes:
 --   - 30d metrics → cost_impression_log / clickpass_log / ui_conversions (fresh).
---   - 12mo monthly-spend pattern → agg__daily_sum_by_campaign (stale ~1mo but the
---     pattern, not the latest month, is what we need).
+--   - 12mo monthly-spend pattern → summarydata.sum_by_advertiser_by_day.
+--     (The 2026-06 run used aggregates.agg__daily_sum_by_campaign; that view NO LONGER
+--     EXISTS in silver.aggregates as of 2026-08-19. sum_by_advertiser_by_day is already
+--     at advertiser grain, is fresh through the current day, and carries the same
+--     media/data/platform spend columns. Monthly spend now uses the SAME advertiser-facing
+--     total as spend_30d — the old version summed media_spend only, which understated
+--     typical monthly spend and inflated the extra-ask gap. The 12mo window is anchored on
+--     CURRENT_DATE(), not a MAX(day) probe: the physical table REQUIRES a `day` filter for
+--     partition elimination, so an unfiltered MAX(day) CTE is rejected outright.)
 --   - cost_impression_log has NO TTL (fixed floor 2023-10-01, ~1,047 partitions,
 --     verified via INFORMATION_SCHEMA.PARTITIONS 2026-08-11). An earlier comment
 --     here claimed a 90-day TTL — it was wrong, and it made historical windows
@@ -24,9 +31,6 @@
 
 -- (Single statement — no DECLARE/script mode, so --format=csv returns clean CSV.)
 WITH
-agg_bounds AS (
-  SELECT MAX(day) AS agg_end FROM `dw-main-silver.aggregates.agg__daily_sum_by_campaign`
-),
 -- 1. Per-(advertiser, ip) impressions + advertiser-facing spend, trailing 30d.
 ad_ip_30d AS (
   SELECT
@@ -83,12 +87,12 @@ monthly_spend AS (
   SELECT
     advertiser_id,
     DATE_TRUNC(day, MONTH) AS month_start,
-    SUM(CAST(media_spend AS FLOAT64)) AS month_spend
-  FROM `dw-main-silver.aggregates.agg__daily_sum_by_campaign`, agg_bounds
-  WHERE day BETWEEN DATE_SUB(agg_bounds.agg_end, INTERVAL 365 DAY) AND agg_bounds.agg_end
+    SUM(CAST(COALESCE(media_spend,0) + COALESCE(data_spend,0) + COALESCE(platform_spend,0) AS FLOAT64)) AS month_spend
+  FROM `dw-main-silver.summarydata.sum_by_advertiser_by_day`
+  WHERE day BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 365 DAY) AND CURRENT_DATE()
     AND advertiser_id IN (SELECT advertiser_id FROM trailing_30d)
   GROUP BY 1, 2
-  HAVING SUM(CAST(media_spend AS FLOAT64)) > 1000
+  HAVING SUM(CAST(COALESCE(media_spend,0) + COALESCE(data_spend,0) + COALESCE(platform_spend,0) AS FLOAT64)) > 1000
 ),
 active_month_stats AS (
   SELECT
