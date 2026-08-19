@@ -1,7 +1,7 @@
 ---
 doc_type: ticket
 title: "AUDI-694: Update targeted_signal to Handle Billing"
-status: in_progress
+status: done
 date: 2026-08-17
 summary: "DDP vendor crediting as CRM inclusions migrate DS4 -> DS63; review of the unmerged DS63 crediting PR"
 result: "DS47 has zero impressions, so the ticket as written is a no-op; all exposure is DS63. Two opposing defects measured: the divisor choice moves deepsync 4.7x (259x under preemption), and 39.3% of in-scope DS63 impressions get no crediting row at all. PR bae-sql-utility#24 cannot compile and is not the current design."
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-694: Update targeted_signal to Handle Billing
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-694
-**Status:** in_progress
+**Status:** done
 **Date Started:** 2026-08-17
 **Assignee:** Malachi
 
@@ -404,16 +404,60 @@ worth $768,916/yr at MM scale and independently reproduced by BAE on BAE-4923. T
 crediting as settled re-adopts the defect by default.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+
+**No work is needed from AUDI. Close the spike.** Confirmed by Jack Barbey 2026-08-19: *"for DS47 and
+DS63, we won't need inputs in targeted_signal or identity_targeted_signal. Previously, that one table
+would contain both DDP and graph vendor lists, but now we are splitting those into multiple tables
+which get combined later."*
+
+The spike asked what AUDI must change in `targeted_signal` to support graph-era billing. Answer, per
+branch:
+
+| branch | verdict | evidence |
+|---|---|---|
+| DS4 to DS47 | **No change.** DS47 never reaches the meter. | Zero impressions in `enriched_impressions` on all 17 days checked; exclusion-only by design (`crm_exclusion_data_source`, rollout plan D-3 and BS-14) |
+| DS4 to DS63 | **No change.** DS63 needs no DDP vendor list. | The segment is the advertiser's own CRM upload, so no DDP vendor sits behind it (Jack, 2026-08-18). The DS63 exposure is Vendor Lists 2/3, owned by Identity |
+| MNTN ID | **Later, and already built.** | Vendor List 1 applies, and Sean shipped `mntn-data-archive-prod/signals/identity_targeted_signal` under AUDI-953. Mike Dolt 2026-08-19: not needed to start testing MNTN ID; AP owns the DDP crediting pipeline |
+
+**Ownership as settled (2026-08-19):**
+- Vendor List 1 (DDP) — AUDI logs it; **AP** owns the crediting pipeline that consumes it.
+- Vendor Lists 2 and 3 (graph) — Identity. Needed this month for DS63, on track.
+- The monthly DDP script — **AP runs it from August**; BAE provides the updated version. Maya's
+  walkthrough is Monday.
+
+**Follow-on work, not this ticket:**
+1. Wire Vendor List 1 into the crediting run when MNTN ID nears testing. Owner AP, input from AUDI.
+2. The crediting-rule decisions this spike priced but did not settle (see 4.7, 4.10) route to
+   AUDI-1113 and the #identity-crediting thread, not here.
+
+**Findings handed off rather than dropped.** The measurements in 4.4, 4.7 and 4.9 describe defects in
+the graph crediting leg that AUDI does not own. They were given to Wei and Jack directly, and Jack is
+running his own simulations off `ddp_crm_graph_cpm` using the query in
+`queries/audi_694_ds63_divisor_scenarios.sql`. Live risk to flag at Monday's walkthrough: **the August
+payout is being computed on this logic now.**
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+
+- **Q:** Does the DS4 to DS47 migration break DDP billing, as the ticket premise states?
+  **A:** No. DS47 is exclusion-only and has zero impressions in `enriched_impressions` on every day
+  checked. An excluded household is never served, so there is nothing to credit. The ticket's premise
+  does not hold.
+- **Q:** Does DS63 need to be added to `targeted_signal` / `identity_targeted_signal`?
+  **A:** No. DS63 sources its input from the advertiser's own CRM list, so there is no DDP vendor
+  behind the segment. Its crediting exposure is entirely Vendor Lists 2 and 3, which Identity owns.
+- **Q:** What does AUDI owe the graph billing work?
+  **A:** Vendor List 1 only, and only for MNTN ID. `identity_targeted_signal` already delivers it
+  (AUDI-953). Nothing further is needed now.
+- **Q:** Who owns the crediting logic?
+  **A:** AP owns the DDP crediting pipeline and runs the monthly script from August; BAE supplies the
+  updated script; Identity owns Vendor Lists 2 and 3. The business rules for splitting credit remain
+  open in #identity-crediting, with Kale having stated the graph leg should use the same fractional
+  math as DDP crediting today.
+- **Q:** Is the graph crediting leg correct as built?
+  **A:** No, and it is not AUDI's to fix. Measured defects: the divisor pays deepsync 4.7x what Kale's
+  stated rule would (4.7); 39.3% of in-scope DS63 impressions get no crediting row (4.9); 33Across is
+  counted as two vendors (4.4); `bae-sql-utility#24` cannot compile (4.0). All handed to Wei and Jack.
+
 
 ## 7. Data Documentation Updates
 What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
