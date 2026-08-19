@@ -84,8 +84,10 @@ documents, two different `jwks_uri`, and zero shared key ids:
 Both return HTTP 200. Any client or downstream service that validates a token against the set it did not
 issue from fails signature verification. The two documents also disagree on `grant_types_supported`
 (`implicit` appears only in the OIDC doc), `response_types_supported`, and
-`token_endpoint_auth_methods_supported`. **Not yet established** whether this breaks the Claude connection
-itself, since MCP clients usually hold the bearer rather than validate it. Reported to Benny 2026-08-19.
+`token_endpoint_auth_methods_supported`. **RESOLVED 2026-08-19: Benny confirmed the second key set is deadweight and no longer relevant**, so this
+is dead config rather than a live signature risk. Kept here because both documents still resolve and a
+client that discovers via `openid-configuration` still reads the orphan `jwks_uri`; if it disappears,
+that is the cleanup landing.
 
 ## Tool surface (17 tools, inventoried 2026-08-19)
 
@@ -144,7 +146,8 @@ returns `MarketingObjectiveInfo.Name` and `ChannelInfo.Name` as separate keys an
 **Always pass `fullName: true` when grouping by more than one dimension.** This is worst for an LLM
 client, which will narrate the collapsed rows confidently. Filed to MNTN engineering 2026-08-19 via the
 server's own `submit_feedback` tool, id **`fb_fea70a02-7235-46b3-a475-2f678049dcbd`**, category `bug`,
-severity `medium`. That tool posts under the **MNTN OAuth identity**, not the Claude account, and its
+severity `medium`. **Benny confirmed 2026-08-19: being fixed and deployed** — re-test before relying on
+the default. That tool posts under the **MNTN OAuth identity**, not the Claude account, and its
 contract requires showing the user the exact text and getting an explicit yes before sending.
 
 Minor: `MarketingObjectiveInfo.Name` help text says "Deprecated, use CampaignStrategyInfo.Name", but
