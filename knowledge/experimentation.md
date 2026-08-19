@@ -1883,6 +1883,40 @@ Refreshed the persuadables gradient on the now-longer gold window (`dw-main-gold
 
 **3. Raw-visit rank and incremental-lift rank are ~inverted — the scoring warning for AUDI-789.** By raw holdout visit rate: High 1.14% > no_score 0.79% > PP 0.63% > Mid 0.25% > MaxReach 0.16%. By incremental rel lift: Mid > MaxReach > PP > High > no_score. **The bands a visit/spend-optimized scorer chases (High, no_score) are the incrementally deadest.** So AUDI-789 WS1 (make Fangorn better at predicting Spend/Visits) will pull spend toward would-visit-anyway audiences and AWAY from the persuadables unless incremental lift is added as a scoring target/guardrail. WS2 ("validate incrementality") has a ready instrument: the gold ghost-bid tables gated by band. Posted as AUDI-789 finding 2026-07-24. Caveat: bid-grain ITT (win-rate-diluted, not served ATT); per-campaign significance counts are bias-floor-inflated at these N's (read magnitude, not sig-counts).
 
+### CONTRADICTION — the band gradient reverses under a correct relative-effect estimator (INCR-75 rerun, 2026-08-19)
+
+**Both readings stand. The disagreement is an ESTIMATOR disagreement on the same data, not a data disagreement, and the discriminating test has been run.** Do not delete the 2026-07-24 block above; read it with this one.
+
+**The claim above** (Mid +9.2% · MaxReach +6.6% · PP +1.8% · High +1.7% · no_score +0.2%, "mid-intent carries the lift, no_score dead") is computed as **IVW absolute effect ÷ IVW base rate**: `SUM(abs_itt/se²)/SUM(1/se²)` divided by `SUM(rate_holdout/se²)/SUM(1/se²)`. The numerator is sound. **The denominator is not** — an inverse-variance-weighted base rate is dominated by the lowest-variance strata and collapses toward zero (measured 0.0000–0.02% against true band base rates of 0.08–1.1%). Dividing by a collapsed denominator inflates exactly the LOWEST-baseline bands, which are Mid (0.16%) and MaxReach (0.08%). That is the whole of the "mid-intent carries the lift" ordering.
+
+**Pool relative lift on the LOG RISK RATIO instead.** `log(p_t/p_h)`, variance `(1-p_t)/(p_t·n_t) + (1-p_h)/(p_h·n_h)`, inverse-variance combined. It carries the relative effect and its own variance together, so it needs no external baseline. Helper: `tickets/incr_75_eligible_advertisers/artifacts/incr_75_lift_stats.py` (`pool_rr`).
+
+**Discriminating test (2026-08-19) — the SAME gold clean-gated `score_band` strata, both estimators:**
+
+| Band | log-RR pool | IVW-abs ÷ IVW-base (the 2026-07-24 method) |
+|---|---|---|
+| no_score | +23.8% (z=95.6) | +64.9% |
+| PP | +12.1% (z=20.7) | +60.2% |
+| High | +11.5% (z=69.9) | +29.5% |
+| MaxReach | +3.9% (z=2.9) | **+169.9%** |
+| Mid | +2.6% (z=3.2) | **+86.7%** |
+
+On the INCR-75 clean 15-day window (`incr_75_band_lift_clean.sql`), log-RR pooled per advertiser within band: **Unscored +6.06% [+5.5,+6.6] · PP +3.78% [+2.5,+5.0] · High +2.93% [+2.5,+3.3] · Mid −0.05% [−3.3,+3.3] n.s. · MaxReach −1.58% [−6.3,+3.3] n.s.** Same ordering on both windows: **unscored highest, mid-intent and max-reach indistinguishable from zero.**
+
+**What survives from the 2026-07-24 block:** lesson 1 is still right — the naive count pool is wrong (it reads unscored +8.3% / Mid +2.1% on the clean window). **What does not survive:** the magnitudes in lesson 2, the "Mid > MaxReach > PP > High > no_score" ordering, and therefore the AUDI-789 WS1 warning in lesson 3, which rests on that ordering. **Revisit AUDI-789 WS1 before acting on it.**
+
+**What would settle it further:** a served-grain ATT with an instrument for win-rate (both readings are bid-grain ITT, win-rate diluted), and a re-read once the MNTN Rust bidder leg (partner 79) has a trustworthy holdout — see the INCR-75 note that it entered the table 2026-07-05 reading +128% to +290% at ghost_frac 0.066–0.083.
+
+### The entry-cohort ghost-bid estimator self-poisons past ~15 days (INCR-75 rerun, 2026-08-19)
+
+**The measurable window did NOT grow when the ghost-bid tables started accumulating.** `enriched.lift__ghost_bid_visits` held 2026-06-22..2026-08-18 (58 days, 4.22B rows, 1,498 advertisers) on 2026-08-19, and a naive pool over everything after the known-bad left edge reads **+18.6% visit lift**. It is an artifact.
+
+**Mechanism.** The entry-cohort anchors each IP at its FIRST bid, permanently (`ROW_NUMBER() … PARTITION BY adv,campaign,ip ORDER BY dt = 1`). A holdout IP never wins, so it never exits the prospecting pool and is anchored almost immediately; treatment IPs win, exit, and are replaced by new arrivals. Each successive entry day therefore samples a pool that is more treatment-only than the last. **Observed ghost_frac decays monotonically 0.1054 (06-23) → 0.0836 (08-11) against a FIXED 10% platform holdout, and measured rel lift climbs in lockstep +2.8% → +16–26% (peak +94% on 07-16).** Holdout entries decay 8.2x across the window vs treatment 6.6x — holdout exhaustion, not a lift trend.
+
+**Rule: the estimate is valid only while observed ghost_frac sits in the clean 0.09–0.11 band.** For the 2026-06-22 table floor that ends **2026-07-07** — about 15 days. This is the same failure class as the 06-22 left-edge stock artifact (which ran the other way, ghost_frac 0.118 → spurious −18.1%), so **check ghost_frac by entry day on BOTH ends before quoting any windowed ghost-bid number**: `queries/incr_75_entry_cohort_byday_window.sql`. Also right-censor: `visited` = visit within 7d of first bid, so entries after MAX(dt)−7d are incomplete.
+
+**Consequence:** a >15-day windowed ghost-bid lift needs a different anchor (re-entry after a cooldown, or a served-grain ATT with IV), not a longer date range. Raised with Matt Brorby.
+
 ### Folding measured lift into a test-candidate screen — the staged gate + the two-instrument gotcha (INCR-77, 2026-07-02)
 Two durable lessons from folding live ghost-bid lift into the INCR-75 eligibility screen (workbook `incr_75_eligible_advertisers.xlsx`; INCR-77 is the dedicated lift-measurement ticket, INCR-75 is the a-priori screen).
 

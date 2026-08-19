@@ -91,7 +91,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback-dont-extend-old-tickets | feedback | 2026-07-24 | [doc](memory/feedback_dont_extend_old_tickets.md) |
 | raspberry-pi-5-server | reference | 2026-07-24 | [doc](memory/reference_pi5_server.md) |
 | reference-workflow-audit-loop | reference | 2026-07-24 | [doc](memory/reference_workflow_audit_loop.md) |
-| reference_ghost_bid_lift_register | reference | 2026-07-24 | [doc](memory/reference_ghost_bid_lift_register.md) |
 | fast-first-bq | feedback | 2026-07-27 | [doc](memory/feedback_fast_first_bq.md) |
 | feedback_bluf_communication | feedback | 2026-07-27 | [doc](memory/feedback_bluf_communication.md) |
 | project_bq_optimization_discipline | project | 2026-07-27 | [doc](memory/project_bq_optimization_discipline.md) |
@@ -199,5 +198,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_prospecting_intent_query_rules | reference | 2026-08-18 | [doc](memory/reference_prospecting_intent_query_rules.md) |
 | reference_vertical_hi_sizing_baseline | reference | 2026-08-18 | [doc](memory/reference_vertical_hi_sizing_baseline.md) |
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-19 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
+| reference_ghost_bid_lift_register | reference | 2026-08-19 | [doc](memory/reference_ghost_bid_lift_register.md) |
 | reference_graph_vendor_crediting | reference | 2026-08-19 | [doc](memory/reference_graph_vendor_crediting.md) |
 | reference_ntb_definitions | reference | 2026-08-19 | [doc](memory/reference_ntb_definitions.md) |
