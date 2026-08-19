@@ -49,7 +49,7 @@ Rerun of INCR-75 on current data, rebuilt on the shared `lib/mntn_xlsx` format.
 | Pooled conversion lift | **+3.33%**, 95% CI [+1.77%, +4.91%], across 624 advertisers |
 | Eligible for a lift test | 1,215 of 1,859 delivering advertisers |
 | Tier Top / Mid / Low | 81 / 207 / 927 |
-| Where the lift is | Unscored +6.1% · Peak Performance +3.8% · High Intent +2.9% · Mid Intent and Max Reach ~0 (n.s.) |
+| Where the lift is | **Not answered.** The band split was built, failed verification, and was pulled — see §3.3 |
 
 ## 3. Two findings that limit the instrument
 
@@ -57,6 +57,8 @@ Both are written up in full, with the evidence and the discriminating test, in [
 
 1. **The measured window cannot be extended past 2026-07-07 (~15 days).** The entry-cohort anchor exhausts the holdout arm — a held-out IP never wins, so it never leaves the bidding pool and anchors immediately, while bid-on IPs churn. Observed holdout share decays 0.105 → 0.084 against a fixed 10% platform holdout and lift inflates to a false +18.6% over the full 58-day table. More data did not buy a longer window.
 2. **The recorded audience-band gradient reverses under a correct relative-effect estimator.** "Mid-intent carries the lift, unscored is dead" came from dividing a precision-weighted absolute effect by a precision-weighted base rate; that denominator collapses and inflates exactly the lowest-baseline bands. Re-estimated on the log risk ratio, on the same data, unscored leads and mid-intent is ~0. Both readings are kept in the record.
+
+3. **The audience-band split failed verification and was pulled (§3.3).** Banding silver `eff_score` by the documented household-score cutpoints reproduces the platform's own `score_band` on only 3.7% of campaign×band cells. Imani's "where are we driving lift" question is therefore answered in aggregate but NOT by audience. Needs the real banding rule from Matt, or the gold `score_band` strata on a clean window.
 
 Also found: `partner_id` 79 (the MNTN Rust bidder leg) entered the lift table the week of 2026-07-05 reading +128% to +290% at a 0.066-0.083 holdout share, and is excluded as unreliable; and `silver.aggregates.agg__daily_sum_by_campaign` no longer exists, so advertiser spend now comes from `summarydata.sum_by_advertiser_by_day`.
 

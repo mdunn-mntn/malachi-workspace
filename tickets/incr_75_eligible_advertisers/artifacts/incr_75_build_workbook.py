@@ -82,10 +82,10 @@ for b in BAND_ORDER:
 df_band = pd.DataFrame(rows_band).sort_values("Visit lift", ascending=False)
 
 df_agg = pd.DataFrame([
-    {"Outcome": "Site visits", "Lift": vis["rel"], "Low": vis["lo"], "High": vis["hi"],
+    {"Outcome": "Site visits", "Lift": vis["rel"], "Range low": vis["lo"], "Range high": vis["hi"],
      "Real?": "Yes" if vis["p"] < 0.05 else "No", "Advertisers": vis["k"],
      "Held-out IPs": N_H, "Bid-on IPs": N_T},
-    {"Outcome": "Conversions", "Lift": conv["rel"], "Low": conv["lo"], "High": conv["hi"],
+    {"Outcome": "Conversions", "Lift": conv["rel"], "Range low": conv["lo"], "Range high": conv["hi"],
      "Real?": "Yes" if conv["p"] < 0.05 else "No", "Advertisers": conv["k"],
      "Held-out IPs": N_H, "Bid-on IPs": N_T},
 ])
@@ -194,26 +194,14 @@ wb.table(
 )
 
 wb.table(
-    "Where lift comes from", df_band,
-    finding=f"Across the base the platform lifts site visits {100 * vis['rel']:.1f}%; unscored reach leads, mid-intent shows none",
-    method=f"Ghost-bid holdout, {WINDOW}, pooled across advertisers on the log risk ratio. Bands are the intent score at bid time. See Method & caveats.",
-    formats={"Visit lift": PCT, "Low": PCT, "High": PCT, "Base rate": FMT.PCT2,
-             "Advertisers": FMT.INT, "Held-out IPs": FMT.INT, "Bid-on IPs": FMT.INT},
-    signal={"Visit lift": {"sig": "Real?"}},
-    kind="headline",
-    toc="Aggregate lift, and which audiences produce it",
-    query="incr_75_band_lift_clean.sql",
-)
-
-wb.table(
     "Lift in aggregate", df_agg,
     finding=f"Visits lift {100 * vis['rel']:.1f}% and conversions {100 * conv['rel']:.1f}% across {vis['k']:,} advertisers",
-    method=f"Same cohort as Where lift comes from. Held-out IPs were selected for bidding, then not bid on. {WINDOW}.",
-    formats={"Lift": PCT, "Low": PCT, "High": PCT, "Advertisers": FMT.INT,
+    method=f"Held-out IPs were selected for bidding, then not bid on. {WINDOW}. Range low and high bound the 95% confidence interval. See Read me.",
+    formats={"Lift": PCT, "Range low": PCT, "Range high": PCT, "Advertisers": FMT.INT,
              "Held-out IPs": FMT.INT, "Bid-on IPs": FMT.INT},
     signal={"Lift": {"sig": "Real?"}},
-    kind="data",
-    toc="The two headline numbers with their ranges",
+    kind="headline",
+    toc="Start here: the two headline numbers and their ranges",
     query="incr_75_entry_cohort_clean.sql",
 )
 
@@ -266,7 +254,7 @@ wb.glossary(
         ("Held-out IPs", "The withheld 10%. They are the control group."),
         ("Visit lift", "How much more often a bid-on IP visits the site than a held-out one, as a percentage of the held-out rate. +5% on a 1% base means 1.05%, not 6%."),
         ("Real?", "Whether the range excludes zero at 95% confidence. 'No' means the measurement cannot tell the lift apart from nothing."),
-        ("Low / High", "The 95% range. The true lift is somewhere in it."),
+        ("Range low / Range high", "The 95% confidence interval. The true lift is somewhere between them."),
         ("", ""),
         ("The forecast", ""),
         ("Visit rate", "Of the IPs an advertiser served in the last 30 days, the share that visited the site."),
@@ -279,13 +267,7 @@ wb.glossary(
         ("Mid", "One of the two, not both."),
         ("Low", "Neither. Still eligible, but a test would need more spend or a longer window."),
         ("Score", "A 0-100 candidate quality score from power, spend, brand size, visit rate and past test results. It ranks advertisers WITHIN a tier. Measured lift is not part of it."),
-        ("", ""),
-        ("Audience bands", ""),
-        ("High Intent", "In the advertiser's vertical and matching its keywords."),
-        ("Peak Performance", "In the vertical, matching no keyword."),
-        ("Mid Intent", "In the parent industry but not the vertical."),
-        ("Max Reach", "Matches a keyword but sits outside the industry."),
-        ("Unscored", "Reached without an intent score. Includes geo-targeted and non-matched buying."),
+
     ],
 )
 
@@ -299,8 +281,8 @@ wb.notes(
          "The observed held-out share falls from 10.5% on 06-23 to 8.4% on 08-11 against a fixed 10% platform holdout, and measured lift climbs from +3% to +25% over the same days. Pooling the full window gives +18.6%. That number is an artifact of the shrinking control group, not a better estimate."),
         ("Lift is pooled on the log risk ratio, not by counting",
          "Base visit rates run from under 0.1% to over 10%. Adding all visits and dividing lets the few largest advertisers decide the answer. Each advertiser is measured separately and combined by precision. The count pool reads +6.3% against the +4.7% reported here."),
-        ("This reverses the recorded audience-band result, and the reversal is an estimator fix",
-         "Earlier work recorded mid-intent as the band that lifts and unscored reach as dead. That divided a precision-weighted absolute effect by a precision-weighted base rate, which is unstable when base rates differ by orders of magnitude. Re-estimating the SAME data on the log risk ratio reverses it. Both readings are kept."),
+        ("Which audiences produce the lift is NOT answered here",
+         "A split by intent band was built and then pulled. The band rule reproduced the platform's own split on only 3.7% of campaigns, so any number built on it would be wrong. Separately, the recorded band ordering does not survive re-estimation. Both are open with Matt Brorby."),
         ("Only the Beeswax bidder is included",
          "The second bidder entered the source table the week of 2026-07-05 with a 6.6% to 8.3% held-out share from its first day, and reads +128% to +290%. It is excluded as unreliable rather than averaged in."),
         ("Measured lift and detectable lift are different instruments",
@@ -319,8 +301,8 @@ wb.notes(
 wb.sql_dir(
     "Queries", f"{T}/queries",
     order=["incr_75_advertiser_metrics.sql", "incr_75_entry_cohort_clean.sql",
-           "incr_75_band_lift_clean.sql", "incr_75_entry_cohort_byday_window.sql"],
-    ignore=["incr_75_entry_cohort_excl_leftedge.sql", "incr_75_entry_cohort_per_advertiser.sql",
+           "incr_75_entry_cohort_byday_window.sql"],
+    ignore=["incr_75_band_lift_clean.sql", "incr_75_entry_cohort_excl_leftedge.sql", "incr_75_entry_cohort_per_advertiser.sql",
             "incr_75_entry_cohort_pooled_byday.sql", "incr_75_matt_entry_cohort_perday_51660.sql",
             "incr_75_entry_cohort_window.sql", "incr_75_gold_clean_ivw.sql"],
     note="The four queries behind this workbook. Superseded 2026-06 variants are kept in the ticket, not here.",
@@ -329,7 +311,7 @@ wb.sql_dir(
 wb.cover(takeaways=[
     f"{len(df_top)} of {len(df_all_elig):,} eligible advertisers are ready now: they can power a 5% test in 8 weeks and already show a real lift.",
     f"Across {vis['k']:,} advertisers the platform lifts site visits {100 * vis['rel']:.1f}% and conversions {100 * conv['rel']:.1f}%.",
-    "Unscored reach carries the most lift and mid-intent shows none, reversing the earlier band reading.",
+    "At the eligible-cohort median a test needs about $250K over 8 weeks to prove a 5% lift.",
 ])
 
 # The ticket's Drive folder is Tickets/INCR/INCR-75 (the INCR project groups its tickets),

@@ -280,15 +280,9 @@ Partner 79 first appears the week of **2026-07-05** (superseding memory `referen
 
 Recorded (2026-06-25 register, refreshed 2026-07-24 for AUDI-789): Mid +9.2% · MaxReach +6.6% · PP +1.8% · High +1.7% · no_score +0.2% (dead) — "mid-intent carries the lift, unscored reach is incrementally dead."
 
-Rerun, clean window, pooled on the **log risk ratio** across advertisers within band (`incr_75_band_lift_clean.sql`, `artifacts/incr_75_lift_stats.py`):
+**RETRACTED — the clean-window band split originally reported here.** Verification on 2026-08-19 (after the first workbook build) shows the banding rule is wrong. `incr_75_band_lift_clean.sql` banded silver `eff_score` with the documented household-score cutpoints; joined per campaign×band against gold `lift__ghost_bid_results`, only **256 of 6,968 cells match exactly (3.7%)**, 458 within 1%. `eff_score` is not `household_score` — they agree on 59% of one day's partner-8 rows, `eff_score` is NULL on 27% where `household_score` is never NULL, and 43% of `eff_score` values are exactly 10000. The band sheet was pulled from the workbook and `incr_75_band_lift_clean.sql` is retained only as the record of the failed attempt. **Band this table only from the gold `stratum_type='score_band'` strata, or get the rule from Matt.**
 
-| Band | rel lift | 95% CI | z |
-|---|---|---|---|
-| Unscored | **+6.06%** | [+5.5%, +6.6%] | +21.3 |
-| Peak Performance | +3.78% | [+2.5%, +5.0%] | +6.1 |
-| High Intent | +2.93% | [+2.5%, +3.3%] | +15.3 |
-| Mid Intent | -0.05% | [-3.3%, +3.3%] | -0.0 |
-| Max Reach | -1.58% | [-6.3%, +3.3%] | -0.6 |
+The estimator finding below is unaffected: it is computed on the gold strata, which carry the platform's own banding.
 
 **Discriminating test (run 2026-08-19, settles it):** re-estimate the SAME gold clean-gated `score_band` strata the register used, both ways.
 
