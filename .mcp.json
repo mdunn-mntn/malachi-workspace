@@ -27,6 +27,10 @@
         "us-central1"
       ],
       "env": {}
+    },
+    "mntn": {
+      "type": "http",
+      "url": "https://mcp.ex.mountain.com/mcp"
     }
   }
 }
