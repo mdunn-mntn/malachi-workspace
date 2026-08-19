@@ -59,6 +59,34 @@ connection facts. Drive original is `1FMmeVfvfK80S57CBa2utsUBu_ns_rt0_VOZ7Sc1Ui9
 machine (gcloud carries no Drive scope, the Drive MCP is authed to a personal gmail, see
 [[reference_mntn_google_drive_access]]).
 
+## Auth topology (verified unauthenticated, 2026-08-19)
+
+Probed with plain `curl`, no credentials. An unauthenticated POST to the MCP endpoint returns
+`401 {"error":"unauthorized","error_description":"JWT token required"}` with
+`WWW-Authenticate: Bearer resource_metadata="https://mcp.ex.mountain.com/.well-known/oauth-protected-resource/mcp"`,
+so it implements RFC 9728 discovery correctly.
+
+- Protected-resource metadata resolves at both `/.well-known/oauth-protected-resource` and
+  `.../oauth-protected-resource/mcp`. `mcp_protocol_version` is `2025-06-18`.
+- Authorization server is **`https://auth-proxy.ex.mountain.com`**, a separate host from the MCP server.
+- Scopes are `openid profile email offline_access` plus **`mcp:read`**. Read-only is enforced at the
+  token scope, not only by convention, which is a stronger guarantee than the guide's prose claim.
+- Endpoints: auth `/oidc/auth`, token `/oidc/token`, dynamic registration `/oidc/reg`, PKCE S256.
+
+**Defect found: the authorization server publishes two disjoint key sets.** Same issuer, two discovery
+documents, two different `jwks_uri`, and zero shared key ids:
+
+| Discovery doc | `jwks_uri` | key ids served |
+|---|---|---|
+| `/.well-known/oauth-authorization-server` | `/.well-known/jwks.json` | `mntn-auth-1`, `mntn-auth-2` |
+| `/.well-known/openid-configuration` | `/oidc/jwks` | `mntn-oidc-1` |
+
+Both return HTTP 200. Any client or downstream service that validates a token against the set it did not
+issue from fails signature verification. The two documents also disagree on `grant_types_supported`
+(`implicit` appears only in the OIDC doc), `response_types_supported`, and
+`token_endpoint_auth_methods_supported`. **Not yet established** whether this breaks the Claude connection
+itself, since MCP clients usually hold the bearer rather than validate it. Reported to Benny 2026-08-19.
+
 ## Evaluation status: NOT YET RUN
 
 Registered but **not yet authorized**, so nothing about its output is verified. The advertised prompts are
