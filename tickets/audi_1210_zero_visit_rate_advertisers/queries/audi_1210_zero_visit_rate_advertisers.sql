@@ -1,4 +1,4 @@
--- audi_1209_zero_visit_rate_advertisers.sql — advertisers spending with no measurable site visits.
+-- audi_1210_zero_visit_rate_advertisers.sql — advertisers spending with no measurable site visits.
 --
 -- For each advertiser that served an impression in the trailing 30 days: the distinct IPs it
 -- served, how many of those IPs were seen visiting its site, and the resulting visit rate.

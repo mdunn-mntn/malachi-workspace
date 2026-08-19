@@ -1,4 +1,4 @@
-"""AUDI-1209 — advertisers spending with no measurable site visits, for pixel triage."""
+"""AUDI-1210 — advertisers spending with no measurable site visits, for pixel triage."""
 import csv
 import sys
 
@@ -7,7 +7,7 @@ import pandas as pd
 sys.path.insert(0, "/Users/malachi/Developer/work/mntn/workspace")
 from lib.mntn_xlsx import FMT, MntnWorkbook  # noqa: E402
 
-T = "/Users/malachi/Developer/work/mntn/workspace/tickets/audi_1209_base_wide_ghost_bid_lift"
+T = "/Users/malachi/Developer/work/mntn/workspace/tickets/audi_1210_zero_visit_rate_advertisers"
 SRC = "/Users/malachi/Developer/work/mntn/workspace/tickets/incr_75_eligible_advertisers/outputs/incr_75_advertiser_metrics.csv"
 GENERATED = "2026-08-19"
 
@@ -72,7 +72,7 @@ FM = {"30-day spend": FMT.USD, "Impressions": FMT.INT, "Served IPs": FMT.INT,
 
 wb = MntnWorkbook(
     title="Advertisers With No Measurable Visits",
-    ticket="AUDI-1209",
+    ticket="AUDI-1210",
     subtitle="Live advertisers whose served IPs almost never show a site visit, ranked by spend",
     period="Trailing 30 days to 2026-08-19",
     generated=GENERATED,
@@ -84,7 +84,7 @@ wb.table(
     method="Visit rate is the share of served IPs seen visiting the advertiser's site in the same 30 days. Ranked by spend. See Read me.",
     formats=FM, heat={"30-day spend": "high"}, kind="headline",
     toc="The ones worth checking: $10k or more in spend",
-    query="audi_1209_zero_visit_rate_advertisers.sql",
+    query="audi_1210_zero_visit_rate_advertisers.sql",
 )
 
 wb.table(
@@ -100,7 +100,7 @@ wb.table(
     finding=f"All {len(df)} advertisers under a 0.5% visit rate, largest spender first",
     method="Every live, non-test advertiser that served an impression in the trailing 30 days and sits under 0.5%.",
     formats=FM, kind="data", toc="The full list",
-    query="audi_1209_zero_visit_rate_advertisers.sql",
+    query="audi_1210_zero_visit_rate_advertisers.sql",
 )
 
 wb.glossary(
@@ -144,5 +144,5 @@ wb.cover(takeaways=[
     "Visits are only recorded by the advertiser's own site pixel, so the likeliest cause is pixel reporting.",
 ])
 
-path = wb.save_drive("AUDI-1209", "Advertisers With No Measurable Visits")
+path = wb.save_drive("AUDI-1210", "Advertisers With No Measurable Visits")
 print("wrote", path)
