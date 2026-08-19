@@ -383,5 +383,42 @@ taxonomy grid, column dictionary, live sample rows, join snippets, and 6 open qu
 inline comments (flagship def, gate rule, geo threshold, keyword-only-as-MM, grain, materialization).
 Source HTML: `artifacts/audi_1083_confluence_spec.html`.
 
+## 6e. Post-deploy health re-verification (2026-08-19) — triggered by a Slack thread
+
+Alyson Lefkowitz pointed the squad at this view to identify Peak Performance campaigns for Bryce's
+8/21 "Insight Spelunking" session. Re-verified before it got shared team-wide. **Verdict: healthy,
+running daily, up to date, valid — nothing to fix.** (User asked "this is a dataproc job, no?" — **no.**
+It is a SQLMesh FULL model, `cron '@daily'`, gateway silver, `SteelHouse/sqlmesh` PR #1245. airflow-ti /
+Dataproc is the Spark path and was explicitly rejected as the wrong tool at build time, see §6d.)
+
+- **Runs daily, zero failures.** `dw-main-silver.region-us-central1.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+  filtered `destination_table.table_id LIKE 'audience__mm_campaign_classifier%'`, 21-day window:
+  **21 distinct run days out of 21, 54 jobs** (base + `_by_group`, 2/day), **0 errored**, all landing
+  ~00:15-00:45 UTC. Last run 2026-08-19 00:18:05 UTC.
+- **Fresh.** Physical `audience__mm_campaign_classifier__3945841201` rebuilt 2026-08-19 00:13:47 UTC,
+  14,312 rows; `_by_group` 13,398 rows @ 00:18 UTC. Max `campaign_created` in the view = 2026-08-18
+  19:24 UTC, max `expression_updated_at` = 2026-08-18 21:58 UTC — both inside the rebuild window.
+- **Valid vs live source.** Re-ran the model's own base filter (`integrationprod.campaigns`
+  deleted=FALSE, is_test=FALSE, campaign_status_id=3, funnel_level=1 JOIN latest targeted
+  `audience_segments` rn=1): source 14,381 vs view 14,312. **All 78 in-source-not-in-view rows are
+  post-rebuild churn** (76 with `update_time` after 00:13:47 UTC; oldest change 2026-08-18 23:17 UTC,
+  inside the run window); 9 in-view-not-in-source left Live status since. Drift 0.5%, fully explained
+  by the daily-snapshot cadence. Rule of thumb now in `data_knowledge`: a gap whose rows **predate**
+  the last rebuild is a bug; a gap that is entirely **post-rebuild** is the cadence working.
+- **Snapshot fingerprint moved** `2449582902` (doc'd 2026-07-29) → `3945841201`. Expected on any
+  re-plan; the table doc's `physical_table:` field is updated. Never hardcode the fingerprint.
+- **BUG FOUND AND FIXED IN THE DOCS — `tiers_reachable LIKE '%PP%'` is not a PP filter.** I first
+  suggested it in the Slack answer; it is wrong. `'HI·MI·MaxReach (no PP)'` contains the substring
+  `PP`, so the LIKE sweeps in every mmv2 keyword-only campaign: **6,226 returned vs 2,651 true**, a
+  2.3x over-count. **Correct filter = `has_ds13 OR has_ds46`** → 2,651 campaigns / 1,087 advertisers.
+  Caught before the view was shared squad-wide. Also: `has_ds13`/`has_ds46` are **nullable** (2 rows
+  on 2026-08-19 with no parsed DS rows), so the boolean OR returns NULL and those rows fall out of
+  *both* sides of a `GROUP BY` — `COALESCE(...,FALSE)` when the cut must be exhaustive.
+- **Live mm_class distribution 2026-08-19:** non_mm 8,086 / mmv2 3,575 / mm_flagship_fangorn 1,513 /
+  mmv3 663 (519 HI-reaching + 144 PP-capped) / fangorn_vertical_only 334 / mmv1 141.
+- **Caveat to restate whenever this view is shared:** scope is Live, `funnel_level = 1` prospecting
+  only. Rows in a bad-CPA sheet that are paused or Stage 2/3 will not match — absence here is not
+  evidence of "non-MM".
+
 ## 7. Data Documentation Updates
 (pending — will land taxonomy/gate/geo confirmations into data_knowledge.md as the view is built)

@@ -28,6 +28,8 @@ MNTN security (Robin Fox) **no longer allows locally-hosted Slack apps or API ke
 - **"Expanded Peak Performance"** — DS13 with bucket (industry) ids; named but never shipped (would unlock the MI tier; zero live campaigns)
 - **"Vertical only"** (Matt's colloquialism) = a PP-only / PP-v2-only campaign with no keyword layer
 
+**Peak Performance is the H2 2026 optimizer focus** (Bryce Wagg, squad announcement 2026-08-19): the 8/21 "Insight Spelunking" fieldwork session directs everyone to claim a Peak Performance campaign first from the bad-CPA list, "only default to other underperformers if the PP ones are taken." Live PP footprint as of 2026-08-19 = **2,651 Stage-1 Live campaigns / 1,087 advertisers** (`audience.mm_campaign_classifier`, `has_ds13 OR has_ds46`).
+
 Config space = 2×3 grid (keyword layer y/n × anchor none/DS13/DS46). Live prospecting footprint (45d, 2026-07-08): Keyword-Only 42.7% of spend · MM Core+PP v2 flagship 18.9% · MM Core+PP v1 4.0% · PP v2 only 6.5% · PP v1 only 1.1% · non-MM 26.8%. "MM = has DS19" undercounts MM-scored spend by ~7.6%. Full logic + tier table: `data_knowledge.md` § `"MM = has DS19" is an undercount` · Confluence: https://mntn.atlassian.net/wiki/spaces/TAR/pages/3691708511
 
 **Scoring difference between the generations (verified 2026-07-08):** PP v1 assigns tiers categorically (fixed points 8000/10000); PP v2 (Fangorn) scores continuously — two model passes per IP, the tier label follows the score, and **a keyword-less ("vertical only") v2 advertiser's ceiling is the PP band (8000)** — the v2 HI band requires the keyword layer. Product implication: flipping a vertical-only advertiser to v2 removes their access to 10000-scored delivery. Methodology: Confluence 3414917161.

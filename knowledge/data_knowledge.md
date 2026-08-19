@@ -117,6 +117,28 @@ only *freshness* needs the physical table. Verified 2026-07-27 on `audience.mm_c
 (AUDI-1083): clean view read 0 rows / 25h-stale, while the physical `audience__mm_campaign_classifier__…`
 showed 14,516 rows refreshed 17h prior — daily FULL refresh confirmed running (07/24 → 07/27 versions).
 
+**`__TABLES__` proves the LAST run; `INFORMATION_SCHEMA.JOBS` proves EVERY run.** The physical
+`last_modified_time` only tells you the most recent refresh succeeded — it cannot distinguish "runs
+daily" from "ran once last night after a week of silence," and it shows nothing about failed attempts.
+For a real health verdict, read the job history (verified 2026-08-19 on `audience.mm_campaign_classifier`):
+```sql
+SELECT DATE(creation_time) AS run_date, COUNT(*) AS jobs,
+       MAX(creation_time) AS last_run, COUNTIF(error_result IS NOT NULL) AS errors
+FROM `dw-main-silver.region-us-central1.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 21 DAY)
+  AND destination_table.table_id LIKE 'audience__<table>%'
+GROUP BY 1 ORDER BY 1 DESC
+```
+Pass `--project_id=dw-main-silver --location=us-central1`; the `LIKE` on `destination_table.table_id`
+(not the clean name) is what catches the SQLMesh writes, and it spans fingerprints across redeploys.
+AUDI-1083 result: 21 distinct run days out of 21, 54 jobs (base + `_by_group` = 2/day), **0 errors**,
+every run landing ~00:15-00:45 UTC. **Third leg — validity:** re-run the model's own base filter against
+live source and diff the key sets. Expect a small non-zero gap on a daily FULL model and check its
+*direction*: on 2026-08-19, source 14,381 vs view 14,312, and all 78 in-source-not-in-view rows had
+`update_time` after the 00:13 UTC rebuild — i.e. pure post-snapshot churn (0.5%), not dropped rows.
+A gap whose rows predate the last rebuild is a real bug; a gap that is entirely post-rebuild is the
+snapshot cadence working as designed.
+
 ### Partition Filter Best Practice — Silver Log Tables
 
 **Critical:** Silver layer views (`logdata.*`, `summarydata.*`) are UNION ALL views of two underlying tables:
@@ -999,6 +1021,15 @@ MM audience. [[reference_fangorn_audience_overlay]]
   - **The v2 HI band REQUIRES the keyword layer**: 100% of 8001–10000 delivery sits on DS19-carrying campaigns; DS46-only ("vertical only") campaigns top out at 8000 (1,087 stray imps of 11.1M above it). Consequence: post-flip, a vertical-only advertiser's ceiling is the PP band — under v1 the same config delivered 10000s (categorical HI IPs matched the vertical leaf).
   - Open per the methodology doc itself: how/whether Campaign-HI vs PP survives under continuous scoring (legacy split = keyword overlap), and the proposed Fangorn+BUK blend (DCG rank weights → saturating K → additive F=(1−γ)s+γK, Matt's preference) folding keywords into ONE score. Exact per-pass production cutoffs are not documented — the band mapping above is the empirical read. Query: variant 3 in `ti_1037_mm_ds_cooccurrence.sql`.
 
+- **Filtering for "is this a Peak Performance campaign?" — use the DS flags, never the tier string.**
+  On `dw-main-silver.audience.mm_campaign_classifier`, PP = **`has_ds13 OR has_ds46`** (DS13 = PP v1
+  anchor, DS46 = PP v2 / Fangorn anchor; the two never co-occur). **`tiers_reachable LIKE '%PP%'` is a
+  trap** — the value `'HI·MI·MaxReach (no PP)'` contains the substring `PP`, so the LIKE silently sweeps
+  in every keyword-only (mmv2) campaign: verified 2026-08-19 it returns 6,226 campaigns vs the true
+  **2,651 / 1,087 advertisers**, a 2.3x over-count. String form, if needed:
+  `tiers_reachable IN ('HI·PP·MI·MaxReach','PP·MI (no HI)')`. Also note `has_ds13`/`has_ds46` are
+  **nullable** (campaigns with no parsed DS rows), so `has_ds13 OR has_ds46` yields NULL for those —
+  `COALESCE(...,FALSE)` when the cut must be exhaustive.
 - **Misreading guard: adding DS13 to DS19 BROADENS, it does not narrow.** Include leaves are OR-joined (module 12c), so DS13+DS19 ("PP config") is not a hotter intersection than DS19-alone — the vertical∩keyword intersection IPs are the HI 10000 tier and are biddable by BOTH configs (they match DS19). DS13's marginal contribution = the state-5 vertical-no-keyword IPs scored exactly 8000 (the PP tier), unreachable from a DS19-only expression. "Peak Performance" names the product that can DELIVER the 8000 tier (DS13+DS19+RTC, HHST 6666 → HI+PP only), not a narrower audience.
 - **The OLD MM 2.0 IP-state table (Alyson's sheet, pre-Fangorn) decodes the product names.** An IP's state = (in bucket?, in vertical?, has keywords?) → tier: state 6 = **HI 10000** (vertical ∩ keywords), state 5 = **PP 8000** (vertical, no keywords), state 4 = **MI 3333–6665** (bucket-not-vertical + keywords), state 3 = MI **not biddable** (bucket, no keywords — no DS leaf matches), state 2 = **MaxReach** (keywords outside bucket; sheet logs score NULL, Venn says 1–3332 random), state 1 = not in audience. **Biddability = the expression contains a DS leaf matching the state**: keyword states need DS19, bucket/vertical states need a vertical anchor (DS13/DS46). That is WHY the shipped "Peak Performance" product pairs DS13 with DS19 — the anchor is required to reach the 8000-tier (vertical-no-keyword) IPs. HI/PP/MI/MaxReach are **IP score tiers, not campaign types**; per the component naming above, "Peak Performance" also names the vertical-anchor component itself (DS13 = v1, DS46 = v2).
 - **Bucket vs vertical inside DS13**: bucket = **3-digit** DS13 segment ids (industry), vertical = **6-digit** DS13 segment ids (subindustry). (Same sheet; matches [[reference_fangorn_two_model_passes]] — Fangorn's HI + PP passes replace these two membership tests with continuous scores.)
