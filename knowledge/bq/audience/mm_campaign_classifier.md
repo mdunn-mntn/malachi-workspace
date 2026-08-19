@@ -188,6 +188,18 @@ GROUP BY 1, 2, 3;
 <!-- OBSERVED:COST END -->
 
 ## Observed facts
+- 2026-08-19 (health verification, "is it running daily / up to date / valid?"): **YES on all three.**
+  (1) **Runs daily, no failures** — `region-us-central1.INFORMATION_SCHEMA.JOBS_BY_PROJECT` filtered on
+  `destination_table.table_id LIKE 'audience__mm_campaign_classifier%'`: 21 distinct run days out of the last
+  21, 54 jobs (base + `_by_group`), **0 errored**, every run landing ~00:15-00:45 UTC. Last run 2026-08-19
+  00:18:05 UTC. (2) **Up to date** — max `campaign_created` in the view = 2026-08-18 19:24 UTC, max
+  `expression_updated_at` = 2026-08-18 21:58 UTC, both just inside the 00:13 UTC rebuild window. (3) **Valid
+  against live source** — re-ran the view's own base filter (`integrationprod.campaigns` deleted=FALSE,
+  is_test=FALSE, campaign_status_id=3, funnel_level=1 JOIN latest targeted `audience_segments` rn=1):
+  source 14,381 vs view 14,312. The 78 in-source-not-in-view are **100% post-rebuild churn** (76 with
+  `campaigns.update_time` after 00:13:47 UTC, oldest change 2026-08-18 23:17 = inside the run window);
+  9 in-view-not-in-source are campaigns that left Live status since. Drift = 0.5%, entirely explained by the
+  daily-snapshot cadence. **Expect up to ~24h of lag by design** — it is a daily FULL rebuild, not streaming.
 - 2026-08-19 (spot-check, "is the job working?"): healthy + refreshing daily. Physical snapshot rebuilt
   2026-08-19 00:13 UTC, **14,312 rows** (`_by_group` 13,398 @ 00:18 UTC) — note the snapshot hash moved
   `2449582902` → **`3945841201`** since 2026-07-29, so the model was re-planned/redeployed in between.
