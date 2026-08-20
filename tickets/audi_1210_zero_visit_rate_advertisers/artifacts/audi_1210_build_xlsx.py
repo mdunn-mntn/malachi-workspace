@@ -130,6 +130,8 @@ wb.notes(
          "A verified visit requires an impression to have been served and credited. So a low share mixes reaching few of their visitors with being credited for few, and the two cannot be separated here."),
         ("Visit rate on its own was the wrong measure",
          "An earlier version of this list ranked on matched visits over served IPs. That mostly tracks campaign audience against site size: Maurices matches 3.2% of served IPs but gets credit for 0.40% of its site traffic, while Re-Bath Cherry Hill matches 0.13% and gets 1.27%."),
+        ("Tracking opt-out was checked and does not explain the zeros",
+         "The opt-out flag on the advertiser record is set for one of these accounts. It is also not backfilled: it reads false for every advertiser created before 2022. These accounts were all created 2024 or later, so it should be readable for them, and an opt-out cannot produce an account that reported visits and then stopped."),
         ("The 30-day window under-detects recent breakage",
          "An advertiser whose pixel went dark ten days ago still carries three weeks of earlier visits and stays off the flag."),
     ],
