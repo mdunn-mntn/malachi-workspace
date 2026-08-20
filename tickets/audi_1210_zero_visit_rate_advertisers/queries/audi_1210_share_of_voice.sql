@@ -42,6 +42,16 @@ converting AS (
   WHERE DATE(time) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AND CURRENT_DATE()
   GROUP BY 1, 2
 ),
+-- 12-month history separates a never-installed pixel from one that went dark. An opt-out never
+-- reports a visit; a defect reports and then stops, and the stop date is the useful part.
+history AS (
+  SELECT advertiser_id,
+    SUM(raw_visits)                        AS raw_visits_12mo,
+    MAX(IF(raw_visits > 0, day, NULL))     AS last_day_with_a_visit
+  FROM `dw-main-silver.summarydata.sum_by_advertiser_by_day`
+  WHERE day BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 365 DAY) AND CURRENT_DATE()
+  GROUP BY 1
+),
 site AS (
   SELECT advertiser_id,
     SUM(raw_visits)         AS raw_visits_30d,
@@ -76,6 +86,8 @@ joined AS (
     COALESCE(t.verified_visits_30d, 0) AS verified_visits_30d,
     COALESCE(t.raw_conversions_30d, 0) AS raw_conversions_30d,
     COALESCE(t.days_with_any_visit, 0) AS days_with_any_visit,
+    COALESCE(h.raw_visits_12mo, 0)     AS raw_visits_12mo,
+    h.last_day_with_a_visit,
     SAFE_DIVIDE(r.matched_ips_30d, r.served_ips_30d)          AS match_rate,
     SAFE_DIVIDE(t.verified_visits_30d, t.raw_visits_30d)      AS share_of_voice,
     CASE WHEN COALESCE(t.raw_visits_30d, 0) = 0    THEN 'Pixel reported nothing'
@@ -84,6 +96,7 @@ joined AS (
   FROM rolled r
   JOIN `dw-main-bronze.integrationprod.advertisers` adv USING (advertiser_id)
   LEFT JOIN site t USING (advertiser_id)
+  LEFT JOIN history h USING (advertiser_id)
   WHERE COALESCE(adv.deleted, FALSE) = FALSE
     AND COALESCE(adv.is_test, FALSE) = FALSE
     AND adv.company_name IS NOT NULL

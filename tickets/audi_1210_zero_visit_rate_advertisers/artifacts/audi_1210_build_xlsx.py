@@ -28,6 +28,7 @@ rows.sort(key=lambda r: -f(r, "spend_30d"))
 scored = [r for r in rows if r["coverage"] == "Scored"]
 quiet = [r for r in rows if r["coverage"] == "Site too quiet to score"]
 dark = [r for r in rows if r["coverage"] == "Pixel reported nothing"]
+never = sum(1 for r in dark if f(r, "raw_visits_12mo") == 0)
 flagged = [r for r in scored
            if f(r, "sov_percentile_vs_peers") < PEER_CUT and f(r, "spend_30d") >= SPEND_FLOOR]
 
@@ -52,6 +53,11 @@ def frame(rs, peers=True):
         if peers:
             d["Site size group"] = SIZE_LABEL.get(r["site_size_quintile"], None)
             d["Rank vs peers"] = f(r, "sov_percentile_vs_peers") if r["coverage"] == "Scored" else None
+        else:
+            d["Visits in 12 months"] = int(f(r, "raw_visits_12mo"))
+            d["Last visit seen"] = r["last_day_with_a_visit"] or None
+            d["Reading"] = ("Never tracked" if f(r, "raw_visits_12mo") == 0
+                            else "Tracked, then stopped")
         out.append(d)
     return pd.DataFrame(out)
 
@@ -94,7 +100,7 @@ df_pair = pd.DataFrame([{
 FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Our verified visits": FMT.INT,
       "Matched IPs": FMT.INT,
       "Share of voice": FMT.PCT2, "Match rate": FMT.PCT2, "Served IPs": FMT.INT,
-      "Rank vs peers": FMT.PCT0, "Advertiser ID": "0"}
+      "Rank vs peers": FMT.PCT0, "Advertiser ID": "0", "Visits in 12 months": FMT.INT}
 
 wb = MntnWorkbook(
     title="Share of Voice by Advertiser",
@@ -133,8 +139,8 @@ wb.table(
 
 wb.table(
     "Pixel reported nothing", df_dark,
-    finding=f"{len(df_dark)} advertisers reported no site visits at all, together spending ${sum(f(r, 'spend_30d') for r in dark):,.0f}",
-    method="Zero reported visits over 30 days. They cannot be scored on share of voice, and this is the clearest setup question in the file.",
+    finding=f"Of {len(df_dark)} advertisers reporting nothing in 30 days, {never} never tracked in 12 months and the rest tracked and stopped",
+    method="An opt-out never reports a visit; a broken pixel reports and then stops. Only Dura Guard Roofing stopped from real volume. See Method & caveats.",
     formats=FM, kind="data", toc="Advertisers reporting nothing at all",
 )
 
@@ -176,6 +182,10 @@ wb.notes(
          "A low match rate reflects campaign audience against site size, not measurement. Share of voice asks the question that matters: of everyone who reached their site, how many came through us."),
         ("Peers are matched on site size because share of voice shrinks with it",
          "Correlation of log site visits to log share of voice is -0.24, and median share of voice falls from 1.09% to 0.39% across the size range. Ranking on the raw figure would flag large sites and nothing else."),
+        ("Only one advertiser reporting nothing looks like real breakage",
+         f"{never} of the {len(dark)} never tracked a visit in 12 months, consistent with an opt-out or a pixel never installed. The rest stopped, but on 1 to 151 visits all year, so the stop date is indistinguishable from a quiet site. Dura Guard Roofing is the exception: 7,338 visits, last seen 2026-04-28."),
+        ("Pixel opt-out was checked and does not explain the group",
+         "advertisers.conv_pixel_opt_out is set for 1 of these advertisers, against 3.4% across the live base, and 38 of them carry the same tracking status nearly every live advertiser has. That field covers the conversion pixel, so a separate visit-tracking setting may exist that this table does not carry."),
         ("This is still a flag, not a verdict",
          "A low share of voice against peers can come from campaign configuration, audience quality, flight length or budget. It says the account is worth opening, not that anything is broken."),
         ("The share-of-voice definition, settled",
@@ -190,7 +200,7 @@ wb.sql_dir("Queries", f"{T}/queries",
 
 wb.cover(takeaways=[
     f"{len(df_flag)} advertisers spent $10k or more and reach less of their own site audience than three quarters of similar accounts.",
-    f"Only {len(dark)} of {len(rows):,} report no site visits at all; a low match rate is usually site size, not a defect.",
+    f"Only {len(dark)} of {len(rows):,} report nothing at all, and just one of those stopped from real volume.",
     "Share of voice is compared within a site-size group, and uses verified visits, the client-facing figure.",
 ])
 
