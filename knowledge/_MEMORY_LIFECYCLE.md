@@ -148,7 +148,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-10 | [doc](memory/reference_airflow3_backfill_scoping.md) |
 | feedback_constrain_llm_to_real_taxonomy | feedback | 2026-08-10 | [doc](memory/feedback_constrain_llm_to_real_taxonomy.md) |
-| reference_airflow_log_puller | reference | 2026-08-10 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-10 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_gitignore_json_rule | reference | 2026-08-10 | [doc](memory/reference_gitignore_json_rule.md) |
 | feedback_one_resolver_for_shared_state | feedback | 2026-08-11 | [doc](memory/feedback_one_resolver_for_shared_state.md) |
@@ -202,6 +201,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_optimizer | project | 2026-08-20 | [doc](memory/project_airflow_optimizer.md) |
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
+| reference_airflow_log_puller | reference | 2026-08-20 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-20 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-08-20 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |

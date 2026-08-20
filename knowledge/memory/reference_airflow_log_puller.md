@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: 4a87e9ee-a383-4bc8-a05e-73f7db64eef1
 doc_type: memory
-keywords: [airflow_pull, airflow_api.py, astronomer task logs, airflow rest api, /api/v2, taskInstances list, astro login bearer, completion sensor, on-call log download, airflow 3.1.5, day-dump manifest, watch tag, astro token expiry, bearer token 401, astro deployment list refresh, gcloud sso expiry, airflow api path prefix, airflow_api_url no scheme, dev deployment id]
+keywords: [airflow_pull, airflow_api.py, astronomer task logs, airflow rest api, /api/v2, taskInstances list, astro login bearer, completion sensor, on-call log download, airflow 3.1.5, day-dump manifest, watch tag, astro token expiry, bearer token 401, astro deployment list refresh, gcloud sso expiry, airflow api path prefix, airflow_api_url no scheme, dev deployment id, deployment API token, astro deployment token create, clean-output, unattended runner auth, astro owns service accounts]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-08-10
+last_verified: 2026-08-20
 ---
 **`.claude/scripts/airflow_pull.sh`** (+ stdlib client `airflow_api.py`) automates on-call log collection: it downloads **every** Astronomer (Airflow 3) task-instance log for a day, renames each `<HHMMSS-start>__<dag>__<task>[__mapN]__try<N>__<state>.log`, and writes a `_manifest.jsonl` pass/fail grid to `on-call/airflow_logs/<date>/` (gitignored — bulk dumps are triage scratch; durable evidence is filed to `on-call/incidents/INC-NNN/`). Replaces the screenshot + manual UI download in `/oncall` (INC-008's documented failure mode was inferring cause from a grid screenshot). Built for the on-call runbook — see [[reference_oncall_runbook]], [[reference_airflow_ti]].
 
@@ -24,3 +24,15 @@ last_verified: 2026-08-10
 **Airflow-3 endpoint gotchas baked into `airflow_api.py`:** all-tasks-for-a-day = `POST /dags/~/dagRuns/~/taskInstances/list` windowed on **`start_date_gte/lte`**, NOT `logical_date` (nullable for asset/manual runs; a task that ran 07-28 belongs to the 07-27 logical run). Tag has no filter on the TI endpoint → resolve via `GET /dags?tags=<t>&tags_match_mode=any` then feed `dag_ids`. Logs are structured **NDJSON / JSON `{content,continuation_token}`**, never plaintext — flattened to `TS [level] logger message` here. Watch lists runs with **both** `run_after_gte` AND `run_after_lte` (day-bounded — an unbounded `_gte` pulled every later day's runs, the bug fixed on build). Terminal states = success/failed/upstream_failed/skipped/removed; `up_for_retry` is NOT terminal; dedupe on `(dag,run,task,map_index,try_number)`.
 
 **Runtime:** `python3` invoked from a bash subprocess resolves the **system 3.9** (not the interactive 3.11), so `airflow_api.py` is kept 3.9-compatible (no `datetime.UTC`, no 3.10+ unions) and must stay ruff-clean (durable-code commit gate). Validated end-to-end vs 2026-07-28: manifest failures matched INC-001 (`ipdsc_monitor.precondition_bombora` `AirflowSensorTimeout` 64836s > 64800s = benign Bombora skip).
+
+**For an UNATTENDED runner the preference inverts (AUDI-1194, 2026-08-20).** The note above prefers the SSO token because it needs no secret — true for a human at a laptop, wrong for a cron. The SSO JWT expires in ~1h and refreshing it requires *some* `astro` CLI invocation as that human, which a Cloud Run job cannot do. So a scheduled workload takes the **Deployment API token**, not the SSO path:
+
+```bash
+astro deployment token create --deployment-id cmd6bd10c0gl901rfuokgryiq \
+  --name spark-optimizer --description "..." --role DEPLOYMENT_ADMIN \
+  --expiration 365 --clean-output          # --clean-output prints ONLY the token, pipe it straight to Vault
+```
+
+`--expiration` is 1-3650 days; omitting the flag means **no expiry**, so always set it. `--clean-output` exists precisely for scripts and keeps the token out of scrollback. **Still no built-in read-only role** — `--role` takes `DEPLOYMENT_ADMIN` or a custom role name, so a genuinely read-only token needs a custom role defined first; ask Victor/TI whether one exists before settling for admin on a job that only calls `GET /dags`.
+
+**Ownership (Dustin Niehoff, #devops, 2026-08-20): "astro owns them."** The deployment service accounts / API tokens are managed inside the Astro platform, not by MNTN devops. There is no devops ticket to file — the gate is Astro org access. See [[project_deidentify_personal_credentials]].
