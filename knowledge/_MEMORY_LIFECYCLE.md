@@ -98,7 +98,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | bq-workflow | feedback | 2026-07-28 | [doc](memory/feedback_bq_workflow.md) |
 | idso_repo | reference | 2026-07-28 | [doc](memory/reference_idso_repo.md) |
 | project_audi_1173_freq_cap_bandit | project | 2026-07-28 | [doc](memory/project_audi_1173_freq_cap_bandit.md) |
-| reference_drive_mount_xlsx_delivery | reference | 2026-07-28 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_frequency_capping | reference | 2026-07-28 | [doc](memory/reference_frequency_capping.md) |
 | reference_hhst_efficiency_sizing | reference | 2026-07-28 | [doc](memory/reference_hhst_efficiency_sizing.md) |
 | reference_improvements_backlog | reference | 2026-07-28 | [doc](memory/reference_improvements_backlog.md) |
@@ -208,6 +207,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
+| reference_drive_mount_xlsx_delivery | reference | 2026-08-20 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_mm_vs_3p_scorecard | reference | 2026-08-20 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-20 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
