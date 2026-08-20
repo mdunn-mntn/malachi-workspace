@@ -1,9 +1,9 @@
 ---
 doc_type: ticket
-title: "[SPIKE] Can we support a B2B / non-revenue CPA claim for the pitch deck?"
+title: "[SPIKE] MM vs 3P performance by sales vertical for Sales"
 status: backlog
 date: 2026-08-20
-summary: "Test whether a defensible MM-vs-3P CPA comparison exists for non-revenue advertisers"
+summary: "Standing Sales request: MM vs 3P prospecting performance across the 8 sales verticals"
 result: "not started"
 question: ""
 framing_state: draft

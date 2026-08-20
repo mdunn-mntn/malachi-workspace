@@ -1,0 +1,5 @@
+*Objective:* Compare MNTN Matched vs 3P prospecting performance across the 8 sales verticals, on the metrics Sales asks for.
+
+*Why:* Standing Sales request (Jon Zucker) feeding the new pitch deck. Latest ask adds CPA for advertisers that drive no revenue, where ROAS cannot be computed.
+
+*Done when:* A shareable scorecard by vertical, with lens and caveats agreed with the requester.

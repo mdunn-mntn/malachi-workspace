@@ -1,5 +1,0 @@
-*Objective:* Decide whether a defensible MM-vs-3P CPA claim exists for non-revenue (B2B) advertisers, for the sales pitch deck.
-
-*Why:* In AUDI-1141 CPA advantage is 2.16x overall but 1.02x on B2B software, and on B2B accounts with no revenue 3P is cheaper. Sales is building slides on it.
-
-*Done when:* A yes/no, plus the cohort, coverage screen and minimum 3P sample.
