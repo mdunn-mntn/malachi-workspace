@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 # Daily retrospective RCA over the on-call/paging DAGs (AUDI-1191 trust-building).
 #
-# Scans a day for FAILED / upstream_failed tasks on the paging tags and auto-runs the
+# Scans a day for tasks that FAILED AT ANY POINT on the paging tags and auto-runs the
 # deterministic (key-free, no-LLM) RCA on each, writing <log>.rca.md beside the log. Built
 # for a once-a-day cron: failures are rare, so this idles most days and produces an RCA to
-# eyeball against the real resolution when one lands. Reboot-safe, rolls the date each run,
-# no long-lived process to babysit.
+# eyeball against the real resolution when one lands.
+#
+# --include-recovered is load-bearing: `--state failed` is the state AT PULL TIME, so a task that
+# failed and then retried or was cleared to success is invisible to it. That is most resolved
+# incidents. On 2026-08-19 it was the difference between 0 and 9 captured failures, including
+# INC-021 and INC-022.
+#
+# Reboot-safe, rolls the date each run, no long-lived process to babysit.
 #
 # Usage: oncall_daily_rca.sh [YYYY-MM-DD]   (default: yesterday UTC)
 # Auth : needs a live `astro login` session (SSO ~daily). If the session is stale, this
@@ -23,7 +29,8 @@ cd "$WORKSPACE"
 echo "[oncall_daily_rca] ${DATE} — scanning tags: ${TAGS[*]}"
 
 for tag in "${TAGS[@]}"; do
-    bash "$PULL" --date "$DATE" --tag "$tag" --state failed --state upstream_failed --diagnose
+    bash "$PULL" --date "$DATE" --tag "$tag" --state failed --state upstream_failed \
+        --include-recovered --diagnose
     rc=$?
     if [[ $rc -eq 3 ]]; then
         echo "[oncall_daily_rca] astro session stale — run 'astro login' and re-run. Skipping."

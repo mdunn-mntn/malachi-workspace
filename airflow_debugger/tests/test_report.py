@@ -9,7 +9,7 @@ dags/tpa_export/ and spark/data_source/, and __init__.py is everywhere.
 
 from __future__ import annotations
 
-from airflow_debugger.report import build_troubleshooting, code_links
+from airflow_debugger.report import build_report, build_troubleshooting, code_links
 
 _REPO = {
     "dsid30_augmentor_log_processing.py": ["spark/fpa/dsid30_augmentor_log_processing.py"],
@@ -188,6 +188,15 @@ def test_unclassified_diag_still_produces_package() -> None:
     assert "No known fix on record" in out
 
 
+def test_empty_log_note_depends_on_terminal_state() -> None:
+    """An empty log means worker death on a failed task, and 'never ran' on upstream_failed."""
+    base = {"identity": {"dag_id": "d", "task_id": "t"}, "no_error_text": True}
+    failed = build_report({**base, "ti_state": "failed"})
+    assert "worker died" in failed and "already retried" in failed, failed
+    upstream = build_report({**base, "ti_state": "upstream_failed"})
+    assert "never ran" in upstream and "worker died" not in upstream, upstream
+
+
 if __name__ == "__main__":
     test_code_links_maps_traceback_to_repo()
     test_code_links_skips_framework_frames()
@@ -199,4 +208,5 @@ if __name__ == "__main__":
     test_low_score_fix_pr_not_claimed()
     test_log_newlines_cannot_forge_package_lines()
     test_unclassified_diag_still_produces_package()
+    test_empty_log_note_depends_on_terminal_state()
     print("OK - troubleshooting package tests passed (incl. adversarial-review regressions)")

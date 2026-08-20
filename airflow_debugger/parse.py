@@ -43,6 +43,7 @@ class ParsedFailure:
     dbx_run_id: int | None = None  # databricks
     airflow_signature: dict | None = None  # signature of the Airflow-task-level failure
     has_error_text: bool = True  # False = the task never ran / emitted no diagnostic output
+    ti_state: str | None = None  # terminal state from the filename: failed | upstream_failed | ...
     notes: list = field(default_factory=list)
 
 
@@ -179,6 +180,7 @@ def diagnose(parsed: ParsedFailure) -> dict:
         "engine": parsed.engine,
         "airflow_signature": parsed.airflow_signature,
         "no_error_text": not parsed.has_error_text,
+        "ti_state": parsed.ti_state,
         "spark": spark,
         "spark_outcome": "succeeded" if spark_ok else ("failed" if spark else "none"),
         "orchestration_only": orchestration_only,
@@ -192,7 +194,7 @@ def diagnose(parsed: ParsedFailure) -> dict:
 
 # airflow_pull.sh naming: <HHMMSS>__<dag>__<task>[__map<N>]__try<N>__<state>.log
 _FILENAME_RE = re.compile(
-    r"\d{6}__(?P<dag>.+?)__(?P<task>.+?)(?:__map(?P<map>\d+))?__try(?P<try>\d+)__\w+\.log$"
+    r"\d{6}__(?P<dag>.+?)__(?P<task>.+?)(?:__map(?P<map>\d+))?__try(?P<try>\d+)__(?P<state>\w+)\.log$"
 )
 
 
@@ -207,6 +209,7 @@ def parse_log_file(path: str) -> ParsedFailure:
         p.try_number = p.try_number or int(m.group("try"))
         if p.map_index is None and m.group("map") is not None:
             p.map_index = int(m.group("map"))
+        p.ti_state = m.group("state")
     return p
 
 

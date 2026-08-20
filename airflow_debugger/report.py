@@ -56,6 +56,19 @@ def _link(diag: dict) -> str | None:
     return None
 
 
+def _no_output_note(ti_state: str | None) -> str:
+    """An empty log means different things for a failed task and an upstream_failed one."""
+    if ti_state == "upstream_failed":
+        return "The task never ran; diagnose the upstream task that failed."
+    if ti_state == "failed":
+        # INC-021: the worker died rather than the task raising, so Airflow has no exception.
+        return (
+            "Empty log on a failed task: the worker died before the task could raise. "
+            "Check whether it already retried before touching anything."
+        )
+    return "The task emitted no failure output; diagnose the upstream task that failed."
+
+
 def build_report(diag: dict) -> str:
     """Assemble the BLUF/STAR report (<=500 chars) from a diagnosis dict."""
     ident = diag.get("identity", {})
@@ -77,9 +90,7 @@ def build_report(diag: dict) -> str:
     if link:
         lines.append(link)
     if not root and diag.get("no_error_text"):
-        lines.append(
-            "The task emitted no failure output; diagnose the upstream task that failed."
-        )
+        lines.append(_no_output_note(diag.get("ti_state")))
     if not root:
         notes = "; ".join(
             (diag.get("notes") or []) + ((diag.get("spark") or {}).get("notes") or [])

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # airflow_pull.sh — pull Astronomer (Airflow 3) task logs for a day + a completion sensor for on-call.
 # Usage:
-#   Day-dump:  bash .claude/scripts/airflow_pull.sh [--date YYYY-MM-DD] [--dag NAME] [--tag TAG] [--state failed] [--all-tries] [--diagnose] [--deployment ID]
+#   Day-dump:  bash .claude/scripts/airflow_pull.sh [--date YYYY-MM-DD] [--dag NAME] [--tag TAG] [--state failed] [--include-recovered] [--all-tries] [--diagnose] [--deployment ID]
+#              --include-recovered also pulls tasks that failed then recovered; --state alone is state AT PULL TIME and misses them.
 #              --diagnose auto-RCAs each failed task's log (writes <log>.rca.md). Daily wrapper: oncall_daily_rca.sh.
 #   Sensor:    bash .claude/scripts/airflow_pull.sh --watch --tag <tag> [--dag NAME] [--interval 30] [--persistent] [--diagnose]
 #              --diagnose runs the RCA orchestrator on each dropped failure log and writes <log>.rca.md for /oncall.
@@ -44,6 +45,7 @@ while [[ $# -gt 0 ]]; do
         --interval)    INTERVAL="$2"; shift 2 ;;
         --interval=*)  INTERVAL="${1#--interval=}"; shift ;;
         --all-tries)   PY_ARGS+=(--all-tries); shift ;;
+        --include-recovered) PY_ARGS+=(--include-recovered); shift ;;
         --diagnose)    PY_ARGS+=(--diagnose); shift ;;
         --diagnose-cmd)   PY_ARGS+=(--diagnose-cmd "$2"); shift 2 ;;
         --diagnose-cmd=*) PY_ARGS+=(--diagnose-cmd "${1#--diagnose-cmd=}"); shift ;;

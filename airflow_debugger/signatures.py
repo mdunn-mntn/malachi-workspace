@@ -304,6 +304,16 @@ SIGNATURES: list[Signature] = [
         "sometimes",
     ),
     Signature(
+        "task_externally_terminated",
+        r"Server indicated the task shouldn't be running anymore|Task killed!|"
+        r"Task received SIGTERM signal",
+        "orchestration/externally-killed",
+        "Airflow terminated the process; the task did not fail on its own. Usually a clear, a "
+        "DAG-run reset, or the scheduler adopting the instance. This try's log holds no cause: "
+        "if the task really is broken, the reason is in an EARLIER try.",
+        "no",
+    ),
+    Signature(
         "auth_error",
         r"AccessDenied|PERMISSION_DENIED|Unauthorized|invalid[_ ]token|token.{0,20}expired|"
         r"(?<![0-9])(401|403)(?![0-9]).{0,30}(Forbidden|Unauthorized|denied)",

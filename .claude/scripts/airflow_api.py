@@ -271,6 +271,11 @@ def list_task_instances_in_run(base, token, dag_id, run_id):
     return out
 
 
+def _ti_key(ti):
+    """Identity of one task instance across queries (a mapped task needs map_index)."""
+    return (ti.get("dag_id"), ti.get("dag_run_id"), ti.get("task_id"), ti.get("map_index", -1))
+
+
 def expand_tries(base, token, ti):
     """Return one ti-like dict per try (accurate try_number/state/start_date), newest last.
 
@@ -464,11 +469,33 @@ def cmd_list(args):
     states = args.state or None
 
     tis = list_task_instances_for_day(args.base, token, start_iso, end_iso, dag_ids, states)
+    recovered = []
+    if states and getattr(args, "include_recovered", False):
+        # `state=failed` is the state AT PULL TIME, so a task that failed and then retried or was
+        # cleared to success is invisible to it - which is exactly the incidents that got resolved.
+        # try_number > 1 means it failed at least once, whatever it ended as.
+        every = list_task_instances_for_day(args.base, token, start_iso, end_iso, dag_ids, None)
+        seen = {_ti_key(t) for t in tis}
+        recovered = [
+            t
+            for t in every
+            if (t.get("try_number") or 0) > 1
+            and t.get("state") not in FAILURE_STATES
+            and _ti_key(t) not in seen
+        ]
+        tis = tis + recovered
     outdir = os.path.join(args.outdir, args.date)
     os.makedirs(outdir, exist_ok=True)
     manifest_path = os.path.join(outdir, "_manifest.jsonl")
 
-    counts = {"total": len(tis), "failed": 0, "running": 0, "logs": 0}
+    counts = {
+        "total": len(tis),
+        "failed": 0,
+        "running": 0,
+        "logs": 0,
+        "recovered": len(recovered),
+    }
+    recovered_keys = {_ti_key(t) for t in recovered}
     failed_rows = []
     with open(manifest_path, "w", encoding="utf-8") as mf:
         for ti in tis:
@@ -480,8 +507,10 @@ def cmd_list(args):
                 )
             elif state in (None, "running", "queued", "scheduled", "deferred", "up_for_retry"):
                 counts["running"] += 1
-            # one log per try with --all-tries (failed retries hold the cause), else the current try only
-            work = expand_tries(args.base, token, ti) if args.all_tries else [ti]
+            # one log per try with --all-tries (failed retries hold the cause), else the current try
+            # only. A recovered task is always expanded: its final try is green and says nothing.
+            is_recovered = _ti_key(ti) in recovered_keys
+            work = expand_tries(args.base, token, ti) if (args.all_tries or is_recovered) else [ti]
             for wti in work:
                 text = fetch_log(args.base, token, wti)
                 fname = log_filename(wti)
@@ -490,10 +519,20 @@ def cmd_list(args):
                 rel = os.path.join(args.outdir, args.date, fname)
                 mf.write(json.dumps(manifest_record(wti, rel)) + "\n")
                 counts["logs"] += 1
-            if state in FAILURE_STATES and getattr(args, "diagnose", False):
-                _run_diagnosis(os.path.join(outdir, log_filename(ti)), args.diagnose_cmd)
+            if getattr(args, "diagnose", False):
+                target = None
+                if state in FAILURE_STATES:
+                    target = ti
+                elif is_recovered:
+                    # diagnose the try that actually failed, not the green one that followed
+                    failed_tries = [w for w in work if w.get("state") in FAILURE_STATES]
+                    target = failed_tries[-1] if failed_tries else None
+                if target is not None:
+                    _run_diagnosis(os.path.join(outdir, log_filename(target)), args.diagnose_cmd)
 
     extra = f" · {counts['logs']} logs (all tries)" if args.all_tries else ""
+    if counts["recovered"]:
+        extra += f" · {counts['recovered']} failed-then-recovered"
     print(
         f"{counts['total']} tasks · {counts['failed']} failed · {counts['running']} in-flight{extra}",
         file=sys.stderr,
@@ -650,6 +689,12 @@ def build_parser():
     ls.add_argument("--tag", help="restrict to DAGs carrying this Airflow tag")
     ls.add_argument("--state", action="append", help="restrict to these states (repeatable)")
     ls.add_argument("--outdir", required=True, help="output dir root (date subdir is added)")
+    ls.add_argument(
+        "--include-recovered",
+        action="store_true",
+        help="with --state: also pull tasks that failed then retried/were cleared to success "
+        "(try_number > 1). --state is state AT PULL TIME, so these are otherwise invisible.",
+    )
     ls.add_argument(
         "--all-tries",
         dest="all_tries",

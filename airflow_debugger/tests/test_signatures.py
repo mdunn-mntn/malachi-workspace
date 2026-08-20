@@ -240,6 +240,14 @@ CASES = [
         "  ValueError: Too many signals to process 176052364",
         "dbt_model_runtime_error",
     ),
+    (
+        # INC-022 try 21: Airflow killed the process. The stockout was in an earlier try.
+        "airflow_killed_the_task",
+        "2026-08-19T19:54:33.668069Z [error] task Server indicated the task shouldn't be "
+        "running anymore. Terminating process\n"
+        "2026-08-19T19:54:38.695680Z [error] task Task killed!",
+        "task_externally_terminated",
+    ),
 ]
 
 # Real prod log shape (2026-08-06 ddp_vertical_classification_api): a dbt python model
