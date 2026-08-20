@@ -1,0 +1,5 @@
+CPA was already in there, on the Full scorecard tab. I've rebuilt the workbook in our standard format and added it to both by-vertical tabs.
+
+One flag before it ships: the gap nearly closes on the cut you need. All accounts, MM $315 vs 3P $658. No revenue tracked, $584 vs $679. B2B software, $1,188 vs $1,255. I'd skip a B2B CPA claim on this.
+
+Can we pick gated or ungated and hold it deck-wide?
