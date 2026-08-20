@@ -2,7 +2,7 @@
 
 **Status: DESIGN ONLY. No airflow-ti change proposed yet.** This is the reviewable spec for Ryan
 before any prod code. Scope = the *trigger* half of Phase 3 (auto-fire on task failure). The Slack
-auto-reply and propose-only PR remain separately gated.
+auto-reply remains separately gated. **The propose-only PR is DROPPED, permanently (user decision 2026-08-20).**
 
 ## BLUF
 
@@ -125,6 +125,19 @@ and has **no Airflow import**). This is the contract the prod callback would cal
 unit-tested in this ticket (see `airflow_debugger/tests/test_context_parse.py`) so the design is proven,
 not paper. It reuses `classify()` and the same operator→engine map as `parse.py`.
 
+## 8b. Hard constraint — the tool never writes code (user decision, 2026-08-20)
+
+The debugger must **never open a pull request, push a branch, commit code, or change any prod
+resource**, in any phase and behind any flag. The earlier "propose-only PR" item (IMP-022 item 3)
+is dropped, not deferred.
+
+**Read-only GitHub access is acceptable** and is what the troubleshooting pack already uses: it
+resolves a traceback frame to a repo path so the report can render an exact `#L` link. That path
+runs `git ls-files` against a local checkout today and needs no write scope. If it is ever moved
+to an API token, that token must be read-only.
+
+Phase 3 itself is **HELD** as of 2026-08-20; nothing in this spec is built.
+
 ## 9. Reference implementation sketch (PROPOSAL — not committed to airflow-ti)
 
 ```python
@@ -164,7 +177,7 @@ Wired by appending `create_debugger_callback(self.team.value)` to `failure_callb
    default **off**. Ryan's review; never push main. **Gate 2.**
 4. Flip `DEBUGGER_AUTOFIRE` for one low-risk team's DAG; watch for a week; confirm zero task-outcome
    impact and correct events. **Gate 3.**
-5. Expand team-by-team. Slack threaded-reply + propose-only PR remain separately gated.
+5. Expand team-by-team. The Slack threaded reply remains separately gated.
 
 ## 11. Open questions for Ryan
 

@@ -19,7 +19,10 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from airflow_debugger import signatures as sig
-from lib.mntn_xlsx import BRAND, FMT, MntnWorkbook
+from lib.mntn_xlsx import BRAND, MntnWorkbook
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from audi_1191_worked_example_sheets import add_sheets as add_worked_example_sheets
 
 GEN = "2026-08-07"
 GH = "https://github.com/mdunn-mntn/malachi-workspace/blob/main/"
@@ -110,6 +113,9 @@ for i, (_, _, _, disp, repo_path, _, _) in enumerate(STEPS, 1):  # data rows sta
     c.hyperlink = Hyperlink(ref=c.coordinate, target=GH + repo_path, display=disp)
     c.font = Font(name=c.font.name, size=10, color=BRAND["LINK"], underline="single")
 
+# ---------------------------------------------------------------- 6b. Worked example (exhaustive)
+add_worked_example_sheets(wb, GH)
+
 # ---------------------------------------------------------------- 2. Incidents proven
 cases = pd.DataFrame([
     {"Incident": "INC-005", "Failure class": "Perf / TTL", "Engine": "Dataproc",
@@ -158,7 +164,7 @@ CLASS_MAP = {  # human label for the fix flag
 tax = pd.DataFrame([
     {"Signature": s.key.replace("_", " "),
      "Engine": s.engine,
-     "Class": s.sig_class,
+     "Failure class": s.sig_class,
      "Likely cause": s.likely_cause,
      "Auto-fix possible?": CLASS_MAP.get(s.programmatic_fix, s.programmatic_fix)}
     for s in sig.SIGNATURES
@@ -169,7 +175,7 @@ wb.table(
     finding=f"{len(tax)} failure fingerprints — a match returns a cached verdict with no LLM",
     method="Built live from airflow_debugger.signatures. Engine 'any' applies to both. Auto-fix possible separates a fixable root cause (Yes) from a symptom or infra issue (No).",
     kind="data",
-    widths={"Signature": 26, "Engine": 11, "Class": 22, "Likely cause": 62, "Auto-fix possible?": 16},
+    widths={"Signature": 26, "Engine": 11, "Failure class": 22, "Likely cause": 62, "Auto-fix possible?": 16},
     toc=f"Coverage — the {len(tax)} fingerprints the deterministic classifier knows",
 )
 
@@ -211,4 +217,5 @@ except Exception as e:
     print("drive save skipped:", e)
 
 from openpyxl import load_workbook  # noqa: E402
+
 print("tabs        :", load_workbook(local).sheetnames)
