@@ -1,0 +1,7 @@
+Filter it on has_ds13 OR has_ds46. DS13 is PP v1, DS46 is the Fangorn v2, and they never co-occur.
+
+Skip tiers_reachable LIKE '%PP%'. One label is literally "no PP", so it matches too and you get 6,226, not 2,651.
+
+That's 2,651 live campaigns, 1,087 advertisers. It's Live Stage 1 prospecting only, so paused or Stage 2/3 rows won't appear, which isn't the same as not PP.
+
+Share the tab and I'll post the labeled list.
