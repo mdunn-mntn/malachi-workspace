@@ -31,3 +31,29 @@ Full picker population if the deeper floor is used: **7,642** (6,232 + 1,410), a
 - 2.68 TB is slot time on the reservation, not dollars, but it is ~14k slot-seconds per refresh against 0.161 GB for the silver path. Only worth paying on a schedule if the pre-2024 names are actually wanted.
 - Recency, not churn status: an advertiser last delivering in 2021 is five years lapsed. Whether that is a win-back target or noise is Al's call, not a data question.
 - `all_facts` has `require_partition_filter: false`, so an unbounded query against it full-scans. Always bound `hour`.
+
+---
+
+# How far back the calculator actually needs
+
+Run 2026-08-20, job `perf_20260820_154...`, 0.161 GB.
+
+The MDE math never touches deep history. Per advertiser it needs exactly two windows, both anchored on that advertiser's last active day:
+
+1. **56 days of delivery** for the rate and reach inputs (baseline rate, CPM, imps/IP, distinct IPs). 56 days because the test horizon is 8 weeks and `distinct_ips_56d` removes the linear extrapolation that overstates reach 1.25-1.32x.
+2. **12 months** for the typical-active-month budget basis (median of months over $1k).
+
+Deep history only decides **who appears in the picker**, never what the calculator computes for them. So the floor is set by the recency cut, plus 12 months behind it.
+
+| Recency cut (days since last delivery) | Advertisers | >= $10k lifetime | Full 12mo budget history | Full 56d rate history | Earliest day needed |
+|---|---|---|---|---|---|
+| 30 (delivering only) | 1,863 | 1,326 | 1,863 | 1,863 | 2025-07-21 |
+| 180 | 3,123 | 2,051 | 3,123 | 3,123 | 2025-02-21 |
+| **365** | **4,409** | **2,759** | **4,409** | **4,409** | **2024-08-20** |
+| 730 | 5,739 | 3,594 | 5,343 (396 short) | 5,739 | 2023-08-21 |
+
+**Recommendation: a 365-day recency cut.** It is the largest cut silver serves losslessly. All 4,409 advertisers get both windows in full, the earliest day touched is 2024-08-20 against a 2024-01-01 floor, and the scan is 0.161 GB.
+
+At 730 days, 396 advertisers need history back to 2023-08-21, before the silver floor, so their budget basis silently computes on a truncated window. That is the failure mode the frozen `agg__daily_sum_by_campaign` already produced once (340 of 879 rows capped at 8 months instead of 12). Going past 365 days means either accepting truncated budget baselines or paying 2.68 TB for `all_facts`.
+
+Dropped by the 365-day cut: 1,823 advertisers last delivering over a year ago, plus the 1,410 pre-2024 names only `all_facts` can see.
