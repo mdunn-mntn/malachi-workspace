@@ -103,6 +103,12 @@ But the volumes gut the alarm. Only **Dura Guard Roofing** is substantive: 7,338
 
 **Net:** one clear breakage worth chasing (Dura Guard), six plausible opt-outs or never-installed, and the rest too small to call either way. The 25 peer-flagged advertisers on the main sheet remain the higher-value list.
 
+**Imani's follow-up: is the field even valid? (2026-08-19)** She suspected `conv_pixel_opt_out` is a net-new column that was never backfilled, so an advertiser that launched earlier and opted out would still read FALSE. **She is right about the field.** Share TRUE by advertiser creation year: 0.00% for every year 2010-2021 · 0.07% 2022 · 0.09% 2023 · 0.24% 2024 · **0.80% 2025** · 0.39% 2026. The column carries no signal before roughly 2024.
+
+**But it does not change the answer for this group,** because these advertisers are all recent: of the 38 reporting nothing, **29 were created in 2026, 6 in 2025, 3 in 2024** — entirely inside the populated era. Within their own cohort the flag is set on 1 of 38 (2.6%) against roughly 0.5% for advertisers created 2025-2026, so it is somewhat enriched but still accounts for a single advertiser.
+
+**And the load-bearing test never used that field.** 33 of the 38 reported visits and then stopped. An opt-out at launch cannot produce a stop date. That result stands independent of the column's history.
+
 **Caveat before this is quoted back to Imani:** `conv_pixel_opt_out` is the CONVERSION pixel. The UI control she describes may be a separate visit-tracking setting that this table does not carry, and `pixel_id` is NULL for every row here so it cannot be used as a proxy. Johnny's team has the logs to settle it.
 
 ## 5. Open items
