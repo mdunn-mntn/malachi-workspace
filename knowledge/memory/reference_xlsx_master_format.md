@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [xlsx master format, MntnWorkbook, mntn_xlsx.py, xlsx deliverable, brand palette, Inter font, save_drive, heat, signal, glossary terseness, Mountain Green, paint rule, what to highlight, answer column]
 domain: [workflow, business]
 lifecycle: active
-last_verified: 2026-07-30
+last_verified: 2026-08-20
 ---
 The default shareable is a branded **.xlsx**, and every one is built with the shared module so they all
 look identical and polished. Source of truth = `documentation/docs/xlsx_deliverable_standard.md`; code =
@@ -36,8 +36,10 @@ makes traffic-light fns. Sample: `python3 lib/mntn_xlsx_demo.py` → `My Drive/T
   fills; **never both on one column** (they collide in Excel). Column widths fit the WHOLE header.
 - File name: Drive = `<KEY> <Title Case Desc>.xlsx`; local repo `outputs/` = `<prefix>_<snake>.xlsx`;
   builder committed at `tickets/<t>/artifacts/<prefix>_build_xlsx.py` (.xlsx gitignored).
-- Drive folder = `My Drive/Tickets/<KEY>/` — **key only** (re-locked; older folders' description suffix
-  has drifted).
+- Drive folder = `My Drive/Tickets/<KEY> <Short Title>/` — **key PLUS a short description**
+  (**reversed 2026-08-20**: key-only was unreadable, Malachi does not remember ticket numbers).
+  `save_drive()` reuses any existing folder starting with the key, whatever its description, so a
+  hand-rename is never orphaned by a rebuild. FILE name stays `<KEY> <Desc>.xlsx`.
 
 **Attribution (user-set 2026-07-21):** cover *Prepared by* defaults to **`Malachi Dunn · Audience
 Intelligence`** (author + team) — a deliberate exception to the no-names-in-shared-artifacts rule, for
@@ -121,3 +123,13 @@ back into a data JSON once, then build from the JSON through `MntnWorkbook` (rep
 **The format is a living, centralized look** — refine `lib/mntn_xlsx.py`, regenerate the sample, note it
 in the doc Changelog; every builder re-run inherits the change. See [[feedback_xlsx_default_output]],
 [[reference_drive_mount_xlsx_delivery]], [[reference_deck_standards]].
+
+**Drive reorganized 2026-08-20.** My Drive root went from ~40 loose files to 5 folders:
+`Tickets/` · `Reference/` (cross-ticket gdocs) · `Learning/` · `Presentations/` · `Personal/`.
+Every ticket folder is now `<KEY> <Short Title>`; legacy typos fixed (DM-3188 "Comparisson",
+TI-200 triple space). **Nothing was deleted** — 23 superseded copies, `(1)`-suffixed duplicates,
+`Untitled spreadsheet`s and `results-<timestamp>` exports went to `Tickets/_ARCHIVE/`, because a
+Drive file that looks like a stale duplicate can be the link someone is actively working from
+(AUDI-1141: `MM vs 3P Scorecard.xlsx` reads as a dupe of the prefixed file and is the one Sales has
+open). Moving and renaming preserve the file ID, so every circulated link still resolves; deleting
+does not. Empty the archive only after checking each file's sharing.

@@ -1331,15 +1331,26 @@ class MntnWorkbook:
         return path
 
     def save_drive(self, ticket_key: str, filename_desc: str, drive_root: str | None = None) -> str:
-        """Write straight into the mounted Google Drive: My Drive/Tickets/<KEY>/<KEY> <Desc>.xlsx"""
+        """Write into the mounted Drive: My Drive/Tickets/<KEY> <Ticket Title>/<KEY> <Desc>.xlsx
+
+        A ticket folder is named "<KEY> <short title>" so it is findable without knowing the number.
+        An existing folder starting with the key WINS, whatever its description, so a hand-renamed
+        folder is never orphaned by a rebuild (which is what a bare-key mkdir used to do).
+        """
         self._resolve_query_links()  # deep-link each Source footnote to its query block (may add issues)
         self._raise_if_issues()  # broken workbook cannot reach Drive
         root = drive_root or os.path.expanduser(
             "~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/Tickets"
         )
-        folder = os.path.join(root, ticket_key.upper().strip())
+        key = ticket_key.upper().strip()
+        existing = sorted(
+            d
+            for d in (os.listdir(root) if os.path.isdir(root) else [])
+            if d == key or d.startswith(key + " ")
+        )
+        folder = os.path.join(root, existing[0] if existing else key)
         os.makedirs(folder, exist_ok=True)
-        fname = f"{ticket_key.upper().strip()} {filename_desc}.xlsx"
+        fname = f"{key} {filename_desc}.xlsx"
         path = os.path.join(folder, fname)
         self.wb.save(path)
         return path
