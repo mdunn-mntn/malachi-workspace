@@ -38,7 +38,17 @@ is not "no credentials ever" — Airflow and Databricks have no keyless path —
 > anywhere.**
 
 So the answer is not "get service accounts and put their keys in `~/.config`". It is a runner
-with an attached identity, plus Secret Manager for the two services that genuinely need a secret.
+with an attached identity, plus the org's approved secret store for anything that genuinely
+cannot be eliminated.
+
+**The org already has a paved road here, and it is not Secret Manager by default** (SOP 052,
+`docs/standard_operating_procedures/052-secrets-management-strategy.md`): secrets default to
+**Vault/ESO**, with Secret Manager as a **narrow, documented exception**. SOP 060 covers the
+GitHub side — Actions get short-lived **Octo STS** App tokens, never PATs
+(`docs/standard_operating_procedures/060-github-actions-octo-sts-tokens.md`). SOP 063 is the
+least-privilege principle this whole doc is an instance of (`063-security-principles.md:136-152`).
+Conform to those rather than introducing a new exception; the fewer secrets this job needs, the
+less of that conversation applies.
 
 ## 3. Recommended shape — **corrected 2026-08-20 after reading the OIDC config**
 
@@ -64,12 +74,21 @@ Cloud Run sidesteps the question entirely: the job runs **as a GCP service accou
 project**, triggered by Cloud Scheduler. No repository identity is involved, no OIDC trust has
 to be widened, and still no service-account key exists anywhere.
 
-**There is already a precedent to copy.** `daily-jedi-media-spend` in `dw-finance-compliance`
-is a scheduled Cloud Run job, and the repo documents the split: **Crossplane owns the `V2Job`
-manifest** under `argocd-v2/mgmt/platform/crossplane/managed-resources/prod/manifests/base/`,
-and **Terragrunt owns the IAM bindings Crossplane cannot express** (`provider-gcp-cloudrun`
-v2.5.x ships `V2Job` but not `V2JobIAMMember` — see DEV-8121). Follow that shape rather than
-inventing one.
+**There is a precedent, but only half of it is verified.** `daily-jedi-media-spend` in
+`dw-finance-compliance` is a scheduled Cloud Run job. What is confirmed is the **IAM** split:
+Terragrunt owns the invoker binding (`.../jedi-media-spend-job/terragrunt.hcl:1-12`) because
+`provider-gcp-cloudrun` v2.5.x ships `V2Job` but not `V2JobIAMMember` (DEV-8121), and Crossplane
+owns the job's other IAM under `argocd-v2/.../dw-finance-compliance/iam/jedi-media-spend-job/`.
+
+> **CORRECTED 2026-08-20 (Compass design review).** An earlier draft of this doc said
+> "Crossplane owns the `V2Job` manifest". **That was inferred from the Terragrunt header comment,
+> not verified.** The comment says Crossplane owns the job's *IAM*; it does not say where the job
+> resource lives. A grep for `kind: V2Job` across `argocd-v2/mgmt/platform/crossplane` returns
+> **no matches**, and `jedi-media-spend` does not appear in `mntn-argocd` at all. The compute
+> manifest's home is **unresolved** — possibly a third repo or a composite claim that is not
+> indexed. **Find it before copying the pattern**, or you inherit an IAM-only shape and miss the
+> compute resource's real owner and promotion gates. Ask the `dw-finance-compliance` owner or
+> DEV-8121's author.
 
 ### What is already built and verified
 
@@ -89,9 +108,9 @@ inventing one.
 |---|---|---|---|
 | **GCP** (GCS + Dataproc read, artifact write) | GCP SA `spark-optimizer@mntn-prj-prod-00` | **None** — the Cloud Run job's attached identity | `roles/storage.objectViewer` on `mntn-data-archive-prod` and the PHS temp bucket; `roles/storage.objectCreator` on the `optimizer/` prefix only; `roles/dataproc.viewer` on the project |
 | **Scheduler → job** | Cloud Scheduler SA | None | `roles/run.jobsExecutor` on this job only (the `daily-jedi-media-spend` Terragrunt pattern) |
-| **Airflow** | Astro Deployment API token | Secret Manager | Read-only on the `airflow-ti` deployment. The coverage pass only does `GET /dags` and `GET /dags/{id}/tasks` |
-| **Databricks** | Databricks **service principal** | OAuth M2M client secret in Secret Manager | `CAN_VIEW` on jobs; `CAN_USE` on one SQL warehouse; SELECT on the tables `EXPLAIN COST` plans |
-| **GitHub** | **not needed at all** | — | The runner reads no repo and writes no repo. If a read is ever wanted, a GitHub App with `contents: read` + `metadata: read` — which *structurally* cannot open a PR — never a PAT |
+| **Airflow** | Astro Deployment API token | Approved store — **Vault/ESO by default** (SOP 052); Secret Manager only as a documented exception | Read-only on the `airflow-ti` deployment. The coverage pass only does `GET /dags` and `GET /dags/{id}/tasks` |
+| **Databricks** | Databricks **service principal** | OAuth M2M client secret in the approved store (see SOP 052; **not** assumed Secret Manager) | `CAN_VIEW` on jobs; `CAN_USE` on one SQL warehouse; SELECT on the tables `EXPLAIN COST` plans |
+| **GitHub** | **not needed at all** | — | The runner reads no repo and writes no repo. If a read is ever wanted: a single-repo `contents: read` App via the **Octo STS** pattern (SOP 060), which *structurally* cannot open a PR. Never a PAT — SOP 052's FAQ prohibits it outright |
 
 ### GitHub, specifically: the cleanest answer is no GitHub access
 
@@ -131,15 +150,16 @@ whoever owns these.
 group — the optimizer reads, it never produces. It needs exactly `CAN_VIEW` on jobs,
 `CAN_USE` on one SQL warehouse, and SELECT on the tables `EXPLAIN COST` plans.
 
-**Mint the secret straight into Secret Manager so it never lands in a file or a shell history:**
+**Do not mint the secret until the store is settled.** SOP 052 makes Vault/ESO the default and
+Secret Manager a narrow exception, so the destination is an open question, not a given. Whatever
+it is, pipe the secret straight into it — an OAuth M2M secret is shown once, and echoing it to a
+terminal puts it in the scrollback:
 
 ```bash
+# destination TBC pending the SOP 052 answer; shape only
 databricks service-principal-secrets create <sp-id> -p malachi@mountain.com -o json \
-  | jq -r .secret \
-  | gcloud secrets create databricks-spark-optimizer --data-file=- --project=mntn-prj-prod-00
+  | jq -r .secret | <write to the approved store, never to a file>
 ```
-
-An OAuth M2M secret is shown once. If it is echoed to a terminal, it is in the scrollback.
 
 ## 5. What each piece costs
 
@@ -176,10 +196,26 @@ working state, not a blocked one.
 - **A runner does not make the findings right.** The verify-before-send rule stays a human step;
   automating the send is explicitly out of scope.
 
-## 8. Open questions for whoever picks this up
+## 8. Open questions — after the Compass review, 2026-08-20
 
-1. Who owns the Astro org and can mint a deployment API token?
-2. Does the GitHub App need org-owner approval, or can it be installed on the single repo?
-3. Which project hosts the job? `mntn-prj-prod-00` keeps it next to the data and the existing
-   grants, but the Crossplane precedent lives in `dw-finance-compliance`.
-4. Does `compass-slack` already accept an arbitrary rendered message, or does it need an endpoint?
+Compass confirmed the identity direction (dedicated SA + Cloud Run, no personal SSO, no key) and
+flagged that MNTN's paved road already refuses human-carried credentials for automation, so the
+job should **conform rather than customise**. Four things it could not settle:
+
+1. **Where does the `V2Job` manifest actually live?** `kind: V2Job` is not in the Crossplane tree
+   and `jedi-media-spend` is not in `mntn-argocd`. Ask the `dw-finance-compliance` owner or
+   DEV-8121's author before copying the pattern.
+2. **SA bindings: join the group or stand alone?** DEV-8182 and mntn-devops#4724 both granted to
+   `group:audience-intelligence@mountain.com` rather than a principal. Needs the IAM owner.
+3. **Does Octo STS (SOP 060) even apply to a Cloud Run job**, or only to Actions workflows? And
+   who approves a single-repo `contents: read` install?
+4. **Vault/ESO or Secret Manager** for the Databricks M2M secret, under SOP 052's narrow-exception
+   rule (`052-secrets-management-strategy.md:175-185`)?
+
+Plus the one Compass is structurally blind to: **who owns the Astro org** and can mint a
+deployment token. INC-006 established the Astronomer deploy is not in Compass's monitored fleet —
+that question goes to `#dev-basecamp` or devops directly.
+
+**Verification Compass asked for, worth doing either way:** once the job is live, confirm IAM
+Policy Analyzer shows **no personal-account binding left** on the two buckets or the project. That
+is the actual test that the personal-SSO path is gone, not just supplemented.

@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: 6b830d36-17fc-4962-b8c0-c9c838b6e689
 doc_type: memory
-keywords: [compass, atlas code mcp, backstage, infra investigator, agent-gateway, contextforge, harvey yau, dev-basecamp, quickframe coverage gap, a2a]
+keywords: [compass, SOP 052, SOP 060, SOP 063, octo sts, vault ESO, secrets management strategy, standard operating procedures, design review, atlas code mcp, backstage, infra investigator, agent-gateway, contextforge, harvey yau, dev-basecamp, quickframe coverage gap, a2a]
 domain: [infra, routing-people]
 lifecycle: active
-last_verified: 2026-06-10
+last_verified: 2026-08-20
 ---
 **Compass** = MNTN's internal multi-agent AI infrastructure investigator, embedded in Backstage (Internal Developer Platform). Router → parallel domain Advisors (Infra/Billing/GCP/Knowledge/GitHub) → live evidence knowledge graph with contradiction detection + provenance + readiness-based synthesis. Read-only (remediation via GitOps PRs). Built on MCP + Google A2A + ContextForge (IBM MCP gateway) + Grafana LGTM. Whitepaper 2026-03; org rollout 2026-06 (Harvey Yau). Questions: **#dev-basecamp**.
 
@@ -26,4 +26,19 @@ last_verified: 2026-06-10
 
 **Relevant to our killed Slack bot:** Compass's Slack integration + knowledge-doc authoring are ROADMAP (§9), not shipped — so Compass does NOT yet replace a scheduled Slack-scrape→markdown pipeline. See [[reference_pi5_server]] (bot decommissioned 2026-06-10) and `knowledge/mntn_business.md` Compass section.
 
-**Secret policy (paired):** no local-env API keys / no local Slack apps. Secrets → SOPS-encrypted in ArgoCD repo, rotated via Basecamp tool (KMS Decrypt disabled for individuals; Vault optional/unsupported).
+**Secret policy (paired):** no local-env API keys / no local Slack apps. Secrets → SOPS-encrypted in ArgoCD repo, rotated via Basecamp tool (KMS Decrypt disabled for individuals; Vault optional/unsupported). *[Recorded 2026-06-10, source: the decommissioning conversation.]*
+
+**CONTRADICTION, unresolved (2026-08-20).** The line above says **SOPS-in-ArgoCD, Vault optional/unsupported**. Compass's design review cites **SOP 052** (`052-secrets-management-strategy.md:175-185`) as **Vault/ESO by default, Secret Manager a narrow documented exception** — and does not mention SOPS at all. Both are kept; neither is deleted.
+- *Evidence for SOPS/ArgoCD:* what I was told at the 2026-06-10 decommissioning, conversational.
+- *Evidence for Vault/ESO:* a numbered SOP with line references, quoted by Compass in a design review.
+- *Reconciling hypothesis:* the policy moved between June and August (SOP 052 postdates the bot decommissioning), OR they address different layers — SOPS for GitOps-delivered cluster secrets, Vault/ESO for workload-runtime secrets, Secret Manager for neither by default.
+- *The check that settles it:* read `docs/standard_operating_procedures/052-secrets-management-strategy.md` directly and look for its effective date and whether it supersedes the SOPS guidance. Do this before storing a secret for any new workload.
+
+**SOPs Compass surfaced that were not otherwise on my radar (2026-08-20, AUDI-1194 identity review).** Compass cites `docs/standard_operating_procedures/` as an authoritative corpus; three that govern any automation identity work:
+- **SOP 052 secrets** (`052-secrets-management-strategy.md:175-185`): secrets default to **Vault/ESO**; **Secret Manager is a narrow, documented exception**, not the default. The paired FAQ (`secrets-management-announcement-and-faq.md:65-86`) prohibits PATs and hardcoded credentials outright. Do NOT assume Secret Manager for a new workload.
+- **SOP 060 GitHub Actions Octo STS** (`060-github-actions-octo-sts-tokens.md`): Actions get short-lived **Octo STS App tokens**, never PATs. OPEN: whether it applies to a Cloud Run job rather than an Actions workflow.
+- **SOP 063 security principles** (`063-security-principles.md:136-152`): least privilege, SP-06. The rule Compass applies to any "runs on my laptop under personal SSO" job — that is a standing-credential gap regardless of what it reads.
+
+**Calibration, second data point (AUDI-1194, 2026-08-20).** Compass caught a real error of mine: I read a Terragrunt header comment saying "Crossplane owns the rest of jedi-media-spend-job **IAM**" and wrote it up as "Crossplane owns the **V2Job manifest**". Compass grepped `kind: V2Job` across `argocd-v2/mgmt/platform/crossplane` (no matches) and `mntn-argocd` (no `jedi-media-spend` at all) and returned the manifest's home as **unresolved evidence, not a fact**. That is the pattern to expect: **Compass is strong at "does this artifact actually exist where you think", weaker at mechanism** (see the INC-006 note above). Use it to falsify structural claims; keep confirming runtime behaviour yourself.
+
+**It also reports honestly when a specialist did not answer.** In the same review it flagged that its iam-advisor and secrets-advisor questions came back without a validated, corroborated response and told me not to finalise those decisions from the review alone — rather than filling the gap with documentation inference. Treat an unanswered sub-question as unanswered, and re-dispatch it.
