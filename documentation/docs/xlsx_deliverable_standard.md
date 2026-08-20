@@ -399,3 +399,13 @@ Every existing builder re-run picks up the new look automatically. That is the p
 - **2026-07-21 · v1** — Initial standard + `lib/mntn_xlsx.py` (`MntnWorkbook`): branded cover with
   clickable contents, finding-led table sheets with heat + RAG, glossary/SQL/notes sheets, color-coded
   tabs, locked palette/typography/naming/Drive structure. Sample at `My Drive/Tickets/_FORMAT_SAMPLE/`.
+
+### No label badges in descriptive slots
+
+A contents line, method subtitle, caption or column note **states what the thing is**. Do not prefix it
+with a rhetorical badge and colon: `The headline:`, `Best case:`, `The realistic average:`, `Key point —`.
+Write "Every MM campaign vs 3P, by vertical", not "The headline: every MM campaign vs 3P, by vertical".
+
+In a contents list every line is a description, so the badge carries no information and reads as
+salesmanship. Conclusion-first phrasing belongs where a conclusion is the point: cover takeaways and the
+sheet `finding=` title. `MntnWorkbook` hard-fails the build on a badge in `toc=` or `method=`.

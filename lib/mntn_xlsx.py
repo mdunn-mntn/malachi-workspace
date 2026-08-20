@@ -301,6 +301,21 @@ class MntnWorkbook:
     FINDING_CAP = 125
     METHOD_CAP = 200
 
+    # A descriptive slot (contents line, method subtitle) states what the thing IS. A rhetorical badge
+    # in front of it ("The headline:", "Best case:") tells the reader how to feel before they have read
+    # the row, and in a contents list every line is a description anyway, so the tag carries nothing.
+    # BLUF stays where a conclusion is the point: takeaways and the finding title. (Malachi, 2026-08-20.)
+    _LABEL_PREFIX = re.compile(r"^\s*[A-Z][^.:;!?]{0,44}:\s+\S")
+
+    def _check_label_prefix(self, sheet: str, field: str, text: str) -> None:
+        if text and self._LABEL_PREFIX.match(text):
+            badge = text.split(":", 1)[0].strip()
+            self._issue(
+                sheet,
+                f"{field} opens with the label {badge!r} — drop the badge and start with what the "
+                f"thing is. BLUF belongs in takeaways and the finding title, not descriptive slots",
+            )
+
     def _check_titleblock(self, sheet: str, finding: str, method: str) -> None:
         """Hard-fail an over-long tab title or method subtitle.
 
@@ -308,6 +323,7 @@ class MntnWorkbook:
         always detail that belongs on the Read me or Method tab; the subtitle should state the
         basis and delegate, e.g. "... See Read me for definitions."
         """
+        self._check_label_prefix(sheet, "method", method)
         for label, text, cap in (
             ("finding", finding, self.FINDING_CAP),
             ("method", method, self.METHOD_CAP),
@@ -853,6 +869,7 @@ class MntnWorkbook:
         if query:
             self._pending_query_links.append((ws.title, foot_row, query))
         if toc:
+            self._check_label_prefix(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, kind))
         return ws
 
@@ -923,6 +940,7 @@ class MntnWorkbook:
         self._wrap_rows(ws, "B", def_rows, body_width)
         self._fit_subtitle_height(ws, 2, sub, a_width + body_width)
         if toc:
+            self._check_label_prefix(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, "glossary"))
         return ws
 
@@ -995,6 +1013,7 @@ class MntnWorkbook:
         ws.column_dimensions["A"].width = width
         self._fit_subtitle_height(ws, 2, note, width)
         if toc:
+            self._check_label_prefix(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, "sql"))
         return ws
 
@@ -1119,6 +1138,7 @@ class MntnWorkbook:
         self._wrap_rows(ws, "A", body_rows, body_width)
         self._fit_subtitle_height(ws, 2, intro, body_width)
         if toc:
+            self._check_label_prefix(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, "notes"))
         return ws
 
