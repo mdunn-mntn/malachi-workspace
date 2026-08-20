@@ -1,7 +1,7 @@
 ---
 doc_type: ticket
 title: "[SPIKE] Advertisers spending with no measurable site visits"
-status: in_progress
+status: done
 date: 2026-08-19
 summary: "Share of site visits by advertiser: how much of their own site traffic MNTN touched, and who falls short of similar accounts"
 result: "25 advertisers spending $10k+ reach less of their site audience than three quarters of size-matched peers. Only 39 report no visits at all."
