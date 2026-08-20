@@ -290,3 +290,35 @@ Read the old `My Drive/Tickets/AUDI-1141/MM vs 3P Scorecard.xlsx` cell-by-cell o
 
 **Lesson:** a shared workbook is not reproducible from its builder alone once anyone has touched it in
 Drive. Read the live file before regenerating over it. The old file is still in place next to the new one.
+
+## 12. Correction to §11, and a spec divergence found in the original Slack thread (2026-08-20)
+
+**Correction — §11 item 3 overreached.** The full Slack thread shows Malachi **made Jon an editor** on
+`1m5RKXYN219eGH_JiYwPdL9pmzwmerunJ` on 2026-07-22 ("I'll make you an editor as well just in case"), and
+the ROAS-advantage column existed because **Jon asked for it**. So the hand edits (re-sort, the Education
+footnote, the two "N/A" cells) are as likely Jon's as anyone's, and the Education caveat was one Malachi
+had already given him verbally. §11 called the pattern a cherry-picking "tell"; that reading is not
+supported. Both cells still show their real ratio in the rebuild, which is the right default, but the
+motive claim is withdrawn.
+
+**Spec divergence — Jon's zip rule was never implemented as stated.** On 2026-07-20 Jon said: *"Lets omit
+zip codes for all verticals except auto and professional services."* The shipped SQL does something
+different: zip/city/radius narrowing routes a campaign into **MM restricted** in EVERY vertical, with no
+Auto/ProServ exemption. That is a defensible design (isolate rather than drop, and expose the group), but
+it was never reconciled with him, and it matters because MM restricted IS folded into **MM (all)** — the
+exact lens Jon says the deck is using for the "realistic story".
+
+Applying Jon's rule literally (drop geo-narrowed MM campaigns outside Auto and ProServ) on the
+2026-08-20 window:
+
+| MM (all) | As shipped | Jon's zip rule | 3P |
+|---|---:|---:|---:|
+| Advertisers | 2,299 | 1,514 | 378 |
+| IVR (median) | 0.26% | **0.34%** | 0.07% |
+| CPV (median) | $12.90 | **$11.36** | $36.23 |
+| CPA (median) | $338.82 | **$295.06** | $732.50 |
+
+Drops 2,592 of 5,966 MM campaigns (43%), $26.0M spend. **The shipped MM (all) understates MM against
+Jon's own spec**: IVR advantage 3.5x → 4.7x, CPA advantage 2.16x → 2.48x. Not added to the workbook — it
+is a third lens and §9's "pick one and hold it" applies to it too. Raise it with Jon and let him choose
+which MM (all) the deck means.
