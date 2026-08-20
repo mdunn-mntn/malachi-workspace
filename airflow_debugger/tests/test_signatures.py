@@ -166,6 +166,25 @@ CASES = [
         "failed\nCaused by: java.net.SocketTimeoutException: Read timed out",
         "gcs_list_timeout",
     ),
+    (
+        # Airflow-3 shape (INC-015 drift logs): the [error] line is empty and the payload
+        # survives only in the slack_messages dict repr, where \n is two literal characters.
+        "vertex_code9_repr_escapes",
+        "'exception': RuntimeError('Job failed with:\\ncode: 9\\nmessage: \" The DAG failed "
+        "because some tasks failed. The failed tasks are: [submit-daily-drift-job].; Job "
+        "(project_id = mntn-targeting-prj-prod, job_id = 3145311409647124480) is failed due "
+        "to the above error.\"\\n')",
+        "vertex_pipeline_task_failed",
+    ),
+    (
+        # Older incident capture (INC-002): same wrapper on real newlines.
+        "vertex_code9_real_newlines",
+        "RuntimeError: Job failed with:\ncode: 9\nmessage: \" The DAG failed because some "
+        "tasks failed. The failed tasks are: [create-dataproc-cluster].; Job (project_id = "
+        "mntn-targeting-prj-prod, job_id = 951702149350293504) is failed due to the above "
+        "error.\"",
+        "vertex_pipeline_task_failed",
+    ),
 ]
 
 # Real prod log shape (2026-08-06 ddp_vertical_classification_api): a dbt python model

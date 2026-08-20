@@ -66,3 +66,16 @@ def test_troubleshooting_renders_perf_section(monkeypatch: pytest.MonkeyPatch) -
 def test_non_perf_failure_gets_no_profile() -> None:
     """Non-perf failure classes never trigger the profiler."""
     assert profile(_diag("executor_lost")) is None
+
+
+if __name__ == "__main__":
+    mp = pytest.MonkeyPatch()
+    try:
+        test_gate_fires_only_on_perf_signatures_with_a_log()
+        test_profile_runs_optimizer_on_local_event_log(mp)
+        test_profile_degrades_to_note_when_log_unreachable()
+        test_troubleshooting_renders_perf_section(mp)
+        test_non_perf_failure_gets_no_profile()
+    finally:
+        mp.undo()
+    print("OK - perf_profile gate + profiling + report tests passed")

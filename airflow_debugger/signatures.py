@@ -159,6 +159,20 @@ SIGNATURES: list[Signature] = [
         "yes",
     ),
     Signature(
+        "vertex_pipeline_task_failed",
+        # Two log shapes: real newlines in the older incident .txt captures, literal two-char
+        # \n escapes in the current Airflow-3 logs (the payload survives only inside the
+        # slack_messages dict repr, the [error] line itself carries no text).
+        r"The DAG failed because some tasks failed\. The failed tasks are: \[[^\]]+\]|"
+        r"Job failed with:(\\n|\s)+code: 9",
+        "vertex/pipeline-task-failed",
+        "A Vertex AI pipeline step failed; the Airflow log carries only the code-9 wrapper, "
+        "not the cause. Read the bracketed step name and job_id from the message, then pull "
+        "that step's own logs (Vertex console run URL is logged just above the traceback). "
+        "The step is usually a Dataproc/custom job whose real error lives one layer down.",
+        "no",
+    ),
+    Signature(
         "analysis_exception",
         r"AnalysisException|TABLE_OR_VIEW_NOT_FOUND|UNRESOLVED_COLUMN|cannot resolve",
         "query/schema-error",
