@@ -63,6 +63,22 @@ def _with_anthropic(module: types.ModuleType | None, fn: Callable) -> object:
             del sys.modules["anthropic"]
 
 
+# Deliberately UNCLASSIFIED: the deterministic-vs-LLM test needs the LLM path to be
+# reached. Any signature added here would silently turn that test into a no-op.
+_UNKNOWN_LOG = """\
+2026-08-06T01:08:16.873042Z [info] astronomer.runtime.listener TaskInstance Details:
+2026-08-06T01:08:17.430913Z [error] task Task failed with exception
+2026-08-06T01:08:17.476952Z [info] include.job_config.slack_messages id=UUID('019fd498') task_id='send_notification' dag_id='set_gaclid_enabled_flag' run_id='scheduled__2026-08-05T01:00:00+00:00' try_number=2 'exception': DiskFullException("No space left on device while staging output")
+"""
+
+
+def _unknown_log_file() -> str:
+    fd, path = tempfile.mkstemp(suffix=".log", text=True)
+    with os.fdopen(fd, "w") as f:
+        f.write(_UNKNOWN_LOG)
+    return path
+
+
 def _slack_log_file() -> str:
     fd, path = tempfile.mkstemp(suffix=".log", text=True)
     with os.fdopen(fd, "w") as f:
@@ -122,7 +138,7 @@ def test_orchestrate_prefers_deterministic_on_llm_failure() -> None:
     def _raise(**kwargs: object) -> None:
         raise RuntimeError("FakeAuthError")
 
-    path = _slack_log_file()
+    path = _unknown_log_file()
     try:
         res = _with_anthropic(_fake_anthropic(_raise), lambda: orchestrate.investigate(path))
     finally:
@@ -133,13 +149,29 @@ def test_orchestrate_prefers_deterministic_on_llm_failure() -> None:
     assert "LLM synthesis unavailable" in res["diagnosis"]["llm_note"]
 
 
+def test_slack_failure_classifies_without_an_llm_call() -> None:
+    """A Slack notify failure resolves deterministically; the LLM is never reached."""
+
+    def _raise(**kwargs: object) -> None:
+        raise AssertionError("LLM called for a classified failure")
+
+    path = _slack_log_file()
+    try:
+        res = _with_anthropic(_fake_anthropic(_raise), lambda: orchestrate.investigate(path))
+    finally:
+        os.unlink(path)
+    assert res["diagnosis"]["root_signature"]["key"] == "slack_notify_failed"
+    assert res["confidence"] == "high"
+    assert res["llm_used"] is False
+
+
 def test_orchestrate_matcher_crash_degrades_to_no_matches() -> None:
     """A matcher crash degrades to empty matches instead of killing the run."""
 
     def _boom(*args: object) -> None:
         raise json.JSONDecodeError("Expecting ':' delimiter", '{"inc"', 6)
 
-    path = _slack_log_file()
+    path = _unknown_log_file()
     orig = orchestrate.match_incidents
     orchestrate.match_incidents = _boom
     try:
@@ -159,7 +191,7 @@ def test_evidence_includes_log_tail_and_parse_notes() -> None:
         captured.update(evidence)
         return None, None
 
-    path = _slack_log_file()
+    path = _unknown_log_file()
     orig = synth_mod.synthesize
     synth_mod.synthesize = _capture
     try:
@@ -167,7 +199,7 @@ def test_evidence_includes_log_tail_and_parse_notes() -> None:
     finally:
         synth_mod.synthesize = orig
         os.unlink(path)
-    assert "not_in_channel" in captured["log_tail"]
+    assert "No space left on device" in captured["log_tail"]
     assert "parse_notes" in captured and "root_error" in captured
 
 
@@ -223,6 +255,7 @@ if __name__ == "__main__":
         test_output_capped_at_500,
         test_max_tokens_thinking_only_returns_note,
         test_orchestrate_prefers_deterministic_on_llm_failure,
+        test_slack_failure_classifies_without_an_llm_call,
         test_orchestrate_matcher_crash_degrades_to_no_matches,
         test_evidence_includes_log_tail_and_parse_notes,
         test_dataproc_error_text_reaches_incident_query,

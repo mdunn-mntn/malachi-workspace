@@ -417,6 +417,28 @@ def test_dbx_rca_non_dict_run_output_noted() -> None:
     assert any("non-dict payload" in n for n in ev.notes)
 
 
+def test_bogus_none_batch_id_is_rejected() -> None:
+    """'Starting batch None-1' means no batch was submitted; never query GCP for it."""
+    log = (
+        "[info] airflow.task.operators.include.dataproc.serverless_operators."
+        "RetrySafeDataprocCreateBatchOperator Starting batch None-1\n"
+        "[error] task Task failed with exception\n"
+    )
+    p = parse_log(log)
+    assert p.engine == "dataproc"
+    assert p.batch_id is None, f"queried GCP for a bogus id: {p.batch_id}"
+    assert any("id-minting" in n for n in p.notes), p.notes
+
+
+def test_real_batch_id_still_parses() -> None:
+    """The None-guard must not reject a legitimate batch id."""
+    p = parse_log(
+        "[info] ...DataprocCreateBatchOperator Starting batch tpa-export-2026-08-15-1786992151-1"
+    )
+    assert p.batch_id == "tpa-export-2026-08-15-1786992151-1"
+    assert p.notes == []
+
+
 if __name__ == "__main__":
     for fn in [
         test_parse_databricks,
@@ -446,4 +468,6 @@ if __name__ == "__main__":
         test_dbx_rca_non_dict_run_output_noted,
     ]:
         fn()
+    test_bogus_none_batch_id_is_rejected()
+    test_real_batch_id_still_parses()
     print("OK — parse + synthesis tests passed")

@@ -185,6 +185,61 @@ CASES = [
         "error.\"",
         "vertex_pipeline_task_failed",
     ),
+    (
+        # INC-016/017: the retry reattached to the already-failed batch (id cached in XCom).
+        "batch_id_already_exists",
+        "airflow.providers.google.cloud.operators.dataproc.DataprocCreateBatchOperator "
+        "Batch with given id already exists.",
+        "batch_id_attach_trap",
+    ),
+    (
+        # INC-020: IAM 503 before submission, so no batch was ever created.
+        "impersonated_credentials_503",
+        "'exception': ServiceUnavailable('Getting metadata from plugin failed with error: "
+        "(\\'Unable to acquire impersonated credentials\\', \\'{\\\\n  \"error\": {\\\\n    "
+        "\"code\": 503,\\\\n    \"status\": \"UNAVAILABLE\"}}\\')')",
+        "impersonation_unavailable",
+    ),
+    (
+        # The TASK's own exception is the Slack error (set_gaclid_enabled_flag/send_notification).
+        "slack_channel_not_found",
+        "'exception': SlackApiError(\"The request to the Slack API failed. "
+        "(url: https://slack.com/api/chat.postMessage)\\nThe server responded with: "
+        "{'ok': False, 'error': 'not_in_channel'}\")}",
+        "slack_notify_failed",
+    ),
+    (
+        "airflow_execution_timeout",
+        "2026-08-04T17:15:15.351435Z [error] task Process timed out\n"
+        "2026-08-04T17:15:15.654932Z [error] task Task failed with exception",
+        "task_execution_timeout",
+    ),
+    (
+        # The wrapper names no cause: it lives in the batch's own driver output.
+        "dataproc_agent_boilerplate_only",
+        "'exception': AirflowException(\"Batch job mntn-select-2026-08-06-1786049114 failed "
+        "with error: Google Cloud Dataproc Agent reports job failure. If logs are available, "
+        "they can be found at:\\nhttps://console.cloud.google.com/dataproc/batches/us-central1"
+        "/mntn-select-2026\")",
+        "downstream_job_no_local_cause",
+    ),
+    (
+        # Same class via KubernetesPodOperator; \n here is two literal characters.
+        "pod_returned_a_failure",
+        "'exception': AirflowException('Pod pre-cache-verticals-w9e9fd2v returned a failure."
+        "\\nremote_pod: {\\'api_version\\': None,\\n \\'kind\\': None}')",
+        "downstream_job_no_local_cause",
+    ),
+    (
+        # dbt model raised at runtime; the real exception is in the traceback below it.
+        "dbt_model_runtime_crash",
+        "Completed with 1 error, 0 partial successes, and 0 warnings:\n"
+        "  Runtime Error in model ddp_vertical_classification_api "
+        "(models/vertical_categorization/ddp_vertical_classification_api.py)\n"
+        "  Python model failed with traceback as:\n"
+        "  ValueError: Too many signals to process 176052364",
+        "dbt_model_runtime_error",
+    ),
 ]
 
 # Real prod log shape (2026-08-06 ddp_vertical_classification_api): a dbt python model
@@ -257,7 +312,26 @@ def test_benign_scale_down_decommission_no_match() -> None:
 def test_dbt_runtime_crash_not_test_failure() -> None:
     """A dbt model runtime crash ('Completed with 1 error') is not a data-quality test."""
     m = classify(DBT_RUNTIME_CRASH)
-    assert m is None, f"expected no match, got {m.key}"
+    assert m is not None and m.key == "dbt_model_runtime_error", f"got {m and m.key}"
+
+
+def test_slack_callback_noise_does_not_steal_the_real_cause() -> None:
+    """The Slack notifier error in a failure CALLBACK must not become the root cause.
+
+    Any DAG that posts to Slack emits this after the task has already failed; on
+    ga4 and url_pattern_identification it was outranking the real exception.
+    """
+    blob = (
+        "[error] task Task failed with exception\n"
+        "'exception': AirflowException('Pod ga4-pod-h7hjg1kb returned a failure."
+        "\\nremote_pod: {}')\n"
+        "[error] airflow.providers.slack.notifications.slack.SlackNotifier Failed to send "
+        "notification (sync): The request to the Slack API failed.\n"
+        "The server responded with: {'ok': False, 'error': 'channel_not_found'}\n"
+        "[error] task Failed to run task callback\n"
+    )
+    m = classify(blob)
+    assert m is not None and m.key == "downstream_job_no_local_cause", f"got {m and m.key}"
 
 
 def test_generic_socket_timeout_not_gcs() -> None:
@@ -304,6 +378,7 @@ if __name__ == "__main__":
     test_order_integrity()
     test_benign_scale_down_decommission_no_match()
     test_dbt_runtime_crash_not_test_failure()
+    test_slack_callback_noise_does_not_steal_the_real_cause()
     test_generic_socket_timeout_not_gcs()
     test_grpc_deadline_not_ttl()
     test_gcp_capacity_signatures_reachable_from_databricks()

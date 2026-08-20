@@ -42,6 +42,8 @@ def _short_cause(diag: dict) -> str:
     m = re.search(r"\[([A-Z0-9_]{4,}(?:\.[A-Z0-9_]+)*)\]", err)
     if m and not diag.get("orchestration_only"):
         return m.group(1)
+    if not root and diag.get("no_error_text"):
+        return "no error text in log"
     return root.get("sig_class") or "unclassified"
 
 
@@ -74,6 +76,10 @@ def build_report(diag: dict) -> str:
     link = _link(diag)
     if link:
         lines.append(link)
+    if not root and diag.get("no_error_text"):
+        lines.append(
+            "The task emitted no failure output; diagnose the upstream task that failed."
+        )
     if not root:
         notes = "; ".join(
             (diag.get("notes") or []) + ((diag.get("spark") or {}).get("notes") or [])

@@ -42,12 +42,31 @@ class ParsedFailure:
     batch_id: str | None = None  # dataproc
     dbx_run_id: int | None = None  # databricks
     airflow_signature: dict | None = None  # signature of the Airflow-task-level failure
+    has_error_text: bool = True  # False = the task never ran / emitted no diagnostic output
     notes: list = field(default_factory=list)
 
 
 def _first(pattern: str, text: str, flags: int = 0) -> str | None:
     m = re.search(pattern, text, flags)
     return m.group(1) if m else None
+
+
+# A log with none of these carries no diagnosis: the task never ran (upstream_failed) or
+# died without emitting output. Reporting that as "unclassified" blames the taxonomy instead.
+_ERROR_MARKERS = re.compile(
+    r"\[error\]|ERROR -|Task failed with exception|Traceback \(most recent call last\)|"
+    r"\bException\b|\bError:|failed with error",
+    re.IGNORECASE,
+)
+
+
+def has_error_text(text: str) -> bool:
+    """True if the log body carries any failure output worth classifying."""
+    return bool(text and _ERROR_MARKERS.search(text))
+
+
+# 'Starting batch None-1' = the upstream create_batch_id task returned None.
+_BOGUS_BATCH_ID = re.compile(r"^None(-\d+)?$", re.IGNORECASE)
 
 
 def parse_log(text: str) -> ParsedFailure:
@@ -86,7 +105,16 @@ def parse_log(text: str) -> ParsedFailure:
         # Failed runs log 'Starting batch <id>' / lowercase 'batch job <id>' only;
         # the capital 'Batch job <id>' wording is success-only.
         p.batch_id = _first(r"[Bb]atch job (\S+)", text) or _first(r"Starting batch (\S+)", text)
-        if not p.batch_id:
+        if p.batch_id and _BOGUS_BATCH_ID.match(p.batch_id):
+            # Airflow logged the id as literally 'None-<try>': the upstream id-minting task
+            # returned nothing. Querying GCP for it is guaranteed useless, and the missing id
+            # IS the finding.
+            p.notes.append(
+                f"batch id logged as '{p.batch_id}': the upstream id-minting task "
+                "produced no id, so no batch was submitted"
+            )
+            p.batch_id = None
+        elif not p.batch_id:
             p.notes.append("dataproc engine but no 'Batch job <id>' line found")
     elif p.engine == "databricks":
         rid = (
@@ -102,6 +130,7 @@ def parse_log(text: str) -> ParsedFailure:
 
     asig = classify(text)
     p.airflow_signature = asdict(asig) if asig else None
+    p.has_error_text = has_error_text(text)
     return p
 
 
@@ -149,6 +178,7 @@ def diagnose(parsed: ParsedFailure) -> dict:
         },
         "engine": parsed.engine,
         "airflow_signature": parsed.airflow_signature,
+        "no_error_text": not parsed.has_error_text,
         "spark": spark,
         "spark_outcome": "succeeded" if spark_ok else ("failed" if spark else "none"),
         "orchestration_only": orchestration_only,

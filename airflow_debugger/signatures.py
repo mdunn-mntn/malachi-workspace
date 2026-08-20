@@ -254,11 +254,75 @@ SIGNATURES: list[Signature] = [
         "no",
     ),
     Signature(
+        "batch_id_attach_trap",
+        r"Batch with given id already exists|Attaching to the job.{0,60}if it is still running",
+        "dag_bug/batch-id-reattach",
+        "The batch id is minted once by an upstream task and cached in XCom, so this retry "
+        "reattached to the ALREADY-FAILED batch and inherited its error. The error text here "
+        "is not a fresh fault. Check GCS for _SUCCESS before re-running; to genuinely re-run, "
+        "clear the id-minting task WITH downstream so a new id is minted.",
+        "yes",
+    ),
+    Signature(
+        "impersonation_unavailable",
+        r"Unable to acquire impersonated credentials|"
+        r"Getting metadata from plugin failed.{0,80}UNAVAILABLE",
+        "transient-infra/iam-503",
+        "GCP's credential-minting service returned 503 while impersonating the job service "
+        "account, so the task died BEFORE submitting anything. No batch exists, nothing to "
+        "clean up. Confirm the log never reaches a batch state, then check whether the DAG "
+        "self-heals or has retries before acting.",
+        "no",
+    ),
+    Signature(
+        "slack_notify_failed",
+        # Must be the TASK's own exception. The notifier error also appears in the failure
+        # callback of any DAG that posts to Slack, where it would steal the real cause.
+        r"'exception': SlackApiError|SlackApiError\(.{0,160}(channel_not_found|not_in_channel)",
+        "config/slack-channel",
+        "The Slack notification call failed: the bot is not in the target channel, or the "
+        "channel id is wrong or renamed. Fix the channel id in the DAG config or invite the "
+        "app to the channel.",
+        "yes",
+    ),
+    Signature(
+        "task_execution_timeout",
+        r"\[error\] task Process timed out|Process timed out",
+        "timeout/execution",
+        "Airflow killed the task at its execution_timeout. The work itself may be fine but "
+        "slow, so read the runtime trend before raising the timeout: a task that crept past "
+        "the budget is a capacity problem, one that hangs is not.",
+        "sometimes",
+    ),
+    Signature(
+        "dbt_model_runtime_error",
+        r"Runtime Error in model|Database Error in model",
+        "dbt/model-runtime-error",
+        "A dbt model raised at runtime (not a data-quality test). The real exception is in "
+        "the Python traceback printed under the Runtime Error line; dbt's own line numbers "
+        "are templated and do not match the source file.",
+        "sometimes",
+    ),
+    Signature(
         "auth_error",
         r"AccessDenied|PERMISSION_DENIED|Unauthorized|invalid[_ ]token|token.{0,20}expired|"
         r"(?<![0-9])(401|403)(?![0-9]).{0,30}(Forbidden|Unauthorized|denied)",
         "auth",
         "Expired token or missing IAM/UC grant.",
+        "no",
+    ),
+    # LAST by design: fires only when nothing specific matched, i.e. the Airflow log is
+    # pure wrapper and the cause lives one layer down.
+    Signature(
+        "downstream_job_no_local_cause",
+        # Failure-only wording. 'Waiting for the completion of batch job' is NOT usable here:
+        # it appears in every healthy Dataproc log, so it fired on 325 green runs.
+        r"Dataproc Agent reports job failure|returned a failure\.\s*\\?n?remote_pod",
+        "boilerplate/cause-one-layer-down",
+        "The downstream job was submitted and failed, but this Airflow log carries only the "
+        "wrapper, no cause. Pull the job's own output: the Dataproc batch driver log (the "
+        "batch id is logged above) or the Kubernetes pod log. Do not read the wrapper text "
+        "as the root cause.",
         "no",
     ),
 ]
