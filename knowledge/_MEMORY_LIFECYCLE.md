@@ -117,7 +117,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | Zach Schoenberger is authoritative on audience platform / holdout | reference | 2026-07-29 | [doc](memory/reference_audience_platform_authority.md) |
 | dataproc-cost-awareness | feedback | 2026-07-29 | [doc](memory/feedback_dataproc_cost_awareness.md) |
 | feedback_attribution | feedback | 2026-07-29 | [doc](memory/feedback_attribution.md) |
-| feedback_shared_worktree_commits | feedback | 2026-07-29 | [doc](memory/feedback_shared_worktree_commits.md) |
 | reference_data_pipeline_repo | reference | 2026-07-29 | [doc](memory/reference_data_pipeline_repo.md) |
 | reference_hhst_pacing_lever | reference | 2026-07-29 | [doc](memory/reference_hhst_pacing_lever.md) |
 | rubric_strategy | feedback | 2026-07-29 | [doc](memory/feedback_rubric_strategy.md) |
@@ -196,6 +195,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | databricks | reference | 2026-08-20 | [doc](memory/reference_databricks.md) |
 | feedback_explicit_descriptive_slots | feedback | 2026-08-20 | [doc](memory/feedback_explicit_descriptive_slots.md) |
 | feedback_no_label_colon_prefix | feedback | 2026-08-20 | [doc](memory/feedback_no_label_colon_prefix.md) |
+| feedback_shared_worktree_commits | feedback | 2026-08-20 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-20 | [doc](memory/feedback_validated_is_not_correct.md) |
 | project_airflow_debugger | project | 2026-08-20 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-08-20 | [doc](memory/project_airflow_optimizer.md) |

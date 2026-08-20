@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [shared working tree, concurrent sessions, git add . sweeps edits, commit attribution, stage specific files, curator specific-files, git status before commit, git stash grabs concurrent work, stale stash pop reverts commits, fast-forward push backlog, no-verify index freshness churn]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-07-29
+last_verified: 2026-08-20
 ---
 
 Multiple Claude Code sessions on this Mac operate on ONE shared git working tree. A `git add . && git commit` in any session stages and commits EVERY uncommitted change in the tree, including another session's in-flight edits.
@@ -28,3 +28,5 @@ Multiple Claude Code sessions on this Mac operate on ONE shared git working tree
 **Recurrence 2026-08-12 (AUDI-1204), and it went BOTH ways.** I used `git add -A` per the global "commit constantly" rule and swept three of a concurrent AUDI-431 session's in-flight files into my commits; that same session's `git add .` then swept MY uncommitted `data_knowledge.md` + `data_catalog.md` edits into its commit `69a7224d "AUDI-431: capture"`. Nothing was lost (all of it is in git) but attribution is scrambled in both directions across ~5 commits. Tell: commits interleaving every 30-90s from two tickets. **The global CLAUDE.md §2 instruction literally says `git add . && git commit` — that instruction assumes a clean solo tree and is UNSAFE here. Treat scoped `git add <paths>` as the default and §2 as shorthand.** Cheap guard before any commit: `git diff --cached --name-only` and confirm every path is yours.
 
 **Instruction sources corrected 2026-08-12** so the rule stops being contradicted by the docs themselves: global `CLAUDE.md` §2, the `/capture`, `/frame` and `/transcribe` skills, and the AI-workflow-kit global template all said `git add .`. All now say stage-your-paths + `git diff --cached --name-only` before committing. `preflight.sh` also warns when the tree is dirty at session start.
+
+**Third occurrence, 2026-08-20 — and it landed on ME this time.** A concurrent AUDI-1213 session ran a blanket add and swept an entire `/capture` (4 memory files, 4 generated indexes, 3 on-call files) into its commit `cfc7e29a "AUDI-1213: drop sign-off notes from framing"`. Nothing was lost and everything reached origin, but the capture is now attributed to an unrelated ticket and is unfindable by `git log --grep`. **The staging area is shared, not per-session** — anything you `git add` is claimable by whichever session commits next, so the exposure window is between your `add` and your `commit`, not just your own blanket adds. Practical consequence: **stage and commit in ONE command**, not as separate steps, and re-check `git diff --cached --name-only` immediately before committing. A `git commit` that reports "no changes added to commit" right after a successful `git add` is this, not a mistake in your add.
