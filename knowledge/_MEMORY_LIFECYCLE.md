@@ -94,7 +94,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_bq_optimization_discipline | project | 2026-07-27 | [doc](memory/project_bq_optimization_discipline.md) |
 | reference_advertiser_vertical_correction | reference | 2026-07-27 | [doc](memory/reference_advertiser_vertical_correction.md) |
 | reference_sqlmesh_repo | reference | 2026-07-27 | [doc](memory/reference_sqlmesh_repo.md) |
-| bq-workflow | feedback | 2026-07-28 | [doc](memory/feedback_bq_workflow.md) |
 | idso_repo | reference | 2026-07-28 | [doc](memory/reference_idso_repo.md) |
 | project_audi_1173_freq_cap_bandit | project | 2026-07-28 | [doc](memory/project_audi_1173_freq_cap_bandit.md) |
 | reference_frequency_capping | reference | 2026-07-28 | [doc](memory/reference_frequency_capping.md) |
@@ -194,6 +193,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_graph_vendor_crediting | reference | 2026-08-19 | [doc](memory/reference_graph_vendor_crediting.md) |
 | reference_mntn_public_mcp | reference | 2026-08-19 | [doc](memory/reference_mntn_public_mcp.md) |
 | reference_ntb_definitions | reference | 2026-08-19 | [doc](memory/reference_ntb_definitions.md) |
+| bq-workflow | feedback | 2026-08-20 | [doc](memory/feedback_bq_workflow.md) |
 | compass-mntn-infra-investigator-atlas-code-mcp | reference | 2026-08-20 | [doc](memory/reference_compass.md) |
 | databricks | reference | 2026-08-20 | [doc](memory/reference_databricks.md) |
 | feedback_explicit_descriptive_slots | feedback | 2026-08-20 | [doc](memory/feedback_explicit_descriptive_slots.md) |

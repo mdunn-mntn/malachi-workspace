@@ -431,9 +431,13 @@ branch:
    AUDI-1113 and the #identity-crediting thread, not here.
 
 **Findings handed off rather than dropped.** The measurements in 4.4, 4.7 and 4.9 describe defects in
-the graph crediting leg that AUDI does not own. They were given to Wei and Jack directly, and Jack is
-running his own simulations off `ddp_crm_graph_cpm` using the query in
-`queries/audi_694_ds63_divisor_scenarios.sql`. Live risk to flag at Monday's walkthrough: **the August
+the graph crediting leg that AUDI does not own. They were given to Wei and Jack directly, and Jack intended to
+run his own simulations off `ddp_crm_graph_cpm` using the query in
+`queries/audi_694_ds63_divisor_scenarios.sql`. **He is blocked on it as of 2026-08-20: he has no read
+on `dw-main-gold`.** The draft posted to him assumed the table's own team already had access, which
+was wrong; gold is PAM-gated per session (`bq-read`, 8h) for everyone but a few standing grantees,
+Wei included. Reply drafted in `artifacts/audi_694_slack_reply_jack_gold_access.md`; fallback if the
+PAM cycle is too slow is exporting the 214k rows to a file for him. Live risk to flag at Monday's walkthrough: **the August
 payout is being computed on this logic now.**
 
 ## 6. Questions Answered

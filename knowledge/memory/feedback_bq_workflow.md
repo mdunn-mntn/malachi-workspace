@@ -6,10 +6,10 @@ metadata:
   type: feedback
   originSessionId: cc00f377-b575-43ed-84cf-3e31ce190e7a
 doc_type: memory
-keywords: [bq_run.sh, project_id required, mntn-coredw-prod access denied, bigquery.jobs.create permission, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook]
+keywords: [bq_run.sh, dw-main-gold access, PAM bq-read gold, gold access denied, project_id required, mntn-coredw-prod access denied, bigquery.jobs.create permission, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook]
 domain: [bigquery, workflow]
 lifecycle: active
-last_verified: 2026-07-28
+last_verified: 2026-08-20
 ---
 ## from feedback_bq_perf_tracking.md
 
@@ -34,6 +34,20 @@ mntn-coredw-prod: User does not have bigquery.jobs.create permission`. The error
 referenced, so it reads like a permissions problem rather than a missing flag. Always pass
 `--project_id=dw-main-silver` (or bronze). Cross-project `INFORMATION_SCHEMA` reads still work from any one
 billing project, so pick one and fully-qualify the rest.
+
+**`dw-main-gold` read access is not uniform across the team (2026-08-20).** malachi@ has standing
+`bq-read` on the gold project (verified: a dry run against `dw-main-gold.reporting.ddp_crm_graph_cpm`
+validates with no active PAM grant, and no malachi@ grant exists on any gold entitlement). Everyone
+else requests it per session through PAM: `gcloud pam grants create --entitlement=bq-read
+--project=dw-main-gold --location=global --requested-duration=28800s --justification="..."` (8h max,
+DevOps approves, auto-revokes). Grant history shows weiang@, safia@, kaitlin@, alyson@, elena@ and
+cfranz@ all cycling through it, so **table owners are PAM-gated on their own tables too**. Do not
+assume a collaborator can read a gold table just because they built it (this assumption was posted to
+Jack Barbey on AUDI-694 and was wrong). Note the failure modes look different: missing gold access is
+`Access Denied` on the table, while a wrong billing project is `bigquery.jobs.create` on
+`mntn-coredw-prod` (above). The gold entitlement list also carries `bq-write`, `bq-admin`,
+`breakglass-editor`, `vm-ssh`, `kms-decrypt`. The 8h window is what stranded sqlmesh PR #1147, whose
+plan runs >24h (see [[reference_aud22_geo_reporting_sync]]).
 
 Schema inspection and dry runs can still use plain `bq` (no perf logging needed for those).
 
