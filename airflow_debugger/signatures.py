@@ -173,6 +173,19 @@ SIGNATURES: list[Signature] = [
         "no",
     ),
     Signature(
+        "model_alias_not_found",
+        # Only ever printed on failure, and only reachable from the Vertex driver output the
+        # router fetches. INC-024: a model re-registration silently dropped the alias.
+        r"No version found with alias pattern '([^']+)' for model|"
+        r"alias .{0,40}(not found|does not exist).{0,40}model",
+        "vertex/model-alias-missing",
+        "The inference job resolves its model by alias pattern (e.g. challenger-v*) and the "
+        "registry has no version carrying it. Re-registering a model drops the aliases it "
+        "replaces, so this fires on every run until the owner re-applies the alias. "
+        "Check the registry before re-running: a retry cannot recreate an alias.",
+        "no",
+    ),
+    Signature(
         "analysis_exception",
         r"AnalysisException|TABLE_OR_VIEW_NOT_FOUND|UNRESOLVED_COLUMN|cannot resolve",
         "query/schema-error",

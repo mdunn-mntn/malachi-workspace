@@ -5,6 +5,7 @@ Input is a failed-task Airflow log (the file `airflow_pull.sh --watch` drops int
 the Spark engine, and pulls the downstream job id out of the log:
 - Dataproc: `Batch job <batch_id>`
 - Databricks: the dbt-databricks adapter's `Job submission response={"run_id":<N>}`
+- Vertex: the `Pipeline Run URL` the submitting task prints
 
 `route()` dispatches to the matching analyzer and returns its evidence bundle.
 """
@@ -26,6 +27,18 @@ _DATAPROC_OPS = (
     "TiPysparkBatch",
     "DataprocInstantiate",
 )
+# The submitting task prints this URL and then dies with an empty exception, so the run id
+# is the only handle on the cause. Green runs print it too - which is exactly why this is a
+# router, not a signature.
+_VERTEX_RUN_RE = re.compile(
+    r"vertex-ai/locations/(?P<loc>[a-z0-9-]+)/pipelines/runs/(?P<run>[A-Za-z0-9._-]+)"
+    r"(?:\?project=(?P<proj>[A-Za-z0-9._-]+))?"
+)
+# ExternalTaskSensor names its target then raises with no message; the target's real state
+# lives in the Airflow API, not in this log.
+_EXTERNAL_POKE_RE = re.compile(
+    r"Poking for tasks \[([^\]]*)\] in dag (\S+) on (\S+?)\s*\.\.\."
+)
 
 
 @dataclass
@@ -38,9 +51,16 @@ class ParsedFailure:
     try_number: int | None = None
     map_index: int | None = None  # mapped-task instance; -1 = not mapped
     operator: str | None = None
-    engine: str = "unknown"  # dataproc | databricks | other | unknown
+    engine: str = "unknown"  # dataproc | databricks | vertex | other | unknown
     batch_id: str | None = None  # dataproc
     dbx_run_id: int | None = None  # databricks
+    vertex_run_id: str | None = None  # vertex pipeline run
+    vertex_project: str | None = None
+    vertex_location: str | None = None
+    external_dag_id: str | None = None  # ExternalTaskSensor target
+    external_task_ids: list = field(default_factory=list)
+    external_logical_date: str | None = None
+    failed_at: str | None = None  # log timestamp of the failure, for as-of-then state checks
     airflow_signature: dict | None = None  # signature of the Airflow-task-level failure
     has_error_text: bool = True  # False = the task never ran / emitted no diagnostic output
     ti_state: str | None = None  # terminal state from the filename: failed | upstream_failed | ...
@@ -95,12 +115,28 @@ def parse_log(text: str) -> ParsedFailure:
         or _first(r"<Task\((\w+)\)", text)
     )
     hay = p.operator or text
-    if any(o in hay for o in _DATABRICKS_OPS):
+    vm = _VERTEX_RUN_RE.search(text)
+    if vm:
+        p.engine = "vertex"
+        p.vertex_run_id = vm.group("run")
+        p.vertex_location = vm.group("loc")
+        p.vertex_project = vm.group("proj")
+    elif any(o in hay for o in _DATABRICKS_OPS):
         p.engine = "databricks"
     elif any(o in hay for o in _DATAPROC_OPS):
         p.engine = "dataproc"
     elif p.operator and ("Operator" in p.operator or "Sensor" in p.operator):
         p.engine = "other"  # sensor / python / pod, not a Spark job
+
+    p.failed_at = _first(r"(\d{4}-\d{2}-\d{2}T[\d:.]+Z) \[error\]", text) or _first(
+        r"\[(\d{4}-\d{2}-\d{2}[T ][\d:.,+-]+)\] \{[^}]*\} ERROR", text
+    )
+
+    em = _EXTERNAL_POKE_RE.search(text)
+    if em:
+        p.external_task_ids = re.findall(r"'([^']+)'", em.group(1))
+        p.external_dag_id = em.group(2)
+        p.external_logical_date = em.group(3)
 
     if p.engine == "dataproc":
         # Failed runs log 'Starting batch <id>' / lowercase 'batch job <id>' only;
@@ -145,6 +181,10 @@ def _spark_succeeded(spark: dict | None) -> bool:
         )
     if spark.get("engine") == "dataproc":
         return spark.get("state") == "SUCCEEDED"
+    if spark.get("engine") == "vertex":
+        return spark.get("state") == "PIPELINE_STATE_SUCCEEDED"
+    if spark.get("engine") == "external_task":
+        return spark.get("state") == "success"
     return False
 
 
@@ -156,7 +196,7 @@ def diagnose(parsed: ParsedFailure) -> dict:
     (e.g. a pod eviction) and the Airflow-log signature is the root cause.
     """
     spark = None
-    if parsed.engine in ("dataproc", "databricks") and (parsed.batch_id or parsed.dbx_run_id):
+    if _has_downstream(parsed):
         spark = route(parsed)
     spark_sig = (spark or {}).get("signature")
     spark_ok = _spark_succeeded(spark)
@@ -188,6 +228,9 @@ def diagnose(parsed: ParsedFailure) -> dict:
         "root_error": (spark or {}).get("root_error"),
         "batch_id": parsed.batch_id,
         "dbx_run_id": parsed.dbx_run_id,
+        "vertex_run_id": parsed.vertex_run_id,
+        "vertex_project": parsed.vertex_project,
+        "vertex_location": parsed.vertex_location,
         "job_id": (spark or {}).get("job_id"),
     }
 
@@ -213,6 +256,17 @@ def parse_log_file(path: str) -> ParsedFailure:
     return p
 
 
+def _has_downstream(parsed: ParsedFailure) -> bool:
+    """True when the cause lives in another system this parser has a handle on."""
+    if parsed.engine == "dataproc":
+        return bool(parsed.batch_id)
+    if parsed.engine == "databricks":
+        return bool(parsed.dbx_run_id)
+    if parsed.engine == "vertex":
+        return bool(parsed.vertex_run_id and parsed.vertex_project)
+    return bool(parsed.external_dag_id and parsed.external_task_ids)
+
+
 def route(parsed: ParsedFailure) -> dict:
     """Dispatch to the matching analyzer; return its evidence bundle (dict)."""
     from .databricks_rca import analyze_run
@@ -222,6 +276,25 @@ def route(parsed: ParsedFailure) -> dict:
         return asdict(analyze_batch(parsed.batch_id))
     if parsed.engine == "databricks" and parsed.dbx_run_id:
         return asdict(analyze_run(parsed.dbx_run_id))
+    if parsed.engine == "vertex" and parsed.vertex_run_id and parsed.vertex_project:
+        from .vertex_rca import analyze_pipeline_run
+
+        return asdict(
+            analyze_pipeline_run(
+                parsed.vertex_run_id, parsed.vertex_project, parsed.vertex_location or "us-central1"
+            )
+        )
+    if parsed.external_dag_id and parsed.external_task_ids:
+        from .external_task_rca import analyze_external_task
+
+        return asdict(
+            analyze_external_task(
+                parsed.external_dag_id,
+                parsed.external_task_ids,
+                parsed.external_logical_date,
+                parsed.failed_at,
+            )
+        )
     return {
         "engine": parsed.engine,
         "note": "no downstream Spark job id; Airflow-only failure (sensor/python/pod or unresolved)",

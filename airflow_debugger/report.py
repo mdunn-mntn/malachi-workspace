@@ -16,6 +16,8 @@ from pathlib import Path
 
 DBX_HOST = "https://1262887251702944.4.gcp.databricks.com"
 DATAPROC_CONSOLE = "https://console.cloud.google.com/dataproc/batches/us-central1"
+VERTEX_CONSOLE = "https://console.cloud.google.com/vertex-ai/locations/{loc}/pipelines/runs"
+AIRFLOW_UI = "https://cmd6bd10c0gl901rfuokgryiq.astronomer.run/d6bdvmnl/dags"
 GCP_PROJECT = "mntn-prj-prod-00"
 GITHUB_AIRFLOW_TI = "https://github.com/SteelHouse/airflow-ti/blob/main"
 _AIRFLOW_TI_LOCAL = Path.home() / "Developer" / "work" / "mntn" / "airflow-ti"
@@ -53,6 +55,12 @@ def _link(diag: dict) -> str | None:
         return f"{DBX_HOST}/jobs/{jid}/runs/{rid}" if jid else f"{DBX_HOST} run {rid}"
     if diag.get("engine") == "dataproc" and diag.get("batch_id"):
         return f"{DATAPROC_CONSOLE}/{diag['batch_id']}?project={GCP_PROJECT}"
+    if diag.get("engine") == "vertex" and diag.get("vertex_run_id"):
+        console = VERTEX_CONSOLE.format(loc=diag.get("vertex_location") or "us-central1")
+        return f"{console}/{diag['vertex_run_id']}?project={diag.get('vertex_project')}"
+    spark = diag.get("spark") or {}
+    if spark.get("engine") == "external_task" and spark.get("run_id"):
+        return f"{AIRFLOW_UI}/{spark['dag_id']}/runs/{spark['run_id']}"
     return None
 
 

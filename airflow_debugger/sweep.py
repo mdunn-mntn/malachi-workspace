@@ -25,6 +25,7 @@ from .parse import _FILENAME_RE, has_error_text, parse_log, parse_log_file
 from .signatures import classify
 
 DEFAULT_GLOB = "on-call/airflow_logs/*/*.log"
+_FAILURE_OUTCOMES = ("failed", "upstream_failed")  # the only outcomes a taxonomy gap can hide in
 _CLUSTER_SAMPLE = 240  # chars of fingerprint text kept for the cluster label
 
 # Ranked most-specific-first: the first hit labels the cluster. These are recognition
@@ -83,12 +84,25 @@ def _outcome(path: str) -> str:
     return m.group(1) if m else "unknown"
 
 
+def _downstream_handle(p: object) -> str | None:
+    """The id that lets `route()` fetch the cause from the system that actually holds it."""
+    if p.batch_id:
+        return p.batch_id
+    if p.dbx_run_id:
+        return str(p.dbx_run_id)
+    if p.vertex_run_id:
+        return p.vertex_run_id
+    if p.external_dag_id and p.external_task_ids:
+        return f"{p.external_dag_id}.{p.external_task_ids[0]}"
+    return None
+
+
 def _cluster(text: str, job_id: str | None = None) -> str:
     """Label an unclassified log by its error shape."""
     if job_id:
         # A job id outranks any text probe: the cause is in the engine, and callback noise in the
         # Airflow log (a failed Slack notify) would otherwise mislabel a perfectly routable failure.
-        return "no local cause, routes to engine RCA (job id present)"
+        return "no local cause, routes to the owning system (downstream handle present)"
     for label, pat in _CLUSTER_PROBES:
         if re.search(pat, text, re.IGNORECASE):
             return label
@@ -99,7 +113,7 @@ def _cluster(text: str, job_id: str | None = None) -> str:
             if job_id:
                 # The Airflow log is textually identical to a healthy run; the cause is in
                 # the engine. diagnose() routes on the job id, so this is not a taxonomy gap.
-                return "no local cause, routes to engine RCA (job id present)"
+                return "no local cause, routes to the owning system (downstream handle present)"
             return f"other: {body[:_CLUSTER_SAMPLE]}"
     return "other: no error line"
 
@@ -124,7 +138,7 @@ def sweep_one(path: str) -> tuple[LogResult, str]:
             task_final=final.task_id,
             run_id=final.run_id,
             engine=p.engine,
-            job_id=p.batch_id or (str(p.dbx_run_id) if p.dbx_run_id else None),
+            job_id=_downstream_handle(p),
             signature=sig.key if sig else None,
             has_error=has_error_text(text),
         ),
@@ -139,7 +153,7 @@ def sweep(paths: list[str]) -> tuple[list[LogResult], dict[str, list[str]]]:
     for path in sorted(paths):
         res, text = sweep_one(path)
         results.append(res)
-        if res.signature is None and res.has_error:
+        if res.signature is None and res.has_error and res.outcome in _FAILURE_OUTCOMES:
             clusters[_cluster(text, res.job_id)].append(path)
     return results, dict(clusters)
 
@@ -202,9 +216,12 @@ def render(results: list[LogResult], clusters: dict[str, list[str]]) -> str:
         f" of {len(failures)}.",
         f"- Classified: {hit}/{len(diagnosable)}"
         f" ({100 * hit // max(len(diagnosable), 1)}%) of diagnosable failures.",
-        f"- Routable without a signature (job id present): {routable}."
-        " These carry no cause in the Airflow log and are resolved by the engine RCA,"
+        f"- Routable without a signature (downstream handle present): {routable}."
+        " These carry no cause in the Airflow log and are resolved by fetching it from the"
+        " system that owns it (Dataproc, Databricks, Vertex, the Airflow API),"
         " so they are not taxonomy gaps.",
+        f"- Neither classified nor routable: {len(diagnosable) - hit - routable}."
+        " This is the real taxonomy gap.",
         f"- Fires on a green run: {greens}"
         " (a signature firing on a success log is a false positive unless the mechanism"
         " genuinely occurred).",

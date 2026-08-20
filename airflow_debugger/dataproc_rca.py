@@ -119,7 +119,7 @@ def _public_ip(host: str) -> str | None:
     return None
 
 
-def _logging_via_curl(batch_id: str, project: str) -> tuple[str, str | None]:
+def _logging_via_curl(filt: str, project: str) -> tuple[str, str | None]:
     """Cloud Logging over a pinned IP, for when local DNS sinkholes the API host."""
     ip = _public_ip(_LOGGING_HOST)
     if not ip:
@@ -129,8 +129,7 @@ def _logging_via_curl(batch_id: str, project: str) -> tuple[str, str | None]:
         return "", f"access token: {err}"
     body = json.dumps({
         "resourceNames": [f"projects/{project}"],
-        "filter": (f'resource.type="cloud_dataproc_batch" AND '
-                   f'resource.labels.batch_id="{batch_id}"'),
+        "filter": filt,
         "orderBy": "timestamp desc",
         "pageSize": _LOG_LIMIT,
     })
@@ -152,22 +151,28 @@ def _logging_via_curl(batch_id: str, project: str) -> tuple[str, str | None]:
     return "\n".join(m for m in lines if m), None
 
 
-def _logging_messages(batch_id: str, project: str) -> tuple[str, str | None]:
-    """Driver log lines via Cloud Logging (key-free; the GCS staging bucket is 403)."""
-    filt = f'resource.type="cloud_dataproc_batch" AND resource.labels.batch_id="{batch_id}"'
+def logging_messages(filt: str, project: str, limit: int = _LOG_LIMIT) -> tuple[str, str | None]:
+    """`jsonPayload.message` lines for any Cloud Logging filter, with the pinned-IP fallback."""
     stdout, err = _run(
         ["gcloud", "logging", "read", filt, "--project", project,
-         "--limit", str(_LOG_LIMIT), "--freshness", _LOG_FRESHNESS,
+         "--limit", str(limit), "--freshness", _LOG_FRESHNESS,
          "--order", "desc", "--format", "value(jsonPayload.message)"]
     )  # fmt: skip
     if stdout or not err:
         return stdout or "", err
     if not any(m in err for m in _DNS_BLOCK_MARKERS):
         return "", err
-    text, curl_err = _logging_via_curl(batch_id, project)
+    text, curl_err = _logging_via_curl(filt, project)
     if text:
         return text, None
     return "", f"{err} | pinned-curl fallback: {curl_err or 'no entries'}"
+
+
+def _logging_messages(batch_id: str, project: str) -> tuple[str, str | None]:
+    """Driver log lines via Cloud Logging (key-free; the GCS staging bucket is 403)."""
+    return logging_messages(
+        f'resource.type="cloud_dataproc_batch" AND resource.labels.batch_id="{batch_id}"', project
+    )
 
 
 def driveroutput_uri(state_message: str | None) -> str | None:
@@ -176,7 +181,7 @@ def driveroutput_uri(state_message: str | None) -> str | None:
     return m.group(0) if m else None
 
 
-def _driveroutput_text(uri: str) -> tuple[str | None, str | None]:
+def driveroutput_text(uri: str) -> tuple[str | None, str | None]:
     """Read driver output from the staging bucket; return (text, None) or (None, why)."""
     try:
         out = subprocess.run(
@@ -238,7 +243,8 @@ def _decode_app_id(text: str) -> str | None:
     return m.group(0) if m else None
 
 
-def _error_region(text: str) -> str | None:
+def error_region(text: str) -> str | None:
+    """The failure region of a driver log: the last traceback, else the distinct error lines."""
     idx = text.rfind("Traceback (most recent call last):")
     if idx >= 0:
         return text[idx : idx + 2000]
@@ -304,7 +310,7 @@ def analyze_batch(
     logs, log_err = _logging_messages(batch_id, project)
     if logs:
         ev.application_id = _decode_app_id(logs)
-        ev.error_text = _error_region(logs)
+        ev.error_text = error_region(logs)
         if ev.has_event_log and ev.application_id and event_log_dir:
             ev.event_log_uri = f"{event_log_dir}/{ev.application_id}"
     elif log_err:
@@ -317,10 +323,10 @@ def analyze_batch(
     if not ev.error_text:
         uri = driveroutput_uri(ev.state_message)
         if uri:
-            text, do_err = _driveroutput_text(uri)
+            text, do_err = driveroutput_text(uri)
             if text:
                 ev.application_id = ev.application_id or _decode_app_id(text)
-                ev.error_text = _error_region(text)
+                ev.error_text = error_region(text)
                 ev.notes.append(
                     "driver text read from staging driveroutput (Cloud Logging had none)"
                 )

@@ -43,18 +43,18 @@ _DESCRIBE = {
 
 def _patched(describe=None, logging=None, driveroutput=None) -> tuple:  # noqa: ANN001
     """Swap the module's CLI-touching functions; return the originals for restore."""
-    orig = (dataproc_rca._describe, dataproc_rca._logging_messages, dataproc_rca._driveroutput_text)
+    orig = (dataproc_rca._describe, dataproc_rca._logging_messages, dataproc_rca.driveroutput_text)
     if describe is not None:
         dataproc_rca._describe = describe
     if logging is not None:
         dataproc_rca._logging_messages = logging
     if driveroutput is not None:
-        dataproc_rca._driveroutput_text = driveroutput
+        dataproc_rca.driveroutput_text = driveroutput
     return orig
 
 
 def _restore(orig: tuple) -> None:
-    dataproc_rca._describe, dataproc_rca._logging_messages, dataproc_rca._driveroutput_text = orig
+    dataproc_rca._describe, dataproc_rca._logging_messages, dataproc_rca.driveroutput_text = orig
 
 
 def test_uri_parses_real_state_message() -> None:
