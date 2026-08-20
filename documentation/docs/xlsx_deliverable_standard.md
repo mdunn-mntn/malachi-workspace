@@ -82,6 +82,15 @@ Two rules from global `CLAUDE.md` §9, restated here because workbooks break the
 - **Never use internal vocabulary this workbook doesn't define.** A constant name, tier label, function or script name, or internal column name cannot appear in reader-facing text unless a tab defines it. If the reader would have to open a source file to decode the word, it is a variable, not a word. Real misses: *"above the 12% saturation band"* (INCR-75's `IVR_SATURATED`) and *"Ceiling is Mid tier"* on a cover, in a workbook with no tier column.
 - **A `Note` column carries fact only** — composition ("36,965 visiting of 285,909 served IPs"), a benchmark ("cohort median $27.54"), or a unit qualifier ("both arms, 10% holdout"). If the label already says it, leave the Note empty. Interpretation goes on Method & caveats where it has room to be justified.
 
+### Column headers must read without the Read me, and derived groups carry their range
+
+Two failure modes caught in review on AUDI-1210 (2026-08-19), both of which passed every existing check because the terms *were* defined on the Read me:
+
+- **A header that only makes sense after a lookup is a variable, not a word.** `Rank vs peers` and `Reading` both had correct Read me entries and still stopped the reader. Rewrite the header as the sentence the number answers: `Rank vs peers` → **Similar sites we beat** (now the percentile reads forward — 23% means better than 23 of every 100), `Reading` → **Tracking history**. If you cannot name a column without a definition, the column is doing two jobs.
+- **Never label a derived group by its ordinal position.** `Smallest fifth / Second fifth / Fourth fifth / Largest fifth` tells the reader nothing about what the group *is*, and "fourth fifth" is actively hard to parse. Carry the actual range instead: **Under 25K · 25K to 120K · 120K to 350K · 350K to 1.4M · Over 1.4M**. The group then explains itself and the reader can see why a given row landed in it. Same rule for score bands, spend tiers and date buckets.
+
+A useful test before shipping: read each header aloud with no other context. If the answer to "what would this cell contain?" is a guess, rename it.
+
 ### Tab title + method subtitle caps (HARD — the build refuses to write the file)
 
 **`finding` ≤ 125 chars · `method` ≤ 200 chars.** Enforced in `MntnWorkbook.table()` via `_check_titleblock`; over-cap raises at `save_*()` and no file is produced. Derived from **AUDI-1172 `Select vs Non-Select Incrementality.xlsx`, the hand-edited reference workbook** (finding 72–122, method 91–192) and capped just above its longest.
