@@ -3,7 +3,7 @@ doc_type: ticket
 title: "[SPIKE] Advertisers spending with no measurable site visits"
 status: in_progress
 date: 2026-08-19
-summary: "Share of voice by advertiser: how much of their own site traffic MNTN touched, and who falls short of similar accounts"
+summary: "Share of site visits by advertiser: how much of their own site traffic MNTN touched, and who falls short of similar accounts"
 result: "25 advertisers spending $10k+ reach less of their site audience than three quarters of size-matched peers. Only 39 report no visits at all."
 question: "Which advertisers are we failing to reach, once site traffic and site size are accounted for?"
 framing_state: "skip: diagnostic list, the deliverable is the list itself"
@@ -30,13 +30,13 @@ Surfaced during the AUDI-1209 rerun. The lift-test screen drops any advertiser w
 
 **Second cut.** Johnny: attributed visits are a subset of the advertiser's own reported visits, so a zero match on a quiet site means nothing. Adding `raw_visits` from `summarydata.sum_by_advertiser_by_day` reclassified **171** advertisers as quiet sites, including all three named above. Their own pixels report 55, 20 and 70 visits in 30 days.
 
-**Third cut (current).** Johnny again: compare MNTN visits to the advertiser's total site visits, a share of voice, because a low match rate reflects campaign audience against site size rather than measurement. He showed it with a model account: **Maurices (66784) matches 3.15% of served IPs but reaches only 0.26% of its site traffic, while Re-Bath Cherry Hill (39510) matches 0.13% and reaches 0.29%.** The account with the far worse match rate reaches a larger share of its audience.
+**Third cut (current).** Johnny again: compare MNTN visits to the advertiser's total site visits, a share of site visits, because a low match rate reflects campaign audience against site size rather than measurement. He showed it with a model account: **Maurices (66784) matches 3.15% of served IPs but reaches only 0.26% of its site traffic, while Re-Bath Cherry Hill (39510) matches 0.13% and reaches 0.29%.** The account with the far worse match rate reaches a larger share of its audience.
 
-### Share of voice shrinks with site size, so peers are matched on it
+### Share of site visits shrinks with site size, so peers are matched on it
 
-Correlation of log site visits to log share of voice = **-0.24**. Medians by site-size quintile:
+Correlation of log site visits to log share of site visits = **-0.24**. Medians by site-size quintile:
 
-| Site size group | Median site visits | Median share of voice |
+| Site size group | Median site visits | Median share of site visits |
 |---|---|---|
 | Smallest fifth | 9,269 | 1.09% |
 | Second fifth | 59,683 | 0.91% |
@@ -44,13 +44,13 @@ Correlation of log site visits to log share of voice = **-0.24**. Medians by sit
 | Fourth fifth | 648,346 | 0.78% |
 | Largest fifth | 2,565,052 | 0.39% |
 
-Ranking on raw share of voice selects large sites and nothing else: an unadjusted bottom-quartile cut flagged ElevenLabs, Buckle, Apollo.io, EcoATM and Owala purely for having huge sites. Within-quintile ranking drops them.
+Ranking on raw share of site visits selects large sites and nothing else: an unadjusted bottom-quartile cut flagged ElevenLabs, Buckle, Apollo.io, EcoATM and Owala purely for having huge sites. Within-quintile ranking drops them.
 
 ### The current answer
 
 Of 1,859 live advertisers that served in the trailing 30 days: **1,649 scorable · 171 sites too quiet to score (under 1,000 visits) · 39 reporting no visits at all.**
 
-**25 advertisers spent $10,000 or more and sit in the bottom quartile of share of voice against size-matched peers.** Largest: ElevenLabs ($939k, 0.025%), Policygenius ($76k, 0.336%), Benlysta ($49k, 0.370%), Metal Supermarkets ($35k, 0.348%), MegaFood ($32k, 0.236%). Lowest against peers: Front (8th percentile), Nili Lotan (12th), MegaFood (17th).
+**25 advertisers spent $10,000 or more and sit in the bottom quartile of share of site visits against size-matched peers.** Largest: ElevenLabs ($939k, 0.025%), Policygenius ($76k, 0.336%), Benlysta ($49k, 0.370%), Metal Supermarkets ($35k, 0.348%), MegaFood ($32k, 0.236%). Lowest against peers: Front (8th percentile), Nili Lotan (12th), MegaFood (17th).
 
 The 39 reporting nothing at all remain the clearest setup question, though they are small: $82,479 of spend between them.
 
@@ -58,7 +58,7 @@ The 39 reporting nothing at all remain the clearest setup question, though they 
 
 A visit exists only when the advertiser's own site pixel fires and writes a `clickpass_log` row keyed to their advertiser id. That makes matched visits a strict subset of reported visits, which is why the raw number has to sit beside the matched one.
 
-A low share of voice against size-matched peers can come from campaign configuration, audience quality, flight length or budget, exactly as Johnny said. It says the account is worth opening, not that anything is broken.
+A low share of site visits against size-matched peers can come from campaign configuration, audience quality, flight length or budget, exactly as Johnny said. It says the account is worth opening, not that anything is broken.
 
 **Why it matters beyond reporting:** an advertiser with no measurable visit rate cannot be screened for an incrementality lift test and cannot be shown a result. This was the largest single cut in the AUDI-1209 screening funnel, at 479 of 1,859.
 
@@ -79,9 +79,11 @@ Verified visits reproduces Johnny's 1.25% and 0.5%. It is the client-facing Repo
 
 `My Drive/Tickets/AUDI-1210/AUDI-1210 Advertisers With No Measurable Visits.xlsx` — <https://docs.google.com/spreadsheets/d/1KpOHoI2yB0cbF6_pxIL5QyNCojsTh2sp/edit>
 
-Sheets: the 26 flagged accounts, the Maurices vs Re-Bath comparison that reframed the list, share of voice by site size, the 39 reporting nothing, the full 1,859, a Read me, method notes, and the standalone SQL.
+Sheets: the flagged accounts, the advertisers reporting nothing, the full audit trail, a Read me, method notes, and the one standalone query. Two argument tabs (the Maurices comparison, the size-group table) were cut on 2026-08-19 as unnecessary; both points live in Method & caveats as a sentence each.
 
-- Query: `queries/audi_1210_share_of_voice.sql` (runs standalone; returns the whole base with both ratios and both percentiles)
+**Naming:** the metric was called "share of voice" through the afternoon, borrowed from Johnny. Renamed to **share of site visits** because share of voice normally means impression share against competitors, and this is a credit ratio. The file name is unchanged on purpose, so the link already circulating with Johnny and Imani still resolves.
+
+- Query: `queries/audi_1210_share_of_site_visits.sql` (runs standalone; returns the whole base with both ratios and both percentiles)
 - Builder: `artifacts/audi_1210_build_xlsx.py`
 
 ## 4b. Imani's opt-out hypothesis — tested, does not hold

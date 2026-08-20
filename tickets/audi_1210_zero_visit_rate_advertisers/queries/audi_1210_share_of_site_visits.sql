@@ -1,7 +1,8 @@
--- audi_1210_share_of_voice.sql — how much of each advertiser's own site traffic MNTN touched.
+-- audi_1210_share_of_site_visits.sql — the share of each advertiser's own site traffic MNTN gets credit for.
 --
--- Share of voice (Johnny Chen, 2026-08-19) is the right lens, not the raw visit rate:
---   share_of_voice = MNTN verified visits / the advertiser's own reported site visits
+-- The right lens is the share of the advertiser's own traffic we get credit for, not the raw
+-- visit rate (Johnny Chen, 2026-08-19):
+--   share_of_site_visits = MNTN verified visits / the advertiser's own reported site visits
 --   match_rate     = matched IPs / IPs MNTN served
 --
 -- Verified visits = clicks + views + competing_views, the client-facing Reporting figure, NOT a
@@ -15,8 +16,8 @@
 -- media-plan fact, not a measurement fault. A low SHARE OF VOICE against real spend is the
 -- anomaly worth chasing: we paid, and almost none of the site's audience came through us.
 --
--- Share of voice falls as a site gets bigger (corr of log site visits to log SOV = -0.24; median
--- SOV runs 1.09% for the smallest fifth of sites down to 0.39% for the largest). So SOV is compared
+-- The share falls as a site gets bigger (corr of log site visits to log share = -0.24; median
+-- share runs 1.09% for the smallest fifth of sites down to 0.39% for the largest). So it is compared
 -- WITHIN a site-size peer group, not across the whole base, or the flag would just select big sites.
 --
 -- Universe: live, non-test advertisers that served in the trailing 30 days AND reported at least
@@ -89,7 +90,7 @@ joined AS (
     COALESCE(h.raw_visits_12mo, 0)     AS raw_visits_12mo,
     h.last_day_with_a_visit,
     SAFE_DIVIDE(r.matched_ips_30d, r.served_ips_30d)          AS match_rate,
-    SAFE_DIVIDE(t.verified_visits_30d, t.raw_visits_30d)      AS share_of_voice,
+    SAFE_DIVIDE(t.verified_visits_30d, t.raw_visits_30d)      AS share_of_site_visits,
     CASE WHEN COALESCE(t.raw_visits_30d, 0) = 0    THEN 'Pixel reported nothing'
          WHEN COALESCE(t.raw_visits_30d, 0) < 1000 THEN 'Site too quiet to score'
          ELSE 'Scored' END AS coverage
@@ -107,12 +108,12 @@ sized AS (
     IF(j.coverage = 'Scored',
        NTILE(5) OVER (PARTITION BY j.coverage ORDER BY j.raw_visits_30d), NULL) AS site_size_quintile,
     IF(j.coverage = 'Scored',
-       PERCENT_RANK() OVER (PARTITION BY j.coverage ORDER BY j.share_of_voice), NULL) AS sov_percentile
+       PERCENT_RANK() OVER (PARTITION BY j.coverage ORDER BY j.share_of_site_visits), NULL) AS site_visit_share_percentile
   FROM joined j
 )
 SELECT s.*,
   IF(s.coverage = 'Scored',
-     PERCENT_RANK() OVER (PARTITION BY s.coverage, s.site_size_quintile ORDER BY s.share_of_voice),
-     NULL) AS sov_percentile_vs_peers
+     PERCENT_RANK() OVER (PARTITION BY s.coverage, s.site_size_quintile ORDER BY s.share_of_site_visits),
+     NULL) AS site_visit_share_percentile_vs_peers
 FROM sized s
 ORDER BY s.spend_30d DESC
