@@ -420,5 +420,39 @@ Dataproc is the Spark path and was explicitly rejected as the wrong tool at buil
   only. Rows in a bad-CPA sheet that are paused or Stage 2/3 will not match — absence here is not
   evidence of "non-MM".
 
+## 6f. Applied to the 8/21 Insight Spelunking bad-CPA list (2026-08-19)
+
+Bryce's session directs everyone to claim a Peak Performance campaign first off the "bad cpa" tab of
+Lauren's sheet; Alex asked how to tell which rows those are. Labelled all 251 rows with this view.
+
+- **The sheet already carries a `peak perf` column and it is right.** 250 of 251 rows agree with
+  `has_ds13 OR has_ds46`. The one disagreement is LifeVac, campaign group 123213, flagged `peak perf`
+  but running `mmv2` (keyword layer only, no vertical anchor). One further row has no Live Stage-1
+  campaign so the view cannot label it either way.
+- **Split:** 161 Peak Performance (128 on v2/DS46, 33 on v1/DS13), 89 not PP, 1 unlabelable. 159 of the
+  161 are unclaimed. Note the v2 majority — a DS13-only regex (what the sheet's README query shows)
+  would have found 33 of 161.
+- **Grain.** The tab is keyed on the PARENT campaign group (`cgid`, from ClickHouse
+  `info.v_parent_campaign_groups`), the view on the Stage-1 `campaign_id`. 10 of the 251 groups have a
+  child group, so the query expands parent → {self, children} via
+  `bronze.integrationprod.campaign_groups.parent_campaign_group_id` before the `LOGICAL_OR` roll-up.
+  Expanding changed no label, but the join is only correct because of it.
+- **22 of the 161 PP campaigns carry no keyword layer; 18 of those are v2**, so their ceiling is the
+  8000 band and their delivery can never come from the high-intent band.
+- Query `queries/audi_1083_pp_label_bad_cpa.sql`; source tab `data/audi_1083_bad_cpa_tab.csv`;
+  builder `artifacts/audi_1083_build_pp_claim_xlsx.py`; deliverable
+  `My Drive/Tickets/AUDI-1083/AUDI-1083 Peak Performance Bad CPA Claim List.xlsx`.
+  Slack reply drafted at `artifacts/audi_1083_slack_pp_filter_reply.txt` (not posted).
+- **Claim for the session: FICO, campaign group 81053** ($220,763 spend, $41.65 CPA against a $25 goal,
+  the largest unclaimed PP miss). Answer key in `artifacts/audi_1083_spelunk_claim_brief.md`: v2
+  vertical-only so it cannot reach the high-intent band, `hhst_current = 0` so no score gate bites at
+  all, and a 3P segment AND-narrowing the universe. Session rule is reporting UI only, so the brief is
+  not opened during the hour.
+- **The sheet is not machine-readable from this environment.** The Drive MCP connector is authed to the
+  personal Google account, the gcloud token carries no Drive/Sheets scope (403
+  `ACCESS_TOKEN_SCOPE_INSUFFICIENT`), unauthenticated CSV export 401s, and the Drive mount stores
+  Google-native files as 175-byte pointer stubs. Getting a tab into BigQuery means a manual export or
+  `gcloud auth login --enable-gdrive-access`.
+
 ## 7. Data Documentation Updates
 (pending — will land taxonomy/gate/geo confirmations into data_knowledge.md as the view is built)

@@ -1,7 +1,5 @@
-Filter it on has_ds13 OR has_ds46. DS13 is PP v1, DS46 is the Fangorn v2, and they never co-occur.
+The sheet already has a peak perf column and it holds up. I ran all 251 against the classifier and 250 agree. The one to fix is LifeVac, cgid 123213, which runs the keyword layer with no vertical anchor.
 
-Skip tiers_reachable LIKE '%PP%'. One label is literally "no PP", so it matches too and you get 6,226, not 2,651.
+161 are Peak Performance, 159 unclaimed. I dropped a labeled claim list in Drive with the audience setup per campaign.
 
-That's 2,651 live campaigns, 1,087 advertisers. It's Live Stage 1 prospecting only, so paused or Stage 2/3 rows won't appear, which isn't the same as not PP.
-
-Share the tab and I'll post the labeled list.
+If you run it yourself, use has_ds13 OR has_ds46. tiers_reachable LIKE '%PP%' looks right and isn't.
