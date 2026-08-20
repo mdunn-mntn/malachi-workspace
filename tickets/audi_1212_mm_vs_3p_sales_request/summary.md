@@ -1,13 +1,17 @@
 ---
 doc_type: ticket
 title: "[SPIKE] MM vs 3P performance by sales vertical for Sales"
-status: backlog
+status: done
 date: 2026-08-20
 summary: "Standing Sales request: MM vs 3P prospecting performance across the 8 sales verticals"
-result: "not started"
+result: "Refreshed AUDI-1141 scorecard to the 2026-08-20 window, added CPA and Peak Performance, flagged that no B2B CPA claim survives. Closed 2026-08-20."
 question: ""
-framing_state: draft
+framing_state: "skip: standing Sales request, scope agreed in Slack"
 ---
+
+**Jira:** https://mntn.atlassian.net/browse/AUDI-1212
+**Workbook:** https://docs.google.com/spreadsheets/d/1yvH-JcQ2xFvmGkRk8ToI2Evsp_nr1mB9/edit
+**Analytical record:** ../audi_1141_mm_vs_3p_by_vertical/summary.md (§9-13)
 
 # [SPIKE] Can we support a B2B / non-revenue CPA claim for the pitch deck?
 
