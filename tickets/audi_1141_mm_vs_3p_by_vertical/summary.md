@@ -269,3 +269,24 @@ On the exact cohort the pitch deck wants (B2B, no revenue to compute ROAS from),
 pooled runs the other way (MM $371.78 vs 3P $1,129.04), which is itself the point: the cohort is too thin
 and too lens-sensitive to carry an external claim. The §9 recommendation stands and hardens — ship CPA on
 the all-advertiser cut, do not build a B2B or non-revenue CPA slide on this data.
+
+## 11. The shipped 2026-07-21 workbook had HAND EDITS the first rebuild silently dropped
+
+Read the old `My Drive/Tickets/AUDI-1141/MM vs 3P Scorecard.xlsx` cell-by-cell only AFTER rebuilding
+(should have been before). Its tabs match the builder's, but four things in it were not builder output:
+
+1. **Verticals were re-sorted descending by IVR advantage**, not alphabetical. The standing rank-descending
+   rule ([[feedback_rank_desc_always]]) applies and the first rebuild broke it. Fixed in `compare()`.
+2. **An inline footnote on the Education row: "*most education does not optimize towards a ROAS."**
+   Carried forward as a Method & caveats block ("Education ROAS is not a target").
+3. **Two ROAS-advantage cells were hand-blanked to "N/A"** — Restaurants/Dining (MM 0.62 vs 3P 0.67) and
+   Telco & Tech (MM 0.289 vs 3P 0.350): the only two verticals where MM LOSES on ROAS. Deliberately NOT
+   carried forward. Suppressing the cells where the claim fails is the same cherry-picking pattern flagged
+   in §9; the real ratio now shows. Education's absurd 3,753x ROAS advantage was left visible in the old
+   sheet while the two losses were hidden, which is the tell.
+4. Read me detail dropped in the first rebuild and now restored: the 3P vendor names (ShareThis,
+   Dstillery, LiveRamp), the CVR/CTR/CPM definitions, "Restricted is expected for local" (Auto and ProServ
+   buy local by design), and "Pooled 3P is one account" (~39% of 3P impressions).
+
+**Lesson:** a shared workbook is not reproducible from its builder alone once anyone has touched it in
+Drive. Read the live file before regenerating over it. The old file is still in place next to the new one.

@@ -75,9 +75,10 @@ def compare(df_by_vert, df_overall, gcol, a, b, name, finding, method, toc, kind
                 return np.nan
         return g
 
-    verts = sorted(df_by_vert.sales_vertical.dropna().unique())
-    rows = [row("All verticals", lambda c, g: ovi.loc[g, c] if g in ovi.index else np.nan)]
-    rows += [row(v, cell(bvi, v)) for v in verts]
+    verts = df_by_vert.sales_vertical.dropna().unique()
+    vrows = [row(v, cell(bvi, v)) for v in verts]
+    vrows.sort(key=lambda r: (-1e18 if pd.isna(r["IVR advantage"]) else -r["IVR advantage"]))
+    rows = [row("All verticals", lambda c, g: ovi.loc[g, c] if g in ovi.index else np.nan)] + vrows
     cols = ["Sales vertical", "MM IVR", "3P IVR", "IVR advantage", "MM CPV", "3P CPV",
             "MM CPA", "3P CPA", "CPA advantage", "MM ROAS", "3P ROAS", "ROAS advantage",
             "MM advertisers", "3P advertisers"]
@@ -177,7 +178,7 @@ wb.glossary(
         ("The comparison", ""),
         ("MNTN Matched (MM)", "A campaign targeted by MNTN's own intent model. A 3P segment joined "
                               "with OR adds reach on top and the campaign still counts as MM."),
-        ("3P", "A campaign targeted by a bought third-party segment with no MNTN Matched signal."),
+        ("3P", "A campaign targeted by bought interest segments only (ShareThis, Dstillery, LiveRamp), with no MNTN Matched signal."),
         ("MM restricted", "MM narrowed by a 3P segment joined with AND, or by sub-DMA geo. The "
                           "narrowing, not the model, is what changes the result."),
         ("Intent gate", "The household score threshold. Above 0 the campaign only bids on "
@@ -185,6 +186,8 @@ wb.glossary(
         ("The metrics", ""),
         ("IVR", "Visit rate. Visits divided by impressions, where a visit is a view or a click."),
         ("CPV", "Cost per visit. Spend divided by visits. Lower is better."),
+        ("CVR, CTR, CPM", "Conversions over impressions, clicks over impressions, and spend per "
+                         "thousand impressions. All on the Full scorecard tab."),
         ("CPA", "Cost per acquisition. Spend divided by conversions. Depends on the advertiser's "
                 "pixel, so it is directional, like ROAS. Lower is better."),
         ("ROAS", "Revenue divided by spend, prospecting and last-touch only. Directional."),
@@ -228,6 +231,16 @@ wb.notes(
                                                  "conversion, against 78% of MM. Advertisers with no "
                                                  "pixel drop out of CPA entirely, which flatters 3P, "
                                                  "so the MM CPA win is a conservative one."),
+        ("Education ROAS is not a target", "Most education advertisers do not optimise toward "
+                                          "revenue, so their ROAS column and any ROAS advantage "
+                                          "built on it are not meaningful. Read Education on visit "
+                                          "rate and cost per visit only."),
+        ("Restricted is expected for local", "Auto and ProServ legitimately buy local (zip, radius) "
+                                             "targeting, so a high MM restricted share is by design "
+                                             "there. In other verticals it flags real narrowing."),
+        ("Pooled 3P is one account", "Pool every impression and 3P visit rate looks competitive, "
+                                     "but roughly 39% of 3P impressions come from a single large, "
+                                     "non-representative account. Quote the median."),
         ("B2B is not a sales vertical here", "B2B Software & Services is an MNTN vertical folded "
                                              "into the 8 sales buckets by an interim crosswalk that "
                                              "still needs RevOps sign-off. Treat any B2B split as "
