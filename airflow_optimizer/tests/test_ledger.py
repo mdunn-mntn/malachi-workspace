@@ -35,6 +35,46 @@ def test_states_walk_new_recurring_chronic(tmp_path: Path) -> None:
     assert (third[0].state, third[0].streak) == ("chronic", 3)
 
 
+def test_shipped_fix_that_works_is_attributed_and_costed(tmp_path: Path) -> None:
+    """A shipped fix carries its PR forward and the register shows what the DAG cost after."""
+    p = str(tmp_path / "l.jsonl")
+    ledger.record([_report("a", FETCH)], "2026-08-01", dcu={"site_network_hourly": 100.0}, path=p)
+    ledger.mark_applied("site_network_hourly", "shuffle_fetch_wait:9",
+                        "https://github.com/x/y/pull/9", "2026-08-03", path=p)
+    for date in ("2026-08-04", "2026-08-05", "2026-08-06"):  # finding gone, DAG cheaper
+        ledger.record([_report("b", IDLE)], date, dcu={"site_network_hourly": 40.0}, path=p)
+    row = ledger.shipped(p)[0]
+    assert row["outcome"] == "resolved", row
+    assert row["fix_pr"].endswith("/9") and row["applied_date"] == "2026-08-03"
+    assert (row["dcu_h_before"], row["dcu_h_after"]) == (100.0, 40.0)
+
+
+def test_shipped_fix_that_does_not_work_says_so(tmp_path: Path) -> None:
+    """A merged fix is not a verified fix: if the finding keeps firing the register says so."""
+    p = str(tmp_path / "l.jsonl")
+    ledger.record([_report("a", FETCH)], "2026-08-01", path=p)
+    ledger.mark_applied("site_network_hourly", "shuffle_fetch_wait:9",
+                        "https://github.com/x/y/pull/11", "2026-08-02", path=p)
+    for date in ("2026-08-03", "2026-08-04", "2026-08-05"):
+        entries = ledger.record([_report("b", FETCH)], date, path=p)
+    assert entries[0].state == "fix_not_working", entries[0]
+    assert entries[0].fix_pr.endswith("/11"), entries[0]
+    assert ledger.shipped(p)[0]["outcome"] == "fix_not_working"
+
+
+def test_mark_applied_needs_history_and_a_pr(tmp_path: Path) -> None:
+    """The register records real work, so it refuses an unattributed or unknown entry."""
+    p = str(tmp_path / "l.jsonl")
+    ledger.record([_report("a", FETCH)], "2026-08-01", path=p)
+    for args in (("site_network_hourly", "shuffle_fetch_wait:9", "", "2026-08-02"),
+                 ("no_such_dag", "shuffle_fetch_wait:9", "pr", "2026-08-02")):
+        try:
+            ledger.mark_applied(*args, path=p)
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted a bad mark_applied: {args}")
+
+
 def test_one_entry_per_key_per_sweep(tmp_path: Path) -> None:
     """An hourly job contributes ~24 logs a day; the ledger must not count each as a finding."""
     p = str(tmp_path / "l.jsonl")

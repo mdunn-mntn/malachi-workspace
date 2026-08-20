@@ -10,9 +10,16 @@ history to derive a state:
     owner_notified  a person sent the ask (set by hand, survives replay)
     wont_fix        owner declined, with a reason (set by hand, survives replay)
     resolved        the key stopped firing for RESOLVE_SWEEPS sweeps
+    applied         a fix shipped for this key (records the PR); the ledger then WATCHES
+    fix_not_working the key is still firing RESOLVE_SWEEPS sweeps after the fix shipped
 
 `owner_notified` and `wont_fix` are sticky because they record a human decision;
 everything else is recomputed from what the detectors saw.
+
+`applied` is deliberately NOT sticky. Recording that a fix shipped is the point of the
+register, but a merged fix is not a verified fix: the ledger keeps carrying `fix_pr` and
+`applied_date` forward and lets the detectors decide what happened next. The key going
+quiet is the win; the key still firing after the grace window is `fix_not_working`.
 """
 
 from __future__ import annotations
@@ -25,6 +32,7 @@ from dataclasses import asdict, dataclass, field
 LEDGER = "tickets/audi_1194_optimizer_efficiency_crawler/outputs/optimization_ledger.jsonl"
 RESOLVE_SWEEPS = 3  # consecutive sweeps without a key before it counts as resolved
 STICKY = ("owner_notified", "wont_fix")
+HUMAN = (*STICKY, "applied")  # states a person sets by hand
 
 
 @dataclass
@@ -42,6 +50,8 @@ class Entry:
     state: str = "new"
     streak: int = 1
     note: str = ""
+    fix_pr: str = ""  # set when a fix ships; carried forward so the outcome is attributable
+    applied_date: str = ""
 
 
 def finding_key(finding: object) -> str:
@@ -95,9 +105,18 @@ def classify(new: list[Entry], prior: list[dict], date: str) -> list[Entry]:
             continue
         last = past[-1]
         entry.streak = int(last.get("streak", 0)) + 1
+        fix = next((e for e in reversed(past) if e.get("fix_pr")), None)
+        if fix:  # attribution survives every later sweep, whatever the outcome
+            entry.fix_pr = fix.get("fix_pr", "")
+            entry.applied_date = fix.get("applied_date", "")
         sticky = next((e["state"] for e in reversed(past) if e.get("state") in STICKY), None)
+        after_fix = [e for e in past if entry.applied_date and e.get("date", "") > entry.applied_date]
         if sticky:
             entry.state, entry.note = sticky, last.get("note", "")
+        elif entry.applied_date and len(after_fix) + 1 >= RESOLVE_SWEEPS:
+            # still firing well after the fix shipped: the fix did not do what it claimed
+            entry.state = "fix_not_working"
+            entry.note = f"still firing {len(after_fix) + 1} sweeps after {entry.fix_pr}"
         elif entry.streak >= RESOLVE_SWEEPS:
             entry.state = "chronic"
         else:
@@ -118,11 +137,15 @@ def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: st
             continue
         if any(e.get("date") in recent for e in past):
             continue  # still inside the grace window
+        pr = last.get("fix_pr", "")
+        note = f"stopped firing after {last.get('date', 'an earlier sweep')}"
+        if pr:
+            note = f"cleared by {pr}; {note}"
         new.append(Entry(
             date=date, dag_id=dag_id, app_id="", key=key, impact=last.get("impact", ""),
             title=last.get("title", ""), owner=last.get("owner", ""),
-            state="resolved", streak=0,
-            note=f"stopped firing after {last.get('date', 'an earlier sweep')}",
+            state="resolved", streak=0, note=note,
+            fix_pr=pr, applied_date=last.get("applied_date", ""),
         ))
 
 
@@ -223,6 +246,84 @@ def set_state(dag_id: str, key: str, state: str, note: str = "",
     return entry
 
 
+def mark_applied(dag_id: str, key: str, fix_pr: str, date: str, note: str = "",
+                 path: str = LEDGER) -> Entry:
+    """Record that a fix SHIPPED for this finding. The ledger then watches whether it worked."""
+    if not fix_pr:
+        raise ValueError("mark_applied needs the PR or commit that shipped the fix")
+    past = [e for e in read(path) if e.get("dag_id") == dag_id and e.get("key") == key]
+    if not past:
+        raise ValueError(f"no ledger history for {dag_id}/{key}; nothing to mark applied")
+    last = past[-1]
+    entry = Entry(
+        date=date, dag_id=dag_id, app_id=last.get("app_id", ""), key=key,
+        impact=last.get("impact", ""), title=last.get("title", ""),
+        owner=last.get("owner", ""), dcu_h=last.get("dcu_h"),
+        state="applied", streak=int(last.get("streak", 1)), note=note,
+        fix_pr=fix_pr, applied_date=date,
+    )
+    append([entry], path)
+    return entry
+
+
+def shipped(path: str = LEDGER) -> list[dict]:
+    """The register: one row per optimization that actually shipped, newest first.
+
+    `outcome` is what the detectors saw AFTER the fix, not what the PR claimed:
+    resolved = the finding stopped firing, fix_not_working = it did not, watching = too
+    early to say.
+    """
+    rows: dict[tuple[str, str], dict] = {}
+    for e in read(path):
+        if not e.get("fix_pr"):
+            continue
+        k = (e.get("dag_id", ""), e.get("key", ""))
+        row = rows.setdefault(k, {
+            "dag_id": k[0], "key": k[1], "title": e.get("title", ""),
+            "impact": e.get("impact", ""), "owner": e.get("owner", ""),
+            "fix_pr": e.get("fix_pr", ""), "applied_date": e.get("applied_date", ""),
+            "dcu_h_before": None, "dcu_h_after": None, "outcome": "watching",
+        })
+        row["fix_pr"] = e.get("fix_pr") or row["fix_pr"]
+        row["applied_date"] = e.get("applied_date") or row["applied_date"]
+        if e.get("state") in ("resolved", "fix_not_working"):
+            row["outcome"] = e["state"]
+    # Cost is per-DAG, and the question is what the DAG costs now vs before, so read any
+    # entry for that dag_id - not just this key, which by design stops firing when it works.
+    for e in read(path):
+        dag = e.get("dag_id", "")
+        if e.get("dcu_h") is None:
+            continue
+        for row in rows.values():
+            if row["dag_id"] != dag or not row["applied_date"]:
+                continue
+            if e.get("date", "") < row["applied_date"]:
+                row["dcu_h_before"] = e["dcu_h"]
+            elif e.get("date", "") > row["applied_date"]:
+                row["dcu_h_after"] = e["dcu_h"]
+    return sorted(rows.values(), key=lambda r: r["applied_date"], reverse=True)
+
+
+def render_shipped(rows: list[dict]) -> str:
+    """Markdown register. Ranked newest first; the outcome column is the honest bit."""
+    if not rows:
+        return "No optimizations recorded as shipped yet.\n"
+    out = [
+        "| Applied | DAG | Finding | Impact | PR | Outcome | DCU/h before | after |",
+        "|---|---|---|---|---|---|---:|---:|",
+    ]
+    for r in rows:
+        pr = r["fix_pr"]
+        cell = f"[{pr.rsplit('/', 1)[-1]}]({pr})" if pr.startswith("http") else pr
+        before = "-" if r["dcu_h_before"] is None else f"{r['dcu_h_before']:.1f}"
+        after = "-" if r["dcu_h_after"] is None else f"{r['dcu_h_after']:.1f}"
+        out.append(
+            f"| {r['applied_date']} | `{r['dag_id']}` | {r['title']} | {r['impact']} | "
+            f"{cell} | {r['outcome']} | {before} | {after} |"
+        )
+    return "\n".join(out) + "\n"
+
+
 def latest(path: str = LEDGER) -> dict[tuple[str, str], dict]:
     """Current state of every key the ledger has ever seen."""
     out: dict[tuple[str, str], dict] = {}
@@ -262,6 +363,14 @@ if __name__ == "__main__":
     if len(sys.argv) >= 5 and sys.argv[1] == "set":
         _, _, dag, key, state, *rest = sys.argv
         print(set_state(dag, key, state, note=" ".join(rest)))
+        raise SystemExit(0)
+    if len(sys.argv) >= 5 and sys.argv[1] == "applied":
+        # applied <dag_id> <key> <fix_pr> <YYYY-MM-DD> [note...]
+        _, _, dag, key, pr, date, *rest = sys.argv
+        print(mark_applied(dag, key, pr, date, note=" ".join(rest)))
+        raise SystemExit(0)
+    if len(sys.argv) >= 2 and sys.argv[1] == "shipped":
+        print(render_shipped(shipped()))
         raise SystemExit(0)
     rows = read()
     print(f"{len(rows)} ledger entries, {len({(r['dag_id'], r['key']) for r in rows})} distinct keys")
