@@ -80,20 +80,20 @@ wb = MntnWorkbook(
 )
 
 wb.table(
-    "Check these first", df_flag,
-    finding=f"{len(df_flag)} advertisers spending ${flag_spend / 1e6:.1f}M get credit for less of their site traffic than three quarters of similar accounts",
-    method="Share of site visits is our verified visits over the advertiser's own reported visits, ranked within a site-size group. See Read me.",
-    formats=FM, heat={"30-day spend": "high"}, kind="headline",
-    toc="Start here: short of similar accounts, $10k or more in spend",
+    "Reporting nothing", df_dark,
+    finding=f"{len(df_dark)} advertisers reported no site visits in 30 days, but only one stopped from real volume",
+    method=f"{never} never tracked a visit in 12 months. The rest stopped, mostly from single-digit annual volume. Together they spent ${dark_spend:,.0f}.",
+    formats=FM, kind="headline",
+    toc="Start here: advertisers reporting no visits at all",
     query="audi_1210_share_of_site_visits.sql",
 )
 
 wb.table(
-    "Reporting nothing", df_dark,
-    finding=f"{len(df_dark)} advertisers reported no site visits in 30 days, but only one stopped from real volume",
-    method=f"{never} never tracked a visit in 12 months. The rest stopped, mostly from single-digit annual volume. Together they spent ${dark_spend:,.0f}.",
-    formats=FM, kind="data",
-    toc="Advertisers reporting nothing, and whether they ever did",
+    "Check these first", df_flag,
+    finding=f"{len(df_flag)} advertisers spending ${flag_spend / 1e6:.1f}M get credit for less of their site traffic than three quarters of similar accounts",
+    method="Share of site visits is our verified visits over the advertiser's own reported visits, ranked within a site-size group. See Read me.",
+    formats=FM, heat={"30-day spend": "high"}, kind="data",
+    toc="Accounts short of similar advertisers, $10k or more in spend",
     query="audi_1210_share_of_site_visits.sql",
 )
 
