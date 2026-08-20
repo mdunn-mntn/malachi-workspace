@@ -33,8 +33,10 @@ never = sum(1 for r in dark if f(r, "raw_visits_12mo") == 0)
 flag_spend = sum(f(r, "spend_30d") for r in flagged)
 dark_spend = sum(f(r, "spend_30d") for r in dark)
 
-SIZE = {"1": "Smallest fifth", "2": "Second fifth", "3": "Middle fifth",
-        "4": "Fourth fifth", "5": "Largest fifth"}
+# Peer groups are labelled with the site-traffic range they cover, so the reader can see why an
+# advertiser was compared to the accounts it was compared to without opening the Read me.
+SIZE = {"1": "Under 25K", "2": "25K to 120K", "3": "120K to 350K",
+        "4": "350K to 1.4M", "5": "Over 1.4M"}
 
 df_flag = pd.DataFrame([{
     "Advertiser": r["advertiser_name"],
@@ -44,7 +46,7 @@ df_flag = pd.DataFrame([{
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits"),
     "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers"),
-    "Site size": SIZE.get(r["site_size_quintile"]),
+    "Compared against": SIZE.get(r["site_size_quintile"]),
 } for r in flagged])
 
 df_dark = pd.DataFrame([{
@@ -64,7 +66,7 @@ df_all = pd.DataFrame([{
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits") or None,
     "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers") if r["coverage"] == "Scored" else None,
-    "Site size": SIZE.get(r["site_size_quintile"]),
+    "Compared against": SIZE.get(r["site_size_quintile"]),
 } for r in rows])
 
 FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Our visits": FMT.INT,
@@ -113,7 +115,7 @@ wb.glossary(
         ("Our visits", "MNTN verified visits over the same period: clicks plus views plus competing views. The client-facing Reporting figure."),
         ("Share of site visits", "Our visits over their site visits."),
         ("Similar sites we beat", "Of advertisers whose sites get about as much traffic, the share we do better than. 23% means we reach a bigger slice of the audience than 23 of every 100 similar advertisers, and a smaller slice than the other 77."),
-        ("Site size", "Which fifth of advertisers this one falls in, by its own site traffic. Comparison is always against the same fifth, because a bigger site gives us a smaller slice."),
+        ("Compared against", "The band of monthly site traffic this advertiser was measured against. Advertisers are only compared to others in the same band, because a busier site gives any one channel a smaller slice."),
         ("No share shown", "The advertiser reported fewer than 1,000 site visits, so the ratio would be noise."),
         ("Tracking history", "For advertisers reporting nothing now: whether they have EVER reported a visit in the last 12 months. Never tracked points at a pixel that was never installed; tracked then stopped points at one that broke."),
     ],
@@ -126,7 +128,7 @@ wb.notes(
         ("This is a flag, not a verdict",
          "A low share can come from campaign configuration, audience, flight length or budget. It says the account is worth opening, not that anything is broken."),
         ("Every advertiser is compared only to others with similarly busy sites",
-         "The bigger a site gets, the smaller a slice any one channel holds: the median share runs 1.09% for the least-trafficked fifth of sites and 0.39% for the busiest fifth. Comparing across the whole base would flag large sites and nothing else, so the comparison is made inside each fifth."),
+         "The bigger a site gets, the smaller a slice any one channel holds: the median share runs 1.09% for sites under 25K monthly visits and 0.39% for those over 1.4M. Comparing across the whole base would flag large sites and nothing else, so each advertiser is measured inside its own traffic band."),
         ("Our visits are attribution-credited, not a clean reach count",
          "A verified visit requires an impression to have been served and credited. So a low share mixes reaching few of their visitors with being credited for few, and the two cannot be separated here."),
         ("Visit rate on its own was the wrong measure",
@@ -144,7 +146,7 @@ wb.sql_dir("Queries", f"{T}/queries",
 wb.cover(takeaways=[
     f"{len(df_flag)} advertisers spending ${flag_spend / 1e6:.1f}M over 30 days get credit for less of their site traffic than similar accounts.",
     f"The {len(dark)} reporting nothing at all spent ${dark_spend:,.0f} between them, and only one stopped from real volume.",
-    "Busier sites give any channel a smaller slice, so each advertiser is compared only to others with similarly busy sites.",
+    "Busier sites give any channel a smaller slice, so each advertiser is measured against others in its own traffic band.",
 ])
 
 # Filename is kept as-is on purpose: the link is already circulating with Johnny and Imani.

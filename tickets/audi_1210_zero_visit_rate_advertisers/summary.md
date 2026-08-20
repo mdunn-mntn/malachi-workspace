@@ -81,7 +81,7 @@ Verified visits reproduces Johnny's 1.25% and 0.5%. It is the client-facing Repo
 
 Sheets: the flagged accounts, the advertisers reporting nothing, the full audit trail, a Read me, method notes, and the one standalone query. Two argument tabs (the Maurices comparison, the size-group table) were cut on 2026-08-19 as unnecessary; both points live in Method & caveats as a sentence each.
 
-**Column naming (2026-08-19):** `Rank vs peers` → **Similar sites we beat** (the percentile read forward: 23% means we reach a bigger slice than 23 of every 100 comparable advertisers), `Site size group` → **Site size**, `Reading` → **Tracking history**. Renamed after review: the originals did not say what they were for without opening the Read me.
+**Column naming (2026-08-19):** `Rank vs peers` → **Similar sites we beat** (the percentile read forward: 23% means we reach a bigger slice than 23 of every 100 comparable advertisers), `Site size group` → **Compared against**, labelled with the actual traffic band (Under 25K · 25K to 120K · 120K to 350K · 350K to 1.4M · Over 1.4M) rather than "fourth fifth", so the peer group explains itself, `Reading` → **Tracking history**. Renamed after review: the originals did not say what they were for without opening the Read me.
 
 **Metric naming:** the metric was called "share of voice" through the afternoon, borrowed from Johnny. Renamed to **share of site visits** because share of voice normally means impression share against competitors, and this is a credit ratio. The file name is unchanged on purpose, so the link already circulating with Johnny and Imani still resolves.
 
