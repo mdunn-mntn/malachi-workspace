@@ -124,8 +124,11 @@ back into a data JSON once, then build from the JSON through `MntnWorkbook` (rep
 in the doc Changelog; every builder re-run inherits the change. See [[feedback_xlsx_default_output]],
 [[reference_drive_mount_xlsx_delivery]], [[reference_deck_standards]].
 
-**Drive reorganized 2026-08-20.** My Drive root went from ~40 loose files to 5 folders:
-`Tickets/` · `Reference/` (cross-ticket gdocs) · `Learning/` · `Presentations/` · `Personal/`.
+**Drive reorganized 2026-08-20.** My Drive root went from ~40 loose files to **3 folders**:
+`Tickets/` · `Reference/` · `Personal/`. `Learning/` and `Presentations/` were folded into
+`Reference/`, whose subfolders are `How MNTN Works/` (product and pipeline docs), `How I Work/`
+(tooling, onboarding, process) and `Decks/`. The one sorting question is "is this ticket work or not";
+Learning-vs-Reference was a blurry line nothing sorted cleanly against.
 Every ticket folder is now `<KEY> <Short Title>`; legacy typos fixed (DM-3188 "Comparisson",
 TI-200 triple space). **Nothing was deleted** — 23 superseded copies, `(1)`-suffixed duplicates,
 `Untitled spreadsheet`s and `results-<timestamp>` exports went to `Tickets/_ARCHIVE/`, because a
