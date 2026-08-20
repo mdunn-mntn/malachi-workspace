@@ -180,6 +180,54 @@ Build in progress. Code home: `airflow_debugger/` package in the workspace (key-
 - **Live-fire INC-014 (2026-08-08):** `--troubleshoot` ran end-to-end on a real page the day it shipped — classified `[high]` late-data/missing-partition, INC-010 top similar, lifecycle root found via one bucket describe.
 - **Live-fire INC-015 (2026-08-09):** diagnosed via the manual chain + pinned-curl workaround (Vertex → Dataproc → driver output; path in memory `reference_fangorn_inference_dataproc`). **Known taxonomy gap:** Vertex code-9 boilerplate logs classify as UNCLASSIFIED (no `vertex_pipeline_task_failed` signature; INC-015's drift logs hit this).
 
+### Full-corpus sweep + taxonomy close-out (2026-08-20) — 55% to 85% on real failed logs
+
+**The corpus grew 64 -> 991 raw `.log` files** (18 date dirs under `on-call/airflow_logs/`, gitignored). Composition: 831 `success`, 84 `failed`, 59 `upstream_failed`, 14 `skipped`, 3 other. The 2026-08-06 "64 logs" sweep was **ad-hoc and unrecorded** — no script, no artifact, selection rule unrecoverable — so this pass built it as committed tooling: **`airflow_debugger/sweep.py`** (`python3 -m airflow_debugger.sweep [<glob>] [--out <path>]`), offline only (reuses `parse_log_file` + `classify`, never `orchestrate.investigate`, which would hit live GCP 991 times). Report: `outputs/audi_1191_corpus_sweep_2026_08_20.md`.
+
+**Measured before -> after (diagnosable failures = `failed` + `upstream_failed` carrying error text, n=83):**
+
+| Metric | Before | After |
+|---|---:|---:|
+| Classified | 46 (55%) | 71 (85%) |
+| Routable without a signature (job id present) | — | 8 |
+| Signature fires on a green run | 0 | 2 |
+| Identity resolved by `parse_log_file` | 991/991 | 991/991 |
+
+71 + 8 = **79 of 83 (95%) resolved** either by signature or by engine routing. Residual: 2 `Dag not found during start up`, 2 non-failure terminations.
+
+**Report the rate per outcome, never blended.** 84% of the corpus is green, and **all 59 `upstream_failed` logs are UNCLASSIFIED — but 54 are ~69-byte stubs** for tasks that never ran. That is not a taxonomy gap; reporting `[low] unclassified` on them was a **reporting defect** that drowned the real gaps. Fixed: `parse.has_error_text()` sets `ParsedFailure.has_error_text`, `diagnose()` surfaces `no_error_text`, and `report.py` now emits `no error text in log` + "diagnose the upstream task that failed".
+
+**Identity is 991/991 via the production path, and the filename fallback is load-bearing** — body-only extraction fires on 72/84 `failed` logs and **0/831 `success`** logs (the `dag_id=` form appears only in the failure-callback dump). Zero body/filename contradictions. So the honest claim is "identity works", not "the body parser works".
+
+**Signatures added (24 -> 31):**
+- `vertex_pipeline_task_failed` — the INC-002/008/015 gap (see below).
+- `batch_id_attach_trap` — `Batch with given id already exists` / `Attaching to the job`. INC-016/017/018: the id is minted once and cached in XCom, so a retry reattaches to the already-failed batch and **inherits its error**; the text is not a fresh fault.
+- `impersonation_unavailable` — INC-020's IAM 503 before submission (no batch exists, nothing to clean up).
+- `slack_notify_failed`, `task_execution_timeout`, `dbt_model_runtime_error`.
+- `downstream_job_no_local_cause` — last by design; fires only when nothing specific matched.
+
+**Two self-inflicted defects caught by measuring, not by reading:**
+1. `downstream_job_no_local_cause` originally included `Waiting for the completion of batch job` — which appears in **every healthy Dataproc log**. It fired on **325 green runs**. Removed; the pattern now uses failure-only wording.
+2. `slack_notify_failed` originally matched bare `channel_not_found`. The Slack notifier error appears in the **failure callback of any DAG that posts to Slack**, so it stole the real cause from `ga4/fetch_transaction_conversion_report` (actually `AirflowException: Pod ... returned a failure`, and `PERMISSION_DENIED: User does not have sufficient permissions for this property`) and `url_pattern_identification` (actually `Batch job ... was cancelled`). Now bound to the task's **own** exception (`'exception': SlackApiError`), with an anti-steal regression test. Same family as the IMP-030 known-fix defect: **a pattern that is true of the log is not the same as a pattern that is true of the failure.**
+
+**Parser fix:** `Starting batch None-1` was extracted as the literal batch id `"None-1"` and would have been sent to GCP. The upstream id-minting task returning nothing IS the finding; `_BOGUS_BATCH_ID` now rejects it and records a note.
+
+**Test-gate defect:** `test_perf_profile.py` was the only test module with no `if __name__ == "__main__"` block, so `python3 -m airflow_debugger.tests.test_perf_profile` imported it and **ran nothing** — its 12 real assertions were silently skipped by the stated acceptance gate. Added. Suite is now 8 modules, 36 classifier cases, ruff clean.
+
+**Acquisition gap found (IMP-053):** `oncall_daily_rca.sh` pulls only the `tpa` and `Machine Learning` tags, so `audience_intent`, `mntn_match_incrementals_fetch` and `keyword_ddp_reporting` never land on disk. **INC-021, INC-022 and INC-023 have NO raw logs** and could not be swept or replayed; only INC-019 and INC-020 were available. Every future sweep and regression fixture is limited to what the daily pull captured.
+
+### DNS fallback verified against live prod (2026-08-20)
+
+**Pi-hole is back ON and `logging.googleapis.com` is now allowlisted** (control `doubleclick.net` -> `0.0.0.0`, admin UI answers 302), so the sinkhole no longer reproduces on its own. Verified both branches against live FAILED batch `f73fa983-67a7-4f35-8e5d-37919e30b43d`:
+- Normal `gcloud logging read`: **20993 chars** of real driver text.
+- Forced `_logging_via_curl` pinned-IP path: **20991 chars**, differing by one trailing blank line. The pinned path is live, not dead code.
+- `_public_ip` resolves via `dig +short @8.8.8.8` (bypasses the system resolver, hence Pi-hole).
+- Full `analyze_batch` -> `state=FAILED`, `signature=driver_oom`, `application_id=app-20260820152024919-0859`, real error text. **Not an empty classification.**
+
+**Fixed:** `_public_ip` accepted any answer starting with a digit that was not `0.0.0.0`. A blocker in **IP-blocking mode** answers with its own LAN address (here `192.168.10.177`), which passed the check and pinned curl at the blocker, surfacing later as a confusing `non-json response` instead of an honest resolution failure. Now requires a globally routable address (`ipaddress.IPv4Address.is_global`), with regression tests for both directions.
+
+**Logged, not fixed (scope):** IMP-051 `gcloud auth print-access-token` is not pinned, so a token refresh goes through the very sinkhole the fallback routes around; IMP-052 `curl -s` without `--fail` discards a real HTTP 4xx/5xx API error as the generic `no entries`.
+
 ### Optimization UNBLOCKED — event logs already flow to GCS; crawl validated on real prod (2026-08-04)
 - **Ryan pointed to `gs://mntn-data-archive-prod/spark-events/`** — real Spark event logs already land there (49 `.zstd`, from a window in Nov 2025). So the optimization half is **not gated** for jobs that log there; the enablement ask is now "keep it on + wire the remaining models," not "turn it on from zero." (Ryan also flagged: the bucket needs a TTL / cleanup of old logs.)
 - **Download gotcha:** `gcloud storage cp` corrupts the `.zstd` (hash mismatch → 0 bytes, the crc32c/decompress gatekeeper). **Workaround: `gsutil -o "GSUtil:check_hashes=never" cp`** (gcloud `-m` bulk is flaky/crashes here; download small batches).
