@@ -33,6 +33,12 @@ det = pd.read_csv(OUT / "audi_1141_campaign_grain.csv").dropna(subset=["vertical
 names = pd.read_csv(OUT / "audi_1141_advertiser_names.csv").drop_duplicates("advertiser_id")
 det = det.merge(names, on="advertiser_id", how="left")
 det = det[det.bucket != "Neither"].copy()
+cls = pd.read_csv(OUT / "audi_1141_mm_classifier.csv").drop_duplicates("campaign_id")
+det = det.merge(cls, on="campaign_id", how="left")
+det["peak_performance"] = det.is_peak_performance.map({True: "Yes", False: "No"}).fillna(
+    "Not classified")
+det["mm_class"] = det.mm_class.fillna("Not classified")
+det["tiers_reachable"] = det.tiers_reachable.fillna("Not classified")
 gated_frac = np.where(det.hhst_writes > 0, det.hhst_writes_gated / det.hhst_writes, 0.0)
 det["bucket_detail"] = np.where(
     det.bucket == "MM", np.where(gated_frac >= 0.5, "MM (gated)", "MM (no gate)"), det.bucket
@@ -155,15 +161,17 @@ wb.table("Overall", ov[list(ocols)].rename(columns=ocols),
 
 dcols = {"company_name": "Advertiser", "advertiser_id": "Advertiser ID", "campaign_id": "Campaign ID",
          "sales_vertical": "Sales vertical", "vertical_name": "MNTN vertical",
-         "bucket_detail": "Targeting group", "semantics": "3P join", "hhst_current": "Intent gate",
+         "bucket_detail": "Targeting group", "peak_performance": "Peak Performance",
+         "mm_class": "Scoring engine", "tiers_reachable": "Intent tiers reachable",
+         "semantics": "3P join", "hhst_current": "Intent gate",
          "imps": "Impressions", "visits": "Visits", "clicks": "Clicks", "conv": "Conversions",
          "revenue": "Revenue", "spend": "Spend"}
 dt = det[[c for c in dcols if c in det.columns]].rename(columns=dcols).sort_values(
     "Spend", ascending=False)
 wb.table("Campaign detail", dt,
          finding="Every classified campaign, pivotable back to the advertiser that produced it",
-         method="One row per Stage 1 prospecting campaign in the cohort, ranked by spend. Intent "
-                "gate is the latest household score threshold; 0 means no gate.",
+         method="One row per Stage 1 prospecting campaign in the cohort, ranked by spend. Peak "
+                "Performance and scoring engine come from the live classifier view. See Read me.",
          formats={"Impressions": FMT.INT, "Visits": FMT.INT, "Clicks": FMT.INT,
                   "Conversions": FMT.INT, "Revenue": FMT.USD0, "Spend": FMT.USD0,
                   "Intent gate": FMT.INT, "Advertiser ID": FMT.INT, "Campaign ID": FMT.INT},
@@ -193,6 +201,11 @@ wb.glossary(
         ("ROAS", "Revenue divided by spend, prospecting and last-touch only. Directional."),
         ("Advantage", "How many times better MM is than 3P on that metric. For a cost metric it is "
                       "3P divided by MM, so above 1.0x always means MM is cheaper."),
+        ("Peak Performance", "The campaign can reach the Peak Performance intent tier, meaning it "
+                             "carries a vertical or Fangorn score. A keyword-only MM campaign "
+                             "cannot, and reads No."),
+        ("Not classified", "The campaign delivered in the window but is no longer active, so the "
+                           "live classifier view has no row for it. 40% of the cohort. Not a No."),
         ("Which number to quote", ""),
         ("Median", "The middle advertiser, each advertiser counting once, 20,000-impression floor. "
                    "This is the headline: it cannot be moved by one large account."),
@@ -241,6 +254,10 @@ wb.notes(
         ("Pooled 3P is one account", "Pool every impression and 3P visit rate looks competitive, "
                                      "but roughly 39% of 3P impressions come from a single large, "
                                      "non-representative account. Quote the median."),
+        ("Where Peak Performance comes from", "dw-main-silver.audience.mm_campaign_classifier, the "
+                                              "live campaign-grain view from AUDI-1083. It is a "
+                                              "current-state snapshot, so campaigns that have since "
+                                              "gone inactive read Not classified, not No."),
         ("B2B is not a sales vertical here", "B2B Software & Services is an MNTN vertical folded "
                                              "into the 8 sales buckets by an interim crosswalk that "
                                              "still needs RevOps sign-off. Treat any B2B split as "
