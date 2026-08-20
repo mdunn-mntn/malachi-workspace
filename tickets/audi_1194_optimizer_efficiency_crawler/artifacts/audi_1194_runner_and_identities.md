@@ -41,14 +41,44 @@ So the answer is not "get service accounts and put their keys in `~/.config`". I
 with an attached identity, plus the org's approved secret store for anything that genuinely
 cannot be eliminated.
 
-**The org already has a paved road here, and it is not Secret Manager by default** (SOP 052,
-`docs/standard_operating_procedures/052-secrets-management-strategy.md`): secrets default to
-**Vault/ESO**, with Secret Manager as a **narrow, documented exception**. SOP 060 covers the
-GitHub side — Actions get short-lived **Octo STS** App tokens, never PATs
-(`docs/standard_operating_procedures/060-github-actions-octo-sts-tokens.md`). SOP 063 is the
-least-privilege principle this whole doc is an instance of (`063-security-principles.md:136-152`).
-Conform to those rather than introducing a new exception; the fewer secrets this job needs, the
-less of that conversation applies.
+**The org already has a paved road here, and Secret Manager is not it** (SOP 052,
+`052-secrets-management-strategy.md`). Its checklist leads with *"Identity possible? ALWAYS prefer
+Workload Identity. If identity works, no secret is allowed."* Secret Manager is acceptable only
+when **all four** hold: the workload is Google-only and natively consumes Secret Manager, the API
+is enabled and not blocked by `restrictServiceUsage`, Workload Identity cannot eliminate the
+secret, and the exception is recorded with an owner.
+
+A Databricks OAuth M2M secret and an Astro API token are **third-party credentials**, so they fail
+the first condition outright. **The store is Vault, via `mntn-team-credentials`.**
+
+> **RESOLVED 2026-08-20.** An earlier draft of this doc said "Secret Manager". It also logged an
+> apparent contradiction between SOP 052 (Vault/ESO) and the June note (SOPS-in-ArgoCD). They do
+> not compete — **SOPS-in-git is the transport INTO Vault, split by repo** (SOP 055):
+> `mntn-argocd` `apps-v3/secrets/**.enc.yaml` uses *Rotate a SOPS Secret*, while
+> `mntn-team-credentials` `secrets/**.enc.yaml` uses *Update Team Secret*, which also runs
+> `sync-manifests`. Using `rotate-secret` on the latter **breaks Vault delivery**. SOP 065 adds
+> that the SOPS template is "not for new secrets and never for `mntn-team-credentials`". KMS
+> decrypt is disabled for engineers, which is why Basecamp is the only self-serve path.
+
+**And the team already owns this exact credential class** — verified directly, not inferred:
+
+```yaml
+# SteelHouse/mntn-team-credentials
+#   secrets/team-engineering-targeting/databricks/teamsecret.yaml
+kind: TeamSecret
+spec:
+  owner: group:team-engineering-targeting
+  vault: { path: teams/team-engineering-targeting/databricks }
+  keys: [host, client_id, client_secret]
+  environments: [prod]
+  description: Databricks Secrets for ShopperGraph
+```
+
+Siblings under that team path today: `coredb`, `kafka-config`, `openai`, `reportingdb`,
+`sendgrid`, `targeting-secrets`, `vector-search`. **Add a new sibling entry for the optimizer
+rather than extending the ShopperGraph one** — same team, same store, different workload, so
+conflating them would make revocation hit both. Use the **Update Team Secret** template. No new
+store, no exception to document.
 
 ## 3. Recommended shape — **corrected 2026-08-20 after reading the OIDC config**
 
@@ -108,17 +138,26 @@ owns the job's other IAM under `argocd-v2/.../dw-finance-compliance/iam/jedi-med
 |---|---|---|---|
 | **GCP** (GCS + Dataproc read, artifact write) | GCP SA `spark-optimizer@mntn-prj-prod-00` | **None** — the Cloud Run job's attached identity | `roles/storage.objectViewer` on `mntn-data-archive-prod` and the PHS temp bucket; `roles/storage.objectCreator` on the `optimizer/` prefix only; `roles/dataproc.viewer` on the project |
 | **Scheduler → job** | Cloud Scheduler SA | None | `roles/run.jobsExecutor` on this job only (the `daily-jedi-media-spend` Terragrunt pattern) |
-| **Airflow** | Astro Deployment API token | Approved store — **Vault/ESO by default** (SOP 052); Secret Manager only as a documented exception | Read-only on the `airflow-ti` deployment. The coverage pass only does `GET /dags` and `GET /dags/{id}/tasks` |
-| **Databricks** | Databricks **service principal** | OAuth M2M client secret in the approved store (see SOP 052; **not** assumed Secret Manager) | `CAN_VIEW` on jobs; `CAN_USE` on one SQL warehouse; SELECT on the tables `EXPLAIN COST` plans |
-| **GitHub** | **not needed at all** | — | The runner reads no repo and writes no repo. If a read is ever wanted: a single-repo `contents: read` App via the **Octo STS** pattern (SOP 060), which *structurally* cannot open a PR. Never a PAT — SOP 052's FAQ prohibits it outright |
+| **Airflow** | Astro Deployment API token | **Vault** via `mntn-team-credentials` (assumed by analogy — no Astro precedent found) | Read-only on the `airflow-ti` deployment. The coverage pass only does `GET /dags` and `GET /dags/{id}/tasks` |
+| **Databricks** | Databricks **service principal** | **Vault**, new sibling entry under `secrets/team-engineering-targeting/` (verified path) | `CAN_VIEW` on jobs; `CAN_USE` on one SQL warehouse; SELECT on the tables `EXPLAIN COST` plans |
+| **GitHub** | **none** | — | The runner reads and writes no repo. **Octo STS (SOP 060) is Actions-only by its own scope statement and does not reach a Cloud Run job**, so there is no paved road to take even if a read were wanted. Never a PAT — SOP 052's FAQ prohibits it |
 
 ### GitHub, specifically: the cleanest answer is no GitHub access
 
 You asked for read access with no PRs. Publishing artifacts to GCS instead of committing them
-removes the runner's only reason to touch GitHub, so the safest scope is **none**. If a repo
-read is later needed, a GitHub App limited to `contents: read` and `metadata: read` cannot open
-a pull request, comment, or push — the minted token simply carries no such permission. A PAT
-with `repo` scope could, so do not use one.
+removes the runner's only reason to touch GitHub, so the safest scope is **none** — and that is
+now also the *easiest* answer, because the org's paved road does not reach this workload:
+
+**SOP 060's Octo STS pattern does not apply to a Cloud Run job.** Its scope statement is explicit:
+it brokers a short-lived GitHub App installation token *inside a GitHub Actions workflow*, using
+the runner's GitHub OIDC token at every job start. A Cloud Run job has no Actions runner and so no
+runner OIDC token to broker with. Whether the self-hosted Octo STS instance would accept a
+Google-issued OIDC token is **unconfirmed** — nothing retrieved addresses it.
+
+So: take no GitHub access. If source lookup is later wanted, ask team-engineering-dev-ops
+(SOP 060 owner, `last_reviewed: 2026-07-06`) whether Octo STS accepts a non-Actions issuer, and
+if not, what the approved read-only cross-repo mechanism is for a GCP compute workload. **Do not
+fall back to a PAT** — the SOP 052 FAQ prohibits it outright.
 
 ### The grants that already exist
 
@@ -128,9 +167,23 @@ against a **group**, not a person:
 - `roles/dataproc.viewer` on `mntn-prj-prod-00` → `group:audience-intelligence@mountain.com` (standing)
 - `roles/storage.objectViewer` on the PHS temp bucket → same group (mntn-devops#4724, in review)
 
-So the GCP half is one mntn-devops PR: add the new SA to that group, or mirror the two bindings
-onto it directly. Group membership is simpler and keeps the existing bindings as the single
-source of truth.
+So the GCP half is one mntn-devops PR. **Give the SA its own bindings; do not put it in the
+group.** The reason is auditability, from the IAM audit's own declared limits (2026-08-20 review):
+
+- **Google Workspace group membership is not expanded** by the audit — that needs a standing
+  Workspace admin role it does not hold. A grant that reaches a principal through a group is
+  therefore invisible to the org's own IAM audit.
+- The audit's `iacAttribution` is partial anyway: **499 bindings attributed to Crossplane, 0 to
+  Terragrunt, 2,040 unmatched**, because Terraform state is not read. Unmatched is recorded as
+  unknown, never as clickops.
+
+A binding the audit can see is one that can be reviewed, trended and revoked with evidence.
+Membership in an unexpandable group defeats that, and the group also contains humans, so it
+blurs attribution. Direct bindings keep the grant visible in CAI and traceable to one IaC file.
+
+**Still open:** whether the org nonetheless *prefers* the group pattern. That is a human ruling
+from team-engineering-dev-ops and the DEV-8182 author, not a query — the dataset that would
+settle it is the one that cannot see groups.
 
 ### Databricks: there is already a convention, so I did not mint a third identity
 
@@ -150,16 +203,11 @@ whoever owns these.
 group — the optimizer reads, it never produces. It needs exactly `CAN_VIEW` on jobs,
 `CAN_USE` on one SQL warehouse, and SELECT on the tables `EXPLAIN COST` plans.
 
-**Do not mint the secret until the store is settled.** SOP 052 makes Vault/ESO the default and
-Secret Manager a narrow exception, so the destination is an open question, not a given. Whatever
-it is, pipe the secret straight into it — an OAuth M2M secret is shown once, and echoing it to a
-terminal puts it in the scrollback:
-
-```bash
-# destination TBC pending the SOP 052 answer; shape only
-databricks service-principal-secrets create <sp-id> -p malachi@mountain.com -o json \
-  | jq -r .secret | <write to the approved store, never to a file>
-```
+**The store is settled: Vault, via the Update Team Secret template.** Add a sibling to
+`secrets/team-engineering-targeting/` (not the existing `databricks/` entry, which belongs to
+ShopperGraph). An OAuth M2M secret is shown once — never echo it to a terminal, or it is in the
+scrollback. Do **not** use `rotate-secret` on `mntn-team-credentials`; that breaks Vault delivery
+(SOP 055).
 
 ## 5. What each piece costs
 
@@ -196,26 +244,41 @@ working state, not a blocked one.
 - **A runner does not make the findings right.** The verify-before-send rule stays a human step;
   automating the send is explicitly out of scope.
 
-## 8. Open questions — after the Compass review, 2026-08-20
+## 8. Status after the second Compass review, 2026-08-20
 
-Compass confirmed the identity direction (dedicated SA + Cloud Run, no personal SSO, no key) and
-flagged that MNTN's paved road already refuses human-carried credentials for automation, so the
-job should **conform rather than customise**. Four things it could not settle:
+Both specialists (`iam-advisor`, `secrets-advisor`) **aborted mid-run** — `cancelled: Request
+aborted`, blocked at 10% confidence. What came back is partial tool-level evidence, so it is
+leads plus a few things that were fully retrieved.
 
-1. **Where does the `V2Job` manifest actually live?** `kind: V2Job` is not in the Crossplane tree
-   and `jedi-media-spend` is not in `mntn-argocd`. Ask the `dw-finance-compliance` owner or
-   DEV-8121's author before copying the pattern.
-2. **SA bindings: join the group or stand alone?** DEV-8182 and mntn-devops#4724 both granted to
-   `group:audience-intelligence@mountain.com` rather than a principal. Needs the IAM owner.
-3. **Does Octo STS (SOP 060) even apply to a Cloud Run job**, or only to Actions workflows? And
-   who approves a single-repo `contents: read` install?
-4. **Vault/ESO or Secret Manager** for the Databricks M2M secret, under SOP 052's narrow-exception
-   rule (`052-secrets-management-strategy.md:175-185`)?
+### Settled
 
-Plus the one Compass is structurally blind to: **who owns the Astro org** and can mint a
-deployment token. INC-006 established the Astronomer deploy is not in Compass's monitored fleet —
-that question goes to `#dev-basecamp` or devops directly.
+- **Secret store: Vault**, via `mntn-team-credentials` / Update Team Secret. Third-party
+  credentials fail SOP 052's Google-only test on their face, and the team already owns the
+  credential class (verified path above). No Secret Manager exception to document.
+- **The SOPS-vs-Vault contradiction is closed** — they coexist by repo; SOPS-in-git is the
+  transport into Vault (SOP 055 / SOP 065).
+- **Octo STS does not reach this workload** — SOP 060 is Actions-scoped by its own first sentence.
+  Reinforces taking no GitHub access at all.
+- **SA gets direct bindings, not group membership** — the IAM audit cannot expand Workspace
+  groups, so a group-routed grant is invisible to the org's own audit.
 
-**Verification Compass asked for, worth doing either way:** once the job is live, confirm IAM
-Policy Analyzer shows **no personal-account binding left** on the two buckets or the project. That
-is the actual test that the personal-SSO path is gone, not just supplemented.
+### Still open, and do not open PRs on these
+
+1. **Where does the `V2Job` manifest live?** Unlocated across both reviews.
+2. **Does the org nonetheless prefer the group pattern?** Human ruling from
+   team-engineering-dev-ops / the DEV-8182 author.
+3. **Is conditional IAM used in this project?** The audit run in scope
+   (`1467fed0b5abae3f6067486537adea29`) was collected 2026-08-18 12:56 UTC, **58 hours stale**,
+   with `denyPolicies` returning 0 rows and marked partial. Absence there is not evidence of
+   absence.
+4. **Octo STS with a non-Actions OIDC issuer** — unconfirmed; ask the SOP 060 owner.
+5. **SOP 052's effective date** — front matter never retrieved.
+6. **Astro token store** — no Astro precedent found anywhere; Vault is an analogy, not evidence.
+7. **Who owns the Astro org.** Compass is structurally blind here (INC-006): the Astronomer
+   deploy is not in its monitored fleet. Ask `#dev-basecamp` or devops.
+
+### Verification to run once it is live
+
+Confirm **no personal-account binding remains** on the two buckets or the project — IAM Policy
+Analyzer, and the SA resolving in `v_current_findings` with a resolvable `iac_source`. That is the
+test that the personal-SSO path is *gone*, not merely supplemented.

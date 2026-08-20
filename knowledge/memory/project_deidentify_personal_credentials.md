@@ -28,3 +28,14 @@ Raised 2026-08-20 as the likely next major work stream after AUDI-1191 and AUDI-
 **Open:** who owns non-human identity provisioning at MNTN, whether Astro deployment tokens can dispatch the deploys we run today, and whether the Databricks service principal can read `system.billing` (see IMP-048).
 
 Related: [[reference_airflow_ti_dev_testing]], [[reference_shopper_graph_deploy]], [[feedback_bq_workflow]].
+
+**AUDI-1194 is the first workload through this (2026-08-20).** The daily Spark optimizer sweep is the pilot: it reads GCS + Dataproc, calls the Airflow API and Databricks, and today runs on a laptop under personal SSO. Full design + two Compass reviews: `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_runner_and_identities.md`.
+
+Settled there, and reusable for every other workload in this stream:
+- **Shape: Cloud Run Job + Cloud Scheduler with an attached SA.** NOT GitHub Actions — the prod OIDC pool `mntn-prj-prod-gh-oidc` allow-lists 23 `SteelHouse/*` repos, and `mdunn-mntn/malachi-workspace` is personal. Putting a personal repo on a prod OIDC allow-list means anyone with push access can mint prod tokens.
+- **Secrets → Vault via `mntn-team-credentials`**, Update Team Secret template, sibling entry per workload. Not Secret Manager: a third-party credential fails SOP 052's Google-only test. See [[reference_compass]] for the SOP 052/055/060/065 detail and the verified team path.
+- **Direct bindings on the SA, not group membership** — the IAM audit cannot expand Workspace groups, so a group-routed grant is invisible to the org's own audit.
+- **Prefer eliminating the credential over storing it.** SOP 052 leads with "if identity works, no secret is allowed". Publishing the sweep's artifacts to GCS instead of committing them removed the GitHub identity entirely — the cheapest secret is the one the design does not need.
+- **Octo STS (SOP 060) is Actions-only** and does not reach a GCP compute workload, so there is currently no paved road for a Cloud Run job that needs to read a repo.
+
+**Verification that actually closes a workload:** IAM Policy Analyzer shows **no personal-account binding remaining** on the target resources. Supplementing the personal path is not the same as removing it.
