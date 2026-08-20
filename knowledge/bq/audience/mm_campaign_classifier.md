@@ -135,7 +135,14 @@ the targeting is (`restriction_level`), and a battery of feature flags for the u
   COALESCE accordingly.
 - **Stage-2/3 rollups:** this view only covers Stage-1 (funnel_level=1). For a whole campaign group across
   stages, roll up via the sibling `audience.mm_campaign_classifier_by_group` on `campaign_group_id` (per the
-  view description).
+  view description). **But `_by_group` carries NO DS flags** — its 10 columns are `campaign_group_id`,
+  `n_stage1_campaigns`, `group_any_mm`, `group_all_mm`, `group_any_unmodified_mm`, `group_any_flagship`,
+  `group_all_flagship`, `group_best_engine_rank`, `group_mm_class`, `group_restriction_level` (verified
+  2026-08-19). So a **Peak Performance cut at group grain cannot use `_by_group`**: `has_ds13`/`has_ds46`
+  exist only on the base view. Roll them up yourself with
+  `LOGICAL_OR(COALESCE(has_ds13,FALSE)) OR LOGICAL_OR(COALESCE(has_ds46,FALSE))` GROUP BY `campaign_group_id`.
+  `group_mm_class` collapses to the literal `'mixed'` when a group's Stage-1 campaigns disagree, which also
+  loses the DS detail.
 - `advertiser_id` / `campaign_group_id` let you aggregate the classification up to advertiser or group level.
 
 ## Gotchas

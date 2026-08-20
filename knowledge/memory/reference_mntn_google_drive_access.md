@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [google drive access, google sheets api, gcloud enable-gdrive-access, drive mcp wrong account, shared with me, 401 spreadsheet, docs.google.com export csv, drive scope, sheets v4, mntn drive]
 domain: [workflow, infra]
 lifecycle: active
-last_verified: 2026-08-05
+last_verified: 2026-08-19
 ---
 
 **To read any MNTN Google Sheet or Doc, use the `gcloud` token — not the Drive MCP connector.**
@@ -51,3 +51,15 @@ Native Sheets need the **Sheets** API (a Drive `alt=media` GET fails on them); u
 need **Drive** `alt=media` (the Sheets API fails on them). Check `mimeType` to pick.
 
 Related: [[project_bae_4923_ddp_claim_validation]]
+
+**Re-verified 2026-08-19 — the Drive scope is NOT on the credential by default, and it lapses.** A
+`gcloud auth print-access-token` that day carried only `email · accounts.reauth · appengine.admin ·
+cloud-platform · compute · sqlservice.login · userinfo.email · openid`, and the Sheets API returned
+403 `ACCESS_TOKEN_SCOPE_INSUFFICIENT`. Check first with
+`curl -s "https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=$(gcloud auth print-access-token)"`
+before assuming the REST path works; re-run `gcloud auth login --enable-gdrive-access` if `auth/drive`
+is absent. Also confirmed the same day: the mount stores Google-native files as ~175-byte JSON pointer
+stubs (`{"doc_id": ...}`), an unauthenticated `export?format=csv` on a domain-restricted sheet 401s, and
+the Drive MCP connector still sees only the personal gmail. When the user is present, the cheapest
+unblock is asking them to File > Download > CSV the tab.
+

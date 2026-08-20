@@ -149,7 +149,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | jira-conventions | reference | 2026-08-05 | [doc](memory/reference_jira_conventions.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
 | reference-ddp-billing-logic | reference | 2026-08-05 | [doc](memory/reference_ddp_billing_logic.md) |
-| reference-mntn-google-drive-access | reference | 2026-08-05 | [doc](memory/reference_mntn_google_drive_access.md) |
 | feedback_hold_evidenced_verdict | feedback | 2026-08-06 | [doc](memory/feedback_hold_evidenced_verdict.md) |
 | feedback_plain_voice_internal_docs | feedback | 2026-08-06 | [doc](memory/feedback_plain_voice_internal_docs.md) |
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
@@ -198,6 +197,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_prospecting_intent_query_rules | reference | 2026-08-18 | [doc](memory/reference_prospecting_intent_query_rules.md) |
 | reference_vertical_hi_sizing_baseline | reference | 2026-08-18 | [doc](memory/reference_vertical_hi_sizing_baseline.md) |
 | feedback_self_explaining_columns | feedback | 2026-08-19 | [doc](memory/feedback_self_explaining_columns.md) |
+| reference-mntn-google-drive-access | reference | 2026-08-19 | [doc](memory/reference_mntn_google_drive_access.md) |
 | reference_advertiser_visit_measurement | reference | 2026-08-19 | [doc](memory/reference_advertiser_visit_measurement.md) |
 | reference_anthropic_api_key_keychain | reference | 2026-08-19 | [doc](memory/reference_anthropic_api_key_keychain.md) |
 | reference_claude_cli_npmrc_os_pin | reference | 2026-08-19 | [doc](memory/reference_claude_cli_npmrc_os_pin.md) |
