@@ -1,10 +1,15 @@
 # airflow_optimizer
 
 Key-free, deterministic efficiency sweep over Airflow/Spark jobs that **succeed** (AUDI-1194). Reads a
-finished job's Spark event log (Dataproc) or `EXPLAIN COST` plan + metrics (Databricks), runs the
-optimization detectors, and ranks a cross-job backlog worst-first. The success-only counterpart to
-`airflow_debugger/` (AUDI-1191, the failure debugger); the two run separately and share only the Spark
-event-log parser.
+finished job's Spark event log, runs the optimization detectors, and ranks a cross-job backlog
+worst-first. The success-only counterpart to `airflow_debugger/` (AUDI-1191, the failure debugger);
+the two run separately and share only the Spark event-log parser.
+
+The live input is **Dataproc event logs**, from two places: the flat `spark-events` archive (the 88
+batch-operator models) and the per-uuid PHS temp-bucket dirs (ipdsc/tpa, via `phs`). `analyze_plan`
+also reads a Databricks `EXPLAIN COST` plan, but nothing here acquires one: the 2026-08-03 probe
+showed `jobs get-run-output` returns only `error`/`error_trace`/`metadata`/`notebook_output`, so a
+model has to emit `EXPLAIN COST` itself before there is a plan to fetch.
 
 ## Use
 
@@ -16,8 +21,8 @@ python3 -m airflow_optimizer.optimize <spark_eventlog>
 python3 -m airflow_optimizer.crawl <event_log_dir_or_glob>
 ```
 
-The weekly sweep (`.claude/scripts/oncall_weekly_optimizer.sh`) pulls the newest event logs from the GCS
-prefix and runs `airflow_optimizer.crawl`.
+The daily sweep (`.claude/scripts/oncall_daily_optimizer.sh`) pulls a full day of event logs from the
+GCS prefix plus the PHS batches and runs `airflow_optimizer.crawl` over both.
 
 ## Pipeline
 
@@ -33,10 +38,15 @@ event log (.zstd) ─▶ eventlog (7-surface parse) ─▶ optimizations (detect
   SQL per-node metrics / storage; handles `.zstd`). The one artifact holding all 7 surfaces.
 - `optimizations` — detectors over the plan text (`analyze_plan`: missing_statistics,
   shuffle_partition_sizing, broadcast_candidate, window_full_sort, repeated_scan) AND the event log
-  (`analyze_run`: skew, disk_spill, gc_pressure, spot_preemption_cost, shuffle_fetch_instability),
+  (`analyze_run`: skew, straggler, disk_spill, shuffle_partition_sizing, shuffle_fetch_wait,
+  gc_pressure, spot_preemption_cost, idle_reserved_executors, cache_ineffective,
+  shuffle_fetch_instability),
   emitting `code` / `infra` / `failure` recommendations with real metrics.
 - `optimize` — one-call single-job report.
 - `crawl` — fleet crawl, ranks a cross-job backlog worst-first (the "check every DAG" mode).
+- `phs` — enumerates PHS-attached SUCCEEDED ipdsc/tpa batches (`gcloud dataproc batches list`) and
+  fetches each one's per-uuid `spark-job-history` log. Needs standing `storage.objectViewer` on the
+  Dataproc temp bucket (mntn-devops#4724); until that merges the reads 403 and are skipped.
 
 ## Notes
 

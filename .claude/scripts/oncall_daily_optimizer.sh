@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Weekly Spark fleet optimizer (AUDI-1191). Pulls the recent event logs from the live
-# spark-events prefix, runs the deterministic (key-free, no-LLM) optimizer crawl on each,
-# and writes a ranked cross-job backlog. Idles gracefully until event-log enablement lands
-# (empty/absent prefix -> a one-line "pending" note, exit 0). Built for a weekly cron.
+# Daily Spark fleet optimizer (AUDI-1194). Pulls a full day of event logs from the live
+# spark-events prefix plus the PHS-attached ipdsc/tpa batches, runs the deterministic
+# (key-free, no-LLM) optimizer crawl on each, and writes a ranked cross-job backlog.
+# Idles gracefully when a source is unreachable (empty prefix or a PHS 403 -> a one-line
+# note, exit 0). Cadence is daily because the fleet emits ~160 logs/day: a weekly cap-40
+# sweep saw ~4% of it.
 #
 # Usage:
-#   oncall_weekly_optimizer.sh                 # crawl the live GCS prefix (default)
-#   oncall_weekly_optimizer.sh /path/to/logs   # crawl a local dir of event logs (testing)
-#   oncall_weekly_optimizer.sh --selftest      # hermetic regression check (no GCS needed)
+#   oncall_daily_optimizer.sh                 # crawl the live GCS prefix (default)
+#   oncall_daily_optimizer.sh /path/to/logs   # crawl a local dir of event logs (testing)
+#   oncall_daily_optimizer.sh --selftest      # hermetic regression check (no GCS needed)
 #
 # Auth : gsutil uses the user's gcloud creds (key-free, SSO). Stale creds -> exit 0 with a note.
 set -uo pipefail
@@ -23,7 +25,8 @@ dest_for() {
 
 WORKSPACE="/Users/malachi/Developer/work/mntn/workspace"
 PREFIX="${SPARK_EVENTS_PREFIX:-gs://mntn-data-archive-prod/spark-events}"
-CAP="${OPTIMIZER_LOG_CAP:-40}"        # newest N logs per run (bounded: -m bulk pulls have crashed)
+CAP="${OPTIMIZER_LOG_CAP:-200}"       # newest N logs per run; ~160/day, so 200 covers a full day
+PHS="${OPTIMIZER_PHS:-1}"             # 0 skips the ipdsc/tpa PHS half
 DATE="$(date +%F)"
 OUTDIR="${WORKSPACE}/tickets/audi_1194_optimizer_efficiency_crawler/outputs"
 REPORT="${OUTDIR}/optimizer_backlog_${DATE}.md"
@@ -67,10 +70,10 @@ fi
 
 # ---- Local-dir mode (testing): crawl a directory that already holds event logs. ----------
 if [[ $# -ge 1 && -d "$1" ]]; then
-    echo "[weekly_optimizer] local mode: crawling $1"
+    echo "[daily_optimizer] local mode: crawling $1"
     body="$(python3 -m airflow_optimizer.crawl "$1")"
     { echo "# Spark fleet optimizer backlog — ${DATE} (local: $1)"; echo; echo "$body"; } > "$REPORT"
-    echo "[weekly_optimizer] wrote ${REPORT#"$WORKSPACE"/}"
+    echo "[daily_optimizer] wrote ${REPORT#"$WORKSPACE"/}"
     echo "$body" | head -n 1
     exit 0
 fi
@@ -90,7 +93,7 @@ listing="$(gsutil ls -l "${PREFIX}/**" 2>/dev/null \
     | tail -n "$CAP")"
 
 if [[ -z "$listing" ]]; then
-    msg="[weekly_optimizer] no event logs at ${PREFIX} — enablement pending (AUDI-1191 step #1). Idling."
+    msg="[daily_optimizer] no event logs at ${PREFIX} (enablement pending or creds stale). Idling."
     echo "$msg"
     # No git noise until real logs flow: only touch the report when there is something to report.
     exit 0
@@ -107,20 +110,39 @@ while IFS= read -r obj; do
     fi
 done <<< "$listing"
 
-if [[ $n -eq 0 ]]; then
-    echo "[weekly_optimizer] prefix listed but 0 logs downloaded (creds stale?). Idling."
+# ---- PHS half: ipdsc/tpa batches attach a history server and write per-uuid under the
+# Dataproc temp bucket, not the archive prefix. Enumerate the SUCCEEDED PHS-attached batches
+# and pull each log into the SAME download root so both sources rank in one backlog. The
+# bucket 403s until mntn-devops#4724 merges and fetch_logs skips those quietly, so until then
+# this stage costs one batches-list call and adds nothing.
+phs_n=0
+if [[ "$PHS" == "1" ]]; then
+    phs_n="$(python3 - "$TMP" 2>/dev/null <<'PY' || echo 0
+import sys
+
+from airflow_optimizer import phs
+
+print(len(phs.fetch_logs(phs.phs_succeeded(phs.list_batches()), sys.argv[1])))
+PY
+)"
+    [[ "$phs_n" =~ ^[0-9]+$ ]] || phs_n=0
+    echo "[daily_optimizer] PHS: ${phs_n} ipdsc/tpa batch log(s)."
+fi
+
+if [[ $((n + phs_n)) -eq 0 ]]; then
+    echo "[daily_optimizer] prefix listed but 0 logs downloaded (creds stale?). Idling."
     exit 0
 fi
 
-echo "[weekly_optimizer] pulled ${n} log(s) from ${PREFIX}; crawling."
+echo "[daily_optimizer] pulled ${n} log(s) from ${PREFIX} + ${phs_n} PHS; crawling."
 body="$(python3 -m airflow_optimizer.crawl "$TMP")"
 {
     echo "# Spark fleet optimizer backlog — ${DATE}"
     echo
-    echo "Source: ${PREFIX} (newest ${n} logs, cap ${CAP})."
+    echo "Source: ${PREFIX} (newest ${n} logs, cap ${CAP}) + ${phs_n} PHS batch log(s)."
     echo
     echo "$body"
 } > "$REPORT"
 
-echo "[weekly_optimizer] wrote ${REPORT#"$WORKSPACE"/}"
+echo "[daily_optimizer] wrote ${REPORT#"$WORKSPACE"/}"
 echo "$body" | head -n 1

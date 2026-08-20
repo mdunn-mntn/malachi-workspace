@@ -41,8 +41,8 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `lint_memory.py` | linter + one-shot migrator for auto-memory files (knowledge/memory/*.md) |
 | `lint_tickets.py` | ticket front-matter linter (the work-side mirror of lint_coverage.py) |
 | `new_ticket.sh` | scaffold a ticket folder that conforms to folder_definitions.md, one command |
+| `oncall_daily_optimizer.sh` | Daily Spark fleet optimizer (AUDI-1194) |
 | `oncall_daily_rca.sh` | Daily retrospective RCA over the on-call/paging DAGs (AUDI-1191 trust-building) |
-| `oncall_weekly_optimizer.sh` | Weekly Spark fleet optimizer (AUDI-1191) |
 | `package_kit.sh` | extract, sanitize, and assemble a portable copy of the AI Workflow Kit |
 | `perf_digest.py` | Deterministic aggregation over knowledge/bq/bq_perf_log.jsonl for the perf-analyst |
 | `pi_run_workflow_audit.sh` | weekly DETERMINISTIC workflow-audit signal capture on the Pi |
