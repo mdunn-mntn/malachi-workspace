@@ -194,6 +194,20 @@ sign-off (§8), so "B2B" is not a cut the workbook exposes today.
    flatters 3P (its zero-conversion half is excluded), so the MM win is conservative; but it also means
    the CPA population is not the IVR/CPV population and the two slides are not the same advertisers.
 
+**Rebuilt 2026-08-20 on the shared format.** `artifacts/audi_1141_build_xlsx.py` now builds on
+`lib/mntn_xlsx.MntnWorkbook` instead of hand-rolled openpyxl (the module was generalized FROM this
+builder on 2026-07-21, so the original predated the standard). Sheets: Overview / MM vs 3P by vertical /
+MM gated vs 3P by vertical / **CPA on non-revenue accounts** (new) / Full scorecard / Overall / Campaign
+detail / Read me / Queries / Method & caveats. CPA and a CPA-advantage column were added to both
+by-vertical tabs. `artifacts/audi_1141_aggregate.py` now also emits
+`outputs/audi_1141_scorecard_nonrevenue.csv`. Numbers are unchanged (same Jul-20 campaign-grain CSV);
+the all-advertiser row still reproduces the shipped figures exactly.
+
+**Drive now holds TWO files** in `My Drive/Tickets/AUDI-1141/`: the new
+`AUDI-1141 MM vs 3P Scorecard.xlsx` (convention-named) and the original `MM vs 3P Scorecard.xlsx`
+(Jul 21 build, opened 2026-08-20 08:26). The old one was left in place deliberately — it may be linked
+from elsewhere. Delete it only once nothing points at it.
+
 **Recommendation:** ship CPA on the all-advertiser cut where the 2.09x holds, and do NOT put a B2B or
 non-revenue CPA slide in the deck on this data. If the B2B claim is needed, it is a new pull, not a
 column: a B2B-specific cohort with RevOps-signed verticals, a conversion-pixel coverage screen, and a
@@ -207,3 +221,11 @@ larger 3P n.
   2026-07-20 (~2026-01-21 → 2026-07-20); it is one month old. The link Jon circulated
   (`1m5RKXYN219eGH_JiYwPdL9pmzwmerunJ`) does not resolve against this Drive account, so it is a separate
   copy, not `My Drive/Tickets/AUDI-1141/MM vs 3P Scorecard.xlsx` — rebuilding the source will not update it.
+
+**Open follow-up (Alex Knorr, Slack 2026-08-20 13:54): "how do we tell which campaigns in the sheet are
+peak performance?"** This workbook cannot answer that. It was built 2026-07-21 with its own inline
+MM/3P classification; `dw-main-silver.audience.mm_campaign_classifier` (AUDI-1083) only went live
+2026-07-24. The workbook's "MM" bucket is DS-presence plus restriction, NOT engine — Peak Performance is
+`mm_engine IN ('peak_performance_v1','fangorn_v2')` on the classifier view. Adding an engine column to
+the Campaign detail tab is a small join on `campaign_id`, not a re-run. Not done: which sheet Alex meant
+was not confirmed.

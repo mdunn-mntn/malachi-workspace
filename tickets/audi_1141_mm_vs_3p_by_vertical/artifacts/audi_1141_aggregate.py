@@ -68,6 +68,51 @@ byvert = scorecard(df, ["sales_vertical","bucket_detail"]); byvert.to_csv(OUT+"a
 overall2 = scorecard(df, ["bucket2"]); overall2.to_csv(OUT+"audi_1141_scorecard2_overall.csv", index=False)
 byvert2 = scorecard(df, ["sales_vertical","bucket2"]); byvert2.to_csv(OUT+"audi_1141_scorecard2_by_vertical.csv", index=False)
 
+# ---------------------------------------------------------------------------
+# CPA cohort cut (AUDI-1141 follow-up, 2026-08-20): does the CPA advantage hold for
+# advertisers that drive no revenue (B2B and similar)? ROAS is undefined for them, so CPA
+# is the only efficiency metric the deck can use, and it is the one that does not hold up.
+# A CPA median is taken over advertisers with >=1 conversion only, so the qualifying and the
+# CPA-eligible advertiser counts are BOTH reported: they differ a lot by group.
+# ---------------------------------------------------------------------------
+NONREV_OUT = OUT + "audi_1141_scorecard_nonrevenue.csv"
+B2B_VERTICAL = "B2B Software & Services"
+adv_revenue = df.groupby("advertiser_id").revenue.sum()
+no_revenue = set(adv_revenue[adv_revenue <= 0].index)
+df["is_non_revenue"] = df.advertiser_id.isin(no_revenue)
+
+def cpa_cut(frame, cohort, gcol):
+    rows = []
+    for grp, g in frame.groupby(gcol):
+        adv = g.groupby("advertiser_id").agg(imps=("imps","sum"), conv=("conv","sum"),
+                                             spend=("spend","sum"))
+        adv = adv[adv.imps >= ADV_MIN_IMPS]
+        if adv.empty:
+            continue
+        elig = adv[adv.conv > 0]
+        rows.append({"cohort": cohort, "group": grp, "n_adv_qual": len(adv),
+            "n_adv_cpa": len(elig), "share_with_conv": len(elig)/len(adv) if len(adv) else np.nan,
+            "CPA_med": (elig.spend/elig.conv).median() if len(elig) else np.nan,
+            "CPA_pooled": elig.spend.sum()/elig.conv.sum() if elig.conv.sum() else np.nan,
+            "spend": adv.spend.sum()})
+    return rows
+
+cohorts = [("All advertisers", df),
+           ("No revenue tracked", df[df.is_non_revenue]),
+           (B2B_VERTICAL, df[df.vertical_name == B2B_VERTICAL]),
+           ("B2B and no revenue", df[(df.vertical_name == B2B_VERTICAL) & df.is_non_revenue])]
+nr_rows = []
+for cohort, frame in cohorts:
+    nr_rows += cpa_cut(frame, cohort, "bucket2")
+    nr_rows += cpa_cut(frame, cohort, "bucket_detail")
+nonrev = pd.DataFrame(nr_rows).drop_duplicates(subset=["cohort","group"])
+nonrev["_c"] = nonrev.cohort.map({c:i for i,(c,_) in enumerate(cohorts)})
+nonrev["_g"] = nonrev.group.map({g:i for i,g in enumerate(BUCKET2_ORDER[:1] + BUCKET_ORDER)})
+nonrev = nonrev.sort_values(["_c","_g"]).drop(columns=["_c","_g"])
+nonrev.to_csv(NONREV_OUT, index=False)
+print("\n=== CPA by cohort (median advertiser; CPA-eligible advertisers only) ===")
+print(nonrev.to_string(index=False, float_format=lambda v: f"{v:,.2f}"))
+
 pd.set_option("display.width",240,"display.max_columns",40)
 def pct(x): return f"{x*100:.2f}%" if pd.notna(x) else "-"
 print("bucket mix:", dict(df.bucket_detail.value_counts()))

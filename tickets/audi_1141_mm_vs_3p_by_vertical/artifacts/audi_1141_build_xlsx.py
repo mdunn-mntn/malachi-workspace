@@ -1,213 +1,247 @@
 #!/usr/bin/env python3
-"""AUDI-1141 shareable .xlsx. Tabs: Read me / MM vs 3P by vertical / Full scorecard / Overall /
-Campaign detail / Queries. Rates stored as decimals, formatted as % and $. Content-sized columns."""
-import pandas as pd, numpy as np
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
+"""AUDI-1141 shareable .xlsx, built on the shared MntnWorkbook format.
 
-OUT = "tickets/audi_1141_mm_vs_3p_by_vertical/outputs/"
-DEST = OUT + "audi_1141_mm_vs_3p_scorecard.xlsx"
-SQLFILE = "tickets/audi_1141_mm_vs_3p_by_vertical/queries/audi_1141_cohort_scorecard.sql"
-ADV_MIN_IMPS = 20000
+Rebuilt 2026-08-20: moved off the hand-rolled openpyxl builder onto lib/mntn_xlsx, added CPA to the
+two by-vertical tabs, and added the non-revenue / B2B CPA cohort tab that the pitch-deck ask needs.
+Run artifacts/audi_1141_aggregate.py first — this reads its CSVs.
+"""
+
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT))
+from lib.mntn_xlsx import FMT, MntnWorkbook  # noqa: E402
+
+TICKET = "AUDI-1141"
+OUT = ROOT / "tickets/audi_1141_mm_vs_3p_by_vertical/outputs"
+SQLFILE = ROOT / "tickets/audi_1141_mm_vs_3p_by_vertical/queries/audi_1141_cohort_scorecard.sql"
+DEST = OUT / "audi_1141_mm_vs_3p_scorecard.xlsx"
 BO = ["MM (gated)", "MM (no gate)", "MM restricted", "3P"]
+ADV_MIN_IMPS = 20000
 
-HEAD="1a3c5e"; BAND="eef3f4"; GREY="666666"
-HFONT=Font(bold=True,color="FFFFFF",size=11); TITLE=Font(bold=True,size=15,color=HEAD)
-SUB=Font(italic=True,size=10,color=GREY); BOLD=Font(bold=True); MONO=Font(name="Consolas",size=9)
-HFILL=PatternFill("solid",fgColor=HEAD); BANDF=PatternFill("solid",fgColor=BAND)
-CEN=Alignment(horizontal="center",vertical="center",wrap_text=True)
-LFT=Alignment(horizontal="left",vertical="top",wrap_text=True)
-THIN=Side(style="thin",color="CCCCCC"); BORD=Border(left=THIN,right=THIN,top=THIN,bottom=THIN)
-PCT2="0.00%"; PCT3="0.000%"; USD="\"$\"#,##0.00"; USD0="\"$\"#,##0"; NUM2="0.00"; INT="#,##0"
+ov = pd.read_csv(OUT / "audi_1141_scorecard_overall.csv")
+bv = pd.read_csv(OUT / "audi_1141_scorecard_by_vertical.csv")
+ov2 = pd.read_csv(OUT / "audi_1141_scorecard2_overall.csv")
+bv2 = pd.read_csv(OUT / "audi_1141_scorecard2_by_vertical.csv")
+nr = pd.read_csv(OUT / "audi_1141_scorecard_nonrevenue.csv")
 
-wb=Workbook()
+det = pd.read_csv(OUT / "audi_1141_campaign_grain.csv").dropna(subset=["vertical_id"])
+names = pd.read_csv(OUT / "audi_1141_advertiser_names.csv").drop_duplicates("advertiser_id")
+det = det.merge(names, on="advertiser_id", how="left")
+det = det[det.bucket != "Neither"].copy()
+gated_frac = np.where(det.hhst_writes > 0, det.hhst_writes_gated / det.hhst_writes, 0.0)
+det["bucket_detail"] = np.where(
+    det.bucket == "MM", np.where(gated_frac >= 0.5, "MM (gated)", "MM (no gate)"), det.bucket
+)
 
-def autosize(ws, df, wide=None):
-    """Width fits the WHOLE header on one line, plus padding for bold text and the filter-dropdown
-    icon (headers must never clip). wide = {col: value_display_len} for columns whose DATA is longer
-    than the header (e.g. Spend, company names)."""
-    wide = wide or {}
-    for j,col in enumerate(df.columns,1):
-        w=max(len(str(col)), int(wide.get(col,0)))
-        ws.column_dimensions[get_column_letter(j)].width = min(max(w+4, 10), 46)
+wb = MntnWorkbook(
+    title="MNTN Matched vs 3P Segment Scorecard",
+    ticket=TICKET,
+    subtitle="Stage 1 prospecting performance by sales vertical, trailing 6 months",
+    period="2026-01-21 to 2026-07-20",
+    generated="2026-08-20",
+)
 
-def write_table(ws, df, start_row, fmts, band=True, header_wrap=True):
-    for j,col in enumerate(df.columns,1):
-        c=ws.cell(row=start_row,column=j,value=col); c.font=HFONT; c.fill=HFILL
-        c.alignment=CEN if header_wrap else Alignment(horizontal="center"); c.border=BORD
-    for i,(_,r) in enumerate(df.iterrows(),1):
-        rr=start_row+i
-        for j,col in enumerate(df.columns,1):
-            v=r[col]
-            if isinstance(v,(np.integer,)): v=int(v)
-            elif isinstance(v,(np.floating,)): v=float(v) if pd.notna(v) else None
-            elif isinstance(v,(np.bool_,)): v=bool(v)
-            c=ws.cell(row=rr,column=j,value=v); c.border=BORD
-            if col in fmts: c.number_format=fmts[col]
-            if j==1: c.font=BOLD
-            if band and i%2==0: c.fill=BANDF
-    ws.row_dimensions[start_row].height=30
-    return start_row+len(df)+1
 
-# ---------------- load + transform ----------------
-df=pd.read_csv(OUT+"audi_1141_campaign_grain.csv").dropna(subset=["vertical_id"])
-names=pd.read_csv(OUT+"audi_1141_advertiser_names.csv").drop_duplicates("advertiser_id")
-df=df.merge(names,on="advertiser_id",how="left")
-df["gated_frac"]=np.where(df.hhst_writes>0, df.hhst_writes_gated/df.hhst_writes, 0.0)
-df["capped"]=df.gated_frac>=0.5
-df=df[df.bucket!="Neither"].copy()
-df["bucket_detail"]=np.where(df.bucket=="MM", np.where(df.capped,"MM (gated)","MM (no gate)"), df.bucket)
+# --------------------------------------------------------------------------- headline comparisons
+def compare(df_by_vert, df_overall, gcol, a, b, name, finding, method, toc, kind):
+    """One MM-group-vs-3P table: visit rate, cost per visit, cost per action, ROAS, by vertical."""
+    bvi = df_by_vert.set_index(["sales_vertical", gcol])
+    ovi = df_overall.set_index(gcol)
 
-ov=pd.read_csv(OUT+"audi_1141_scorecard_overall.csv")
-bv=pd.read_csv(OUT+"audi_1141_scorecard_by_vertical.csv")
-ov2=pd.read_csv(OUT+"audi_1141_scorecard2_overall.csv")
-bv2=pd.read_csv(OUT+"audi_1141_scorecard2_by_vertical.csv")
-def _int0(x): return int(x) if pd.notna(x) else 0
+    def row(label, get):
+        d = {"Sales vertical": label}
+        for tag, col, fmtcols in (("IVR", "IVR_med", None), ("CPV", "CPV_med", None),
+                                  ("CPA", "CPA_med", None), ("ROAS", "ROAS_med", None)):
+            d[f"MM {tag}"], d[f"3P {tag}"] = get(col, a), get(col, b)
+        # advantage: higher-is-better for a rate, lower-is-better for a cost (so invert)
+        for tag, invert in (("IVR", False), ("CPA", True), ("ROAS", False)):
+            hi, lo = d[f"MM {tag}"], d[f"3P {tag}"]
+            num, den = (lo, hi) if invert else (hi, lo)
+            d[f"{tag} advantage"] = num / den if den else np.nan
+        d["MM advertisers"] = int(get("n_adv", a) or 0)
+        d["3P advertisers"] = int(get("n_adv", b) or 0)
+        return d
 
-# ================= 1) READ ME =================
-ws=wb.active; ws.title="Read me"; ws.sheet_view.showGridLines=False
-ws["A1"]="MNTN Matched vs 3P Segments: Prospecting Performance by Vertical"; ws["A1"].font=TITLE
-ws["A2"]="Trailing 6 months. Stage-1 prospecting campaigns. Source AUDI-1141. Generated 2026-07-20."; ws["A2"].font=SUB
-rows=[
- ("",""),
- ("Summary","Across all MM campaigns, MNTN Matched delivers about 4x the visit rate of 3P segments at about one third the cost per visit and roughly double the ROAS, for the typical (median) advertiser, and leads visit rate in every vertical. When MM is configured well (intent gate on, audience not over-narrowed) the gap widens to about 6x on visit rate."),
- ("",""),
- ("Two ways to read this",""),
- ("MM (all) vs 3P","The realistic average: every MM campaign vs 3P, including mis-configured ones. Use this for the general 'MM vs 3P' comparison."),
- ("MM (gated) vs 3P","The best case: MM campaigns where the intent gate is on and the audience is broad. Use this to show what MM does when configured correctly."),
- ("",""),
- ("How campaigns are grouped","Each Stage-1 prospecting campaign is classified from its live bidder audience expression."),
- ("MM (gated)","MNTN scoring (DS13/19/38/46) with the intent score threshold above 0, so the bidder only bids on IPs the model scored as high intent. 3P (if present) is joined by OR (adds reach), and the geo is broad."),
- ("MM (no gate)","MM with the intent score threshold at 0. This bypasses the model and bids broadly, similar to a 3P segment. The threshold drops to 0 for a few reasons: Max Reach, many short flights (lowered to keep delivery flowing), or an audience narrowed so far that the high-intent pool is exhausted and the score is lowered for deliverability. Note: the gate is the score threshold setting, not the scoring model itself."),
- ("MM restricted","MM whose audience is narrowed by an AND-required 3P clause, or by a sub-DMA geo (zip, city, or radius)."),
- ("3P","Bought interest segments only (ShareThis, Dstillery, LiveRamp), no MM signal."),
- ("MM (all)","Every campaign with an MM signal: MM (gated), MM (no gate), and MM restricted combined."),
- ("Why OR vs AND matters","About 85% of campaigns that carry a 3P segment join it with OR, which only adds reach and leaves MM doing the scoring. Only an AND-required 3P actually narrows the audience. Grouping all 3P-carrying campaigns together would misread additive 3P as restrictive."),
- ("",""),
- ("Metrics","All rates below are over impressions."),
- ("IVR","Visit rate. Visits divided by impressions (visits = views + clicks)."),
- ("CVR","Conversion rate. Conversions divided by impressions."),
- ("CTR","Click rate. Clicks divided by impressions."),
- ("CPV","Cost per visit. Spend divided by visits."),
- ("CPA","Cost per acquisition. Spend divided by conversions. Directional (pixel-dependent), like ROAS."),
- ("CPM","Cost per thousand impressions."),
- ("ROAS","Revenue divided by spend."),
- ("Weighting","Headline numbers are advertiser-weighted medians (each advertiser counts once, so one large account cannot set the result). Columns labeled 'pooled' are impression or spend weighted. Advertisers with under 20,000 impressions in a group are excluded from the median so a tiny campaign cannot swing it."),
- ("Advertisers / Campaigns","Counts of advertisers and campaigns in each group. Use them to see how much a number rests on: a small group is less reliable."),
- ("",""),
- ("Read before quoting",""),
- ("1. Pooled 3P is one account","If all impressions are pooled, 3P visit rate looks competitive, but roughly 39% of 3P impressions come from a single large, non-representative account. Use the per-advertiser (median) numbers."),
- ("2. ROAS is directional","Prospecting only, last-touch. Revenue mostly lands in retargeting, which is excluded, and some verticals have unreliable conversion pixels (one account shows over 800x). ROAS is computed only over advertisers with revenue, so where few have it the number is rough. Visit rate and cost per visit are the solid metrics."),
- ("3. Vertical mapping","The 37 MNTN internal verticals are rolled up into the 8 sales verticals using an interim crosswalk, not an official one. Provide the RevOps crosswalk and it is a one-line swap."),
- ("4. Restricted is expected for local","Auto and ProServ legitimately use local (zip, radius) targeting, so their 'MM restricted' share is high by design. In other verticals it flags narrowing."),
- ("5. MM (no gate) is small","144 advertisers. Directionally clear, thinner than the other groups."),
- ("",""),
- ("Tabs","'MM vs 3P by vertical' is the headline. 'Full scorecard' has every group by vertical. 'Overall' is all verticals combined. 'Campaign detail' is the raw campaign rows for your own pivots. 'Queries' has the SQL used to produce these numbers."),
-]
-r=4
-for k,v in rows:
-    ws.cell(row=r,column=1,value=k).font=BOLD
-    c=ws.cell(row=r,column=2,value=v); c.alignment=LFT
-    r+=1
-ws.column_dimensions["A"].width=max((len(str(k)) for k,_ in rows), default=30)+2
-ws.column_dimensions["B"].width=104
+    def cell(frame, key):
+        def g(col, grp):
+            try:
+                return frame.loc[(key, grp) if isinstance(key, str) else grp, col]
+            except KeyError:
+                return np.nan
+        return g
 
-# ================= 2 & 3) MM vs 3P by vertical (blended + gated) =================
-def compare_tab(wsname, tt, sub, src, gcol, gA, gB, ov_src=None):
-    def c(v,g,col):
-        x=src[(src.sales_vertical==v)&(src[gcol]==g)]; return x[col].iloc[0] if len(x) else np.nan
-    verts=[v for v in src.sales_vertical.unique() if v!="Other / Unmapped"]
-    verts=sorted(verts,key=lambda v:-(c(v,gA,"IVR_med")/max(c(v,gB,"IVR_med"),1e-9)))
-    # short column labels (which MM group is named in the tab title/subtitle)
-    aI,bI="MM IVR","3P IVR"; aC,bC="MM CPV","3P CPV"; aR,bR="MM ROAS","3P ROAS"
-    aN,bN="MM advertisers","3P advertisers"
-    def rowd(vlabel, get):
-        return {"Sales vertical":vlabel,
-            aI:get("IVR_med",gA), bI:get("IVR_med",gB),
-            "IVR advantage": get("IVR_med",gA)/get("IVR_med",gB) if get("IVR_med",gB) else np.nan,
-            aC:get("CPV_med",gA), bC:get("CPV_med",gB),
-            aR:get("ROAS_med",gA), bR:get("ROAS_med",gB),
-            "ROAS advantage": get("ROAS_med",gA)/get("ROAS_med",gB) if get("ROAS_med",gB) else np.nan,
-            aN:_int0(get("n_adv",gA)), bN:_int0(get("n_adv",gB))}
-    hd=pd.DataFrame([rowd(v, lambda col,g,v=v: c(v,g,col)) for v in verts])
-    ws=wb.create_sheet(wsname); ws.sheet_view.showGridLines=False
-    ws["A1"]=tt; ws["A1"].font=TITLE; ws["A2"]=sub; ws["A2"].font=SUB
-    fmts={aI:PCT2,bI:PCT2,"IVR advantage":"0.0\"x\"",aC:USD,bC:USD,aR:NUM2,bR:NUM2,"ROAS advantage":"0.0\"x\""}
-    start=4
-    if ov_src is not None:  # overall summary line above the by-vertical table
-        ows=ov_src.set_index(gcol)
-        allrow=pd.DataFrame([rowd("ALL VERTICALS", lambda col,g: ows.loc[g,col])])
-        start=write_table(ws,allrow,4,fmts)+1
-    write_table(ws,hd,start,fmts)
-    ws.freeze_panes=f"A{start+1}"; ws.auto_filter.ref=f"A{start}:{get_column_letter(len(hd.columns))}{start+len(hd)}"
-    autosize(ws,hd,{"Sales vertical":26})
-    return ws
+    verts = sorted(df_by_vert.sales_vertical.dropna().unique())
+    rows = [row("All verticals", lambda c, g: ovi.loc[g, c] if g in ovi.index else np.nan)]
+    rows += [row(v, cell(bvi, v)) for v in verts]
+    cols = ["Sales vertical", "MM IVR", "3P IVR", "IVR advantage", "MM CPV", "3P CPV",
+            "MM CPA", "3P CPA", "CPA advantage", "MM ROAS", "3P ROAS", "ROAS advantage",
+            "MM advertisers", "3P advertisers"]
+    out = pd.DataFrame(rows)[cols]
+    return wb.table(
+        name, out, finding=finding, method=method, kind=kind, toc=toc,
+        formats={"MM IVR": FMT.PCT2, "3P IVR": FMT.PCT2, "IVR advantage": FMT.MULT,
+                 "MM CPV": FMT.USD, "3P CPV": FMT.USD, "MM CPA": FMT.USD, "3P CPA": FMT.USD,
+                 "CPA advantage": FMT.MULT, "MM ROAS": FMT.ROAS, "3P ROAS": FMT.ROAS,
+                 "ROAS advantage": FMT.MULT, "MM advertisers": FMT.INT, "3P advertisers": FMT.INT},
+        heat={"IVR advantage": "high", "CPA advantage": "high"},
+        first_col_width=27, query="audi_1141_cohort_scorecard.sql",
+    )
 
-compare_tab("MM vs 3P by vertical",
-    "MM vs 3P by vertical (all MM campaigns), median advertiser",
-    "Every MM campaign vs 3P: the realistic average. Visit rate higher is better, cost per visit lower is better. ROAS is directional (see Read me).",
-    bv2,"bucket2","MM (all)","3P",ov_src=ov2)
-compare_tab("MM gated vs 3P by vertical",
-    "MM (gated) vs 3P by vertical, median advertiser",
-    "MM configured with the intent gate on (best case) vs 3P. ROAS is directional (see Read me).",
-    bv,"bucket_detail","MM (gated)","3P",ov_src=ov)
 
-# ================= 3) Full scorecard =================
-fcols={"sales_vertical":"Sales vertical","bucket_detail":"Group","n_adv":"Advertisers",
- "n_camp":"Campaigns","spend":"Spend","imps":"Impressions","IVR_med":"IVR (median)","CVR_med":"CVR (median)",
- "CTR_med":"CTR (median)","CPV_med":"CPV (median)","CPA_med":"CPA (median)","ROAS_med":"ROAS (median)",
- "IVR_pooled":"IVR (pooled)","CPV_pooled":"CPV (pooled)","CPM_pooled":"CPM (pooled)","CPA_pooled":"CPA (pooled)","ROAS_pooled":"ROAS (pooled)"}
-full=bv[list(fcols)].rename(columns=fcols)
-ws3=wb.create_sheet("Full scorecard"); ws3.sheet_view.showGridLines=False
-ws3["A1"]="Full scorecard: every group by vertical"; ws3["A1"].font=TITLE
-ws3["A2"]="Median = advertiser-weighted (whale-robust). Pooled = impression or spend weighted. ROAS directional only."; ws3["A2"].font=SUB
-ffmt={"Spend":USD0,"Impressions":INT,"IVR (median)":PCT2,"CVR (median)":PCT3,"CTR (median)":PCT3,
- "CPV (median)":USD,"CPA (median)":USD,"ROAS (median)":NUM2,"IVR (pooled)":PCT2,"CPV (pooled)":USD,
- "CPM (pooled)":USD,"CPA (pooled)":USD,"ROAS (pooled)":NUM2}
-write_table(ws3,full,4,ffmt)
-ws3.freeze_panes="C5"; ws3.auto_filter.ref=f"A4:{get_column_letter(len(full.columns))}{4+len(full)}"
-autosize(ws3,full,{"Sales vertical":26,"Spend":11,"Impressions":13})
+compare(bv2, ov2, "bucket2", "MM (all)", "3P", "MM vs 3P by vertical",
+        finding="MNTN Matched beats 3P on visit rate and cost per visit in all 8 verticals",
+        method="Every MM campaign vs 3P: the realistic average. Median advertiser, 20k-impression "
+               "floor. Higher visit rate and lower cost are better. See Read me for definitions.",
+        toc="The headline: every MM campaign vs 3P, by vertical", kind="headline")
 
-# ================= 4) Overall =================
-oc=[c for c in fcols if c!="sales_vertical"]
-overall=ov[oc].rename(columns=fcols)
-ws4=wb.create_sheet("Overall"); ws4.sheet_view.showGridLines=False
-ws4["A1"]="Overall: all verticals combined"; ws4["A1"].font=TITLE
-ws4["A2"]="The intent gate and audience breadth both matter: un-gated and restricted MM fall well below gated MM."; ws4["A2"].font=SUB
-write_table(ws4,overall,4,ffmt)
-ws4.freeze_panes="A5"
-autosize(ws4,overall,{"Spend":11,"Impressions":13})
+compare(bv, ov, "bucket_detail", "MM (gated)", "3P", "MM gated vs 3P by vertical",
+        finding="Gated MM beats 3P 6.6x on visit rate, the best-configured subset not the average",
+        method="MM with the intent gate on, the best case, vs 3P. Pair it with the blended tab; "
+               "quoting only this one overstates the typical account. See Read me.",
+        toc="Best case: MM with the intent gate on vs 3P", kind="data")
 
-# ================= 5) Campaign detail =================
-det=df.copy()
-det["IVR"]=det.visits/det.imps; det["CVR"]=det.conv/det.imps; det["CTR"]=det.clicks/det.imps
-det["CPV"]=(det.spend/det.visits).replace([np.inf,-np.inf],np.nan)
-det["ROAS"]=(det.revenue/det.spend).replace([np.inf,-np.inf],np.nan)
-det=det[["company_name","advertiser_id","campaign_id","sales_vertical","vertical_name","bucket_detail",
-  "semantics","capped","zip_narrow","city_narrow","radius_narrow","imps","visits","clicks","conv","revenue","spend",
-  "IVR","CVR","CTR","CPV","ROAS"]].rename(columns={
-  "company_name":"Advertiser","advertiser_id":"Adv ID","campaign_id":"Campaign ID","sales_vertical":"Sales vertical",
-  "vertical_name":"MNTN vertical","bucket_detail":"Group","semantics":"3P semantics","capped":"HHST gated",
-  "zip_narrow":"Zip","city_narrow":"City","radius_narrow":"Radius","imps":"Impressions","visits":"Visits",
-  "clicks":"Clicks","conv":"Conversions","revenue":"Revenue","spend":"Spend"}).sort_values(
-  ["Sales vertical","Group","Spend"],ascending=[True,True,False])
-ws5=wb.create_sheet("Campaign detail"); ws5.sheet_view.showGridLines=False
-write_table(ws5,det,1,{"Impressions":INT,"Visits":INT,"Clicks":INT,"Conversions":INT,"Revenue":USD0,"Spend":USD0,
-  "IVR":PCT2,"CVR":PCT3,"CTR":PCT3,"CPV":USD,"ROAS":NUM2},band=False,header_wrap=True)
-ws5.freeze_panes="A2"; ws5.auto_filter.ref=f"A1:{get_column_letter(len(det.columns))}{len(det)+1}"
-autosize(ws5,det,{"Advertiser":30,"Sales vertical":24,"MNTN vertical":24,"3P semantics":21,"Group":13,
-  "Impressions":11,"Revenue":11,"Spend":11,"Visits":8,"Conversions":9})
+# ------------------------------------------------------------------ the pitch-deck CPA cohort cut
+nrt = nr.rename(columns={"cohort": "Advertiser cohort", "group": "Targeting group",
+                         "n_adv_qual": "Advertisers", "n_adv_cpa": "With conversions",
+                         "share_with_conv": "Share with conversions", "CPA_med": "CPA (median)",
+                         "CPA_pooled": "CPA (pooled)", "spend": "Spend"})
+nrt = nrt[["Advertiser cohort", "Targeting group", "Advertisers", "With conversions",
+           "Share with conversions", "CPA (median)", "CPA (pooled)", "Spend"]]
+wb.table(
+    "CPA on non-revenue accounts", nrt,
+    finding="The CPA gap closes without revenue: 2.1x across all accounts, 1.0x for B2B software",
+    method="Advertisers with no tracked revenue, where ROAS cannot be computed. A CPA median uses "
+           "only advertisers with at least one conversion, so both counts are shown. See Read me.",
+    formats={"Advertisers": FMT.INT, "With conversions": FMT.INT,
+             "Share with conversions": FMT.PCT0, "CPA (median)": FMT.USD,
+             "CPA (pooled)": FMT.USD, "Spend": FMT.USD0},
+    kind="data", toc="Does the CPA advantage survive on non-revenue and B2B accounts",
+    first_col_width=24, query="audi_1141_cohort_scorecard.sql",
+)
 
-# ================= 6) Queries =================
-ws6=wb.create_sheet("Queries"); ws6.sheet_view.showGridLines=False
-ws6["A1"]="Queries used (for validation)"; ws6["A1"].font=TITLE
-ws6["A2"]="Cohort SQL below (BigQuery). Aggregation to medians/pooled done in audi_1141_aggregate.py; see the ticket folder."; ws6["A2"].font=SUB
-with open(SQLFILE) as fh: sql_lines=fh.read().split("\n")
-r=4
-for ln in sql_lines:
-    c=ws6.cell(row=r,column=1,value=ln); c.font=MONO; r+=1
-ws6.column_dimensions["A"].width=120
+# ------------------------------------------------------------------------------- detail + overall
+fcols = {"sales_vertical": "Sales vertical", "bucket_detail": "Targeting group",
+         "n_adv": "Advertisers", "n_camp": "Campaigns", "spend": "Spend", "imps": "Impressions",
+         "IVR_med": "IVR (median)", "CVR_med": "CVR (median)", "CTR_med": "CTR (median)",
+         "CPV_med": "CPV (median)", "CPA_med": "CPA (median)", "ROAS_med": "ROAS (median)",
+         "IVR_pooled": "IVR (pooled)", "CPV_pooled": "CPV (pooled)", "CPM_pooled": "CPM (pooled)",
+         "CPA_pooled": "CPA (pooled)", "ROAS_pooled": "ROAS (pooled)"}
+FFMT = {"Advertisers": FMT.INT, "Campaigns": FMT.INT, "Spend": FMT.USD0, "Impressions": FMT.INT,
+        "IVR (median)": FMT.PCT2, "CVR (median)": FMT.PCT3, "CTR (median)": FMT.PCT3,
+        "CPV (median)": FMT.USD, "CPA (median)": FMT.USD, "ROAS (median)": FMT.ROAS,
+        "IVR (pooled)": FMT.PCT2, "CPV (pooled)": FMT.USD, "CPM (pooled)": FMT.USD,
+        "CPA (pooled)": FMT.USD, "ROAS (pooled)": FMT.ROAS}
 
-wb.save(DEST)
-print("saved",DEST,"|",len(det),"campaign rows |",wb.sheetnames)
+wb.table("Full scorecard", bv[list(fcols)].rename(columns=fcols),
+         finding="Every targeting group by vertical, median and pooled side by side",
+         method="Median is advertiser-weighted and whale-robust; pooled is impression or spend "
+                "weighted. Where the two disagree, one account is carrying the pooled number.",
+         formats=FFMT, kind="detail", toc="All four targeting groups, every metric, by vertical",
+         first_col_width=27, query="audi_1141_cohort_scorecard.sql")
+
+ocols = {k: v for k, v in fcols.items() if k != "sales_vertical"}
+wb.table("Overall", ov[list(ocols)].rename(columns=ocols),
+         finding="The intent gate is the single biggest lever inside MNTN Matched",
+         method="All verticals pooled into one row per targeting group. Median advertiser, "
+                "20k-impression floor.",
+         formats=FFMT, kind="detail", toc="One row per targeting group, all verticals",
+         first_col_width=20, query="audi_1141_cohort_scorecard.sql")
+
+dcols = {"company_name": "Advertiser", "advertiser_id": "Advertiser ID", "campaign_id": "Campaign ID",
+         "sales_vertical": "Sales vertical", "vertical_name": "MNTN vertical",
+         "bucket_detail": "Targeting group", "semantics": "3P join", "hhst_current": "Intent gate",
+         "imps": "Impressions", "visits": "Visits", "clicks": "Clicks", "conv": "Conversions",
+         "revenue": "Revenue", "spend": "Spend"}
+dt = det[[c for c in dcols if c in det.columns]].rename(columns=dcols).sort_values(
+    "Spend", ascending=False)
+wb.table("Campaign detail", dt,
+         finding="Every classified campaign, pivotable back to the advertiser that produced it",
+         method="One row per Stage 1 prospecting campaign in the cohort, ranked by spend. Intent "
+                "gate is the latest household score threshold; 0 means no gate.",
+         formats={"Impressions": FMT.INT, "Visits": FMT.INT, "Clicks": FMT.INT,
+                  "Conversions": FMT.INT, "Revenue": FMT.USD0, "Spend": FMT.USD0,
+                  "Intent gate": FMT.INT, "Advertiser ID": FMT.INT, "Campaign ID": FMT.INT},
+         band=False, kind="detail", toc="Campaign-grain backing data, ranked by spend",
+         first_col_width=34, query="audi_1141_cohort_scorecard.sql")
+
+# ---------------------------------------------------------------------------------------- read me
+wb.glossary(
+    "Read me",
+    intro="What each column means and which number to quote. Rates are all over impressions.",
+    rows=[
+        ("The comparison", ""),
+        ("MNTN Matched (MM)", "A campaign targeted by MNTN's own intent model. A 3P segment joined "
+                              "with OR adds reach on top and the campaign still counts as MM."),
+        ("3P", "A campaign targeted by a bought third-party segment with no MNTN Matched signal."),
+        ("MM restricted", "MM narrowed by a 3P segment joined with AND, or by sub-DMA geo. The "
+                          "narrowing, not the model, is what changes the result."),
+        ("Intent gate", "The household score threshold. Above 0 the campaign only bids on "
+                        "model-scored high-intent households; at 0 it bids broadly, like a 3P buy."),
+        ("The metrics", ""),
+        ("IVR", "Visit rate. Visits divided by impressions, where a visit is a view or a click."),
+        ("CPV", "Cost per visit. Spend divided by visits. Lower is better."),
+        ("CPA", "Cost per acquisition. Spend divided by conversions. Depends on the advertiser's "
+                "pixel, so it is directional, like ROAS. Lower is better."),
+        ("ROAS", "Revenue divided by spend, prospecting and last-touch only. Directional."),
+        ("Advantage", "How many times better MM is than 3P on that metric. For a cost metric it is "
+                      "3P divided by MM, so above 1.0x always means MM is cheaper."),
+        ("Which number to quote", ""),
+        ("Median", "The middle advertiser, each advertiser counting once, 20,000-impression floor. "
+                   "This is the headline: it cannot be moved by one large account."),
+        ("Pooled", "Every impression or dollar added up first. A cross-check only. On this data it "
+                   "flips the 3P visit rate, because 39% of 3P impressions are one account."),
+        ("With conversions", "How many advertisers had at least one conversion. Only those can have "
+                             "a CPA, so a low share means that CPA rests on a small, self-selected set."),
+    ],
+)
+
+wb.sql("Queries", SQLFILE.read_text(),
+       note="BigQuery cohort SQL. Classification is a polarity-aware walk of the targeting "
+            "expression tree, so an OR-joined 3P segment is read as additive, not as narrowing.")
+
+# -------------------------------------------------------------------------------- method + caveats
+wb.notes(
+    "Method & caveats",
+    intro="Read these before quoting a number outside the team.",
+    blocks=[
+        ("Cohort", "Stage 1 prospecting campaigns (objective 1, funnel level 1) that delivered "
+                   "impressions in the trailing 180 days to 2026-07-20. 8,202 campaigns after "
+                   "dropping CRM-only and geo-only setups, 7,138 in the scored MM and 3P groups."),
+        ("Pick one lens and hold it", "Two MM lenses are published on purpose: every MM campaign "
+                                      "(the realistic average) and gated MM (the best-configured "
+                                      "subset). Choosing whichever reads better slide to slide is "
+                                      "not a defensible comparison. Pick one and label it."),
+        ("ROAS is directional", "Prospecting and last-touch only. Revenue concentrates in "
+                                "retargeting, which is excluded, and some pixels are unreliable "
+                                "(one account reads over 800x). Use the median, never the mean. "
+                                "Visit rate and cost per visit are the solid metrics."),
+        ("CPA does not carry the B2B claim", "Across all accounts MM's CPA is 2.1x better than 3P. "
+                                             "On accounts with no tracked revenue it is 1.16x, and "
+                                             "on B2B software 1.06x, on 22 3P advertisers. Do not "
+                                             "build a B2B CPA claim on this data."),
+        ("Conversion coverage differs by group", "Only 54% of qualifying 3P advertisers recorded any "
+                                                 "conversion, against 78% of MM. Advertisers with no "
+                                                 "pixel drop out of CPA entirely, which flatters 3P, "
+                                                 "so the MM CPA win is a conservative one."),
+        ("B2B is not a sales vertical here", "B2B Software & Services is an MNTN vertical folded "
+                                             "into the 8 sales buckets by an interim crosswalk that "
+                                             "still needs RevOps sign-off. Treat any B2B split as "
+                                             "provisional."),
+        ("Data window", "Built 2026-08-20 from a trailing-180-day window ending 2026-07-20. Re-run "
+                        "artifacts/audi_1141_aggregate.py then this builder to refresh."),
+    ],
+)
+
+wb.cover(takeaways=[
+    "MNTN Matched beats 3P on visit rate and cost per visit in all 8 verticals, on the median advertiser",
+    "The intent gate is the biggest lever: gated MM 0.46% visit rate vs 0.13% with the gate off",
+    "The CPA advantage is 2.1x overall but only 1.0x on B2B software, so CPA cannot carry a B2B slide",
+])
+
+print("saved local:", wb.save_local(str(DEST)))
+print("saved drive:", wb.save_drive(TICKET, "MM vs 3P Scorecard"))
