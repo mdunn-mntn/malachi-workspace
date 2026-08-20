@@ -236,6 +236,10 @@ wb.notes(
                                                  "conversion, against 78% of MM. Advertisers with no "
                                                  "pixel drop out of CPA entirely, which flatters 3P, "
                                                  "so the MM CPA win is a conservative one."),
+        ("Thin verticals swing hard", "Restaurants/Dining reads 27.8x on visit rate off 15 3P "
+                                      "advertisers, against 5-6x for the large verticals. Any row "
+                                      "with a 3P advertiser count under about 40 is directional. "
+                                      "Check the advertiser columns before quoting a multiple."),
         ("Education ROAS is not a target", "Most education advertisers do not optimise toward "
                                           "revenue, so their ROAS column and any ROAS advantage "
                                           "built on it are not meaningful. Read Education on visit "
