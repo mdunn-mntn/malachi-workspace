@@ -133,3 +133,11 @@ Drive file that looks like a stale duplicate can be the link someone is actively
 (AUDI-1141: `MM vs 3P Scorecard.xlsx` reads as a dupe of the prefixed file and is the one Sales has
 open). Moving and renaming preserve the file ID, so every circulated link still resolves; deleting
 does not. Empty the archive only after checking each file's sharing.
+
+**Drive move FOOTGUN (hit 2026-08-20):** `mv` into a Drive folder that already holds that filename
+**trashes the existing file** — Drive keeps the ID but flags `trashed=1`, and the mount shows only the
+survivor, so the loss is invisible from `ls`. It happened once during the reorg:
+`audi_1089_billing_review.xlsx` (Jul-30, 38,357 b, id `1sVem7uLthiVsd9_RBm_tRzUebQDqXlF0`) was trashed by
+moving the root copy (Jul-21, 86,656 b) in on top. Recoverable from Drive Trash.
+**Always guard a Drive move:** `[ -e "$dst" ] && skip`. Audit afterwards with
+`sqlite3 <DriveFS>/metadata_sqlite_db "select id,local_title,file_size from items where trashed=1"`.
