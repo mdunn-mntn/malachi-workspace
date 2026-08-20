@@ -162,8 +162,14 @@ wb.glossary(
         ("MNTN Matched (MM)", "A campaign targeted by MNTN's own intent model. A 3P segment joined "
                               "with OR adds reach on top and the campaign still counts as MM."),
         ("3P", "A campaign targeted by bought interest segments only (ShareThis, Dstillery, LiveRamp), with no MNTN Matched signal."),
+        ("MM (gated)", "MM with the intent score threshold above 0, so the bidder only bids on "
+                       "households the model scored as high intent. The best-configured case."),
+        ("MM (no gate)", "MM with the threshold at 0, which bypasses the model and bids broadly, "
+                         "like a 3P segment. Causes: Max Reach, short flights, an exhausted pool."),
         ("MM restricted", "MM narrowed by a 3P segment joined with AND, or by sub-DMA geo. The "
                           "narrowing, not the model, is what changes the result."),
+        ("MM (all)", "Every campaign with an MM signal: gated, no gate and restricted combined. "
+                     "The realistic average, and the default lens for a general MM vs 3P claim."),
         ("Intent gate", "The household score threshold. Above 0 the campaign only bids on "
                         "model-scored high-intent households; at 0 it bids broadly, like a 3P buy."),
         ("The metrics", ""),
@@ -215,10 +221,6 @@ wb.notes(
                                             "against 78% of MM, and non-converters drop out of CPA "
                                             "entirely. Read CPA against the with-conversions "
                                             "counts, and treat thin cells as directional."),
-        ("Conversion coverage differs by group", "Only 54% of qualifying 3P advertisers recorded any "
-                                                 "conversion, against 78% of MM. Advertisers with no "
-                                                 "pixel drop out of CPA entirely, which flatters 3P, "
-                                                 "so the MM CPA win is a conservative one."),
         ("Thin verticals swing hard", "Restaurants/Dining reads 27.8x on visit rate off 15 3P "
                                       "advertisers, against 5-6x for the large verticals. Any row "
                                       "with a 3P advertiser count under about 40 is directional. "
@@ -237,10 +239,10 @@ wb.notes(
                                               "live campaign-grain view from AUDI-1083. It is a "
                                               "current-state snapshot, so campaigns that have since "
                                               "gone inactive read Not classified, not No."),
-        ("B2B is not a sales vertical here", "B2B Software & Services is an MNTN vertical folded "
-                                             "into the 8 sales buckets by an interim crosswalk that "
-                                             "still needs RevOps sign-off. Treat any B2B split as "
-                                             "provisional."),
+        ("The vertical crosswalk is interim", "The 37 MNTN verticals are rolled into the 8 sales "
+                                              "buckets by a crosswalk that still needs RevOps "
+                                              "sign-off. B2B and Food & Beverage are judgment "
+                                              "calls. Provide the official one and it is a swap."),
         ("Data window", "Refreshed 2026-08-20 from a trailing-180-day window ending that day. Re-run "
                         "the cohort SQL, then aggregate.py, then this builder to refresh again."),
     ],

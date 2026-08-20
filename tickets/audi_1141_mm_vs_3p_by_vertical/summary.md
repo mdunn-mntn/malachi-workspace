@@ -322,3 +322,45 @@ Drops 2,592 of 5,966 MM campaigns (43%), $26.0M spend. **The shipped MM (all) un
 Jon's own spec**: IVR advantage 3.5x → 4.7x, CPA advantage 2.16x → 2.48x. Not added to the workbook — it
 is a third lens and §9's "pick one and hold it" applies to it too. Raise it with Jon and let him choose
 which MM (all) the deck means.
+
+## 13. Final shipped state (2026-08-20) — supersedes the tab list in §9 and §11
+
+**The "CPA on non-revenue accounts" tab described in §9 was BUILT AND THEN CUT.** Two reasons, both
+raised by Malachi in review:
+
+1. **Jon never asked for it.** His ask was "add a CPA comparison... we'll need it for non-revenue-driving
+   customers, e.g. B2B" — a request for the CPA *column*, because ROAS is meaningless for those accounts.
+   The cohort split was analyst-initiated scope.
+2. **The cohort was mislabelled and did not mean what it said.** "No revenue tracked" was really "zero
+   revenue attributed to Stage 1 prospecting in this window". Retargeting is excluded from the cohort, so
+   ecommerce advertisers whose revenue lands there fell into it. Of 2,542 qualifying advertisers, 1,624
+   had zero prospecting revenue: **980 fire a conversion pixel with no order value, 644 fire none at all.**
+   Not a clean B2B proxy.
+
+**The correct screen for CPA is conversions, not revenue** — which is what the CPA median always did
+(`conv > 0` only). Revenue now backs only the ROAS columns. Both comparison tabs carry
+`MM with conversions` / `3P with conversions`, the advertiser counts each CPA rests on, so a thin cell is
+visible at the point of use (Restaurants/Dining's 6.6x CPA advantage sits on 8 3P advertisers).
+
+**§9's finding still stands and is still worth carrying to Jon** — the CPA advantage narrows sharply on
+B2B and non-revenue accounts — but it belongs in conversation and in the spike, not as a tab whose cohort
+definition cannot be defended.
+
+**Shipped tabs (8):** Overview · MM vs 3P by vertical · MM gated vs 3P by vertical · Full scorecard ·
+Campaign detail · Read me · Queries · Method & caveats. The `Overall` tab was cut as derivable from
+Full scorecard.
+
+**Also fixed in this pass:**
+- **All four groups are now defined in the Read me.** The first rebuild defined only `MM restricted` and
+  `Intent gate`; `MM (gated)`, `MM (no gate)` and `MM (all)` had no definition anywhere in the workbook,
+  a regression against the 2026-07-21 sheet, which defined all of them. Caught in review.
+- Duplicate Method blocks on conversion coverage merged into one.
+- The B2B caveat was rewritten as "The vertical crosswalk is interim" — it had been describing a B2B
+  split that no longer ships.
+- `Campaign detail` gained `Peak Performance`, `Scoring engine` and `Intent tiers reachable` from
+  `dw-main-silver.audience.mm_campaign_classifier` (answers Alex Knorr, 2026-08-20). 40% read
+  `Not classified`: delivered in-window but no longer active, so the live view has no row.
+- A thin-vertical caveat: Restaurants/Dining reads 27.8x on visit rate off 15 3P advertisers.
+
+**Still open with the requester:** (a) which `MM (all)` the deck means, given §12's unimplemented zip
+rule; (b) Jon's link points at the 2026-07-21 file, not this one.
