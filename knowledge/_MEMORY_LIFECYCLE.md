@@ -153,7 +153,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_optimizer | project | 2026-08-07 | [doc](memory/project_airflow_optimizer.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-07 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |
-| project_airflow_debugger | project | 2026-08-09 | [doc](memory/project_airflow_debugger.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-08-09 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-10 | [doc](memory/reference_airflow3_backfill_scoping.md) |
@@ -165,7 +164,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_terse_chat_replies | feedback | 2026-08-11 | [doc](memory/feedback_terse_chat_replies.md) |
 | project_audi_431_list_refresh | project | 2026-08-11 | [doc](memory/project_audi_431_list_refresh.md) |
 | reference_build_index_frontmatter_parsing | reference | 2026-08-11 | [doc](memory/reference_build_index_frontmatter_parsing.md) |
-| reference_pihole_dns_contaminates_fetch | reference | 2026-08-11 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
 | reference_test_budget_from_rates | reference | 2026-08-11 | [doc](memory/reference_test_budget_from_rates.md) |
 | Terse tickets and docs | feedback | 2026-08-12 | [doc](memory/feedback_terse_tickets.md) |
 | feedback_contradictions_are_appended | feedback | 2026-08-12 | [doc](memory/feedback_contradictions_are_appended.md) |
@@ -183,7 +181,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | Astronomer/Airflow — clear failed task with "Run with latest bundle version | feedback | 2026-08-15 | [doc](memory/feedback_astronomer_clear_with_latest_bundle.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-15 | [doc](memory/reference_airflow_ti.md) |
 | background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |
-| feedback_validated_is_not_correct | feedback | 2026-08-15 | [doc](memory/feedback_validated_is_not_correct.md) |
 | feedback_slack_reply_voice | feedback | 2026-08-17 | [doc](memory/feedback_slack_reply_voice.md) |
 | reference_airflow_ti_dev_testing | reference | 2026-08-17 | [doc](memory/reference_airflow_ti_dev_testing.md) |
 | reference_guid_geos_summary_pipeline | reference | 2026-08-17 | [doc](memory/reference_guid_geos_summary_pipeline.md) |
@@ -204,10 +201,13 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ntb_definitions | reference | 2026-08-19 | [doc](memory/reference_ntb_definitions.md) |
 | feedback_explicit_descriptive_slots | feedback | 2026-08-20 | [doc](memory/feedback_explicit_descriptive_slots.md) |
 | feedback_no_label_colon_prefix | feedback | 2026-08-20 | [doc](memory/feedback_no_label_colon_prefix.md) |
+| feedback_validated_is_not_correct | feedback | 2026-08-20 | [doc](memory/feedback_validated_is_not_correct.md) |
+| project_airflow_debugger | project | 2026-08-20 | [doc](memory/project_airflow_debugger.md) |
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-08-20 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_mm_vs_3p_scorecard | reference | 2026-08-20 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
+| reference_pihole_dns_contaminates_fetch | reference | 2026-08-20 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-20 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
