@@ -229,3 +229,43 @@ MM/3P classification; `dw-main-silver.audience.mm_campaign_classifier` (AUDI-108
 `mm_engine IN ('peak_performance_v1','fangorn_v2')` on the classifier view. Adding an engine column to
 the Campaign detail tab is a small join on `campaign_id`, not a re-run. Not done: which sheet Alex meant
 was not confirmed.
+
+---
+
+## 10. Data refresh 2026-08-20 (window moved to 2026-02-21 → 2026-08-20)
+
+Re-ran `queries/audi_1141_cohort_scorecard.sql` (2.29 GB scanned, 23s), refreshed
+`outputs/audi_1141_advertiser_names.csv` from `dw-main-bronze.integrationprod.advertisers`, re-ran
+`aggregate.py` and `build_xlsx.py`. Previous pull kept at `outputs/audi_1141_campaign_grain_2026_07_20.csv`.
+8,120 campaigns (was 8,202); 7,045 non-Neither. **MM still wins IVR and CPV in all 9 vertical rows on
+both lenses**, so the headline claim holds.
+
+**Two SQL/runner gotchas found:** (a) the file's first line cannot start with `--` or `bq` parses it as a
+flag — the filename header that `mntn_xlsx` needs for query deep-links now sits at the END of the file as
+`-- source: audi_1141_cohort_scorecard.sql`; (b) this query needs `--nouse_legacy_sql` (it opens with
+`CREATE TEMP FUNCTION`) and an explicit `--project_id=dw-main-silver`, or `bq` picks up
+`mntn-coredw-prod` from the gcloud default and fails on `bigquery.jobs.create`.
+
+**Headline movement (advertiser-weighted median):**
+
+| | Jul-20 window | Aug-20 window |
+|---|---|---|
+| MM (gated) IVR | 0.46% | 0.43% |
+| MM (no gate) IVR | 0.13% | 0.14% |
+| 3P IVR | 0.07% | 0.07% |
+| Gated-vs-3P IVR advantage | 6.6x | 6.1x |
+
+**The CPA cohort finding got STRONGER, not weaker:**
+
+| Cut | MM (all) CPA | 3P CPA | MM advantage |
+|---|---:|---:|---:|
+| All advertisers | $338.82 | $732.50 | **2.16x** |
+| Non-revenue advertisers | $644.29 | $793.81 | **1.23x** |
+| B2B Software & Services | $1,267.15 | $1,290.66 | **1.02x** |
+| B2B **and** non-revenue | $1,984.21 | $1,533.66 | **0.77x — 3P is CHEAPER** |
+
+On the exact cohort the pitch deck wants (B2B, no revenue to compute ROAS from), MM's CPA is now
+**worse** than 3P on the median advertiser. n is small (19 3P advertisers with a conversion vs 86 MM) and
+pooled runs the other way (MM $371.78 vs 3P $1,129.04), which is itself the point: the cohort is too thin
+and too lens-sensitive to carry an external claim. The §9 recommendation stands and hardens — ship CPA on
+the all-advertiser cut, do not build a B2B or non-revenue CPA slide on this data.

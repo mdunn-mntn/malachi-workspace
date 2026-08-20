@@ -1,4 +1,3 @@
--- audi_1141_cohort_scorecard.sql
 /* ============================================================================
    AUDI-1141 - MM vs 3P prospecting performance by sales vertical (trailing 6mo)
    ----------------------------------------------------------------------------
@@ -225,3 +224,4 @@ LEFT JOIN geo g USING (campaign_id)
 LEFT JOIN hhst h USING (campaign_id)
 LEFT JOIN cur cu USING (campaign_id)
 LEFT JOIN vert v ON v.advertiser_id = c.advertiser_id
+-- source: audi_1141_cohort_scorecard.sql

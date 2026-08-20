@@ -42,7 +42,7 @@ wb = MntnWorkbook(
     title="MNTN Matched vs 3P Segment Scorecard",
     ticket=TICKET,
     subtitle="Stage 1 prospecting performance by sales vertical, trailing 6 months",
-    period="2026-01-21 to 2026-07-20",
+    period="2026-02-21 to 2026-08-20",
     generated="2026-08-20",
 )
 
@@ -100,7 +100,7 @@ compare(bv2, ov2, "bucket2", "MM (all)", "3P", "MM vs 3P by vertical",
         toc="The headline: every MM campaign vs 3P, by vertical", kind="headline")
 
 compare(bv, ov, "bucket_detail", "MM (gated)", "3P", "MM gated vs 3P by vertical",
-        finding="Gated MM beats 3P 6.6x on visit rate, the best-configured subset not the average",
+        finding="Gated MM beats 3P 6.1x on visit rate, the best-configured subset not the average",
         method="MM with the intent gate on, the best case, vs 3P. Pair it with the blended tab; "
                "quoting only this one overstates the typical account. See Read me.",
         toc="Best case: MM with the intent gate on vs 3P", kind="data")
@@ -114,7 +114,7 @@ nrt = nrt[["Advertiser cohort", "Targeting group", "Advertisers", "With conversi
            "Share with conversions", "CPA (median)", "CPA (pooled)", "Spend"]]
 wb.table(
     "CPA on non-revenue accounts", nrt,
-    finding="The CPA gap closes without revenue: 2.1x across all accounts, 1.0x for B2B software",
+    finding="The CPA gap closes without revenue: 2.2x across all accounts, 1.0x for B2B software",
     method="Advertisers with no tracked revenue, where ROAS cannot be computed. A CPA median uses "
            "only advertisers with at least one conversion, so both counts are shown. See Read me.",
     formats={"Advertisers": FMT.INT, "With conversions": FMT.INT,
@@ -210,8 +210,8 @@ wb.notes(
     intro="Read these before quoting a number outside the team.",
     blocks=[
         ("Cohort", "Stage 1 prospecting campaigns (objective 1, funnel level 1) that delivered "
-                   "impressions in the trailing 180 days to 2026-07-20. 8,202 campaigns after "
-                   "dropping CRM-only and geo-only setups, 7,138 in the scored MM and 3P groups."),
+                   "impressions in the trailing 180 days to 2026-08-20. 8,120 campaigns after "
+                   "dropping rows with no vertical, 7,045 in the scored MM and 3P groups."),
         ("Pick one lens and hold it", "Two MM lenses are published on purpose: every MM campaign "
                                       "(the realistic average) and gated MM (the best-configured "
                                       "subset). Choosing whichever reads better slide to slide is "
@@ -220,10 +220,10 @@ wb.notes(
                                 "retargeting, which is excluded, and some pixels are unreliable "
                                 "(one account reads over 800x). Use the median, never the mean. "
                                 "Visit rate and cost per visit are the solid metrics."),
-        ("CPA does not carry the B2B claim", "Across all accounts MM's CPA is 2.1x better than 3P. "
-                                             "On accounts with no tracked revenue it is 1.16x, and "
-                                             "on B2B software 1.06x, on 22 3P advertisers. Do not "
-                                             "build a B2B CPA claim on this data."),
+        ("CPA does not carry the B2B claim", "Across all accounts MM's CPA is 2.2x better than 3P. "
+                                             "On accounts with no tracked revenue it is 1.23x, on "
+                                             "B2B software 1.02x, and on B2B accounts with no "
+                                             "revenue 3P is cheaper. No B2B CPA claim survives."),
         ("Conversion coverage differs by group", "Only 54% of qualifying 3P advertisers recorded any "
                                                  "conversion, against 78% of MM. Advertisers with no "
                                                  "pixel drop out of CPA entirely, which flatters 3P, "
@@ -232,15 +232,15 @@ wb.notes(
                                              "into the 8 sales buckets by an interim crosswalk that "
                                              "still needs RevOps sign-off. Treat any B2B split as "
                                              "provisional."),
-        ("Data window", "Built 2026-08-20 from a trailing-180-day window ending 2026-07-20. Re-run "
-                        "artifacts/audi_1141_aggregate.py then this builder to refresh."),
+        ("Data window", "Refreshed 2026-08-20 from a trailing-180-day window ending that day. Re-run "
+                        "the cohort SQL, then aggregate.py, then this builder to refresh again."),
     ],
 )
 
 wb.cover(takeaways=[
     "MNTN Matched beats 3P on visit rate and cost per visit in all 8 verticals, on the median advertiser",
-    "The intent gate is the biggest lever: gated MM 0.46% visit rate vs 0.13% with the gate off",
-    "The CPA advantage is 2.1x overall but only 1.0x on B2B software, so CPA cannot carry a B2B slide",
+    "The intent gate is the biggest lever: gated MM 0.43% visit rate vs 0.14% with the gate off",
+    "The CPA advantage is 2.2x overall but 1.0x on B2B software, so CPA cannot carry a B2B slide",
 ])
 
 print("saved local:", wb.save_local(str(DEST)))
