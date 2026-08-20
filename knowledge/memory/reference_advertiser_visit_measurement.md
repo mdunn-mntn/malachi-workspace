@@ -20,4 +20,6 @@ last_verified: 2026-08-19
 
 **Grain trap:** visit rate is a 30-day CUMULATIVE rate ≈ 6x the daily one. Medians: advertiser×30d **2.0%** · advertiser×day 0.42% · campaign×day **0.334%**. "0.2% IVR" is ordinary daily, bottom-fifth cumulatively. A 0.5% cumulative cut = bottom 28% of the base, not an outlier line.
 
+**Denominator sanity check:** `raw_visits` reflects wherever the pixel is placed. ElevenLabs (51660) reports 21.5M visits/day vs 1.2M for WGU on 350M impressions — that is app/API telemetry, not marketing traffic, and every ratio built on it is uncomparable for that advertiser. Check the daily rate before acting on a low share.
+
 **Zeros:** verified ≤ raw by construction, so a zero on a quiet site is arithmetic. Separate never-installed from broken with 12 months of `raw_visits` — an opt-out NEVER reports; a defect reports then stops. **`advertisers.conv_pixel_opt_out` is NOT backfilled** (0.00% TRUE for every creation year 2010-2021, 0.80% by 2025) and covers the CONVERSION pixel only; `pixel_id` is NULL for every row and `tracking_pixel_status_id`=10 for essentially all live advertisers, so neither discriminates. Route pixel questions to Johnny Chen or [[reference_pixel_ops_routing]].
