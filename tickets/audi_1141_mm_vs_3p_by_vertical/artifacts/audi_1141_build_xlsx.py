@@ -151,14 +151,6 @@ wb.table("Full scorecard", bv[list(fcols)].rename(columns=fcols),
          formats=FFMT, kind="detail", toc="All four targeting groups, every metric, by vertical",
          first_col_width=27, query="audi_1141_cohort_scorecard.sql")
 
-ocols = {k: v for k, v in fcols.items() if k != "sales_vertical"}
-wb.table("Overall", ov[list(ocols)].rename(columns=ocols),
-         finding="The intent gate is the single biggest lever inside MNTN Matched",
-         method="All verticals pooled into one row per targeting group. Median advertiser, "
-                "20k-impression floor.",
-         formats=FFMT, kind="detail", toc="One row per targeting group, all verticals",
-         first_col_width=20, query="audi_1141_cohort_scorecard.sql")
-
 dcols = {"company_name": "Advertiser", "advertiser_id": "Advertiser ID", "campaign_id": "Campaign ID",
          "sales_vertical": "Sales vertical", "vertical_name": "MNTN vertical",
          "bucket_detail": "Targeting group", "peak_performance": "Peak Performance",
