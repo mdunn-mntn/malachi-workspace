@@ -124,10 +124,74 @@ def test_no_fallback_when_logging_carries_error_text() -> None:
     assert ev.error_text and "ValueError" in ev.error_text
 
 
+def test_dns_sinkhole_falls_back_to_pinned_curl() -> None:
+    """A sinkholed DNS error retries over a pinned IP instead of returning nothing."""
+    calls = []
+
+    def fake_run(cmd: list[str], timeout: int = 90) -> tuple[str | None, str | None]:
+        calls.append(cmd[:3])
+        if cmd[:3] == ["gcloud", "logging", "read"]:
+            return None, "ServiceUnavailable: 503 failed to connect to all addresses; 0.0.0.0:443"
+        if cmd[:2] == ["dig", "+short"]:
+            return "142.251.46.74\n", None
+        if cmd[:2] == ["gcloud", "auth"]:
+            return "ya29.token\n", None
+        if cmd[0] == "curl":
+            return '{"entries":[{"jsonPayload":{"message":"OutOfMemoryError: Java heap space"}}]}', None
+        raise AssertionError(f"unexpected command {cmd}")
+
+    orig = dataproc_rca._run
+    dataproc_rca._run = fake_run
+    try:
+        text, err = dataproc_rca._logging_messages("some-batch-1", "mntn-prj-prod-00")
+    finally:
+        dataproc_rca._run = orig
+    assert err is None, err
+    assert "OutOfMemoryError" in text
+    assert [c[:1][0] for c in calls if c[0] == "curl"][:1] == ["curl"]
+
+
+def test_non_dns_error_does_not_reach_the_fallback() -> None:
+    """A permissions failure is a real answer, not something a pinned IP can fix."""
+
+    def fake_run(cmd: list[str], timeout: int = 90) -> tuple[str | None, str | None]:
+        if cmd[:3] == ["gcloud", "logging", "read"]:
+            return None, "PERMISSION_DENIED: caller lacks logging.logEntries.list"
+        raise AssertionError("fallback fired on a non-DNS error")
+
+    orig = dataproc_rca._run
+    dataproc_rca._run = fake_run
+    try:
+        text, err = dataproc_rca._logging_messages("some-batch-1", "mntn-prj-prod-00")
+    finally:
+        dataproc_rca._run = orig
+    assert text == ""
+    assert "PERMISSION_DENIED" in err
+
+
+def test_sinkholed_resolver_answer_is_rejected() -> None:
+    """dig returning the sinkhole address is not a usable IP."""
+
+    def fake_run(cmd: list[str], timeout: int = 90) -> tuple[str | None, str | None]:
+        if cmd[:2] == ["dig", "+short"]:
+            return "0.0.0.0\n", None
+        raise AssertionError(f"unexpected command {cmd}")
+
+    orig = dataproc_rca._run
+    dataproc_rca._run = fake_run
+    try:
+        assert dataproc_rca._public_ip("logging.googleapis.com") is None
+    finally:
+        dataproc_rca._run = orig
+
+
 if __name__ == "__main__":
     test_uri_parses_real_state_message()
     test_uri_absent_returns_none()
     test_fallback_reads_driveroutput_and_classifies_inc012()
     test_fallback_403_degrades_to_actionable_note()
     test_no_fallback_when_logging_carries_error_text()
-    print("OK - dataproc_rca driveroutput fallback tests passed")
+    test_dns_sinkhole_falls_back_to_pinned_curl()
+    test_non_dns_error_does_not_reach_the_fallback()
+    test_sinkholed_resolver_answer_is_rejected()
+    print("OK - dataproc_rca driveroutput + dns-fallback tests passed")

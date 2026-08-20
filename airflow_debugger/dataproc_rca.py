@@ -31,6 +31,8 @@ from .signatures import Match, classify
 PROJECT_DEFAULT = "mntn-prj-prod-00"
 REGION = "us-central1"
 _LOG_LIMIT = 80
+_LOGGING_HOST = "logging.googleapis.com"
+_PUBLIC_RESOLVER = "8.8.8.8"
 _LOG_FRESHNESS = "45d"
 _TTL_TOLERANCE = 0.05  # runtime within 5% of ttl => TTL kill
 _ERR_MARKERS = (
@@ -82,6 +84,58 @@ def _describe(batch_id: str, project: str, region: str) -> tuple[dict | None, st
         return None, "describe: non-json output"
 
 
+_DNS_BLOCK_MARKERS = (
+    "0.0.0.0", "Name or service not known", "nodename nor servname",
+    "Temporary failure in name resolution", "Failed to establish a new connection",
+    "Connection refused", "getaddrinfo", "ServiceUnavailable", "Unable to find the server",
+)
+
+
+def _public_ip(host: str) -> str | None:
+    """Resolve a host against a public resolver, bypassing a local DNS sinkhole."""
+    stdout, err = _run(["dig", "+short", f"@{_PUBLIC_RESOLVER}", "A", host], timeout=15)
+    if err:
+        return None
+    for line in (stdout or "").splitlines():
+        line = line.strip()
+        if line and line[0].isdigit() and line != "0.0.0.0":
+            return line
+    return None
+
+
+def _logging_via_curl(batch_id: str, project: str) -> tuple[str, str | None]:
+    """Cloud Logging over a pinned IP, for when local DNS sinkholes the API host."""
+    ip = _public_ip(_LOGGING_HOST)
+    if not ip:
+        return "", f"could not resolve {_LOGGING_HOST} via {_PUBLIC_RESOLVER}"
+    token, err = _run(["gcloud", "auth", "print-access-token"], timeout=30)
+    if err:
+        return "", f"access token: {err}"
+    body = json.dumps({
+        "resourceNames": [f"projects/{project}"],
+        "filter": (f'resource.type="cloud_dataproc_batch" AND '
+                   f'resource.labels.batch_id="{batch_id}"'),
+        "orderBy": "timestamp desc",
+        "pageSize": _LOG_LIMIT,
+    })
+    stdout, err = _run([
+        "curl", "-s", "--max-time", "60",
+        "--resolve", f"{_LOGGING_HOST}:443:{ip}",
+        f"https://{_LOGGING_HOST}/v2/entries:list",
+        "-H", f"Authorization: Bearer {(token or '').strip()}",
+        "-H", "Content-Type: application/json",
+        "-d", body,
+    ])
+    if err:
+        return "", err
+    try:
+        entries = json.loads(stdout or "{}").get("entries", [])
+    except json.JSONDecodeError:
+        return "", "pinned curl: non-json response"
+    lines = [e.get("jsonPayload", {}).get("message", "") for e in entries]
+    return "\n".join(m for m in lines if m), None
+
+
 def _logging_messages(batch_id: str, project: str) -> tuple[str, str | None]:
     """Driver log lines via Cloud Logging (key-free; the GCS staging bucket is 403)."""
     filt = f'resource.type="cloud_dataproc_batch" AND resource.labels.batch_id="{batch_id}"'
@@ -90,7 +144,14 @@ def _logging_messages(batch_id: str, project: str) -> tuple[str, str | None]:
          "--limit", str(_LOG_LIMIT), "--freshness", _LOG_FRESHNESS,
          "--order", "desc", "--format", "value(jsonPayload.message)"]
     )  # fmt: skip
-    return stdout or "", err
+    if stdout or not err:
+        return stdout or "", err
+    if not any(m in err for m in _DNS_BLOCK_MARKERS):
+        return "", err
+    text, curl_err = _logging_via_curl(batch_id, project)
+    if text:
+        return text, None
+    return "", f"{err} | pinned-curl fallback: {curl_err or 'no entries'}"
 
 
 def driveroutput_uri(state_message: str | None) -> str | None:
