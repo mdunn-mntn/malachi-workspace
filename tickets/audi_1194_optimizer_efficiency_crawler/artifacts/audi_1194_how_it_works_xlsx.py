@@ -18,16 +18,17 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from lib.mntn_xlsx import BRAND, FMT, MntnWorkbook
 
-GEN = "2026-08-07"
+GEN = "2026-08-20"
 GH = "https://github.com/mdunn-mntn/malachi-workspace/blob/main/"
+ART = "https://claude.ai/code/artifact/878ac222-4ed6-4376-aea5-cd1772308cca"
 
 wb = MntnWorkbook(
     title="Airflow/Spark Efficiency Optimizer",
     ticket="AUDI-1194",
-    subtitle="Reads jobs that SUCCEEDED and finds waste: skew, spill, GC pressure, spot churn, missing stats. Ranks a fleet backlog worst-first.",
-    period="Built Aug 2026",
+    subtitle="Reads jobs that SUCCEEDED and finds waste: skew, spill, fetch wait, idle fleets, missing stats. Ranks a daily backlog worst-first and reports what it could not see.",
+    period="Daily since 2026-08-20",
     generated=GEN,
-    status="Hardened",
+    status="Daily, full fleet",
 )
 
 # ---------------------------------------------------------------- 1. How it works (step map)
@@ -37,9 +38,9 @@ STEPS = [
      "Runs on SUCCEEDED jobs. Dataproc: the .zstd Spark event log from gs://mntn-data-archive-{env}/spark-events "
      "(fleet-enabled by PR #1169) or the per-batch history-server folders for ipdsc/tpa (temp bucket, needs the "
      "standing read grant). Databricks: the EXPLAIN COST plan from a SQL warehouse (jobs get-run-output carries no plan).",
-     "oncall_weekly_optimizer.sh", ".claude/scripts/oncall_weekly_optimizer.sh",
-     "bash .claude/scripts/oncall_weekly_optimizer.sh",
-     "2026-08-07: rolling dirs parse fully (IMP-029 fixed), cron rebuilds them (--selftest); phs.py enumerates the ipdsc/tpa PHS batches key-free (22 live) - log READ pends grant PR mntn-devops#4724"),
+     "oncall_daily_optimizer.sh", ".claude/scripts/oncall_daily_optimizer.sh",
+     "bash .claude/scripts/oncall_daily_optimizer.sh --selftest",
+     "2026-08-20: daily at cap 200 (~160 logs/day, so weekly cap-40 saw ~4% of the fleet). PHS half proven end-to-end under a 1h PAM grant: 22/22 batches enumerated, fetched and parsed. Standing read pends mntn-devops#4724"),
     ("O2", "Parse 7 surfaces",
      "Full Spark event-log parse into structured metrics: jobs, stages, tasks, executors, environment, SQL node "
      "metrics, storage.",
@@ -58,7 +59,21 @@ STEPS = [
      "knows the kind of fix. This is the 'check every DAG automatically' mode.",
      "crawl.py:54", "airflow_optimizer/crawl.py#L54",
      "python3 -m airflow_optimizer.crawl <dir-or-glob>",
-     "2026-08-07 corpus crawl: 48/48 jobs, 99 findings, 68 high; phantom-skew noise killed by the 60s floor + zero-median guards"),
+     "First daily run 2026-08-20: 214 jobs, 278 findings, 197 high (vs 37/59/42 on the last weekly run), including 21 PHS-only jobs the archive sweep had never seen"),
+    ("O5", "Record what changed",
+     "Appends every finding to a ledger keyed on job + detector + stage, and replays it to derive a state: new, "
+     "chronic (3+ consecutive sweeps), owner_notified, wont_fix, resolved (stopped firing for 3 sweeps). Without it a "
+     "backlog rebuilt each day cannot say whether anything improved.",
+     "ledger.py", "airflow_optimizer/ledger.py",
+     "python3 -m airflow_optimizer.ledger",
+     "26 findings across 25 job-logs collapse to 4 distinct keys: an hourly job contributes ~24 logs a day and must count once"),
+    ("O6", "Report coverage and the delta",
+     "Enumerates every unpaused DAG from the Airflow API and names the ones with no Spark task, so the backlog is never "
+     "mistaken for the fleet. Then renders a digest that leads with what changed, links each job to its Airflow page, and "
+     "points at the full backlog.",
+     "coverage.py / digest.py", "airflow_optimizer/coverage.py",
+     "python3 -m airflow_optimizer.coverage <api_base> <date>",
+     "2026-08-20 live: 62 active DAGs, 24 have a Spark task, 38 are structurally invisible to this tool and are listed by name"),
 ]
 steps_df = pd.DataFrame(
     [{"Step": s, "Name": n, "What it does and how": w, "Code": d, "Test it": t, "Proven": p}
@@ -81,42 +96,46 @@ for i, (_, _, _, disp, repo_path, _, _) in enumerate(STEPS, 1):  # data rows sta
 
 # ---------------------------------------------------------------- 2. Real findings
 finds = pd.DataFrame([
-    {"Job": "intent_score_map (Ryan's live ask)", "Engine": "Dataproc", "Group": "INFRA+CODE",
-     "Finding (real numbers)": "One IO-stalled straggler task (67 min vs 5 min median on identical data, 5% CPU) pinned 240 premium executors at 32% utilization; ~$175 of the ~$260 list run idle. Stage spills 2.5 TiB to disk nightly.",
-     "Fix": "spark.speculation=true (quantile 0.9); raise shuffle.partitions ~30k (set in BOTH decorator and builder line 89 - builder wins).",
-     "Status": "Verified 4-ways, recs sent to Ryan 2026-08-07"},
-    {"Job": "Hourly aug_log_ip* / site_network_hourly family", "Engine": "Dataproc", "Group": "INFRA",
-     "Finding (real numbers)": "Runs at 2-8% executor utilization, 20-61 idle executor-hours per run, every hour.",
-     "Fix": "Cut minExecutors/initialExecutors; check eager allocation before driver-side steps.",
-     "Status": "New systemic finding, 2026-08-07 corpus crawl"},
-    {"Job": "Update Vertical Categorization", "Engine": "Dataproc", "Group": "CODE",
-     "Finding (real numbers)": "Stage 0 duration skew 10-242x on 2025-era logs, GC pressure alongside. Caveat: pre-discriminator detector; could be a straggler, not data skew. DAG is manual-trigger only.",
-     "Fix": "Profile the next manual run with the new skew/straggler discriminator before coding a fix.",
-     "Status": "Owner corrected to Ryan/targeting (IMP-024)"},
-    {"Job": "Prepare HTML Content", "Engine": "Dataproc", "Group": "CODE",
-     "Finding (real numbers)": "Stage skew 18.4x (max vs median task).",
-     "Fix": "Same class: salt the key or AQE skew join.",
-     "Status": "In the crawl backlog"},
-    {"Job": "keyword_ddp_reporting / targeted_signal", "Engine": "Databricks", "Group": "CODE",
-     "Finding (real numbers)": "Missing table stats on product_categorization (13.5B rows scanned) so the optimizer defaults to full sorts; shuffles of 768 / 72 / 182 GiB at the default partition count.",
-     "Fix": "ANALYZE TABLE COMPUTE STATISTICS; set spark.sql.shuffle.partitions (~256 MiB per partition) or enable AQE coalesce.",
-     "Status": "Demoed from the INC-009 job's plan + metrics"},
-    {"Job": "keyword_ddp_reporting / targeted_signal", "Engine": "Databricks", "Group": "INFRA",
-     "Finding (real numbers)": "161 task re-runs from 7 spot-reclaimed executors; 168 FetchFailed tasks (shuffle instability).",
-     "Fix": "Raise first_on_demand or add on-demand fallback; reduce shuffle block size.",
-     "Status": "Demoed from the INC-009 job's metrics"},
-    {"Job": "6 of 13 prod jobs", "Engine": "Dataproc", "Group": "—",
-     "Finding (real numbers)": "Clean: no findings above thresholds.",
-     "Fix": "None needed.",
-     "Status": "2026-08-04 prod crawl"},
+    {"Job": "site_network_hourly", "Engine": "Dataproc", "Fix type": "code",
+     "Finding (real numbers)": "Stage 9 waits 44-73% of task time on shuffle fetch, every run, 3+ weeks. 8,663 DCU-h across 17 runs in a day.",
+     "Fix": "Map-side spread: the feeding stage always starts at initialExecutors=50 and lands 90% of output on 48-105 executors.",
+     "Where it stands": "Verified 4 logs; one-hour experiment drafted for Ryan"},
+    {"Job": "fangorn_score_monitor", "Engine": "Dataproc", "Fix type": "code",
+     "Finding (real numbers)": "Stage 17 spilled 1,138 GiB to disk (3,924 GiB in memory at spill time).",
+     "Fix": "Raise shuffle partitions first; if it persists, raise executor memory.",
+     "Where it stands": "In the 2026-08-20 backlog, unrouted"},
+    {"Job": "intent_score_household_map", "Engine": "Dataproc", "Fix type": "code",
+     "Finding (real numbers)": "Stage 10 wide shuffle, 3,758 GiB at ~3,848 MiB per partition.",
+     "Fix": "Set shuffle partitions to ~256 MiB each, or enable AQE coalesce.",
+     "Where it stands": "In the 2026-08-20 backlog, unrouted"},
+    {"Job": "intent_score_map", "Engine": "Dataproc", "Fix type": "infra",
+     "Finding (real numbers)": "A 67-min straggler on uniform data pinned 240 executors at 32% utilization; ~$175 of a ~$260 run idle.",
+     "Fix": "spark.speculation=true (quantile ~0.9). shuffleTracking.timeout was REFUTED against Spark source.",
+     "Where it stands": "Delivered to Ryan 2026-08-07"},
+    {"Job": "aug_log_ip_vertical_id_hourly", "Engine": "Dataproc", "Fix type": "infra",
+     "Finding (real numbers)": "4-11% executor utilization, 21-52 idle executor-hours per run; Stage 11 fetch wait 31-45% on 11 of 11 runs.",
+     "Fix": "Cut min/initialExecutors. Ranking buries it: 11 chronic mediums sort below one job with 2 highs (IMP-046).",
+     "Where it stands": "Second in line, unrouted"},
+    {"Job": "materialize_mntn_select", "Engine": "Dataproc (PHS)", "Fix type": "code",
+     "Finding (real numbers)": "Stage 6 waits 40-78% on shuffle fetch. One of 21 findings on jobs the archive sweep had never seen.",
+     "Fix": "Same map-side check as site_network_hourly before touching partition counts.",
+     "Where it stands": "Found under a 1h PAM grant; needs mntn-devops#4724"},
+    {"Job": "Update Vertical Categorization", "Engine": "Dataproc", "Fix type": "code",
+     "Finding (real numbers)": "Chronic Stage-0 skew up to 242x max-vs-median task, with GC pressure alongside.",
+     "Fix": "Salt the skewed key or enable AQE skew join; a plain repartition will not fix a value-skewed key.",
+     "Where it stands": "Owner Ryan/targeting; manual-only DAG, re-profile first"},
+    {"Job": "product_categorization + product_uniques", "Engine": "Databricks", "Fix type": "code",
+     "Finding (real numbers)": "EXPLAIN COST reports missing = both tables, so the CBO estimates sizeInBytes=2.27E+22 and picks the join blind.",
+     "Fix": "ANALYZE TABLE COMPUTE STATISTICS FOR ALL COLUMNS, then re-check the plan.",
+     "Where it stands": "First live Databricks pull, 2026-08-20"},
 ])
 wb.table(
     "Real findings",
     finds,
-    finding="The first prod crawl found a 242x skew nobody was looking for — on jobs that all show green",
-    method="From the 2026-08-07 crawl of 48 real prod event logs (99 findings, 68 high), plus the intent_score_map ask and the INC-009 Databricks demo. Every number is from a real run.",
+    finding="Every one of these came off a job that ran GREEN, on a fleet nobody was reviewing",
+    method="From the 2026-08-20 daily crawl (214 jobs, 278 findings, 197 high), the PHS batches fetched under a 1h PAM grant, and the first live Databricks EXPLAIN COST. Every number is from a real run.",
     kind="headline",
-    widths={"Job": 30, "Engine": 11, "Group": 9, "Finding (real numbers)": 52, "Fix": 42, "Status": 26},
+    widths={"Job": 32, "Engine": 15, "Fix type": 10, "Finding (real numbers)": 54, "Fix": 46, "Where it stands": 30},
     toc="What it has already found on real prod jobs",
 )
 
@@ -124,7 +143,7 @@ wb.table(
 dets = pd.DataFrame([
     {"Detector": "skew", "Reads": "event log (run)", "Flags": "One task far slower AND reading far more data than the median (60s floor; data cross-check separates true skew from stragglers).", "Typical fix": "Salt the skewed key / AQE skew join."},
     {"Detector": "straggler", "Reads": "event log (run)", "Flags": "One task far slower on the SAME data as its peers - a slow node or IO stall, not skew.", "Typical fix": "spark.speculation=true (quantile ~0.9)."},
-    {"Detector": "shuffle fetch-wait", "Reads": "event log (run)", "Flags": "Tasks spending 30%+ of their time waiting on shuffle fetch instead of computing.", "Typical fix": "More partitions; check executor count/network."},
+    {"Detector": "shuffle fetch-wait", "Reads": "event log (run)", "Flags": "Tasks spending 30%+ of their time waiting on shuffle fetch instead of computing.", "Typical fix": "Check how many executors hold the map output FIRST. More partitions makes it worse when blocks are already small."},
     {"Detector": "idle reserved executors", "Reads": "event log (run)", "Flags": "A fleet held (billed) at low utilization, incl. zero-task allocations.", "Typical fix": "Fix the tail (speculation/skew); cut min executors."},
     {"Detector": "disk spill", "Reads": "event log (run)", "Flags": "Stages writing spill to disk (reported separately from in-memory-at-spill size - summing double-counts).", "Typical fix": "More partitions, more memory, or cache less."},
     {"Detector": "GC pressure", "Reads": "event log (run)", "Flags": "High share of task time spent in garbage collection (memory-starved).", "Typical fix": "Raise executor memory / fewer, larger partitions."},
@@ -135,12 +154,13 @@ dets = pd.DataFrame([
     {"Detector": "broadcast candidate", "Reads": "plan text", "Flags": "A small table joined the expensive way when it could be broadcast.", "Typical fix": "Broadcast hint / raise the broadcast threshold."},
     {"Detector": "window full-sort", "Reads": "plan text", "Flags": "A window function forcing a full sort of the data.", "Typical fix": "Partition the window; pre-bucket the data."},
     {"Detector": "repeated scan", "Reads": "plan text", "Flags": "The same source read multiple times in one job.", "Typical fix": "Cache the reused frame."},
+    {"Detector": "cache ineffective", "Reads": "event log (run)", "Flags": "Cached blocks evicted under memory pressure, so the data is recomputed on the next read.", "Typical fix": "More storage memory, MEMORY_AND_DISK, or cache a narrower projection."},
 ])
 wb.table(
     "Detector catalog",
     dets,
-    finding="Thirteen detectors: eight read how the job RAN, five read what the plan INTENDED",
-    method="Hand-maintained list matching airflow_optimizer/optimizations.py. Each finding carries real measured numbers and a concrete fix. See Method for the Databricks-only plan caveat.",
+    finding="Fourteen detectors: nine read how the job RAN, five read what the plan INTENDED",
+    method="Hand-maintained list matching airflow_optimizer/optimizations.py. Every finding carries measured numbers and a concrete fix. The fetch-wait fix text was corrected 2026-08-20 (see Read me).",
     kind="data",
     widths={"Detector": 22, "Reads": 16, "Flags": 52, "Typical fix": 40},
     toc="What each detector looks for and the fix it recommends",
@@ -148,16 +168,15 @@ wb.table(
 
 # ---------------------------------------------------------------- 4. Worked example: Dataproc
 wb.notes(
-    "Ex — Dataproc",
-    intro="Reading a Spark event log to find a concrete speed-up (the Update Vertical Categorization job).",
+    "Ex — site_network_hourly",
+    intro=f"The full walkthrough, verified 2026-08-20 on four real event logs. Line-by-line version with the raw JSON and the code: {ART}",
     blocks=[
-        ("Input", "A finished job's Spark event log (.zstd) from the archive bucket. No failure needed — this runs on healthy jobs to find waste."),
-        ("Parse (7 surfaces)", "Parses jobs, stages, tasks, executors, environment, SQL per-node metrics, and storage from the event log into structured metrics."),
-        ("Detect", "The skew detector compares max-vs-median task time per stage. Stage 0's slowest task ran 242x the median: one partition held nearly all the data, with GC pressure alongside."),
-        ("Recommend (actual output)",
-         "[high] Stage 0 skewed 242.1x (max vs median task). Why: one partition holds most of the data. Fix: salt the skewed group/join key or enable AQE skew join (spark.sql.adaptive.skewJoin.enabled); a plain repartition will not fix a value-skewed key."),
-        ("Crawl (check every DAG)", "The same run across a directory of event logs ranks a cross-job backlog worst-first. The 2026-08-04 prod crawl scanned 13 jobs and surfaced 34 findings, 10 high-impact, led by this 242x skew."),
-        ("Outcome", "Owner corrected 2026-08-07 to Ryan/targeting; the DAG is manual-trigger only, and the 242x predates the straggler discriminator - the next manual run gets re-profiled before anyone codes a fix. Still the first real target the tool found autonomously."),
+        ("The symptom", "Stage 9 spends 44-73% of task time waiting on shuffle fetch, on every hourly run, for at least three weeks. The job has never failed, so nothing ever paged. It is the fleet's largest measured consumer: 8,663 DCU-h across 17 runs in one day."),
+        ("The evidence, from one task", "Task 23201: 28.3s alive, 1.63s of CPU (5.8%), 51ms GC, 16.3s blocked fetching 14,292 remote blocks averaging 1,400 bytes. Reported Success. Note Executor CPU Time is NANOseconds while Run Time is milliseconds."),
+        ("Refuted #1 - the tool's own fix", "The detector said raise spark.sql.shuffle.partitions. Stages 29 and 35 in the SAME app fetch 23.4M blocks of the same size and wait 1 second, against Stage 9's 4.2M and 73%. Block count is not the cause, and raising partitions multiplies it. Fix text corrected."),
+        ("Refuted #2 - the obvious source read", "site_network_hourly.py coalesces current_partitions // 33 after shuffle.partitions=5000, predicting ~151 reducers. The log shows 366, 128 and 622 across runs. Plausible mechanism, wrong stage."),
+        ("What survived", "Map-side spread. Blocks are served by the executor that WROTE them. The map stage feeding Stage 9 starts with exactly 50 executors (initialExecutors) and lands 90% of its output on 48-105, hottest holding 24.6%. The later map stages start with 306-500, spread over ~480, hottest 0.3%, and wait 0%."),
+        ("What does not fit, and the ask", "Stage 15 reads the same concentrated output and waits ~0% (likely cold vs warm first read; the log cannot settle it). So the ask to the owner is a one-hour initialExecutors experiment, not a config prescription, and the DCU attributable to the stall is stated as not established."),
     ],
 )
 
@@ -177,17 +196,31 @@ wb.notes(
     ],
 )
 
+# ---------------------------------------------------------------- 5b. Ledger + digest
+wb.notes(
+    "Ledger + digest",
+    intro="How a daily sweep says what CHANGED, and what it admits it cannot see.",
+    blocks=[
+        ("Why a ledger", "A backlog rebuilt from scratch each day cannot answer the three questions that decide whether anyone acts: how long has this been true, is it new, and did the fix work. Every finding is appended to optimization_ledger.jsonl keyed on job + detector + stage."),
+        ("The states", "new (first sweep) - chronic (3+ consecutive sweeps) - owner_notified (a person sent the ask) - wont_fix (owner declined, with a reason) - resolved (stopped firing for 3 sweeps). The two human decisions are sticky; everything else is recomputed from what the detectors saw."),
+        ("One entry per job per sweep", "An hourly job contributes ~24 logs a day. Counting each as a finding makes every job look like a crisis, so entries collapse to one per job+detector+stage, keeping the highest severity seen."),
+        ("Identity is evidence-based", "Spark app names carry per-run stamps (materialize_mntn_select_16, segment-updates-to-parquet-2026-08-20-[19]). Stamps are stripped, but a trailing _<n> is only removed when the base is a DAG the coverage pass actually saw, so ipdsc_ds_67 and ipdsc_ds_13 stay distinct."),
+        ("Coverage, stated not implied", "The optimizer reads Spark event logs, so BigQuery operators, sensors and Python callables produce nothing. Live 2026-08-20: 62 active DAGs, 24 with a Spark task, 38 invisible - all 38 listed by name, plus the Databricks tasks whose plans are not reachable yet."),
+        ("Delivery", "The digest is written to outputs/optimizer_digest_<date>.md and links each job to its Airflow page, but only when the name matches a DAG coverage saw - a dead link costs the reader trust. MNTN retired local Slack apps in June, so posting runs through an approved server-side path, never a credential on a laptop."),
+    ],
+)
+
 # ---------------------------------------------------------------- 6. Status + next
 wb.notes(
     "Status + next",
-    intro="Where the build stands (2026-08-07) and what remains before it runs fully unattended.",
+    intro="Where the build stands (2026-08-20) and what remains.",
     blocks=[
-        ("Working today", "All four steps run, hardened by a 48-log adversarial pass (41 confirmed defects fixed, 106 tests). First live ask answered same-morning (intent_score_map). Weekly cron rebuilds rolling dirs and self-tests."),
-        ("1. Standing read grant", "PR mntn-devops#4724 (draft) grants bucket-scoped objectViewer on the PHS temp bucket to audience-intelligence@. dataproc.viewer is already standing (DEV-8182). Mark ready + ping Christina."),
-        ("2. History-server crawl", "Built: phs.py enumerates PHS-attached SUCCEEDED batches key-free (22 live today) and derives each batch's per-uuid log path. Fetch lights up when the grant merges."),
-        ("3. Databricks live pull", "EXPLAIN COST now runs live against a SQL warehouse and the detectors fire on real production plans (2026-08-20). Wire that pull into the sweep."),
-        ("4. Cadence", "Measured 2026-08-07: a 48-log sweep is 58s local CPU + ~600MB download. Daily is cheap; switch after the next green live cron run."),
-        ("5. Plan-shuffle detectors", "Three of the five plan detectors read shuffle sizes in a Spark-UI rendering that neither Dataproc nor Photon EXPLAIN COST emits, so only the stats detector fires today (IMP-033)."),
+        ("Running today", "Daily at 11:00 PT over a full day of logs from both sources, with a ledger, a coverage report and a digest. 40 tests, ruff clean. First daily run: 214 jobs, 278 findings, 197 high."),
+        ("1. Standing read grant", "mntn-devops#4724 is out of draft with @SteelHouse/devops and csz-mntn (Cristina Szumilo) requested. It sat 13 days as a draft with zero reviewers; nothing technical was blocking it. On merge the PHS half starts producing with no code change."),
+        ("2. site_network_hourly", "Verified and drafted for Ryan Kleck (JobTeamConfig.TPA_EXPORT to Team.TARGETING). The ask is a one-hour initialExecutors experiment; re-profiling that run is what turns a 44-73% stall into a DCU number."),
+        ("3. Databricks live pull", "EXPLAIN COST runs live against a SQL warehouse and the detectors fire on real production plans. Not yet wired into the sweep, and there is no bridge from an enumerated run to the query it ran."),
+        ("4. Plan-shuffle detectors", "Three of the five plan detectors read shuffle sizes in a Spark-UI rendering that neither Dataproc nor Photon EXPLAIN COST emits, so only the stats detector fires today (IMP-033)."),
+        ("5. Off the laptop", "The sweep runs on a Mac against expiring SSO: the Databricks OAuth refresh and the astro token both die unattended. Moving it to a runner with workload identity is the next infrastructure step, not minting service-account keys."),
     ],
 )
 
@@ -213,9 +246,9 @@ wb.glossary(
 # ---------------------------------------------------------------- Cover (LAST)
 wb.cover(
     takeaways=[
-        "Checks every Spark job that ran GREEN for hidden waste on both engines, ranks a fleet backlog worst-first, key-free at ~1 CPU-minute a sweep.",
-        "First live ask root-caused same-morning: a straggler pinned 240 executors at 32% utilization, ~$175 of a ~$260 run idle.",
-        "Hardened by a 48-log adversarial pass: 41 execution-confirmed defects fixed, one of which silently blanked every log.",
+        "Reads every Spark job that ran GREEN for hidden waste. Daily, key-free, 3 CPU-minutes: 214 jobs and 278 findings, against 37 and 59 weekly.",
+        "The verify pass refuted the tool's OWN recommendation on the fleet's biggest job before it reached the owner. Third time it has caught one.",
+        "Says what it cannot see: 62 active DAGs, 24 with a Spark task, 38 named as invisible rather than silently omitted.",
     ]
 )
 
