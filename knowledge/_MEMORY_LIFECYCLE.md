@@ -75,7 +75,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_olympus_repo | reference | 2026-07-20 | [doc](memory/reference_olympus_repo.md) |
 | feedback_xlsx_default_output | feedback | 2026-07-21 | [doc](memory/feedback_xlsx_default_output.md) |
 | reference_goal_attainment_report | reference | 2026-07-21 | [doc](memory/reference_goal_attainment_report.md) |
-| reference_mm_vs_3p_scorecard | reference | 2026-07-21 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
 | reference_mntn_brand_assets | reference | 2026-07-21 | [doc](memory/reference_mntn_brand_assets.md) |
 | reference_mode_dashboard_porting | reference | 2026-07-21 | [doc](memory/reference_mode_dashboard_porting.md) |
 | audi-1089-ddp-evals | project | 2026-07-22 | [doc](memory/project_audi_1089_ddp_evals.md) |
@@ -205,9 +204,10 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_graph_vendor_crediting | reference | 2026-08-19 | [doc](memory/reference_graph_vendor_crediting.md) |
 | reference_mntn_public_mcp | reference | 2026-08-19 | [doc](memory/reference_mntn_public_mcp.md) |
 | reference_ntb_definitions | reference | 2026-08-19 | [doc](memory/reference_ntb_definitions.md) |
-| feedback-explicit-descriptive-slots | feedback | 2026-08-20 | [doc](memory/feedback_explicit_descriptive_slots.md) |
-| feedback-no-label-colon-prefix | feedback | 2026-08-20 | [doc](memory/feedback_no_label_colon_prefix.md) |
+| feedback_explicit_descriptive_slots | feedback | 2026-08-20 | [doc](memory/feedback_explicit_descriptive_slots.md) |
+| feedback_no_label_colon_prefix | feedback | 2026-08-20 | [doc](memory/feedback_no_label_colon_prefix.md) |
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
+| reference_mm_vs_3p_scorecard | reference | 2026-08-20 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-20 | [doc](memory/reference_shopper_graph_deploy.md) |

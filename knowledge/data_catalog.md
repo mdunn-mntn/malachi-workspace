@@ -2771,6 +2771,7 @@ Tables in this dataset are VIEWs over `bronze.integrationprod.fpa_*` (Datastream
 - **Empty name regression:** Starting 2025-12-23, 79–82% of new advertisers inserted with empty string. 4,366 advertisers affected.
 - **Stale names:** Even when populated, 1,114 of 16,000 (7%) differ from current `advertisers.company_name` because customers edited their name after the FPA row was created.
 - **Always JOIN to `integrationprod.advertisers.company_name`** (or `public_advertisers.company_name`) for the authoritative, current advertiser name.
+- **There is no `dw-main-silver.core.advertisers`** — it errors `Not found ... in location us-central1`. The advertiser dim is `dw-main-bronze.integrationprod.advertisers` (filter `deleted=FALSE AND is_test=FALSE`; ~37.7k rows). Verified 2026-08-20 (AUDI-1141 name refresh).
 
 ---
 

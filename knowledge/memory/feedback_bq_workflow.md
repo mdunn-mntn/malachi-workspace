@@ -102,3 +102,22 @@ application-default print-access-token` confirms ADC is live). Don't ask the use
 - **Always pass `--project_id=dw-main-silver`.** The wrapper defaults that variable for its own logging but does not forward it to `bq`, and the shell's gcloud default project is `mntn-coredw-prod`, where the account has no `bigquery.jobs.create` → `Access Denied`.
 
 **`INFORMATION_SCHEMA.PARTITIONS` returns ZERO rows for a view.** Physical `sqlmesh__*` names taken from a table doc can themselves be views (`clickpass_log`, `ui_conversions` both returned 0 partitions this way) — an empty result means "not a partitioned base table", NOT "no data". Verify coverage by counting rows on sampled literal dates instead.
+
+## bq CLI gotchas hit on AUDI-1141 (2026-08-20)
+
+Three separate failures before a single query ran. All three look like broken SQL and are not:
+
+1. **A `.sql` file whose FIRST line starts with `--` breaks `bq query`.** Passing the file contents as the
+   positional arg makes bq parse that line as a command-line flag
+   (`Unknown command line flag ' audi_1141_cohort_scorecard.sql'`). Put any `--` filename header at the
+   END of the file. `mntn_xlsx.sql()` needs a `--` line naming the file for its query deep-links, so a
+   trailing `-- source: <file>.sql` satisfies both.
+2. **`CREATE TEMP FUNCTION` scripts need `--nouse_legacy_sql`.** Without it bq runs legacy SQL and errors
+   `Encountered "CREATE" ... Was expecting: <EOF>` at the function line.
+3. **Pass `--project_id=dw-main-silver` explicitly.** After a fresh `gcloud auth login` the default
+   project resolved to `mntn-coredw-prod`, giving
+   `Access Denied: User does not have bigquery.jobs.create permission`. `bq_run.sh` defaults its internal
+   `PROJECT_ID` var but only forwards the flag when you pass it.
+
+Also: `gcloud` auth expiring is NOT the MCP Drive connector expiring — they fail independently and on the
+same day looked like one problem.

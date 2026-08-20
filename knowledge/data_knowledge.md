@@ -5140,3 +5140,30 @@ Measured on `ddp_crm_graph_cpm` (dt 2026-08-06..08-12, 214,251 impressions, AUDI
 
 Deepsync bills **$22,379.79 Jan–Jul 2026** (~$38K/yr) through the legacy DS4 path; `usage_reporting_data` has
 no DS63 rows, so graph crediting has never been billed. Dollars are small today; the multipliers are the point.
+
+### Zero prospecting revenue does NOT mean the advertiser tracks no revenue (AUDI-1141, 2026-08-20)
+
+A Stage-1-prospecting cohort excludes retargeting, and **prospecting is last-touch**, so revenue that the
+advertiser genuinely records lands outside the cohort. On the AUDI-1141 180d cohort (window ending
+2026-08-20): of 2,542 qualifying advertisers (20k-impression floor), **1,624 (64%) show zero revenue** —
+**980 fire a conversion pixel with no order value, 644 fire no conversion at all.** So a "no revenue
+tracked" cut is NOT a lead-gen/B2B proxy; it silently pulls in ecommerce advertisers whose revenue is
+attributed to retargeting, plus advertisers with no pixel.
+
+**Rule: screen CPA on `conversions > 0`, never on `revenue = 0`.** Revenue belongs only to ROAS. And
+report the CPA-eligible advertiser count next to any CPA — coverage is uneven by group (AUDI-1141: 78% of
+MM advertisers converted vs **54%** of 3P), so a CPA comparison silently compares differently-selected
+populations. Non-converters drop out entirely, which flatters whichever group has worse pixel coverage.
+
+### `audience.mm_campaign_classifier` is a CURRENT-STATE snapshot — ~40% miss on a trailing-window cohort (AUDI-1083 view, joined 2026-08-20)
+
+The classifier view (AUDI-1083) carries only campaigns that are currently active
+(`deleted=FALSE`, `campaign_status_id NOT IN (8,9)`). Joining it to a **delivered-in-trailing-180d**
+cohort left **2,808 of 7,045 campaigns (40%) with no row** — they delivered in-window and have since gone
+inactive. In a deliverable, render that as an explicit third value ("Not classified"), never as blank or
+as `False`, or a reader reads "no longer active" as "not Peak Performance".
+
+**Peak Performance = `has_ds13 OR has_ds46`** (equivalently `tiers_reachable` contains `PP`). `mm_class`
+observed values and counts (2026-08-20): `non_mm` 8,153 · `mmv2` (DS19-only, keyword-only, **no PP**)
+3,577 · `mm_flagship_fangorn` 1,527 · `mmv3` 662 · `fangorn_vertical_only` 334 · `mmv1` 141. There is no
+`mm_engine` column on the view — it is `mm_class` plus `mm_engine_rank`.
