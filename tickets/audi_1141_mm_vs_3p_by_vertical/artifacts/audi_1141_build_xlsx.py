@@ -26,6 +26,8 @@ ADV_MIN_IMPS = 20000
 ov = pd.read_csv(OUT / "audi_1141_scorecard_overall.csv")
 bv = pd.read_csv(OUT / "audi_1141_scorecard_by_vertical.csv")
 ov2 = pd.read_csv(OUT / "audi_1141_scorecard2_overall.csv")
+_n_gated = int(ov.set_index("bucket_detail").loc["MM (gated)", "n_adv"])
+_n_mm = int(ov2.set_index("bucket2").loc["MM (all)", "n_adv"])
 bv2 = pd.read_csv(OUT / "audi_1141_scorecard2_by_vertical.csv")
 
 det = pd.read_csv(OUT / "audi_1141_campaign_grain.csv").dropna(subset=["vertical_id"])
@@ -110,8 +112,8 @@ compare(bv2, ov2, "bucket2", "MM (all)", "3P", "MM vs 3P by vertical",
 
 compare(bv, ov, "bucket_detail", "MM (gated)", "3P", "MM gated vs 3P by vertical",
         finding="Gated MM beats 3P 6.1x on visit rate, the best-configured subset not the average",
-        method="The 1,254 of 2,613 MM advertisers whose intent threshold is above 0, so the bidder "
-               "only serves model-scored households. MM vs 3P by vertical has all of them.",
+        method=f"The {_n_gated:,} of {_n_mm:,} MM advertisers whose intent threshold is above 0, so the "
+               "bidder only serves model-scored households. MM vs 3P by vertical has all of them.",
         toc="MM with the intent gate on vs 3P", kind="data")
 
 # ------------------------------------------------------------------------------- detail + overall
@@ -129,8 +131,8 @@ FFMT = {"Advertisers": FMT.INT, "Campaigns": FMT.INT, "Spend": FMT.USD0, "Impres
 
 wb.table("Full scorecard", bv[list(fcols)].rename(columns=fcols),
          finding="Every targeting group by vertical, median and pooled side by side",
-         method="Median is advertiser-weighted and whale-robust; pooled is impression or spend "
-                "weighted. Where the two disagree, one account is carrying the pooled number.",
+         method="Median takes the middle advertiser, each counting once. Pooled adds every impression "
+                "and dollar together first, so one large account can move it.",
          formats=FFMT, kind="detail", toc="All four targeting groups, every metric, by vertical",
          first_col_width=27, query="audi_1141_cohort_scorecard.sql")
 
