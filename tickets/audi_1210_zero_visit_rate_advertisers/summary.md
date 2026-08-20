@@ -46,6 +46,14 @@ Correlation of log site visits to log share of site visits = **-0.24**. Medians 
 
 Ranking on raw share of site visits selects large sites and nothing else: an unadjusted bottom-quartile cut flagged ElevenLabs, Buckle, Apollo.io, EcoATM and Owala purely for having huge sites. Within-quintile ranking drops them.
 
+### The bottom of each band is a separate population
+
+Inside the 1.4M+ band (327 advertisers) the share distribution breaks rather than tapers: p10 **0.0036%** · p25 **0.0297%** · **p50 0.6075%** · p75 2.14% · p90 3.73%. A 20x jump between p25 and p50 means the bottom quarter is its own cluster, not the tail of a curve.
+
+The 76 advertisers below ElevenLabs in that band are almost all very small spenders (eFax $10.9k, Textmagic $4.5k, Kickstarter $4.3k, Jet's Pizza $2.1k). **ElevenLabs sits in that cluster spending $916,628.** The percentile is the weak signal; the company an advertiser keeps is the strong one.
+
+**Caveat on ElevenLabs specifically:** 645,567,794 reported site visits over 30 days is **21.5M/day**, against 1.2M/day for WGU on 350M MNTN impressions. That is app or API surface traffic, not a marketing-site audience, so its 0.02% share is not comparable and should be footnoted or excluded rather than actioned.
+
 ### The current answer
 
 Of 1,859 live advertisers that served in the trailing 30 days: **1,649 scorable · 171 sites too quiet to score (under 1,000 visits) · 39 reporting no visits at all.**
@@ -81,7 +89,7 @@ Verified visits reproduces Johnny's 1.25% and 0.5%. It is the client-facing Repo
 
 Sheets: the flagged accounts, the advertisers reporting nothing, the full audit trail, a Read me, method notes, and the one standalone query. Two argument tabs (the Maurices comparison, the size-group table) were cut on 2026-08-19 as unnecessary; both points live in Method & caveats as a sentence each.
 
-**Column naming (2026-08-19):** `Rank vs peers` → **Similar sites we beat** (the percentile read forward: 23% means we reach a bigger slice than 23 of every 100 comparable advertisers), `Site size group` → **Compared against**, labelled with the actual traffic band (Under 25K · 25K to 120K · 120K to 350K · 350K to 1.4M · Over 1.4M) rather than "fourth fifth", so the peer group explains itself, `Reading` → **Tracking history**. Renamed after review: the originals did not say what they were for without opening the Read me.
+**Column naming (2026-08-19):** `Rank vs peers` → briefly **Similar sites we beat**, then replaced outright by **Typical for this size** (the band's median share, shown beside each row). "Beat" implied MNTN won a contest when the number is a rank on one ratio, and a percentile made the reader do arithmetic. A median sitting next to the row's own share reads straight across, `Site size group` → **Compared against**, labelled with the actual traffic band (Under 25K · 25K to 120K · 120K to 350K · 350K to 1.4M · Over 1.4M) rather than "fourth fifth", so the peer group explains itself, `Reading` → **Tracking history**. Renamed after review: the originals did not say what they were for without opening the Read me.
 
 **Metric naming:** the metric was called "share of voice" through the afternoon, borrowed from Johnny. Renamed to **share of site visits** because share of voice normally means impression share against competitors, and this is a credit ratio. The file name is unchanged on purpose, so the link already circulating with Johnny and Imani still resolves.
 

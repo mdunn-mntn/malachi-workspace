@@ -35,6 +35,15 @@ dark_spend = sum(f(r, "spend_30d") for r in dark)
 
 # Peer groups are labelled with the site-traffic range they cover, so the reader can see why an
 # advertiser was compared to the accounts it was compared to without opening the Read me.
+# Median share within each size band. Shown beside every row so a reader can judge a share
+# against its own peer group without decoding a percentile.
+BAND_MEDIAN = {}
+for _q in ("1", "2", "3", "4", "5"):
+    _v = sorted(f(r, "share_of_site_visits") for r in scored if r["site_size_quintile"] == _q)
+    if _v:
+        _m = len(_v) // 2
+        BAND_MEDIAN[_q] = _v[_m] if len(_v) % 2 else (_v[_m - 1] + _v[_m]) / 2
+
 SIZE = {"1": "Under 25K visits", "2": "25K to 120K visits", "3": "120K to 350K visits",
         "4": "350K to 1.4M visits", "5": "Over 1.4M visits"}
 
@@ -45,7 +54,7 @@ df_flag = pd.DataFrame([{
     "Their site visits": int(f(r, "raw_visits_30d")),
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits"),
-    "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers"),
+    "Typical for this size": BAND_MEDIAN.get(r["site_size_quintile"]),
     "Compared to sites with": SIZE.get(r["site_size_quintile"]),
 } for r in flagged])
 
@@ -65,12 +74,12 @@ df_all = pd.DataFrame([{
     "Their site visits": int(f(r, "raw_visits_30d")),
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits") or None,
-    "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers") if r["coverage"] == "Scored" else None,
+    "Typical for this size": BAND_MEDIAN.get(r["site_size_quintile"]) if r["coverage"] == "Scored" else None,
     "Compared to sites with": SIZE.get(r["site_size_quintile"]),
 } for r in rows])
 
 FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Our visits": FMT.INT,
-      "Share of site visits": FMT.PCT2, "Similar sites we beat": FMT.PCT0, "Advertiser ID": "0",
+      "Share of site visits": FMT.PCT2, "Typical for this size": FMT.PCT2, "Advertiser ID": "0",
       "Visits in 12 months": FMT.INT}
 
 wb = MntnWorkbook(
@@ -93,7 +102,7 @@ wb.table(
 wb.table(
     "Check these first", df_flag,
     finding=f"{len(df_flag)} advertisers spending ${flag_spend / 1e6:.1f}M get credit for less of their site traffic than three quarters of similar accounts",
-    method="Share of site visits is our visits over theirs. Each advertiser is compared only to others whose sites get about as much traffic. See Read me.",
+    method="Share of site visits is our visits over theirs. Read it against the typical share for that site size in the next column. See Read me.",
     formats=FM, heat={"30-day spend": "high"}, kind="data",
     toc="Accounts short of similar advertisers, $10k or more in spend",
     query="audi_1210_share_of_site_visits.sql",
@@ -114,7 +123,7 @@ wb.glossary(
         ("Their site visits", "Every visit the advertiser's own pixel reported in 30 days, whether or not MNTN was involved."),
         ("Our visits", "MNTN verified visits over the same period: clicks plus views plus competing views. The client-facing Reporting figure."),
         ("Share of site visits", "Our visits over their site visits."),
-        ("Similar sites we beat", "Of advertisers whose sites get about as much traffic, the share we do better than. 23% means we reach a bigger slice of the audience than 23 of every 100 similar advertisers, and a smaller slice than the other 77."),
+        ("Typical for this size", "The middle share among advertisers whose sites get about as much traffic. Read it straight across from the row's own share: half of similar advertisers sit above this number and half below."),
         ("Compared to sites with", "The 30-day site-visit range of the advertisers this one was measured against. Comparison stays inside a band because a busier site gives any one channel a smaller slice."),
         ("No share shown", "The advertiser reported fewer than 1,000 site visits, so the ratio would be noise."),
         ("Tracking history", "For advertisers reporting nothing now: whether they have EVER reported a visit in the last 12 months. Never tracked points at a pixel that was never installed; tracked then stopped points at one that broke."),
@@ -127,6 +136,8 @@ wb.notes(
     blocks=[
         ("This is a flag, not a verdict",
          "A low share can come from campaign configuration, audience, flight length or budget. It says the account is worth opening, not that anything is broken."),
+        ("The bottom of each band is a separate cluster, not a tail",
+         "Among sites over 1.4M visits the share runs 0.0036% at the 10th percentile, 0.0297% at the 25th, then jumps to 0.6075% at the median. That 20x break means a low row is not slightly behind, it is in a different group, and most of that group are very small spenders."),
         ("Every advertiser is compared only to others with similarly busy sites",
          "The bigger a site gets, the smaller a slice any one channel holds: the median share runs 1.09% for sites under 25K monthly visits and 0.39% for those over 1.4M. Comparing across the whole base would flag large sites and nothing else, so each advertiser is measured inside its own traffic band."),
         ("Our visits are attribution-credited, not a clean reach count",
