@@ -39,3 +39,9 @@ Settled there, and reusable for every other workload in this stream:
 - **Octo STS (SOP 060) is Actions-only** and does not reach a GCP compute workload, so there is currently no paved road for a Cloud Run job that needs to read a repo.
 
 **Verification that actually closes a workload:** IAM Policy Analyzer shows **no personal-account binding remaining** on the target resources. Supplementing the personal path is not the same as removing it.
+
+**Ownership answers (Dustin Niehoff, #devops, 2026-08-20).** Two of the four unknowns close, and neither needs devops:
+- **Databricks:** Victor set up all of it for TI; DPLAT wanted nothing to do with Databricks. Route to Victor / TI. Self-serve in practice, since `malachi@mountain.com` holds workspace `admins`.
+- **Astro:** "astro owns them" — the deployment service accounts / API tokens are managed inside the Astro platform, not by MNTN devops. Mint from the Astro UI; the gate is Astro org access, not a devops ticket.
+
+Still open and genuinely devops: where a scheduled Cloud Run job manifest is defined, and whether a new runtime SA takes its own IAM bindings or joins `group:audience-intelligence@mountain.com`.

@@ -114,6 +114,8 @@ Increasing executor count by reducing cores/memory per executor shrinks the gap 
 
 **§ Credentials: no PAT on disk (2026-08-20).** `~/.databrickscfg` `[DEFAULT]` held a long-lived token reported `Valid: NO` by `databricks auth profiles`; `databricks tokens list` returns **empty**, so it was already revoked server-side. The stanza is deleted and `.claude/databricks_setup.md` no longer instructs recreating it. Use the U2M OAuth profile and pass `-p malachi@mountain.com` on EVERY call. The keychain entry `databricks-ti837` still holds the dead token and `.claude/scripts/databricks_smoke.py` still reads it, so that script cannot authenticate (IMP-049). See [[project_deidentify_personal_credentials]].
 
+**§ Ownership (Dustin Niehoff, #devops, 2026-08-20):** **Victor set up all the Databricks estate for TI. DPLAT explicitly wanted nothing to do with Databricks.** So Databricks questions route to Victor / TI, not to data-platform and not to devops. Practical consequence: creating a read-only service principal for a TI workload needs no devops ticket, and `malachi@mountain.com` is already in workspace `admins`, so it is self-serve. Existing principals `prod_runner` / `dev_runner` sit in `producers_prod` / `producers_dev`; a read-only workload belongs in neither.
+
 **§ Access level:** `malachi@mountain.com` is in **`admins`** as of 2026-08-20 (groups: `producers_dev`, `users`, `admins`, a users-clone). The on-call runbook's `producers/dev/users` line is stale. Workspace `admin` still does not grant Unity Catalog `system` schema access.
 
 ---
