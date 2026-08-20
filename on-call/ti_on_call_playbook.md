@@ -178,9 +178,14 @@ Some evidence is behind a Privileged Access Manager grant. Request it **before**
 | Object read on the prod dataproc-staging bucket | `audi-storage-object-view` | Named in the runbook for a 403 on `storage.objects.get`. |
 
 Propagation is about 30 seconds. A 1-hour grant cannot run a scheduled job, so anything recurring
-needs a standing grant, not PAM.
+needs a standing grant, not PAM. Worked example: the daily Spark sweep reads the Dataproc history
+bucket every night, so it takes a standing `objectViewer` binding
+([mntn-devops#4724](https://github.com/SteelHouse/mntn-devops/pull/4724), open since 2026-08-07)
+rather than a PAM grant nobody is awake to request.
 
-**NEEDS INPUT** — the full list of grants a TI on-call actually needs, and who approves each.
+**NEEDS INPUT** — the full list of grants a TI on-call actually needs, and who approves each. The
+two rows above are the only ones 24 logged incidents have actually required, so treat them as a
+floor, not the list.
 
 ---
 
