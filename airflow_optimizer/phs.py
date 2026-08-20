@@ -55,6 +55,22 @@ def log_uri(batch: dict, bucket: str = PHS_TEMP_BUCKET) -> str:
     return f"gs://{bucket}/{batch['uuid']}/spark-job-history"
 
 
+def _strip_top_markers(local: str) -> list[str]:
+    """Drop top-level appstatus_*/.crc leftovers and return what remains.
+
+    A PHS batch dir can hold both a flat app-*.zstd and an eventlog_v2_* rolling dir. An
+    appstatus_* marker sitting BESIDE them makes crawl._event_logs read the whole uuid dir as
+    ONE rolling log, merging unrelated jobs. The marker inside a rolling dir is load-bearing,
+    so only the top level is stripped.
+    """
+    for name in os.listdir(local):
+        if name.startswith("appstatus_") or name.endswith(".crc"):
+            path = os.path.join(local, name)
+            if os.path.isfile(path):
+                os.remove(path)
+    return os.listdir(local)
+
+
 def fetch_logs(batches: list[dict], dest: str, bucket: str = PHS_TEMP_BUCKET) -> list[str]:
     """Download each batch's event log; skip unreachable (403/absent) quietly. Returns paths."""
     got = []
@@ -62,14 +78,15 @@ def fetch_logs(batches: list[dict], dest: str, bucket: str = PHS_TEMP_BUCKET) ->
         local = os.path.join(dest, b.get("uuid", "unknown"))
         os.makedirs(local, exist_ok=True)
         r = subprocess.run(
-            ["gsutil", *_GSUTIL_OPTS, "cp", f"{log_uri(b, bucket)}/*", local + "/"],
+            # -r or a rolling eventlog_v2_* dir is silently skipped and the batch reads empty.
+            ["gsutil", *_GSUTIL_OPTS, "cp", "-r", f"{log_uri(b, bucket)}/*", local + "/"],
             capture_output=True, timeout=600,
         )
-        files = [f for f in os.listdir(local) if not f.endswith(".crc")] if r.returncode == 0 else []
+        files = _strip_top_markers(local) if r.returncode == 0 else []
         if files:
             got.append(local)
-        else:
-            os.rmdir(local) if not os.listdir(local) else None
+        elif not os.listdir(local):
+            os.rmdir(local)
     return got
 
 
