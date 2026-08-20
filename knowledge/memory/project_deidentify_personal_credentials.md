@@ -25,7 +25,7 @@ Raised 2026-08-20 as the likely next major work stream after AUDI-1191 and AUDI-
 
 **Why it matters beyond convenience.** Today every automation is a bus-factor of one, dies when a token expires mid-run, and attributes all prod actions to a single human in the audit log. Same class of risk as the Victor Savitskiy departure that stranded the Spark framework knowledge.
 
-**Open:** who owns non-human identity provisioning at MNTN, whether Astro deployment tokens can dispatch the deploys we run today, and whether the Databricks service principal can read `system.billing` (see IMP-048).
+**Open:** who owns non-human identity provisioning at MNTN, whether Astro deployment tokens can dispatch the deploys we run today, and whether the Databricks service principal can read `system.billing` (see IMP-062).
 
 Related: [[reference_airflow_ti_dev_testing]], [[reference_shopper_graph_deploy]], [[feedback_bq_workflow]].
 
