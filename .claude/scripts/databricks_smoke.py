@@ -11,7 +11,7 @@ Usage:
     ~/.databricks-py312/bin/python .claude/scripts/databricks_smoke.py --dt 2026-04-26
 
 Prereqs:
-  - PAT in macOS keychain under service "databricks-ti837"
+  - an authenticated `databricks` CLI profile (`databricks auth login --host <workspace>`)
   - ~/.databricks-py312 venv with databricks-connect==17.3.*
   - Cluster 5428-215533-4jodkdfs RUNNING (will not auto-start; check the UI)
 
@@ -20,33 +20,23 @@ If the cluster is TERMINATED, start via:
 """
 
 import argparse
-import subprocess
+import os
 import sys
 import time
 
 WORKSPACE_HOST = "https://1262887251702944.4.gcp.databricks.com"
 CLUSTER_ID = "5428-215533-4jodkdfs"
-KEYCHAIN_SERVICE = "databricks-ti837"
+# OAuth profile, not a stored PAT. A long-lived local token is the pattern MNTN
+# decommissioned with the Slack bot; override for a service principal on OAuth M2M.
+PROFILE = os.environ.get("DATABRICKS_PROFILE", "malachi@mountain.com")
 
 
-def get_pat() -> str:
-    out = subprocess.run(
-        ["security", "find-generic-password", "-s", KEYCHAIN_SERVICE, "-w"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return out.stdout.strip()
-
-
-def make_session(token: str):
+def make_session():
     from databricks.connect import DatabricksSession
+    from databricks.sdk.core import Config
 
-    return DatabricksSession.builder.remote(
-        host=WORKSPACE_HOST,
-        cluster_id=CLUSTER_ID,
-        token=token,
-    ).getOrCreate()
+    cfg = Config(profile=PROFILE, host=WORKSPACE_HOST, cluster_id=CLUSTER_ID)
+    return DatabricksSession.builder.sdkConfig(cfg).getOrCreate()
 
 
 def test_a_bq_campaigns(spark) -> int:
@@ -74,11 +64,9 @@ def main():
     parser.add_argument("--dt", default="2026-04-23", help="augmentor partition date (YYYY-MM-DD)")
     args = parser.parse_args()
 
-    print("[smoke] reading PAT from keychain...")
-    token = get_pat()
-    print("[smoke] starting Databricks Connect session...")
+    print(f"[smoke] starting Databricks Connect session as profile {PROFILE}...")
     t0 = time.time()
-    spark = make_session(token)
+    spark = make_session()
     print(f"[smoke]   session up in {time.time() - t0:.1f}s")
 
     print("\n[A] BQ connector: dw-main-bronze.integrationprod.campaigns ...")
