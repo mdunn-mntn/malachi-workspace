@@ -61,9 +61,19 @@ if [[ "${1:-}" == "--selftest" ]]; then
         mkdir -p "$dest"
         cp "$obj" "$dest/"
     done < <(find "$SRC" -name '*.zstd' | sort)
-    head1="$(python3 -m airflow_optimizer.crawl "$DL" | head -n 1)"
+    OUT="$(mktemp -d "${TMPDIR:-/tmp}/spark_selftest_out.XXXXXX")"
+    LED="${OUT}/ledger.jsonl"
+    trap 'rm -rf "$SRC" "$DL" "$OUT"' EXIT
+    head1="$(python3 -c "
+import sys
+from airflow_optimizer.sweep import run
+out = run(['$DL'], '$DATE', outdir='$OUT', ledger_path='$LED')
+print(f\"{out['scanned']} jobs scanned, {out['ledger_entries']} ledger entries\")
+")"
     [[ "$head1" == *"4 jobs scanned"* ]] \
         || { echo "[selftest] FAIL: expected 4 jobs scanned, got: $head1"; exit 1; }
+    [[ -s "${OUT}/optimizer_digest_${DATE}.md" ]] \
+        || { echo "[selftest] FAIL: no digest written"; exit 1; }
     echo "[selftest] PASS: $head1"
     exit 0
 fi
@@ -71,10 +81,7 @@ fi
 # ---- Local-dir mode (testing): crawl a directory that already holds event logs. ----------
 if [[ $# -ge 1 && -d "$1" ]]; then
     echo "[daily_optimizer] local mode: crawling $1"
-    body="$(python3 -m airflow_optimizer.crawl "$1")"
-    { echo "# Spark fleet optimizer backlog — ${DATE} (local: $1)"; echo; echo "$body"; } > "$REPORT"
-    echo "[daily_optimizer] wrote ${REPORT#"$WORKSPACE"/}"
-    echo "$body" | head -n 1
+    python3 -m airflow_optimizer.sweep "$1" --date "$DATE" --source "local: $1"
     exit 0
 fi
 
@@ -135,14 +142,21 @@ if [[ $((n + phs_n)) -eq 0 ]]; then
 fi
 
 echo "[daily_optimizer] pulled ${n} log(s) from ${PREFIX} + ${phs_n} PHS; crawling."
-body="$(python3 -m airflow_optimizer.crawl "$TMP")"
-{
-    echo "# Spark fleet optimizer backlog — ${DATE}"
-    echo
-    echo "Source: ${PREFIX} (newest ${n} logs, cap ${CAP}) + ${phs_n} PHS batch log(s)."
-    echo
-    echo "$body"
-} > "$REPORT"
 
-echo "[daily_optimizer] wrote ${REPORT#"$WORKSPACE"/}"
-echo "$body" | head -n 1
+# Coverage needs the Airflow API to enumerate active DAGs and name what has no Spark task.
+# A stale astro token is not fatal: the sweep then reports coverage as unknown.
+base="${AIRFLOW_TI_API_URL:-}"
+if [[ -z "$base" && "${OPTIMIZER_COVERAGE:-1}" == "1" ]]; then
+    base="$(astro deployment inspect "${AIRFLOW_TI_DEPLOYMENT_ID:-cmd6bd10c0gl901rfuokgryiq}" \
+            --key metadata.airflow_api_url 2>/dev/null | tr -d '"[:space:]')"
+    [[ -z "$base" || "$base" == "null" ]] && base=""
+fi
+if [[ -n "$base" ]]; then
+    [[ "$base" == http*://* ]] || base="https://${base}"
+    [[ "$base" == */api/v2 ]] || base="${base%/}/api/v2"
+fi
+
+python3 -m airflow_optimizer.sweep "$TMP" \
+    --date "$DATE" \
+    --source "${PREFIX} (newest ${n} logs, cap ${CAP}) + ${phs_n} PHS batch log(s)." \
+    --airflow-base "$base"
