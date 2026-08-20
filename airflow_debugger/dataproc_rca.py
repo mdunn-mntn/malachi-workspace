@@ -20,6 +20,7 @@ History Server peripheral is omitted (common in this DAG family).
 from __future__ import annotations
 
 import base64
+import ipaddress
 import json
 import re
 import subprocess
@@ -91,6 +92,21 @@ _DNS_BLOCK_MARKERS = (
 )
 
 
+def _is_public_v4(addr: str) -> bool:
+    """True only for a routable public IPv4 address.
+
+    A router that transparently redirects port 53 answers @8.8.8.8 from the local
+    blocker anyway. In IP-blocking mode that answer is the blocker's own LAN address,
+    which pins curl at the blocker and surfaces as a confusing parse error instead of
+    an honest resolution failure.
+    """
+    try:
+        ip = ipaddress.IPv4Address(addr)
+    except ipaddress.AddressValueError:
+        return False
+    return ip.is_global
+
+
 def _public_ip(host: str) -> str | None:
     """Resolve a host against a public resolver, bypassing a local DNS sinkhole."""
     stdout, err = _run(["dig", "+short", f"@{_PUBLIC_RESOLVER}", "A", host], timeout=15)
@@ -98,7 +114,7 @@ def _public_ip(host: str) -> str | None:
         return None
     for line in (stdout or "").splitlines():
         line = line.strip()
-        if line and line[0].isdigit() and line != "0.0.0.0":
+        if line and line[0].isdigit() and _is_public_v4(line):
             return line
     return None
 

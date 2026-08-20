@@ -185,6 +185,27 @@ def test_sinkholed_resolver_answer_is_rejected() -> None:
         dataproc_rca._run = orig
 
 
+def test_lan_sinkhole_answer_is_rejected() -> None:
+    """An IP-blocking sinkhole answering with its own LAN address must not be pinned."""
+    for addr in ("192.168.10.177", "10.0.0.53", "127.0.0.1", "172.16.4.4", "0.0.0.0"):
+        assert not dataproc_rca._is_public_v4(addr), addr
+    for addr in ("142.250.73.106", "216.239.34.174", "8.8.8.8"):
+        assert dataproc_rca._is_public_v4(addr), addr
+
+
+def test_public_ip_skips_sinkhole_and_takes_the_real_answer() -> None:
+    """dig output mixing a CNAME, a sinkhole answer and a real A record yields the real one."""
+    orig = dataproc_rca._run
+    dataproc_rca._run = lambda *a, **k: (
+        "logging-alv.googleapis.com.\n192.168.10.177\n216.239.34.174\n",
+        None,
+    )
+    try:
+        assert dataproc_rca._public_ip("logging.googleapis.com") == "216.239.34.174"
+    finally:
+        dataproc_rca._run = orig
+
+
 if __name__ == "__main__":
     test_uri_parses_real_state_message()
     test_uri_absent_returns_none()
@@ -194,4 +215,6 @@ if __name__ == "__main__":
     test_dns_sinkhole_falls_back_to_pinned_curl()
     test_non_dns_error_does_not_reach_the_fallback()
     test_sinkholed_resolver_answer_is_rejected()
+    test_lan_sinkhole_answer_is_rejected()
+    test_public_ip_skips_sinkhole_and_takes_the_real_answer()
     print("OK - dataproc_rca driveroutput + dns-fallback tests passed")
