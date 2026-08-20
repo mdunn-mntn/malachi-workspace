@@ -86,16 +86,20 @@ Two rules from global `CLAUDE.md` §9, restated here because workbooks break the
 
 Two failure modes caught in review on AUDI-1210 (2026-08-19), both of which passed every existing check because the terms *were* defined on the Read me:
 
-- **A header that only makes sense after a lookup is a variable, not a word.** `Rank vs peers` and `Reading` both had correct Read me entries and still stopped the reader. Rewrite the header as the sentence the number answers: `Rank vs peers` → **Similar sites we beat** (now the percentile reads forward — 23% means better than 23 of every 100), `Reading` → **Tracking history**. If you cannot name a column without a definition, the column is doing two jobs.
+- **A header that only makes sense after a lookup is a variable, not a word.** `Rank vs peers` and `Reading` both had correct Read me entries and still stopped the reader. Rewrite the header as the sentence the number answers: `Reading` → **Tracking history**, `Tier` → **Test readiness**, `Score` → **Candidate score**. If you cannot name a column without a definition, the column is doing two jobs.
+- **Give the reader the comparison, not the rank.** `Rank vs peers` became `Similar sites we beat` and was still wrong twice over: "beat" implied MNTN won a contest when the number is a rank on one ratio, and a percentile makes the reader do arithmetic to recover the thing they actually want. **Put the benchmark in its own column and let the row read straight across** — `Share of site visits 0.02%` · `Typical for this size 0.61%` · `Compared to sites with: Over 1.4M visits`. Three plain numbers beat one clever one. Never name a column with a verb that implies winning, losing, or beating.
+- **Check whether the distribution even supports a rank.** Inside the largest site-size band the share ran p10 0.0036% · p25 0.0297% · **p50 0.6075%** — a 20x break between the 25th and 50th percentile. That is two populations, not a gradient, so "bottom quartile" reads as *slightly behind* when the truth is *different cluster*. Look at the quantiles before shipping a percentile; if it breaks, show the median and say so on Method & caveats.
 - **Never label a derived group by its ordinal position.** `Smallest fifth / Second fifth / Fourth fifth / Largest fifth` tells the reader nothing about what the group *is*, and "fourth fifth" is actively hard to parse. Carry the actual range instead. Same rule for score bands, spend tiers and date buckets.
 - **A range carries its unit, in the header or in the value — never neither.** The first fix above produced `Under 25K · 350K to 1.4M · Over 1.4M`, and the immediate question back was *"over 1.4M what?"*. Landed as header **Compared to sites with** + values **`Under 25K visits` … `Over 1.4M visits`**. Put the unit once where it reads naturally: on the header when every value shares it and repetition would be noise, on the values when the header is already carrying a different job.
 
-Three tests before shipping, all cheap:
+Five tests before shipping, all cheap:
 1. Read each header aloud with no other context. If "what would this cell contain?" is a guess, rename it.
 2. Read one cell value aloud on its own. If it prompts "…of what?", the unit is missing.
 3. If a value names a bucket, ask whether the reader can tell *why this row landed there*. Ordinal labels always fail this; ranges always pass it.
+4. For any column holding a rank, percentile, index or score: can you replace it with the raw number plus its benchmark in the next column? If yes, do that.
+5. Read one full row aloud as a sentence. If you have to jump columns or do mental arithmetic to reach the point, the columns are in the wrong order or one of them is doing too much.
 
-**Partly enforced.** `MntnWorkbook.table()` raises on ordinal-position group labels (`fourth fifth`, `third quintile`, `2nd decile`) and on placeholder headers (`Reading`, `Value`, `Status`, `Category`, `Group`, `Type`, `Rank`, `Score`, `Band`, `Tier`, `Metric`, `Result`, `Flag`, `Notes`). The unit test and the read-aloud tests are on you — no check can see that `Over 1.4M` is missing a noun.
+**Partly enforced.** `MntnWorkbook.table()` raises on ordinal-position group labels (`fourth fifth`, `third quintile`, `2nd decile`) and on placeholder headers (`Reading`, `Value`, `Status`, `Category`, `Group`, `Type`, `Rank`, `Score`, `Band`, `Tier`, `Metric`, `Result`, `Flag`, `Notes`). Tests 2, 4 and 5 are on you — no check can see that `Over 1.4M` is missing a noun, or that a percentile would read better as a benchmark.
 
 ### Tab title + method subtitle caps (HARD — the build refuses to write the file)
 
