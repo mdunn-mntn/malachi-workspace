@@ -228,6 +228,63 @@ Build in progress. Code home: `airflow_debugger/` package in the workspace (key-
 
 **Logged, not fixed (scope):** IMP-051 `gcloud auth print-access-token` is not pinned, so a token refresh goes through the very sinkhole the fallback routes around; IMP-052 `curl -s` without `--fail` discards a real HTTP 4xx/5xx API error as the generic `no entries`.
 
+### IMP-055 — routing closes the last 3 unclassified failures (2026-08-20)
+
+**The problem was never the taxonomy.** The three remaining unclassified `failed` logs each print
+their one distinguishing line on SUCCESSFUL runs too, so any signature over them repeats the defect
+that cost 325 false positives on `Waiting for the completion of batch job`:
+- `fangorn_{,hhid_}inference_pipeline_run/challenger_inference_pipeline` prints `Submitting Vertex AI
+  Pipeline` + a `Pipeline Run URL`, then dies with an empty exception.
+- `keyword_ddp_reporting/wait_for_product_categorization` prints `Poking for tasks [...] in dag ...`,
+  then dies with no message.
+
+**Fix = fetch the cause from the system that owns it.**
+
+`airflow_debugger/vertex_rca.py` (new). The Run URL yields run id + project + location; from there the
+chain is five mechanical hops, verified live against INC-024 in ~6s:
+
+| Layer | Call | What it yields |
+|---|---|---|
+| 1 | `pipelineJobs` REST GET | `state`, root `error`, `jobDetail.taskDetails` |
+| 2 | FAILED leaf (root DAG node excluded — it only restates its children) | `submit-parallel-inference-jobs` + its error |
+| 3 | percent-encoded log link in that error | `ml_job` replica id `4569671626135699456` |
+| 4 | Cloud Logging `resource.type="ml_job"` | KFP traceback, cluster `fangorn-hhid-challenger-7bea6d2b`, the 3 Dataproc job uuids |
+| 5 | `dataproc jobs describe` → `driveroutput*` | `ValueError: No version found with alias pattern 'challenger-v*' for model 'fangorn-hhid-xgboost'` |
+
+There is no `gcloud ai pipeline-jobs` subcommand in the installed SDK, so layer 1 is a curl with a
+short-lived `print-access-token` — the same key-free pattern as `dataproc_rca`. The executor retries a
+failed index 3x; only the attempt named in its `last job_id:` abort line has the real driver output, so
+that one is tried first.
+
+`airflow_debugger/external_task_rca.py` (new). Resolves the poked task's ACTUAL state via the Airflow
+API and branches: `failed` → diagnose the target; `skipped` → the sensor is mis-configured, not broken;
+`running`/`queued` → it ran out of time. **The sensor case re-exposed the IMP-053 defect in a new
+place:** the API answers with the state NOW. Asked on 2026-08-20, `batch_post.product_categorization`
+reads `success` — but it ended 22:11:22Z on 08-19 and the sensor gave up at 15:00:12Z, seven hours
+earlier. Comparing the target's `end_date` against the sensor's own failure timestamp (parsed from the
+log's `[error]` line) turns a wrong "the target succeeded, your sensor is broken" into the correct
+"the target had not finished when the sensor gave up."
+
+**One new signature, and it belongs to the driver output, not the Airflow log:**
+`model_alias_not_found` (`vertex/model-alias-missing`, `programmatic_fix="no"` — a retry cannot
+recreate a registry alias). It fires on 0 of 845 success logs and is unreachable from the Airflow log
+by construction; the test asserts both directions.
+
+**Result — the sweep's honest bottom line changed shape.** It now reports "neither classified nor
+routable", which is the only number that is actually a taxonomy gap:
+
+| | before | after |
+|---|---|---|
+| Diagnosable failures | 110 | 110 |
+| Classified by signature | 101 (91%) | 101 (91%) |
+| Routed to the owning system | 6 | 9 |
+| **Neither** | 3 | **0** |
+| Fires on a green run | 5 | 5 |
+
+Reports for both now read `[high]` instead of `[low] unclassified`, and the Vertex one matches INC-024
+at 0.765. 11 regression tests in `tests/test_routing.py`, built from verbatim corpus text; the ones
+that matter are the negative ones (the green-run log must still classify to nothing).
+
 ### Optimization UNBLOCKED — event logs already flow to GCS; crawl validated on real prod (2026-08-04)
 - **Ryan pointed to `gs://mntn-data-archive-prod/spark-events/`** — real Spark event logs already land there (49 `.zstd`, from a window in Nov 2025). So the optimization half is **not gated** for jobs that log there; the enablement ask is now "keep it on + wire the remaining models," not "turn it on from zero." (Ryan also flagged: the bucket needs a TTL / cleanup of old logs.)
 - **Download gotcha:** `gcloud storage cp` corrupts the `.zstd` (hash mismatch → 0 bytes, the crc32c/decompress gatekeeper). **Workaround: `gsutil -o "GSUtil:check_hashes=never" cp`** (gcloud `-m` bulk is flaky/crashes here; download small batches).

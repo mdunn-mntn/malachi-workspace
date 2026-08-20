@@ -1216,7 +1216,7 @@ bash .claude/scripts/airflow_pull.sh --date <UTC-date> --dag fpa_site_visit_batc
 gcloud storage ls -l "gs://mntn-data-archive-prod/signals/hashed_email_signal/dt=<D>/hh=<H>/data_source_id=23/_SUCCESS"
 ```
 
-**Durable fix:** IMP-043 — **PR [airflow-ti#1199](https://github.com/SteelHouse/airflow-ti/pull/1199) OPEN 2026-08-16**, raises `wait_fpa`'s `timeout` 900 → 1800 on both DAGs to cover the real producer distribution (a 50-min tail exists; 900s covers ~94% of runs), and/or move the two consumers to the producer's `all_batches_done` boundary. Raising `retries` alone does NOT help: `AirflowSensorTimeout` skips retries entirely. Worth a separate look: the recurring ~10-min gap between `get_dt_hh_by_dsid` and `source_available_*` is scheduling latency inside the producer, not task work.
+**Durable fix:** IMP-043 — **PR [airflow-ti#1199](https://github.com/SteelHouse/airflow-ti/pull/1199) MERGED 2026-08-16** (approved; verified 2026-08-20: 240 `wait_fpa` runs across both DAGs since the merge, zero failures). Raises `wait_fpa`'s `timeout` 900 → 1800 on both DAGs to cover the real producer distribution (a 50-min tail exists; 900s covers ~94% of runs), and/or move the two consumers to the producer's `all_batches_done` boundary. Raising `retries` alone does NOT help: `AirflowSensorTimeout` skips retries entirely. Worth a separate look: the recurring ~10-min gap between `get_dt_hh_by_dsid` and `source_available_*` is scheduling latency inside the producer, not task work.
 
 **Logs:** `on-call/airflow_logs/2026-08-16/021621__hashed_email_guid_log_signals__wait_fpa__try1__failed.log` (+ the ds_26 sibling and the full producer timeline in the same folder).
 
