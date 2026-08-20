@@ -1,0 +1,47 @@
+
+-- AUDI-1083: label the 8/21 spelunking bad-CPA list with Peak Performance status.
+-- Sheet grain is the parent campaign group, so expand parent -> {self, children} before rolling up.
+-- PP = has_ds13 (v1) OR has_ds46 (v2/Fangorn), both nullable, hence COALESCE.
+WITH sheet AS (
+  SELECT cgid FROM UNNEST([31371,31805,32185,32900,34152,44454,62700,63800,63802,65833,67503,69600,70441,71353,73468,74649,75251,75858,76848,77829,77832,78413,78597,80057,80068,80120,80328,80474,81053,81355,81375,81902,82118,82123,82124,82126,82128,82130,82133,82134,82135,82136,82137,83097,83378,83394,83395,83399,83400,83714,84029,84040,84043,84077,84080,84081,84082,84086,84096,84111,84564,85691,86094,86212,86701,87443,89173,89366,89534,90960,90962,91684,93240,93373,93457,93832,93948,94249,94252,94253,94254,94256,94271,95338,95778,97116,97117,98187,98299,98488,98674,98750,99085,100168,100266,101737,102115,102305,102324,102740,102908,104330,104912,105397,106523,106548,106638,106676,106888,106892,106938,107091,107166,107446,107889,108221,108227,108263,108361,108373,108384,108487,108493,108496,108769,108788,109032,109607,109958,111795,111870,112152,112908,112984,113235,113835,113895,114417,114553,114914,115056,115185,115233,115242,115598,115744,115745,115760,116732,117578,117662,117770,118024,118271,118563,118727,118882,118938,118943,119362,119391,119918,120373,121215,121649,122150,122709,122867,122900,122928,122945,123213,123278,123392,124009,124099,124623,124628,124630,124782,124810,125345,125504,125616,125979,126306,126330,126532,126640,126648,126939,127030,127162,127178,127329,127354,127550,127705,127714,127737,127864,127865,127907,128065,128156,128157,128395,128398,128400,128419,128420,128433,128522,128696,128705,128710,128794,128930,128947,129025,129335,129337,129359,129630,129688,129832,130056,130171,130194,130255,130399,130405,130409,130501,130626,130639,130661,130664,130791,131148,131302,131756,131762,131774,131786,131973,132046,132055,132230,132365,133300]) AS cgid
+),
+expanded AS (
+  SELECT s.cgid, cg.campaign_group_id
+  FROM sheet s
+  JOIN `dw-main-bronze.integrationprod.campaign_groups` cg
+    ON cg.campaign_group_id = s.cgid OR cg.parent_campaign_group_id = s.cgid
+  WHERE cg.deleted = FALSE AND cg.is_test = FALSE
+),
+rolled AS (
+  SELECT
+    e.cgid,
+    COUNT(*)                                        AS n_stage1_campaigns,
+    LOGICAL_OR(COALESCE(c.has_ds13, FALSE))         AS any_ds13,
+    LOGICAL_OR(COALESCE(c.has_ds46, FALSE))         AS any_ds46,
+    LOGICAL_OR(COALESCE(c.has_ds19, FALSE))         AS any_ds19,
+    LOGICAL_OR(COALESCE(c.has_mm,   FALSE))         AS any_mm,
+    LOGICAL_OR(COALESCE(c.hhst_gated, FALSE))       AS any_hhst_gated,
+    MAX(c.hhst_current)                             AS max_hhst,
+    MIN(c.geo_reach_pct)                            AS min_geo_reach_pct,
+    STRING_AGG(DISTINCT c.mm_class, ' + ' ORDER BY c.mm_class)                 AS mm_classes,
+    STRING_AGG(DISTINCT c.restriction_level, ' + ' ORDER BY c.restriction_level) AS restriction_levels,
+    STRING_AGG(DISTINCT c.tiers_reachable, ' + ' ORDER BY c.tiers_reachable)     AS tiers_reachable
+  FROM expanded e
+  JOIN `dw-main-silver.audience.mm_campaign_classifier` c
+    ON c.campaign_group_id = e.campaign_group_id
+  GROUP BY e.cgid
+)
+SELECT
+  s.cgid,
+  CASE
+    WHEN r.cgid IS NULL           THEN 'not_in_view'
+    WHEN r.any_ds13 OR r.any_ds46 THEN 'peak_performance'
+    ELSE 'not_pp'
+  END AS pp_label,
+  CASE WHEN r.any_ds46 THEN 'v2_fangorn' WHEN r.any_ds13 THEN 'v1' ELSE NULL END AS pp_version,
+  r.any_ds19 AS has_keyword_layer,
+  r.n_stage1_campaigns, r.mm_classes, r.restriction_levels, r.tiers_reachable,
+  r.any_hhst_gated, r.max_hhst, r.min_geo_reach_pct
+FROM sheet s
+LEFT JOIN rolled r USING (cgid)
+ORDER BY s.cgid
