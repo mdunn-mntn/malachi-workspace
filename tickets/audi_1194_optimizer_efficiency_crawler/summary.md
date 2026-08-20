@@ -4,7 +4,7 @@ title: "AUDI-1194: Airflow/Spark optimization crawler"
 status: in_progress
 date: 2026-08-05
 summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
-result: "in progress — first external validation run 2026-08-07 on Ryan's aud-int-int-map batch (intent_score_map); IMP-029 rolling-dir fix shipped en route"
+result: "in progress — sweep now daily and full-fleet (214 jobs/278 findings vs 37/59 weekly), PHS half proven end-to-end, site_network_hourly Stage 9 verified and drafted for Ryan, Databricks EXPLAIN COST validated live"
 question: "Can a scheduled key-free crawler read every succeeded Spark job (Dataproc event logs + Databricks plans/metrics) and emit a ranked, actionable optimization backlog with no manual step?"
 framing_state: locked
 ---
@@ -82,25 +82,77 @@ Mirrored the AUDI-1191 pattern: 5 per-module finders against a 48-log / 611MB RE
 
 **Sweep cost → cadence: DAILY.** 48 logs = 58s local CPU + 49MB RSS + ~600MB GCS download. The weekly launchd can move to daily once the cron's next green live run confirms.
 
+### 2026-08-20: daily cadence, PHS half live, first owner-facing recommendation
+
+**Cadence decided: DAILY, full-day coverage.** The measurement that settled it: the fleet emits **~160 event logs/day** (157-164/day, 2026-08-14..08-19), so the weekly `cap=40` sweep read ~6 hours of one day out of 168 -- **~4% of the fleet**, a coverage hole rather than a freshness preference. Cost at the measured 7.85 MB average object: ~1.3 GB/day download, ~3 min CPU, ~50 MB RSS. Shipped: `oncall_weekly_optimizer.sh` -> `.claude/scripts/oncall_daily_optimizer.sh`, `CAP` 40 -> 200, launchd `com.mntn.weekly-spark-optimizer` -> `com.mntn.daily-spark-optimizer` (11:00 PT daily, plist copy in `artifacts/`). First live run: **214 jobs scanned, 278 findings, 197 high-impact** vs 37/59/42 on the last weekly run.
+
+**PHS half unblocked and proven end-to-end.** mntn-devops#4724 had sat as a DRAFT since 2026-08-07 with **zero reviewers requested** -- all CI green, `mergeable: true`, 219 commits behind main with no conflict. Nothing was blocking it but the ask. Branch updated, marked ready, review requested from `@SteelHouse/devops` (CODEOWNERS `* @SteelHouse/devops`) plus **`csz-mntn` = Cristina Szumilo** (note the spelling: memory had "Christina"). Slack draft in `artifacts/audi_1194_slack_cristina_phs_grant.md`.
+
+Rather than wait for the merge, the path was proven under a 1h `audi-storage-object-view` PAM grant (auto-approved; both `audi-storage-object-view` and `dataproc-debug` are 64800s max and need 1 approval from devops-squad / gcp-audi-admins / pam-slack-bot): **22/22 PHS-attached SUCCEEDED batches enumerated, fetched (568 MB), and parsed**, yielding 21 findings on jobs the archive sweep has never seen (`materialize_mntn_select_*` Stage 6 at 40-78% fetch wait, `segment-updates-to-parquet-*` Stage 2 at 36-67%). The PHS stage is now wired into the daily script and fetches into the same download root, so both sources rank in one backlog; it 403s and skips quietly until the PR merges.
+
+**Two `phs.fetch_logs` defects found and fixed en route** (regression tests that fail against the old code):
+- `gsutil cp` had **no `-r`**, so any batch that wrote an `eventlog_v2_*` rolling dir downloaded empty and was silently dropped.
+- No `dest_for()` equivalent: an `appstatus_*` marker landing beside the logs in a uuid dir makes `crawl._event_logs` read the whole dir as ONE rolling log. Top-level markers are now stripped; the marker *inside* a rolling dir is load-bearing and is kept.
+
+**Highest-value finding actioned: `site_network_hourly` Stage 9.** Picked over the `aug_log_ip*` family on measured DCU (`runtimeInfo.approximateUsage.milliDcuSeconds`, metered not estimated): 17 SUCCEEDED runs on 2026-08-20 totalled **8,663 DCU-h, mean 510/run, range 164-1,547**, against 99-208 DCU-h/run for `aug_log_ip_hourly`.
+
+The verify pass **refuted two hypotheses before anything reached the owner**, which is the third time that step has earned its keep:
+1. *The detector's own stock fix was wrong.* `shuffle_fetch_wait` said "raise `spark.sql.shuffle.partitions`". In the same app, stages 29/35 fetch **23.4M blocks at 1,607 B with 1s of fetch wait** while stage 9 stalls on 4.2M blocks of the same size. Block count and size are not the cause, and raising partitions would multiply block count. Fix text corrected in `optimizations.py`.
+2. *The source-read hypothesis was wrong.* `site_network_hourly.py` sets `shuffle.partitions=5000` in the builder and coalesces `current_partitions // 33` at ~line 203, which predicts ~151 reducers; the event log shows 74-622. The `// 33` coalesce is not what produces stage 9.
+
+What the evidence does support: **map-side output spread.** Shuffle blocks are served by the executor that wrote them, so the reduce stage is rate-limited by how many map-side executors hold the output. Across all four logs profiled, the map stage feeding stage 9 starts with **exactly 50 executors** live (`initialExecutors=50`), runs 48-257s, and lands 90% of its output on 48-105 executors with one holding up to **24.6%**; the job's later map stages start with 306-500 executors, spread across ~480 with a **0.3%** max, and their reducers wait ~0%.
+
+| log | stage 9 fetch wait | blocks | B/block | map-side spread | hottest |
+|---|---|---|---|---|---|
+| app-20260817065122856-0420 | 73% (17,379s of 23,716s) | 4,222,144 | 1,753 | 159 execs, 90% on 77 | 24.6% |
+| app-20260817085115734-0691 | 64% | 1,356,749 | 1,544 | 206 execs, 90% on 105 | 19.9% |
+| app-20260817125114709-0168 | 44% | 5,117,397 | 5,950 | 146 execs, 90% on 48 | 2.2% |
+| app-20260820185132316-0176 | 58% | 709,722 | 1,333 | 191 execs, 90% on 85 | 18.1% |
+| (clean) stage 29/35, same apps | 0-1% | 20.1-23.4M | 1,607-1,620 | 481-500 execs, 90% on ~430 | 0.3% |
+
+**The one fact that does not fit, stated rather than buried:** stage 15 reads the *same* map output as stage 9, at comparable block count and size, and waits ~0%. The likely reason is that stage 9 is the first (cold) reader off the map-side executors' local disks and stage 15 the second (warm), but the event log cannot settle it. That is why the ask to Ryan is a **one-hour experiment** (`initialExecutors` 50 -> ~300, then re-profile) rather than a config prescription. Draft: `artifacts/audi_1194_slack_ryan_site_network_hourly.md`. Profiler: `artifacts/audi_1194_shuffle_concentration.py`. Owner routing is unambiguous: `JobTeamConfig.TPA_EXPORT` -> `Team.TARGETING`, `#alerts-tpa-pipeline`, and Ryan's last commit on the file is "Tune site_network_hourly executors and partition size" (2026-06-26). **DCU attributable to the stall is NOT established** -- that is what the experiment measures, and any dollar figure stays unproven while a CUD floor is in play.
+
+**Databricks acquisition validated -- and the spec was wrong about the route.** On a SUCCEEDED prod run today (`prod-mntn_matched_reporting-targeted_signal_domain`, task run 502229322982640), `jobs get-run-output` returns `{"metadata": ..., "notebook_output": {}}`: no plan, no logs, no stats, and `new_cluster.cluster_log_conf` is `None`. The pipe exists and is empty. What **does** work, with no dbt change and no cluster change, is running `EXPLAIN COST` against a SQL warehouse through the **Statement Execution API** (`/api/2.0/sql/statements`). Validated live against real prod tables: a 5,412-char plan with `== Physical Plan ==`, `Statistics(sizeInBytes=)`, `Scan parquet`, and `== Optimizer Statistics (table names per statistics state) == / missing = product_categorization, product_uniques`, fed straight into `analyze_plan` -> 2 high-impact `missing_statistics` findings. First time the Databricks half has run on anything but a hand-transcribed 2026-07-31 screenshot. Module: `artifacts/audi_1194_databricks_explain_cost.py`.
+
+Corrections that fell out of it:
+- **Enumeration is solved without `system.lakeflow`.** `jobs list-runs --completed-only` surfaces the ephemeral `SUBMIT_RUN` submissions (including `targeted_signal_domain`) that `jobs list` misses. `system.lakeflow` is in fact *blocked*: `USE SCHEMA` denied, workspace `admins` is not a Unity Catalog metastore admin.
+- **IMP-033 widened.** Only `missing_statistics` fires even on real Databricks output. The shuffle-size regex wants `(ShuffleQueryStage|Exchange) ... sizeInBytes=` on one line, which is the Spark UI SQL-tab rendering; EXPLAIN COST attaches `Statistics(sizeInBytes=)` to LOGICAL operators and Photon renames the physical ones `PhotonShuffleExchangeSink/Source`. So `broadcast_candidate`, `shuffle_partition_sizing`, `window_full_sort` are dead on **both** engines, not just OSS. The fix targets the plan rendering, not the engine.
+- **PAT removed.** `~/.databrickscfg` `[DEFAULT]` held a long-lived token reported `Valid: NO`; `databricks tokens list` returns empty, so it was already revoked server-side. Stanza deleted, no backup kept, OAuth profile still works. `.claude/databricks_setup.md` no longer instructs recreating it. The keychain entry `databricks-ti837` still holds the dead token (IMP-049).
+- Databricks group membership is now `admins` (the runbook records `producers/dev/users`).
+
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+- **Cadence:** daily, full-day. `.claude/scripts/oncall_daily_optimizer.sh` (renamed from `oncall_weekly_optimizer.sh`), `CAP` 40 -> 200, launchd `com.mntn.daily-spark-optimizer` at 11:00 PT.
+- **Both log sources in one sweep:** the script now runs `phs.fetch_logs` into the same download root as the archive pull, so the archive fleet and the PHS-attached ipdsc/tpa batches rank in one backlog.
+- **`phs.fetch_logs` fixed:** `gsutil cp -r` (rolling dirs were silently skipped) and top-level `appstatus_*` stripping (chimera guard), each with a regression test.
+- **`shuffle_fetch_wait` fix text corrected** -- it recommended the one change that would make the `site_network_hourly` case worse.
+- **Docs made honest:** `airflow_optimizer/__init__.py`, `README.md`, and the xlsx generator no longer present `jobs get-run-output` as a working Databricks input.
+- **Recommendation delivered:** `artifacts/audi_1194_slack_ryan_site_network_hourly.md` (Ryan Kleck / Targeting), a one-hour `initialExecutors` experiment plus the full evidence table.
+- **Grant unstuck:** mntn-devops#4724 out of draft with reviewers requested; `artifacts/audi_1194_slack_cristina_phs_grant.md`.
+- **Credential removed:** the dead PAT stanza is gone from `~/.databrickscfg`.
+- New tooling: `artifacts/audi_1194_shuffle_concentration.py`, `artifacts/audi_1194_databricks_explain_cost.py`. Backlog rows IMP-046..IMP-049; IMP-033 widened.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Daily or weekly?
+  **A:** Daily. The fleet emits ~160 logs/day, so the weekly cap-40 sweep covered ~4% of it. A full-day sweep costs ~1.3 GB and ~3 min.
+- **Q:** What was actually blocking mntn-devops#4724?
+  **A:** Nothing technical. It was a draft with zero reviewers requested. CI green, mergeable, no conflict against 219 commits of drift.
+- **Q:** Can the crawler read the PHS half on a schedule?
+  **A:** The code path works today -- 22/22 batches enumerated, fetched and parsed under a PAM grant. Only the standing grant is missing, and it is one review away.
+- **Q:** Is `site_network_hourly` Stage 9 a partition-sizing problem?
+  **A:** No. Stages 29/35 in the same app fetch 5.5x more blocks of the same size with 1s of wait. Raising `shuffle.partitions` is the wrong lever. The evidenced difference is map-side spread: the feeding stage always starts with exactly 50 executors and concentrates its output; the later ones start with 400+ and do not stall.
+- **Q:** Does the Databricks `EXPLAIN COST` acquisition path work?
+  **A:** Yes, but not by the specced route. `jobs get-run-output` returns an empty `notebook_output` even on success. `EXPLAIN COST` via the SQL Statement Execution API works today with no dbt or cluster change, and the detectors fire on the real plan.
 
 ## 7. Data Documentation Updates
 What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
 
 ## 8. Open Items / Follow-ups
-- **mntn-devops#4724 (draft):** standing bucket-scoped `storage.objectViewer` on the PHS temp bucket for `audience-intelligence@` — Malachi marks ready + pings Christina. `dataproc.viewer` already standing via DEV-8182; `phs.py` enumeration works today (22 batches), fetch lights up on merge.
+- **mntn-devops#4724 — awaiting review, not blocked by us.** Out of draft 2026-08-20, reviewers `@SteelHouse/devops` + `csz-mntn` (Cristina Szumilo). Send `artifacts/audi_1194_slack_cristina_phs_grant.md`. On merge the PHS half of the daily sweep starts producing without any code change (proven under PAM: 22/22 fetched and parsed).
+- **Send the `site_network_hourly` draft to Ryan** (`artifacts/audi_1194_slack_ryan_site_network_hourly.md`) and re-profile the experiment run. That measurement is what turns a 44-73% stall into a DCU number.
 - **IMP-024 handoff:** owner is Ryan/targeting (not DDP); DAG is manual-only. Message drafted; profile the next manual run with the new discriminator before anyone codes a fix.
-- **OSS plan-format detectors** (follow-up from hardening): scan/stats regexes are Databricks-format only; Dataproc physicalPlanDescription needs its own patterns. Backlog row pending.
-- **Cadence switch weekly → daily** after the next green live cron run.
-- **Databricks EXPLAIN COST acquisition** still unvalidated (pre-existing).
-- **Fleet finding to route:** hourly aug_log_ip*/site_network_hourly at 2-8% executor utilization (20-61 idle exec-h/run) — candidates for min/initialExecutors cuts.
+- **Plan-shuffle detectors (IMP-033, widened):** three of the five plan detectors read a Spark-UI shuffle rendering that neither Dataproc nor Photon `EXPLAIN COST` emits. Only `missing_statistics` fires on either engine.
+- **Wire the Databricks `EXPLAIN COST` pull into the sweep.** The acquisition works (`artifacts/audi_1194_databricks_explain_cost.py`); it is not in `airflow_optimizer/` yet, and there is no enumeration-to-plan bridge (`jobs list-runs --completed-only` gives the runs; mapping a run to the query it ran is the missing piece).
+- **`aug_log_ip*` family still unrouted:** 4-11% executor utilization, 21-52 idle exec-h/run, plus `shuffle_fetch_wait` at 31-45% on 11 of 11 runs. Second in line behind `site_network_hourly`; the ranking currently buries it (IMP-046).
+- **PHS-only jobs newly visible and unreviewed:** `materialize_mntn_select_*` (Stage 6, 40-78% fetch wait) and `segment-updates-to-parquet-*` (Stage 2, 36-67%), 21 findings from the first PHS crawl.
+- **IMP-048:** `spark-events` has no lifecycle rule; the approved age-30 TTL was never applied. Needs `storage.buckets.update`.
+- **IMP-049:** clear the dead `databricks-ti837` keychain entry and repoint `databricks_smoke.py` at the OAuth profile.
