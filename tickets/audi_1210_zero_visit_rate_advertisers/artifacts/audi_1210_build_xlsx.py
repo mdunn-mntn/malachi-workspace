@@ -35,8 +35,8 @@ dark_spend = sum(f(r, "spend_30d") for r in dark)
 
 # Peer groups are labelled with the site-traffic range they cover, so the reader can see why an
 # advertiser was compared to the accounts it was compared to without opening the Read me.
-SIZE = {"1": "Under 25K", "2": "25K to 120K", "3": "120K to 350K",
-        "4": "350K to 1.4M", "5": "Over 1.4M"}
+SIZE = {"1": "Under 25K visits", "2": "25K to 120K visits", "3": "120K to 350K visits",
+        "4": "350K to 1.4M visits", "5": "Over 1.4M visits"}
 
 df_flag = pd.DataFrame([{
     "Advertiser": r["advertiser_name"],
@@ -46,7 +46,7 @@ df_flag = pd.DataFrame([{
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits"),
     "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers"),
-    "Compared against": SIZE.get(r["site_size_quintile"]),
+    "Compared to sites with": SIZE.get(r["site_size_quintile"]),
 } for r in flagged])
 
 df_dark = pd.DataFrame([{
@@ -66,7 +66,7 @@ df_all = pd.DataFrame([{
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits") or None,
     "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers") if r["coverage"] == "Scored" else None,
-    "Compared against": SIZE.get(r["site_size_quintile"]),
+    "Compared to sites with": SIZE.get(r["site_size_quintile"]),
 } for r in rows])
 
 FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Our visits": FMT.INT,
@@ -115,7 +115,7 @@ wb.glossary(
         ("Our visits", "MNTN verified visits over the same period: clicks plus views plus competing views. The client-facing Reporting figure."),
         ("Share of site visits", "Our visits over their site visits."),
         ("Similar sites we beat", "Of advertisers whose sites get about as much traffic, the share we do better than. 23% means we reach a bigger slice of the audience than 23 of every 100 similar advertisers, and a smaller slice than the other 77."),
-        ("Compared against", "The band of monthly site traffic this advertiser was measured against. Advertisers are only compared to others in the same band, because a busier site gives any one channel a smaller slice."),
+        ("Compared to sites with", "The 30-day site-visit range of the advertisers this one was measured against. Comparison stays inside a band because a busier site gives any one channel a smaller slice."),
         ("No share shown", "The advertiser reported fewer than 1,000 site visits, so the ratio would be noise."),
         ("Tracking history", "For advertisers reporting nothing now: whether they have EVER reported a visit in the last 12 months. Never tracked points at a pixel that was never installed; tracked then stopped points at one that broke."),
     ],
