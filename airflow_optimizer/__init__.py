@@ -7,9 +7,10 @@ optimization detectors, and ranks a cross-job backlog worst-first.
 
 The live input is Dataproc event logs, from two places: the flat spark-events
 archive (the 88 batch-operator models) and the per-uuid PHS temp-bucket dirs
-(ipdsc/tpa). analyze_plan also reads a Databricks EXPLAIN COST plan, but nothing
-here acquires one - the 2026-08-03 probe showed jobs get-run-output carries no
-plan text until a model emits EXPLAIN COST itself.
+(ipdsc/tpa). analyze_plan reads a Databricks EXPLAIN COST plan; acquiring one is
+not in this package yet - it goes through the SQL Statement Execution API, not
+jobs get-run-output, which returns an empty notebook_output even on a SUCCEEDED
+run (validated 2026-08-20; see the ticket's audi_1194_databricks_explain_cost.py).
 
 Modules:
 - eventlog      : full 7-surface Spark event-log parser (jobs/stages/tasks/executors/environment/SQL/storage; handles .zstd)

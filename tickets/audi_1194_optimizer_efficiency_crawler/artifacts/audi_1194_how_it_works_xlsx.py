@@ -36,7 +36,7 @@ STEPS = [
     ("O1", "Get the job's Spark data",
      "Runs on SUCCEEDED jobs. Dataproc: the .zstd Spark event log from gs://mntn-data-archive-{env}/spark-events "
      "(fleet-enabled by PR #1169) or the per-batch history-server folders for ipdsc/tpa (temp bucket, needs the "
-     "standing read grant). Databricks: the EXPLAIN COST plan + Spark metrics from jobs get-run-output.",
+     "standing read grant). Databricks: the EXPLAIN COST plan from a SQL warehouse (jobs get-run-output carries no plan).",
      "oncall_weekly_optimizer.sh", ".claude/scripts/oncall_weekly_optimizer.sh",
      "bash .claude/scripts/oncall_weekly_optimizer.sh",
      "2026-08-07: rolling dirs parse fully (IMP-029 fixed), cron rebuilds them (--selftest); phs.py enumerates the ipdsc/tpa PHS batches key-free (22 live) - log READ pends grant PR mntn-devops#4724"),
@@ -166,7 +166,7 @@ wb.notes(
     "Ex — Databricks",
     intro="The same detectors on Databricks, on a real job (targeted_signal in keyword_ddp_reporting). Databricks runs ~66 dbt models plus a handful of PySpark jobs.",
     blocks=[
-        ("Input", "A Databricks job's EXPLAIN COST plan (from jobs get-run-output) plus its Spark job metrics (stage shuffle sizes, task failures, executor events). No GCS event log needed."),
+        ("Input", "A Databricks EXPLAIN COST plan, pulled live from a SQL warehouse through the Statement Execution API. No GCS event log needed. jobs get-run-output carries no plan, so it is not the route."),
         ("Parse", "The plan gives per-node operators and optimizer statistics; the metrics give stage shuffle sizes, failed tasks, and executor removals."),
         ("CODE fixes (actual output)",
          "Missing table stats on product_categorization (13.5B rows scanned) so the optimizer defaults to full sorts, fix ANALYZE TABLE COMPUTE STATISTICS. Wide shuffles 768/72/182 GiB at the default partition count, fix set spark.sql.shuffle.partitions (~256 MiB each) or enable AQE coalesce."),
@@ -185,9 +185,9 @@ wb.notes(
         ("Working today", "All four steps run, hardened by a 48-log adversarial pass (41 confirmed defects fixed, 106 tests). First live ask answered same-morning (intent_score_map). Weekly cron rebuilds rolling dirs and self-tests."),
         ("1. Standing read grant", "PR mntn-devops#4724 (draft) grants bucket-scoped objectViewer on the PHS temp bucket to audience-intelligence@. dataproc.viewer is already standing (DEV-8182). Mark ready + ping Christina."),
         ("2. History-server crawl", "Built: phs.py enumerates PHS-attached SUCCEEDED batches key-free (22 live today) and derives each batch's per-uuid log path. Fetch lights up when the grant merges."),
-        ("3. Databricks live pull", "The EXPLAIN COST path is demoed from captured output; wire the live jobs get-run-output pull into the sweep."),
+        ("3. Databricks live pull", "EXPLAIN COST now runs live against a SQL warehouse and the detectors fire on real production plans (2026-08-20). Wire that pull into the sweep."),
         ("4. Cadence", "Measured 2026-08-07: a 48-log sweep is 58s local CPU + ~600MB download. Daily is cheap; switch after the next green live cron run."),
-        ("5. OSS plan formats", "Plan detectors only match Databricks EXPLAIN COST text; Dataproc physicalPlanDescription needs its own patterns (IMP-033)."),
+        ("5. Plan-shuffle detectors", "Three of the five plan detectors read shuffle sizes in a Spark-UI rendering that neither Dataproc nor Photon EXPLAIN COST emits, so only the stats detector fires today (IMP-033)."),
     ],
 )
 

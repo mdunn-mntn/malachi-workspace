@@ -7,9 +7,11 @@ the two run separately and share only the Spark event-log parser.
 
 The live input is **Dataproc event logs**, from two places: the flat `spark-events` archive (the 88
 batch-operator models) and the per-uuid PHS temp-bucket dirs (ipdsc/tpa, via `phs`). `analyze_plan`
-also reads a Databricks `EXPLAIN COST` plan, but nothing here acquires one: the 2026-08-03 probe
-showed `jobs get-run-output` returns only `error`/`error_trace`/`metadata`/`notebook_output`, so a
-model has to emit `EXPLAIN COST` itself before there is a plan to fetch.
+also reads a Databricks `EXPLAIN COST` plan. Acquiring one is **not in this package yet**, and the
+specced route does not work: `jobs get-run-output` returns an empty `notebook_output` even on a
+SUCCEEDED prod run, and job clusters set no `cluster_log_conf`. What does work (validated
+2026-08-20) is running `EXPLAIN COST` against a SQL warehouse through the Statement Execution API,
+which needs no dbt or cluster change: `tickets/audi_1194_.../artifacts/audi_1194_databricks_explain_cost.py`.
 
 ## Use
 

@@ -56,7 +56,10 @@ databricks --version    # → 0.298.0 as of 2026-04-29
 
 ## Auth setup
 
-PAT lives in macOS keychain under service name `databricks-ti837` (no token in dotfiles, not in env vars, not in shell history).
+The TI-837 PAT lives in the macOS keychain under service name `databricks-ti837`. It is **dead**
+as of 2026-08-20 (`databricks tokens list` returns empty) and the keychain entry is stale; the
+smoke test below cannot authenticate with it. Prefer the OAuth profile. To clear the entry:
+`security delete-generic-password -s databricks-ti837 -a "$USER"`.
 
 **Store / rotate** (run from any terminal — token is read with `-w` so it doesn't echo):
 ```bash
@@ -68,23 +71,19 @@ security add-generic-password -s "databricks-ti837" -a "$USER" -w "<PAT>" -U
 DATABRICKS_TOKEN=$(security find-generic-password -s "databricks-ti837" -w)
 ```
 
-**`~/.databrickscfg`** (chmod 600). Generated once via:
+**`~/.databrickscfg` no longer holds a PAT.** The `[DEFAULT]` stanza that wrote one was
+removed 2026-08-20 (the token had already been revoked server-side: `databricks tokens list`
+returns empty). Do not recreate it. A long-lived token in a dotfile is the pattern MNTN
+decommissioned with the Slack bot on 2026-06-10.
+
+Use the U2M OAuth profile instead, and pass it explicitly on every call:
 ```bash
-PAT=$(security find-generic-password -s databricks-ti837 -w)
-umask 077
-cat > ~/.databrickscfg <<EOF
-[DEFAULT]
-host       = https://1262887251702944.4.gcp.databricks.com
-token      = ${PAT}
-cluster_id = 5428-215533-4jodkdfs
-EOF
-chmod 600 ~/.databrickscfg
+databricks auth login --profile malachi@mountain.com   # renews when the refresh token expires
+databricks current-user me -p malachi@mountain.com
 ```
 
-This file is what `databricks` CLI reads by default. Confirm:
-```bash
-databricks current-user me
-```
+The profile carries no secret on disk; the CLI keeps its own token cache. `databricks auth
+profiles` shows which profiles are valid.
 
 ## Smoke test
 
