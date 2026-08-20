@@ -18,7 +18,7 @@ Design: `workflows/ARCHITECTURE.md`. Operator guide for the deterministic layer:
 
 **Run `.claude/scripts/build_index.sh` after any `knowledge/` change**, and `.claude/scripts/verify.sh` (add `--fix`) when the commit gate blocks.
 
-**No `ANTHROPIC_API_KEY` on the Pi, ever.** The weekly Pi cron runs ONLY the key-free deterministic aggregator (`pi_run_workflow_audit.sh` → `signals_<date>.md`); the reasoning half runs on the Mac via `/workflow-audit`. Local API keys are the pattern MNTN decommissioned with the Slack bot on 2026-06-10 — never reintroduce one on a server.
+**No `ANTHROPIC_API_KEY` on the Pi, ever.** The weekly Pi cron runs ONLY the key-free deterministic aggregator (`pi_run_workflow_audit.sh` → `signals_<date>.md`); the reasoning half runs on the Mac via `/workflow-audit`. Local API keys are the pattern MNTN decommissioned with the Slack bot on 2026-06-10 — never reintroduce one on a server. **The Mac is not a server:** `ANTHROPIC_API_KEY` there is legitimate (`airflow_debugger/synth.py`, AUDI-1191) and lives in the login Keychain, not `~/.zshrc` (memory `reference_anthropic_api_key_keychain`).
 
 ## Key Paths
 
