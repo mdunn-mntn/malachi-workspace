@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 
 from . import coverage as cov_mod
 from . import digest as digest_mod
@@ -24,6 +25,9 @@ from . import ledger as ledger_mod
 from .crawl import crawl, render_crawl
 
 OUTDIR = "tickets/audi_1194_optimizer_efficiency_crawler/outputs"
+# gsutil, not `gcloud storage`: the same decompressive-transcoding gatekeeper that corrupts
+# a .zstd download also has to be bypassed on the way back up for anything compressed.
+_GSUTIL = ["gsutil", "-o", "GSUtil:check_hashes=never"]
 
 
 def _dag_ids(reports: list, known: set | None = None) -> set:
@@ -31,8 +35,30 @@ def _dag_ids(reports: list, known: set | None = None) -> set:
     return {ledger_mod._dag_id(r, known) for r in reports if not r.error and r.findings}
 
 
+def publish(files: list[str], gcs_prefix: str) -> list[str]:
+    """Copy the sweep's artifacts to GCS. Returns what landed; never raises.
+
+    A runner has no repo to commit to and should not have one - keeping its GitHub identity
+    read-only is the point. GCS is where the outputs live for anyone downstream.
+    """
+    if not gcs_prefix:
+        return []
+    landed = []
+    for f in files:
+        if not f or not os.path.exists(f):
+            continue
+        dest = f"{gcs_prefix.rstrip('/')}/{os.path.basename(f)}"
+        r = subprocess.run([*_GSUTIL, "cp", f, dest], capture_output=True, timeout=300)
+        if r.returncode == 0:
+            landed.append(dest)
+        else:
+            print(f"[sweep] upload failed {dest}: {r.stderr.decode()[:160]}")
+    return landed
+
+
 def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
-        outdir: str = OUTDIR, ledger_path: str = ledger_mod.LEDGER) -> dict:
+        outdir: str = OUTDIR, ledger_path: str = ledger_mod.LEDGER,
+        gcs_prefix: str = "") -> dict:
     """Crawl, record, report. Returns the paths written and the headline counts."""
     reports = crawl(paths)
     scored = [r for r in reports if not r.error]
@@ -76,11 +102,14 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     with open(digest_path, "w") as fh:
         fh.write(digest_mod.render_plain(text))
 
+    published = publish([backlog, digest_path, cov.report_path if cov else "", ledger_path],
+                        gcs_prefix)
+
     return {
         "backlog": backlog, "digest": digest_path,
         "coverage": cov.report_path if cov else "",
         "scanned": len(scored), "findings": findings, "high": high,
-        "ledger_entries": len(entries), "slack": text,
+        "ledger_entries": len(entries), "slack": text, "published": published,
     }
 
 
@@ -93,15 +122,21 @@ def main() -> None:
     ap.add_argument("--airflow-base", default="",
                     help="Airflow API base ending in /api/v2; omit to skip coverage")
     ap.add_argument("--outdir", default=OUTDIR)
+    ap.add_argument("--ledger", default=ledger_mod.LEDGER)
+    ap.add_argument("--gcs-prefix", default=os.environ.get("OPTIMIZER_GCS_PREFIX", ""),
+                    help="gs://... to publish the artifacts to; omit to keep them local only")
     args = ap.parse_args()
 
-    out = run(args.paths, args.date, args.source, args.airflow_base, args.outdir)
+    out = run(args.paths, args.date, args.source, args.airflow_base, args.outdir,
+              args.ledger, args.gcs_prefix)
     print(f"Fleet optimization: {out['scanned']} jobs scanned, {out['findings']} findings, "
           f"{out['high']} high-impact.")
     print(f"[sweep] backlog  {out['backlog']}")
     print(f"[sweep] digest   {out['digest']}  ({out['ledger_entries']} ledger entries)")
     if out["coverage"]:
         print(f"[sweep] coverage {out['coverage']}")
+    for dest in out["published"]:
+        print(f"[sweep] published {dest}")
 
 
 if __name__ == "__main__":
