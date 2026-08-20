@@ -110,8 +110,8 @@ compare(bv2, ov2, "bucket2", "MM (all)", "3P", "MM vs 3P by vertical",
 
 compare(bv, ov, "bucket_detail", "MM (gated)", "3P", "MM gated vs 3P by vertical",
         finding="Gated MM beats 3P 6.1x on visit rate, the best-configured subset not the average",
-        method="MM with the intent gate on vs 3P. Pair it with the blended tab; quoting only this "
-               "one overstates the typical account. See Read me.",
+        method="The 1,254 of 2,613 MM advertisers whose intent threshold is above 0, so the bidder "
+               "only serves model-scored households. MM vs 3P by vertical has all of them.",
         toc="MM with the intent gate on vs 3P", kind="data")
 
 # ------------------------------------------------------------------------------- detail + overall
