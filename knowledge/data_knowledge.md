@@ -395,6 +395,22 @@ plausibly a ~$1M cap; mechanism/location not found). So bronze ⊃ silver ⊃ ui
 begin mid-Oct 2025; Sep 2025 fully absent) — NOT a 10–90d TTL. Silver `conversion_log` floor ≈ **2024-01**
 (no partitions exist before that). Any bronze-vs-silver comparison older than ~9 months is impossible.
 
+### Three different "visit" counts, and which one answers "are we reaching this advertiser's audience?" (AUDI-1210, 2026-08-19)
+
+For one advertiser over one window there are three distinct visit numbers, and mixing them produces the wrong conclusion:
+
+1. **Their site traffic** — `summarydata.sum_by_advertiser_by_day.raw_visits` (INT64). Every visit the advertiser's own pixel reported, whether or not MNTN served anything. Independent of us.
+2. **Our verified visits** — `SUM(clicks) + SUM(views) + SUM(competing_views)` from the same table. The client-facing Reporting figure, impression-gated and attribution-credited.
+3. **Matched IPs** — distinct `cost_impression_log.ip` that later appear in `clickpass_log` for that advertiser. A distinct-household count, so a household visiting five times counts once, and the IP join misses cross-device.
+
+**Ratios and what each actually measures.** `matched IPs / served IPs` (call it match rate) mostly tracks **campaign audience size against site size**, NOT measurement health — Maurices (66784) matches 3.15% of served IPs while reaching 0.40% of its site traffic; Re-Bath Cherry Hill (39510) matches 0.13% and reaches 1.27%. The account with the 25x worse match rate reaches 3x more of its audience. **`verified visits / raw_visits` = share of site visits** is the ratio that answers "how much of this advertiser's audience came through us." Johnny Chen named it share of voice; renamed here because share of voice normally means impression share against competitors.
+
+**Scale traps on both ratios.** (a) **Share of site visits shrinks with site size** — corr(log raw_visits, log share) = **-0.24**; median share by site-size quintile runs 1.09% · 0.91% · 0.77% · 0.78% · 0.39%. Rank it WITHIN a size quintile or the flag just selects large sites (an unadjusted bottom-quartile cut flagged ElevenLabs, Buckle, Apollo.io, EcoATM and Owala purely for scale). Needs ≥1,000 reported site visits to mean anything. (b) **Visit rate is a 30-day CUMULATIVE rate, ~6x the daily one** — advertiser×30d median **2.0%**, advertiser×day median 0.42%, campaign×day median **0.334%**. So "0.2% IVR" is unremarkable daily and bottom-fifth cumulatively; always state the grain. A cumulative cut at 0.5% is the bottom **28%** of the live base, not an outlier line.
+
+**Reading a zero.** Verified visits ≤ raw visits by construction, so a zero on a quiet site is arithmetic, not a defect. Of 1,859 live advertisers (30d to 2026-08-19): 1,649 scorable · 171 sites too quiet to score (<1,000 visits) · 37-39 reporting nothing at all, together only ~$55-78k of spend. Separate a never-installed pixel from a broken one with 12 months of `raw_visits`: an opt-out NEVER reports a visit, a defect reports and stops. Of the dark group, 5 never tracked and 32 tracked-then-stopped — but 32 of those stopped from 1-151 visits across the whole year, which is indistinguishable from a quiet site. Only **Dura Guard Roofing** stopped from real volume (7,338 visits/12mo, last 2026-04-28).
+
+**`advertisers.conv_pixel_opt_out` is NOT backfilled — do not read it historically.** Share TRUE by advertiser creation year: 0.00% for every year 2010-2021 · 0.07% 2022 · 0.09% 2023 · 0.24% 2024 · **0.80% 2025** · 0.39% 2026. It also covers the CONVERSION pixel specifically; a separate visit-tracking opt-out may exist that `integrationprod.advertisers` does not carry (`pixel_id` is NULL for every row, and `core_pixel_integrations` is the e-commerce integration table — 11,814 rows all "Not Done"). `tracking_pixel_status_id` = 10 for essentially every live-serving advertiser (1,848 of 1,859) while 9 dominates the full table, so 10 reads as the active state and carries no discriminating signal.
+
 ### Detecting an advertiser pixel/tag change from OUR side (playbook, WGU-REV 2026-07-08)
 We can't see the client's tag manager (per Kevin Cipriani, changes happen in Adobe Launch/GTM we have no
 access to) — but every fire lands in conversion_log with its full payload, so changes are reconstructable
