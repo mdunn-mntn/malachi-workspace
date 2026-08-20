@@ -275,8 +275,11 @@ def analyze_run(run: object) -> list[OptFinding]:
                 f"{s.fetch_wait_ms / 1000:.0f}s of {s.run_time_ms / 1000:.0f}s task time is "
                 f"shuffle-fetch wait over {s.num_tasks} tasks - the shuffle IO path is the "
                 "bottleneck, not compute.",
-                "Raise spark.sql.shuffle.partitions (smaller blocks fetch in parallel) and check "
-                "executor count/network tier; premium disk helps only the write side.",
+                "Check which executors hold the map output before changing partition counts. If "
+                "it is concentrated (the map stage ran while the fleet was still scaling up), "
+                "raise dynamicAllocation.initialExecutors so the map stage spreads its output; "
+                "raising spark.sql.shuffle.partitions then makes it WORSE by multiplying block "
+                "count. Raise partitions only when the blocks themselves are large.",
                 rec_type="code"))
 
     # GC PRESSURE across the run - an infra (memory) signal.

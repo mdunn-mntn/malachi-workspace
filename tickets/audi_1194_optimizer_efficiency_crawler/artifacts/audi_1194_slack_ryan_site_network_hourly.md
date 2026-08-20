@@ -1,0 +1,88 @@
+# Slack DM draft, Ryan Kleck, re: site_network_hourly Stage 9
+
+Owner routing: `JobTeamConfig.TPA_EXPORT` -> `Team.TARGETING`, `#alerts-tpa-pipeline`.
+Verified 2026-08-20 against 4 real event logs (3 from 2026-08-17, 1 from 2026-08-20).
+Everything below the marker is the message; the evidence section is for follow-up questions.
+
+## Message
+
+Hey Ryan, can you set `initialExecutors` to ~300 on `site_network_hourly` for one hour so I can profile that run?
+
+Stage 9 burns 44-73% of task time waiting on shuffle fetch, every run I've checked. Not compute, CPU is 2.6% of run time. Its map stage always starts with exactly 50 executors and lands 90% of its output on 48-105 of them. The job's later shuffles run with 400+ up, spread evenly, and wait about 0%.
+
+## Evidence
+
+Measured with `airflow_optimizer` (AUDI-1194) on four event logs from
+`gs://mntn-data-archive-prod/spark-events`.
+
+### The stall, every run
+
+| log | stage 9 tasks | fetch wait | blocks | bytes/block |
+|---|---|---|---|---|
+| app-20260817065122856-0420 | 366 | **73%** (17,379s of 23,716s) | 4,222,144 | 1,753 |
+| app-20260817085115734-0691 | 128 | **64%** | 1,356,749 | 1,544 |
+| app-20260817125114709-0168 | 622 | **44%** | 5,117,397 | 5,950 |
+| app-20260820185132316-0176 | 74 | **58%** | 709,722 | 1,333 |
+
+The crawl backlogs show the same stage at 44-73% on 8 of 8 runs sampled on 2026-08-17, and
+on every sweep since 2026-08-07. Zero fetch failures, zero spill, CPU 608s of 23,716s run time.
+
+### What it is not
+
+Block size and block count are not the cause. In the same app, stages 29 and 35 fetch
+**23.4M blocks at 1,607 B** (5.5x more blocks, same size) with **1s** of fetch wait.
+
+So raising `spark.sql.shuffle.partitions` is the wrong lever here and would make it worse by
+multiplying block count. (The optimizer's stock advice for this detector said to raise it;
+that text has been corrected.)
+
+### What discriminates the stalling read from the clean one
+
+Shuffle blocks are served by the executor that wrote them, so the reduce stage is
+rate-limited by how many map-side executors hold the output:
+
+| feeding map stage | executors live at its start | output spread over | 90% sits on | hottest holds | its reducer's fetch wait |
+|---|---|---|---|---|---|
+| stage 5 (feeds stage 9) | **50** | 159 | 77 | **24.6%** | 73% |
+| stage 5, run 2 | **50** | 206 | 105 | **19.9%** | 64% |
+| stage 6, run 3 | **50** | 146 | 48 | 2.2% | 44% |
+| stage 5, run 4 | **50** | 191 | 85 | **18.1%** | 58% |
+| stage 26 (feeds stage 29) | 306-398 | 481-500 | 422-436 | **0.3%** | 0% |
+
+In all four logs the first big map stage starts with **exactly 50 executors** live
+(`initialExecutors=50`), runs for 48-257s, and concentrates its output. By the time the
+later map stages run, 306-500 executors are up and the output spreads across ~480 of them.
+Their reducers do not stall.
+
+### The one thing that does not fit
+
+Stage 15 reads the **same** map output as stage 9, with comparable block count and size, and
+waits ~0%. The likely reason is that stage 9 is the first reader (cold, off the map-side
+executors' local disks) and stage 15 the second (warm), but the event log cannot settle that.
+This is why the ask is a one-hour experiment rather than a config prescription.
+
+### Cost context
+
+17 SUCCEEDED runs on 2026-08-20 (04:50-19:50): **8,663 DCU-h total, mean 510/run, range
+164-1,547** (`runtimeInfo.approximateUsage.milliDcuSeconds`, metered not estimated).
+Stage 9 held 306 executors for 93s of an 823s app in the profiled run, at 16% utilization
+(~31 idle executor-hours).
+
+The DCU actually attributable to the stall is **not established** -- that is what the
+experiment measures. Any dollar figure is also unproven while a committed-use discount is in
+play: cutting DCU-seconds under a CUD floor saves nothing.
+
+### Config as observed (event log, not source)
+
+`spark.sql.shuffle.partitions=5000` (SparkSession builder, wins over the decorator),
+`executor.cores=4`, `executor.memory=9600m`, `minExecutors=2`, `initialExecutors=50`,
+`maxExecutors=500`, `executorAllocationRatio=0.3`, AQE on, `speculation` unset,
+`shuffleTracking.enabled=true`, runtime 2.3.39.
+
+### Reproduce
+
+```
+gsutil -o "GSUtil:check_hashes=never" cp gs://mntn-data-archive-prod/spark-events/<app>.zstd .
+python3 -m airflow_optimizer.optimize <app>.zstd
+PYTHONPATH=. python3 tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_shuffle_concentration.py <app>.zstd
+```
