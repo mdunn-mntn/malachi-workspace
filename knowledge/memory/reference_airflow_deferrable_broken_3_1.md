@@ -26,7 +26,7 @@ The trigger returns the batch state as a **proto enum**; Airflow 3.1's msgpack c
 
 **A clean prod triggerer log is NOT evidence of health.** Prod had zero deferred task instances at the time (`POST /dags/~/dagRuns/~/taskInstances/list` with `{"state":["deferred"]}` returned 0), so its triggerer had never been exercised. The crash only fires once a trigger actually runs.
 
-**Consequence.** `deferrable=True` was removed from #1206; only the batch-cancel guardrail shipped. Revisit deferrable after an Astro runtime or `apache-airflow-providers-google` bump, and re-test with the recipe in [[reference_airflow_ti_dev_testing]].
+**Consequence.** `deferrable=True` was removed from #1206; only the batch-cancel guardrail shipped (merged 2026-08-20, prod-validated on `site_network_hourly` `scheduled__2026-08-20T01:50:00+00:00`, success try 1 in 14.7 min on bundle `2026-08-20T02:00:01Z`). Revisit deferrable after an Astro runtime or `apache-airflow-providers-google` bump, and re-test with the recipe in [[reference_airflow_ti_dev_testing]].
 
 **How to check quickly:** `astro deployment logs <id> --triggerer --error | grep "Trigger runner"`. Zero hits means either healthy or unexercised; confirm which by counting deferred task instances.
 
