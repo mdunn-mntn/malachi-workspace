@@ -307,6 +307,37 @@ class MntnWorkbook:
     # BLUF stays where a conclusion is the point: takeaways and the finding title. (Malachi, 2026-08-20.)
     _LABEL_PREFIX = re.compile(r"^\s*[A-Z][^.:;!?]{0,44}:\s+\S")
 
+    # A descriptive slot must be readable without the author standing next to it. Two failure modes,
+    # both shipped on AUDI-1141 before review caught them: a coined shorthand the workbook never defines
+    # ("whale-robust"), and a pointer to another tab that never names it ("pair it with the blended tab").
+    # Name the tab, or give the number. (Malachi, 2026-08-20.)
+    _COINED = re.compile(
+        r"\b(?:whale[- ]robust|blended tab|the other tab|this one|as (?:noted|above|mentioned)|"
+        r"see below|the former|the latter|apples[- ]to[- ]apples)\b",
+        re.I,
+    )
+    _VAGUE_POINTER = re.compile(
+        r"\b(?:the|that|another|this)\s+(?:tab|sheet|column|section)\b", re.I
+    )
+
+    def _check_explicit(self, sheet: str, field: str, text: str) -> None:
+        if not text:
+            return
+        m = self._COINED.search(text)
+        if m:
+            self._issue(
+                sheet,
+                f"{field} uses {m.group(0)!r}, which the workbook never defines — say it plainly or "
+                f"name the tab / give the number",
+            )
+        m = self._VAGUE_POINTER.search(text)
+        if m:
+            self._issue(
+                sheet,
+                f"{field} points at {m.group(0)!r} without naming it — write the actual tab or "
+                f"column name so the line reads on its own",
+            )
+
     def _check_label_prefix(self, sheet: str, field: str, text: str) -> None:
         if text and self._LABEL_PREFIX.match(text):
             badge = text.split(":", 1)[0].strip()
@@ -324,6 +355,7 @@ class MntnWorkbook:
         basis and delegate, e.g. "... See Read me for definitions."
         """
         self._check_label_prefix(sheet, "method", method)
+        self._check_explicit(sheet, "method", method)
         for label, text, cap in (
             ("finding", finding, self.FINDING_CAP),
             ("method", method, self.METHOD_CAP),
@@ -870,6 +902,7 @@ class MntnWorkbook:
             self._pending_query_links.append((ws.title, foot_row, query))
         if toc:
             self._check_label_prefix(ws.title, "toc", toc)
+            self._check_explicit(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, kind))
         return ws
 
@@ -941,6 +974,7 @@ class MntnWorkbook:
         self._fit_subtitle_height(ws, 2, sub, a_width + body_width)
         if toc:
             self._check_label_prefix(ws.title, "toc", toc)
+            self._check_explicit(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, "glossary"))
         return ws
 
@@ -1014,6 +1048,7 @@ class MntnWorkbook:
         self._fit_subtitle_height(ws, 2, note, width)
         if toc:
             self._check_label_prefix(ws.title, "toc", toc)
+            self._check_explicit(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, "sql"))
         return ws
 
@@ -1139,6 +1174,7 @@ class MntnWorkbook:
         self._fit_subtitle_height(ws, 2, intro, body_width)
         if toc:
             self._check_label_prefix(ws.title, "toc", toc)
+            self._check_explicit(ws.title, "toc", toc)
             self._toc.append((ws.title, toc, "notes"))
         return ws
 

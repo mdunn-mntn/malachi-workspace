@@ -409,3 +409,17 @@ Write "Every MM campaign vs 3P, by vertical", not "The headline: every MM campai
 In a contents list every line is a description, so the badge carries no information and reads as
 salesmanship. Conclusion-first phrasing belongs where a conclusion is the point: cover takeaways and the
 sheet `finding=` title. `MntnWorkbook` hard-fails the build on a badge in `toc=` or `method=`.
+
+### Descriptive slots must read on their own
+
+A contents line, method subtitle or caption is read by someone with no one standing next to them. Two
+things break that, and `MntnWorkbook` now hard-fails the build on both:
+
+- **Coined shorthand the workbook never defines** — `whale-robust`, `apples-to-apples`, `the former`.
+  Say it plainly: "the middle advertiser, each counting once", not "advertiser-weighted and whale-robust".
+- **A pointer that never names its target** — "pair it with the blended tab", "see the other column".
+  Name the actual tab or column: "MM vs 3P by vertical has all of them".
+
+When a subtitle describes a subset, give its size rather than a label: "the 1,254 of 2,613 MM advertisers
+whose intent threshold is above 0" beats "MM with the intent gate on". Derive those counts from the data
+in the builder so they cannot drift on the next refresh.

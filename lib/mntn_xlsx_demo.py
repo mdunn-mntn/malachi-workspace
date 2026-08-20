@@ -61,7 +61,7 @@ for v, mi, ti, mc, tc, mr, tr, ma, ta in rows:
         full_rows.append(
             {
                 "Sales vertical": v,
-                "Group": g,
+                "Targeting group": g,
                 "Advertisers": int(ma * (0.9 if g.startswith("MM") else 1.0) if g != "3P" else ta),
                 "Campaigns": int((ma if g != "3P" else ta) * 1.8),
                 "Spend": round((ma if g != "3P" else ta) * 21000 * k),
@@ -80,7 +80,7 @@ detail = pd.DataFrame(
             "Advertiser": f"Advertiser {chr(65 + i)}",
             "Campaign ID": 400000 + i,
             "Sales vertical": rows[i % len(rows)][0],
-            "Group": groups[i % 4],
+            "Targeting group": groups[i % 4],
             "Impressions": 5_200_000 - i * 130_000,
             "Visits": int((5_200_000 - i * 130_000) * (0.0060 - i * 0.0003)),
             "Spend": 92000 - i * 4200,
@@ -145,7 +145,7 @@ wb.table(
     },
     heat={"IVR (median)": "high", "CPV (median)": "low", "ROAS (median)": "high"},
     kind="data",
-    widths={"Sales vertical": 22, "Group": 15, "Spend": 12, "Impressions": 13},
+    widths={"Sales vertical": 22, "Targeting group": 15, "Spend": 12, "Impressions": 13},
     freeze="C",
     toc="Full breakout — all four groups across every vertical",
 )
