@@ -43,8 +43,8 @@ df_flag = pd.DataFrame([{
     "Their site visits": int(f(r, "raw_visits_30d")),
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits"),
-    "Rank vs peers": f(r, "site_visit_share_percentile_vs_peers"),
-    "Site size group": SIZE.get(r["site_size_quintile"]),
+    "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers"),
+    "Site size": SIZE.get(r["site_size_quintile"]),
 } for r in flagged])
 
 df_dark = pd.DataFrame([{
@@ -53,7 +53,7 @@ df_dark = pd.DataFrame([{
     "30-day spend": f(r, "spend_30d"),
     "Visits in 12 months": int(f(r, "raw_visits_12mo")),
     "Last visit seen": r["last_day_with_a_visit"] or None,
-    "Reading": "Never tracked" if f(r, "raw_visits_12mo") == 0 else "Tracked, then stopped",
+    "Tracking history": "Never tracked" if f(r, "raw_visits_12mo") == 0 else "Tracked, then stopped",
 } for r in dark])
 
 df_all = pd.DataFrame([{
@@ -63,12 +63,12 @@ df_all = pd.DataFrame([{
     "Their site visits": int(f(r, "raw_visits_30d")),
     "Our visits": int(f(r, "verified_visits_30d")),
     "Share of site visits": f(r, "share_of_site_visits") or None,
-    "Rank vs peers": f(r, "site_visit_share_percentile_vs_peers") if r["coverage"] == "Scored" else None,
-    "Site size group": SIZE.get(r["site_size_quintile"]),
+    "Similar sites we beat": f(r, "site_visit_share_percentile_vs_peers") if r["coverage"] == "Scored" else None,
+    "Site size": SIZE.get(r["site_size_quintile"]),
 } for r in rows])
 
 FM = {"30-day spend": FMT.USD, "Their site visits": FMT.INT, "Our visits": FMT.INT,
-      "Share of site visits": FMT.PCT2, "Rank vs peers": FMT.PCT0, "Advertiser ID": "0",
+      "Share of site visits": FMT.PCT2, "Similar sites we beat": FMT.PCT0, "Advertiser ID": "0",
       "Visits in 12 months": FMT.INT}
 
 wb = MntnWorkbook(
@@ -82,7 +82,7 @@ wb = MntnWorkbook(
 wb.table(
     "Reporting nothing", df_dark,
     finding=f"{len(df_dark)} advertisers reported no site visits in 30 days, but only one stopped from real volume",
-    method=f"{never} never tracked a visit in 12 months. The rest stopped, mostly from single-digit annual volume. Together they spent ${dark_spend:,.0f}.",
+    method=f"{never} have never reported a visit in 12 months. The rest reported some and stopped, mostly from single-digit annual volume. Together they spent ${dark_spend:,.0f}.",
     formats=FM, kind="headline",
     toc="Start here: advertisers reporting no visits at all",
     query="audi_1210_share_of_site_visits.sql",
@@ -91,7 +91,7 @@ wb.table(
 wb.table(
     "Check these first", df_flag,
     finding=f"{len(df_flag)} advertisers spending ${flag_spend / 1e6:.1f}M get credit for less of their site traffic than three quarters of similar accounts",
-    method="Share of site visits is our verified visits over the advertiser's own reported visits, ranked within a site-size group. See Read me.",
+    method="Share of site visits is our visits over theirs. Each advertiser is compared only to others whose sites get about as much traffic. See Read me.",
     formats=FM, heat={"30-day spend": "high"}, kind="data",
     toc="Accounts short of similar advertisers, $10k or more in spend",
     query="audi_1210_share_of_site_visits.sql",
@@ -112,9 +112,10 @@ wb.glossary(
         ("Their site visits", "Every visit the advertiser's own pixel reported in 30 days, whether or not MNTN was involved."),
         ("Our visits", "MNTN verified visits over the same period: clicks plus views plus competing views. The client-facing Reporting figure."),
         ("Share of site visits", "Our visits over their site visits."),
-        ("Rank vs peers", "Where that share sits against advertisers with similarly sized sites. 20% means four in five peers do better."),
-        ("Site size group", "Advertisers split into five equal groups by their own site visits. The share falls as sites get larger, so it is only comparable within a group."),
+        ("Similar sites we beat", "Of advertisers whose sites get about as much traffic, the share we do better than. 23% means we reach a bigger slice of the audience than 23 of every 100 similar advertisers, and a smaller slice than the other 77."),
+        ("Site size", "Which fifth of advertisers this one falls in, by its own site traffic. Comparison is always against the same fifth, because a bigger site gives us a smaller slice."),
         ("No share shown", "The advertiser reported fewer than 1,000 site visits, so the ratio would be noise."),
+        ("Tracking history", "For advertisers reporting nothing now: whether they have EVER reported a visit in the last 12 months. Never tracked points at a pixel that was never installed; tracked then stopped points at one that broke."),
     ],
 )
 
@@ -124,8 +125,8 @@ wb.notes(
     blocks=[
         ("This is a flag, not a verdict",
          "A low share can come from campaign configuration, audience, flight length or budget. It says the account is worth opening, not that anything is broken."),
-        ("Compared within a size group, because the share shrinks with site size",
-         "Median share runs 1.09% at the smallest fifth of sites and 0.39% at the largest. Ranking on the raw figure would flag large sites and nothing else."),
+        ("Every advertiser is compared only to others with similarly busy sites",
+         "The bigger a site gets, the smaller a slice any one channel holds: the median share runs 1.09% for the least-trafficked fifth of sites and 0.39% for the busiest fifth. Comparing across the whole base would flag large sites and nothing else, so the comparison is made inside each fifth."),
         ("Our visits are attribution-credited, not a clean reach count",
          "A verified visit requires an impression to have been served and credited. So a low share mixes reaching few of their visitors with being credited for few, and the two cannot be separated here."),
         ("Visit rate on its own was the wrong measure",
@@ -143,7 +144,7 @@ wb.sql_dir("Queries", f"{T}/queries",
 wb.cover(takeaways=[
     f"{len(df_flag)} advertisers spending ${flag_spend / 1e6:.1f}M over 30 days get credit for less of their site traffic than similar accounts.",
     f"The {len(dark)} reporting nothing at all spent ${dark_spend:,.0f} between them, and only one stopped from real volume.",
-    "Share of site visits is only comparable within a site-size group: it runs 1.1% at the smallest sites and 0.4% at the largest.",
+    "Busier sites give any channel a smaller slice, so each advertiser is compared only to others with similarly busy sites.",
 ])
 
 # Filename is kept as-is on purpose: the link is already circulating with Johnny and Imani.
