@@ -103,8 +103,8 @@ def cand_rows(rows):
         out.append({
             "Advertiser": r["advertiser_name"],
             "Industry": (m.get("vertical_buckets") or "").split(" | ")[0] or None,
-            "Tier": r["final_tier"],
-            "Score": num(r, "value_score"),
+            "Test readiness": r["final_tier"],
+            "Candidate score": num(r, "value_score"),
             "Monthly spend": num(r, "avg_monthly_spend"),
             "Visit rate": num(r, "ivr"),
             "Detectable lift": (num(r, "mde_ivr_at_normal_pct") or 0) / 100.0,
@@ -148,7 +148,7 @@ df_audit = pd.DataFrame([{
     "Visit rate": num(r, "ivr"),
     "Visiting IPs": int(num(r, "visiting_ips_30d") or 0),
     "Screened out at": None if r["failed_at_filter"] == "PASSED" else r["failed_at_filter"],
-    "Tier": r["final_tier"] or None,
+    "Test readiness": r["final_tier"] or None,
 } for r in sorted(allf, key=lambda r: -(num(r, "avg_monthly_spend") or 0))])
 
 # ---------------------------------------------------------------- spend -> MDE curve
@@ -183,11 +183,11 @@ wb.table(
     "Best candidates", df_top,
     finding=f"{len(df_top)} advertisers can both power a 5% test in 8 weeks and already show a real lift",
     method=f"Advertisers delivering in the trailing 30 days, screened and ranked. Measured lift is the ghost-bid holdout, {WINDOW}. See Read me.",
-    formats={"Score": FMT.NUM1, "Monthly spend": FMT.USD, "Visit rate": FMT.PCT2,
+    formats={"Candidate score": FMT.NUM1, "Monthly spend": FMT.USD, "Visit rate": FMT.PCT2,
              "Detectable lift": PCT, "Test budget": FMT.USD,
              "Measured lift": PCT, "Conversion lift": PCT, "Held-out visits": FMT.INT},
     signal={"Measured lift": {"sig": "Lift is real"}},
-    heat={"Score": "high", "Detectable lift": "low"},
+    heat={"Candidate score": "high", "Detectable lift": "low"},
     kind="headline",
     toc="Start here: the shortlist for the beta",
     query="incr_75_advertiser_metrics.sql",
@@ -217,8 +217,8 @@ wb.table(
 wb.table(
     "All eligible", df_all_elig,
     finding=f"All {len(df_all_elig):,} eligible advertisers, ranked within tier by candidate score",
-    method="Tier is power crossed with confirmed lift. Top needs both, Mid needs one, Low needs neither. Score ranks within a tier.",
-    formats={"Score": FMT.NUM1, "Monthly spend": FMT.USD, "Visit rate": FMT.PCT2,
+    method="Test readiness crosses power with confirmed lift: Top needs both, Mid one, Low neither. Candidate score ranks within a readiness group.",
+    formats={"Candidate score": FMT.NUM1, "Monthly spend": FMT.USD, "Visit rate": FMT.PCT2,
              "Detectable lift": PCT, "Test budget": FMT.USD,
              "Measured lift": PCT, "Conversion lift": PCT, "Held-out visits": FMT.INT},
     signal={"Measured lift": {"sig": "Lift is real"}},
@@ -262,11 +262,11 @@ wb.glossary(
         ("Test budget", "Total spend needed over 8 weeks to detect a 5% lift. Compare it to monthly spend times 1.8."),
         ("Powered at 5%", "Whether normal 8-week spend already covers that budget."),
         ("", ""),
-        ("Tiers", ""),
+        ("Test readiness", ""),
         ("Top", "Can power a 5% test at normal spend AND already shows a real positive lift."),
         ("Mid", "One of the two, not both."),
         ("Low", "Neither. Still eligible, but a test would need more spend or a longer window."),
-        ("Score", "A 0-100 candidate quality score from power, spend, brand size, visit rate and past test results. It ranks advertisers WITHIN a tier. Measured lift is not part of it."),
+        ("Candidate score", "A 0-100 quality score from power, spend, brand size, visit rate and past test results. It ranks advertisers WITHIN a readiness group, not across them. Measured lift is not part of it."),
 
     ],
 )

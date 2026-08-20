@@ -87,9 +87,15 @@ Two rules from global `CLAUDE.md` §9, restated here because workbooks break the
 Two failure modes caught in review on AUDI-1210 (2026-08-19), both of which passed every existing check because the terms *were* defined on the Read me:
 
 - **A header that only makes sense after a lookup is a variable, not a word.** `Rank vs peers` and `Reading` both had correct Read me entries and still stopped the reader. Rewrite the header as the sentence the number answers: `Rank vs peers` → **Similar sites we beat** (now the percentile reads forward — 23% means better than 23 of every 100), `Reading` → **Tracking history**. If you cannot name a column without a definition, the column is doing two jobs.
-- **Never label a derived group by its ordinal position.** `Smallest fifth / Second fifth / Fourth fifth / Largest fifth` tells the reader nothing about what the group *is*, and "fourth fifth" is actively hard to parse. Carry the actual range instead: **Under 25K · 25K to 120K · 120K to 350K · 350K to 1.4M · Over 1.4M**. The group then explains itself and the reader can see why a given row landed in it. Same rule for score bands, spend tiers and date buckets.
+- **Never label a derived group by its ordinal position.** `Smallest fifth / Second fifth / Fourth fifth / Largest fifth` tells the reader nothing about what the group *is*, and "fourth fifth" is actively hard to parse. Carry the actual range instead. Same rule for score bands, spend tiers and date buckets.
+- **A range carries its unit, in the header or in the value — never neither.** The first fix above produced `Under 25K · 350K to 1.4M · Over 1.4M`, and the immediate question back was *"over 1.4M what?"*. Landed as header **Compared to sites with** + values **`Under 25K visits` … `Over 1.4M visits`**. Put the unit once where it reads naturally: on the header when every value shares it and repetition would be noise, on the values when the header is already carrying a different job.
 
-A useful test before shipping: read each header aloud with no other context. If the answer to "what would this cell contain?" is a guess, rename it.
+Three tests before shipping, all cheap:
+1. Read each header aloud with no other context. If "what would this cell contain?" is a guess, rename it.
+2. Read one cell value aloud on its own. If it prompts "…of what?", the unit is missing.
+3. If a value names a bucket, ask whether the reader can tell *why this row landed there*. Ordinal labels always fail this; ranges always pass it.
+
+**Partly enforced.** `MntnWorkbook.table()` raises on ordinal-position group labels (`fourth fifth`, `third quintile`, `2nd decile`) and on placeholder headers (`Reading`, `Value`, `Status`, `Category`, `Group`, `Type`, `Rank`, `Score`, `Band`, `Tier`, `Metric`, `Result`, `Flag`, `Notes`). The unit test and the read-aloud tests are on you — no check can see that `Over 1.4M` is missing a noun.
 
 ### Tab title + method subtitle caps (HARD — the build refuses to write the file)
 

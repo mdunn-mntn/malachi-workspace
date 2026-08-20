@@ -463,6 +463,61 @@ class MntnWorkbook:
             maxlines = max(maxlines, self._wrap_lines(col, w))
         ws.row_dimensions[start_row].height = max(base, min(maxlines, 4) * per_line + pad)
 
+    # Headers so generic the reader must go find a definition, and group labels that name a
+    # position instead of a range. Both shipped on AUDI-1210 with correct Read me entries and
+    # still stopped the reader — a definition you have to fetch is friction, so this is a build
+    # failure rather than a doc rule. See xlsx_deliverable_standard.md "Column headers must read
+    # without the Read me".
+    _VAGUE_HEADERS = frozenset(
+        {
+            "reading",
+            "value",
+            "status",
+            "category",
+            "group",
+            "type",
+            "rank",
+            "score",
+            "band",
+            "tier",
+            "metric",
+            "result",
+            "flag",
+            "notes",
+            "label",
+            "class",
+            "level",
+        }
+    )
+    _ORDINAL_LABEL = re.compile(
+        r"\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth"
+        r"|smallest|largest|lowest|highest|top|bottom|\d+(?:st|nd|rd|th))\s+"
+        r"(?:fifth|quarter|quartile|quintile|decile|tenth|third|half|bucket|group|band|tier)\b",
+        re.I,
+    )
+
+    def _check_labels(self, sheet: str, df: pd.DataFrame) -> None:
+        """Fail the build on a header that needs a glossary, or a group label naming a position."""
+        for col in df.columns:
+            if str(col).strip().lower() in self._VAGUE_HEADERS:
+                self._issue(
+                    sheet,
+                    f"column header {col!r} is too generic to read on its own — name it as the "
+                    f"question the number answers (e.g. 'Reading' -> 'Tracking history')",
+                )
+        for col in df.columns:
+            series = df[col]
+            if series.dtype != object:
+                continue
+            for v in series.dropna().unique()[:200]:
+                if isinstance(v, str) and self._ORDINAL_LABEL.search(v):
+                    self._issue(
+                        sheet,
+                        f"group label {v!r} in {col!r} names a position, not a range — carry the "
+                        f"actual band instead (e.g. 'Fourth fifth' -> '350K to 1.4M visits')",
+                    )
+                    break
+
     def _issue(self, sheet: str, msg: str) -> None:
         """Record a build-time violation. save_*() prints all of them and RAISES, so a workbook that breaks
         a hard rule (char cap, etc.) cannot be produced -- the mistake fails the build instead of shipping."""
@@ -657,6 +712,7 @@ class MntnWorkbook:
         rag = rag or {}
         signal = signal or {}
         self._check_titleblock(name, finding, method)
+        self._check_labels(name, df)
         ws = self._new_sheet(name, "headline" if kind == "headline" else kind)
         ncols = len(df.columns)
         self._titleblock(ws, finding, method, ncols)
