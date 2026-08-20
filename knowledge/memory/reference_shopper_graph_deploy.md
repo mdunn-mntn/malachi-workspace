@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py]
 domain: [repos, infra, routing-people]
 lifecycle: active
-last_verified: 2026-07-30
+last_verified: 2026-08-20
 ---
 `SteelHouse/shopper_graph` = the **MNTN Matched backend** ("Shopper Graph" is the original name for MNTN
 Matched — Alyson Lefkowitz + Brian McAdams, INC-006 2026-07-30). Its API services the **entire MNTN Match
@@ -25,6 +25,12 @@ deploy is often the WRONG one. Map the changed file's **build context** to the w
 | `steelhousedev/shopper-graph` (middleware **API-serving app**) | `middleware/k8s` | `deploy_middleware_dockerhub.yml` (env qa\|prod, run-from-branch; prod→main only) | HAS an **mntn-argocd** manifest → deploy opens an mntn-argocd PR (peter-evans / mountain-devops bot) → approve/merge → **Argo re-syncs**. Rollback = revert the argocd PR to an older tag. |
 | `openai_batch_runner` (`DbtImageName.OPEN_AI_BATCH`, the **batch pipeline** `batch_*` tasks) | `openai/` | `deploy_openai_dockerhub_gcp.yml` (env prod, mntn_cloud gcp; from main → tag `{cloud}-{ENV}` = `gcp-prod`) | **NO argocd manifest.** Airflow's `MntnKubePodOperator` pulls the DockerHub tag directly (`image_pull_policy=Always`), so a rebuilt `gcp-prod` tag is picked up on the **next DAG run** — no argocd/sync, no Astronomer bundle redeploy. |
 | `mntn_matched_data_pipeline` (`DbtImageName.SHOPPER_GRAPH`, the **dbt** image) | dbt | "Deploy dbt to Dockerhub" (`deploy_dbt_dockerhub.yml`) | DockerHub image. |
+
+**⚠ Every `dbt/` change needs a manual deploy run, and the gap can be months.** `dbt/Dockerfile` does `COPY shopper_graph_repo/dbt /dbt`, so the whole dbt project including model `.yml` cluster specs is baked into the image; the tag is `steelhousedev/mntn_matched_data_pipeline:${cloud}-${ENV}` and `main` maps to `prod`. On 2026-08-19 a merged fix sat inert because the workflow had last run **2026-06-17** (INC-022). Command:
+```bash
+gh workflow run deploy_dbt_dockerhub.yml -R SteelHouse/shopper_graph --ref main -f environment=prod -f mntn_cloud=gcp
+```
+Check what you are actually shipping first: `git log --oneline <last-deploy-sha>..HEAD -- dbt/`. Two more traps — the Astronomer registry can 503 mid-push, so **read the whole `astro`/`gh run` output, not the last four lines**, and the pod pulls the image at task start, so a task that began before the push completes still runs the old build.
 
 **`mntn_match_incrementals_{submit,fetch}` DAG tasks map ONLY to `openai_batch_runner`** (batch_* tasks:
 `batch_submit`, `batch_transition`, `batch_fetch`) **and `mntn_matched_data_pipeline`** (dbt tasks) —

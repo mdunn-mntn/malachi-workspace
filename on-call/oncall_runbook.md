@@ -148,6 +148,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 
 | Any Targeting DAG, **`No exception message found`** + `Try 0 of N` | A burst of these across unrelated DAGs in one window (2026-08-19: `site_network_hourly`, `audience_intent/wait_for_ipdsc_geo`, `audience_intent/intent_score_map`, `tpa_ipdsc_export/ipdsc_ds_35`). Airflow has no exception because the worker died rather than the task raising. | One cluster-level event: on 2026-08-19 all four ended within 40s of each other on 3+ distinct workers after 22min-2h32m of runtime, with empty try-1 logs. Not a code fault, not a deploy (nearest was 15h earlier). Trigger unverified, see INC-021. | **transient_infra.** Check whether the task already retried before touching anything: `GET /dags/<id>/dagRuns/<run>/taskInstances` and look for `try_number > 1` or `failures=none`. All four on 2026-08-19 recovered on their own. Only act if a task has retries=0 or exhausted them. | INC-021 |
 
+| `keyword_ddp_reporting / write_targeted_signal_ds_13` | dbt `Runtime Error` → `AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view prod.ml.ddp_url_verticals cannot be found` | The source is a dbt table-materialized model that is dropped and recreated on every rebuild. `create_ip_verticals / ddp_url_classification` (daily 00:05 UTC, 25 min to 2h32m) was mid-rebuild. Only collides when the 15:00 reporting run is delayed into the nightly window. | **resource_contention.** Check the producer task's state before touching anything; if it is running, wait for green, then clear the consumer. Do not read `_filtered` as a rename. | INC-023 |
 | `mntn_match_incrementals_fetch / batch_post.taxonomy_vector` (and its consumer `keyword_ddp_reporting / wait_for_product_categorization`) | dbt `Runtime Error in model mntn_matched_taxonomy_vector` → `Cluster '<id>' was terminated. Reason: GCP_INSUFFICIENT_CAPACITY`, detail `VM_MIN_COUNT_NOT_REACHED|ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS`. Every try fails identically for hours. | GCP is out of the requested Intel node type (`c2-standard-8`) in the Databricks project's zone. **Stockout, NOT quota** — a quota fault reads `Quota '<NAME>' exceeded`. `zone_id` was already `auto`, so zone is not the lever, and retry backoff cannot outlast an 8h shortage. | **transient_infra (external).** Do not re-run blindly; confirm the detail string first. Durable fix = flexible node types ([shopper_graph#300](https://github.com/SteelHouse/shopper_graph/pull/300), merged 2026-08-19) plus the workspace toggle *Compute → Enable auto flexible node types*. Full detail + the cost answer: memory `reference_databricks_stockout_flexible_nodes`. | INC-022 |
 
 ---
@@ -1329,9 +1330,19 @@ Clustered end times + distinct hostnames = one platform event. Spread-out end ti
 
 **⚠ Stockout vs quota — the team conflated these all morning.** Ours said `ZONE_RESOURCE_POOL_EXHAUSTED`; another team's job the same hour said `Quota 'LOCAL_SSD_TOTAL_GB_PER_VM_FAMILY' exceeded`. Different faults, different owners: a stockout needs node-type fallback (us), a quota needs a raise (devops). Quota utilization on the Databricks project looked healthy, which is itself evidence it was not quota. Brian McAdams flagged that GCP sometimes reports `QUOTA_EXCEEDED` when it is really a stockout, so read the full detail string.
 
-**Two dead ends, recorded so nobody re-walks them.** (a) **Zone** — `zone_id` was already `auto`, so "pin a different zone" was never available. (b) **Retry spacing** — [airflow-ti#1208](https://github.com/SteelHouse/airflow-ti/pull/1208) adds exponential backoff (5 min → 30 min, cap 4h) and is worth having, but the shortage outlasted any retry window. Do not expect it to rescue a run.
+**Two dead ends, recorded so nobody re-walks them.** (a) **Zone** — `zone_id` was already `auto`, so "pin a different zone" was never available. (b) **Retry spacing** — [airflow-ti#1208](https://github.com/SteelHouse/airflow-ti/pull/1208) adds exponential backoff (merged as 4 retries at +10, +20, +40, +45 min) and is worth having, but the shortage outlasted any retry window. Do not expect it to rescue a run.
 
-**Fix:** flexible node types, which Databricks' own error text recommends. [shopper_graph#300](https://github.com/SteelHouse/shopper_graph/pull/300) merged 2026-08-19 adds `worker_node_type_flexibility` / `driver_node_type_flexibility` with AMD (`n2d`, `c2d`) then `n2` fallbacks. A workspace-wide toggle exists too (**Compute → Enable auto flexible node types**) and is the higher-leverage move since it covers every cluster.
+**Fix: flexible node types — but it took THREE PRs and a manual image deploy, and none of that is obvious.**
+
+1. [shopper_graph#300](https://github.com/SteelHouse/shopper_graph/pull/300) added the two flexibility blocks. **It never ran.** The dbt project is baked into the `steelhousedev/mntn_matched_data_pipeline:gcp-prod` image, and *Deploy dbt to Dockerhub* is `workflow_dispatch`-only; it had last run 2026-06-17. Merging changed nothing until the image was rebuilt. See memory `reference_shopper_graph_deploy`.
+2. Once deployed, Databricks rejected the spec in 2.98s: `INVALID_PARAMETER_VALUE: Node type c2d-standard-8 is not supported`. `c2d-*` is absent from this workspace's catalog. [shopper_graph#301](https://github.com/SteelHouse/shopper_graph/pull/301) swapped in supported ids.
+3. Rejected again, on a rule the docs bury: alternates must match the preferred node's **local SSD count** (plus x86/ARM class, core count, memory within 90-100%, and HYPERDISK_BALANCED support). `c2-standard-8` carries 2x375 GB local SSD; `c3d`/`n4d-standard-8` carry none. [shopper_graph#302](https://github.com/SteelHouse/shopper_graph/pull/302) landed on worker `n2d-standard-8`, `n2-standard-8` and driver `c3d-standard-4`, `n4d-standard-4`.
+
+**The run that finally succeeded (try 22, 15.9 min) used the PREFERRED `c2-standard-8`** — capacity returned on its own. The fallback list is validated but has never been exercised. Do not claim it fixed this incident.
+
+**Authoritative node list:** `databricks clusters list-node-types -p malachi@mountain.com` (169 entries). The Job Compute policy `001D160AE4052091` leaves `node_type_id` unlimited, so the GCP catalog is the only gate. Field to compare: `node_instance_type.local_disks`.
+
+The workspace-wide toggle (**Compute → Enable auto flexible node types**) was turned ON 2026-08-19 after Alyson Lefkowitz signed off on reliability over marginal cost and Brian McAdams agreed conditional on someone watching costs. It applies to NEW classic compute only. Cost monitoring is still unbuilt: `system.billing` is not readable by our account.
 
 **Decision tree (next `GCP_INSUFFICIENT_CAPACITY`):**
 1. **Read the detail string.** `ZONE_RESOURCE_POOL_EXHAUSTED` = stockout. `Quota '<NAME>' exceeded` = devops. They co-occur; do not assume.
@@ -1341,6 +1352,31 @@ Clustered end times + distinct hostnames = one platform event. Spread-out end ti
 5. **Clear the failed producer task** once capacity returns, then clear the downstream sensor.
 
 **Where things live:** the cluster spec is in `SteelHouse/shopper_graph` → `dbt/models/mntn_matched/taxonomy/mntn_matched_taxonomy_vector.yml`. airflow-ti's `DbxDbtOperator` only launches the dbt pod and carries no cluster config. Full detail incl. the cost objection: memory `reference_databricks_stockout_flexible_nodes`.
+
+### INC-023 — `keyword_ddp_reporting` `write_targeted_signal_ds_13` — read a source table while its producer was rebuilding it
+
+**Date:** 2026-08-20 UTC (2026-08-19 PT) · **Alert:** `🔴 [prod] Airflow Targeting FAILURE [keyword_ddp_reporting/write_targeted_signal_ds_13] at 2026-08-18 08:00:00 PT`, `Pod write-targeted-signal-ds-13-... returned a failure.` **STATUS: RESOLVED.**
+
+**Verdict: `resource_contention` (producer/consumer race), not a code fault.** dbt died with `AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view prod.ml.ddp_url_verticals cannot be found`. The table is a dbt **table**-materialized python model, so each rebuild drops and recreates it. `create_ip_verticals / ddp_url_classification` (daily `5 0 * * *`, 25 min to 2h32m) was mid-rebuild; ds_13 read at 00:15 UTC and died at 00:22.
+
+**Why it had never happened before.** `keyword_ddp_reporting` runs at 15:00 UTC, nine hours clear of the 00:05 rebuild. Today's stockout backlog (INC-022) pushed the 2026-08-18T15:00 run into the next night's rebuild window. **There is no cross-DAG dependency between them** — the separation is schedule luck.
+
+**Do not diagnose this from the table name.** `prod.ml.ddp_url_verticals_filtered` exists and looks like a rename; it is a different model. Confirm with `SHOW TABLES IN prod.ml LIKE 'ddp*'` and check the producer's run state before assuming a rename or a dropped table.
+
+**Decision tree (next `TABLE_OR_VIEW_NOT_FOUND` on a dbt source):**
+1. `SHOW TABLES IN <catalog>.<schema>` — absent, or just renamed?
+2. Find the producing model: `gh search code --owner SteelHouse "<table>"` → the `.yml` in `SteelHouse/dbt`, then the DAG task that runs it.
+3. Check that task's state right now. Running = you raced it; wait, do not clear.
+4. Clear the consumer only after the producer is green.
+
+**Diagnosis commands:**
+```bash
+gh search code --owner SteelHouse "ddp_url_verticals" --limit 20 --json repository,path
+# producer: create_ip_verticals / ddp_url_classification, dbt model in SteelHouse/dbt
+#   ml_squad/models/vertical_categorization/ddp_url_verticals.yml
+```
+
+Durable fix logged as IMP-047 (a cross-DAG guard, or a non-destructive materialization).
 
 ## 4. System reference (producer → consumer maps as we learn them)
 
