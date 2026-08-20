@@ -20,7 +20,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | Stop | — | `comms_cap_reminder.sh` | soft nudge to keep outward-facing writing terse | no |
 | Stop | — | `oncall_triage_reminder.sh` | advisory on-call-triage reminder | no |
 
-## Scripts (30)
+## Scripts (31)
 
 | script | what it does |
 |--------|--------------|
@@ -35,6 +35,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `databricks_smoke.py` | TI-837 Databricks Connect smoke test |
 | `health_scorecard.py` | read-only workspace-health signals for the SessionStart print |
 | `hooks_selftest.sh` | exercise all 9 Claude Code harness hooks with synthetic inputs and assert (exit code, output substring) |
+| `incident_log_compact.py` | Render the on-call incident log as 4-line entries, and lint every one |
 | `install_git_hooks.sh` | one-time: point git at the committed .githooks/ gate |
 | `lint_comms.py` | the terse-comms linter for outward-facing writing |
 | `lint_coverage.py` | Coverage-state linter + one-shot migrator for bq_table docs |

@@ -64,8 +64,14 @@ CAPS = {
         "words": 75,
         "bullets": 6,
     },  # commit message (subject + terse body); subject also capped below
+    "incident": {
+        "chars": 120,
+        "words": 24,
+        "lines": 4,
+    },  # on-call incident log entry: BLUF / Incident / Solve / PR, one line each.
+    # chars = PER LINE. The deep narrative stays in the repo runbook §3; this is the index.
 }
-LINE_KINDS = {"xlsx", "xlsx_explainer"}  # measured per line/section, not as one blob
+LINE_KINDS = {"xlsx", "xlsx_explainer", "incident"}  # measured per line/section, not as one blob
 TITLE_CAP = 120  # Jira summary/title (hard Jira limit is 255; our guidance is far tighter)
 COMMIT_SUBJECT_CAP = 72  # commit subject line (first line) — git convention, hard cap
 

@@ -368,6 +368,7 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 
 ## Runbooks
 - [On-Call Runbook — Master](../on-call/oncall_runbook.md) — Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here.  ·  _verified 2026-08-10_
+- [TI On-Call Playbook (Confluence draft)](../on-call/ti_on_call_playbook.md) — Draft for the TI On Call Playbook Confluence page. Covers the incident log, alert priorities, triage-vs-PR, emergency PRs, PAM, PS tickets, and tech-debt escalation. Sections marked NEEDS INPUT are gaps I cannot source.
 
 ## backlog
 - [Improvements Backlog](../improvements_backlog.md) — Single lightweight tracker for improvement ideas / durable fixes / tech-debt we want to remember but not put on the Jira board yet. On-call durable-fixes feed it; so can anything. Promote a row to Jira only when it's actually prioritized.  ·  _verified 2026-08-15_

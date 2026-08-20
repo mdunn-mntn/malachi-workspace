@@ -4,3 +4,4 @@
 | runbook | summary | verified | doc |
 |---------|---------|----------|-----|
 | On-Call Runbook — Master | Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here. | 2026-08-10 | [doc](../../on-call/oncall_runbook.md) |
+| TI On-Call Playbook (Confluence draft) | Draft for the TI On Call Playbook Confluence page. Covers the incident log, alert priorities, triage-vs-PR, emergency PRs, PAM, PS tickets, and tech-debt escalation. Sections marked NEEDS INPUT are gaps I cannot source. | — | [doc](../../on-call/ti_on_call_playbook.md) |
