@@ -51,6 +51,7 @@ def scorecard(frame, keys):
             "IVR_med": ivr.median(), "CVR_med": cvr.median(), "CTR_med": ctr.median(),
             "CPV_med": cpv.median(), "CPA_med": cpa[adv.conv>0].median(),
             "ROAS_med": roas[adv.revenue>0].median(), "n_adv_roas": int((adv.revenue>0).sum()),
+            "n_adv_cpa": int((adv.conv>0).sum()),
             # advertiser-weighted MEAN
             "IVR_mean": ivr.mean(), "CPV_mean": cpv.mean(),
             **pooled})

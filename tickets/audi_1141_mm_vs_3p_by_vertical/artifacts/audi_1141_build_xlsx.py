@@ -27,7 +27,6 @@ ov = pd.read_csv(OUT / "audi_1141_scorecard_overall.csv")
 bv = pd.read_csv(OUT / "audi_1141_scorecard_by_vertical.csv")
 ov2 = pd.read_csv(OUT / "audi_1141_scorecard2_overall.csv")
 bv2 = pd.read_csv(OUT / "audi_1141_scorecard2_by_vertical.csv")
-nr = pd.read_csv(OUT / "audi_1141_scorecard_nonrevenue.csv")
 
 det = pd.read_csv(OUT / "audi_1141_campaign_grain.csv").dropna(subset=["vertical_id"])
 names = pd.read_csv(OUT / "audi_1141_advertiser_names.csv").drop_duplicates("advertiser_id")
@@ -71,6 +70,8 @@ def compare(df_by_vert, df_overall, gcol, a, b, name, finding, method, toc, kind
             d[f"{tag} advantage"] = num / den if den else np.nan
         d["MM advertisers"] = int(get("n_adv", a) or 0)
         d["3P advertisers"] = int(get("n_adv", b) or 0)
+        d["MM with conversions"] = int(get("n_adv_cpa", a) or 0)
+        d["3P with conversions"] = int(get("n_adv_cpa", b) or 0)
         return d
 
     def cell(frame, key):
@@ -87,14 +88,15 @@ def compare(df_by_vert, df_overall, gcol, a, b, name, finding, method, toc, kind
     rows = [row("All verticals", lambda c, g: ovi.loc[g, c] if g in ovi.index else np.nan)] + vrows
     cols = ["Sales vertical", "MM IVR", "3P IVR", "IVR advantage", "MM CPV", "3P CPV",
             "MM CPA", "3P CPA", "CPA advantage", "MM ROAS", "3P ROAS", "ROAS advantage",
-            "MM advertisers", "3P advertisers"]
+            "MM advertisers", "3P advertisers", "MM with conversions", "3P with conversions"]
     out = pd.DataFrame(rows)[cols]
     return wb.table(
         name, out, finding=finding, method=method, kind=kind, toc=toc,
         formats={"MM IVR": FMT.PCT2, "3P IVR": FMT.PCT2, "IVR advantage": FMT.MULT,
                  "MM CPV": FMT.USD, "3P CPV": FMT.USD, "MM CPA": FMT.USD, "3P CPA": FMT.USD,
                  "CPA advantage": FMT.MULT, "MM ROAS": FMT.ROAS, "3P ROAS": FMT.ROAS,
-                 "ROAS advantage": FMT.MULT, "MM advertisers": FMT.INT, "3P advertisers": FMT.INT},
+                 "ROAS advantage": FMT.MULT, "MM advertisers": FMT.INT, "3P advertisers": FMT.INT,
+                 "MM with conversions": FMT.INT, "3P with conversions": FMT.INT},
         heat={"IVR advantage": "high", "CPA advantage": "high"},
         first_col_width=27, query="audi_1141_cohort_scorecard.sql",
     )
@@ -111,25 +113,6 @@ compare(bv, ov, "bucket_detail", "MM (gated)", "3P", "MM gated vs 3P by vertical
         method="MM with the intent gate on, the best case, vs 3P. Pair it with the blended tab; "
                "quoting only this one overstates the typical account. See Read me.",
         toc="Best case: MM with the intent gate on vs 3P", kind="data")
-
-# ------------------------------------------------------------------ the pitch-deck CPA cohort cut
-nrt = nr.rename(columns={"cohort": "Advertiser cohort", "group": "Targeting group",
-                         "n_adv_qual": "Advertisers", "n_adv_cpa": "With conversions",
-                         "share_with_conv": "Share with conversions", "CPA_med": "CPA (median)",
-                         "CPA_pooled": "CPA (pooled)", "spend": "Spend"})
-nrt = nrt[["Advertiser cohort", "Targeting group", "Advertisers", "With conversions",
-           "Share with conversions", "CPA (median)", "CPA (pooled)", "Spend"]]
-wb.table(
-    "CPA on non-revenue accounts", nrt,
-    finding="The CPA gap closes without revenue: 2.2x across all accounts, 1.0x for B2B software",
-    method="Advertisers with no tracked revenue, where ROAS cannot be computed. A CPA median uses "
-           "only advertisers with at least one conversion, so both counts are shown. See Read me.",
-    formats={"Advertisers": FMT.INT, "With conversions": FMT.INT,
-             "Share with conversions": FMT.PCT0, "CPA (median)": FMT.USD,
-             "CPA (pooled)": FMT.USD, "Spend": FMT.USD0},
-    kind="data", toc="Does the CPA advantage survive on non-revenue and B2B accounts",
-    first_col_width=24, query="audi_1141_cohort_scorecard.sql",
-)
 
 # ------------------------------------------------------------------------------- detail + overall
 fcols = {"sales_vertical": "Sales vertical", "bucket_detail": "Targeting group",
@@ -198,13 +181,13 @@ wb.glossary(
                              "cannot, and reads No."),
         ("Not classified", "The campaign delivered in the window but is no longer active, so the "
                            "live classifier view has no row for it. 40% of the cohort. Not a No."),
+        ("With conversions", "Advertisers in that cell with at least one conversion. CPA is the "
+                             "median over only those, so this is the count the CPA rests on."),
         ("Which number to quote", ""),
         ("Median", "The middle advertiser, each advertiser counting once, 20,000-impression floor. "
                    "This is the headline: it cannot be moved by one large account."),
         ("Pooled", "Every impression or dollar added up first. A cross-check only. On this data it "
                    "flips the 3P visit rate, because 39% of 3P impressions are one account."),
-        ("With conversions", "How many advertisers had at least one conversion. Only those can have "
-                             "a CPA, so a low share means that CPA rests on a small, self-selected set."),
     ],
 )
 
@@ -228,10 +211,10 @@ wb.notes(
                                 "retargeting, which is excluded, and some pixels are unreliable "
                                 "(one account reads over 800x). Use the median, never the mean. "
                                 "Visit rate and cost per visit are the solid metrics."),
-        ("CPA does not carry the B2B claim", "Across all accounts MM's CPA is 2.2x better than 3P. "
-                                             "On accounts with no tracked revenue it is 1.23x, on "
-                                             "B2B software 1.02x, and on B2B accounts with no "
-                                             "revenue 3P is cheaper. No B2B CPA claim survives."),
+        ("CPA rests on fewer advertisers", "Only 54% of qualifying 3P advertisers converted at all, "
+                                            "against 78% of MM, and non-converters drop out of CPA "
+                                            "entirely. Read CPA against the with-conversions "
+                                            "counts, and treat thin cells as directional."),
         ("Conversion coverage differs by group", "Only 54% of qualifying 3P advertisers recorded any "
                                                  "conversion, against 78% of MM. Advertisers with no "
                                                  "pixel drop out of CPA entirely, which flatters 3P, "
@@ -266,7 +249,7 @@ wb.notes(
 wb.cover(takeaways=[
     "MNTN Matched beats 3P on visit rate and cost per visit in all 8 verticals, on the median advertiser",
     "The intent gate is the biggest lever: gated MM 0.43% visit rate vs 0.14% with the gate off",
-    "The CPA advantage is 2.2x overall but 1.0x on B2B software, so CPA cannot carry a B2B slide",
+    "MM costs 2.2x less per conversion than 3P overall, on the 78% of MM advertisers that converted",
 ])
 
 print("saved local:", wb.save_local(str(DEST)))
