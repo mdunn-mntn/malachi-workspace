@@ -162,7 +162,7 @@ grow this one.
 | INC-021 | 2026-08-19 | `site_network_hourly+audience_intent+tpa_ipdsc_export/site_network_hourly,wait_for_ipdsc_geo,intent_score_map,ipdsc_ds_35` | Worker-loss burst, all self-recovered, and the first payoff from IMP-044. Verdict transient_infra. | none_required_all_self_recovered; trigger unverified (OBSERVED) | — |
 | INC-022 | 2026-08-19 | `mntn_match_incrementals_fetch/batch_post.taxonomy_vector` | GCP stockout, not a code fault and not our quota. Verdict transient_infra. | Fix merged shopper graph #300 flexible node types | [300](https://github.com/SteelHouse/shopper_graph/pull/300) |
 | INC-023 | 2026-08-20 | `keyword_ddp_reporting/write_targeted_signal_ds_13` | Read a source table while its producer was rebuilding it. Verdict resource_contention. | waited for create_ip_verticals/ddp_url_classification to finish rebuilding the table, then cleared ds_13 and dow… | — |
-| INC-024 | 2026-08-20 | `fangorn_hhid_inference_pipeline_run/challenger_inference_pipeline` | The challenger model alias vanished when the hhid model was re-registered. Verdict dag_bug. | routed to the model owner to re-add a challenger-v* alias; no re-run (deterministic) | — |
+| INC-024 | 2026-08-20 | `fangorn_hhid_inference_pipeline_run/challenger_inference_pipeline` | The challenger model alias vanished when the hhid model was re-registered. Verdict dag_bug. | owner (Brian McAdams) took the fix same day; no re-run (deterministic). Anticipated failure mode, so the guardra… | — |
 <!-- INCIDENT_LOG:END -->
 
 ---

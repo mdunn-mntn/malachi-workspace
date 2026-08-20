@@ -1564,4 +1564,6 @@ curl -s -H "Authorization: Bearer $TOK" \
 
 **Action taken:** routed to the model owner; no re-run. Durable fix + the missing guardrail: **IMP-056**.
 
+**Owner confirmed same day (2026-08-20 16:06 PT):** Brian McAdams took the fix and said "thought this might happen" — so dropping the challenger alias on a re-registration is a **known, anticipated failure mode**, not a surprise. That raises IMP-056 from a nice-to-have to the real ask: the guardrail (re-apply aliases on re-register, or check for `challenger-v*` before provisioning) is what stops it recurring, since the manual fix is already understood and will be needed again.
+
 **Note on `fetch-advertisers` SKIPPED:** expected — the component is conditional and the challenger path skips it. Not part of this failure.

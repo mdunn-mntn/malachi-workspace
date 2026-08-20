@@ -99,7 +99,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_frequency_capping | reference | 2026-07-28 | [doc](memory/reference_frequency_capping.md) |
 | reference_hhst_efficiency_sizing | reference | 2026-07-28 | [doc](memory/reference_hhst_efficiency_sizing.md) |
 | reference_improvements_backlog | reference | 2026-07-28 | [doc](memory/reference_improvements_backlog.md) |
-| reference_oncall_runbook | reference | 2026-07-28 | [doc](memory/reference_oncall_runbook.md) |
 | reference_select_vs_nonselect_incrementality | reference | 2026-07-28 | [doc](memory/reference_select_vs_nonselect_incrementality.md) |
 | reference_total_visit_signal | reference | 2026-07-28 | [doc](memory/reference_total_visit_signal.md) |
 | BUK rebranded to Behavior Keywords | project | 2026-07-29 | [doc](memory/project_buk_rebrand.md) |
@@ -147,7 +146,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_exec_explainer_mechanism_only | feedback | 2026-08-07 | [doc](memory/feedback_exec_explainer_mechanism_only.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
 | sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |
-| reference_fangorn_inference_dataproc | reference | 2026-08-09 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-10 | [doc](memory/reference_airflow3_backfill_scoping.md) |
 | feedback_constrain_llm_to_real_taxonomy | feedback | 2026-08-10 | [doc](memory/feedback_constrain_llm_to_real_taxonomy.md) |
@@ -206,8 +204,10 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-20 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-08-20 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
+| reference_fangorn_inference_dataproc | reference | 2026-08-20 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_mm_vs_3p_scorecard | reference | 2026-08-20 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-20 | [doc](memory/reference_mntn_devops_permissions.md) |
+| reference_oncall_runbook | reference | 2026-08-20 | [doc](memory/reference_oncall_runbook.md) |
 | reference_pihole_dns_contaminates_fetch | reference | 2026-08-20 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-20 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
