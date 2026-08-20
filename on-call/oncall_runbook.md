@@ -149,6 +149,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | Any Targeting DAG, **`No exception message found`** + `Try 0 of N` | A burst of these across unrelated DAGs in one window (2026-08-19: `site_network_hourly`, `audience_intent/wait_for_ipdsc_geo`, `audience_intent/intent_score_map`, `tpa_ipdsc_export/ipdsc_ds_35`). Airflow has no exception because the worker died rather than the task raising. | One cluster-level event: on 2026-08-19 all four ended within 40s of each other on 3+ distinct workers after 22min-2h32m of runtime, with empty try-1 logs. Not a code fault, not a deploy (nearest was 15h earlier). Trigger unverified, see INC-021. | **transient_infra.** Check whether the task already retried before touching anything: `GET /dags/<id>/dagRuns/<run>/taskInstances` and look for `try_number > 1` or `failures=none`. All four on 2026-08-19 recovered on their own. Only act if a task has retries=0 or exhausted them. Consequence now guarded: [airflow-ti#1206](https://github.com/SteelHouse/airflow-ti/pull/1206) (merged 2026-08-20) makes each `ModelPysparkBatchOperator` try cancel any live batch left by a previous try. The recycle itself is still unguarded — deferrable is broken on Airflow 3.1.5, see IMP-049. | INC-021 |
 
 | `keyword_ddp_reporting / write_targeted_signal_ds_13` | dbt `Runtime Error` → `AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view prod.ml.ddp_url_verticals cannot be found` | The source is a dbt table-materialized model that is dropped and recreated on every rebuild. `create_ip_verticals / ddp_url_classification` (daily 00:05 UTC, 25 min to 2h32m) was mid-rebuild. Only collides when the 15:00 reporting run is delayed into the nightly window. | **resource_contention.** Check the producer task's state before touching anything; if it is running, wait for green, then clear the consumer. Do not read `_filtered` as a rename. | INC-023 |
+| `fangorn_hhid_inference_pipeline_run / challenger_inference_pipeline` | Vertex `code: 9` boilerplate, `The failed tasks are: [submit-parallel-inference-jobs]`. Every try dies identically. The Airflow log carries NO cause. | The hhid model's challenger alias is gone. `run_challenger_inference.py` resolves the model by alias pattern `challenger-v*`; `fangorn-hhid-xgboost` was re-registered 2026-08-18 and its v1 carries only `default` + `champion`. Sibling `fangorn-xgboost` still has `challenger-v2`, which is why the non-hhid challenger is green. | **dag_bug (registry regression).** Deterministic, so do NOT re-run. Check `models?filter=display_name="<model>"` for a `challenger-v*` alias before anything else; if it is missing, route to the model owner to re-add it. `create-dataproc-cluster` SUCCEEDED here, so this is NOT the INC-002/008 stockout class. | INC-024 |
 | `mntn_match_incrementals_fetch / batch_post.taxonomy_vector` (and its consumer `keyword_ddp_reporting / wait_for_product_categorization`) | dbt `Runtime Error in model mntn_matched_taxonomy_vector` → `Cluster '<id>' was terminated. Reason: GCP_INSUFFICIENT_CAPACITY`, detail `VM_MIN_COUNT_NOT_REACHED|ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS`. Every try fails identically for hours. | GCP is out of the requested Intel node type (`c2-standard-8`) in the Databricks project's zone. **Stockout, NOT quota** — a quota fault reads `Quota '<NAME>' exceeded`. `zone_id` was already `auto`, so zone is not the lever, and retry backoff cannot outlast an 8h shortage. | **transient_infra (external).** Do not re-run blindly; confirm the detail string first. Durable fix = flexible node types ([shopper_graph#300](https://github.com/SteelHouse/shopper_graph/pull/300), merged 2026-08-19) plus the workspace toggle *Compute → Enable auto flexible node types*. Full detail + the cost answer: memory `reference_databricks_stockout_flexible_nodes`. | INC-022 |
 
 ---
@@ -1514,3 +1515,53 @@ Fields: `inc` · `date` (YYYY-MM-DD) · `dag` · `task` · `team` · `signature`
 (`ack_no_rerun|clear_task|rerun|force_export|routed_owner|spawned_ticket`) · `resolved` (bool) ·
 `ticket` (TI/AUDI key if a durable fix was spun out, else null) · `pagerduty` (PD incident # if it paged, else null) ·
 `ref` (`§3 INC-NNN`). **When the user gives a PagerDuty incident #, record it in `pagerduty` and cite it in the §3 alert line** — it ties our INC-NNN to the PD record.
+
+### INC-024 — `fangorn_hhid_inference_pipeline_run` `challenger_inference_pipeline` — the challenger model alias vanished when the hhid model was re-registered
+
+**2026-08-20** · PagerDuty · `[prod] Airflow Targeting FAILURE [fangorn_hhid_inference_pipeline_run/challenger_inference_pipeline]`, logical date 2026-08-19 18:00Z, both tries failed (try 2 ran 22:34:44-22:53:33Z, 18m49s). **STATUS: RESOLVED (cause verified, fix is owner-side).**
+
+**Verdict: `dag_bug` — a registry regression, not infra.** `run_challenger_inference.py:35` resolves the model by alias **pattern `challenger-v*`**. `fangorn-hhid-xgboost` has exactly one version (v1) whose aliases are `['default', 'champion']` — no challenger alias at all — so the resolve raises before any inference runs.
+
+**Timeline that pins it:** hhid challenger SUCCEEDED 2026-08-12 and 2026-08-17. The model's `updateTime` is **2026-08-18**. The next challenger run (2026-08-20) failed, and every try since has failed identically. The sibling `fangorn-xgboost` still carries `challenger-v2`, which is why the **non-hhid** challenger succeeded at 21:25Z the same day. So the alias was dropped by the 8/18 re-registration; the code and the pattern are correct and unchanged.
+
+**Why the alert is useless on its own.** The Airflow log is pure Vertex `code: 9` boilerplate naming only the failed Vertex STEP (`submit-parallel-inference-jobs`). The cause is four layers down. The chain:
+
+```bash
+# 1. Airflow log -> the debugger names the class, not the cause (this signature shipped 2026-08-20)
+python3 -m airflow_debugger.orchestrate <log> --no-llm      # -> [high] vertex/pipeline-task-failed
+
+# 2. the numeric job_id in the Airflow text is NOT the pipelineJobs id - list to get the real name
+TOK=$(gcloud auth print-access-token)
+curl -s -H "Authorization: Bearer $TOK" \
+  "https://us-central1-aiplatform.googleapis.com/v1/projects/401977096985/locations/us-central1/pipelineJobs?pageSize=15&orderBy=create_time%20desc"
+
+# 3. the pipeline job's taskDetails name the failing component + its ml_job id
+curl -s -H "Authorization: Bearer $TOK" \
+  ".../pipelineJobs/fangorn-hhid-challenger-inference-pipeline-20260820223456"
+#    create-dataproc-cluster SUCCEEDED | submit-parallel-inference-jobs FAILED (replica exited 1)
+
+# 4. the replica log names the Dataproc job that failed 3 times
+gcloud logging read 'resource.type="ml_job" AND resource.labels.job_id="4870005426285969408" AND severity>=ERROR' \
+  --project mntn-targeting-prj-prod --limit 25 --freshness=2d
+
+# 5. that Dataproc job's driver output holds the actual exception
+gcloud dataproc jobs describe ce5eb0d1-37e2-4bac-bf6e-756caf530dd4 --region us-central1 \
+  --project mntn-targeting-prj-prod --format='value(driverOutputResourceUri)'
+gsutil -o "GSUtil:check_hashes=never" cat '<uri>.*'
+#    ValueError: No version found with alias pattern 'challenger-v*' for model 'fangorn-hhid-xgboost'
+
+# 6. confirm against the registry, and against the sibling model
+curl -s -H "Authorization: Bearer $TOK" \
+  ".../models?filter=display_name%3D%22fangorn-hhid-xgboost%22"   # aliases ['default','champion']
+#    fangorn-xgboost -> ['default','challenger-v2']   <- the working convention
+```
+
+**Decision tree for next time (any fangorn `code: 9`):**
+1. Read the Vertex `taskDetails`. **`create-dataproc-cluster` FAILED** → capacity/stockout, INC-002 / INC-008. **SUCCEEDED** → the cluster was fine; keep going down.
+2. `submit-parallel-inference-jobs` FAILED → the cause is in the ml_job replica log, then in the Dataproc job it names. Do not stop at the code-9 text.
+3. `ValueError: No version found with alias pattern` → a Model Registry alias is missing. **Compare against the sibling model** (`fangorn-xgboost` vs `fangorn-hhid-xgboost`) and check the model's `updateTime` against the last green run. A re-registration that drops an alias looks exactly like this.
+4. **Never re-run this class.** It is deterministic and burns a Dataproc cluster per attempt (cluster create + delete both ran on every try here).
+
+**Action taken:** routed to the model owner; no re-run. Durable fix + the missing guardrail: **IMP-056**.
+
+**Note on `fetch-advertisers` SKIPPED:** expected — the component is conditional and the challenger path skips it. Not part of this failure.
