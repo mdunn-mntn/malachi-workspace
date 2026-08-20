@@ -304,6 +304,33 @@ SIGNATURES: list[Signature] = [
         "sometimes",
     ),
     Signature(
+        "dag_not_found_at_startup",
+        r"Dag not found during start ?up|DAG '[^']+' not found in serialized_dag table",
+        "orchestration/dag-not-loaded",
+        "The worker could not load the DAG when the task started, so the task died before running "
+        "any of its own code. Usually a deploy or DAG-bundle race: the scheduler queued the task "
+        "against a bundle version the worker no longer has. Re-run once the bundle settles.",
+        "no",
+    ),
+    Signature(
+        "batch_id_missing",
+        r"Starting batch None(-\d+)?\b",
+        "dag_bug/no-batch-id",
+        "Airflow logged the batch id as literally 'None': the upstream id-minting task returned "
+        "nothing, so no batch was ever submitted. The missing id IS the fault. Fix the producer "
+        "of the id (usually a create_batch_id task whose XCom is empty), not the Spark job.",
+        "yes",
+    ),
+    Signature(
+        "batch_cancelled",
+        r"Batch job \S+ was cancelled",
+        "batch-cancelled",
+        "The Dataproc batch was CANCELLED, not failed. Either it hit its TTL, or someone cleared "
+        "the Airflow task while the batch was still running, which cancels it and can record the "
+        "next try as a green run with no output. Check the batch state history before re-running.",
+        "no",
+    ),
+    Signature(
         "task_externally_terminated",
         r"Server indicated the task shouldn't be running anymore|Task killed!|"
         r"Task received SIGTERM signal",

@@ -248,6 +248,28 @@ CASES = [
         "2026-08-19T19:54:38.695680Z [error] task Task killed!",
         "task_externally_terminated",
     ),
+    (
+        # The id-minting task returned nothing, so no batch was ever submitted.
+        "starting_batch_none",
+        "airflow.task.operators.include.dataproc.serverless_operators."
+        "RetrySafeDataprocCreateBatchOperator Starting batch None-1\n"
+        "[error] task Task failed with exception",
+        "batch_id_missing",
+    ),
+    (
+        # Deploy / bundle race: the worker had no DAG to run.
+        "dag_missing_at_startup",
+        "2026-08-17T19:45:53.123456Z [error] task Dag not found during start up",
+        "dag_not_found_at_startup",
+    ),
+    (
+        # Cancelled is not failed. Clearing a task with a live batch cancels it (INC-018).
+        "batch_was_cancelled",
+        "'exception': AirflowException('Batch job url-pat-id-63736-202608051106 was cancelled."
+        "\\nDriver logs: https://console.cloud.google.com/dataproc/batches/us-central1/"
+        "url-pat-id-63736-202608051106/monitoring?project=mntn-prj-prod-00')",
+        "batch_cancelled",
+    ),
 ]
 
 # Real prod log shape (2026-08-06 ddp_vertical_classification_api): a dbt python model

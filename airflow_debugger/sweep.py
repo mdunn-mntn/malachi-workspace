@@ -85,6 +85,10 @@ def _outcome(path: str) -> str:
 
 def _cluster(text: str, job_id: str | None = None) -> str:
     """Label an unclassified log by its error shape."""
+    if job_id:
+        # A job id outranks any text probe: the cause is in the engine, and callback noise in the
+        # Airflow log (a failed Slack notify) would otherwise mislabel a perfectly routable failure.
+        return "no local cause, routes to engine RCA (job id present)"
     for label, pat in _CLUSTER_PROBES:
         if re.search(pat, text, re.IGNORECASE):
             return label
