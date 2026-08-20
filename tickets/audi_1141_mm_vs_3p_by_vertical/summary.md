@@ -152,3 +152,58 @@ some cells carry pixel artifacts (one ProServ advertiser shows >800x). Use media
 ## 8. Open items
 - Vertical crosswalk needs RevOps sign-off (B2B, Food & Beverage are judgment calls; 3 orphans).
 - Confirm KPI/attribution lens (currently default non-competing, prospecting-only).
+
+---
+
+## 9. CPA follow-up for the pitch deck (2026-08-20, Jon Zucker via Slack)
+
+**Ask:** add a CPA comparison for non-revenue-driving customers (e.g. B2B), for the new pitch deck.
+
+**CPA was already delivered.** `CPA (median)` and `CPA (pooled)` are on the **Full scorecard** and
+**Overall** tabs, per vertical, and defined in Read me. What is missing is the CPA column on the two
+headline tabs ("MM vs 3P by vertical", "MM gated vs 3P by vertical"), which carry IVR / CPV / ROAS only.
+That is a one-column edit to `compare_tab()` in `artifacts/audi_1141_build_xlsx.py`.
+
+**The finding that matters: the CPA advantage does not survive the cohort Jon asked for.**
+Recomputed from `outputs/audi_1141_campaign_grain.csv` (same 20k-impression floor, same
+advertiser-weighted median; the all-advertiser row reproduces the shipped workbook exactly —
+315.12 / 252.74 / 318.65 / 431.73 / 657.87). Full table: `outputs/audi_1141_cpa_nonrevenue_b2b.csv`.
+
+| Cut | MM (all) CPA | 3P CPA | MM advantage |
+|---|---:|---:|---:|
+| All advertisers (what the deck has today) | $315.12 | $657.87 | **2.09x** |
+| Non-revenue advertisers (conversions, no revenue) | $584.28 | $679.24 | **1.16x** |
+| B2B Software & Services vertical | $1,187.71 | $1,255.46 | **1.06x** |
+| B2B **and** non-revenue | $1,534.71 | $1,566.35 | **1.02x — a tie** |
+
+Non-revenue = advertiser with zero tracked revenue across the window. `B2B Software & Services` is a
+`vertical_name`, NOT one of the 8 sales verticals; the crosswalk folds it in and still needs RevOps
+sign-off (§8), so "B2B" is not a cut the workbook exposes today.
+
+**Three reasons this is not deck-safe as a CPA slide:**
+
+1. **The gate inverts.** In B2B, MM (no gate) median CPA $724.71 BEATS MM (gated) $1,043.73 — the
+   opposite of the deck's core "the intent gate is the biggest lever" line, which holds on IVR/CPV.
+   n=6 advertisers, so it is noise, not a counter-finding; but it is noise that contradicts the claim.
+2. **Median and pooled disagree by ~2.5x.** B2B pooled: MM $128.58 vs 3P $330.60 = 2.6x. B2B median:
+   1.06x. Same data, same cohort. On IVR the two lenses agreed; on CPA they do not, because conversion
+   counts are pixel-dependent and whale-skewed.
+3. **Small n and unequal pixel coverage.** B2B rests on 22 3P advertisers vs 115 MM. Only **53.8%** of
+   qualifying 3P advertisers have any conversion at all vs **78.0%** of MM (42.5% vs 64.2% on the
+   non-revenue cut) — advertisers with no conversion pixel drop out of CPA entirely. That selection
+   flatters 3P (its zero-conversion half is excluded), so the MM win is conservative; but it also means
+   the CPA population is not the IVR/CPV population and the two slides are not the same advertisers.
+
+**Recommendation:** ship CPA on the all-advertiser cut where the 2.09x holds, and do NOT put a B2B or
+non-revenue CPA slide in the deck on this data. If the B2B claim is needed, it is a new pull, not a
+column: a B2B-specific cohort with RevOps-signed verticals, a conversion-pixel coverage screen, and a
+larger 3P n.
+
+**Two process flags raised with the requester:**
+- **Lens switching.** Selecting gated vs ungated per slide by which reads better is cherry-picking in an
+  external artifact. Both lenses exist because Jon asked for both (§4); the honest use is to pick one and
+  hold it across the whole deck, labelled. Note the switch would run the other way on B2B CPA.
+- **Staleness and the copy.** The workbook was built 2026-07-21 over a trailing-180d window ending
+  2026-07-20 (~2026-01-21 → 2026-07-20); it is one month old. The link Jon circulated
+  (`1m5RKXYN219eGH_JiYwPdL9pmzwmerunJ`) does not resolve against this Drive account, so it is a separate
+  copy, not `My Drive/Tickets/AUDI-1141/MM vs 3P Scorecard.xlsx` — rebuilding the source will not update it.
