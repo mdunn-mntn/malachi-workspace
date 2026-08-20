@@ -104,15 +104,15 @@ def compare(df_by_vert, df_overall, gcol, a, b, name, finding, method, toc, kind
 
 compare(bv2, ov2, "bucket2", "MM (all)", "3P", "MM vs 3P by vertical",
         finding="MNTN Matched beats 3P on visit rate and cost per visit in all 8 verticals",
-        method="Every MM campaign vs 3P: the realistic average. Median advertiser, 20k-impression "
-               "floor. Higher visit rate and lower cost are better. See Read me for definitions.",
-        toc="The headline: every MM campaign vs 3P, by vertical", kind="headline")
+        method="Every MM campaign vs 3P, median advertiser, 20k-impression floor. Higher visit rate "
+               "and lower cost are better. See Read me for definitions.",
+        toc="Every MM campaign vs 3P, by vertical", kind="headline")
 
 compare(bv, ov, "bucket_detail", "MM (gated)", "3P", "MM gated vs 3P by vertical",
         finding="Gated MM beats 3P 6.1x on visit rate, the best-configured subset not the average",
-        method="MM with the intent gate on, the best case, vs 3P. Pair it with the blended tab; "
-               "quoting only this one overstates the typical account. See Read me.",
-        toc="Best case: MM with the intent gate on vs 3P", kind="data")
+        method="MM with the intent gate on vs 3P. Pair it with the blended tab; quoting only this "
+               "one overstates the typical account. See Read me.",
+        toc="MM with the intent gate on vs 3P", kind="data")
 
 # ------------------------------------------------------------------------------- detail + overall
 fcols = {"sales_vertical": "Sales vertical", "bucket_detail": "Targeting group",
