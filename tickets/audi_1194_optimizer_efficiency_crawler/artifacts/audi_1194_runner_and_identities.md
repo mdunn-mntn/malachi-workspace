@@ -113,6 +113,34 @@ So the GCP half is one mntn-devops PR: add the new SA to that group, or mirror t
 onto it directly. Group membership is simpler and keeps the existing bindings as the single
 source of truth.
 
+### Databricks: there is already a convention, so I did not mint a third identity
+
+The workspace already has two service principals, and they follow a pattern:
+
+| Service principal | applicationId | Groups |
+|---|---|---|
+| `prod_runner` | `397d710b-4c85-4a96-b009-a07c1d373204` | `producers_prod` |
+| `dev_runner` | `81b867bc-e052-4b4a-8881-39a3321f73e2` | `producers_dev` |
+
+I have workspace `admins` and could have created a `spark_optimizer` principal, but stopped:
+reusing `prod_runner` widens the blast radius of an identity that presumably drives the dbt
+runs, and inventing a third name cuts across a convention I do not own. That is a call for
+whoever owns these.
+
+**Recommended:** a dedicated `spark_optimizer` service principal, in **no** `producers_*`
+group — the optimizer reads, it never produces. It needs exactly `CAN_VIEW` on jobs,
+`CAN_USE` on one SQL warehouse, and SELECT on the tables `EXPLAIN COST` plans.
+
+**Mint the secret straight into Secret Manager so it never lands in a file or a shell history:**
+
+```bash
+databricks service-principal-secrets create <sp-id> -p malachi@mountain.com -o json \
+  | jq -r .secret \
+  | gcloud secrets create databricks-spark-optimizer --data-file=- --project=mntn-prj-prod-00
+```
+
+An OAuth M2M secret is shown once. If it is echoed to a terminal, it is in the scrollback.
+
 ## 5. What each piece costs
 
 | Step | Where | Effort | Status / blocked on |
