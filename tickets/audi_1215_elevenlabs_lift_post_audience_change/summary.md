@@ -45,6 +45,7 @@ Matt's own pre/post run (blackout 07-01..07-10), to reconcile against ours:
 - **Visits: +11% pre → +16.5% post** ("always incremental, improved").
 - **Conversions: 0% pre → +15.6% post, NOT significant either period.**
 - Compass link: https://basecamp.in.mountain.com/mcp-chat?join=c0cf4001-aeb7-4829-9634-c1bdd851da68&atSeq=1
+- **Blackout rationale (Matt, 1:46 PM): ElevenLabs made MULTIPLE campaign and audience changes during 07-01..07-10** — not one clean 6/30 flip. So "treatment" = the bundle of changes, and post-vs-pre measures the combined effect; attributing the lift delta to the CGID 122748 audience swap alone requires the change timeline (audience scout) to rule out confounding changes. Full tables: artifacts/audi_1215_matt_compass_results.md.
 - **Reconciliation flag:** Matt's pre +11% visit lift vs TI-1044's clean ITT ~0–2% (n.s., June cohorts) — likely different instrument (his pipeline / holdout lineage vs entry-cohort ghost-bid ITT), different windows, possibly advertiser-level vs CGID 122748. Resolve which instrument and grain his numbers come from before calling agreement or disagreement.
 
 _Workflow in flight (wf_8b658238-b57); our numbers land here on completion._
