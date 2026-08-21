@@ -33,7 +33,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `build_index.sh` | Regenerate every knowledge/ticket index from each doc's YAML front-matter |
 | `build_kit_manifest.sh` | generate the AI Workflow Kit component inventory FROM the actual files |
 | `databricks_smoke.py` | TI-837 Databricks Connect smoke test |
-| `engine_protected_paths.sh` | pre-commit guard for the self-improvement engine's floors |
+| `engine_protected_paths.sh` | engine_protected_paths.sh <commit-msg-file> — commit-msg guard for the engine's floors |
 | `health_scorecard.py` | read-only workspace-health signals for the SessionStart print |
 | `hooks_selftest.sh` | exercise all 9 Claude Code harness hooks with synthetic inputs and assert (exit code, output substring) |
 | `incident_log_compact.py` | Render the on-call incident log as 4-line entries, and lint every one |
