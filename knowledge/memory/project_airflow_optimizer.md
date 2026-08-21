@@ -1,14 +1,14 @@
 ---
 name: project_airflow_optimizer
-description: AUDI-1194 airflow_optimizer/ — key-free efficiency crawler over SUCCEEDED Spark jobs; DAILY full-fleet since 2026-08-20 (214 jobs/278 findings vs 37/59 weekly), PHS half proven end-to-end, Databricks EXPLAIN COST validated live via the SQL Statement Execution API
+description: AUDI-1194 airflow_optimizer/ — key-free efficiency crawler over SUCCEEDED Spark jobs; SHIPPED TO PROD 2026-08-21 as the spark_optimizer_daily DAG in airflow-ti (215 jobs/290 findings on run 1); coverage pass is dead on Airflow 3 (ORM forbidden in tasks)
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow optimizer, AUDI-1194, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs]
+keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-20
+last_verified: 2026-08-21
 ---
 **AUDI-1194 = the OPTIMIZER** (success-triggered efficiency sweep), **split from the AUDI-1191 debugger 2026-08-05** (both AUDI, type Task, Backlog). The two are separate workflows with distinct triggers/schedules/deliverables: the debugger fires only on a **failure**, the optimizer sweeps every DAG that **succeeds**. They can chain but are distinct. AUDI-1194: 5 story points, PMO rep Bryce Wagg, label q3_2026, folder `tickets/audi_1194_optimizer_efficiency_crawler/`, framing **LOCKED** (§0 in its summary). See [[project_airflow_debugger]] (the RCA half), [[reference_airflow_ti]], [[reference_oncall_runbook]].
 
@@ -63,3 +63,52 @@ See [[reference_databricks]] for the corrected Databricks acquisition route, [[r
 - **Runner scoped, not built** (`artifacts/audi_1194_runner_and_identities.md`, its own ticket when approved): the blocker is **expiry, not identity** — astro bearer ~1h, Databricks OAuth refresh needs an interactive renewal, gcloud is personal SSO. Recommendation: **GH Actions + GCP Workload Identity Federation** (no SA key exists at all), Astro deployment token + Databricks service-principal secret in Secret Manager (no keyless path for those two), GitHub App scoped **`contents:read` + `metadata:read`** so "never opens a PR" is structural. Artifacts to GCS, so the GitHub identity never needs write. Two of four GCP grants already exist because DEV-8182 and #4724 were written against `group:audience-intelligence@`, not a person.
 
 **Shipped-optimization register (IMP-054, 2026-08-20).** The finding ledger gained an **`applied`** state: `python3 -m airflow_optimizer.ledger applied <dag> <key> <pr> <date>` records the PR and applied date and carries both onto every later sweep, so an outcome stays attributable. **`applied` is deliberately NOT sticky** — a merged fix is not a verified fix, so the detectors decide what happened next: the finding going quiet becomes `resolved` (noted "cleared by <PR>"), the finding still firing after the grace window becomes **`fix_not_working`**. `ledger shipped` renders the register (applied date, DAG, finding, PR, outcome, DCU/h before vs after). **Cost is read per-DAG, not per-finding** — a fix that works stops the finding firing, so a per-finding "after" would always be empty. Validated both directions: a working fix reads 100.0 -> 40.0 DCU/h `resolved`, a non-working one 80.0 -> 79.0 `fix_not_working`. Answers "what has this tool actually saved", which the backlog alone never could.
+
+---
+
+## SHIPPED TO PROD 2026-08-21 — it is an airflow-ti DAG now, not a laptop cron
+
+**`spark_optimizer_daily`** in `SteelHouse/airflow-ti` (`dags/spark_optimizer_daily.py`, package
+vendored at `include/spark_optimizer/`), 09:00 UTC daily, `retries=1`, `execution_timeout=1h`,
+`dagrun_timeout=2h`. **First prod run 2026-08-21: 215 jobs, 290 findings, 196 high**, all four
+artifacts published to `gs://mntn-data-archive-prod/optimizer/`. The laptop launchd job and
+`oncall_daily_optimizer.sh` still work and are still the local entrypoint.
+
+**Why it moved off the runner design entirely:** Cristina Szumilo asked why a job owned by AUDI
+was living in `mntn-devops` and being attributed to the platform team. She was right, and the
+move was cheaper than the design it replaced: it deleted the container image, the GAR push, the
+ArgoCD manifests, the `mntn-helm` chart change, **and the Astro API token** (a DAG can enumerate
+DAGs locally). **Before designing a store for a credential, check whether moving the workload
+removes the need for it.** Prior design iterations, all superseded, are in
+`tickets/audi_1194_.../artifacts/audi_1194_runner_and_identities.md` §3-§13.
+
+**Identity, verified in prod:** GSA `spark-optimizer@mntn-prj-prod-00` (mntn-devops#4971,
+merged), impersonated from the deployment's own ADC `airflow-ti-prod@` via
+`roles/iam.serviceAccountTokenCreator` and `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT`. Grants:
+`dataproc.viewer` on the project, `storage.objectViewer` on `mntn-data-archive-prod` and the PHS
+temp bucket, `storage.objectUser` conditioned to the `optimizer/` prefix. Mechanism detail:
+[[reference_gcs_iam_creator_vs_user]].
+
+### Known broken after run 1
+
+**`coverage.collect_local` is dead on Airflow 3.** It reads the paused set from the metadata DB,
+and a task gets `airflow session use is forbidden in this context`. The DAG-bundle parse is fine;
+the ORM is not reachable from task code. The sweep degrades correctly (`DAG coverage unknown`,
+and the ledger declines to write rather than rekey), so this is a missing feature, not a
+corruption. **Fix: go back through the REST API** with a deployment token, or find a Task-SDK
+call that exposes paused state.
+
+**The download is 200 serial `gsutil` invocations.** `fetch.download()` shells out once per
+object, each paying Python interpreter startup. On the Astro default pod (**0.25 CPU, 0.5 Gi** —
+the DAG sets no `executor_config`) run 1 took **~19 minutes**, and process spawn dominated, not
+the parse. **Fix: one `gsutil -m cp -I` fed the whole object list.** Raising CPU is the smaller
+lever.
+
+**The digest cites the container path.** `Full backlog: /tmp/spark_events_*/out/...` instead of
+the GCS URL, because `run()` passes the local path through. Cosmetic but useless to a reader.
+
+### Not yet built
+Slack delivery (the digest already renders Slack markup; `compass-slack` in mntn-devops is the
+transport), the Databricks `EXPLAIN COST` bridge, and `USE SCHEMA` on `system.lakeflow` — which
+needs a Databricks **account** admin, not a workspace admin. Ryan Kleck said workspace admin
+would be enough; it is not, `grants update` returns `User is not an account admin`.

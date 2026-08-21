@@ -168,6 +168,23 @@ Sibling of the `create_batch_id` defect above, and the costlier one. After mergi
 
 ## DAG-authoring gotchas confirmed while fixing #1195 (2026-08-15)
 - **An `XComArg` passed into a templated field is just an xcom_pull template.** Verified by DagBag parse on unmodified `main`: `batch_id=create_batch_id(...)` renders as `{{ task_instance.xcom_pull(task_ids='create_batch_id', dag_id='...', key='return_value') }}`. So replacing the XComArg with an explicit `{{ ti.xcom_pull(...) }}` string preserves the VALUE — **but it silently DROPS the implicit dependency edge**, so you must re-add `create_batch_id >> <downstream>` by hand. Check `dag.get_task('<t>').upstream_task_ids` before and after (here `['create_batch','create_batch_id']` both ways). `batch_id` IS in `DataprocCreateBatchOperator.template_fields` (confirmed in the installed provider), which is what makes the string form work at all.
+- **Airflow 3 forbids the metadata-DB ORM from inside a task.** `create_session()` / any
+  `session.query(...)` in task code raises `airflow session use is forbidden in this context`
+  (Astro executor, runtime 3.1-9). Parsing the DAG bundle with `DagBag` from a task is fine; the
+  DB is not. Anything needing DagModel state (paused, next run, etc.) has to go through the REST
+  API with a deployment token. Verified in prod 2026-08-21 by `spark_optimizer_daily`.
+- **A task pod gets `default_task_pod_cpu` / `default_task_pod_memory` unless the DAG sets
+  `executor_config`.** On the `ti` prod deployment that is **0.25 CPU / 0.5 Gi**, which is small
+  enough to turn a 3-minute job into 19. Check `astro deployment inspect <id>` before assuming a
+  task has room.
+- **`Deploy to Prod` failing on an unrelated job blocks the DAG bundle from reaching Astro.** On
+  2026-08-21 a merged DAG did not appear until a second, green run: `current_tag` stayed on the
+  previous deploy. If a merged DAG is missing from the deployment, check the workflow run before
+  the DAG.
+- **Jobs that install with `uv` must not set `cache: 'pip'` on `actions/setup-python`.**
+  `~/.cache/pip` is never written, so the `Post Setup Python` cache-save step fails the job after
+  every real step has passed. Broke `Deploy to Prod` and `Models PR checks` fleet-wide from
+  2026-08-21 until airflow-ti#1213. The failure looks like a deploy failure and is not one.
 - **Airflow 3: `logical_date` is NULLABLE for manual and asset-triggered runs**, so `{{ logical_date.format(...) }}` in a template raises on a hand-triggered run. Never use it in a DAG that supports manual triggering — these DAGs carry `dt`/`hhs` params exactly for that. Caught in review before merge. Same nullability that forces the log puller to window on `start_date_gte/lte`: [[reference_airflow_log_puller]].
 
 ## Offline DAG-parse validation (no live Airflow, no pytest)

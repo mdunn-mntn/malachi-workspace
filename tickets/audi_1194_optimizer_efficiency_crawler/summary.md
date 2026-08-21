@@ -190,17 +190,80 @@ Corrections that fell out of it:
   **A:** Yes, but not by the specced route. `jobs get-run-output` returns an empty `notebook_output` even on success. `EXPLAIN COST` via the SQL Statement Execution API works today with no dbt or cluster change, and the detectors fire on the real plan.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+
+Nothing landed in `data_catalog.md` or `data_knowledge.md`: this ticket produced no schema, join
+key or business-logic fact. Everything durable went to memory instead, because it is about how
+the platform behaves rather than what the data means.
+
+- `project_airflow_optimizer` — rewritten for the prod ship; the laptop-cron description is now
+  history and the known post-launch defects are listed.
+- `reference_airflow_ti` — four platform gotchas: the Airflow 3 ORM ban inside tasks, the 0.25
+  CPU / 0.5 Gi default task pod, a failing unrelated deploy job blocking the DAG bundle, and the
+  `cache: 'pip'` + `uv` defect.
+- `reference_gcs_iam_creator_vs_user` — `objectCreator` cannot overwrite; impersonation from a
+  pod's ADC is `serviceAccountTokenCreator`, not `workloadIdentityUser`.
+- `feedback_review_own_pr_before_asking`, `feedback_branch_from_origin_not_local_main`,
+  `feedback_sparse_code_comments` — working rules this ticket produced.
 
 ## 8. Open Items / Follow-ups
-- **mntn-devops#4724 — awaiting review, not blocked by us.** Out of draft 2026-08-20, reviewers `@SteelHouse/devops` + `csz-mntn` (Cristina Szumilo). Send `artifacts/audi_1194_slack_cristina_phs_grant.md`. On merge the PHS half of the daily sweep starts producing without any code change (proven under PAM: 22/22 fetched and parsed).
-- **Send the `site_network_hourly` draft to Ryan** (`artifacts/audi_1194_slack_ryan_site_network_hourly.md`) and re-profile the experiment run. That measurement is what turns a 44-73% stall into a DCU number.
-- **IMP-024 handoff:** owner is Ryan/targeting (not DDP); DAG is manual-only. Message drafted; profile the next manual run with the new discriminator before anyone codes a fix.
-- **Plan-shuffle detectors (IMP-033, widened):** three of the five plan detectors read a Spark-UI shuffle rendering that neither Dataproc nor Photon `EXPLAIN COST` emits. Only `missing_statistics` fires on either engine.
-- **Wire the Databricks `EXPLAIN COST` pull into the sweep.** The acquisition works (`artifacts/audi_1194_databricks_explain_cost.py`); it is not in `airflow_optimizer/` yet, and there is no enumeration-to-plan bridge (`jobs list-runs --completed-only` gives the runs; mapping a run to the query it ran is the missing piece).
-- **Open its own ticket for the runner** (`artifacts/audi_1194_runner_and_identities.md`): GH Actions + workload identity, Astro token, Databricks service principal, read-only GitHub App. Needs a yes before anything is filed.
-- **Digest delivery** through the `compass-slack` automation in mntn-devops. `digest.render()` already emits Slack markup, so this is a transport, not a rewrite.
-- **`aug_log_ip*` family still unrouted:** 4-11% executor utilization, 21-52 idle exec-h/run, plus `shuffle_fetch_wait` at 31-45% on 11 of 11 runs. Second in line behind `site_network_hourly`; the ranking currently buries it (IMP-046).
-- **PHS-only jobs newly visible and unreviewed:** `materialize_mntn_select_*` (Stage 6, 40-78% fetch wait) and `segment-updates-to-parquet-*` (Stage 2, 36-67%), 21 findings from the first PHS crawl.
-- **IMP-048:** `spark-events` has no lifecycle rule; the approved age-30 TTL was never applied. Needs `storage.buckets.update`.
-- **IMP-049:** clear the dead `databricks-ti837` keychain entry and repoint `databricks_smoke.py` at the OAuth profile.
+
+**Status 2026-08-21: SHIPPED.** `spark_optimizer_daily` runs in prod airflow-ti. First run:
+215 jobs, 290 findings, 196 high, four artifacts in `gs://mntn-data-archive-prod/optimizer/`.
+Closed since the last revision: mntn-devops#4724 (merged), mntn-devops#4971 (merged, the GSA and
+its grants), airflow-ti#1212 (merged, the DAG), airflow-ti#1213 (merged, unblocked prod deploys),
+and the whole runner design question.
+
+### Broken, found by the first prod run
+
+- **The coverage pass is dead on Airflow 3.** `collect_local` reads paused state from the
+  metadata DB and a task gets `airflow session use is forbidden in this context`. The sweep
+  degrades honestly (`DAG coverage unknown`, ledger declines to write rather than rekey), so it
+  is a missing feature, not corruption. Fix: back to the REST API with a deployment token, or a
+  Task-SDK call that exposes paused state. **This makes Ryan's token useful again** after the
+  reshape had made it unnecessary.
+- **The download is 200 serial `gsutil` invocations**, each paying interpreter startup. On the
+  Astro default pod (0.25 CPU / 0.5 Gi, because the DAG sets no `executor_config`) run 1 took
+  ~19 minutes and process spawn dominated the parse. Fix: one `gsutil -m cp -I`. Raising CPU is
+  the smaller lever and should follow the batching, not precede it.
+- **The digest cites the container path** (`/tmp/spark_events_*/out/...`) for the full backlog
+  instead of the GCS URL.
+
+### Next, and the ticket they belong to
+
+Everything below is post-launch work on a shipped system, so it belongs in a **new ticket**, not
+this one:
+
+- **Slack delivery.** `digest.render()` already emits Slack markup; `compass-slack` in
+  mntn-devops is the transport. This is the difference between artifacts in a bucket and a
+  product someone reads.
+- **Presentation.** The digest currently lists eight `fangorn_score_monitor` findings in a row
+  because ranking is per-finding, not per-DAG (IMP-046). One line per DAG with its worst finding
+  would read far better.
+- **Databricks.** `USE SCHEMA` on `system.lakeflow` needs a Databricks **account** admin;
+  workspace admin is not enough (`grants update` → `User is not an account admin`), which
+  corrects Ryan's assumption. Then the `EXPLAIN COST` bridge from
+  `artifacts/audi_1194_databricks_explain_cost.py` into the sweep.
+- **Hand findings to the AUDI-1191 debugger.** The optimizer produces structured findings with
+  file-level fixes and shares the event-log parser; the debugger already has the LLM path.
+
+### Carried forward, unchanged
+
+- **Send the `site_network_hourly` draft to Ryan** (`artifacts/audi_1194_slack_ryan_site_network_hourly.md`)
+  and re-profile the experiment run. Deliberately deferred: get the optimizer working first.
+- **IMP-024 handoff:** owner is Ryan/targeting (not DDP); DAG is manual-only.
+- **Plan-shuffle detectors (IMP-033, widened):** three of five plan detectors read a Spark-UI
+  shuffle rendering neither Dataproc nor Photon `EXPLAIN COST` emits.
+- **`aug_log_ip*` family still unrouted:** 4-11% executor utilization, 21-52 idle exec-h/run,
+  `shuffle_fetch_wait` 31-45% on 11 of 11 runs. Buried by the per-finding ranking (IMP-046).
+- **PHS-only jobs newly visible and unreviewed:** `materialize_mntn_select_*` and
+  `segment-updates-to-parquet-*`.
+- **IMP-048:** `spark-events` has no lifecycle rule; the approved age-30 TTL was never applied.
+- **IMP-049:** clear the dead `databricks-ti837` keychain entry.
+- **New, from run 1:** `fangorn_score_monitor` spilled **1.7 TiB** on one stage and held ~422
+  idle executor-hours at 7% utilization. Biggest single number the tool has produced; unrouted.
+
+### The comment cleanup this ticket owes
+
+The vendored `include/spark_optimizer/` package ships multi-line rationale comments throughout,
+which violates the rule this session made explicit and enforced (`lint_comments.py` in the commit
+gate). Its own linter would fail it today. Own PR, before anything else lands on the package.
