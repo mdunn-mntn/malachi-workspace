@@ -10,6 +10,7 @@ from the batch uuid. Blocked on standing storage.objectViewer for the temp bucke
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import subprocess
@@ -71,10 +72,38 @@ def _strip_top_markers(local: str) -> list[str]:
     return os.listdir(local)
 
 
-def fetch_logs(batches: list[dict], dest: str, bucket: str = PHS_TEMP_BUCKET) -> list[str]:
-    """Download each batch's event log; skip unreachable (403/absent) quietly. Returns paths."""
+# A PHS batch dir is a recursive copy of unknown size, so an uncapped fetch is an uncapped
+# download: 500 batches x 600s of timeout is days of wall clock and tens of GB on a worker's
+# ephemeral disk, and a disk that fills mid-write leaves truncated logs that parse as clean.
+MAX_BATCHES = 60
+MAX_BYTES = 4 * 1024**3
+
+
+def _dir_bytes(path: str) -> int:
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for f in files:
+            with contextlib.suppress(OSError):
+                total += os.path.getsize(os.path.join(root, f))
+    return total
+
+
+def fetch_logs(batches: list[dict], dest: str, bucket: str = PHS_TEMP_BUCKET,
+               max_batches: int = MAX_BATCHES, max_bytes: int = MAX_BYTES) -> list[str]:
+    """Download each batch's event log; skip unreachable (403/absent) quietly. Returns paths.
+
+    Bounded on both axes. Stopping early loses the tail of an already-ranked list, which costs
+    coverage; not stopping risks filling the worker's disk, which costs correctness.
+    """
     got = []
+    if len(batches) > max_batches:
+        print(f"[phs] capped at {max_batches} of {len(batches)} batches")
+        batches = batches[:max_batches]
     for b in batches:
+        if _dir_bytes(dest) >= max_bytes:
+            print(f"[phs] stopping at {len(got)} batches: download budget "
+                  f"({max_bytes // 1024**3} GiB) reached")
+            break
         local = os.path.join(dest, b.get("uuid", "unknown"))
         os.makedirs(local, exist_ok=True)
         r = subprocess.run(

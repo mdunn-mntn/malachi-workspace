@@ -32,26 +32,63 @@ def newest_logs(prefix: str, cap: int) -> list[str]:
 
     `.inprogress` logs are excluded: the crawler discards them, so including them spends the
     download budget on nothing and can pass a "downloaded > 0" check with an empty report.
+
+    Raises on a listing failure rather than returning []. An empty list and a failed list are
+    completely different facts downstream: one is a quiet day, the other is a broken sweep that
+    would otherwise publish a confident, wrong "nothing to report".
     """
     r = subprocess.run(["gsutil", "ls", "-l", f"{prefix.rstrip('/')}/**"],
                        capture_output=True, text=True, timeout=900)
+    if r.returncode != 0:
+        raise RuntimeError(f"listing {prefix} failed ({r.returncode}): "
+                           f"{(r.stderr or '').strip()[:300]}")
     rows = []
     for line in r.stdout.splitlines():
         parts = line.split()
-        if len(parts) >= 3 and parts[-1].endswith(".zstd"):
+        # gsutil ls -l ends with a "TOTAL: N objects, M bytes" line; it has no object column.
+        if len(parts) >= 3 and parts[-1].endswith(".zstd") and parts[-1].startswith("gs://"):
             rows.append((parts[1], parts[-1]))          # (creation time, object)
     rows.sort()
     return [obj for _, obj in rows[-cap:]]
 
 
-def download(objects: list[str], dest: str) -> int:
-    """Copy each object under `dest`. Returns how many landed; a failed object is skipped."""
-    n = 0
+def download(objects: list[str], dest: str) -> tuple[int, int]:
+    """Copy each object under `dest`. Returns (landed, failed).
+
+    The failure count is returned rather than swallowed because a partial download is not a
+    small version of a full one: the sweep would read the jobs that landed, see nothing from
+    the rest, and report them as having stopped firing.
+    """
+    landed = failed = 0
     for obj in objects:
         target = dest_for(dest, obj)
         os.makedirs(target, exist_ok=True)
         r = subprocess.run(["gsutil", *GSUTIL_OPTS, "cp", obj, target + "/"],
                            capture_output=True, timeout=600)
         if r.returncode == 0:
-            n += 1
-    return n
+            landed += 1
+        else:
+            failed += 1
+            if failed <= 3:                       # enough to diagnose, not a log flood
+                print(f"[fetch] failed {obj}: {(r.stderr or b'').decode()[:160]}")
+    return landed, failed
+
+
+def fetch_optional(obj: str, dest: str) -> bool:
+    """Fetch one object that is allowed not to exist. True when it landed.
+
+    Distinguishes "absent" from "the copy failed", which a bare download cannot. Callers that
+    treat a missing file as empty state need that distinction: for the ledger, believing an
+    unreadable object is an absent one destroys the history it is about to republish.
+    """
+    stat = subprocess.run(["gsutil", *GSUTIL_OPTS, "stat", obj],
+                          capture_output=True, timeout=120)
+    if stat.returncode != 0:
+        return False                              # not there; a fresh start is correct
+    os.makedirs(dest, exist_ok=True)
+    cp = subprocess.run(["gsutil", *GSUTIL_OPTS, "cp", obj, dest + "/"],
+                        capture_output=True, timeout=600)
+    if cp.returncode != 0:
+        raise RuntimeError(f"{obj} exists but could not be fetched "
+                           f"({cp.returncode}): {(cp.stderr or b'').decode()[:200]}")
+    return True

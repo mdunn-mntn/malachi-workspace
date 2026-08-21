@@ -48,7 +48,29 @@ def test_collect_local_classifies_without_a_token(monkeypatch: pytest.MonkeyPatc
     assert live.opaque_tasks == [("write_signal", coverage.OPAQUE_OPERATORS["DbxDbtOperator"])]
 
 
-def test_collect_local_reports_a_broken_bundle_instead_of_raising() -> None:
-    """A coverage failure must never sink a sweep that already produced findings."""
-    cov = coverage.collect_local("2026-08-21", dag_folder="/nonexistent/bundle")
-    assert cov.error and not cov.dags
+def test_collect_local_reports_a_failure_instead_of_raising(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A coverage failure must never sink a sweep, but it must be VISIBLE on the report.
+
+    The previous version of this test asserted only that `cov.error` was set, which it always
+    is when Airflow is not installed, so it passed without exercising anything.
+    """
+    def _boom(_folder: str | None) -> tuple[dict, set]:
+        raise RuntimeError("metadata DB unreachable from the task")
+
+    monkeypatch.setattr(coverage, "_load_bag_and_paused", _boom)
+    cov = coverage.collect_local("2026-08-21")
+    assert not cov.dags
+    assert "metadata DB unreachable" in cov.error
+    assert "Could not enumerate DAGs" in coverage.render(cov)
+
+
+def test_paused_set_is_read_before_the_bundle_is_parsed() -> None:
+    """Parsing the bundle runs every DAG's module code; doing it then discarding it is waste.
+
+    Guards the ORDER inside the helper, which is the whole point of the fix: an unreachable DB
+    must fail before hundreds of MB of DAG parsing, not after.
+    """
+    import inspect
+
+    src = inspect.getsource(coverage._load_bag_and_paused)
+    assert src.index("create_session") < src.index("DagBag(")

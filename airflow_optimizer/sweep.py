@@ -58,8 +58,13 @@ def publish(files: list[str], gcs_prefix: str) -> list[str]:
 
 def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         outdir: str = OUTDIR, ledger_path: str = ledger_mod.LEDGER,
-        gcs_prefix: str = "") -> dict:
-    """Crawl, record, report. Returns the paths written and the headline counts."""
+        gcs_prefix: str = "", complete: bool = True) -> dict:
+    """Crawl, record, report. Returns the paths written and the headline counts.
+
+    `complete=False` says the acquisition step did not deliver the whole fleet (some downloads
+    failed). The sweep still reports what it found, but it will not conclude that anything
+    stopped firing, because on a partial sweep absence is not evidence.
+    """
     reports = crawl(paths)
     scored = [r for r in reports if not r.error]
     findings = sum(len(r.findings) for r in scored)
@@ -87,12 +92,29 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             print(f"[sweep] coverage skipped: {str(e)[:160]}")
             cov = None
 
+    # The ledger keys a finding by DAG, and `known` is what resolves an ambiguous trailing
+    # suffix. Without it the same job keys differently (materialize_mntn_select_16 vs
+    # materialize_mntn_select), which reads as a brand-new finding now and as a resolved one
+    # three sweeps later. Both are lies, so when coverage failed and the ledger already holds
+    # history, decline to write rather than write under a second namespace.
     entries, delta = [], ledger_mod.Delta()
-    try:
-        entries = ledger_mod.record(reports, date, path=ledger_path, known=known)
-        delta = ledger_mod.delta(entries)
-    except Exception as e:  # a ledger fault must not lose the backlog
-        print(f"[sweep] ledger skipped: {str(e)[:160]}")
+    ledger_note = ""
+    prior = ledger_mod.read(ledger_path)
+    # Only when coverage was ASKED FOR and failed. A sweep that never requests coverage keys
+    # every run the same way, so there is nothing to be inconsistent with; the damage comes
+    # from a history written WITH the active-DAG set and a run appended without it.
+    if airflow_base and known is None and prior:
+        ledger_note = ("coverage unavailable, so this sweep was not recorded: without the "
+                       "active-DAG set the same job keys differently and would read as new")
+        print(f"[sweep] ledger skipped: {ledger_note}")
+    else:
+        try:
+            entries = ledger_mod.record(reports, date, path=ledger_path, known=known,
+                                        complete=complete)
+            delta = ledger_mod.delta(entries)
+        except Exception as e:  # a ledger fault must not lose the backlog
+            ledger_note = f"ledger step failed: {str(e)[:160]}"
+            print(f"[sweep] {ledger_note}")
 
     if cov is not None:
         cov.report_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
@@ -101,6 +123,11 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
 
     text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high,
                              date=date, coverage=cov, backlog_path=backlog)
+    if not complete:
+        text += ("\n\n_Partial sweep: some event logs could not be downloaded, so nothing is "
+                 "reported as resolved this run._")
+    if ledger_note:
+        text += f"\n\n_No change tracking this run: {ledger_note}._"
     digest_path = os.path.join(outdir, f"optimizer_digest_{date}.md")
     with open(digest_path, "w") as fh:
         fh.write(digest_mod.render_plain(text))
@@ -113,6 +140,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         "coverage": cov.report_path if cov else "",
         "scanned": len(scored), "findings": findings, "high": high,
         "ledger_entries": len(entries), "slack": text, "published": published,
+        "complete": complete, "ledger_note": ledger_note,
     }
 
 
@@ -127,12 +155,14 @@ def main() -> None:
                          "bundle in-process; omit to skip coverage")
     ap.add_argument("--outdir", default=OUTDIR)
     ap.add_argument("--ledger", default=ledger_mod.LEDGER)
+    ap.add_argument("--partial", action="store_true",
+                    help="acquisition was incomplete; record findings but resolve nothing")
     ap.add_argument("--gcs-prefix", default=os.environ.get("OPTIMIZER_GCS_PREFIX", ""),
                     help="gs://... to publish the artifacts to; omit to keep them local only")
     args = ap.parse_args()
 
     out = run(args.paths, args.date, args.source, args.airflow_base, args.outdir,
-              args.ledger, args.gcs_prefix)
+              args.ledger, args.gcs_prefix, complete=not args.partial)
     print(f"Fleet optimization: {out['scanned']} jobs scanned, {out['findings']} findings, "
           f"{out['high']} high-impact.")
     print(f"[sweep] backlog  {out['backlog']}")

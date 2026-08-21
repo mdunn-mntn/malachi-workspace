@@ -165,15 +165,26 @@ def collect(base: str, date: str, token: str | None = None) -> Coverage:
 
 
 def _load_bag_and_paused(dag_folder: str | None) -> tuple[dict, set]:
-    """Parse the DAG bundle and read which DAGs are paused. Airflow-only; seam for tests."""
+    """Parse the DAG bundle and read which DAGs are paused. Airflow-only; seam for tests.
+
+    The paused query runs FIRST and deliberately. Parsing the bundle executes the module-level
+    code of every DAG in the deployment, including their `Variable.get()` calls, which is
+    hundreds of MB and a burst of API-server RPCs from inside one worker slot. Doing that and
+    then discovering the DB is unreachable pays the whole cost for nothing, which is what the
+    original order did. If the session fails, this raises before the parse.
+
+    A worker in a deployment that denies direct metadata-DB access will raise here every run;
+    that is intended. `collect_local` turns it into a stated gap on the report rather than a
+    silent one, and `sweep` then declines to write ledger rows it cannot key correctly.
+    """
     from airflow.models import DagModel
     from airflow.models.dagbag import DagBag
     from airflow.utils.session import create_session
 
-    bag = DagBag(dag_folder=dag_folder, include_examples=False)
     with create_session() as session:
         paused = {row[0] for row in session.query(DagModel.dag_id).filter(
             DagModel.is_paused.is_(True)).all()}
+    bag = DagBag(dag_folder=dag_folder, include_examples=False)
     return bag.dags, paused
 
 

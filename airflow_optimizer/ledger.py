@@ -95,8 +95,14 @@ def _history(entries: list[dict]) -> dict[tuple[str, str], list[dict]]:
     return hist
 
 
-def classify(new: list[Entry], prior: list[dict], date: str) -> list[Entry]:
-    """Set state and streak on this sweep's findings from what the ledger already holds."""
+def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = True) -> list[Entry]:
+    """Set state and streak on this sweep's findings from what the ledger already holds.
+
+    `complete=False` means this sweep did not see the whole fleet, so absence proves nothing
+    and no key may be resolved from it. Resolution is the only inference drawn from a finding
+    NOT appearing, which makes it the only thing a partial sweep can get catastrophically
+    wrong: it would announce untouched jobs as fixed.
+    """
     hist = _history(prior)
     seen_dates = sorted({e.get("date", "") for e in prior if e.get("date")})
     for entry in new:
@@ -122,7 +128,8 @@ def classify(new: list[Entry], prior: list[dict], date: str) -> list[Entry]:
             entry.state = "chronic"
         else:
             entry.state = "recurring"
-    _mark_resolved(new, hist, seen_dates, date)
+    if complete:
+        _mark_resolved(new, hist, seen_dates, date)
     return new
 
 
@@ -160,11 +167,14 @@ def append(entries: list[Entry], path: str = LEDGER) -> int:
 
 
 def record(reports: list, date: str, owners: dict | None = None, dcu: dict | None = None,
-           path: str = LEDGER, known: set | None = None) -> list[Entry]:
+           path: str = LEDGER, known: set | None = None, complete: bool = True) -> list[Entry]:
     """Turn a crawl's JobReports into classified ledger entries and append them.
 
     `known` is the active-DAG set from the coverage pass; it disambiguates a trailing
     numeric suffix (run index vs data-source id) instead of guessing.
+
+    `complete` says whether this sweep saw the whole fleet. A partial sweep still records what
+    it found, but may not resolve anything.
     """
     owners, dcu = owners or {}, dcu or {}
     entries = []
@@ -180,7 +190,7 @@ def record(reports: list, date: str, owners: dict | None = None, dcu: dict | Non
                 dcu_h=dcu.get(dag_id),
             ))
     entries = _dedup(entries)
-    classify(entries, read(path), date)
+    classify(entries, read(path), date, complete=complete)
     append(entries, path)
     return entries
 
