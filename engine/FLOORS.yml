@@ -43,3 +43,5 @@ protected_paths:
 kill_switch:
   flag: engine/STOP
   rule: "Presence of engine/STOP halts every engine stage at entry. dsh-lab/scripts/killswitch.sh sets it plus the dsh-lab DISABLED flag."
+
+# (guard accept-path verification 2026-08-21)
