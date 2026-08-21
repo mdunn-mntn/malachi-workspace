@@ -685,3 +685,54 @@ The `automations/apps/base/` + overlay route from §9 is the *other* deployment 
 `argocd-v2/mgmt/platform/<name>/` with their own ApplicationSet. **Follow the newer path** — it is
 where the two most recent automations live, and it avoids the prod-overlay `$patch: delete`
 footgun §9 flagged entirely.
+
+---
+
+## 11. 2026-08-20 — shipped: mntn-devops#4971
+
+One PR, not three. All of it lands in `mntn-devops` and the pieces are interdependent (the
+CronJob's `serviceAccountName` has to match the KSA the Terragrunt unit binds), so splitting them
+would produce two PRs that are individually broken.
+
+**https://github.com/SteelHouse/mntn-devops/pull/4971** — 33 files, reviewers `SteelHouse/devops`.
+
+| Path | What |
+|---|---|
+| `automations/apps/spark-optimizer/` | package, `Dockerfile`, `bin/sweep.sh`, `ruff.toml`, `README.md` |
+| `.github/workflows/build-automation-images.yaml` | `test-spark-optimizer` + `build-spark-optimizer` jobs, path filter, detect output |
+| `terragrunt/.../mntn-gke-management-01/spark-optimizer/` | `terragrunt.hcl`, `main.tf`, `variables.tf` |
+| `argocd-v2/mgmt/platform/spark-optimizer/` | ApplicationSet + base (`cronjob`, `serviceaccount`, `kustomization`) + production overlay |
+
+**Verified before opening:** 43 tests pass, `ruff check` clean, `kubectl kustomize` renders the
+production overlay, and `docker build` succeeds with the in-container selftest passing
+(`[selftest] PASS: 4 jobs scanned`).
+
+**Four decisions worth keeping:**
+
+1. **`ruff.toml` ships with the app.** The package was clean in the workspace and reported 18
+   errors under `mntn-devops` CI, because the workspace's `pyproject.toml` selects its rule set
+   explicitly and Ruff's own defaults differ. Three of those were `C901` against the event-log
+   parser, which dispatches on 7 Spark event families and is inherently branchy. The config
+   mirrors the workspace's selection and its `max-complexity = 25`, and CI pins
+   `ruff>=0.16,<0.17` for the same reason the workspace does. **A lint config that lives only in
+   the source repo does not travel with the code.**
+2. **The `objectCreator` grant carries an IAM condition** limiting it to
+   `projects/_/buckets/mntn-data-archive-prod/objects/optimizer/`. Without it the one write grant
+   would also permit overwriting the event logs the job reads. Note the IAM audit's `denyPolicies`
+   view is partial and conditional-IAM usage org-wide was never confirmed, so this may be the
+   first conditional binding in the project. Flag it in review rather than assume it is routine.
+3. **No ExternalSecret in this PR.** The GCS and Dataproc half needs no secret at all, and an
+   ExternalSecret pointing at an unpopulated Vault path would leave the Application permanently
+   OutOfSync. It lands with the Astro token, in a follow-up.
+4. **`OPTIMIZER_COVERAGE=0`.** The coverage pass shells out to `.claude/scripts/airflow_api.py`,
+   which does not exist in the container, and needs an Astro token that does not exist yet. The
+   sweep degrades to "coverage unknown" rather than failing. Flip to `1` in the same follow-up.
+
+**Also changed in the workspace:** `oncall_daily_optimizer.sh` now reads `OPTIMIZER_WORKSPACE`,
+`OPTIMIZER_OUTDIR` and `OPTIMIZER_LEDGER` from the environment and passes `--outdir`/`--ledger`
+through to `sweep`. The laptop defaults are unchanged, so one script serves both the launchd job
+and the container.
+
+**What #4971 does NOT close:** the Astro token (Ryan Kleck, `WORKSPACE_OWNER`), `USE SCHEMA` on
+`system.lakeflow` (needs a metastore admin now that Victor has left), and mntn-devops#4724, which
+still gates the PHS half of the fleet.
