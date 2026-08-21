@@ -5,7 +5,9 @@ set -uo pipefail
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 
 # Safe pull: only when the tree is clean, so overnight Pi commits land without clobbering local work.
-if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 && [[ -z "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]]; then
+# ORIENT_NO_PULL=1 = read-only orientation (dsh sessions set it: a pull from a session-start hook
+# races concurrent sessions in this shared worktree; Claude Code's own SessionStart keeps the pull).
+if [[ "${ORIENT_NO_PULL:-}" != "1" ]] && git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 && [[ -z "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]]; then
   git -C "$ROOT" pull --quiet origin main >/dev/null 2>&1 && echo "Git      : pulled origin/main (tree was clean)"
 fi
 
