@@ -751,12 +751,14 @@ sub           cmf357xbd2uz001o44sl2mxp8     # Ryan Kleck
 issued        2026-08-21     expires 2027-08-21
 ```
 
-**It should be rotated once it is in Vault.** It crossed Slack in plaintext, so Slack's retention
-now holds a working prod credential regardless of whether the message is deleted. That is not a
-reason to refuse it, it is a reason to treat this one as interim: onboard it, confirm the CronJob
-reads it, then mint a replacement through the proper path and revoke this one. Ryan does not have
-Astro admin either (`astro deployment token create` worked for him but he described himself as
-lacking admin), so the durable owner is still `ORGANIZATION_OWNER` — **Dustin Niehoff**.
+**Rotation was raised and declined, 2026-08-21.** The token crossed Slack in plaintext, so Slack's
+retention holds a working prod credential regardless of whether the message is deleted, and the
+first recommendation here was to treat it as interim and re-mint it through
+`ORGANIZATION_OWNER` (Dustin Niehoff). Malachi's call was to keep it. **Recorded as an accepted
+risk, not an oversight.** The mitigating facts: it is scoped to one deployment
+(`deploymentId:cmd6bd10c0gl901rfuokgryiq`), it only reads DAG and task names, and it expires
+2027-08-21. **Revisit if the token's scope ever widens beyond read**, and revoke it if the
+`spark-optimizer` workload is retired.
 
 **Using it immediately exposed a real defect.** `coverage._airflow()` and `coverage._bearer()`
 both shelled out to `.claude/scripts/airflow_api.py` at a **relative** path. That file is a
