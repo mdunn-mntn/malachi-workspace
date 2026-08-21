@@ -528,3 +528,83 @@ place. **Cite it in the PR.** Keep the bucket-scoped `objectViewer`/`objectCreat
 
 **Compass's own caveat, honoured:** no IAM advisor ran this round, so every finding above is
 IaC-declared and not live-state confirmed, and no run ID or collection age exists to cite.
+
+---
+
+## 9. 2026-08-20 — the platform already exists: `mntn-devops/automations/`
+
+Chasing the image-build question found the answer to the whole problem. **`mntn-devops` contains a
+purpose-built automations platform** — `automations/` with `docs/ADD_AN_AUTOMATION.md`,
+`templates/automation/{cronjob,externalsecret,deployment,build-and-push}.yaml`, a shared
+`build-automation-images.yaml` workflow, and a running `slack-bot-c3po`. Its stated scope is
+*"Slack bot, cron job, small service"*, and its ownership model explicitly supports source living
+in `automations/<name>/` for *"small internal utilities"*. This is that.
+
+**It removes four open problems at once:**
+
+1. **The image build.** Images publish to GAR at
+   `us-central1-docker.pkg.dev/devops-425515/automations/<name>`. The doc states plainly:
+   *"No extra IAM for a new image"* — `github-actions@mntn-prj-prod-00` already holds
+   `artifactregistry.writer` and the node SA holds `artifactregistry.reader` on the whole repo.
+2. **The GitHub Actions OIDC blocker from §3 is gone.** §3 ruled out Actions + Workload Identity
+   Federation because the code sat in `mdunn-mntn/malachi-workspace`, a personal repo, and the
+   prod pool allow-lists 23 `SteelHouse/*` repos. **`mntn-devops` is on that allow-list.** Moving
+   the source there makes the documented WIF path
+   (`workloadIdentityPools/mntn-prj-prod-gh-oidc/providers/github` →
+   `github-actions@mntn-prj-prod-00`) available with no pool change and no key. The §3 reasoning
+   was right; the conclusion only followed from where the code happened to live.
+3. **The `cron-jobs` chart PR is moot.** `templates/automation/cronjob.yaml` already carries
+   `serviceAccountName: automations-runner`, `concurrencyPolicy: Forbid`, `timeZone: UTC` and
+   history limits. **Compass's second gap and §7's one-line `mntn-helm` change are no longer
+   needed** — that gap was real for the `cron-jobs` chart and simply does not apply to this path.
+4. **Secrets.** `templates/automation/externalsecret.yaml` plus `docs/SECRETS.md` define the
+   contract. The Onboard-Team-Secret correction from §8 still holds; only the consumer changes.
+
+**Read this before copying anything:** the prod overlay renders **everything in `base`**
+(`resources: [../../base]`) and removes workloads only via explicit `$patch: delete`. Registering
+in `base` therefore **deploys to prod on the next sync**. `slack-bot-c3po` carries a prod
+delete-patch for exactly this reason. A new automation must ship its own delete-patch to stay out
+of prod until it is deliberately promoted.
+
+Also note the base manifests keep the `ghcr.io/steelhouse/<name>` image ref as the **match key**
+for the CI writeback and the kustomize image transformer; the nonprod overlay redirects the real
+pull to GAR via `newName`. Do not "fix" the GHCR ref in base — it is load-bearing.
+
+### The one real gap
+
+**`automations-runner` has no GCP identity.** `automations/apps/base/rbac.yaml` defines it with an
+in-namespace Role for `secrets`/`configmaps`/`pods` and **no `iam.gke.io/gcp-service-account`
+annotation**, so a pod running as it cannot reach GCS or Dataproc at all. Its own comment records
+why the previous credential is gone: *"The previous ghcr-pull-secret wrapped a long-lived GitHub
+PAT, which was revoked and took the workloads offline — see SOP 063, identity over credentials."*
+
+Two ways to close it, and the choice matters:
+
+- **Annotate `automations-runner`** — one line, but every automation in the namespace inherits the
+  optimizer's GCS and Dataproc read. Wrong direction for a shared runner.
+- **A dedicated KSA `spark-optimizer-runner`** in the `automations` namespace, bound by Workload
+  Identity to the new `spark-optimizer` GSA, with `serviceAccountName` on the CronJob pointing at
+  it instead. Blast radius stays at one workload, and the existing shared Role can be reused by
+  RoleBinding.
+
+Take the second. The binding mirrors
+`terragrunt/.../mntn-gke-prod-01/iam/workload_identity/data_eng_mcp/terragrunt.hcl` (§8), which
+already grants a GKE workload standing `dataproc.viewer` + `storage.objectViewer` on
+`mntn-prj-prod-00` for *"Spark event log access"* — the same purpose, on the same project.
+
+**Open:** which cluster the `automations` namespace runs on. The prod overlay says only *"now
+deployed to the mgmt cluster"* without naming it, and `data_eng_mcp`'s binding is written against
+`mntn-gke-prod-01`. The Workload Identity binding is cluster-specific, so confirm the cluster
+before writing that unit.
+
+### Final PR set
+
+| Repo | Change |
+|---|---|
+| `mntn-devops` | `automations/spark-optimizer/` — source + Dockerfile; a build job in `.github/workflows/build-automation-images.yaml` copying `build-slack-bot-c3po` |
+| `mntn-devops` | `automations/apps/base/spark-optimizer/{cronjob,externalsecret,kustomization}.yaml`, registered in `base/kustomization.yaml`, plus a **prod `$patch: delete`** |
+| `mntn-devops` | `automations/apps/overlays/nonprod/kustomization.yaml` — GHCR match key → GAR `newName` |
+| `mntn-devops` | GSA `spark-optimizer` + four bindings + a `workload_identity` unit for KSA `spark-optimizer-runner` |
+| Basecamp | **Onboard** Team Secret at `secrets/team-engineering-targeting/spark-optimizer-secrets/` |
+
+`mntn-argocd` and `mntn-helm` drop out entirely. Everything lands in one repo.
