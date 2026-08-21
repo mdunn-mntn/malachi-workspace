@@ -1,6 +1,6 @@
 # PART B — The Self-Improvement Engine on dsh
 
-> Design agent output, 2026-08-21. Companion docs: `audi_xxxx_design_a_integration.md`, `audi_xxxx_design_c_verification.md`, `audi_xxxx_master_plan.md` (reconciled plan; per the plan, the engine's Cordis plugins `engine-guard`/`replay-tools` live in `dsh-lab/packages/`, not `$WS/engine/plugins/`).
+> Design agent output, 2026-08-21. Companion docs: `ti_xxx_design_a_integration.md`, `ti_xxx_design_c_verification.md`, `ti_xxx_master_plan.md` (reconciled plan; per the plan, the engine's Cordis plugins `engine-guard`/`replay-tools` live in `dsh-lab/packages/`, not `$WS/engine/plugins/`).
 
 `$WS` = `/Users/malachi/Developer/work/mntn/workspace`. `$DSH_HOME` = `~/.dsh` (dsh is not yet installed — Part A stands it up; every dsh-dependent step below declares that dependency).
 

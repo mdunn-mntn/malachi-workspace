@@ -5,7 +5,7 @@ Prior work, newest first. `result` = the blessed one-line answer (skip re-readin
 
 | date | ticket | summary | status | result | doc |
 |------|--------|---------|--------|--------|-----|
-| 2026-08-21 | AUDI: xxxx dsh harness spike | Evaluate DeepSeek Harness as sidecar automation harness and self-improvement engine substrate | backlog | not started | [doc](audi_xxxx_dsh_harness_spike/summary.md) |
+| 2026-08-21 | Local spike: dsh plugin harness | Evaluate DeepSeek Harness as sidecar automation harness and self-improvement engine substrate | backlog | not started | [doc](ti_xxx_dsh_harness_spike/summary.md) |
 | 2026-08-20 | [SPIKE] MM vs 3P performance by sales vertical for Sales | Standing Sales request: MM vs 3P prospecting performance across the 8 sales verticals | done | Refreshed AUDI-1141 scorecard to the 2026-08-20 window, added CPA and Peak Performance, flagged that no B2B CPA claim survives. Closed 2026-08-20. | [doc](audi_1212_mm_vs_3p_sales_request/summary.md) |
 | 2026-08-20 | AUDI-1213: mde calculator refresh | Refresh the MDE calculator onto advertiser-facing spend and a corrected arm-split, add the 365-day lapsed cohort, host on Mode | backlog | not started | [doc](audi_1213_mde_calculator_refresh/summary.md) |
 | 2026-08-19 | [SPIKE] Ghost-bid incrementality across the advertiser base + refreshed lift-test candidates | Base-wide ghost-bid lift and a refreshed tiered lift-test candidate list for Imani Clark | done | Visit lift +4.7% (CI +4.4/+5.0), conversions +3.3%; Top 81 / Mid 207 / Low 927 of 1,215 eligible. Two method findings limit what the instrument can say. | [doc](audi_1209_base_wide_ghost_bid_lift/summary.md) |

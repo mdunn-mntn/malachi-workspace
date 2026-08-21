@@ -1,6 +1,6 @@
 # PART A — Component-by-Component Integration Architecture: dsh as Sidecar/Lab Harness
 
-> Design agent output, 2026-08-21. Companion docs: `audi_xxxx_design_b_engine.md`, `audi_xxxx_design_c_verification.md`, `audi_xxxx_master_plan.md` (reconciled plan; the plan supersedes where they differ — notably Part C's `$WS/dsh-kit/` path is unified into the sibling repo `dsh-lab/`).
+> Design agent output, 2026-08-21. Companion docs: `ti_xxx_design_b_engine.md`, `ti_xxx_design_c_verification.md`, `ti_xxx_master_plan.md` (reconciled plan; the plan supersedes where they differ — notably Part C's `$WS/dsh-kit/` path is unified into the sibling repo `dsh-lab/`).
 
 Stance: **Claude Code remains the daily interactive driver. dsh is a sidecar harness** — headless automation + Python SDK + Web UI inspection + plugin lab — sharing the same host-agnostic substrate (scripts, skills, git knowledge base). Everything MNTN-specific stays in the workspace repo as shell/python; dsh gets only thin TypeScript adapters.
 

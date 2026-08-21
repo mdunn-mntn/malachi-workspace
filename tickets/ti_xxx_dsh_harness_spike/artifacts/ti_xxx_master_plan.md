@@ -53,7 +53,7 @@ Pipeline: **HARVEST** (deterministic python, daily launchd: mines perf log, requ
 ## Execution phases (each step ≈ one agent, ≤ half-day, independently testable)
 
 **Phase 0 — ticket + capture (no dsh):**
-0.1 Scaffold spike folder via `new_ticket.sh` (e.g. `audi_xxxx_dsh_harness_spike`), copy the 4 research/design docs from scratch into `artifacts/` (research corpus: `/private/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/a7dff816-cf0a-4406-a0f4-a2b6c1594db0/tasks/wjqpkdiln.output`; designs: `.../tasks/{a3bdb6a3efae06596,a33e53f5911379509,adee5bc232d2a4a18}.output` — copy NOW, scratch is session-scoped), file the Fireship transcript into `meetings/`, draft linted Jira spike for user confirm, `/frame` it.
+0.1 Scaffold spike folder via `new_ticket.sh` (e.g. `ti_xxx_dsh_harness_spike`), copy the 4 research/design docs from scratch into `artifacts/` (research corpus: `/private/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/a7dff816-cf0a-4406-a0f4-a2b6c1594db0/tasks/wjqpkdiln.output`; designs: `.../tasks/{a3bdb6a3efae06596,a33e53f5911379509,adee5bc232d2a4a18}.output` — copy NOW, scratch is session-scoped), file the Fireship transcript into `meetings/`, draft linted Jira spike for user confirm, `/frame` it.
 0.2 `/capture` the research findings into `knowledge/` (dsh facts, Cordis model, ecosystem gaps, security posture) + commit.
 
 **Phase 1 — foundations (A1-3 + C1-2):**

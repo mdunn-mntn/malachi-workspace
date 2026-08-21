@@ -1,6 +1,6 @@
 # PART C — Verification, Testing, Security & Risk Governance for dsh Adoption
 
-> Design agent output, 2026-08-21. Companion docs: `audi_xxxx_design_a_integration.md`, `audi_xxxx_design_b_engine.md`, `audi_xxxx_master_plan.md`. **Path note:** this part was drafted against `$WS/dsh-kit/`; the reconciled plan relocates all of it into the sibling repo `dsh-lab/` (its `tests/`, `scripts/`, `home/` etc.). Content is relocatable by design (§0).
+> Design agent output, 2026-08-21. Companion docs: `ti_xxx_design_a_integration.md`, `ti_xxx_design_b_engine.md`, `ti_xxx_master_plan.md`. **Path note:** this part was drafted against `$WS/dsh-kit/`; the reconciled plan relocates all of it into the sibling repo `dsh-lab/` (its `tests/`, `scripts/`, `home/` etc.). Content is relocatable by design (§0).
 
 ## 0. Ground rules and assumptions
 

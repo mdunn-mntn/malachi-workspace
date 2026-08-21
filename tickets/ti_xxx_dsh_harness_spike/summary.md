@@ -1,6 +1,6 @@
 ---
 doc_type: ticket
-title: "AUDI: xxxx dsh harness spike"
+title: "Local spike: dsh plugin harness"
 status: backlog
 date: 2026-08-21
 summary: "Evaluate DeepSeek Harness as sidecar automation harness and self-improvement engine substrate"
@@ -9,9 +9,9 @@ question: ""
 framing_state: draft
 ---
 
-# AUDI: xxxx dsh harness spike
+# Local spike: dsh plugin harness
 
-**Jira:** https://mntn.atlassian.net/browse/AUDI
+**Jira:** none (local-only spike)
 **Status:** backlog
 **Date Started:** 2026-08-21
 **Assignee:** Malachi
@@ -36,8 +36,8 @@ This spike: deep research (done 2026-08-21, 7-unit workflow), a reconciled maste
 - Risk side: dsh is preview software (breaking changes promised, ~3-10x token hunger, no network egress restriction in its sandbox, in-process plugins) — adoption must be severable and hard-gated. MNTN constraints: Anthropic-only model routing (user decision 2026-08-21), no LLM keys on servers, knowledge stays git-based markdown.
 
 ## 3. Plan of Action
-Master plan: `artifacts/audi_xxxx_master_plan.md` (phases 0-6). Designs: `artifacts/audi_xxxx_design_{a_integration,b_engine,c_verification}.md`. Research corpus: `artifacts/audi_xxxx_research_*.md` (6 units) + `meetings/audi_xxxx_01_fireship_dsh_video_2026_08_20.txt` (verbatim transcript).
-1. Phase 0: ticket + Jira spike + /frame + /capture research findings (in progress)
+Master plan: `artifacts/ti_xxx_master_plan.md` (phases 0-6). Designs: `artifacts/ti_xxx_design_{a_integration,b_engine,c_verification}.md`. Research corpus: `artifacts/ti_xxx_research_*.md` (6 units) + `meetings/ti_xxx_01_fireship_dsh_video_2026_08_20.txt` (verbatim transcript).
+1. Phase 0: local ticket + /frame + /capture research findings (in progress)
 2. Phase 1: `dsh-lab` sibling repo foundations (pin, gate stub, profiles, Keychain launcher, behavioral harness)
 3. Phase 2: core plugins (skills mount, `@mntn/dsh-bq` tool+guard, `@mntn/dsh-kit`, replay runner, parity suite)
 4. Phase 3: security for headless (dshagent + pf egress, adversarial reviewer, killswitch + provenance)
