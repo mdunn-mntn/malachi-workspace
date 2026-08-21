@@ -63,6 +63,14 @@ Research corpus in `artifacts/` (2026-08-21). Headlines:
 - macOS: no `timeout(1)`; behavioral harness uses a perl alarm wrapper (same footgun class as `find -newermt`).
 - Gate `dshkit_verify.sh` REJECT-by-default proven: dummy unit without evidence bundle rejected naming the missing pieces; pnpm build-script allowlist held to 3 native deps (subprocess-local, koffi, node-pty).
 
+### Phase 2.1-2.5 build findings (2026-08-21, gates PASSED after adversarial review)
+- **Skills mount verbatim**: `skill-filesystem` `customSkillDirs` → `.claude/skills`; `/frame` loaded headless by name, exact heading returned. Note: skill-filesystem + tool-skill ship `disabled: true` at this rc; enable via patch rows.
+- **`@mntn/dsh-bq`** (tool + guard) and **`@mntn/dsh-kit`** (recall/orient/commands): 55 unit tests total, behavioral cases green, per-unit gate green.
+- **Adversarial review process paid for itself immediately.** 4 fresh-context reviewers (2/unit) found 3 BLOCKERs + 12 MAJORs across the two units, all with empirical repros. Highlights: (1) JS regex port of the bash bq guard missed `bq query` on line 2+ of multiline commands (grep is line-anchored, JS `^` is not) — a working governance bypass, now fixed with per-line evaluation + live multiline deny proven in-harness; (2) the dry-run cost cap was DEAD CODE: `--format=prettyjson` suppresses bq's "N bytes" sentence (verified in bq CLI source) — the sole cost control in no-approval profiles silently never fired; now format-flag-free dry-run + fail-closed on unparseable estimates; (3) unhandled stdin EPIPE in the spawn helper CRASHED the whole dsh host process (reproduced with 1MB input); (4) orient's `git pull` fired from a dsh test session and mutated the real workspace (evidenced in the session log) — session_start_routing.sh gained `ORIENT_NO_PULL=1`, dsh orients read-only; (5) recall block was unwrapped user-role text = prompt-injection laundering in no-approval profiles — now wrapped in an explicit not-instructions envelope; (6) tool errors returned as SUCCESS strings would corrupt isError consumers/Code Mode — all failure paths now throw; (7) provenance footer could attribute another query's perf-log entry — now sha256-bound to the exact SQL. Full dispositions: `dsh-lab/packages/*/reviews/`.
+- **Behavioral asserts hardened**: model self-report ("reply YES if...") replaced by deterministic session-log content assertions (`events_content_matches` on the injected plugin message).
+- Recall parity details: fires only on fresh user text (no per-step double-fire), skips delegated subagents (`delegationDepth`), 66ms measured overhead.
+- select1 live BQ behavioral case still BLOCKED on expired gcloud auth (user to run `gcloud auth login`).
+
 ## 5. Solution
 What was done to resolve the issue:
 - Code changes (PRs, commits)
