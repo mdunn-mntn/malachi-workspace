@@ -85,7 +85,7 @@ Research corpus in `artifacts/` (2026-08-21). Headlines:
 - **Adversarial process caught 3 BLOCKERs + fixed all** (multiline guard bypass, dead cost-cap, host-crash EPIPE) and a py3.11-vs-3.9 portability bug (found by the integration run).
 
 ## 5b. Blockers before autonomy (sequenced gates, not defects)
-1. `gcloud auth login` (user) — unblocks the one live-BigQuery assertion; everything else proven.
+1. ~~gcloud auth~~ RESOLVED 2026-08-21: dsh-bq ran a real query end-to-end (select1 behavioral PASS, wrote `ti_xxx_dsh` line to perf log with job_id provenance). Note: re-auth reset the gcloud default project to `mntn-coredw-prod` (no jobs.create); set back to `dw-main-silver` — the query billing project must be dw-main-silver (the reservation).
 2. Egress cage sudo steps (user, `dsh-lab/scripts/egress_setup.md`) — hard gate before any unattended run.
 3. 10-day soak (calendar) — starts when daily use begins; precedes L1 autonomy.
 
