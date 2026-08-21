@@ -54,6 +54,15 @@ Research corpus in `artifacts/` (2026-08-21). Headlines:
 - Press verdict: better architecture, worse daily coder than Claude Code today; ~10x Pi token usage; 3-6 months to production maturity. Sidecar stance confirmed correct.
 - Cordis paper: revertible effects + reactive coeffects give exact-withdrawal unload (Thm 61/62) and as-if-static confluence (Thm 73); inverse correctness is an author obligation the runtime does NOT verify — we test unload in every plugin's vitest suite rather than trusting it.
 
+### Phase 1 build findings (2026-08-21, all 5 gates PASSED)
+- `dsh-lab` sibling repo live: pin `@deepseek-ai/dsh@0.1.1-rc.1`, node@24 keg-only (system node 22.16 fails the `^22.19` engine floor), pnpm 11.22. Web UI boots in 4s; headless "Reply exactly OK" round-trips through Keychain key + `llm-pi-ai` + `claude-sonnet-5`, exit 0.
+- **Telemetry surprise:** the default composition mounts `session-telemetry-otel` ACTIVE with OTLP endpoint defaulting to `https://harness-telemetry.deepseeksvc.com/v1/logs` (mode env-gated to DISABLED, but the row is live). Our gate caught it; disabled by patch row in every profile. Validates the assert-absence policy over trust-the-default.
+- **Boot gotcha:** composed sandbox+approval defaults must match a named permission preset or the plugin tree fails to load. Added `ci-headless` preset (workspace-write + approval never) for headless/test profiles.
+- **Version pinning gotcha:** cross-package deps only resolve at the same rc pin (`dsh-llm-replay@0.0.1-rc.1` depends on a never-published package; `@0.1.1-rc.1` installs clean). Confirms the exact-pin-everything policy.
+- Session logs: `$DSH_HOME/sessions/<cwd-slug>/session-<uuid>/session.jsonl.zstd`; usage on `assistant/message` `data.usage.{inputTokens,outputTokens,cacheWriteTokens}`. Full runtime facts: `dsh-lab/tests/README.md`.
+- macOS: no `timeout(1)`; behavioral harness uses a perl alarm wrapper (same footgun class as `find -newermt`).
+- Gate `dshkit_verify.sh` REJECT-by-default proven: dummy unit without evidence bundle rejected naming the missing pieces; pnpm build-script allowlist held to 3 native deps (subprocess-local, koffi, node-pty).
+
 ## 5. Solution
 What was done to resolve the issue:
 - Code changes (PRs, commits)
