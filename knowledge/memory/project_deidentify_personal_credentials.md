@@ -12,7 +12,7 @@ last_verified: 2026-08-20
 ---
 Raised 2026-08-20 as the likely next major work stream after AUDI-1191 and AUDI-1194 wrap.
 
-**The ask list to walk into the conversation with: `on-call/service_account_ask.md`** (5 identities, 4 owners, only 1 needs devops; row 5 is GitHub and is deliberately empty).
+**The ask list to walk into the conversation with: `on-call/service_account_ask.md`** — rebuilt 2026-08-21 on the pattern AUDI-1194 actually shipped. Two of the five identities already exist, one is a copy of a merged Terragrunt unit, one is unnecessary if the workload moves into a DAG.
 
 **Goal:** every script, watcher, and automation in this workspace runs as a dedicated non-human identity with the same capabilities it has today, and none of it depends on Malachi's personal account.
 
@@ -35,17 +35,27 @@ Related: [[reference_airflow_ti_dev_testing]], [[reference_shopper_graph_deploy]
 
 **AUDI-1194 is the first workload through this (2026-08-20).** The daily Spark optimizer sweep is the pilot: it reads GCS + Dataproc, calls the Airflow API and Databricks, and today runs on a laptop under personal SSO. Full design + two Compass reviews: `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_runner_and_identities.md`.
 
-Settled there, and reusable for every other workload in this stream:
-- **Shape: Cloud Run Job + Cloud Scheduler with an attached SA.** NOT GitHub Actions — the prod OIDC pool `mntn-prj-prod-gh-oidc` allow-lists 23 `SteelHouse/*` repos, and `mdunn-mntn/malachi-workspace` is personal. Putting a personal repo on a prod OIDC allow-list means anyone with push access can mint prod tokens.
-- **Secrets → Vault via `mntn-team-credentials`**, Update Team Secret template, sibling entry per workload. Not Secret Manager: a third-party credential fails SOP 052's Google-only test. See [[reference_compass]] for the SOP 052/055/060/065 detail and the verified team path.
+**SUPERSEDED 2026-08-21 — the runner design was built and then deleted.** The Cloud Run Job + Cloud Scheduler + GAR image + ArgoCD manifests + `mntn-helm` chart change all went away when the workload moved into an `airflow-ti` DAG, which was cheaper than the design it replaced and **removed the Astro API token dependency entirely** (a DAG enumerates DAGs locally instead of calling REST). The OIDC and Octo STS reasoning below is now moot for these workloads: a DAG runs inside the org's own deployment.
+
+**The reusable lesson, and the one to lead with:** *before designing a store for a credential, check whether moving the workload removes the need for it.*
+
+Still true and still reusable:
+- **Secrets → Vault via `mntn-team-credentials`**, Update Team Secret template, sibling entry per workload. Not Secret Manager: a third-party credential fails SOP 052's Google-only test. See [[reference_compass]].
 - **Direct bindings on the SA, not group membership** — the IAM audit cannot expand Workspace groups, so a group-routed grant is invisible to the org's own audit.
-- **Prefer eliminating the credential over storing it.** SOP 052 leads with "if identity works, no secret is allowed". Publishing the sweep's artifacts to GCS instead of committing them removed the GitHub identity entirely — the cheapest secret is the one the design does not need.
-- **Octo STS (SOP 060) is Actions-only** and does not reach a GCP compute workload, so there is currently no paved road for a Cloud Run job that needs to read a repo.
+- **Prefer eliminating the credential over storing it.** SOP 052 leads with "if identity works, no secret is allowed."
+
+Kept as history only (do not build from these): Cloud Run Job shape; the prod OIDC pool `mntn-prj-prod-gh-oidc` allow-listing 23 `SteelHouse/*` repos while `mdunn-mntn/malachi-workspace` is personal; Octo STS (SOP 060) being Actions-only and unreachable from a GCP compute workload.
 
 **Verification that actually closes a workload:** IAM Policy Analyzer shows **no personal-account binding remaining** on the target resources. Supplementing the personal path is not the same as removing it.
+
+**The GCP shape is settled and shipped (2026-08-21).** GSA `spark-optimizer@mntn-prj-prod-00` (mntn-devops#4971, merged), impersonated from the deployment's own ADC `airflow-ti-prod@` via `roles/iam.serviceAccountTokenCreator` and `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT` — **not** `workloadIdentityUser`, which is a no-op here and was rejected in review. GCS writes take `roles/storage.objectUser` scoped by an IAM condition on the prefix, **not** `objectCreator`, which cannot overwrite. Copy the 3-file unit at `terragrunt/gcp/resources/mntn/prod/platform/mntn-prj-prod-00/spark-optimizer/` for the next workload. Mechanism: [[reference_gcs_iam_creator_vs_user]].
+
+**Astro tokens, corrected 2026-08-21:** `astro deployment token create --deployment-id cmd6bd10c0gl901rfuokgryiq --role DEPLOYMENT_ADMIN --expiration 365 --clean-output`. It needs **`WORKSPACE_OWNER`** — Ryan Kleck has it, Malachi does not — and **there is no read-only role in the org**, so `DEPLOYMENT_ADMIN` is the floor and this is not a least-privilege ask. Precedent: Ryan's `dag-run-duration-watchdog` token. Only worth requesting if a workload genuinely needs the REST API.
+
+**Databricks, corrected 2026-08-21:** the service principal **already exists** — `spark_optimizer`, appId `07f36af7-614d-4d57-8143-2dbcd3cb58c2`, `CAN_USE` on warehouse `14b311ac86ee2ca2`. Mint its secret with `databricks service-principal-secrets-proxy create <id>`; the non-proxy `service-principal-secrets create` is account-level and errors. `system.lakeflow` still needs an account admin, as does `system.billing` (IMP-062).
 
 **Ownership answers (Dustin Niehoff, #devops, 2026-08-20).** Two of the four unknowns close, and neither needs devops:
 - **Databricks:** Victor set up all of it for TI; DPLAT wanted nothing to do with Databricks. Route to Victor / TI. Self-serve in practice, since `malachi@mountain.com` holds workspace `admins`.
 - **Astro:** "astro owns them" — the deployment service accounts / API tokens are managed inside the Astro platform, not by MNTN devops. Mint from the Astro UI; the gate is Astro org access, not a devops ticket.
 
-Still open and genuinely devops: where a scheduled Cloud Run job manifest is defined, and whether a new runtime SA takes its own IAM bindings or joins `group:audience-intelligence@mountain.com`.
+**Both of those closed 2026-08-21.** There is no Cloud Run manifest, because there is no Cloud Run job; the SA takes its own direct bindings in the copied Terragrunt unit. What is still open: `system.lakeflow` / `system.billing` (Databricks account admin), a Jira bot identity (nothing started), and moving the AUDI-1191 debugger off its laptop cron into an `airflow-ti` DAG — the same move, needing no new identity beyond a copy of the `spark-optimizer` unit.
