@@ -67,12 +67,13 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `/transcribe` | Transcribe the newest unprocessed Zoom recording (or a named one) and file it correctly |
 | `/workflow-audit` | The System-retro loop — the workflow reviews itself |
 
-## Agents (7)
+## Agents (8)
 
 | agent | description |
 |-------|-------------|
 | `cataloger` | Dispatch to advance ONE bq_table doc from skeleton to enriched — resolve the physical table for real partition/cluster/TTL and fill the curated… |
 | `curator` | The /capture executor — dispatch at a stopping point to route the session's new facts to their home docs, correct stale lines, lint, and rebuild the… |
+| `dsh-reviewer-adversarial` | Dispatch (twice, as two independent fresh contexts) to adversarially review one dsh-lab unit against its claims and the installed dsh contracts —… |
 | `fixer` | Dispatch after both adversarial reviews to apply their findings to the doc — verifying each against source, rejecting the wrong ones with evidence |
 | `implementer` | Dispatch to author ONE knowledge doc from ONE source unit during the ingestion pass (per-object doc or a _staging fragment) |
 | `perf-analyst` | Dispatch on cadence (not per query) to mine the perf log and fold cost findings into the table docs, playbook, and cookbook |
