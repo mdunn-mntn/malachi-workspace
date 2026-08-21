@@ -22,25 +22,25 @@ wb.table("Lift Pre Vs Post", itt,
     kind="headline", toc="The headline lift table, both periods", query="audi_1215_ghost_itt_prepost.sql")
 
 delta = pd.DataFrame([
-    ["Visits, relative lift", "+11.1% -> +16.5%", "+1.21", "0.23", "No", "No detectable change. The test cannot see a change smaller than roughly -30%/+130% of the lift ratio at these counts."],
-    ["Visits, absolute lift", "0.092pp -> 0.022pp per IP", "-4.59", "4.4e-06", "Yes", "Incremental visits per reached IP fell ~4x: the new audience visits ElevenLabs far less at baseline (0.92% -> 0.16%), so the same relative lift yields much less volume."],
-    ["Conversions, relative lift", "+11% -> +35% (both n.s.)", "+0.73", "0.47", "No", "Underpowered at ElevenLabs' 0.06% B2B conversion base (known TI-1044 power floor)."],
-    ["Conversions, holdout-lineage check", "3.49x -> 2.23x multiplier", "-8.98", "2.6e-19", "Yes", "The one well-powered conversion instrument shows the lift multiplier FELL 36% post-change; carryover attribution understates the decline (see Conversion Holdout Check)."],
-], columns=["Comparison", "Change", "z", "p", "Significant", "Read"])
+    ["Visits, relative lift", "+11.1%", "+16.5%", "+1.21", "0.23", "No", "No detectable change at these counts."],
+    ["Visits, incremental volume", "0.092%", "0.022%", "-4.59", "4.4e-06", "Yes", "Baseline visit rate fell 6x; same relative lift, ~4x fewer incremental visits per reached IP."],
+    ["Conversions, relative lift", "+11%", "+35%", "+0.73", "0.47", "No", "Underpowered at the 0.06% conversion base."],
+    ["Conversions, holdout check", "+249%", "+123%", "-8.98", "2.6e-19", "Yes", "Fell 36%; attribution carryover understates the decline."],
+], columns=["Comparison", "Pre", "Post", "z", "p", "Significant", "Read"])
 wb.table("Did Lift Change", delta,
     finding="Relative visit lift did not detectably change; incremental volume fell ~4x and the powered conversion read fell 36%.",
     method="Post minus pre. Relative changes tested on the log risk ratio, absolute on the rate difference. The ghost-bid change test is underpowered for a 36% swing, so its null is not stability.",
-    kind="headline", toc="Did the audience change move lift?", widths={"Read": 66})
+    kind="headline", toc="Did the audience change move lift?", widths={"Read": 52})
 
 hold = pd.DataFrame([
-    ["Pre (6/1-6/30)", 13311, 6520, 3601, 1554, 3.492, "3.30-3.69", "Yes"],
-    ["Post (7/11-7/31)", 3595, 2409, 1223, 779, 2.229, "2.06-2.42", "Yes"],
-    ["Post vs pre (ratio)", None, None, None, None, 0.639, "0.58-0.70", "Yes (decline)"],
-], columns=["Window", "Reached conv", "Reached converters", "Holdout conv", "Holdout converters", "Converter lift (x)", "95% CI", "Significant"])
+    ["Pre (6/1-6/30)", 13311, 6520, 3601, 1554, 2.492, "+230% to +269%", "Yes"],
+    ["Post (7/11-7/31)", 3595, 2409, 1223, 779, 1.229, "+106% to +142%", "Yes"],
+    ["Post vs pre change", None, None, None, None, -0.361, "-30% to -42%", "Yes (decline)"],
+], columns=["Window", "Reached conv", "Reached converters", "Holdout conv", "Holdout converters", "Converter lift", "95% CI", "Significant"])
 wb.table("Conversion Holdout Check", hold,
-    finding="Conversion lift fell 36% after the changes: the converter multiplier dropped from 3.5x to 2.2x (p=2.6e-19).",
+    finding="Conversion lift fell 36% after the changes: +249% over holdout pre vs +123% post (p=2.6e-19).",
     method="Fixed 10% holdout lineage, membership static across periods. Post is 100% this campaign group. 27.8% of post conversions attach to pre impressions via the 43-day lookback, flattering post.",
-    formats={"Converter lift (x)": FMT.MULT},
+    formats={"Converter lift": FMT.PCT2},
     kind="data", toc="The well-powered conversion instrument", query="audi_1215_holdout_prepost.sql")
 
 freq = pd.DataFrame([
@@ -106,7 +106,7 @@ wb.glossary("Read Me", [
     ("Ghost-bid holdout", "10% of IPs are randomly held out per advertiser; the bidder logs the bid it WOULD have made. Comparing reached vs held-out IPs gives a clean randomized lift read."),
     ("Intent-to-treat (ITT)", "Compares everyone we bid on vs the holdout, whether or not the ad won. Avoids win-selection bias; slightly understates the effect of ads actually served."),
     ("Relative vs absolute lift", "Relative: percent above the holdout rate. Absolute: extra visits per reached IP (shown in percentage points). Relative can hold while absolute collapses if the audience's base rate drops."),
-    ("Converter lift multiplier", "Reached converter rate divided by holdout converter rate in the fixed-holdout instrument; 3.5x means reached IPs converted 3.5 times as often."),
+    ("Converter lift", "Reached converter rate versus holdout converter rate in the fixed-holdout instrument, shown as a percentage above holdout; +249% means reached IPs converted 3.5 times as often."),
     ("Blackout (7/1-7/10)", "Window with multiple overlapping campaign and audience changes, excluded from both sides per Matt Brorby's convention."),
     ("Exposure band", "IPs grouped by how many times we bid for them; a proxy for ad frequency."),
     ("Why two instruments", "The ghost-bid test is the cleanest design but thin on pre-period days; the fixed-holdout lineage has full months and power on conversions. Agreement across both is the standard of evidence."),

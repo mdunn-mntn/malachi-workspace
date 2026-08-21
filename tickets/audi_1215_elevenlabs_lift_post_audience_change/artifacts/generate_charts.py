@@ -1,0 +1,75 @@
+"""Charts for the AUDI-1215 ElevenLabs deck, reading outputs/*.csv|json. Deck versions: no chart titles (slide H2 carries the finding)."""
+import json
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
+
+T = "tickets/audi_1215_elevenlabs_lift_post_audience_change"
+NAVY, BLUE, GRAY, RED, BG = "#1B2A4A", "#2E5090", "#999999", "#D63B2F", "#FAFAFA"
+plt.rcParams.update({"font.family": "Helvetica Neue", "figure.facecolor": BG, "axes.facecolor": BG,
+                     "axes.spines.top": False, "axes.spines.right": False, "axes.spines.left": False,
+                     "text.color": "#222222", "axes.edgecolor": "#CCCCCC"})
+
+def save(fig, name):
+    fig.savefig(f"{T}/artifacts/{name}", dpi=200, bbox_inches="tight", facecolor=BG)
+    plt.close(fig)
+    print(name)
+
+d = pd.read_csv(f"{T}/outputs/audi_1215_daily_lift_series_raw.csv", parse_dates=["dt"])
+wide = d.pivot(index="dt", columns="arm", values=["n_ip", "visited"]).sort_index()
+roll = wide.rolling(7, center=True, min_periods=5).sum()
+lift = (roll[("visited", "submitted")] / roll[("n_ip", "submitted")]) / (roll[("visited", "ghost")] / roll[("n_ip", "ghost")]) - 1
+
+fig, ax = plt.subplots(figsize=(11, 4.6))
+ax.axvspan(pd.Timestamp("2026-07-01"), pd.Timestamp("2026-07-10"), color="#E8E8E8", zorder=0)
+ax.axhline(0, color="#CCCCCC", lw=0.8)
+pre_m, post_m = lift[:"2026-06-30"], lift["2026-07-11":]
+ax.plot(lift.index, lift * 100, color=NAVY, lw=2.4, solid_capstyle="round")
+for x, lab, dy in [("2026-06-30", "audience swap", 14), ("2026-07-16", "custom segments", 10), ("2026-07-24", "segments added", 6), ("2026-07-29", "targeting rewrite", 2)]:
+    ax.axvline(pd.Timestamp(x), color=GRAY, lw=0.9, ls=(0, (3, 3)), zorder=1)
+    ax.annotate(lab, (pd.Timestamp(x), ax.get_ylim()[1]), xytext=(4, -dy - 4), textcoords="offset points",
+                fontsize=8.5, color="#666666", va="top")
+ax.annotate("pre avg +11.1%", (pd.Timestamp("2026-06-26"), 11.1), xytext=(0, -26), textcoords="offset points",
+            fontsize=10.5, color=RED, fontweight="bold", ha="center")
+ax.annotate("post avg +16.5%", (pd.Timestamp("2026-08-01"), 16.5), xytext=(0, 16), textcoords="offset points",
+            fontsize=10.5, color=RED, fontweight="bold", ha="center")
+ax.set_ylabel("visit lift vs holdout (7-day window)", fontsize=9.5, color="#666666")
+ax.yaxis.set_major_formatter(lambda v, _: f"{v:+.0f}%")
+ax.tick_params(length=0, labelsize=9)
+save(fig, "audi_1215_chart_daily_lift.png")
+
+fig, ax = plt.subplots(figsize=(8.2, 4.4))
+bars = [("Visits\npre", 11.14, 3.42, NAVY, "+11.1%"), ("Visits\npost", 16.46, 6.86, NAVY, "+16.5%"),
+        ("Conversions\npre", 11.25, 24.6, GRAY, "+11%"), ("Conversions\npost", 34.65, 46.7, GRAY, "+35%")]
+xs = [0, 1, 2.4, 3.4]
+for x, (lab, v, ci, c, txt) in zip(xs, bars):
+    ax.bar(x, v, width=0.72, color=c)
+    ax.errorbar(x, v, yerr=ci, color="#555555", capsize=4, lw=1.2)
+    ax.text(x, v + ci + 3, txt, ha="center", fontsize=12, fontweight="bold",
+            color=NAVY if c == NAVY else "#666666")
+ax.axhline(0, color="#CCCCCC", lw=0.8)
+ax.set_xticks(xs, [b[0] for b in bars], fontsize=10)
+ax.text(0.5, -26, "significant, p < 0.000003", ha="center", fontsize=9, color=NAVY)
+ax.text(2.9, -26, "not yet significant (low base rate)", ha="center", fontsize=9, color="#888888")
+ax.set_yticks([])
+ax.set_ylim(-32, 95)
+save(fig, "audi_1215_chart_prepost_lift.png")
+
+g = json.load(open(f"{T}/outputs/audi_1215_gold_strata.json"))
+freq = [r for r in g["results_strata_cg_122748"] if r["stratum_type"] == "bid_count"]
+order = {"1": 0, "2-3": 1, "4-10": 2, "11+": 3}
+freq.sort(key=lambda r: order[r["stratum_value"]])
+fig, ax = plt.subplots(figsize=(8.2, 4.4))
+for i, r in enumerate(freq):
+    v = float(r["rel_itt"]) * 100
+    ci = 1.96 * float(r["se"]) / float(r["rate_holdout"]) * 100
+    c = RED if v < 0 else NAVY
+    ax.bar(i, v, width=0.72, color=c)
+    ax.errorbar(i, v, yerr=ci, color="#555555", capsize=4, lw=1.2)
+    ax.text(i, v + (ci + 2 if v > 0 else -ci - 6), f"{v:+.0f}%", ha="center", fontsize=12, fontweight="bold", color=c)
+ax.axhline(0, color="#CCCCCC", lw=0.8)
+ax.set_xticks(range(4), [f"{r['stratum_value']}\nexposures" for r in freq], fontsize=10)
+ax.set_yticks([])
+ax.set_ylim(-32, 30)
+save(fig, "audi_1215_chart_frequency_lift.png")
