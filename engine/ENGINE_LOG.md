@@ -8,3 +8,4 @@ The engine harvests THIS file too — it observes itself with the same instrumen
 2026-08-21 | stage=ROLLBACK | candidates=0 | adopted=0 | rolled_back=1 | cost_usd=0 | reverted a43ca73f52abc3b709ea1c4cd0890c43a67e950c (rollback-demo): phase-5 rollback drill
 2026-08-21 | stage=LOOP | candidates=15 | adopted=0 | rolled_back=0 | cost_usd=0.01 | phase-5: full loop proven — rung-0 auto-adopt + LLM hypothesize->PROPOSE + gate + rollback drill
 2026-08-21 | stage=ROLLBACK | candidates=0 | adopted=0 | rolled_back=1 | cost_usd=0 | reverted ccab181f8bbcc8fe604d2336d74939fe623d4778 (int-s3): integration S3 forced failure
+2026-08-21 | stage=ROLLBACK | candidates=0 | adopted=0 | rolled_back=1 | cost_usd=0 | reverted 8449391d0a8aaa6a64ad62506566cf664a5bf4d8 (int-s3): integration S3 forced failure
