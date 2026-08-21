@@ -75,7 +75,8 @@ tl = pd.DataFrame([
 wb.table("What Changed", tl,
     finding="The 6/30 swap was one of six targeting changes through 7/29, so the post period averages four audience states.",
     method="Recovered from the platform change archives; every version is recoverable. The 10% holdout construction was unchanged throughout, so both periods rest on the same assignment.",
-    kind="detail", toc="Exact change timeline from the archives", widths={"What changed": 72},
+    kind="detail", toc="Exact change timeline from the archives",
+    widths={"When (UTC)": 18, "What changed": 72},
     query="audi_1215_audience_change_timeline.sql")
 
 panel = pd.DataFrame([

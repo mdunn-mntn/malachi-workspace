@@ -55,7 +55,7 @@ HTML = f"""<!DOCTYPE html>
 
 <section>
   <h2>Conversion lift is not measurable at this spend</h2>
-  <p>+11% pre, +35% post. Neither is significant at the 0.06% conversion base rate.</p>
+  <p>+11% pre, +35% post: directionally up, neither significant at the 0.06% conversion base rate. Conversions lag visits.</p>
   <p>Detecting a 5% conversion lift takes ~$2M/month; the same lift on visits takes $36K.</p>
 </section>
 
