@@ -1,12 +1,12 @@
 ---
 doc_type: ticket
 title: "Local spike: dsh plugin harness"
-status: backlog
+status: in_progress
 date: 2026-08-21
 summary: "Evaluate DeepSeek Harness as sidecar automation harness and self-improvement engine substrate"
 result: "not started"
-question: ""
-framing_state: draft
+question: "Can a pinned dsh sidecar run our skills, bq gate, and a harvesting engine v0 with every unit passing its adversarial test gate?"
+framing_state: locked
 ---
 
 # Local spike: dsh plugin harness
@@ -17,13 +17,12 @@ framing_state: draft
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+## 0. Framing (locked 2026-08-21)
+- **Question (the unknown):** Under the exact `0.1.1-rc.1` pin, can a dsh sidecar run the kit's components (6 skills mounted verbatim, bq cost gate as a `tools/pre-execute` deny plugin, memory-recall inject) plus an engine v0 harvesting real signals, with every unit passing its REJECT-by-default gate (vitest + behavioral + 2 adversarial reviews + budget)?
+- **Goal (why / the decision):** Decides adopt-vs-abandon for dsh as the automation substrate, and whether the self-improvement loop graduates from propose-only to machine-gated. Waiting: Malachi only (local-only spike). North-star tie: Tier 3 infrastructure (velocity multiplier); no direct OKR tie — deliberate personal-stack investment, flagged per the leverage check.
+- **Objective (done-when):** v0 exists = Phase 1-4 gates all green: dsh boots pinned with Keychain-routed Anthropic; skill catalog lists all 6; `bq_query` logs to the perf log and refuses an over-budget query with no force path; guard denies planted raw `bq query`; recall injects on a known TSV keyword; `harvest.py` emits ≥3 evidenced candidates; CC-0 auto-apply works. Binary per gate. Phases 5-6 are follow-on work, not this spike.
+- **Approach (how):** Master plan `artifacts/ti_xxx_master_plan.md` Phases 1-4: sibling repo `dsh-lab` pinned exact, thin TS adapters over existing workspace scripts (bq_run.sh stays the implementation), per-unit test protocol from design C, Anthropic-only via llm-pi-ai (note: dsh API calls are API-billed, not subscription — engine spend caps stay enforced, $5/day fail-stop), engine v0 keyless Python. Each build step is one agent, independently testable.
+- **What would change the answer:** Skills or bq plugin can't mount under the rc pin after 3 fix cycles (Phase 2 red) → abandon early. Any Sev-1 (secret exposure, egress finding) → kill switch, pause. Churn to keep the rc working >10h before v0 → abandon. Follow-on phases governed by kill criteria K1-K5 in design C §5.
 
 ## 1. Introduction
 DeepSeek released deepseek-harness (`dsh`, 2026-08-14, MIT, 177k stars, v0.1.1-rc.1 developer preview): a Node/TS agent harness where every component (models, tools, skills, sessions, sandbox, agent loop, UI) is a hot-swappable Cordis plugin. Its primitives (append-only session logs, `llm-replay`, session fork, `tools/pre-execute` deny hooks, AgentSkills-standard skills shared with Claude Code) are a candidate substrate for two things the current kit lacks: (a) a headless automation harness, (b) replay-based evaluation that could close the self-improvement loop the kit deliberately keeps propose-only.
