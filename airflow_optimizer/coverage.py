@@ -161,6 +161,52 @@ def collect(base: str, date: str, token: str | None = None) -> Coverage:
     return cov
 
 
+def _load_bag_and_paused(dag_folder: str | None) -> tuple[dict, set]:
+    """Parse the DAG bundle and read which DAGs are paused. Airflow-only; seam for tests."""
+    from airflow.models import DagModel
+    from airflow.models.dagbag import DagBag
+    from airflow.utils.session import create_session
+
+    bag = DagBag(dag_folder=dag_folder, include_examples=False)
+    with create_session() as session:
+        paused = {row[0] for row in session.query(DagModel.dag_id).filter(
+            DagModel.is_paused.is_(True)).all()}
+    return bag.dags, paused
+
+
+def collect_local(date: str, dag_folder: str | None = None) -> Coverage:
+    """Same Coverage, built by parsing the DAG bundle instead of calling the REST API.
+
+    When the sweep runs as an Airflow task it is already inside the deployment, so the DAG
+    files are on disk and no deployment token is needed at all. This is the preferred path:
+    a token is a credential to store, rotate and leak, and this needs none.
+
+    Paused DAGs are excluded to match the API path, which filters `paused=false`.
+    """
+    cov = Coverage(date=date, report_path=REPORT.format(date=date))
+    try:
+        dags, paused = _load_bag_and_paused(dag_folder)
+    except Exception as e:
+        cov.error = str(e)[:160]
+        return cov
+
+    for dag_id, dag in sorted(dags.items()):
+        if dag_id in paused:
+            continue
+        owner = getattr(dag, "owner", "") or ""
+        dc = DagCoverage(dag_id=dag_id, owners=owner, tags=sorted(getattr(dag, "tags", []) or []))
+        for t in dag.tasks:
+            op, tid = type(t).__name__, t.task_id
+            if op in SPARK_OPERATORS:
+                dc.spark_tasks.append(tid)
+            elif op in OPAQUE_OPERATORS:
+                dc.opaque_tasks.append((tid, OPAQUE_OPERATORS[op]))
+            else:
+                dc.other_tasks.append((tid, op))
+        cov.dags.append(dc)
+    return cov
+
+
 def render(cov: Coverage, profiled_dags: set | None = None) -> str:
     """The coverage report: what was read, what was not, and why not."""
     profiled = profiled_dags or set()
