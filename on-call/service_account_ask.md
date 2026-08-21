@@ -46,7 +46,7 @@ promising the move removes its credential.
 |---|---|---|---|---|
 | 1 | **GCP GSA** | **Done** — the debugger reuses `spark-optimizer@`, no new unit needed. For a future workload that wants its own, copy the 3-file unit at `terragrunt/gcp/resources/mntn/prod/platform/mntn-prj-prod-00/spark-optimizer/` (mntn-devops#4971) | mntn-devops review |
 | 2 | **Astro Deployment API token** | **Now needed** (IMP-065) | The debugger reads task logs, which no DAG can read locally. Command below | **Ryan Kleck** (`WORKSPACE_OWNER`) |
-| 3 | **Databricks service principal** | **Exists** — `spark_optimizer`, appId `07f36af7-614d-4d57-8143-2dbcd3cb58c2`, `CAN_USE` on warehouse `14b311ac86ee2ca2` | Mint a secret (below). `system.lakeflow` access is still open | Databricks **account admin** |
+| 3 | **Databricks service principal** | **Exists** — `spark_optimizer`, appId `07f36af7-614d-4d57-8143-2dbcd3cb58c2`, `CAN_USE` on warehouse `14b311ac86ee2ca2` | Mint a secret (below). Ask about `system.billing` only; `system.lakeflow` is Databricks-side | Databricks **account admin** (billing only) |
 | 4 | **Jira bot identity** | Not started | Team-owned account with its own token, replacing `JIRA_API_TOKEN` in `~/.zshrc` | PMO / Jira admin |
 | 5 | **GitHub** | — | **Ask for nothing.** The workloads read no repo | — |
 
@@ -139,9 +139,13 @@ is in the scrollback. Store via Vault's Update Team Secret template under
 ShopperGraph), and do not use `rotate-secret` on `mntn-team-credentials` — that breaks Vault
 delivery (SOP 055).
 
-**Still open and genuinely an ask: `system.lakeflow` needs an account admin.** So does
-`system.billing` (IMP-062), which is what turns the flexible-node-types cost commitment from a
-promise into a measurement.
+**`system.lakeflow` is NOT an internal ask — do not raise it in this conversation.** Enabling it
+returns `lakeflow system schema can only be enabled by Databricks.` (2026-08-21). No customer-side
+admin can turn it on; the route is a Databricks support ticket, filed 2026-08-21.
+
+**`system.billing` (IMP-062) may still be an internal ask** and is the one worth raising: it turns
+the flexible-node-types cost commitment from a promise into a measurement. It is a different
+schema, so do not assume the lakeflow answer applies until it has been tried.
 
 ---
 
@@ -181,7 +185,8 @@ the old binding, not the presence of the new one.
 
 ## Still open
 
-1. **`system.lakeflow`** (and `system.billing`, IMP-062) — Databricks account admin.
+1. **`system.billing`** (IMP-062) — Databricks account admin. **`system.lakeflow` is off this
+   list**: only Databricks can enable it, and a support ticket went in 2026-08-21.
 2. **Jira bot identity** — nothing started.
 3. **The debugger moved into a DAG on 2026-08-21** (airflow-ti PR #1214) and needed **no new
    identity** — it reuses `spark-optimizer@`. Two small follow-ups: an Airflow API token

@@ -187,7 +187,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ntb_definitions | reference | 2026-08-19 | [doc](memory/reference_ntb_definitions.md) |
 | bq-workflow | feedback | 2026-08-20 | [doc](memory/feedback_bq_workflow.md) |
 | compass-mntn-infra-investigator-atlas-code-mcp | reference | 2026-08-20 | [doc](memory/reference_compass.md) |
-| databricks | reference | 2026-08-20 | [doc](memory/reference_databricks.md) |
 | feedback-slack-drafts-in-chat | feedback | 2026-08-20 | [doc](memory/feedback_slack_drafts_in_chat.md) |
 | feedback_explicit_descriptive_slots | feedback | 2026-08-20 | [doc](memory/feedback_explicit_descriptive_slots.md) |
 | feedback_no_label_colon_prefix | feedback | 2026-08-20 | [doc](memory/feedback_no_label_colon_prefix.md) |
@@ -209,6 +208,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_pihole_dns_contaminates_fetch | reference | 2026-08-20 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-20 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
+| databricks | reference | 2026-08-21 | [doc](memory/reference_databricks.md) |
 | feedback_branch_from_origin_not_local_main | feedback | 2026-08-21 | [doc](memory/feedback_branch_from_origin_not_local_main.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-21 | [doc](memory/feedback_review_own_pr_before_asking.md) |
 | incrementality-experiment-ber-2250 | project | 2026-08-21 | [doc](memory/project_incrementality_experiment.md) |

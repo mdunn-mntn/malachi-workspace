@@ -239,7 +239,7 @@ this one:
 - **Presentation.** The digest currently lists eight `fangorn_score_monitor` findings in a row
   because ranking is per-finding, not per-DAG (IMP-046). One line per DAG with its worst finding
   would read far better.
-- **Databricks.** `USE SCHEMA` on `system.lakeflow` needs a Databricks **account** admin;
+- **Databricks.** ~~`USE SCHEMA` on `system.lakeflow` needs a Databricks **account** admin~~ — **wrong, corrected 2026-08-21.** The API returns `lakeflow system schema can only be enabled by Databricks`, so no customer-side admin can enable it and there is nobody internal to escalate to. A Databricks support ticket was filed 2026-08-21. Originally recorded as:
   workspace admin is not enough (`grants update` → `User is not an account admin`), which
   corrects Ryan's assumption. Then the `EXPLAIN COST` bridge from
   `artifacts/audi_1194_databricks_explain_cost.py` into the sweep.
