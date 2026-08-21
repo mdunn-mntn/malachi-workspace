@@ -21,6 +21,7 @@ ignore = ["E501",                          # ruff format owns line length; noqa 
 # D-presence + ANN apply to the durable LIBRARY only. Tooling scripts + the demo are internal/example
 # code: keep them linted+formatted, but no docstring/type contract. (tickets/** is fully excluded above.)
 ".claude/scripts/*.py" = ["D100", "D101", "D102", "D103", "D104", "ANN"]
+"engine/scripts/*.py" = ["D100", "D101", "D102", "D103", "D104", "ANN"]
 "lib/mntn_xlsx_demo.py" = ["D100", "D101", "D102", "D103", "D104", "ANN"]
 
 [tool.ruff.lint.mccabe]

@@ -1,0 +1,5 @@
+{"id": "probe-mm_pre_post", "source": "probe", "tier": [2], "holdout": true, "tags": ["retrieval", "seed"]}
+{"id": "probe-ddp_vendor_valuation", "source": "probe", "tier": [2], "holdout": false, "tags": ["retrieval", "seed"]}
+{"id": "probe-incrementality_experiment", "source": "probe", "tier": [2], "holdout": false, "tags": ["retrieval", "seed"]}
+{"id": "probe-availability_gate", "source": "probe", "tier": [2], "holdout": false, "tags": ["retrieval", "seed"]}
+{"id": "probe-bidstream_features", "source": "probe", "tier": [2], "holdout": false, "tags": ["retrieval", "seed"]}
