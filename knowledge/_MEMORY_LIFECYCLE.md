@@ -198,7 +198,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_slack_channel_one_liners | feedback | 2026-08-20 | [doc](memory/feedback_slack_channel_one_liners.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-20 | [doc](memory/feedback_validated_is_not_correct.md) |
 | project_airflow_debugger | project | 2026-08-20 | [doc](memory/project_airflow_debugger.md) |
-| project_airflow_optimizer | project | 2026-08-20 | [doc](memory/project_airflow_optimizer.md) |
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
 | reference_airflow_log_puller | reference | 2026-08-20 | [doc](memory/reference_airflow_log_puller.md) |
@@ -214,6 +213,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
 | feedback_branch_from_origin_not_local_main | feedback | 2026-08-21 | [doc](memory/feedback_branch_from_origin_not_local_main.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-21 | [doc](memory/feedback_review_own_pr_before_asking.md) |
+| project_airflow_optimizer | project | 2026-08-21 | [doc](memory/project_airflow_optimizer.md) |
 | project_dsh_harness_spike | project | 2026-08-21 | [doc](memory/project_dsh_harness_spike.md) |
 | reference_dsh_harness | reference | 2026-08-21 | [doc](memory/reference_dsh_harness.md) |
 | reference_dsh_lab_runtime | reference | 2026-08-21 | [doc](memory/reference_dsh_lab_runtime.md) |
