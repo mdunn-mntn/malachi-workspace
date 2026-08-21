@@ -1,0 +1,501 @@
+[00:00] Thank you.
+[00:30] Doing pretty well.
+[00:37] How's the weather in Denver?
+[00:41] It's cooling down a little bit.
+[00:43] We might actually get some rain this weekend, which would be lovely.
+[00:48] It is definitely starting to cool off.
+[00:50] I'm not sure I'm quite ready for it yet.
+[00:53] We've had like high 90s.
+[00:55] So I am ready for it.
+[00:58] I'll take some snow.
+[01:00] Let's see.
+[01:01] Well, the high, I just was like looking.
+[01:03] Let's look at the daily forecast.
+[01:05] High today is 70.
+[01:07] Tomorrow is 51, 56, 55, 55.
+[01:11] This is like our, you know, hey, don't forget, fall exists.
+[01:17] Don't forget, fall is coming.
+[01:18] Okay.
+[01:26] Hello, Mike, Allison, Matt.
+[01:30] Hey, hey, hey.
+[01:43] I'm officially old, by the way.
+[01:46] I almost made it to my son turning seven before I pulled a hamstring trying to play with him and keep up with him.
+[01:54] just kicking a soccer ball i pulled a hamstring were you trying to like got a stretch stretch
+[02:03] into the next neighborhood or like yeah i was trying to impress him with how far i could kick it
+[02:08] that is a problem yes i'd be really worried if you were like no i was just trying to like kick a
+[02:16] you know a foot and i was like hold a hammy that's when you're like okay maybe
+[02:22] We're really old here. We'll give people a couple more minutes to pile in here. We do
+[02:36] have a hard stop at the top of the hour for some of us. Oh, Mike is getting the Zoom on
+[02:42] there. The Zoom on the Zoom.
+[02:45] I'm checking all the
+[02:47] YASA 5 filters
+[02:48] that
+[02:51] Magbook has.
+[02:53] We do have a hard stop
+[02:55] at the top of the hour, so I don't want to wait too long
+[02:57] for everyone, but I want to give them maybe
+[02:59] another two minutes here.
+[03:02] One.
+[03:03] One minute. You got it, Mike.
+[03:04] You're running this show anyway, so you're in charge.
+[03:12] And not a minute more.
+[03:15] Anyone got questions?
+[03:45] any cool plans for the weekend or just chilling after the mountain meet
+[03:50] uh one of the fair um fairs near here is opening which i think i'll take my family too
+[04:00] awesome should be a fairly good time
+[04:05] yeah my daughter she always says she's really excited to pet the horses and she'll talk about
+[04:15] it like a lot and then we'll go to actually go pet the horses and she's terrified and she won't
+[04:20] go near them so
+[04:21] Mike, it's your time.
+[04:38] It is my time?
+[04:40] It's your time.
+[04:41] All right.
+[04:43] Let's do this.
+[04:45] One second.
+[04:45] Give me just one second to get my bearings and share my screen.
+[04:51] If I can share my screen.
+[04:58] You need my permissions to do that.
+[05:00] One second.
+[05:01] I'll be back.
+[05:03] I guess.
+[05:06] Can you just let me share my screen?
+[05:09] Okay.
+[05:10] Can you guys see my screen?
+[05:12] Perfect.
+[05:13] Awesome.
+[05:14] All right.
+[05:15] Thank you very much for bearing with me there.
+[05:18] I just set up my laptop back again.
+[05:21] So there's some things I need to take care of.
+[05:24] Okay.
+[05:24] So what are we going to be doing today?
+[05:27] We're going to be playing a role-playing game where instead of being our usual engineers that use a bunch of tools and look at the data and do all that cool and interesting stuff, we're going to be looking at our product from the client's perspective.
+[05:44] so what is what we're trying to achieve in this exercise first of all and probably the main goal
+[05:54] here is to get you guys closer to our product and kind of understand what is available to our users
+[06:02] how they look at our reporting and what can what information they can access in order to optimize
+[06:11] their campaigns, right? Not a lot of our clients do that right now. I believe, I don't remember
+[06:20] the exact percentage, but it's like over 80% of people just launch the campaign and forget about
+[06:25] it, which is not leading to great performance across the board necessarily, right? Sometimes
+[06:33] you need to go and tweak a few things and stuff like that. And people don't do that. So we are
+[06:38] building this audience optimization tool, it's going to send the recommendation for them or
+[06:43] make those optimizations automatically. But before we do that, we want to make sure that all of us
+[06:51] have a very good understanding of what our clients see and what they can interact with, right?
+[07:00] So the way we're going to be going about it is if you open the meeting invite, you will see that
+[07:07] there is a spreadsheet that was prepared called Insights Blanken.
+[07:13] And this is basically all the advertisers and their campaigns that have poor CPA,
+[07:22] that are not hitting their CPA goals, right?
+[07:25] So this is kind of gives us an idea that maybe there is something we can try to do
+[07:30] in order to improve their CPA, right?
+[07:33] so the way we're gonna go about this and i believe uh there is there should be a peak
+[07:42] performance yeah so these guys all have peak performance turned on which is important because
+[07:48] that basically kind of allows us uh a cover to kind of make some tweaks behind the scenes without
+[07:55] their necessarily kind of involvement right we're not going to be making those tweaks just yet um
+[08:03] but this is who we want to focus on first so uh what we're gonna do is and i'm gonna go through
+[08:10] the process here one time really quickly to show you what we're trying to do is there is this first
+[08:15] adac here called thresher right so i'm gonna grab this aid and i'm gonna go to the premiere website
+[08:25] and i'm gonna log in as this advertiser right i'm gonna wait here for a second and i'm gonna switch
+[08:33] so now I am in this advertiser's account right and what I want to do here is go to reporting
+[08:40] and once I'm here I want to start playing with these reports and try to understand
+[08:48] what information I can figure out by just looking at the reports I specifically don't want to be
+[08:59] super prescriptive. I want you guys to kind of try to dig this information yourselves for the first
+[09:05] time because that's also part of the signal into how easy it is for our customers to get to this
+[09:12] information. But for example, I can go and look at the performance metric for a specific campaign,
+[09:18] right? And I can go look at different locations and see which locations perform best and which
+[09:26] maybe perform not so well and stuff like that, right?
+[09:30] So just by looking at the UI,
+[09:33] I want to gather as much information as possible
+[09:36] and basically come up with a recommendation to say that,
+[09:40] hey, maybe you should tweak your audience a bit.
+[09:43] Maybe you should not be targeting this state
+[09:45] or maybe you should not be targeting this keyword
+[09:48] or maybe something else, you know?
+[09:53] So basically whatever sort of insights
+[09:56] you can gather for this specific advertiser and kind of write them down.
+[10:01] And yeah, that's basically what we're trying to do here.
+[10:05] If there are any notes in addition to those insights, for example, the reporting is counterintuitive.
+[10:12] You've encountered a bug or you've kind of see the data that is not accurate or something like that.
+[10:20] You know, please note those as well.
+[10:22] They're going to be super helpful to pass on to the reporting team.
+[10:25] But the main thing we're after here is we have these.
+[10:31] And amount of advertisers that are not performing well
+[10:36] and we want to help them out, how would you do that? Right.
+[10:40] In order to not step on each other's toes, you can if you select the
+[10:45] if you select an idea, you can say, yes, this is already splung.
+[10:49] So, for example, I'm going to be looking at this threshold guy.
+[10:51] I'm market as yes.
+[10:52] so everybody else knows that I'm already looking at them, right?
+[10:58] And yeah, that's basically the quick walkthrough here.
+[11:01] Just grab somebody from the list,
+[11:04] go into the AI and start clicking around the reporting
+[11:08] and start kind of putting down those insights.
+[11:13] And yeah, once you have kind of everything written down
+[11:17] for this specific AD, grab the next one
+[11:19] and this process repeats.
+[11:21] Mike, do you want them to go into Slack and submit the insight in the Dev Channel?
+[11:27] Not yet. I think we can just gather all of them for now, and we can submit them
+[11:33] after the meeting just so we can get through as many as possible while we're all here in
+[11:38] case anybody has any questions or anything. I'm sure you guys can figure out how to
+[11:43] submit the form in Slack, you know. So, yeah.
+[11:46] Okay. And then did you want breakout rooms or do you want to just do it here?
+[11:50] I think we can start here just so that everyone is kind of around.
+[11:56] I don't think we have too many people here.
+[11:58] If somebody has questions, I think it will be helpful for folks to hear those and kind of tackle them all together.
+[12:09] What questions do you all have?
+[12:12] What doesn't make sense?
+[12:14] Just real quick, if we're working on it, how did you say you wanted us to market?
+[12:18] it? So there is an already splunked yes, not a good
+[12:22] candidate. You're just going to mark it as yes. Okay. After
+[12:25] you start looking at it and there is something that makes you think
+[12:30] that it is not a good candidate. For example, there is nothing we can do to
+[12:34] optimize them or they are just not
+[12:38] running a campaign anymore. Whatever reason you think that they are not a good
+[12:42] candidate for any sort of optimization ideas, mark them
+[12:46] as not a good candidate.
+[12:56] Any other questions?
+[13:00] So this is where I'm getting a little confused.
+[13:04] I am role playing as the advertiser,
+[13:10] but I have the knowledge that I have.
+[13:12] So I know what they might try to do,
+[13:16] but I know what might be the better thing to do.
+[13:20] I mean, I would say that, obviously, try
+[13:22] to get the best results possible.
+[13:24] Don't tie your hands behind your back sort of thing.
+[13:30] But at the same time, the idea here
+[13:33] is that you're not going to go look at the raw data,
+[13:37] or you're going to look at ask Atlas,
+[13:40] because our users don't have access to that yet.
+[13:45] The limitation is basically use everything
+[13:48] that is visible to user,
+[13:50] everything else obviously use your knowledge,
+[13:52] use your expertise as much as possible.
+[13:56] So, yeah.
+[14:00] Yeah, so just to expand on that question.
+[14:03] So like, should we pretend we don't know
+[14:06] how intense scoring works?
+[14:10] That's what Matt's getting at.
+[14:13] Oh, I mean, I don't think so.
+[14:16] I think kind of pretending that like you don't know how our system works beneath the hood
+[14:20] is going to be a little bit counterproductive, honestly, because like, again, we're not
+[14:25] necessarily trying to come up with the solution that advertisers would come up with.
+[14:32] We're trying to come up with the best solution because we might actually go ahead and do
+[14:36] that later.
+[14:37] Right.
+[14:37] but yeah like obviously don't don't go in and like start looking at like the intense course
+[14:44] for like separate keywords and stuff like that you know because people don't know all of that
+[14:50] behind the scenes stuff right okay all right sounds good awesome any other questions
+[15:01] Only thing I would add is while everyone's focused face, you're welcome to turn off your camera.
+[15:09] But if you want to come back to the group, just make sure you unmute and ask your question.
+[15:15] Or you can always ask it in the Zoom chat.
+[15:17] So we'll be here to facilitate and support as you have questions.
+[15:27] All right.
+[15:27] I'm going to stop sharing my screen, get off camera, and start spelunking.
+[15:57] One other thing real quick, something that I just encountered.
+[16:13] So in addition to the advertiser name on the spreadsheet, you have the campaign name.
+[16:20] That is something you might want to look at as well because some of the, so for example,
+[16:26] the advertiser I just pulled out Thresher, they have like, I don't know, like 10 campaigns active,
+[16:31] right? And some of them might be performing quite well, but I want to be looking specifically at
+[16:37] the one that is not performing well. So for example, in this case, it's going to be
+[16:42] the one in Colorado. So that's the one I want to be scoping my reporting down.
+[16:56] you
+[17:26] you
+[17:56] you
+[18:26] you
+[18:56] you
+[19:26] you
+[19:56] Thank you.
+[20:00] you
+[20:30] you
+[21:00] you
+[21:30] you
+[22:00] you
+[22:30] you
+[23:00] you
+[23:30] you
+[24:00] you
+[24:30] you
+[25:00] you
+[25:30] you
+[26:00] you
+[26:30] you
+[27:00] you
+[27:30] you
+[28:00] you
+[28:30] Doing a quick pulse check here.
+[28:56] What are you guys doing?
+[28:57] Anyone has any questions?
+[29:00] or encountered anything interesting?
+[29:05] I've encountered a customer that thinks they're geotargeting but they're not.
+[29:11] Okay, that's worth to know.
+[29:16] Yeah.
+[29:23] So the recommendation would probably be to geotarget.
+[29:26] Yeah, to make sure the list that they meant to target is being targeted.
+[29:56] you
+[30:26] you
+[30:56] you
+[31:26] you
+[31:56] you
+[32:26] you
+[32:56] Hey, Mike, I may have missed this.
+[33:06] So where do you want us to provide the feedback?
+[33:08] Or is there like a Google Sheet?
+[33:10] So you can just put them all down in notes for now.
+[33:15] Okay.
+[33:16] And after the meeting, we'll make sure you all guys are added to the dev channel we have for this.
+[33:22] and there is a special form you can submit where you're going to get the advertiser ID and basically your findings.
+[33:31] Okay, so for now, we just keep notes to ourselves?
+[33:33] Yeah, yeah, yeah.
+[33:33] Okay. All right. Cool.
+[33:35] Hey Mike, what would be the reason that a state would show up on their location reporting
+[33:56] but not be one of the geo filters that they've included in the audience for that campaign?
+[34:05] What would be the case when their state shows up in reporting but not a part of the audience?
+[34:14] Are you sure you're looking at the correct campaign?
+[34:20] Yes.
+[34:22] Okay.
+[34:23] So like Colorado looks like it's doing very well for them and has a bunch of impressions.
+[34:27] And it's not one of the places that they have in their geo filter.
+[34:31] Can you share your screen?
+[34:33] Yeah.
+[34:35] this is tiff's treats cookies so colorado they have a cpa goal of uh i guess 30
+[34:48] but colorado is in here with almost 12 000 tv commercials aired
+[34:55] and it is not part of their geo filtering in that audience um maybe they changed something
+[35:04] So, yeah. So, one possibility is they changed it. That is an option. And that's probably
+[35:14] the only one, honestly.
+[35:16] Okay. So, there's maybe some timing thing that I can't see.
+[35:19] Yeah, yeah, yeah.
+[35:19] Really, in the reporting?
+[35:21] Can you go back to reporting and can you decrease the date window to, like, the last week, for
+[35:28] example?
+[35:29] Oh, yeah.
+[35:34] And there we go.
+[35:46] Okay.
+[35:46] So maybe they changed something.
+[35:47] Yeah.
+[35:47] Probably they changed.
+[35:51] Okay.
+[35:52] Cool.
+[35:53] Thanks.
+[36:04] you
+[36:34] you
+[37:04] you
+[37:34] Hey, Mike, quick question.
+[37:53] Do we only attribute site visits or do we attribute like phone calls or anything like that?
+[38:00] I believe we only attribute site visits and conversions.
+[38:04] Okay.
+[38:05] Yeah, because I saw an advertisement that has a big phone number on it.
+[38:09] That's it.
+[38:10] I think people who saw it are going to just call the number
+[38:13] instead of visiting their sites.
+[38:16] Maybe.
+[38:17] Maybe.
+[38:17] Yeah, that's a great catch, actually.
+[38:19] That is something we need to consider when we're going to be building
+[38:23] the system that not all performance is going to be the one we can track.
+[38:28] So maybe there's nothing we can optimize.
+[38:32] Exactly.
+[38:34] Thank you.
+[39:04] you
+[39:34] Thank you.
+[40:00] you
+[40:30] Found a client that spent $6,000 and they only had one conversion.
+[40:56] That sucks.
+[41:00] I feel like I'm roleplaying as a small business
+[41:23] that has absolutely no idea what they're looking at.
+[41:30] Yeah, one thing I definitely think we'll have to talk to reporting folks is for some reason
+[41:37] the attribute report is not theirs, like, the default one. You need to create it, which
+[41:47] is super annoying.
+[41:49] One thing I did notice, not here right now, but, like, yesterday and this morning,
+[41:58] because I've been trying to do some random recs with my prompt, like you asked.
+[42:02] There are some advertisers who seem to be on a newer version of the reporting page.
+[42:11] And it's not, I don't know, if you come from this current version
+[42:15] where there's a dropdown where you pick the template,
+[42:18] the new one is a little bit less intuitive, I think.
+[42:25] But they could have two different experiences too.
+[42:28] Interesting.
+[42:54] So I'm thinking, just thinking out loud here, what can we do for the person that spends
+[43:00] $6,000 and only got one conversion?
+[43:04] Like we, there's, there's nothing like, we don't have any data whatsoever to steer them
+[43:13] in one direction or another.
+[43:16] Well, what type of company is it?
+[43:19] They're like a dentist.
+[43:21] What would a conversion be?
+[43:23] An office visit?
+[43:24] um probably probably like a booking an office visit yeah um but even even like the
+[43:31] the site visits are honestly like they only have 100 site visits uh well i can't tell you
+[43:40] how often i visit my dentist's website and probably the first time i went there and that was it
+[43:47] that's true that's true that is yeah i mean i guess
+[43:51] that almost feels like a how do they get recommended by insurance companies kind of thing
+[43:58] right yeah i just did this the other day um because i noticed there was a lot of advertisers
+[44:07] with like zero or really low ivr and after talking to johnny about a lot of the considerations he
+[44:13] makes it basically boiled down to like a list of advertisers who just will never have high
+[44:21] conversion rates so things things like you just mentioned um the only thing that i think that's a
+[44:27] good flag is like if they don't know how to set up their pixel very well or there's maybe something
+[44:33] better they could do then that's like definitely an optimization point but um if that is set
+[44:40] correctly a lot of times it's just industry so maybe we can filter out certain industries that
+[44:45] are known to be poor converters.
+[44:51] But it probably had to be a pretty manual thing
+[44:53] in certain cases.
+[44:56] Yeah.
+[44:57] Yeah, I think that's a good idea.
+[45:15] How do we feel about recommendations per creative?
+[45:41] like this customer is running four different creatives for this campaign and only
+[45:48] call it two of them maybe three are actually generating any revenue associated with those ads
+[45:54] so is that the answer they're like oh you shouldn't be spending on all those other creatives
+[45:59] or do we is there enough justification of like splash effects of just seeing the ads
+[46:04] i think it's it's a little bit outside of like specifically our wheelhouse because it's not
+[46:13] necessarily connected to the audience but i think that's a great insight that we can surface you
+[46:19] know like for future work we'll be doing for this optimization that's definitely good to know that
+[46:25] there is a way for identifying one creative is just performing better than the other so you
+[46:30] should probably switch everyone to that you know um so yeah definitely worth noting i think
+[47:00] um i actually learned this maybe a couple months back but there is a table that has a list of the
+[47:12] client's goals in it um and every advertiser has one so that is also i think probably a good
+[47:20] resource because like one of the things i think about when it comes to optimization is that like
+[47:25] of course um mountain match fangorn is like our flagship model so for about 99 of people except
+[47:34] for those who have so much spend that they're just going to exhaust their high intent and just
+[47:38] keep hitting the same people um it usually is the best situation for them to do a mountain match
+[47:43] campaign um with no no additional changes to it um but it also depends on what their goal is right
+[47:54] So if that's, that's just based on a peer performance standpoint.
+[47:58] Cause a lot of these I'm looking at here, it's like they have a goal and I don't really
+[48:04] see anything wrong with their campaign.
+[48:07] Except for the fact that like they're running peak performance when they don't need to be,
+[48:12] you know, they probably, they could probably just run like a high intent, not match audience
+[48:16] or something like that.
+[48:17] So yeah, I just, I'm not sure what you guys think about that type of optimization.
+[48:31] So you're saying that they are running peak performance and they shouldn't be running
+[48:35] peak performance?
+[48:36] Well, typically I think advertisers think a bigger audience is better, but it depends
+[48:42] on what their goal is.
+[48:43] A lot of times they don't need a bigger audience.
+[48:45] They should just stick with the high intent only.
+[48:49] And they can set that by not having peak performance.
+[48:52] So I'm just noticing that a lot of these are peak performance and they might
+[48:55] just improve if they just turn that off, basically.
+[49:00] Would peak performance matter depending on their budget though?
+[49:03] Now that now we're getting off the rails of like what a customer would know,
+[49:06] right?
+[49:06] Yeah.
+[49:06] Yeah.
+[49:15] I mean, there are definitely like, for example, I'm looking at the guy that has peak performance turned on, obviously.
+[49:26] And I'm looking at their audience segment reporting.
+[49:29] And peak performance is actually the highest spending one.
+[49:34] And it brought zero conversions, right?
+[49:38] So that is 100% a legitimate recommendation that we should probably turn peak performance off.
+[49:45] So, yeah, there might be something there for sure.
+[49:54] This customer, I don't see the, like, keyword report, I guess you would say.
+[50:01] Is that something that they've removed or am I looking in the wrong place?
+[50:05] No, yeah, it's just probably not created.
+[50:07] So that's what I'm saying.
+[50:09] That's what I was saying, that for some reason, the segment keyword reporting is not by default.
+[50:15] So the way you can get to it is you can click create report.
+[50:20] And then there is going to be that like the dropdown that says blank.
+[50:25] You can select audience segment keyword thing, and it will basically show you how it would look like if you'd save it.
+[50:35] So you don't really need to save it.
+[50:37] You can interact with it that way.
+[50:40] But yeah, it is a bit counterintuitive, I think.
+[50:44] This is how I got to it.
+[50:47] I was on performance metrics.
+[50:49] And then I pivot by, and it has all that stuff here now.
+[50:53] It got moved into a pivot.
+[50:56] That is an option as well.
+[50:57] Which it used to be on the side, right?
+[51:00] Each of these used to be an individual thing.
+[51:02] Yeah.
+[51:05] This one has five conversions on $17,000 spend.
+[51:09] Ish.
+[51:11] Who is the advertiser?
+[51:13] Gulf Tech.
+[51:14] They're advertising like golf lessons.
+[51:17] And they geo-targeted it by a lot.
+[51:35] you
+[52:05] To be fair though, a lot of these goals are just bananas, right?
+[52:15] Like somebody has like a goal value of CP of $6, which is crazy.
+[52:24] Especially if you're like an advertiser that does foundation repairs.
+[52:28] but yeah there is definitely place for improvement for us here i think
+[52:36] i know we have rec we have recommendations for goals in progress right yeah i think they rolled
+[52:45] it they either rolled it out or they were supposed to roll it out i don't remember where we stand
+[52:51] right now but yeah they were trying to kind of set some limits so they're at least like in the
+[52:57] realm close to reality but malachi kind of kind of uh mentioned this but it might be useful to
+[53:06] give like a here's the average for other companies in your vertical or something like that right
+[53:12] like some reference point when they're setting them to besides just guardrails
+[53:17] mm-hmm
+[53:27] Mike, since we have Scrum of Scrums coming up in a little bit,
+[53:34] we've got seven minutes left.
+[53:36] Do you want folks to continue to work on this
+[53:38] or do you want them to wrap up here in the next couple minutes?
+[53:41] Yeah, I think we can wrap up for now.
+[53:43] I mean, again, the main idea here was to kind of get you guys
+[53:49] a little bit closer to the reports, get you a bit closer to the clients,
+[53:52] which hopefully was successful.
+[53:57] If we generate some insights here, that's great.
+[54:01] But obviously, this is not a sustainable way to optimize things.
+[54:05] We will be working on an automatic way to do that.
+[54:10] But yeah, we're hoping that you guys got a little bit more knowledgeable about what our users see and how we can think about cutting them out.
+[54:22] So, yeah.
+[54:26] Cool.
+[54:26] And also, Bryce, can you please make sure all the folks here
+[54:31] are in that Dev channel so they can submit the insights
+[54:35] that they were able to gather?
+[54:37] Yeah, I believe I added everyone.
+[54:39] But if you're not in that Dev channel, please let me know.
+[54:42] Reach out to me.
+[54:42] I think that might be the fastest way.
+[54:44] Because I thought I went through yesterday or the day before
+[54:48] and added everybody.
+[54:51] And I believe it's called like Dev Optimization
+[54:56] something something no yeah here i'll copy the link and put it in the channel reporting insights
+[55:02] audience segment builder that's that's a mouthful we need to come up with an acronym for them
+[55:08] drives uh to be a silent there's the channel name there i posted in the zoom chat so
+[55:20] again Mike and Allison and I have to drop off here in a little bit for a for a roadmap meeting
+[55:27] but if you wrap up what you're working on here in the next couple minutes
+[55:30] submit any insights that you have we should be good all set to go
+[55:34] I do have one tiny question slash statement so is it assumed like if let's say there's a mom and
+[55:49] pop bakery right and then want to use mountain is it assumed that they'd be on select or would
+[55:55] they have the possibility of just using the og platform they will be on express you mean express
+[56:01] sorry yes that's what i meant uh they will be on express yeah so all the all the new signups are
+[56:08] going into express now and there is a way to get upgraded to the full ptv i don't know what that
+[56:19] way is and i probably should honestly gotcha so i was just gonna say like if let's say the mom and
+[56:25] pop bakery ends up on ptv but they really don't know the ins and outs of advertising like like
+[56:32] they're gonna be like what's cpa i don't know what this is and then like if they don't even know what
+[56:36] it is how that how do they know how to you know make their audience better and make their campaign
+[56:41] better and so on that's the only thing that i would say because i i mean i'll be honest i i was
+[56:47] poking around looking at numbers and i'm not quite sure what would be positive or negative as far as
+[56:52] changes um so i was just coming from like the mindset of like what if this person literally
+[56:59] has no idea how advertising works they just want to get themselves out there
+[57:04] so yeah no you're 100 correct and that's that was basically the main idea behind express right is
+[57:13] that we have so much kind of baggage accumulated in PTV
+[57:17] for those kind of specialists in ad tech and stuff like that,
+[57:22] that the normal person who just gets in
+[57:26] and wants to like advertise their whatever small shop or something,
+[57:33] you know, they're just getting super confused
+[57:34] and bounce back immediately.
+[57:36] So yeah, that's the whole premise.
+[57:43] They didn't even have pixel at first.
+[57:49] They added it a few months after the launch,
+[57:54] but initially, yeah, there was no pixel.
+[57:57] So there was no performance, right?
+[57:59] Like we could just tell you how many impressions we served, basically,
+[58:03] and that's it.
+[58:06] So it is very, very stripped down.
+[58:13] All right.
+[58:41] We're coming up on time here.
+[58:44] Again, thanks, everyone, for jumping in.
+[58:48] Hopefully this was insightful, no pun intended,
+[58:52] and helpful for you guys
+[58:55] and a little bit helped alleviate the whole Friday workday thing
+[59:04] and distracted you a bit.
+[59:06] So, yeah, thanks a lot for your time and for your help with this.
+[59:09] thanks Mike
+[59:11] yeah thanks Mike
+[59:12] good setting this up
+[59:13] to do some learnings
+[59:15] all right
+[59:18] I think we're gonna
+[59:19] bounce back
+[59:21] bounce here in a minute
+[59:22] for the scrum scrum
+[59:23] so again
+[59:24] thanks everyone
+[59:25] and hope you have
+[59:26] a good weekend
+[59:27] thanks everyone
+[59:29] thank you
+[59:30] thank you everyone
