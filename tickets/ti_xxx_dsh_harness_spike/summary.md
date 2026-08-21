@@ -78,11 +78,16 @@ Research corpus in `artifacts/` (2026-08-21). Headlines:
 - **Engine v0 (Phase 4, keyless, no dsh dep):** `engine/` scaffolded with FLOORS.yml (5 permanent floors) enforced by a commit-msg guard — proven both ways: an unapproved FLOORS.yml commit is BLOCKED, an `Engine-Floor-Change: approved-by-human` trailer lets it through. `harvest.py` mined 15 evidenced candidates from the 7 live signal files (doc_debt=27, think-noun=53, brevity=35% all verified against manual grep). `transcript_miner.py` converts Claude Code transcripts to Tier-2 case skeletons. `seed_corpus.py` seeded 5 retrieval-probe cases (20% holdout). `entropy_snapshot.py` writes a byte-stable metrics line (retrieval_hit_rate 1.0, usd_per_query $4.66, brevity 0.351, 35 overlap clusters). v0 auto-applies nothing yet — HYPOTHESIZE→OBSERVE is Phase 5 (dsh).
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+**Built and gated green: Phases 1-6.** dsh adopted as a supervised sidecar; verdict GO to continued L0/L1 adoption (`artifacts/ti_xxx_go_no_go.md`). Deliverables:
+- **`dsh-lab/`** (sibling repo, local-only, pinned `0.1.1-rc.1`): `@mntn/dsh-bq` (bq_query tool + raw-bq guard), `@mntn/dsh-kit` (recall/orient/commands), 5 profiles, the REJECT-by-default gate (`dshkit_verify.sh`), behavioral harness (`dsh_behave.sh`), replay-eval (`dsh_replay.sh` + 2 goldens), integration+chaos harness (9/9 runnable pass), killswitch, egress cage spec. 55 unit tests green.
+- **`engine/`** (in workspace): the self-improvement loop — FLOORS.yml (commit-guard enforced), harvest.py (15 candidates), transcript_miner, seed_corpus, entropy_snapshot, ladder.py, verify_gate.py, run_engine.py orchestrator, observe.py + rollback.sh. Full loop proven end-to-end (harvest → real LLM hypothesize with pre-registered metric → PROPOSE / rung-0 auto-adopt → gate PASS/FAIL → rollback drill).
+- **Workspace kit additions (only, all additive):** `.claude/agents/dsh-reviewer-adversarial.md`, `.claude/scripts/engine_protected_paths.sh`, commit-msg floor guard, `session_start_routing.sh` `ORIENT_NO_PULL` guard. Nothing existing was modified destructively; deleting `dsh-lab/` + `engine/` reverts the whole program.
+- **Adversarial process caught 3 BLOCKERs + fixed all** (multiline guard bypass, dead cost-cap, host-crash EPIPE) and a py3.11-vs-3.9 portability bug (found by the integration run).
+
+## 5b. Blockers before autonomy (sequenced gates, not defects)
+1. `gcloud auth login` (user) — unblocks the one live-BigQuery assertion; everything else proven.
+2. Egress cage sudo steps (user, `dsh-lab/scripts/egress_setup.md`) — hard gate before any unattended run.
+3. 10-day soak (calendar) — starts when daily use begins; precedes L1 autonomy.
 
 ## 6. Questions Answered
 Specific questions that were resolved during this ticket:
