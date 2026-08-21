@@ -1,0 +1,45 @@
+# FLOORS.yml — the permanent gates the self-improvement engine may NEVER cross, at any autonomy rung.
+# Protected path: a commit touching this file must carry the trailer `Engine-Floor-Change: approved-by-human`
+# (enforced by .githooks/pre-commit via engine_protected_paths.sh). The engine can propose edits here; only a
+# human commit applies them. These are policy, not configuration.
+version: 1
+
+floors:
+  no_knowledge_deletion:
+    rule: "Never net-delete lines from knowledge/**.md (append/supersede only). Sole exception: git-revert of the engine's OWN commit inside its observation window."
+  no_prod_mutation:
+    rule: "Never mutate prod systems (Airflow DAGs, GCS writes, BQ DDL/DML). BQ is read-only by standing rule; engine sessions hold no prod credentials."
+  spend_cap:
+    max_usd_per_day: 5
+    rule: "Aggregate engine spend over a day may not exceed max_usd_per_day. Exceeding = fail-stop with a report, never fail-open. BQ dry-run cost gate stays independent."
+  no_secret_access:
+    rule: "Never read ~/.dsh/.credentials.yaml, Keychain, ~/.ssh, or any credential path. No LLM key on any server, ever."
+  no_external_egress:
+    rule: "Nothing leaves the machine from an engine session except `git push` to the private workspace repo and model-API calls. No Jira/Slack/email/GitHub-comment posts."
+
+# Change classes that NEVER auto-apply regardless of rung (enforced outside the engine by the pre-commit gate):
+never_auto_apply:
+  - knowledge_deletion
+  - prod_mutation
+  - spend_over_cap
+  - external_post
+  - security_config          # pf rules, proxy allowlist, credentials, sandbox/approval presets, ALLOWLIST.txt, plugin installs
+  - the_verifier_itself      # engine/scripts, engine/workflows, dsh-lab gate scripts, .githooks, .claude/{agents,hooks,settings} — Ken Thompson rule
+  - claude_md                # global + project CLAUDE.md
+  - git_history_rewrite
+
+# Protected paths: the engine's ADOPT step demotes any candidate whose diff touches these to the human PROPOSE queue.
+protected_paths:
+  - engine/FLOORS.yml
+  - engine/scripts/
+  - engine/workflows/
+  - dsh-lab/scripts/
+  - .githooks/
+  - .claude/agents/
+  - .claude/hooks/
+  - .claude/settings.json
+  - .claude/settings.local.json
+
+kill_switch:
+  flag: engine/STOP
+  rule: "Presence of engine/STOP halts every engine stage at entry. dsh-lab/scripts/killswitch.sh sets it plus the dsh-lab DISABLED flag."

@@ -1,0 +1,43 @@
+# engine.config.yml — thresholds, cadences, and the autonomy-ladder state for the self-improvement engine.
+# The engine reads this; the engine may propose edits to the THRESHOLDS but ladder promotion is executed by
+# ladder.py from the ENGINE_LOG track record, and this file is NOT a floor (floors live in FLOORS.yml).
+version: 1
+
+# Current autonomy rung per change class. v0 ships rung 0 auto-apply only; everything above is PROPOSE.
+ladder:
+  current_rung: 0            # highest auto-adopt rung active right now
+  rungs:
+    0: [index_rebuild, doc_observed_append, routing_keyword, corpus_add, eval_run_log]
+    1: [knowledge_edit, memory_file]
+    2: [skill_edit, skill_new, prompt_line]
+    3: [tool_plugin, hook]
+    4: [harness_config]
+    5: [engine_self]          # never without meta-eval; rate-limited 1/week
+
+# VERIFY gate thresholds (guard metrics may not regress beyond these).
+verify:
+  tier1_replay_pass: 1.0                # 100% — any invariant/schema break is a hard fail
+  tokens_to_answer_max_increase: 0.10
+  usd_per_case_max_increase: 0.10
+  wall_latency_max_increase: 0.20
+  reviewers_required_clean: 2
+  tier2_max_usd: 3.0
+  tier2_active_cap: 40
+  holdout_fraction: 0.20
+
+observe:
+  window_days: 7
+  window_sessions: 20
+  rollback_consecutive_bad_sessions: 3
+  demote_class_days: 14
+
+harvest:
+  min_recurrence_for_sequence: 3        # a 3+-step manual sequence repeated >=3x = automation candidate
+  signal_files:
+    - knowledge/bq_perf_log.jsonl
+    - knowledge/.request_log.jsonl
+    - .claude/state/chat_brevity_log.jsonl
+    - knowledge/bq/_UNDOCUMENTED.queue
+    - knowledge/eval_runs.log
+    - on-call/incident_log.jsonl
+    - improvements_backlog.md

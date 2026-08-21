@@ -4,6 +4,11 @@
 # Emergency bypass (use sparingly): git commit --no-verify
 set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+# Engine floor guard: block silent edits to the engine's own guardrails unless a human approves.
+G="$ROOT/.claude/scripts/engine_protected_paths.sh"
+[ -f "$G" ] && { bash "$G" "$1" || exit 1; }
+
 L="$ROOT/.claude/scripts/lint_comms.py"
 [ -f "$L" ] || { echo "[gate] lint_comms.py not found — skipping"; exit 0; }
 exec python3 "$L" --kind commit --file "$1"
