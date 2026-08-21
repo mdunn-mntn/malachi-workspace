@@ -193,6 +193,78 @@ def test_lan_sinkhole_answer_is_rejected() -> None:
         assert dataproc_rca._is_public_v4(addr), addr
 
 
+def test_token_refresh_is_pinned_too(tmp_adc: str = "") -> None:
+    """IMP-051: a token that needs refreshing must not go through the sinkhole being routed around."""
+    import json as _json
+    import tempfile
+
+    adc = {"type": "authorized_user", "client_id": "cid", "client_secret": "sec",
+           "refresh_token": "rt"}  # fmt: skip
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+        _json.dump(adc, fh)
+        path = fh.name
+
+    def fake_run(cmd: list[str], timeout: int = 90) -> tuple[str | None, str | None]:
+        if cmd[:2] == ["gcloud", "auth"]:
+            return None, "getaddrinfo: Name or service not known"
+        if cmd[:2] == ["dig", "+short"]:
+            return "142.251.46.74\n", None
+        if cmd[0] == "curl":
+            assert "--resolve" in cmd, "the token refresh went through the system resolver"
+            assert any("oauth2.googleapis.com/token" in a for a in cmd)
+            return '{"access_token":"ya29.pinned","expires_in":3599}', None
+        raise AssertionError(f"unexpected command {cmd}")
+
+    orig_run, orig_adc = dataproc_rca._run, dataproc_rca._ADC_PATH
+    dataproc_rca._run, dataproc_rca._ADC_PATH = fake_run, path
+    try:
+        token, err = dataproc_rca._access_token()
+    finally:
+        dataproc_rca._run, dataproc_rca._ADC_PATH = orig_run, orig_adc
+    assert (token, err) == ("ya29.pinned", None)
+
+
+def test_a_non_dns_token_failure_is_not_retried_over_a_pinned_ip() -> None:
+    """A revoked credential is a real answer; pinning an IP cannot fix it and must not mask it."""
+    def fake_run(cmd: list[str], timeout: int = 90) -> tuple[str | None, str | None]:
+        if cmd[:2] == ["gcloud", "auth"]:
+            return None, "Reauthentication required"
+        raise AssertionError("pinned refresh fired on a non-DNS token failure")
+
+    orig = dataproc_rca._run
+    dataproc_rca._run = fake_run
+    try:
+        token, err = dataproc_rca._access_token()
+    finally:
+        dataproc_rca._run = orig
+    assert token is None and "Reauthentication" in err
+
+
+def test_an_http_error_body_is_surfaced_not_read_as_no_entries() -> None:
+    """IMP-052: `curl -s` without --fail parses a 403 body fine and finds zero entries."""
+    def fake_run(cmd: list[str], timeout: int = 90) -> tuple[str | None, str | None]:
+        if cmd[:3] == ["gcloud", "logging", "read"]:
+            return None, "getaddrinfo failed"
+        if cmd[:2] == ["dig", "+short"]:
+            return "142.251.46.74\n", None
+        if cmd[:2] == ["gcloud", "auth"]:
+            return "ya29.token\n", None
+        if cmd[0] == "curl":
+            return ('{"error":{"code":403,"message":"Permission logging.logEntries.list denied.",'
+                    '"status":"PERMISSION_DENIED"}}'), None
+        raise AssertionError(f"unexpected command {cmd}")
+
+    orig = dataproc_rca._run
+    dataproc_rca._run = fake_run
+    try:
+        text, err = dataproc_rca._logging_messages("some-batch-1", "mntn-prj-prod-00")
+    finally:
+        dataproc_rca._run = orig
+    assert text == ""
+    assert "403" in err and "logging.logEntries.list denied" in err
+    assert "no entries" not in err, "the real API error was discarded"
+
+
 def test_public_ip_skips_sinkhole_and_takes_the_real_answer() -> None:
     """dig output mixing a CNAME, a sinkhole answer and a real A record yields the real one."""
     orig = dataproc_rca._run
@@ -217,4 +289,7 @@ if __name__ == "__main__":
     test_sinkholed_resolver_answer_is_rejected()
     test_lan_sinkhole_answer_is_rejected()
     test_public_ip_skips_sinkhole_and_takes_the_real_answer()
+    test_token_refresh_is_pinned_too()
+    test_a_non_dns_token_failure_is_not_retried_over_a_pinned_ip()
+    test_an_http_error_body_is_surfaced_not_read_as_no_entries()
     print("OK - dataproc_rca driveroutput + dns-fallback tests passed")

@@ -226,7 +226,10 @@ Build in progress. Code home: `airflow_debugger/` package in the workspace (key-
 
 **Fixed:** `_public_ip` accepted any answer starting with a digit that was not `0.0.0.0`. A blocker in **IP-blocking mode** answers with its own LAN address (here `192.168.10.177`), which passed the check and pinned curl at the blocker, surfacing later as a confusing `non-json response` instead of an honest resolution failure. Now requires a globally routable address (`ipaddress.IPv4Address.is_global`), with regression tests for both directions.
 
-**Logged, not fixed (scope):** IMP-051 `gcloud auth print-access-token` is not pinned, so a token refresh goes through the very sinkhole the fallback routes around; IMP-052 `curl -s` without `--fail` discards a real HTTP 4xx/5xx API error as the generic `no entries`.
+**IMP-051 + IMP-052 fixed 2026-08-20** (were logged as out of scope on the day, closed the same evening):
+- **IMP-051 — the token fetch is pinned too.** `_access_token()` tries `gcloud auth print-access-token`, and only on a `_DNS_BLOCK_MARKERS` hit exchanges the ADC `refresh_token` over a curl pinned at `oauth2.googleapis.com`. The refresh is a plain form POST, so it pins exactly like the log read. **A non-DNS token failure is returned unchanged and never retried** — a revoked credential or `Reauthentication required` is a real answer, and pinning an IP cannot fix it. Regression asserts both directions.
+- **IMP-052 — the API's own error survives.** `_api_error()` reads the response `error` object and returns `HTTP <code>: <message>`, so a 403 reads `Permission logging.logEntries.list denied` instead of the generic `no entries`. Wired into the Vertex `pipelineJobs` GET as well.
+- **Re-verified live after the change:** the pinned path on batch `f73fa983-67a7-4f35-8e5d-37919e30b43d` still returns **20991 chars** of real driver text, byte-identical to the pre-change measurement.
 
 ### IMP-055 — routing closes the last 3 unclassified failures (2026-08-20)
 

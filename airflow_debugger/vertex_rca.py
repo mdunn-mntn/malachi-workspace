@@ -27,6 +27,7 @@ import re
 from dataclasses import dataclass, field
 
 from .dataproc_rca import (
+    _access_token,
     _run,
     driveroutput_text,
     error_region,
@@ -72,7 +73,7 @@ class VertexEvidence:
 
 def _api_get(project: str, location: str, run_id: str) -> tuple[dict | None, str | None]:
     """GET one pipelineJob. Returns (job, None) or (None, why)."""
-    token, err = _run(["gcloud", "auth", "print-access-token"], timeout=30)
+    token, err = _access_token()
     if err:
         return None, f"access token: {err}"
     url = (
@@ -81,7 +82,7 @@ def _api_get(project: str, location: str, run_id: str) -> tuple[dict | None, str
     )
     stdout, err = _run([
         "curl", "-s", "--max-time", "60", url,
-        "-H", f"Authorization: Bearer {(token or '').strip()}",
+        "-H", f"Authorization: Bearer {token}",
     ])  # fmt: skip
     if err:
         return None, err
@@ -90,7 +91,8 @@ def _api_get(project: str, location: str, run_id: str) -> tuple[dict | None, str
     except json.JSONDecodeError:
         return None, "pipelineJobs GET: non-json response"
     if "error" in body and "state" not in body:  # an API error, not a job error
-        return None, str(body["error"].get("message"))[:300]
+        err_obj = body["error"]
+        return None, f"HTTP {err_obj.get('code')}: {str(err_obj.get('message'))[:280]}"
     return body, None
 
 

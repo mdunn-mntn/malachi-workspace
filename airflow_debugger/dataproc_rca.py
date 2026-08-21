@@ -22,6 +22,7 @@ from __future__ import annotations
 import base64
 import ipaddress
 import json
+import os
 import re
 import subprocess
 from dataclasses import asdict, dataclass, field
@@ -33,6 +34,8 @@ PROJECT_DEFAULT = "mntn-prj-prod-00"
 REGION = "us-central1"
 _LOG_LIMIT = 80
 _LOGGING_HOST = "logging.googleapis.com"
+_OAUTH_HOST = "oauth2.googleapis.com"
+_ADC_PATH = "~/.config/gcloud/application_default_credentials.json"
 _PUBLIC_RESOLVER = "8.8.8.8"
 _LOG_FRESHNESS = "45d"
 _TTL_TOLERANCE = 0.05  # runtime within 5% of ttl => TTL kill
@@ -119,12 +122,75 @@ def _public_ip(host: str) -> str | None:
     return None
 
 
+def _token_via_pinned_refresh() -> tuple[str | None, str | None]:
+    """Mint an access token over a pinned IP, when the sinkhole also eats the OAuth host.
+
+    `gcloud auth print-access-token` goes through the system resolver, so a token that
+    needs refreshing dies in the very sinkhole this fallback exists to route around. The
+    refresh is a plain form POST, so it can be pinned the same way as the log read.
+    """
+    ip = _public_ip(_OAUTH_HOST)
+    if not ip:
+        return None, f"could not resolve {_OAUTH_HOST} via {_PUBLIC_RESOLVER}"
+    try:
+        with open(os.path.expanduser(_ADC_PATH), encoding="utf-8") as f:
+            adc = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        return None, f"application default credentials unreadable: {e}"
+    if adc.get("type") != "authorized_user":
+        return None, f"ADC type {adc.get('type')!r} has no refresh_token to exchange"
+    stdout, err = _run([
+        "curl", "-s", "--max-time", "30",
+        "--resolve", f"{_OAUTH_HOST}:443:{ip}",
+        f"https://{_OAUTH_HOST}/token",
+        "-d", f"client_id={adc.get('client_id', '')}",
+        "-d", f"client_secret={adc.get('client_secret', '')}",
+        "-d", f"refresh_token={adc.get('refresh_token', '')}",
+        "-d", "grant_type=refresh_token",
+    ])  # fmt: skip
+    if err:
+        return None, err
+    try:
+        body = json.loads(stdout or "{}")
+    except json.JSONDecodeError:
+        return None, "pinned token refresh: non-json response"
+    token = body.get("access_token")
+    if not token:
+        return None, f"pinned token refresh: {body.get('error_description') or body.get('error')}"
+    return token, None
+
+
+def _access_token() -> tuple[str | None, str | None]:
+    """A short-lived access token, falling back to a pinned refresh when DNS is sinkholed."""
+    token, err = _run(["gcloud", "auth", "print-access-token"], timeout=30)
+    if token and token.strip():
+        return token.strip(), None
+    if err and not any(m in err for m in _DNS_BLOCK_MARKERS):
+        return None, err
+    pinned, pin_err = _token_via_pinned_refresh()
+    if pinned:
+        return pinned, None
+    return None, f"{err or 'no token'} | pinned refresh: {pin_err}"
+
+
+def _api_error(stdout: str) -> str | None:
+    """The API's own error message, which a bare `curl -s` would discard as `no entries`."""
+    try:
+        body = json.loads(stdout or "{}")
+    except json.JSONDecodeError:
+        return None
+    err = body.get("error")
+    if isinstance(err, dict):
+        return f"HTTP {err.get('code')}: {err.get('message')}"
+    return None
+
+
 def _logging_via_curl(filt: str, project: str) -> tuple[str, str | None]:
     """Cloud Logging over a pinned IP, for when local DNS sinkholes the API host."""
     ip = _public_ip(_LOGGING_HOST)
     if not ip:
         return "", f"could not resolve {_LOGGING_HOST} via {_PUBLIC_RESOLVER}"
-    token, err = _run(["gcloud", "auth", "print-access-token"], timeout=30)
+    token, err = _access_token()
     if err:
         return "", f"access token: {err}"
     body = json.dumps({
@@ -137,12 +203,15 @@ def _logging_via_curl(filt: str, project: str) -> tuple[str, str | None]:
         "curl", "-s", "--max-time", "60",
         "--resolve", f"{_LOGGING_HOST}:443:{ip}",
         f"https://{_LOGGING_HOST}/v2/entries:list",
-        "-H", f"Authorization: Bearer {(token or '').strip()}",
+        "-H", f"Authorization: Bearer {token}",
         "-H", "Content-Type: application/json",
         "-d", body,
     ])
     if err:
         return "", err
+    api_err = _api_error(stdout or "")
+    if api_err:
+        return "", f"pinned curl: {api_err}"
     try:
         entries = json.loads(stdout or "{}").get("entries", [])
     except json.JSONDecodeError:
