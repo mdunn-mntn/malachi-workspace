@@ -1,6 +1,6 @@
 ---
 name: project_insight_spelunking_session
-description: "Bryce's Insight Spelunking fieldwork session 2026-08-21 2-3pm MT — claim FICO campaign group 81053, diagnose the CPA miss in the reporting UI only, submit via /insight spelunking; prep is done and committed"
+description: "Insight Spelunking session 2026-08-21 — HELD. The H2 optimizer is an audience optimization tool; the exercise was client-seat fluency, not insight generation. Turning Peak Performance OFF is a legitimate rec. Insights still unsubmitted."
 metadata:
   node_type: memory
   type: project
@@ -43,3 +43,21 @@ the classifier on 250 of 251 rows; LifeVac cgid 123213 is the one to fix).
 
 Related: [[project_audi_1083_mm_classifier]] [[reference_mm_component_taxonomy]]
 [[reference_mntn_google_drive_access]]
+
+**HELD 2026-08-21. What it was actually for (Mike Dolt, transcript
+`tickets/audi_1083_mm_classifying_view/meetings/audi_1083_01_insight_spelunking_2026_08_21.txt`):** get
+the squad fluent in what a client can see, ahead of building the **audience optimization tool** that
+will recommend or auto-apply audience changes. Over 80% of clients launch and never touch the campaign.
+The insights were a bonus, not the point.
+
+**Two things I had wrong going in.** (1) The deliverable is an optimization recommendation for the
+advertiser, not a catalogue of UI failures — UI friction is a side channel to the reporting team.
+(2) Peak Performance BROADENS past high intent, so turning it OFF is often the right call; the decisive
+check is the audience-segment report (PP spend vs PP conversions). Both now in `mntn_business.md`.
+
+**Still open:** the four insight notes at
+`tickets/audi_1083_mm_classifying_view/artifacts/audi_1083_spelunk_insight_notes.md` (FICO 37056,
+Join Found 38652, Ancient Nutrition 31455, The Bouqs 32147) are drafted but **not submitted**, and none
+has had the audience-segment check run. Submit via `/insight spelunking` in
+`#dev-reporting-insights-audience-segment-builder`.
+
