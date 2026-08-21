@@ -4,7 +4,7 @@ title: "Local spike: dsh plugin harness"
 status: in_progress
 date: 2026-08-21
 summary: "Evaluate DeepSeek Harness as sidecar automation harness and self-improvement engine substrate"
-result: "not started"
+result: "v0 built and gated green: Phases 1-4 complete. dsh sidecar boots pinned (0.1.1-rc.1) with Keychain-routed Anthropic; 6 skills mount verbatim; @mntn/dsh-bq (tool+guard) and @mntn/dsh-kit (recall/orient/commands) pass 55 unit tests + behavioral cases + 4 adversarial reviews (3 BLOCKERs found and fixed); keyless replay-eval proven (2 goldens zero-drift + negative control); engine v0 harvests 15 evidenced candidates and CC-0 auto-apply works behind a floor-guarded commit. One item BLOCKED on user: gcloud auth for the live BQ perf-log write. Phases 5-6 (full dsh engine loop, integration/soak) are follow-on."
 question: "Can a pinned dsh sidecar run our skills, bq gate, and a harvesting engine v0 with every unit passing its adversarial test gate?"
 framing_state: locked
 ---
