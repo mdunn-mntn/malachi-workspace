@@ -104,3 +104,11 @@ board uncluttered while making sure a good idea (a durable fix, a tooling gap, a
 | IMP-049 | 2026-08-20 | stale `databricks-ti837` PAT in the macOS keychain | **DONE 2026-08-20.** The `[DEFAULT]` PAT stanza in `~/.databrickscfg` was removed 2026-08-20 and the token was dead server-side (`databricks tokens list` returns empty), but the keychain entry `databricks-ti837` still held it and `.claude/scripts/databricks_smoke.py` still read it. Entry deleted (`security delete-generic-password`, verified absent); the smoke test now builds its session from the `databricks` CLI OAuth profile via `Config(profile=...)`, with `$DATABRICKS_PROFILE` as the override so a service principal on OAuth M2M drops in without a code change. No token is read from disk or keychain anywhere in this workspace now. | S | Malachi | done | AUDI-1194 Databricks validation 2026-08-20 |
 
 - ENGINE-PROPOSE `c-2026-08-21-001` (knowledge_edit/costly_query): query shape run 2x billing 5366.8 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-21-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-21-003` (knowledge_edit/costly_query): query shape run 2x billing 542.5 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-21-004` (knowledge_edit/costly_query): query shape run 1x billing 539.3 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-21-005` (knowledge_edit/costly_query): query shape run 2x billing 485.9 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)

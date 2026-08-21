@@ -141,6 +141,17 @@ def main():
     ap.add_argument(
         "--llm", action="store_true", help="allow LLM (HYPOTHESIZE) — Mac only, Keychain key"
     )
+    ap.add_argument(
+        "--auto",
+        action="store_true",
+        help="full unattended loop over the queue: rung-0 -> adopt, others -> hypothesize+propose (spend-bounded)",
+    )
+    ap.add_argument(
+        "--max-llm",
+        type=int,
+        default=3,
+        help="max NEW candidates to hypothesize per --auto run (spend cap; already-specced are skipped)",
+    )
     args = ap.parse_args()
 
     if STOP.exists():
@@ -148,6 +159,28 @@ def main():
         return 3
 
     queue = load_queue()
+
+    if args.auto:
+        llm_used = 0
+        rung0 = 0
+        proposed = 0
+        for c in queue:
+            if c["class"] in ("index_rebuild", "corpus_add", "entropy_snapshot"):
+                run_candidate(c, do_llm=False)  # mechanical rung-0
+                rung0 += 1
+                continue
+            specdir = ENGINE / "candidates" / c["id"]
+            if (specdir / "spec.json").exists() or (specdir / "spec_rejected.json").exists():
+                continue  # already processed on a prior run; don't re-spend
+            if llm_used >= args.max_llm:
+                continue  # spend cap reached for this run
+            run_candidate(c, do_llm=True)
+            llm_used += 1
+            proposed += 1
+        print(
+            f"\nauto: rung-0 adopted={rung0}, hypothesized+proposed={proposed} (llm cap {args.max_llm})"
+        )
+        return 0
     if args.dry:
         print(f"HARVEST queue: {len(queue)} candidates")
         for c in queue:
