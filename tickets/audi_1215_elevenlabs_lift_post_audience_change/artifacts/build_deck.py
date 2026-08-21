@@ -9,7 +9,8 @@ def b64(name):
     with open(f"{T}/{name}", "rb") as f:
         return "data:image/png;base64," + base64.b64encode(f.read()).decode()
 
-CH_DAILY, CH_PREPOST, CH_FREQ = (b64(f"audi_1215_chart_{n}.png") for n in ("daily_lift", "prepost_lift", "frequency_lift"))
+CH_DAILY, CH_PREPOST, CH_FREQ, CH_POWER, CH_BASE = (b64(f"audi_1215_chart_{n}.png") for n in ("daily_lift", "prepost_lift", "frequency_lift", "power_cost", "baseline_collapse"))
+CH_ONEPAGER = b64("audi_1215_one_pager_render.png")
 
 HTML = f"""<!DOCTYPE html>
 <html lang="en">
@@ -55,14 +56,14 @@ HTML = f"""<!DOCTYPE html>
 
 <section>
   <h2>Conversion lift is not measurable at this spend</h2>
-  <p>+11% pre, +35% post: directionally up, neither significant at the 0.06% conversion base rate. Conversions lag visits.</p>
-  <p>Detecting a 5% conversion lift takes ~$2M/month; the same lift on visits takes $36K.</p>
+  <img src="{CH_POWER}" alt="Spend needed to detect a 5 percent lift, conversions vs visits" style="max-height:480px;">
+  <p class="footer-note">+11% pre, +35% post: directionally up, neither significant at the 0.06% conversion base rate. Conversions lag visits.</p>
 </section>
 
 <section>
   <h2>Dashboards fell because the audience changed, not the ads</h2>
-  <p>The new audience's baseline visit rate is 6x lower (holdout: 0.824% before, 0.136% after, no ads involved).</p>
-  <p>Attributed visits fell with it. Lift versus holdout held.</p>
+  <img src="{CH_BASE}" alt="Visit rate by arm, pre vs post" style="max-height:480px;">
+  <p class="footer-note">The precision audience is people not already visiting: both groups' baseline fell ~6x (the holdout sees no ads, so this is composition, not performance). Attributed counts track that baseline; the causal gap is what remained.</p>
 </section>
 
 <section>
@@ -83,8 +84,7 @@ HTML = f"""<!DOCTYPE html>
 
 <section>
   <h2>How it is measured</h2>
-  <p>10% of the audience is always held out at random. The bidder logs the bid it would have placed, never serves it, and lift is the visit-rate gap.</p>
-  <p class="footer-note">One count per household at first bid, outcomes within 7 days. Holdout share 9.2-9.5% every period. One-pager attached.</p>
+  <img src="{CH_ONEPAGER}" alt="Ghost bidding one-pager" style="max-height:640px;">
 </section>
 
 <section>

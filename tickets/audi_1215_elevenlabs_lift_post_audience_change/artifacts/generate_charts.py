@@ -73,3 +73,33 @@ ax.set_xticks(range(4), [f"{r['stratum_value']}\nexposures" for r in freq], font
 ax.set_yticks([])
 ax.set_ylim(-32, 30)
 save(fig, "audi_1215_chart_frequency_lift.png")
+
+fig, ax = plt.subplots(figsize=(7.6, 4.2))
+for x, (lab, v, txt, c) in enumerate([("Conversions", 2000, "$2M/month", GRAY), ("Visits", 36, "$36K/month", NAVY)]):
+    ax.bar(x, v, width=0.6, color=c)
+    ax.text(x, v + 60, txt, ha="center", fontsize=13, fontweight="bold", color=c if c == NAVY else "#666666")
+ax.set_xticks([0, 1], ["Conversions\n(0.06% base rate)", "Visits\n(0.9% base rate)"], fontsize=10)
+ax.set_yticks([])
+ax.set_ylim(0, 2400)
+ax.text(0.5, 2280, "spend needed to detect a 5% lift", ha="center", fontsize=10, color="#666666")
+save(fig, "audi_1215_chart_power_cost.png")
+
+fig, ax = plt.subplots(figsize=(8.6, 4.2))
+groups = [("Pre", 0.916, 0.824, "+11.1% lift"), ("Post", 0.158, 0.136, "+16.5% lift")]
+for i, (lab, r, h, gap) in enumerate(groups):
+    x0 = i * 1.6
+    ax.bar(x0, r, width=0.55, color=NAVY)
+    ax.bar(x0 + 0.62, h, width=0.55, color=GRAY)
+    ax.text(x0, r + 0.03, f"{r:.3f}%", ha="center", fontsize=10.5, fontweight="bold", color=NAVY)
+    ax.text(x0 + 0.62, h + 0.03, f"{h:.3f}%", ha="center", fontsize=10.5, fontweight="bold", color="#666666")
+    ax.text(x0 + 0.31, max(r, h) + 0.12, gap, ha="center", fontsize=11, fontweight="bold", color=RED)
+ax.text(0, -0.09, "reached", ha="center", fontsize=9.5, color=NAVY)
+ax.text(0.62, -0.09, "holdout", ha="center", fontsize=9.5, color="#666666")
+ax.text(1.6, -0.09, "reached", ha="center", fontsize=9.5, color=NAVY)
+ax.text(2.22, -0.09, "holdout", ha="center", fontsize=9.5, color="#666666")
+ax.set_xticks([0.31, 1.91], ["Pre: old audience", "Post: precision audience"], fontsize=10)
+ax.tick_params(axis="x", pad=18, length=0)
+ax.set_yticks([])
+ax.set_ylim(-0.12, 1.15)
+ax.text(1.11, 1.05, "both groups fell ~6x; the lift gap persisted", ha="center", fontsize=10, color="#666666")
+save(fig, "audi_1215_chart_baseline_collapse.png")
