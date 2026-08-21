@@ -309,3 +309,18 @@ Caveat on both readings: this is bid-grain ITT (win-rate diluted), not served-gr
 1. **Ask Matt Brorby** (a) whether partner 79's holdout write path is wired, and (b) whether the entry-cohort anchor can be redefined so a >15-day window is measurable.
 2. **AUDI-789 WS1 guidance needs revisiting** — the "a visit/spend-optimized scorer de-optimizes incrementality" warning rests on the reversed band ordering.
 3. Imani will want a fresh per-advertiser pull once the beta advertisers are chosen; that is `incr_75_entry_cohort_clean.sql` filtered to their IDs.
+
+## Orangetheory National (39718) lift reads reconciled, 2026-08-20
+
+Two lift numbers exist for 39718 and they are not the same read:
+
+| Source | Relative | Absolute | Note |
+|---|---|---|---|
+| `outputs/incr_75_eligible_with_current_lift.csv` `current_rel_lift` | +6.3% | 0.0394 pp | Entry cohort 2026-06-23 to 07-07, partner 8. Same row's `current_lift_confirms` = "flat so far" |
+| `outputs/incr_75_gold_clean_ivw.csv` IVW, full window | **+9.59%** | 0.0613 pp | n_t 2,009,997 / n_h 207,751, `se_ivw` 1.8455e-4, z 3.32, 95% CI **3.93% to 15.24%** |
+
+The entry-cohort figure is the weaker read and its own row labels it "flat so far". The full-window IVW moves the estimate up, not down.
+
+**Budget implication.** MDE scales as 1/sqrt(budget): 5% at $190,064 total, so 3.08% at $500,000. Against a true effect whose 95% CI floor is 3.93%, a $500k test detects even the pessimistic end; a $190k test at 5% MDE does not. The case for the larger budget is downside coverage, not extra precision. Conversions are noise here: `conv_rel_lift` -1.7% on a holdout of 38 converting IPs, and `budget_for_mde_cvr_15pct` is $378,847.
+
+**Defect:** `prior_lift_pp` is blank and `has_prior_lift` is FALSE for 39718 in `outputs/incr_75_final_tiered.csv` even though the gold IVW carries a significant result. The prior-lift join drops it. Check before the workbook is quoted again.
