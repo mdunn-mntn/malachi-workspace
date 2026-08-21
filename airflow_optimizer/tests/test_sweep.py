@@ -158,3 +158,19 @@ def test_fetch_optional_distinguishes_absent_from_unreadable(tmp_path: Path,
     monkeypatch.setattr(fetch.subprocess, "run", _stat_ok_cp_fails)
     with pytest.raises(RuntimeError, match="exists but could not be fetched"):
         fetch.fetch_optional("gs://b/l.jsonl", str(tmp_path))
+
+
+def test_cap_never_cuts_a_rolling_log_in_half(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A half-fetched v2 log parses as a complete run and scores clean, which is a wrong answer."""
+    listing = "".join(
+        f"  10  2026-08-2{i}T01:00:00Z  gs://b/p/eventlog_v2_batch-x/events_{i}_batch-x.zstd\n"
+        for i in range(1, 4)) + "  10  2026-08-29T01:00:00Z  gs://b/p/app-solo.zstd\n"
+
+    class _R:
+        returncode, stdout, stderr = 0, listing, ""
+
+    monkeypatch.setattr(fetch.subprocess, "run", lambda *_a, **_k: _R())
+    # cap=2 would slice off events_1; the whole batch dir has to come back with it.
+    got = fetch.newest_logs("gs://b/p", 2)
+    assert sum(1 for o in got if "eventlog_v2_batch-x" in o) == 3
+    assert "gs://b/p/app-solo.zstd" in got

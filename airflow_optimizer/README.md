@@ -49,10 +49,10 @@ event log (.zstd) ─▶ eventlog (7-surface parse) ─▶ optimizations (detect
 - `crawl` — fleet crawl, ranks a cross-job backlog worst-first (the "check every DAG" mode).
 - `phs` — enumerates PHS-attached SUCCEEDED ipdsc/tpa batches (`gcloud dataproc batches list`) and
   fetches each one's per-uuid `spark-job-history` log. Needs standing `storage.objectViewer` on the
-  Dataproc temp bucket (mntn-devops#4724); until that merges the reads 403 and are skipped.
+  Dataproc temp bucket (the standing bucket grant for the Dataproc PHS temp bucket (mntn-devops#4724)); until that merges the reads 403 and are skipped.
 
 ## Notes
 
 - Parser + detectors validated on real Spark event logs (`tests/fixtures/eventlog.zstd`,
   `eventlog_cache.zstd`). The prod crawl (2026-08-04) found a 242x skew on `Update Vertical Categorization`.
-- Offline tests: `python3 -m airflow_optimizer.tests.test_{eventlog,optimizations}`.
+- Tests: `python3 -m pytest airflow_optimizer/tests/ -q`.

@@ -114,7 +114,10 @@ def test_optimize_entrypoint_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_parse_v2_rolling_dir_reads_all_parts(tmp_path: os.PathLike[str]) -> None:
-    """A v2 rolling dir is parsed across ALL events_* parts, in numeric part order (IMP-029)."""
+    """A v2 rolling dir is parsed across ALL events_* parts, in numeric part order.
+
+    Reading only part 1, or reading parts lexically, silently truncates the run.
+    """
     import json
     from pathlib import Path
 

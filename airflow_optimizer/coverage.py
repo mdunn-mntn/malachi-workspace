@@ -7,10 +7,10 @@ exist looks complete while silently omitting most of the fleet.
 This enumerates every unpaused DAG from the Airflow API, classifies each task by whether
 it can produce an event log, and reports the gap by name.
 
-Two auth paths, because the sweep runs in two places. On a laptop the bearer comes from
-`.claude/scripts/airflow_api.py` (the astro CLI context, refreshed by SSO). In the
-automations container that file does not exist and there is no CLI, so the token arrives
-as AIRFLOW_TI_API_TOKEN from an ExternalSecret. The env var wins when both are present.
+Two ways in. Running as an Airflow task, `collect_local` parses the DAG bundle already on
+disk and needs no credential at all; that is the path the DAG uses. Running outside Airflow,
+`collect` calls the REST API with a bearer from AIRFLOW_TI_API_TOKEN, or from the local astro
+CLI helper when one is present.
 """
 
 from __future__ import annotations

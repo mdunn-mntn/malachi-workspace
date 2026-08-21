@@ -49,7 +49,27 @@ def newest_logs(prefix: str, cap: int) -> list[str]:
         if len(parts) >= 3 and parts[-1].endswith(".zstd") and parts[-1].startswith("gs://"):
             rows.append((parts[1], parts[-1]))          # (creation time, object)
     rows.sort()
-    return [obj for _, obj in rows[-cap:]]
+    return _whole_logs(rows, cap)
+
+
+def _whole_logs(rows: list[tuple[str, str]], cap: int) -> list[str]:
+    """Take the newest `cap` objects, then re-add every sibling part of any rolling log caught.
+
+    A v2 rolling log is a DIRECTORY of `events_*` parts. Slicing a flat object list at `cap`
+    can take some parts and leave others, and a half-log parses as a complete run: stage totals
+    and spill sums come out low, and the job scores clean. Better to fetch a few extra objects
+    than to publish a confident wrong verdict on a job.
+    """
+    import os as _os
+
+    chosen = [obj for _, obj in rows[-cap:]]
+    dirs = {_os.path.dirname(o) for o in chosen
+            if _os.path.basename(_os.path.dirname(o)).startswith("eventlog_v2_")}
+    if not dirs:
+        return chosen
+    keep = set(chosen)
+    keep.update(obj for _, obj in rows if _os.path.dirname(obj) in dirs)
+    return [obj for _, obj in rows if obj in keep]
 
 
 def download(objects: list[str], dest: str) -> tuple[int, int]:

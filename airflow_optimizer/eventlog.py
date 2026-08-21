@@ -118,7 +118,7 @@ def _part_order(path: str) -> tuple:
 def _read_events(path: str) -> Iterator[dict]:
     """Yield event dicts from a plain-JSON, single `.zstd`, or v2 rolling-dir event log.
 
-    Streams line-by-line (a 98MB .zstd expands to ~1.8GB; materializing it OOMs the cron).
+    Streams line-by-line (a 98MB .zstd expands to ~1.8GB; materializing it OOMs the task).
     Raises ValueError on an undecodable part or an ambiguous directory - a corrupt log must
     surface as an error upstream, never parse to an empty "clean" run.
     """

@@ -157,13 +157,22 @@ def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: st
         ))
 
 
-def append(entries: list[Entry], path: str = LEDGER) -> int:
-    """Write this sweep's entries. Returns how many lines were added."""
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "a") as fh:
+def append(entries: list[Entry], path: str = LEDGER) -> None:
+    """Append this sweep's entries, replacing any rows already written for the same date.
+
+    A task retry re-runs the whole sweep. Without this the same (date, dag, key) is written
+    twice and every later streak counts the duplicate, so a retried day permanently inflates
+    "how long has this been true" - the one number the ledger exists to answer.
+    """
+    same_day = {(e.date, e.dag_id, e.key) for e in entries}
+    prior = [r for r in read(path)
+             if (r.get("date"), r.get("dag_id"), r.get("key")) not in same_day]
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w") as fh:
+        for r in prior:
+            fh.write(json.dumps(r) + "\n")
         for e in entries:
-            fh.write(json.dumps(asdict(e), sort_keys=True) + "\n")
-    return len(entries)
+            fh.write(json.dumps(asdict(e)) + "\n")
 
 
 def record(reports: list, date: str, owners: dict | None = None, dcu: dict | None = None,
@@ -351,6 +360,7 @@ class Delta:
     chronic: list = field(default_factory=list)
     resolved: list = field(default_factory=list)
     notified: list = field(default_factory=list)
+    fix_not_working: list = field(default_factory=list)
 
 
 def delta(entries: list[Entry]) -> Delta:
@@ -363,6 +373,8 @@ def delta(entries: list[Entry]) -> Delta:
             d.chronic.append(e)
         elif e.state == "resolved":
             d.resolved.append(e)
+        elif e.state == "fix_not_working":
+            d.fix_not_working.append(e)
         elif e.state in STICKY:
             d.notified.append(e)
     return d

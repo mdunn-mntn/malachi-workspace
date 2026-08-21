@@ -89,6 +89,7 @@ def render(delta: object, scanned: int, findings: int, high: int, date: str,
 
     known = {d.dag_id for d in getattr(coverage, "dags", [])} or None if coverage else None
     out = [head, ""]
+    out += _section("Fix not working", getattr(delta, "fix_not_working", []), base, known)
     out += _section("New today", getattr(delta, "new", []), base, known)
     out += _section("Chronic", getattr(delta, "chronic", []), base, known)
     out += _section("With the owner", getattr(delta, "notified", []), base, known)
@@ -97,7 +98,8 @@ def render(delta: object, scanned: int, findings: int, high: int, date: str,
         names = ", ".join(sorted({getattr(e, "dag_id", "") for e in resolved}))
         out += [f"*Stopped firing* — {names}", ""]
 
-    if not any(getattr(delta, k, []) for k in ("new", "chronic", "notified", "resolved")):
+    if not any(getattr(delta, k, [])
+               for k in ("new", "chronic", "notified", "resolved", "fix_not_working")):
         out += ["No change since the last sweep.", ""]
 
     if backlog_path:

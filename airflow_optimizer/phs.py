@@ -106,12 +106,17 @@ def fetch_logs(batches: list[dict], dest: str, bucket: str = PHS_TEMP_BUCKET,
             break
         local = os.path.join(dest, b.get("uuid", "unknown"))
         os.makedirs(local, exist_ok=True)
-        r = subprocess.run(
-            # -r or a rolling eventlog_v2_* dir is silently skipped and the batch reads empty.
-            ["gsutil", *_GSUTIL_OPTS, "cp", "-r", f"{log_uri(b, bucket)}/*", local + "/"],
-            capture_output=True, timeout=600,
-        )
-        files = _strip_top_markers(local) if r.returncode == 0 else []
+        try:
+            r = subprocess.run(
+                # -r or a rolling eventlog_v2_* dir is silently skipped, batch reads empty.
+                ["gsutil", *_GSUTIL_OPTS, "cp", "-r", f"{log_uri(b, bucket)}/*", local + "/"],
+                capture_output=True, timeout=600,
+            )
+            rc = r.returncode
+        except subprocess.TimeoutExpired:
+            print(f"[phs] timed out on {b.get('uuid', 'unknown')}")
+            rc = 1
+        files = _strip_top_markers(local) if rc == 0 else []
         if files:
             got.append(local)
         elif not os.listdir(local):

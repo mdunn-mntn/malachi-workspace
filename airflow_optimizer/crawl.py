@@ -75,6 +75,14 @@ def crawl(paths: list[str]) -> list[JobReport]:
             continue
         try:
             run, findings = analyze_eventlog(log)
+            # A zero-byte or truncated download parses into a run with no jobs and no stages,
+            # which then scores as a flawless job. Reporting it as clean is worse than
+            # reporting nothing: it is a wrong answer about a job nobody looked at.
+            if not getattr(run, "jobs", None) and not getattr(run, "stages", None):
+                reports.append(JobReport(
+                    source=base,
+                    error="log parsed but contains no jobs or stages (truncated or empty)"))
+                continue
             reports.append(JobReport(source=base, findings=findings, app_name=run.app_name))
         except Exception as e:  # a bad log must not sink the crawl
             reports.append(JobReport(source=base, error=str(e)[:120]))

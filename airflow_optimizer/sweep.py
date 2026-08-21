@@ -1,16 +1,17 @@
 """One sweep: crawl the downloaded logs, record the ledger, check coverage, write the digest.
 
-The shell script owns acquisition (GCS + PHS downloads); everything after the bytes land
-happens here, so the ordering and the failure behaviour are testable in Python rather than
-spread across bash.
+Acquisition (the GCS and PHS downloads) happens before this is called, so ordering and failure
+behaviour live in one testable place rather than being spread across the caller.
 
-Three files come out, all under the ticket's outputs/:
+Three files come out, all under `outdir`:
     optimizer_backlog_<date>.md    every finding, per log, worst first
     optimizer_coverage_<date>.md   which active DAGs could not be profiled, and why
     optimizer_digest_<date>.md     what CHANGED - the thing a person actually reads
-plus an append to optimization_ledger.jsonl.
+plus an append to the ledger.
 
-Coverage and the ledger are best-effort: neither may sink a sweep that produced findings.
+Coverage and the ledger are best-effort: neither may sink a sweep that produced findings. What
+they may NOT do is publish a confident wrong answer, so a partial sweep resolves nothing and a
+sweep that lost coverage declines to write ledger rows it cannot key correctly.
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ def _dag_ids(reports: list, known: set | None = None) -> set:
 
 
 def publish(files: list[str], gcs_prefix: str) -> list[str]:
-    """Copy the sweep's artifacts to GCS. Returns what landed; never raises.
+    """Copy the sweep's artifacts to GCS. Returns what landed; never raises, including on timeout.
 
     A runner has no repo to commit to and should not have one - keeping its GitHub identity
     read-only is the point. GCS is where the outputs live for anyone downstream.
@@ -48,7 +49,13 @@ def publish(files: list[str], gcs_prefix: str) -> list[str]:
         if not f or not os.path.exists(f):
             continue
         dest = f"{gcs_prefix.rstrip('/')}/{os.path.basename(f)}"
-        r = subprocess.run([*_GSUTIL, "cp", f, dest], capture_output=True, timeout=300)
+        try:
+            r = subprocess.run([*_GSUTIL, "cp", f, dest], capture_output=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            # "never raises" has to include the timeout, or the contract is a comment rather
+            # than a guarantee and a slow bucket loses the whole sweep.
+            print(f"[sweep] upload timed out {dest}")
+            continue
         if r.returncode == 0:
             landed.append(dest)
         else:

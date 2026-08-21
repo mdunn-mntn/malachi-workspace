@@ -14,7 +14,7 @@ def _explode(*_a: Any, **_k: Any) -> NoReturn:
 
 
 def test_bearer_prefers_the_injected_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The ExternalSecret value is the only token that exists in the CronJob."""
+    """Outside Airflow there is no CLI to ask, so an injected token is the only one there is."""
     monkeypatch.setenv("AIRFLOW_TI_API_TOKEN", "  tok-123  ")
     monkeypatch.setattr(coverage.subprocess, "run", _explode)
     assert coverage._bearer() == "tok-123"
