@@ -31,5 +31,16 @@ fi
 
 HS="$ROOT/.claude/scripts/health_scorecard.py"
 [[ -f "$HS" ]] && python3 "$HS" 2>/dev/null
+
+# Self-improvement engine: surface pending ENGINE-PROPOSE rows so they never get forgotten.
+BL="$ROOT/improvements_backlog.md"
+if [[ -f "$BL" ]]; then
+  ep=$(grep -c 'ENGINE-PROPOSE' "$BL" 2>/dev/null || echo 0)
+  if [[ "${ep:-0}" -gt 0 ]]; then
+    newest=$(grep 'ENGINE-PROPOSE' "$BL" | tail -1 | sed 's/.*ENGINE-PROPOSE/  →/' | cut -c1-90)
+    echo "Engine   : $ep pending proposal(s) in improvements_backlog.md — review & approve when you like"
+    echo "$newest"
+  fi
+fi
 echo "────────────────────────────────────────────────────────────────"
 exit 0
