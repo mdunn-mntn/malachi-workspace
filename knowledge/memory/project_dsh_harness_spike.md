@@ -1,6 +1,6 @@
 ---
 name: project_dsh_harness_spike
-description: Local-only spike (no Jira, personal) building a dsh sidecar harness + machine-gated self-improvement engine; v0 = Phases 1-4 green.
+description: Local-only spike (no Jira, personal) building a dsh sidecar harness + machine-gated self-improvement engine; Phases 1-6 built and gated green, verdict GO to L0/L1.
 metadata:
   node_type: memory
   type: project
