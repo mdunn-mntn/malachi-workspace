@@ -5,3 +5,4 @@ The engine harvests THIS file too — it observes itself with the same instrumen
 
 2026-08-21 | stage=SCAFFOLD | candidates=0 | adopted=0 | rolled_back=0 | cost_usd=0 | engine v0 dirs + FLOORS + config created (keyless)
 2026-08-21 | stage=HARVEST | candidates=15 | adopted=0 | rolled_back=0 | cost_usd=0 | v0 harvest+miner+seed+entropy built; counts verified vs manual grep
+2026-08-21 | stage=ROLLBACK | candidates=0 | adopted=0 | rolled_back=1 | cost_usd=0 | reverted a43ca73f52abc3b709ea1c4cd0890c43a67e950c (rollback-demo): phase-5 rollback drill
