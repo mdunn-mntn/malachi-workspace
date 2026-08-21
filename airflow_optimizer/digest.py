@@ -10,7 +10,29 @@ on 2026-06-10, so this writes text; posting it belongs to an approved server-sid
 
 from __future__ import annotations
 
-AIRFLOW_UI = "https://cmcvcbd3j03vk01p91ksvm1vd.astronomer.run/dags/{dag_id}"
+import os
+
+
+def _ui_base() -> str:
+    """The deployment's own DAG URL template, or "" when there is nothing to link to.
+
+    Resolved from the environment rather than hardcoded, so a dev or staging deployment links
+    to itself instead of to prod. Airflow sets AIRFLOW__API__BASE_URL (3.x) or
+    AIRFLOW__WEBSERVER__BASE_URL (2.x) in every task; OPTIMIZER_AIRFLOW_UI overrides both for a
+    run outside Airflow. When none is set the digest degrades to plain DAG names, which is the
+    right failure: a link to the wrong deployment is worse than no link.
+    """
+    override = os.environ.get("OPTIMIZER_AIRFLOW_UI", "").strip()
+    if override:
+        return override
+    for var in ("AIRFLOW__API__BASE_URL", "AIRFLOW__WEBSERVER__BASE_URL"):
+        base = os.environ.get(var, "").strip()
+        if base:
+            return f"{base.rstrip('/')}/dags/{{dag_id}}"
+    return ""
+
+
+AIRFLOW_UI = _ui_base()
 SEV = {"high": "HIGH", "medium": "MED", "low": "LOW"}
 _RANK = {"high": 0, "medium": 1, "low": 2}
 
@@ -20,7 +42,7 @@ def dag_link(dag_id: str, base: str = AIRFLOW_UI, known: set | None = None) -> s
 
     Spark app names are not always dag_ids, so linking unconditionally ships dead links.
     """
-    if known is not None and dag_id not in known:
+    if not base or (known is not None and dag_id not in known):
         return f"`{dag_id}`"
     return f"<{base.format(dag_id=dag_id)}|{dag_id}>"
 

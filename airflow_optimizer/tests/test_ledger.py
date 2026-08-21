@@ -8,6 +8,9 @@ from airflow_optimizer import digest, ledger
 from airflow_optimizer.crawl import JobReport
 from airflow_optimizer.optimizations import OptFinding
 
+# The real base is resolved from the deployment's own env, so tests pass one explicitly.
+UI = "https://airflow.example.com/dags/{dag_id}"
+
 FETCH = OptFinding("shuffle_fetch_wait", "Stage 9 spends 73% of task time waiting on shuffle fetch",
                    "high", "why", "fix", rec_type="code")
 IDLE = OptFinding("idle_reserved_executors", "Executors 16% utilized: ~31 idle executor-hours held",
@@ -132,7 +135,7 @@ def test_digest_leads_with_the_delta_and_links_the_dag(tmp_path: Path) -> None:
     entries = ledger.record([_report("a", FETCH)], "2026-08-18",
                             dcu={"site_network_hourly": 8663}, path=p)
     text = digest.render(ledger.delta(entries), scanned=214, findings=278, high=197,
-                         date="2026-08-18", backlog_path="outputs/b.md")
+                         date="2026-08-18", backlog_path="outputs/b.md", base=UI)
     assert "214 Spark jobs scanned, 278 findings, 197 high." in text
     assert "*New today*" in text
     assert "|site_network_hourly>" in text  # a link, not a bare name
@@ -183,7 +186,26 @@ def test_digest_does_not_link_a_dag_that_does_not_exist(tmp_path: Path) -> None:
                                 title="Stage 2 spends 64% of task time waiting on shuffle fetch",
                                 state="new"))
     text = digest.render(ledger.delta(entries), scanned=2, findings=2, high=2,
-                         date="2026-08-18", coverage=_Cov())
+                         date="2026-08-18", coverage=_Cov(), base=UI)
     assert "|site_network_hourly>" in text          # known -> linked
     assert "`segment-updates-to-parquet`" in text   # unknown -> plain
     assert "dags/segment-updates-to-parquet|" not in text
+
+
+def test_digest_falls_back_to_plain_text_with_no_ui_base() -> None:
+    """A link to the wrong deployment is worse than no link, so an unset base drops the link."""
+    assert digest.dag_link("site_network_hourly", base="") == "`site_network_hourly`"
+
+
+def test_ui_base_prefers_the_override_then_airflow_config(monkeypatch: object) -> None:
+    """Resolved per deployment: a dev Airflow must not link findings at prod."""
+    monkeypatch.setenv("OPTIMIZER_AIRFLOW_UI", "https://x/dags/{dag_id}")
+    monkeypatch.setenv("AIRFLOW__API__BASE_URL", "https://ignored")
+    assert digest._ui_base() == "https://x/dags/{dag_id}"
+
+    monkeypatch.delenv("OPTIMIZER_AIRFLOW_UI")
+    assert digest._ui_base() == "https://ignored/dags/{dag_id}"
+
+    monkeypatch.delenv("AIRFLOW__API__BASE_URL")
+    monkeypatch.delenv("AIRFLOW__WEBSERVER__BASE_URL", raising=False)
+    assert digest._ui_base() == ""
