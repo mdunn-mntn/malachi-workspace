@@ -78,7 +78,10 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     cov, known = None, None
     if airflow_base:
         try:
-            cov = cov_mod.collect(airflow_base, date)
+            # "local" means the sweep is running inside Airflow, where the DAG files are on
+            # disk and no deployment token is needed.
+            cov = (cov_mod.collect_local(date) if airflow_base == "local"
+                   else cov_mod.collect(airflow_base, date))
             known = {d.dag_id for d in cov.dags} or None
         except Exception as e:
             print(f"[sweep] coverage skipped: {str(e)[:160]}")
@@ -120,7 +123,8 @@ def main() -> None:
     ap.add_argument("--date", required=True)
     ap.add_argument("--source", default="", help="provenance line for the backlog header")
     ap.add_argument("--airflow-base", default="",
-                    help="Airflow API base ending in /api/v2; omit to skip coverage")
+                    help='Airflow API base ending in /api/v2, or "local" to parse the DAG '
+                         "bundle in-process; omit to skip coverage")
     ap.add_argument("--outdir", default=OUTDIR)
     ap.add_argument("--ledger", default=ledger_mod.LEDGER)
     ap.add_argument("--gcs-prefix", default=os.environ.get("OPTIMIZER_GCS_PREFIX", ""),
