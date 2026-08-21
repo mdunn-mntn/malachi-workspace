@@ -331,3 +331,65 @@ indistinguishable from the pipeline's own. **No targeting service account exists
 (only `airflow-ti-prod`, `airflow-camperbid-prod`, `airflow-reporting-prod`). Ryan and Dustin
 Niehoff independently landed on "make a new one"; Dustin scoped it as *"Dplat would give the
 service account storage access, but you'll need to make the service account."*
+
+---
+
+## 6. 2026-08-20 — Databricks principal created and validated; Astro blocked on a role
+
+**Databricks: done, and verified end to end.** Victor Savitskiy has left, so the naming question
+in §4 had no owner to answer it; created it under the read-only reasoning already recorded there.
+
+```
+displayName    spark_optimizer
+applicationId  07f36af7-614d-4d57-8143-2dbcd3cb58c2
+id             215387379744816
+entitlements   workspace-access, databricks-sql-access
+groups         users            # auto-assigned; NOT producers_prod / producers_dev
+secret expires 2028-08-20
+```
+
+The OAuth secret is in the login Keychain (`security find-generic-password -a spark_optimizer -s
+databricks-sp-secret -w`) until the Vault `TeamSecret` lands. It is not in `~/.databrickscfg`, not
+in the repo, and was never printed to a terminal.
+
+**Validation, as the principal and not as me** — `DATABRICKS_CLIENT_ID` / `_CLIENT_SECRET` M2M,
+`POST /api/2.0/sql/statements` on warehouse `14b311ac86ee2ca2`, `EXPLAIN COST SELECT 1`:
+`SUCCEEDED`, returning `Statistics(sizeInBytes=12.0 B, rowCount=1, ...)`. That is the
+Databricks-format annotation all five plan detectors parse, so the acquisition path IMP-033
+flagged as unproven is now proven at the auth layer.
+
+**Two CLI details that cost time:**
+- The secret subcommand is **`databricks service-principal-secrets-proxy create <id>`** at the
+  workspace level. `service-principal-secrets` alone is the *account*-level API and errors as an
+  unknown command against a workspace host.
+- Use **`permissions update`** (PATCH, additive), never `permissions set` (PUT, replaces the whole
+  ACL). `update` left `IS_OWNER` and the `users` `CAN_USE` binding intact while adding the SP.
+
+**Still open on Databricks: `USE SCHEMA` on `system.lakeflow`.** `databricks grants get SCHEMA
+system.lakeflow` fails for **me** with `User does not have USE SCHEMA`, so this is not a grant I
+can make — it needs a metastore admin (metastore `c5dc6763-eaae-4d6c-9ae2-7af6147595bb`; the
+owning principal on the warehouse is `dbxaccountadmin-sa2@mntn-databricks.iam.gserviceaccount.com`,
+which looks Terraform-managed). **`CAN_VIEW` on jobs is not a substitute**: job permissions are
+per-`job_id`, and the runs the optimizer cares about are ephemeral `SUBMIT_RUN` submissions with
+no stable id. `system.lakeflow` is the only enumeration surface.
+
+**Astro: blocked, and the owner is Ryan Kleck, not Victor.**
+`astro deployment token create` returns `deployment with id cmd6bd10c0gl901rfuokgryiq is
+forbidden`. Reading the roles explains it: I am `ORGANIZATION_MEMBER` + **`WORKSPACE_OPERATOR`**,
+and minting a deployment token needs `WORKSPACE_OWNER`. Token *list* works, which is why this read
+as an auth failure at first rather than a permission one.
+
+**The precedent closes the "is there a read-only role" question without needing Victor.** The `ti`
+deployment already carries exactly this kind of token:
+
+```
+dag-run-duration-watchdog | DEPLOYMENT | DEPLOYMENT_ADMIN | created by Ryan Kleck, 141 days ago
+"Bearer token for dag_run_duration_watchdog to GET running DagRuns via Airflow REST API."
+```
+
+A read-only bot on `DEPLOYMENT_ADMIN` is already the house pattern here, set by the person who
+owns the workspace. `astro organization team list` and the token list return **no custom roles**,
+so `DEPLOYMENT_ADMIN` is not a compromise anyone can improve on today — it is the only option the
+CLI offers. **Ask Ryan Kleck** (`WORKSPACE_OWNER`, and the author of the precedent) to either mint
+the token or grant `WORKSPACE_OWNER`. Other workspace owners: Dustin Niehoff, Jordan Piepkow,
+Scotty Pate, Alyson, Sean Yang.
