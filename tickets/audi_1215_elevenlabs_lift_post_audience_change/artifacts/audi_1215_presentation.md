@@ -8,7 +8,7 @@
 
 ## 1. Title
 ElevenLabs CTV Incrementality: The Study You Asked For
-Malachi Dunn · MNTN Data Science & Measurement · August 2026
+MNTN Data Science & Measurement · August 2026
 
 ## 2. Open (their question, our answer)
 June, your measurement review, question 2: "Can we run a MNTN-side conversion-lift study (ghost ads / PSA holdout) to triangulate with our geo results?"

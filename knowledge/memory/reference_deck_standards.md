@@ -92,6 +92,8 @@ When building a RevealJS deck where a slide is `class="img-slide"` with a chart 
 If a chart needs both a slide and standalone use, generate two versions of the PNG (with and without title) or render the title as a separate slide H2 element only.
 
 ## from feedback_author_name_on_first_slide.md
+**Carve-out (2026-08-21, AUDI-1215):** a CUSTOMER-facing deck framed as a team effort gets team attribution ("MNTN Data Science & Measurement"), not the personal name. The personal-name rule below applies to internal decks.
+
 Every deck must have **"Malachi Dunn"** on its first/title slide. This is a positive rule — author attribution on the slide where the deck identity lives.
 
 **Why:** The user wants visible attribution as the author of decks they create. Established 2026-05-08 during the TI-917 Loom build.
