@@ -5,9 +5,12 @@ callable emits nothing to read, so a backlog built only from the logs that happe
 exist looks complete while silently omitting most of the fleet.
 
 This enumerates every unpaused DAG from the Airflow API, classifies each task by whether
-it can produce an event log, and reports the gap by name. Auth stays in
-`.claude/scripts/airflow_api.py` (bearer from the astro CLI context) - this module shells
-out to it rather than holding a second copy of the token logic.
+it can produce an event log, and reports the gap by name.
+
+Two auth paths, because the sweep runs in two places. On a laptop the bearer comes from
+`.claude/scripts/airflow_api.py` (the astro CLI context, refreshed by SSO). In the
+automations container that file does not exist and there is no CLI, so the token arrives
+as AIRFLOW_TI_API_TOKEN from an ExternalSecret. The env var wins when both are present.
 """
 
 from __future__ import annotations
@@ -15,6 +18,9 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
 
 AIRFLOW_API = ".claude/scripts/airflow_api.py"
@@ -80,24 +86,24 @@ class Coverage:
 
 
 def _airflow(base: str, token: str, path: str, params: dict) -> dict:
-    """One GET through airflow_api.py's client, so auth lives in exactly one place."""
-    code = (
-        "import json,sys;"
-        "sys.path.insert(0,'.claude/scripts');"
-        "import airflow_api as a;"
-        f"s,o=a._get_json({base!r},{token!r},{path!r},{json.dumps(params)});"
-        "print(json.dumps({'status':s,'body':o}))"
-    )
-    r = subprocess.run(["python3", "-c", code], capture_output=True, text=True, timeout=120)
-    if r.returncode != 0 or not r.stdout.strip():
-        raise RuntimeError((r.stderr or "airflow_api call failed").strip()[:200])
-    out = json.loads(r.stdout)
-    if out["status"] != 200:
-        raise RuntimeError(f"HTTP {out['status']} on {path}")
-    return out["body"]
+    """One authenticated GET against the Airflow REST API."""
+    url = f"{base.rstrip('/')}{path}?{urllib.parse.urlencode(params)}"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}",
+                                               "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code} on {path}") from e
 
 
 def _bearer() -> str:
+    """The deployment token if one was injected, else the laptop's astro CLI context."""
+    env = os.environ.get("AIRFLOW_TI_API_TOKEN", "").strip()
+    if env:
+        return env
+    if not os.path.exists(AIRFLOW_API):
+        raise RuntimeError("no AIRFLOW_TI_API_TOKEN and no airflow_api.py to resolve one")
     r = subprocess.run(
         ["python3", "-c",
          "import sys;sys.path.insert(0,'.claude/scripts');"
