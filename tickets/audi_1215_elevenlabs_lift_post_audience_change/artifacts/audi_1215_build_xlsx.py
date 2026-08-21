@@ -90,6 +90,17 @@ wb.table("Attributed Panel", panel,
     formats={"Pre": "0.0000", "Post": "0.0000", "Change": FMT.PCT2},
     kind="detail", toc="What the dashboards show (attributed, context only)", query="audi_1215_daily_panel.sql")
 
+wb.notes("How Ghost Bidding Works", [
+    ("Why attribution is not enough", "Attribution credits a visit to an ad whenever the ad touched it; it cannot say whether the visit would have happened anyway. Incrementality answers the harder question: how many visits happened only because the ad ran. It adds to attribution rather than replacing it."),
+    ("Random split", "Every audience is randomly split by household: roughly 90% eligible, 10% holdout. Same standard of evidence as a clinical trial."),
+    ("Same auctions", "The bidder values every auction identically for both groups. Same campaigns, same targeting, same bidding logic."),
+    ("One difference", "For the eligible group the campaign serves as normal. For the holdout, the bid the bidder would have placed is recorded and never sent: the ghost bid. No ad is ever shown and no media is spent on the control group."),
+    ("Compare", "Lift = (served-group visit rate minus holdout visit rate) divided by the holdout visit rate. The gap is the effect the ads caused, with a confidence interval on every estimate."),
+    ("Always on, at full scale", "Runs inside the bidder across prospecting campaigns with no test setup and no geo split. Live since June 2026; 1,100+ advertisers have measurable ghost-bid lift data."),
+    ("Conservative by design", "Results are reported only where coverage and statistical checks pass, and visits count for only seven days after each ad opportunity, which understates lift rather than inflating it."),
+    ("Reading a lift number", "A +12% lift means: per 100 visits the holdout generates on its own, the served group generates 112. The 12 extra visits are the ones the ads caused."),
+], intro="The measurement behind every lift number in this workbook. Print version: the ghost bidding one-pager PDF filed with this ticket (artifacts/audi_1172_incrementality_one_sheeter.pdf).", toc="How the measurement works")
+
 wb.glossary("Read Me", [
     ("Incrementality vs attribution", "Incrementality = extra visits or conversions caused by ads, measured against a randomized holdout. Attribution = credit assigned after exposure; it always reads far higher."),
     ("Ghost-bid holdout", "10% of IPs are randomly held out per advertiser; the bidder logs the bid it WOULD have made. Comparing reached vs held-out IPs gives a clean randomized lift read."),
