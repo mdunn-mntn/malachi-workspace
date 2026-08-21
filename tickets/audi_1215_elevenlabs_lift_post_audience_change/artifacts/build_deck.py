@@ -11,6 +11,7 @@ def b64(name):
 
 CH_DAILY, CH_PREPOST, CH_FREQ, CH_POWER, CH_BASE = (b64(f"audi_1215_chart_{n}.png") for n in ("daily_lift", "prepost_lift", "frequency_lift", "power_cost", "baseline_collapse"))
 CH_ONEPAGER = b64("audi_1215_one_pager_render.png")
+CH_MDE = b64("audi_1215_chart_mde_curve.png")
 
 HTML = f"""<!DOCTYPE html>
 <html lang="en">
@@ -55,9 +56,9 @@ HTML = f"""<!DOCTYPE html>
 </section>
 
 <section>
-  <h2>Conversion lift is not measurable at this spend</h2>
-  <img src="{CH_POWER}" alt="Spend needed to detect a 5 percent lift, conversions vs visits" style="max-height:480px;">
-  <p class="footer-note">+11% pre, +35% post: directionally up, neither significant at the 0.06% conversion base rate. Conversions lag visits.</p>
+  <h2>At today's spend, visits are measurable; conversions are not</h2>
+  <img src="{CH_MDE}" alt="Smallest detectable lift vs monthly spend, visits and conversions" style="max-height:500px;">
+  <p class="footer-note">Conversions read +11% pre, +35% post: directionally up, below the detectable floor at the 0.06% base rate. Conversions lag visits.</p>
 </section>
 
 <section>

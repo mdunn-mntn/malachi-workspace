@@ -26,7 +26,7 @@ ax.axvspan(pd.Timestamp("2026-07-01"), pd.Timestamp("2026-07-10"), color="#E8E8E
 ax.axhline(0, color="#CCCCCC", lw=0.8)
 pre_m, post_m = lift[:"2026-06-30"], lift["2026-07-11":]
 ax.plot(lift.index, lift * 100, color=NAVY, lw=2.4, solid_capstyle="round")
-for x, lab, dy in [("2026-06-30", "audience swap", 14), ("2026-07-16", "custom segments", 10), ("2026-07-24", "segments added", 6), ("2026-07-29", "targeting rewrite", 2)]:
+for x, lab, dy in [("2026-06-30", "audience swap", 4), ("2026-07-16", "custom segments", 4), ("2026-07-24", "segments added", 20), ("2026-07-29", "targeting rewrite", 4)]:
     ax.axvline(pd.Timestamp(x), color=GRAY, lw=0.9, ls=(0, (3, 3)), zorder=1)
     ax.annotate(lab, (pd.Timestamp(x), ax.get_ylim()[1]), xytext=(4, -dy - 4), textcoords="offset points",
                 fontsize=8.5, color="#666666", va="top")
@@ -103,3 +103,25 @@ ax.set_yticks([])
 ax.set_ylim(-0.12, 1.15)
 ax.text(1.11, 1.05, "both groups fell ~6x; the lift gap persisted", ha="center", fontsize=10, color="#666666")
 save(fig, "audi_1215_chart_baseline_collapse.png")
+
+import numpy as np
+pw = pd.read_csv(f"{T}/outputs/audi_1215_power_table.csv")
+spend = np.linspace(200_000, 3_000_000, 200)
+fig, ax = plt.subplots(figsize=(9.6, 4.6))
+for _, r in pw.iterrows():
+    mde = r["mde_raw_pct"] * np.sqrt(r["actual_spend"] / spend)
+    is_conv = "Conversion" in r["regime"]
+    c = GRAY if is_conv else NAVY
+    ax.plot(spend / 1e6, mde, color=c, lw=2.4)
+    ax.text(3.05, mde[-1], "conversions" if is_conv else "visits", fontsize=10.5, fontweight="bold", color=c, va="center")
+ax.axvline(1.0, color="#CCCCCC", lw=1.0, ls=(0, (3, 3)))
+ax.text(1.0, 26, "current spend", fontsize=9.5, color="#666666", ha="center")
+ax.annotate("~1% lift detectable", (1.0, 1.04), xytext=(28, 16), textcoords="offset points", fontsize=10.5, color=NAVY, fontweight="bold")
+ax.annotate("only 7%+ detectable", (1.0, 7.4), xytext=(28, 12), textcoords="offset points", fontsize=10.5, color="#666666", fontweight="bold")
+ax.set_xlabel("monthly spend ($M)", fontsize=9.5, color="#666666")
+ax.set_ylabel("smallest detectable lift", fontsize=9.5, color="#666666")
+ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
+ax.set_xlim(0.2, 3.45)
+ax.set_ylim(0, 28)
+ax.tick_params(length=0, labelsize=9)
+save(fig, "audi_1215_chart_mde_curve.png")
