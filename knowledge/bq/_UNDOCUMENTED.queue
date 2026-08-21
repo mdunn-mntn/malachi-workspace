@@ -1,6 +1,9 @@
 .TABLES
 analytics_curated.enriched_impressions
 coredw.usage_reporting_data
+enriched.lift__holdout_advertisers
+enriched.lift__holdout_campaign_groups
+enriched.lift__holdout_visits
 external.audience__campaign_segment_history
 external.household_scoring__prospecting_intent__v1
 integrationprod.archives_advertiser_archives
@@ -19,11 +22,14 @@ reporting.__TABLES__
 reporting.ddp_crm_graph_cpm
 reporting.ddp_mm_winners_imp_*
 reporting.ddp_mm_winners_imp_202606
+reporting.lift__conversions
 reporting.lift__ghost_bid_results_experiment
 reporting.lift__ghost_bid_results_experiment_daily
 reporting.lift__ghost_bid_rollup
 reporting.lift__ghost_bid_rollup_experiment
 reporting.lift__holdout_advertisers
+reporting.lift__holdout_conversions
+reporting.lift__holdout_results_step1
 reporting.lift__holdout_results_step2
 reporting.lift__results_by_month_raw
 reporting.lift__stg_holdout_results_by_day

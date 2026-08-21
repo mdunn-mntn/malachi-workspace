@@ -122,7 +122,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | sprint_ready_plan | feedback | 2026-07-29 | [doc](memory/feedback_sprint_ready_plan.md) |
 | feedback_read_full_source_before_verdict | feedback | 2026-07-30 | [doc](memory/feedback_read_full_source_before_verdict.md) |
 | feedback_self_qa_before_shipping | feedback | 2026-07-30 | [doc](memory/feedback_self_qa_before_shipping.md) |
-| incrementality-experiment-ber-2250 | project | 2026-07-30 | [doc](memory/project_incrementality_experiment.md) |
 | project_audi_1175_ds14_scoring_cost | project | 2026-07-30 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | reference_bash_inline_unicode_gotcha | reference | 2026-07-30 | [doc](memory/reference_bash_inline_unicode_gotcha.md) |
 | reference_confluence_api_access | reference | 2026-07-30 | [doc](memory/reference_confluence_api_access.md) |
@@ -133,7 +132,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_data_eng_mcp | reference | 2026-07-31 | [doc](memory/reference_data_eng_mcp.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-07-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_ruff_code_standards | reference | 2026-07-31 | [doc](memory/reference_ruff_code_standards.md) |
-| reference_holdout_lift_lineage | reference | 2026-08-03 | [doc](memory/reference_holdout_lift_lineage.md) |
 | audi-1111-vendor-quality | project | 2026-08-05 | [doc](memory/project_audi_1111_vendor_quality.md) |
 | jira-conventions | reference | 2026-08-05 | [doc](memory/reference_jira_conventions.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
@@ -213,10 +211,12 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
 | feedback_branch_from_origin_not_local_main | feedback | 2026-08-21 | [doc](memory/feedback_branch_from_origin_not_local_main.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-21 | [doc](memory/feedback_review_own_pr_before_asking.md) |
+| incrementality-experiment-ber-2250 | project | 2026-08-21 | [doc](memory/project_incrementality_experiment.md) |
 | project_airflow_optimizer | project | 2026-08-21 | [doc](memory/project_airflow_optimizer.md) |
 | project_dsh_harness_spike | project | 2026-08-21 | [doc](memory/project_dsh_harness_spike.md) |
 | reference_dsh_harness | reference | 2026-08-21 | [doc](memory/reference_dsh_harness.md) |
 | reference_dsh_lab_runtime | reference | 2026-08-21 | [doc](memory/reference_dsh_lab_runtime.md) |
 | reference_gcs_iam_creator_vs_user | reference | 2026-08-21 | [doc](memory/reference_gcs_iam_creator_vs_user.md) |
+| reference_holdout_lift_lineage | reference | 2026-08-21 | [doc](memory/reference_holdout_lift_lineage.md) |
 | reference_youtube_transcript_methods | reference | 2026-08-21 | [doc](memory/reference_youtube_transcript_methods.md) |
 | sparse_code_comments | feedback | 2026-08-21 | [doc](memory/feedback_sparse_code_comments.md) |

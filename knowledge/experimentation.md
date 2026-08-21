@@ -1951,6 +1951,14 @@ Refreshed the persuadables gradient on the now-longer gold window (`dw-main-gold
 
 **Consequence:** a >15-day windowed ghost-bid lift needs a different anchor (re-entry after a cooldown, or a served-grain ATT with IV), not a longer date range. Raised with Matt Brorby.
 
+**Per-period gating exception (AUDI-1215, 2026-08-21):** an entry-cohort PRE/POST read past the global clean cutoff CAN be valid when observed ghost_frac is gated PER PERIOD and holds in the 0.09-0.11 band in each period. ElevenLabs CGID 122748 held pre 0.09505 / post 0.09193 (band floor; one week at 0.0877 sat below). Sign the residual bias every time: post-period holdout depletion biases post lift UP, so a flat or rising post read is an upper bound and a "did not improve" verdict is strengthened, not undermined.
+
+### A null change-test is "cannot see", never "no change": compute the MDE on the DELTA (AUDI-1215, 2026-08-21)
+
+When a clean randomized change-test reads null on a pre/post delta but a second instrument shows a significant decline, compute the null test's MDE ON THE DELTA before calling it an instrument conflict. AUDI-1215: the ghost-bid ITT pre/post delta on conversions carried a log-RR SE of 0.263, so at 95% it could only detect an RR-ratio outside [0.60, 1.67]; the fixed-holdout instrument's measured 0.639 ratio (z -8.98, p 2.6e-19 on its own, far better-powered data) sat INSIDE that blind spot. The instruments never disagreed; the randomized test was blind exactly where the powered one could see. Lead the synthesis with the powered instrument's decline and caveat with the null, never the reverse.
+
+**Companion gotcha, holdout-lineage carryover:** `v_lift__conversions` attributes treated conversions through a 43-day (3,715,200s) impression lookback, so a post-change window is contaminated by pre-change impressions (AUDI-1215: 27.8% of post conversions attached to pre-period impressions, 14.5% to the blackout). The carryover imports pre-change lift into the post window, flattering POST, so a measured post decline is a LOWER bound. Split windows on the impression date and sign the carryover every time. Lineage detail: memory `reference_holdout_lift_lineage` + `data_catalog.md` §"silver.enriched.lift__ghost_bid_*".
+
 ### Folding measured lift into a test-candidate screen — the staged gate + the two-instrument gotcha (INCR-77, 2026-07-02)
 Two durable lessons from folding live ghost-bid lift into the INCR-75 eligibility screen (workbook `incr_75_eligible_advertisers.xlsx`; INCR-77 is the dedicated lift-measurement ticket, INCR-75 is the a-priori screen).
 

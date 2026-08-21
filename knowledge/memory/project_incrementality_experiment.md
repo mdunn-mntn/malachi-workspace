@@ -6,12 +6,14 @@ metadata:
   type: project
   originSessionId: 9c582365-7ebc-49fa-9d1e-6d93ac47841b
 doc_type: memory
-keywords: [incrementality, ber-2250, ghost-bid lift, persuadables gradient, liftlab, kochava, guid_log, clickpass_log, ti-835, incremental roas, matt brorby, remove-ds14 experiment, ds14 availability gate, kirsa, audi-1176, audi-1117]
+keywords: [incrementality, ber-2250, ghost-bid lift, persuadables gradient, liftlab, kochava, guid_log, clickpass_log, ti-835, incremental roas, matt brorby, remove-ds14 experiment, ds14 availability gate, kirsa, audi-1176, audi-1117, audi-1215, elevenlabs]
 domain: [incrementality, experimentation, project]
 lifecycle: active
-last_verified: 2026-07-30
+last_verified: 2026-08-21
 ---
 BER-2250 "Incrementality Overhaul" is the highest-leverage initiative for Q2 2026.
+
+**UPDATE (2026-08-21) — ElevenLabs escalation (AUDI-1215).** Customer paused the $770K CGID 122748 campaign 2026-08-20 citing no lift ($10-12M annual account). Verdict: visit lift real in both periods (+11.1% pre / +16.5% post, change n.s.), but incremental visit volume fell ~4x and the powered fixed-holdout conversion instrument shows lift fell 36% after the 6/30-7/29 change bundle. Frequency finding (lift peaks at 2-10 exposures, -17.7% at 11+) backs the frequency-target recommendation. Gruns frequency spot-check floated by Edgar as a follow-up. See `tickets/audi_1215_elevenlabs_lift_post_audience_change/summary.md` and [[reference_holdout_lift_lineage]].
 
 **CURRENT STATE (2026-07-24) — read first; the April content below is historical.**
 - **Measurement ownership moved to the INCR project / First Ascent team.** Matt Brorby owns the ghost-bid lift pipeline; Ryan Kleck owns the bidder/holdout. We *consume* the measurement, we don't rebuild it. See [[project_bidder_level_ghost_bidding_approved]].

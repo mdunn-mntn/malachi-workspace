@@ -115,12 +115,14 @@ GROUP BY arm;
 <!-- OBSERVED:COST START -->
 <!-- perf-analyst appends dated one-liners here: `- YYYY-MM-DD: <slice> scanned <N> GB (est <M>), slot <S>s — <note>` -->
 - 2026-07-29: one dt partition (2026-07-15), grain/arm probe over all cols scanned 4.29 GB, 1306s slot / 5.7s wall. Single-column single-day dry-run = 2.3 GB; full-table single-column (no dt filter) = 44.3 GB.
+- 2026-08-21: full-history (2026-06-22..08-20) single-CGID pre/post aggregation billed ~277 GB. No clustering, so campaign_group_id filters prune rows, not bytes; the 5 GB dry-run cap is unachievable on any full-history read. Runs on the us-central1 flat-rate reservation (AUDI-1215).
 <!-- OBSERVED:COST END -->
 
 ## Observed facts
 <!-- OBSERVED:FACTS START -->
 <!-- capture/curator appends tribal findings here: `- YYYY-MM-DD: <fact verified against source>` -->
 - 2026-07-29: on 2026-07-15, arms = {ghost, submitted}; ghost 7.64M rows / n_won=0 / visit 0.689% / conv 0.0297%; submitted 79.94M rows / n_won=29.2M (~37%) / visit 1.203% / conv 0.0493%. Grain verified: distinct (campaign_id,dt,ip,arm) = distinct (advertiser_id,campaign_id,dt,ip) = row count (87,575,444); 24.74M distinct IPs.
+- 2026-08-21: MAX(dt) = 2026-08-20, still accumulating from the 2026-06-22 floor. A per-CG pre/post entry-cohort read is valid when observed ghost_frac is gated PER PERIOD in the 0.09-0.11 band (CGID 122748 held pre 0.09505 / post 0.09193); post-period holdout depletion biases post lift UP, so sign it in any pre/post read. Sibling lift__ghost_bid_audiences has NO audience_id column despite the name (cols end at household_score_threshold; 4.24B rows / 468 GB, dt-partitioned, unclustered), so an audience switch is unevidencable from lift data; use silver.archives (AUDI-1215).
 <!-- OBSERVED:FACTS END -->
 
 ## Changelog
