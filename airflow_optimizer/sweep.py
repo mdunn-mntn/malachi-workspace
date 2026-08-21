@@ -24,7 +24,7 @@ from . import digest as digest_mod
 from . import ledger as ledger_mod
 from .crawl import crawl, render_crawl
 
-OUTDIR = "tickets/audi_1194_optimizer_efficiency_crawler/outputs"
+OUTDIR = os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out")
 # gsutil, not `gcloud storage`: the same decompressive-transcoding gatekeeper that corrupts
 # a .zstd download also has to be bypassed on the way back up for anything compressed.
 _GSUTIL = ["gsutil", "-o", "GSUtil:check_hashes=never"]

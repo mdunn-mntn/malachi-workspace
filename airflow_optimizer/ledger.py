@@ -29,7 +29,8 @@ import os
 import re
 from dataclasses import asdict, dataclass, field
 
-LEDGER = "tickets/audi_1194_optimizer_efficiency_crawler/outputs/optimization_ledger.jsonl"
+LEDGER = os.environ.get("OPTIMIZER_LEDGER",
+                        os.path.join("optimizer_out", "optimization_ledger.jsonl"))
 RESOLVE_SWEEPS = 3  # consecutive sweeps without a key before it counts as resolved
 STICKY = ("owner_notified", "wont_fix")
 HUMAN = (*STICKY, "applied")  # states a person sets by hand

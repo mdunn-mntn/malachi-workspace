@@ -11,7 +11,7 @@ also reads a Databricks `EXPLAIN COST` plan. Acquiring one is **not in this pack
 specced route does not work: `jobs get-run-output` returns an empty `notebook_output` even on a
 SUCCEEDED prod run, and job clusters set no `cluster_log_conf`. What does work (validated
 2026-08-20) is running `EXPLAIN COST` against a SQL warehouse through the Statement Execution API,
-which needs no dbt or cluster change: `tickets/audi_1194_.../artifacts/audi_1194_databricks_explain_cost.py`.
+which needs no dbt or cluster change (see the AUDI-1194 ticket artifacts).
 
 ## Use
 
@@ -23,7 +23,8 @@ python3 -m airflow_optimizer.optimize <spark_eventlog>
 python3 -m airflow_optimizer.crawl <event_log_dir_or_glob>
 ```
 
-The daily sweep (`.claude/scripts/oncall_daily_optimizer.sh`) pulls a full day of event logs from the
+The daily sweep (the `spark_optimizer_daily` DAG in production, `oncall_daily_optimizer.sh` on a
+laptop) pulls a full day of event logs from the
 GCS prefix plus the PHS batches and runs `airflow_optimizer.crawl` over both.
 
 ## Pipeline

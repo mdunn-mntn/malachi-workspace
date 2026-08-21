@@ -5,13 +5,19 @@ valuable field' is tested on real data, not asserted on paper.
 """
 import os
 import shutil
+import tempfile
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F  # noqa: N812  (canonical pyspark alias)
 from pyspark.sql.window import Window
 
-EVT = "/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/3c4f6695-7891-4554-8d46-623110bfd018/scratchpad/spark-events"
-OUT = "/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/3c4f6695-7891-4554-8d46-623110bfd018/scratchpad/out"
+# Regenerating the fixtures is a rare, local, manual step. Default to a scratch dir under the
+# system temp so it works for anyone; override to keep the output somewhere you can inspect:
+#   EVENTLOG_FIXTURE_DIR=~/spark-fixture python3 gen_eventlog.py
+_ROOT = os.environ.get("EVENTLOG_FIXTURE_DIR") or os.path.join(
+    tempfile.gettempdir(), "spark_eventlog_fixture")
+EVT = os.path.join(_ROOT, "spark-events")
+OUT = os.path.join(_ROOT, "out")
 shutil.rmtree(EVT, ignore_errors=True)
 shutil.rmtree(OUT, ignore_errors=True)
 os.makedirs(EVT, exist_ok=True)

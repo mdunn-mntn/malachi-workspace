@@ -23,8 +23,10 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 
-AIRFLOW_API = ".claude/scripts/airflow_api.py"
-REPORT = "tickets/audi_1194_optimizer_efficiency_crawler/outputs/optimizer_coverage_{date}.md"
+# Local-developer fallback only. Absent in any deployed copy, which uses the env token.
+AIRFLOW_API = os.environ.get("AIRFLOW_API_HELPER", ".claude/scripts/airflow_api.py")
+REPORT = os.path.join(os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out"),
+                      "optimizer_coverage_{date}.md")
 
 # Operators that submit a Spark job and therefore leave an event log behind.
 SPARK_OPERATORS = {
@@ -104,9 +106,10 @@ def _bearer() -> str:
         return env
     if not os.path.exists(AIRFLOW_API):
         raise RuntimeError("no AIRFLOW_TI_API_TOKEN and no airflow_api.py to resolve one")
+    helper_dir = os.path.dirname(AIRFLOW_API) or "."
     r = subprocess.run(
         ["python3", "-c",
-         "import sys;sys.path.insert(0,'.claude/scripts');"
+         f"import sys;sys.path.insert(0,{helper_dir!r});"
          "import airflow_api as a;print(a.resolve_bearer())"],
         capture_output=True, text=True, timeout=60,
     )
