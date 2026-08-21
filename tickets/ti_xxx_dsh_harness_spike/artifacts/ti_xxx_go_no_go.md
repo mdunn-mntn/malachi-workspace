@@ -21,14 +21,14 @@ with the named blockers before any unattended run.
 
 ## Kill-criteria status (none tripped)
 - **K1 churn** (>6h/mo breakage x2mo): build cost ~0 breakage so far; one py3.11-vs-3.9 portability bug, fixed in minutes (the integration run caught it). GREEN.
-- **K2 security** (1 exfil/credential incident): none. Egress cage designed, not yet installed — L1 stays blocked until `egress_selftest.sh` is green. GREEN (with the gate held).
+- **K2 security** (1 exfil/credential incident): none. Egress cage INSTALLED + verified 2026-08-21 (egress_selftest all green). GREEN.
 - **K3 reliability** (<90% corpus pass 3 wks): all runnable scenarios pass; corpus is small (5 probes + mined skeletons) — grows with real use. GREEN, immature.
 - **K4 economics** (>3x baseline cost 4wks or >$200/mo): engine spend near zero (harvest keyless; one hypothesize ~$0.01). GREEN.
 - **K5 upstream** (repo stalls / adverse terms): rc still active; pinned exact. GREEN.
 
 ## Blockers before autonomy (not defects — sequenced gates)
 1. **gcloud auth** (user): unblocks the one live-BigQuery integration assertion. Everything else is proven.
-2. **Egress cage** (user sudo, `egress_setup.md`): the hard gate before ANY unattended headless run on real data (L0→L1). Until green, dsh runs supervised-interactive only.
+2. ~~Egress cage~~ DONE 2026-08-21 — installed + verified.
 3. **Soak** (calendar): 10 working days of daily-driver use with zero Sev-1 before L1 autonomy — starts when you begin using it.
 
 ## Recommendation

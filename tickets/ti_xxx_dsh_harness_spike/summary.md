@@ -86,7 +86,7 @@ Research corpus in `artifacts/` (2026-08-21). Headlines:
 
 ## 5b. Blockers before autonomy (sequenced gates, not defects)
 1. ~~gcloud auth~~ RESOLVED 2026-08-21: dsh-bq ran a real query end-to-end (select1 behavioral PASS, wrote `ti_xxx_dsh` line to perf log with job_id provenance). Note: re-auth reset the gcloud default project to `mntn-coredw-prod` (no jobs.create); set back to `dw-main-silver` — the query billing project must be dw-main-silver (the reservation).
-2. Egress cage sudo steps (user, `dsh-lab/scripts/egress_setup.md`) — hard gate before any unattended run.
+2. ~~Egress cage~~ RESOLVED 2026-08-21: dshagent user + pf default-deny + tinyproxy allowlist installed; `egress_selftest.sh` all 6 green (dshagent caged, cannot read /Users/malachi, only api.anthropic.com/googleapis reachable). Home tightened 750->700 (staff group could read it). L1 gate on egress = CLEARED.
 3. 10-day soak (calendar) — starts when daily use begins; precedes L1 autonomy.
 
 ## 6. Questions Answered
