@@ -118,6 +118,6 @@ wb.notes("Method And Caveats", [
 wb.cover(takeaways=[
     "Visit lift stayed significant (+11% pre, +16% post) but incremental volume fell ~4x: the new audience rarely visits at baseline.",
     "Conversion lift fell 36% on the one powered instrument (3.5x to 2.2x, p<1e-18); the clean test is unpowered at the 0.06% B2B base.",
-    "Frequency is the lever: lift peaks at 2-10 exposures, turns negative at 11+, and 70% of households see 3 or fewer impressions.",
+    "Lift peaks at 2-10 exposures and turns negative at 11+; 70% of households see 3 or fewer impressions.",
 ])
 print(wb.save_drive("AUDI-1215", "ElevenLabs Lift Pre Post Audience Change"))
