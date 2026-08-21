@@ -376,3 +376,4 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 ## reference
 - [Folder definitions — where every file belongs](folder_definitions.md) —   ·  _verified 2026-08-11_
 - [Retrieval Eval Probes — cold-start regression suite](eval_probes.md) — Cold-start retrieval probes: a fresh chat using only START_HERE + _ROUTING + tickets/INDEX must reach each probe's targets. Every real cold-start miss becomes a new probe here.
+- [Service Account Ask — every automation, every surface](../on-call/service_account_ask.md) — The concrete request list for moving this workspace's automations off a personal identity. One row per identity to provision, with the shape, the owner to ask, and what breaks without it. Companion to memory project_deidentify_personal_credentials and the AUDI-1194 runner design.  ·  _verified 2026-08-20_
