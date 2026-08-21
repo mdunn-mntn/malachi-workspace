@@ -15,7 +15,7 @@ import json
 import pathlib
 import sys
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import datetime, timezone  # noqa: UP017  (portability: CLT/launchd python may be 3.9)
 
 WS = pathlib.Path(__file__).resolve().parents[2]
 ENGINE = WS / "engine"
@@ -25,7 +25,7 @@ STOP = ENGINE / "STOP"
 
 def today():
     # Deterministic per-run stamp; the engine passes no wall clock to sub-steps.
-    return datetime.now(UTC).strftime("%Y-%m-%d")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")  # noqa: UP017
 
 
 def read_jsonl(path):

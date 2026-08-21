@@ -10,3 +10,4 @@ The engine harvests THIS file too — it observes itself with the same instrumen
 2026-08-21 | stage=ROLLBACK | candidates=0 | adopted=0 | rolled_back=1 | cost_usd=0 | reverted ccab181f8bbcc8fe604d2336d74939fe623d4778 (int-s3): integration S3 forced failure
 2026-08-21 | stage=ROLLBACK | candidates=0 | adopted=0 | rolled_back=1 | cost_usd=0 | reverted 8449391d0a8aaa6a64ad62506566cf664a5bf4d8 (int-s3): integration S3 forced failure
 2026-08-21 | stage=ROLLBACK | candidates=0 | adopted=0 | rolled_back=1 | cost_usd=0 | reverted 8890c3a62d65d2c35a8cc775d0309c3b4bc4e293 (int-s3): integration S3 forced failure
+2026-08-21 | stage=INTEGRATION | candidates=15 | adopted=0 | rolled_back=0 | cost_usd=0 | phase-6: 9/9 runnable scenarios+chaos PASS; py3.9 portability bug found by the integration run and fixed
