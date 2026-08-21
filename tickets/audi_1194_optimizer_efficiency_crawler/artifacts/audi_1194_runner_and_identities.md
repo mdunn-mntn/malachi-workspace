@@ -776,3 +776,69 @@ produced, so the rewrite is behaviour-preserving.
 **Lesson worth keeping:** a module that shells out to a sibling repo file has an undeclared
 dependency on its working directory. It survived every test because the tests ran from the repo
 root. Containerising is what surfaced it, and only because the token arrived first.
+
+---
+
+## 13. 2026-08-21 — reshaped to an Airflow DAG, and two IAM defects caught in review
+
+**Cristina approved the `ironclad-fetcher` shape in principle, then raised the ownership
+question that changed the design:** the job was living in `mntn-devops` and would be attributed
+to the platform team rather than to AUDI. She asked whether it belonged in Astro instead.
+
+It did, and the move is strictly better than what §9–§10 built:
+
+| | before | after |
+|---|---|---|
+| compute | Cloud Run Job, then GKE CronJob, then automations CronJob | an `airflow-ti` DAG |
+| image | Dockerfile + GAR + a build job in the shared workflow | none, the Astro worker image already has `google-cloud-cli` |
+| coverage auth | an Astro deployment API token, in Vault | **none** — parse the DAG bundle in-process |
+| ownership | platform | AUDI |
+| repos touched | `mntn-devops`, `mntn-argocd`, `mntn-helm`, `mntn-team-credentials` | `mntn-devops` (3 files) + `airflow-ti` |
+
+**It deleted a whole credential.** §12 recorded Ryan's deployment token as an accepted risk
+because it crossed Slack. A DAG can enumerate DAGs locally, so `coverage.collect_local()` parses
+the bundle with `DagBag` and reads paused state from the metadata DB. **The token, the Vault
+onboard and the rotation question all vanished** rather than being mitigated. The one-line lesson:
+before designing a place to store a credential, check whether moving the workload removes the
+need for it.
+
+Two things had to be ported for the DAG to stand alone: `fetch.py` (the gsutil listing and
+download loop, previously only in bash) and `sweep.run(airflow_base="local")`.
+
+**PRs:** mntn-devops#4971 (identity, 3 files) → airflow-ti#1212 (the DAG, 24 files). **#4971
+merges first**; the DAG's first run fails on impersonation if the SA does not exist yet.
+mntn-devops#4724 **merged 2026-08-21** — note it is no longer what unblocks the fleet, since the
+sweep now reads the PHS bucket as its own SA. Its remaining value is standing read for **humans**
+in `audience-intelligence@`, so on-call triage does not need an 18h PAM request each time.
+
+### Two IAM defects Cristina caught, both from copying a plausible precedent
+
+Full mechanism in memory `reference_gcs_iam_creator_vs_user`. Short form:
+
+1. **`storage.objectCreator` cannot overwrite.** The three report files are date-stamped and
+   would have been fine; the **ledger republishes to a fixed key every run**, so it would have
+   worked on day one and failed from day two — silently, on the one file that distinguishes a
+   standing defect from a new one. Now `storage.objectUser`, with the prefix IAM condition doing
+   the scoping. I had picked `objectCreator` because it *sounded* least-privileged, without
+   checking it against what the job actually does to the object.
+2. **The Workload Identity binding was a no-op.** The DAG sets
+   `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT`, so the caller is `airflow-ti-prod@`'s own ADC,
+   not an Astro KSA — that is `serviceAccountTokenCreator`, not `workloadIdentityUser`. Worse,
+   `airflow-ti` is a **shared** deployment, so the KSA bindings would also have been the unsafe
+   shape if the deployment's WI target ever moved. §10 said "`pam-slack-bot` is the template,
+   end to end" and §7 said the same of `ape-ingestion`; both are **dedicated** deployments, which
+   is the property that makes their identity block correct and that I never checked.
+
+**The pattern in both:** every wrong call this session came from copying a precedent that matched
+on shape and differed on a property I had not looked for — dedicated vs shared deployment,
+create vs overwrite, Actions vs Cloud Run, `dataproc.editor` vs `dataproc.viewer`. Matching the
+shape is the easy half. **Name the property that makes the precedent apply, and check it.**
+
+### One more, unrelated to IAM
+
+airflow-ti#1212's first CI run failed a workflow it should never have triggered. The branch had
+been cut from the shared clone's **local** `main`, which carried an unpushed `AUDI-1208` commit,
+so the PR contained a `models/` file matching `pr_model.yaml`'s path filter. I spent the first
+pass proving the failure was pre-existing on other branches — true, and beside the point. **When
+CI fires a job unrelated to your change, ask why it triggered before asking whether the failure
+is yours.** Memory: `feedback_branch_from_origin_not_local_main`.
