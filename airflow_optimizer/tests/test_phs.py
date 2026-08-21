@@ -103,3 +103,28 @@ def test_fetch_leaves_no_empty_dir_for_an_unreachable_batch(tmp_path: Path, monk
 
     assert phs.fetch_logs([_batch()], str(tmp_path)) == []
     assert list(tmp_path.iterdir()) == []
+
+
+def test_rolling_parts_keep_their_batch_dir(tmp_path: Path) -> None:
+    """Flattened, every events_* part reads as one merged job and standalone logs are lost."""
+    from airflow_optimizer import fetch
+
+    root = str(tmp_path)
+    assert fetch.dest_for(root, "gs://b/p/app-1.zstd") == root
+    assert fetch.dest_for(root, "gs://b/p/eventlog_v2_batch-x/events_1_batch-x.zstd") == \
+        str(tmp_path / "eventlog_v2_batch-x")
+
+
+def test_newest_logs_takes_the_tail_and_drops_inprogress(monkeypatch) -> None:  # noqa: ANN001
+    """Budget spent on an .inprogress log is budget not spent on a readable one."""
+    from airflow_optimizer import fetch
+
+    listing = (
+        "  100  2026-08-19T01:00:00Z  gs://b/p/old.zstd\n"
+        "  100  2026-08-21T01:00:00Z  gs://b/p/new.zstd\n"
+        "  100  2026-08-21T02:00:00Z  gs://b/p/newest.zstd.inprogress\n"
+    )
+    monkeypatch.setattr(fetch.subprocess, "run",
+                        lambda *a, **k: type("R", (), {"stdout": listing, "returncode": 0})())
+    assert fetch.newest_logs("gs://b/p", 2) == ["gs://b/p/old.zstd", "gs://b/p/new.zstd"]
+    assert fetch.newest_logs("gs://b/p", 1) == ["gs://b/p/new.zstd"]
