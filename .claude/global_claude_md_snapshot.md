@@ -81,6 +81,20 @@ When a finding lands, an assumption is contradicted, an open question is answere
 
 **Jira writes = `curl` REST v2, never the MCP write tools (v3 renders wiki markup as literal text). Release Type: OMIT unless prod code actually ships.** Before any Jira comment, ticket create, or transition, read `knowledge/memory/reference_jira_conventions.md` for payloads, wiki markup, the comment template, required fields (PMO rep, quarterly label), story points, Spike-vs-Task routing, and workflow rules. Post at: end of session, completion, blocker.
 
+### 9b. Clean code — comments are the exception, not the default
+
+**Write self-documenting code: clear names, small functions, obvious structure. Then add no comments.** Comments are not the enemy; used sparingly they earn their place. Used by default they are clutter that drifts out of sync and reads as machine-generated.
+
+**Hard rule: one line, max. Never a block.** A run of two or more consecutive comment lines is a violation, anywhere except a short usage header at the top of a script (≤12 lines). **A deletion never needs a comment** — the reader can see the line is gone.
+
+**A one-liner is justified only for something the reader cannot derive from the code**: a platform constraint, a non-obvious magic constant, a real gotcha. Not rationale, not tradeoffs, not history, not ticket IDs. **The why goes in the PR description, the commit message, or the ticket** — the places a reader looks for it and where it stays current.
+
+**Docstrings: one line saying what it does.** Not a rationale essay.
+
+**The trap** (flagged three times, most recently 2026-08-21): I write the explanation while the reasoning is still loaded and it feels like handing context forward. It is not — the PR description already carries it, and pasting it into the file just puts a second copy somewhere it will rot. **Draft new code with no comments at all, then add back only the line that survives "could a reader derive this?"**
+
+**Enforced, not honor-system:** `lint_comments.py --staged` runs in the commit gate (`verify.sh`). History: memory `feedback_sparse_code_comments`.
+
 ### 10. Codex review
 Codex will review your code after you're done. Write with that in mind — keep code clean, well-structured, and ready for automated review.
 

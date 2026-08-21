@@ -20,7 +20,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | Stop | — | `comms_cap_reminder.sh` | soft nudge to keep outward-facing writing terse | no |
 | Stop | — | `oncall_triage_reminder.sh` | advisory on-call-triage reminder | no |
 
-## Scripts (32)
+## Scripts (33)
 
 | script | what it does |
 |--------|--------------|
@@ -38,6 +38,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `hooks_selftest.sh` | exercise all 9 Claude Code harness hooks with synthetic inputs and assert (exit code, output substring) |
 | `incident_log_compact.py` | Render the on-call incident log as 4-line entries, and lint every one |
 | `install_git_hooks.sh` | one-time: point git at the committed .githooks/ gate |
+| `lint_comments.py` | Block multi-line comment blocks in code |
 | `lint_comms.py` | the terse-comms linter for outward-facing writing |
 | `lint_coverage.py` | Coverage-state linter + one-shot migrator for bq_table docs |
 | `lint_memory.py` | linter + one-shot migrator for auto-memory files (knowledge/memory/*.md) |

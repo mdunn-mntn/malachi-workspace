@@ -10,8 +10,7 @@
 #   --fix             — auto-repair: lint_memory --fix, rebuild indexes, git-add the regenerated
 #                       index files. (The gate's failure message points here.)
 #
-# Philosophy: enforce MECHANICAL correctness (front-matter schema, index sync, formatting). JUDGMENT
-# checks (coverage depth, structure carve-outs) stay propose-only in workflow_audit.sh — not here.
+# Philosophy: enforce MECHANICAL correctness (front-matter schema, index sync, formatting). JUDGMENT checks (cov
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 S="$ROOT/.claude/scripts"
@@ -26,8 +25,7 @@ GEN_INDEXES=(knowledge/INDEX.md knowledge/_ROUTING.md knowledge/_MEMORY_INDEX.md
 
 if [ "$MODE" = "--fix" ]; then
   python3 "$S/lint_memory.py" --fix >/dev/null 2>&1 || true
-  # ruff auto-repair on STAGED durable Python (format + safe fixes), then re-stage — mirrors the
-  # index re-stage below. Throwaway tickets/** excluded by pyproject; --force-exclude enforces it.
+  # ruff auto-repair on STAGED durable Python (format + safe fixes), then re-stage — mirrors the index re-stage be
   if command -v ruff >/dev/null 2>&1; then
     fix_py=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(lib/|\.claude/scripts/).*\.py$' || true)
     if [ -n "$fix_py" ]; then
@@ -50,8 +48,7 @@ pass() { echo "  ✓ $1"; }
 STAGED=""
 [ "$MODE" = "--staged" ] && STAGED=$(git diff --cached --name-only)
 
-# run a linter; in --staged, fail only on violations whose (prefixed) path is staged.
-# args: <label> <path_prefix> <cmd...>   (path_prefix normalizes a linter's VIOLATION path to repo-relative)
+# run a linter; in --staged, fail only on violations whose (prefixed) path is staged. args: <label> <path_prefix
 run_linter() {
   local label="$1" prefix="$2"; shift 2
   local out; out=$("$@" 2>&1)
@@ -77,10 +74,12 @@ run_linter "bq_table front-matter (lint_coverage)" "knowledge/" python3 "$S/lint
 run_linter "ticket/framing front-matter (lint_tickets)" "" python3 "$S/lint_tickets.py" --check
 run_linter "memory front-matter (lint_memory)" "" python3 "$S/lint_memory.py" --check
 
-# --- ruff: durable-tier Python (lib/ + .claude/scripts). Staged-scoped in --staged (block only on
-#     files THIS commit stages), whole-tier in full mode. Throwaway tickets/** excluded by pyproject;
-#     --force-exclude enforces it even for files passed by path. Degrades to a skip if ruff is absent
-#     (keeps the gate portable). Line length is owned by `ruff format` (E501 ignored in pyproject). ---
+if [ "$MODE" = "--staged" ]; then
+  if out=$(python3 "$S/lint_comments.py" --staged 2>&1); then pass "comment density (lint_comments)"
+  else fail "comment density — one-line comments only; the why goes in the PR or commit"; echo "$out" | sed 's/^/    /'; fi
+fi
+
+# --- ruff: durable-tier Python (lib/ + .claude/scripts). Staged-scoped in --staged (block only on files THIS co
 if ! command -v ruff >/dev/null 2>&1; then
   echo "  · ruff not installed — skipping Python lint (pip install 'ruff>=0.16,<0.17')"
 elif [ "$MODE" = "--staged" ]; then
@@ -109,9 +108,7 @@ else
   fi
 fi
 
-# --- index freshness: regenerate, then any generated index that differs from what's staged/committed
-#     is out of sync. In --staged, skip entirely unless a front-matter-bearing doc is staged.
-#     (Assumes the `git add .` workflow: working tree ≈ index at commit time.) ---
+# --- index freshness: regenerate, then any generated index that differs from what's staged/committed is out of 
 if [ "$MODE" = "--staged" ] && ! grep -qE '^(knowledge/|on-call/.*\.md$|tickets/.*/summary\.md$|[^/]+\.md$|\.claude/(hooks|scripts|skills|agents)/)' <<<"$STAGED"; then
   pass "index freshness (no front-matter docs staged)"
 else
@@ -134,8 +131,7 @@ if [ "$MODE" != "--staged" ]; then
   python3 "$S/audit_structure.py" --json /tmp/verify_struct.json >/dev/null 2>&1 || true
   hi=$(python3 -c "import json;d=json.load(open('/tmp/verify_struct.json'));f=d if isinstance(d,list) else d.get('findings',[]);print(sum(1 for x in f if x.get('severity')=='high'))" 2>/dev/null || echo "?")
   echo "  · structure: ${hi} high-severity finding(s) — advisory (propose-only; see workflow_audit §1)"
-  # ~/.claude/CLAUDE.md is the only instruction file with no git history. Advisory, never a gate:
-  # it is the user's file across all projects and may legitimately change mid-session.
+  # ~/.claude/CLAUDE.md is the only instruction file with no git history. Advisory, never a gate: it is the user's
   gdrift=$(bash "$S/sync_global_claude_md.sh" --check 2>&1) || echo "  · $gdrift"
 fi
 
