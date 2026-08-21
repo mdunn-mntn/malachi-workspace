@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Datab
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress — RCA debugger (Dataproc+Databricks) validated on INC-005/009 + live prod (INC-010); eventLog PR #1169 MERGED to prod 2026-08-04 (merge cef446a3: batch-operator path + local runner + BaseModel observe; workflow-op deferred, ipdsc reverted/PHS kept). Optimizer split out to AUDI-1194 (own ticket + airflow_optimizer/ package, 2026-08-05). Remaining: follow-up PRs (workflow-op eventLog, Databricks GCS-write, spark-events TTL) + Phase 3 auto-fire"
+result: "in progress (DAG shipped 2026-08-21, airflow-ti PR #1214) — RCA debugger (Dataproc+Databricks) validated on INC-005/009 + live prod (INC-010); eventLog PR #1169 MERGED to prod 2026-08-04 (merge cef446a3: batch-operator path + local runner + BaseModel observe; workflow-op deferred, ipdsc reverted/PHS kept). Optimizer split out to AUDI-1194 (own ticket + airflow_optimizer/ package, 2026-08-05). Remaining: follow-up PRs (workflow-op eventLog, Databricks GCS-write, spark-events TTL) + Phase 3 auto-fire"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -287,6 +287,58 @@ routable", which is the only number that is actually a taxonomy gap:
 Reports for both now read `[high]` instead of `[low] unclassified`, and the Vertex one matches INC-024
 at 0.765. 11 regression tests in `tests/test_routing.py`, built from verbatim corpus text; the ones
 that matter are the negative ones (the green-run log must still classify to nothing).
+
+### SHIPPED AS A DAG — off the laptop cron (2026-08-21, airflow-ti PR #1214)
+
+`airflow_debugger_daily` in `SteelHouse/airflow-ti` (`dags/airflow_debugger_daily.py`, package
+vendored at `include/airflow_debugger/`), 17:00 UTC daily = 10:00 PT, matching the launchd job it
+replaces. Mirrors `spark_optimizer_daily` deliberately: same identity shape, same vendoring, same
+per-package PR workflow. The laptop `oncall_daily_rca.sh` still works and stays the local
+entrypoint.
+
+**Identity is a straight copy of AUDI-1194's:** GSA `spark-optimizer@mntn-prj-prod-00`,
+impersonated from the deployment's own ADC `airflow-ti-prod@` via `roles/iam.serviceAccountTokenCreator`
+and `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT`. No key, and no new Terragrunt unit needed.
+
+**The one thing the DAG move did NOT remove, and why.** The optimizer deleted its Astro API token
+by becoming a DAG, because a DAG can enumerate DAGs locally. That does not transfer here: the
+debugger's input is another task's **log**, and on Astro Hosted task logs live in Astronomer's own
+store. A task's Task-Execution JWT is scoped to itself and cannot list other task instances, and
+the deployment carries no `AIRFLOW__LOGGING__REMOTE_*` config that would put logs in a bucket we
+could read with the SA. So `AIRFLOW_BEARER` is genuinely required rather than merely convenient.
+
+**It is optional at runtime anyway.** `pull.NoTokenError` is caught in `daily.run`, which logs a
+skip and returns cleanly, so the DAG merges and runs green before anyone mints a token. The skip
+message names the exact command and the role it needs. `test_bundle.py` asserts both.
+
+**What changed in the vendored copy** (everything else is byte-identical):
+
+| Change | Why |
+|---|---|
+| `synth.py` NOT vendored | An `ANTHROPIC_API_KEY` on a prod worker is the pattern MNTN decommissioned with the Slack bot. `orchestrate` catches the `ImportError` and returns a low-confidence deterministic report |
+| `sweep.py` NOT vendored | Offline corpus-measurement tool, not a runtime path |
+| `pull.py`, `daily.py` NEW | REST acquisition + the one-day sweep, replacing the `airflow_pull.sh` shell-out |
+| `incident_match._CORPUS` | Now searches beside the package first: a DAG bundle has no `on-call/` tree. The corpus travels with the package |
+| `report._AIRFLOW_TI_LOCAL` | Resolves to the bundle itself, so traceback frames link to the code that is actually running |
+| `perf_profile` optimizer import | Falls back to `include.spark_optimizer`, the name the optimizer is vendored under |
+
+**Selection is the IMP-053 rule, not `--state failed`:** a task that failed and then retried or was
+cleared is invisible to a terminal-state filter, and that is most resolved incidents. `pull` selects
+`try_number > 1` OR a terminal failure state, and `failed_try()` diagnoses the try that actually
+failed rather than the last one.
+
+**Publishing is date-stamped, never a stable name** — the opposite trade from the optimizer's
+ledger. A day's RCA is a record of that day, so re-running an old date can only overwrite its own
+file; the ledger is one fixed object precisely because it has to remember across days.
+
+**Validation:** 100 tests pass, `ruff check --config include/airflow_debugger/ruff.toml` clean,
+`compileall` clean. New `.github/workflows/pr_airflow_debugger.yaml` — without it the package's
+tests would exist and never run, since `pr_model.yaml` is filtered to `models/**`.
+
+**Two follow-ups, neither blocking the merge:** (1) `AIRFLOW_BEARER` + `AIRFLOW_API_BASE` as secret
+deployment variables; minting needs `WORKSPACE_OWNER`, which Ryan Kleck has. (2) The SA's
+`storage.objectUser` IAM condition is scoped to the `optimizer/` prefix, so the publish to
+`debugger/` will 403 until it is widened; a publish failure warns rather than failing the sweep.
 
 ### Optimization UNBLOCKED — event logs already flow to GCS; crawl validated on real prod (2026-08-04)
 - **Ryan pointed to `gs://mntn-data-archive-prod/spark-events/`** — real Spark event logs already land there (49 `.zstd`, from a window in Nov 2025). So the optimization half is **not gated** for jobs that log there; the enablement ask is now "keep it on + wire the remaining models," not "turn it on from zero." (Ryan also flagged: the bucket needs a TTL / cleanup of old logs.)

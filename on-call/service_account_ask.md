@@ -32,8 +32,11 @@ Astro API token**, because a DAG can enumerate DAGs locally instead of calling t
 > **Before designing a store for a credential, check whether moving the workload removes the need
 > for it.** That is the single most useful sentence to bring into the room.
 
-The one workload still on a laptop cron is the **AUDI-1191 debugger** (`oncall_daily_rca.sh`,
-launchd 10:00 PT). It takes the same move: a DAG in `airflow-ti`, no container, no Astro token.
+The AUDI-1191 debugger took the same move on 2026-08-21 (PR #1214) — with one honest caveat worth
+repeating in the room: **the move frees you from an API token only when the workload's input is DAG
+metadata.** The optimizer's was. The debugger reads another task's *log*, which lives in
+Astronomer's store, so it still needs a token (IMP-065). Check what a workload READS before
+promising the move removes its credential.
 
 ---
 
@@ -41,8 +44,8 @@ launchd 10:00 PT). It takes the same move: a DAG in `airflow-ti`, no container, 
 
 | # | Identity | State | What to do | Ask who |
 |---|---|---|---|---|
-| 1 | **GCP GSA** for the debugger | Pattern merged | **Copy the `spark-optimizer` unit** — 3 files at `terragrunt/gcp/resources/mntn/prod/platform/mntn-prj-prod-00/spark-optimizer/` (mntn-devops#4971) | mntn-devops review |
-| 2 | **Astro Deployment API token** | Only if REST is needed | Skip it if the workload is a DAG. If you need the REST API, see the command below | **Ryan Kleck** (`WORKSPACE_OWNER`) |
+| 1 | **GCP GSA** | **Done** — the debugger reuses `spark-optimizer@`, no new unit needed. For a future workload that wants its own, copy the 3-file unit at `terragrunt/gcp/resources/mntn/prod/platform/mntn-prj-prod-00/spark-optimizer/` (mntn-devops#4971) | mntn-devops review |
+| 2 | **Astro Deployment API token** | **Now needed** (IMP-065) | The debugger reads task logs, which no DAG can read locally. Command below | **Ryan Kleck** (`WORKSPACE_OWNER`) |
 | 3 | **Databricks service principal** | **Exists** — `spark_optimizer`, appId `07f36af7-614d-4d57-8143-2dbcd3cb58c2`, `CAN_USE` on warehouse `14b311ac86ee2ca2` | Mint a secret (below). `system.lakeflow` access is still open | Databricks **account admin** |
 | 4 | **Jira bot identity** | Not started | Team-owned account with its own token, replacing `JIRA_API_TOKEN` in `~/.zshrc` | PMO / Jira admin |
 | 5 | **GitHub** | — | **Ask for nothing.** The workloads read no repo | — |
@@ -95,10 +98,13 @@ conditioned to the output prefix.
 
 ## Row 2 — the Astro token, only if you actually need REST
 
-A DAG does not need this. The one known gap that would: `coverage.collect_local` is dead on
-Airflow 3 (`airflow session use is forbidden in this context` — the ORM is unreachable from task
-code), and the fix is either the REST API with a deployment token, or a Task-SDK call that
-exposes paused state.
+**This is now a real ask, and it is the clearest one to lead with.** `airflow_debugger_daily`
+(PR #1214) reads other tasks' logs, which on Astro Hosted live in Astronomer's store; a task's own
+JWT is scoped to itself. Second user: the optimizer's `coverage.collect_local` is dead on Airflow 3
+(`airflow session use is forbidden in this context`), and the REST API is the fix.
+
+One token serves both. Neither is blocked meanwhile: the debugger treats a missing token as a skip
+and runs green without it.
 
 ```bash
 astro deployment token create \
@@ -177,8 +183,10 @@ the old binding, not the presence of the new one.
 
 1. **`system.lakeflow`** (and `system.billing`, IMP-062) — Databricks account admin.
 2. **Jira bot identity** — nothing started.
-3. **The debugger is still a laptop cron.** Moving `oncall_daily_rca.sh` into an `airflow-ti` DAG
-   is the same move AUDI-1194 made, and needs no new identity beyond a copy of row 1.
+3. **The debugger moved into a DAG on 2026-08-21** (airflow-ti PR #1214) and needed **no new
+   identity** — it reuses `spark-optimizer@`. Two small follow-ups: an Airflow API token
+   (IMP-065, `WORKSPACE_OWNER`, Ryan) because task logs are the one input a DAG cannot read
+   locally, and widening the SA's `objectUser` condition to the `debugger/` prefix (IMP-066).
 
 Mechanism detail: memory `reference_gcs_iam_creator_vs_user`. Workload and prod state:
 `project_airflow_optimizer`. Standing inventory: `project_deidentify_personal_credentials`

@@ -1,0 +1,305 @@
+[00:00] And now those have improved.
+[00:03] We see also that the conversion metrics directionally are changing in the same way, but they're not significant.
+[00:13] But if they want to make that leap, we're happy to let them make the leap.
+[00:17] I think that logic.
+[00:21] I'm just going over the caveats and methods.
+[00:24] Are there any concerns with our pre-window for the ghost bidding being eight days?
+[00:30] around these i i am not as familiar as you guys with kind of the ghost bidding methodology so
+[00:35] i'm going off of obviously my thing's here so just calling out things that i see right that's all
+[00:40] yeah yeah unfortunately like this is the whole reason that we got this ghost bidding stuff spun
+[00:46] up so fast is partially because of 11 lives so they're like you're trying to get something done
+[00:54] really fast so unfortunately that's all we had until they made the changes
+[00:58] but I
+[01:02] what I was seeing there was
+[01:04] you know consistent
+[01:06] with what it was all the way back
+[01:09] into May as far as the
+[01:11] rate
+[01:11] so
+[01:13] I don't think much changed
+[01:15] yeah
+[01:20] what was
+[01:22] was Matt or Mike's
+[01:25] exact words
+[01:26] shows the number of changes
+[01:31] and overview how we measure it.
+[01:35] What's that?
+[01:36] Do you mean like the number of campaign changes
+[01:39] or the changes to their metrics?
+[01:49] Well, you have...
+[01:51] Wait.
+[01:52] He says that I'm looking at grooms.
+[01:54] Oh, grooms. Okay.
+[01:56] I don't even know exactly that campaign.
+[02:03] Oh, I'm just looking at the one.
+[02:06] The free form is incremental.
+[02:08] Yeah, incremental.
+[02:10] The lift numbers since audience change.
+[02:12] That's talking about 11 labs, right?
+[02:14] Yes, yes.
+[02:15] So that's what you put there.
+[02:19] This document.
+[02:26] spreadsheet that you have. I think it's just best. So take these headlines and kind of
+[02:42] turn it into a story.
+[02:45] Okay. Yeah, the first three slides, basically.
+[03:15] Conversion.
+[03:20] Multiplier.
+[03:23] Don't know what that means.
+[03:30] It's basically how it's just doing a weird like it should just be percentage changes,
+[03:39] but sometimes it uses a multiplier to explain the difference between one to the other.
+[03:44] I'm not really sure why there's the mix of formatting.
+[03:52] But the relative lifts are kind of what we would go off
+[03:54] of there because in the changes that they made,
+[04:00] they really changed the baseline rates quite a bit.
+[04:07] The baseline visit rate just tanked after their changes
+[04:11] into the post period which was partially the purpose of it right to get the incremental you
+[04:19] have to give up the absolute so yeah is there a way we can um can we plot these relative lift
+[04:28] changes day over day with like the change date just to show you know some elbow points in that
+[04:34] i don't know if it will be as clean of a story that way but it might be an interesting way to
+[04:40] visualize it.
+[04:41] Yeah.
+[04:44] You had this, but this gets pretty noisy, the weekly lift.
+[04:47] Yeah.
+[04:48] Trend.
+[04:58] Because it does get a little bit noisy there.
+[05:08] Just check these.
+[05:10] Yeah, these are the changes that I remember.
+[05:29] We're not going to get it today, but it would also be helpful to see the numbers that they're seeing, kind of like before.
+[05:35] Yeah.
+[05:37] Another comparison, but...
+[05:40] Unfortunately, it's probably tricky.
+[05:44] Like with these numbers that we have, we can really know.
+[05:57] Let's see these, like reach and hold out.
+[06:03] Whereas in their data that they're seeing,
+[06:05] it's probably much higher volumes.
+[06:10] And probably relative to their other channels.
+[06:14] We don't have that.
+[06:16] So they could just look at, like they're just
+[06:18] looking at probably the traffic in their exposed region,
+[06:23] geo, because it's all geo.
+[06:26] So it's exposed in the geos and the holdout geos.
+[06:31] And so they're just looking at pure raw visits
+[06:35] and conversions.
+[06:38] Which can wash out a lot of this, I think.
+[06:41] But I think this headline is fine.
+[06:51] And then we can put in, yeah, basically the relative lift
+[06:59] on both of those, I would say.
+[07:02] Sorry, which headline?
+[07:05] You were saying the?
+[07:06] Yeah, I mean, I guess it's just taking
+[07:07] these relative lift numbers close to the same kind of things that I was seeing. And just
+[07:14] using those as the headline. And then if we need a brief explainer of how we did this.
+[07:25] Yeah.
+[07:26] I don't know if we have anything.
+[07:30] I have all the queries.
+[07:32] You had that one pager, right, Malachi? We'd probably just throw that in. That was
+[07:37] Oh, that I sent to Kursa.
+[07:41] Yeah.
+[07:42] Because I think that's a nice little summary of like,
+[07:44] this is what it is.
+[07:45] And it's pretty easy to follow.
+[07:48] Is there anything we can include around the frequency versus lift as well?
+[07:53] If part of our pitch of what we're doing next is adjusting the frequency
+[07:57] capping.
+[07:58] So that might be, it might helpful.
+[08:01] It might be helpful to show something around that too.
+[08:04] You mean this?
+[08:05] Yeah.
+[08:06] I don't know which parts of that though.
+[08:07] So these ones are always tricky to interpret.
+[08:10] Yeah.
+[08:12] This is the whole selection bias piece
+[08:14] that you talked about before.
+[08:16] Yes.
+[08:17] So that's what makes changing the frequency argument
+[08:23] difficult to motivate from these kind of numbers
+[08:25] because it always looks this way, where the more frequent
+[08:30] until you hit a weird cap.
+[08:32] But more frequent is better.
+[08:37] Yeah.
+[08:38] But here it's the lift.
+[08:43] So it's not just the pure numbers.
+[08:49] So you could say that these are bids.
+[08:52] They're not impressions.
+[08:54] But it's not easy for me to pull that data from the grooms stuff, I feel.
+[09:03] There it's just going to be a pre-post thing again.
+[09:05] I would just do that, where it's, hey,
+[09:09] when did this frequency change happen for grooms?
+[09:13] Let me just pass that really fast in that thread.
+[09:17] And then we can get back into this.
+[09:35] Okay. Well, I could start putting together a deck. Usually it's just easier to just
+[09:42] say, like, let's grab the headlines.
+[09:49] Yeah. So I would say let me go into here. What changed? They may have better
+[09:56] wording for it. Mike probably has better wording. But I would take that one pager, like, throw
+[10:04] that in as the explainer. Here's how we're doing this. And then we can also just throw
+[10:13] in those two lift numbers, the relative lift on visits and conversions. And maybe, I don't
+[10:22] know, we just throw it out. The conversions will lag the visits. So maybe that's like
+[10:28] It's a longer wait time on getting significant conversion numbers. But directionally, things
+[10:35] are going in the same direct, like they're going the same way. They're both improving.
+[10:40] And then why do we think this happened is kind of what we have to throw in here, which
+[10:47] which is they are aware of the changes,
+[10:49] but it's probably best to say it again,
+[10:51] which is Mike has a much better understanding.
+[11:00] I don't know.
+[11:01] All I know is they added those like Bambara segments
+[11:04] to get better like B2B targeting.
+[11:09] Yeah.
+[11:10] So I think that's-
+[11:11] We got rid of scoring too, right?
+[11:13] Right.
+[11:15] Yeah.
+[11:15] let me scroll through and see if we can find
+[11:18] I guess it's all of this stuff
+[11:20] yeah
+[11:20] they
+[11:26] really changed the targeting
+[11:28] to try and not hit the
+[11:30] high intent and to hit
+[11:32] the
+[11:32] more incremental areas like the
+[11:36] intersegments
+[11:36] but I don't have the details on exactly what
+[11:40] they did
+[11:40] unfortunately
+[11:43] but I think we can leave that too
+[11:45] yeah
+[11:47] to fill in
+[11:48] so it was more incremental before the changes
+[11:52] when
+[11:55] which one are you looking at
+[11:58] I'm talking about the
+[11:59] the Bombora stuff
+[12:01] in 630
+[12:03] yeah
+[12:04] I don't think that that was
+[12:12] that's weird though that that would affect
+[12:15] I don't think they had more
+[12:16] segments set up before did they
+[12:18] yeah I think it came later
+[12:21] I think 7-1
+[12:23] you know 6-30 7-1
+[12:25] was the big like we turned off
+[12:27] scoring made a bunch of audience
+[12:29] changes all that
+[12:31] kind of stuff yeah but I'm wondering why that would be
+[12:33] negative though
+[12:34] like
+[12:37] from an incrementality standpoint
+[12:39] because high intent targets people that were already going to convert so it's like not
+[12:47] incremental at all so why if they were going from high intent to these bombora audiences
+[12:55] will their incrementality go down it didn't go down i don't think yeah sorry where are you looking
+[13:02] you know i'm trying to i'm trying to understand why they are saying that like they're saying it's
+[13:07] not incremental. I'm confused why. Because it just doesn't make any sense.
+[13:14] They never had significant incremental results at any point that they shared with
+[13:21] us.
+[13:22] Yeah. Were they doing it through LiftLab before? I wonder if they're running their
+[13:29] own tests or not.
+[13:30] running their own as far as I recall. They had their own one data scientist who runs
+[13:37] everything who also did the analysis that said they should use Mountain or do this large
+[13:46] campaign to use Mountain. So I think that they were incremental on visits from what
+[13:57] I could always remember. And you see that here. And that went up. The relative incrementality
+[14:05] went up.
+[14:06] Yeah. So, okay. Well, why don't I...
+[14:13] Yeah, go ahead.
+[14:14] I was just going to say, why don't I take these things and put them into a deck?
+[14:18] I'll just throw some headlines. I don't think they're going to be in front of 11 labs today,
+[14:24] but they probably definitely will be on Monday.
+[14:26] So I'll probably try to get something out
+[14:30] before the end of the day as quick as possible.
+[14:35] Yeah.
+[14:38] Matt, didn't they share a deck with the results last time?
+[14:41] Do you have access to that?
+[14:43] It's probably in that Slack chat.
+[14:45] Okay.
+[14:53] They don't.
+[14:54] Let's see if I can find it.
+[14:58] June 29th.
+[15:10] I got it if you want to
+[15:25] I'm just trying to remember
+[15:30] there's a point that I brought up of just like
+[15:32] was the incremental number that they're measuring
+[15:36] here
+[15:37] is this the
+[15:39] Yeah, and was it
+[15:41] Oh, yeah
+[15:43] Of CTV itself?
+[15:45] Or like
+[15:45] So they did
+[15:50] Or relative to their other
+[15:52] Contact sales forms, which are like
+[15:54] That's like the B2B part
+[15:57] So it's very low volume
+[16:00] And then they have the self-service subscriptions
+[16:04] I don't even know why they're focused on conversions
+[16:07] especially like that it's it's not even it's not very smart the contact sales forms is like
+[16:13] enterprise accounts getting enterprise accounts signups so that's what they were venturing um
+[16:19] can you grant access to that uh matt yeah thank you wait is this this is the
+[16:28] hold on oops did i just request access to their version of it yeah i accidentally did that as well
+[16:35] so let me go back
+[16:37] that's fine
+[16:39] gonna be like oh these guys
+[16:42] they're having an
+[16:44] emergency
+[16:45] dang I thought there was a copy
+[16:47] in that channel
+[16:50] at one point so I thought I was
+[16:52] copying the copy
+[16:53] oops that's okay
+[16:55] that just shows us
+[16:58] we're dedicated
+[16:58] yeah
+[16:59] okay I'm going
+[17:02] so all their lift numbers
+[17:04] are within channel relative to their geo exclusion.
+[17:08] There we go.
+[17:09] There it is.
+[17:10] I found it.
+[17:12] Here's the one that we should have been looking at.
+[17:18] But I mean, they granted me access to it.
+[17:21] Obviously, I was sharing everything.
+[17:24] Because I do remember when that happened,
+[17:26] he granted me access.
+[17:27] I was like, oh, yeah, oops.
+[17:28] so that's the real one
+[17:35] the real one for us
+[17:37] okay
+[17:41] yeah they did multiple things
+[17:47] but it was always like
+[17:54] a
+[17:55] contact sales form
+[17:56] yeah
+[17:56] So it's like really low volume.
+[17:58] And then if you look at like what their numbers were,
+[18:08] it's not a good one.
+[18:10] Let's go to the other thing that they were measuring.
+[18:14] New subscribers.
+[18:16] So here they were getting like 13,000 a week or 15,000 a week on the international side.
+[18:22] So say 13,000 in the US.
+[18:24] in the US, we are not seeing those same level of conversions at all.
+[18:32] Right.
+[18:32] So obviously like the raw subscriber account that they're getting every week
+[18:43] is a much higher number than what we're seeing in our own data as far as the
+[18:49] ones that we serve impressions to.
+[18:51] And is their conversion pixel fire the same?
+[18:54] like 180 a week contact sales forms.
+[19:00] Right, yeah.
+[19:02] So you can see those in the pixel data.
+[19:06] Yeah.
+[19:06] Tell the difference.
+[19:09] But yeah, oops.
+[19:16] It's hard for them to see it.
+[19:17] That's why I think one of the things we said was you
+[19:19] should look at the visits.
+[19:21] But they didn't do that.
+[19:24] Yeah, I think when I ran my, I mean, it depends.
+[19:27] Sometimes you get really weird conversion, like high conversion lift stuff.
+[19:33] But I think there were like a handful on every single advertiser.
+[19:37] There was only a few that could do conversion lift.
+[19:42] Just the conversion rate is so low on everything.
+[19:48] They should make their conversion page view.
+[19:54] I remember looking at their funnel, like basically how people.
+[20:00] navigate through the website okay do you guys want to uh break and then reconvene maybe yeah
+[20:10] if you need to focus yeah just so i can put some of this stuff together i'll i'll create a deck
+[20:14] and then i'll uh i'll ping you guys i'll send the deck out first and then we can have a meeting if
+[20:18] we need to and then we'll go from there okay all right that sounds good cool all right talk to you
+[20:25] soon bye

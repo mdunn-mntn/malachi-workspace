@@ -10,6 +10,42 @@ domain: [infra, repos, workflow]
 lifecycle: active
 last_verified: 2026-08-20
 ---
+
+## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
+
+`airflow_debugger_daily` (`dags/airflow_debugger_daily.py`, package vendored at
+`include/airflow_debugger/`), 17:00 UTC = 10:00 PT. Deliberately mirrors `spark_optimizer_daily`:
+same identity, same vendoring, its own `pr_airflow_debugger.yaml` (the existing workflows filter to
+`models/**`, so an `include/` library is otherwise never tested). The laptop `oncall_daily_rca.sh`
+still works and stays the local entrypoint. All CI green on first push.
+
+**Identity is a straight copy of AUDI-1194's, no new Terragrunt unit:** GSA
+`spark-optimizer@mntn-prj-prod-00` impersonated from the deployment ADC `airflow-ti-prod@` via
+`serviceAccountTokenCreator` + `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT`. See
+[[reference_gcs_iam_creator_vs_user]].
+
+**The generalizable finding: moving a workload into a DAG removes an API token only when the
+workload's input is DAG metadata.** The optimizer's was, so its Astro token disappeared. The
+debugger's input is another task's **log**, which on Astro Hosted lives in Astronomer's store; a
+task's Task-Execution JWT is scoped to itself, and the deployment sets no
+`AIRFLOW__LOGGING__REMOTE_*` that would put logs in a bucket the SA could read. So `AIRFLOW_BEARER`
+is genuinely required (IMP-065). Check what the workload READS before promising the move frees it.
+
+**A required credential can still be optional at runtime.** `pull.NoTokenError` is caught in
+`daily.run`, which logs a skip naming the exact mint command and returns cleanly. The DAG therefore
+merges and runs green before the token exists, and starts working the day it lands. That is the
+pattern to reuse for anything gated on someone else's permission.
+
+**What changed in the vendored copy** (everything else byte-identical): `synth.py` NOT vendored
+(an `ANTHROPIC_API_KEY` on a prod worker is the decommissioned pattern; `orchestrate` catches the
+`ImportError` and returns a low-confidence deterministic report); `sweep.py` NOT vendored (offline
+tool); new `pull.py` + `daily.py`; `incident_match._CORPUS` searches beside the package first (a DAG
+bundle has no `on-call/` tree, so the corpus travels with the package); `report._AIRFLOW_TI_LOCAL`
+resolves to the bundle itself; `perf_profile` falls back to `include.spark_optimizer`.
+
+**Open (neither blocking):** IMP-065 `AIRFLOW_BEARER` + `AIRFLOW_API_BASE`, minting needs
+`WORKSPACE_OWNER` (Ryan Kleck). IMP-066 the SA's `objectUser` condition is scoped to `optimizer/`,
+so publishing to `debugger/` 403s until widened; a publish failure warns rather than failing.
 **SCOPE (as of 2026-08-05 ticket + package split):** this memory is the **DEBUGGER** — the failure-triggered RCA workflow, ticket **AUDI-1191**, package **`airflow_debugger/`** (parse, context_parse, signatures, dataproc_rca, databricks_rca, incident_match, report, synth, orchestrate). AUDI-1191 was retitled "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Databricks)". The **OPTIMIZER** (success-triggered efficiency crawler) split out to ticket **AUDI-1194** / package **`airflow_optimizer/`** → see **[[project_airflow_optimizer]]** for the go-forward source of truth (eventlog parser, detectors, crawl, weekly cron, PHS access). The two packages are fully decoupled and share ONLY `eventlog.py`, which now lives in `airflow_optimizer/`. Paragraphs below that discuss the eventlog parser / optimizations / crawl / weekly cron are the **historical build record** from when both engines lived under AUDI-1191 — current optimizer facts belong in the optimizer memory.
 
 Building an automated Airflow/Spark failure-triage agent under **AUDI-1191** (the build ticket AUDI-1190 §8 deferred; origin IMP-021). Code lives in the workspace at **`airflow_debugger/`** (key-free, no bot/tokens, no changes to SteelHouse work repos). Harvest source cloned read-only to `~/Developer/work/mntn/mntn-data-eng-assistant`. Approved plan: `~/.claude/plans/we-may-have-already-logical-ladybug.md`. See [[reference_data_eng_mcp]], [[reference_airflow_ti]], [[reference_databricks]], [[reference_oncall_runbook]].
