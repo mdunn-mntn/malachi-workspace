@@ -736,3 +736,41 @@ and the container.
 **What #4971 does NOT close:** the Astro token (Ryan Kleck, `WORKSPACE_OWNER`), `USE SCHEMA` on
 `system.lakeflow` (needs a metastore admin now that Victor has left), and mntn-devops#4724, which
 still gates the PHS half of the fleet.
+
+---
+
+## 12. 2026-08-21 — Astro token in hand, and the coverage pass was quietly broken
+
+**Ryan Kleck minted the deployment token and pasted it in a Slack DM.** It is in the login
+Keychain (`security find-generic-password -a spark-optimizer -s astro-deployment-token -w`),
+never in the repo and never in a shell history. Claims, decoded:
+
+```
+deploymentId  cmd6bd10c0gl901rfuokgryiq     # scoped to the one deployment
+sub           cmf357xbd2uz001o44sl2mxp8     # Ryan Kleck
+issued        2026-08-21     expires 2027-08-21
+```
+
+**It should be rotated once it is in Vault.** It crossed Slack in plaintext, so Slack's retention
+now holds a working prod credential regardless of whether the message is deleted. That is not a
+reason to refuse it, it is a reason to treat this one as interim: onboard it, confirm the CronJob
+reads it, then mint a replacement through the proper path and revoke this one. Ryan does not have
+Astro admin either (`astro deployment token create` worked for him but he described himself as
+lacking admin), so the durable owner is still `ORGANIZATION_OWNER` — **Dustin Niehoff**.
+
+**Using it immediately exposed a real defect.** `coverage._airflow()` and `coverage._bearer()`
+both shelled out to `.claude/scripts/airflow_api.py` at a **relative** path. That file is a
+workspace tool and is not in the container image, so the coverage pass would have failed on the
+first scheduled run even with a valid token — and failed *quietly*, because `collect()` catches
+everything and lands the error on the report rather than raising. The `OPTIMIZER_COVERAGE=0`
+default in #4971 was hiding a bug, not just deferring a feature.
+
+Fixed in both copies: `_bearer()` prefers `AIRFLOW_TI_API_TOKEN` and only falls back to the CLI
+helper when the file actually exists; `_airflow()` is a plain `urllib` GET. Two tests cover the
+container path, which had none. **Verified end to end against the live deployment with Ryan's
+token: 62 active DAGs, 24 with a Spark task, 38 without** — matching the numbers the laptop run
+produced, so the rewrite is behaviour-preserving.
+
+**Lesson worth keeping:** a module that shells out to a sibling repo file has an undeclared
+dependency on its working directory. It survived every test because the tests ran from the repo
+root. Containerising is what surfaced it, and only because the token arrived first.
