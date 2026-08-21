@@ -146,7 +146,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 
 | `site_network_hourly / site_network_hourly` (hourly `50 * * * *`) | `503 Getting metadata from plugin failed with error: ('Unable to acquire impersonated credentials', ... "status": "UNAVAILABLE")`, **Try 0 of 1**, task dead in ~16s. Log stops right after `Starting batch sit-net-hou-fv2-<ts>` at the first `google.auth.default()` call. | GCP IAM credential-minting service returned 503 while the operator was impersonating the service account to submit the Dataproc batch. **No batch was ever created** (the failure precedes submission), so there is nothing to delete and no partial write. | **transient_infra, benign — verify, then no-op.** The model processes the **last 2 hours** every run, so each hour is written twice by consecutive runs; one lost run is covered by its neighbours. The DAG has `default_args={}` = **retries 0**, so a 16s blip pages a human for something one retry absorbs (IMP-044 / [airflow-ti#1202](https://github.com/SteelHouse/airflow-ti/pull/1202)). | INC-020 |
 
-| Any Targeting DAG, **`No exception message found`** + `Try 0 of N` | A burst of these across unrelated DAGs in one window (2026-08-19: `site_network_hourly`, `audience_intent/wait_for_ipdsc_geo`, `audience_intent/intent_score_map`, `tpa_ipdsc_export/ipdsc_ds_35`). Airflow has no exception because the worker died rather than the task raising. | One cluster-level event: on 2026-08-19 all four ended within 40s of each other on 3+ distinct workers after 22min-2h32m of runtime, with empty try-1 logs. Not a code fault, not a deploy (nearest was 15h earlier). Trigger unverified, see INC-021. | **transient_infra.** Check whether the task already retried before touching anything: `GET /dags/<id>/dagRuns/<run>/taskInstances` and look for `try_number > 1` or `failures=none`. All four on 2026-08-19 recovered on their own. Only act if a task has retries=0 or exhausted them. Consequence now guarded: [airflow-ti#1206](https://github.com/SteelHouse/airflow-ti/pull/1206) (merged 2026-08-20) makes each `ModelPysparkBatchOperator` try cancel any live batch left by a previous try. The recycle itself is still unguarded — deferrable is broken on Airflow 3.1.5, see IMP-063. | INC-021 |
+| Any Targeting DAG, **`No exception message found`** + `Try 0 of N` | A burst of these across unrelated DAGs in one window (2026-08-19: `site_network_hourly`, `audience_intent/wait_for_ipdsc_geo`, `audience_intent/intent_score_map`, `tpa_ipdsc_export/ipdsc_ds_35`). Airflow has no exception because the worker died rather than the task raising. | The Astro **metadata Postgres** dropped every connection, so the heartbeat write (`PUT .../task-instances/<uuid>/heartbeat`) 500'd and Airflow failed the tasks. Confirmed by Astronomer support 2026-08-21: 122 such 500s at `2026-08-19T06:39:00Z`, `psycopg2.OperationalError` + pgbouncer `pooler error: server conn crashed?`. The workers were ALIVE and heartbeating; unreachable log servers were a consequence of pod replacement, not the cause. | **transient_infra (platform, not ours to fix).** A burst across unrelated DAGs in one window is the metadata DB as often as the workers. Check whether the task already retried before touching anything: `GET /dags/<id>/dagRuns/<run>/taskInstances` and look for `try_number > 1` or `failures=none`. All four on 2026-08-19 recovered on their own. Only act if a task has retries=0 or exhausted them. Consequence now guarded: [airflow-ti#1206](https://github.com/SteelHouse/airflow-ti/pull/1206) (merged 2026-08-20) makes each `ModelPysparkBatchOperator` try cancel any live batch left by a previous try. The recycle itself is still unguarded — deferrable is broken on Airflow 3.1.5, see IMP-063. | INC-021 |
 
 | `keyword_ddp_reporting / write_targeted_signal_ds_13` | dbt `Runtime Error` → `AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view prod.ml.ddp_url_verticals cannot be found` | The source is a dbt table-materialized model that is dropped and recreated on every rebuild. `create_ip_verticals / ddp_url_classification` (daily 00:05 UTC, 25 min to 2h32m) was mid-rebuild. Only collides when the 15:00 reporting run is delayed into the nightly window. | **resource_contention.** Check the producer task's state before touching anything; if it is running, wait for green, then clear the consumer. Do not read `_filtered` as a rename. | INC-023 |
 | `fangorn_hhid_inference_pipeline_run / challenger_inference_pipeline` | Vertex `code: 9` boilerplate, `The failed tasks are: [submit-parallel-inference-jobs]`. Every try dies identically. The Airflow log carries NO cause. | The hhid model's challenger alias is gone. `run_challenger_inference.py` resolves the model by alias pattern `challenger-v*`; `fangorn-hhid-xgboost` was re-registered 2026-08-18 and its v1 carries only `default` + `champion`. Sibling `fangorn-xgboost` still has `challenger-v2`, which is why the non-hhid challenger is green. | **dag_bug (registry regression).** Deterministic, so do NOT re-run. Check `models?filter=display_name="<model>"` for a `challenger-v*` alias before anything else; if it is missing, route to the model owner to re-add it. `create-dataproc-cluster` SUCCEEDED here, so this is NOT the INC-002/008 stockout class. | INC-024 |
@@ -1322,6 +1322,52 @@ GET /dags/<dag>/dagRuns/<run>/taskInstances/<task>/tries/<n>   -> state, start_d
 Clustered end times + distinct hostnames = one platform event. Spread-out end times on one hostname = that worker. Same end time on one hostname = that pod.
 
 **Logs:** `airflow_pull.sh --state failed` returns nothing for these because it filters on CURRENT state and all four had recovered; query the dag run directly instead.
+
+**ROOT CAUSE CONFIRMED by Astronomer support, 2026-08-21 (ticket reply from Manideep, Airflow
+Reliability Engineer). STATUS: OBSERVED → RESOLVED, with one open question.** The close condition
+this incident named ("ask Astronomer support") is what closed it.
+
+The trigger was **the Astro metadata Postgres dropping every connection**, not a worker recycle:
+
+```
+INFO: 100.64.2.3:36240 - "PUT /dokgryiq/execution/task-instances/<uuid>/heartbeat HTTP/1.1"
+      500 Internal Server Error                                   # 2026-08-19 06:39:06.338
+event: Handle died with an error
+  exc_type: OperationalError
+  exc_value: (psycopg2.OperationalError) server closed the connection unexpectedly
+  [SQL: SELECT task_instance.state, task_instance.hostname, task_instance.pid
+        FROM task_instance WHERE task_instance.id = %(id_1)s FOR UPDATE]
+```
+```
+2026-08-19 06:39:09.601 UTC WARNING S-…: …pgbouncer-metadata/…@100.66.0.2:5432
+    got packet 'E' from server when not linked
+2026-08-19 06:39:09.632 UTC WARNING C-…: pooler error: server conn crashed?
+```
+
+**122 of these 500s** in the API-server logs, all stamped `2026-08-19T06:39:00Z`. Astronomer
+attributes the connection drop to **maintenance on the customer-managed database instance**, and
+says they have an internal issue open for customer-managed DB maintenance windows.
+
+**This CORRECTS the mechanism recorded above, and the correction matters for next time.** The
+`100.64.2.3` in Astronomer's 500 log is one of the very hostnames in the try-1 table — and it was
+**alive and sending a heartbeat at 06:39:06**. The workers did not vanish; the heartbeat *write*
+failed because the metadata DB was gone, and Airflow failed the tasks on that. The unreachable
+log servers observed at those IPs were a **consequence** (the pods were replaced afterwards), not
+the cause. So "simultaneous death across multiple distinct hosts = one cluster-level event" was
+the right inference, but "worker loss" named the wrong layer: it was **metadata-database loss,
+which fails every task on every worker at once**. Same fingerprint, different subject. The
+decision tree above still holds; step 1 should read "several unrelated DAGs in one window =
+infrastructure, and the metadata DB is a candidate alongside the workers."
+
+**OPEN — the timing does not match our own operations log.** The 500s are stamped
+`2026-08-19T06:39:00Z`, but the GCP operations log for
+`astro-postgres-instance-cmcv0v0ae01bk01ngimis9kjy` shows the nearest events that day as a
+**backup at 9:15:58 AM** and **instance maintenance at 12:06:45 PM**. Under no single timezone
+reading does either land on 06:39Z. Either the maintenance Astronomer found was on a different
+instance, or one of the two timestamps is not in the timezone it appears to be. **Asked support
+to confirm which instance and which timezone** before treating "customer-managed maintenance
+window" as the actionable finding — if it is our instance, the durable fix is to move the
+maintenance window; if it is not, there is nothing on our side to move.
 
 ---
 
