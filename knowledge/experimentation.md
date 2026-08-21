@@ -1637,6 +1637,40 @@ $10M/year ≈ **$833k/month** total cross-channel spend. For comparison against 
 
 **See also:** [TI-884 spend curve](../tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/outputs/ti_884_spend_threshold_curve.csv); [TI-884 methodology](../tickets/ber_2250_incrementality_overhaul/ti_884_power_sample_size_analysis/artifacts/ti_884_methodology.md) §4.
 
+<!-- audi_1213: 2026-08-20 -->
+## Power-calculator mechanics: arm split, lookback, and sizing against the CI floor (AUDI-1213, 2026-08-20)
+
+### The unserved holdout must not be charged for impressions
+
+`ti_884_mde_calculator.py:104-109` is correct: `n_treated = n_total * (1 - holdout_frac)`, because only treated IPs receive impressions. The shipped HTML prefill calculator instead splits a **spend-derived** IP pool 90/10, which charges the budget for impressions the holdout never gets. Consequences at defaults (p=2.15%, 5% target, $24.84 CPM, 3.5 imps/IP, 10% holdout):
+
+- Required spend runs `1/(1-h)` = **1.1111x high** ($138,028 quoted vs $124,225 true).
+- Displayed MDE runs `1/sqrt(1-h)` = **1.054x high** (3.06% vs 2.90% at $200k/mo over 8 weeks).
+- It also puts the tool 11.11% off the `$14,100 / IVR` shortcut above.
+
+**Fix `computeMDE` and `spendRequired` in the same pass.** Correcting one alone breaks the budget-to-MDE inverse: a corrected budget then renders 5.270% against a 5% target.
+
+Empirical backing that the holdout is genuinely unserved: 0 of 2,356,886 WGU served IPs (one day) fell in holdout buckets.
+
+### How far back a power calculator actually needs to look
+
+Per advertiser, exactly two windows, both anchored on that advertiser's **last active day**:
+
+1. **56 days of delivery** for the rate and reach inputs (baseline rate, CPM, imps/IP, distinct IPs). 56 rather than 30 because the horizon is 8 weeks and a direct `distinct_ips_56d` removes the linear extrapolation, which overstates reach 1.25-1.32x (measured 56d/30d distinct-IP growth is 1.393 median, against a linear comparator of 1.839).
+2. **12 months** for the typical-active-month budget basis.
+
+**Deeper history only decides who appears in the picker, never what is computed for them.** So the floor is the recency cut plus 12 months behind it. Against the silver 2024-01-01 floor that makes a **365-day recency cut** the widest one served losslessly: all 4,409 advertisers (1,863 delivering + 2,546 lapsed) keep both windows whole, earliest day needed 2024-08-20. At a 730-day cut, 396 of 5,739 need history from before the floor and their budget basis silently computes on a truncated window. Detail: `tickets/audi_1213_mde_calculator_refresh/outputs/audi_1213_history_floor_options.md`.
+
+### Size the test against the CI floor of the prior, not its point estimate
+
+MDE scales as `1/sqrt(budget)`, so a known budget-at-target-MDE rescales directly: `MDE_new = MDE_ref * sqrt(budget_ref / budget_new)`.
+
+Worked case, Orangetheory National (39718): 5% MDE at $190,064 total, therefore **3.08% at $500,000**. Measured prior lift on them is +9.59% relative (`incr_75_gold_clean_ivw.csv`, z 3.32) with a **95% CI of 3.93% to 15.24%**.
+
+The design rule that falls out: **power against the lower bound of the prior's CI, not its point estimate.** At $500k the test detects even the pessimistic 3.93% end; at $190k (5% MDE) it does not. That reframes a larger budget as downside coverage rather than extra precision, and it is the honest answer to "would you recommend a different budget for max lift."
+
+Corollary on quoting a prior: an entry-cohort read and a full-window IVW read of the same advertiser are **not the same number** and can differ materially (Orangetheory: `current_rel_lift` +6.3%, whose own `current_lift_confirms` field says "flat so far", against the full-window IVW +9.59%). Name which one you are quoting.
+
 <!-- ti_917: 2026-05-05 -->
 ## TI-917 — iROAS / revenue MDE extension and the rate→spend inversion
 

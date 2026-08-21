@@ -1200,7 +1200,8 @@ See entries above.
 - `sum_by_advertiser_by_day` — advertiser-level daily
 - `sum_by_creative_by_day` — creative-level daily
 - `sum_by_region_by_day` — geographic daily
-- All go back to 2024-01-01.
+- All go back to 2024-01-01. **2024-01-01 is a platform-wide silver floor, not a per-table quirk (verified 2026-08-20, AUDI-1213):** `sum_by_advertiser_by_day` and `sum_by_campaign_by_day` return the identical `MIN(day)` and the identical advertiser counts (6,232 advertisers with impressions since then; 1,863 delivering within 30d, 4,369 lapsed). An advertiser whose last delivery predates 2024-01-01 is **absent entirely**, not merely truncated.
+- **To reach further back, `summarydata.all_facts` starts 2020-10-01** — and it is the only option. Measured 2026-08-20: 2,281 advertisers delivered before 2024-01-01, of which **1,410 never delivered again** and so are invisible in every silver day-rollup ($149.03M pre-2024 `media_spend`, 953 of them above $10k). Cost of that reach: an advertiser-grain last-active scan over `all_facts` is **2,683 GB** against **0.161 GB** on `sum_by_advertiser_by_day`. `all_facts` also carries `media_spend` only (no data/platform legs), so its totals are NOT on the advertiser-facing basis. It has `require_partition_filter: false`, so always bound `hour` explicitly or it full-scans.
 
 **⚠️ ATTRIBUTION-VARIANT COLUMNS — separate models, NOT additive buckets; never SUM them (verified AUDI-1070, Avon AID 31921, 2026-06-30):** this table carries multiple attribution variants of the same conversions:
 - **Default:** `views, clicks, view_conversions, click_conversions, view_order_value, click_order_value` — **INCLUDES CTV** (a CTV view-conversion is a `view_conversion`). Clincher: the 100%-CTV prospecting campaign ("Beeswax Television") shows its full conversions in the DEFAULT columns — if default excluded CTV that would be ~0.
