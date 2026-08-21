@@ -455,3 +455,76 @@ bindings in ask 1 are unaffected; what changes is what attaches to it.
 | `mntn-devops` | `spark-optimizer` GSA + the four bindings + a `workload_identity/spark-optimizer` module mirroring `qa-optimization-ml` |
 | `mntn-argocd` | `apps-v3/targeting/spark-optimizer/cron/{config,values-prod}.yaml`, mirroring `audience-service/cron/` |
 | `mntn-team-credentials` | `TeamSecret` for the Astro and Databricks tokens, read by the chart's ExternalSecret |
+
+---
+
+## 8. 2026-08-20 — Compass design review: two findings kept, one refuted
+
+Compass returned three root-cause gaps. Two are correct and change the plan. One is wrong, and
+the repo's own comments say so in two places.
+
+**KEPT — the `cron-jobs` chart change is real, and the version is 1.1.0.** Compass independently
+confirmed §7's reading of the pod spec and priced the fix: add
+`serviceAccountName: {{ .Values.serviceAccountName | default "default" }}`, bump `Chart.yaml`
+1.1.0 → 1.2.0 (minor, defaulted, so existing consumers are untouched). Version verified directly.
+
+**KEPT, and it corrects §7 — the secret template is Onboard Team Secret, not Update Team Secret.**
+SOP 065 (`065-secrets-self-service-via-basecamp.md:24-48`): *Update* rotates or adds keys inside an
+existing secret; *Onboard* creates a new secret at `secrets/<team>/<secret>/`. The plan is a
+**new** sibling beside the ShopperGraph `databricks` entry, precisely so revocation cannot cross
+between them, so it is an onboard. **§2, §6 and §7 all said Update Team Secret — that is wrong,
+and it is wrong for a reason worth keeping: `mntn-team-credentials` uses the Update template
+rather than `rotate-secret`, and I carried "not rotate-secret" forward into "therefore update"
+without checking that a third template covers creation.** Target path:
+`secrets/team-engineering-targeting/spark-optimizer-secrets/`.
+
+**REFUTED — the DEV-7921 PAM finding.** Compass read the DEV-7921 comment in
+`mntn-prj-prod-00/iam/terragrunt.hcl` as retiring standing Dataproc access and called a new
+standing `dataproc.viewer` a reopening of a closed decision. What DEV-7921 retired was
+**`dataproc.editor`** — the mutating role. The same file, eight lines below the comment Compass
+quoted, says the opposite about the viewer role:
+
+```hcl
+# DEV-8182: ... dataproc.viewer is default-allow (no PAM request); compute.viewer is
+# already granted org-wide ... storage.objectViewer stays JIT via the
+# audi-storage-object-view entitlement (18h)
+bindings = { "roles/dataproc.viewer" = ["group:audience-intelligence@mountain.com"] }
+```
+
+and `terragrunt/gcp/iam/pam/mntn-prj-prod-00/terragrunt.hcl:44` states it from the PAM side:
+*"compute.viewer/dataproc.viewer are standing in resources/.../mntn-prj-prod-00/iam."*
+So a standing `dataproc.viewer` is the documented policy in this project, not an exception to
+argue for. **No PAM entitlement is needed and no exception has to be written.** This is the same
+Compass failure mode already recorded in `reference_compass`: strong at "does this artifact
+exist", weaker at mechanism — it found the right file and misread which role the ticket retired.
+
+The half of the finding that survives is `storage.objectViewer`, which the same comment says
+**does** stay JIT (`audi-storage-object-view`, 18h) — for the group. Whether a workload GSA gets
+it standing while humans get it JIT is a real question, and it is the one to actually raise.
+
+**Better precedent than `qa-optimization-ml`, found while checking Compass.** A GKE workload with
+standing Spark-event-log read on this exact project already ships:
+
+```hcl
+# terragrunt/.../mntn-gke-prod-01/iam/workload_identity/data_eng_mcp/terragrunt.hcl
+inputs = {
+  name      = "data-eng-mcp-sa"
+  namespace = "mcp-data-eng"
+  additional_projects = {
+    # Dataproc permissions for batch analysis + Spark event log access
+    "mntn-prj-prod-00" : ["roles/dataproc.viewer", "roles/logging.viewer",
+                          "roles/storage.objectViewer"]
+    ...
+  }
+}
+```
+
+Same cluster, same project, same purpose, **standing not JIT**, and it grants a superset of what
+the optimizer asks for. It settles the question Compass raised, and it is a single file: the
+`_envcommon/iam/workload_identity/common.hcl` module creates the GSA and binds the KSA in one
+place. **Cite it in the PR.** Keep the bucket-scoped `objectViewer`/`objectCreator` from the
+`mntn-marketo` pattern rather than copying `data_eng_mcp`'s project-level `storage.objectViewer`
+— tighter, and Compass's healthy control endorses exactly that shape.
+
+**Compass's own caveat, honoured:** no IAM advisor ran this round, so every finding above is
+IaC-declared and not live-state confirmed, and no run ID or collection age exists to cite.
