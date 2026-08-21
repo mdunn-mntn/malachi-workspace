@@ -143,7 +143,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_crm_exclusion_serve_time | reference | 2026-08-06 | [doc](memory/reference_crm_exclusion_serve_time.md) |
 | feedback_exec_explainer_mechanism_only | feedback | 2026-08-07 | [doc](memory/feedback_exec_explainer_mechanism_only.md) |
 | feedback_no_emdash_no_namedrop | feedback | 2026-08-07 | [doc](memory/feedback_no_emdash_no_namedrop.md) |
-| sparse_code_comments | feedback | 2026-08-07 | [doc](memory/feedback_sparse_code_comments.md) |
 | reference_github_pr_no_clone | reference | 2026-08-09 | [doc](memory/reference_github_pr_no_clone.md) |
 | Airflow 3 / Astronomer backfill can't scope to tasks — use dev+copy or a dedicated backfill DAG | reference | 2026-08-10 | [doc](memory/reference_airflow3_backfill_scoping.md) |
 | feedback_constrain_llm_to_real_taxonomy | feedback | 2026-08-10 | [doc](memory/feedback_constrain_llm_to_real_taxonomy.md) |
@@ -220,3 +219,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_dsh_lab_runtime | reference | 2026-08-21 | [doc](memory/reference_dsh_lab_runtime.md) |
 | reference_gcs_iam_creator_vs_user | reference | 2026-08-21 | [doc](memory/reference_gcs_iam_creator_vs_user.md) |
 | reference_youtube_transcript_methods | reference | 2026-08-21 | [doc](memory/reference_youtube_transcript_methods.md) |
+| sparse_code_comments | feedback | 2026-08-21 | [doc](memory/feedback_sparse_code_comments.md) |
