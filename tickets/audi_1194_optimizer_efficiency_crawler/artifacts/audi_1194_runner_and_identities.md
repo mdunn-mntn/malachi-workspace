@@ -393,3 +393,65 @@ so `DEPLOYMENT_ADMIN` is not a compromise anyone can improve on today — it is 
 CLI offers. **Ask Ryan Kleck** (`WORKSPACE_OWNER`, and the author of the precedent) to either mint
 the token or grant `WORKSPACE_OWNER`. Other workspace owners: Dustin Niehoff, Jordan Piepkow,
 Scotty Pate, Alyson, Sean Yang.
+
+---
+
+## 7. 2026-08-20 — the chart layer, read directly. Cloud Run Job is not on the menu
+
+Cristina approved the `ironclad-fetcher` shape in principle ("using ironclad billing is a really
+solid example of offloading these types of tasks to service accounts"). Reading the actual charts
+changes the mechanism, not the principle.
+
+**The charts live in `SteelHouse/mntn-helm` `charts/`, published to `ghcr.io/steelhouse/mntn-helm`.**
+Neither `mntn-devops` nor `mntn-argocd` holds them, which is why §5 could find the claim but not
+the template. The GitHub Contents API reads them without GHCR package scope (`helm pull` /
+`ghcr.io/v2/...` both 403 on a default `gh` token).
+
+**`gcp-cloudrun` renders a Service and nothing else.** Its README's own resource table is the
+whole surface: `V2Service`, `RegionNetworkEndpointGroup`, an imported `ServiceAccount`,
+`ProjectIAMMember`, `ServiceIAMMember`. Templates on disk: `service.yaml`, `neg.yaml`,
+`invoker.yaml`, `serviceaccount.yaml`, `iam-bindings.yaml`. **There is no `V2Job` template and no
+Cloud Scheduler resource anywhere in the chart.** So "Cloud Run Job + Cloud Scheduler" — the shape
+§3 recommended and the one that went to devops — cannot be built from the paved road as written.
+
+**The targeting team already runs scheduled work, and it is a GKE CronJob.**
+`apps-v3/targeting/audience-service/cron/` and `apps-v3/targeting/3p-audience-builder-api/cron/`
+both use chart **`cron-jobs`** from the same registry, deploying to `prod-targeting` on
+`mntn-gke-prod-01`. That chart has `cron-jobs.yaml` (a real `kind: CronJob`, with `schedule`,
+`concurrencyPolicy: Forbid`, history limits) and `externalsecret.yaml` (ESO → Vault, one Secret
+shared by N jobs, one Vault read). **Its ExternalSecret is the Vault delivery mechanism §6 was
+still missing** — no Vault GCP auth role needed, no Secret Manager, no key.
+
+**Its one gap, verified by reading all 80 lines of the template: there is no `serviceAccountName`
+in the pod spec, and no `annotations` block on the pod.** Without those, the CronJob pod runs on
+the node's default KSA and cannot use GKE Workload Identity, so it has **no GCP identity at all**
+— which is the entire point of the exercise. A one-line addition to that template fixes it.
+
+### The three options, priced honestly
+
+| Shape | What it costs |
+|---|---|
+| Cloud Run **Job** + Scheduler | Not renderable. Needs new templates in `gcp-cloudrun` for `V2Job` and a Scheduler resource. Largest chart change, no in-repo precedent to copy. |
+| Cloud Run **Service** + Scheduler | Chart renders the Service and the `run.invoker` binding, so the trigger works. But the sweep is a batch script; it would need an HTTP handler wrapped around it purely to satisfy the shape, and the Scheduler resource still has no template. |
+| **GKE CronJob** via `cron-jobs` | One added line (`serviceAccountName`) in `mntn-helm`. Everything else exists: my own team's folder, my own team's namespace and cluster, native cron, native Vault. |
+
+**Recommendation: GKE CronJob.** It is the smallest change to the paved road, it lands in
+`apps-v3/targeting/` beside work the team already owns, and it removes the Vault question rather
+than answering it. The Workload Identity binding has an in-repo precedent in the same project:
+`terragrunt/.../mntn-prj-prod-00/iam/workload_identity/qa-optimization-ml/terragrunt.hcl` binds
+`prod-optimization-ml-sa` in namespace `prod-optimization-ml` to a GSA in `mntn-prj-prod-00`.
+
+**This supersedes §3's "Cloud Run Job + Cloud Scheduler" recommendation**, which was written
+before the chart was readable. §3's *reasoning* stands unchanged — no repository identity, no
+OIDC trust widened, no service-account key — and a GKE CronJob under Workload Identity satisfies
+all three the same way. Only the compute primitive changes. The GCP service account and its four
+bindings in ask 1 are unaffected; what changes is what attaches to it.
+
+**Revised PR set:**
+
+| Repo | Change |
+|---|---|
+| `mntn-helm` | add `serviceAccountName` (and a pod `annotations` block) to `charts/cron-jobs/templates/cron-jobs.yaml`, bump chart version |
+| `mntn-devops` | `spark-optimizer` GSA + the four bindings + a `workload_identity/spark-optimizer` module mirroring `qa-optimization-ml` |
+| `mntn-argocd` | `apps-v3/targeting/spark-optimizer/cron/{config,values-prod}.yaml`, mirroring `audience-service/cron/` |
+| `mntn-team-credentials` | `TeamSecret` for the Astro and Databricks tokens, read by the chart's ExternalSecret |
