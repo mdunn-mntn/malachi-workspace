@@ -608,3 +608,80 @@ before writing that unit.
 | Basecamp | **Onboard** Team Secret at `secrets/team-engineering-targeting/spark-optimizer-secrets/` |
 
 `mntn-argocd` and `mntn-helm` drop out entirely. Everything lands in one repo.
+
+---
+
+## 10. 2026-08-20 — cluster confirmed, and `pam-slack-bot` is the exact template
+
+**Cluster: `mntn-gke-management-01`. Namespace: `automations`. ArgoCD project: `platform`.**
+From `argocd-v2/mgmt/platform/slack-ai-bot/applicationset.yaml`, whose cluster generator matches
+`name In [mntn-gke-management-01]` and whose destination namespace is `automations`.
+
+**§9's assumption that the GSA belongs in `mntn-prj-prod-00` is wrong.** Workloads in this
+namespace put their GSA in the **cluster's own project**, `mntn-gke-management-01`, and reach
+other projects by cross-project bindings. `pam-slack-bot@mntn-gke-management-01.iam.gserviceaccount.com`
+already appears in the `mntn-prj-prod-00` IAM policy, so the pattern is proven in exactly the
+direction the optimizer needs.
+
+**`pam-slack-bot` is the template, end to end.** It is an automation with app source under
+`automations/apps/pam-slack-bot`, deploy manifests under `argocd-v2/mgmt/platform/pam-slack-bot/`,
+and a **self-contained Terragrunt unit** holding its own `main.tf` and `variables.tf`:
+
+```hcl
+# terragrunt/gcp/resources/mntn/mgmt/shared/gke/mntn-gke-management-01/pam-slack-bot/terragrunt.hcl
+inputs = {
+  project_id          = "mntn-gke-management-01"
+  k8s_namespace       = "automations"
+  k8s_service_account = "pam-slack-bot"
+}
+```
+
+```hcl
+# main.tf — the GSA and the Workload Identity binding in one place
+locals {
+  wi_member = "serviceAccount:${var.project_id}.svc.id.goog[${var.k8s_namespace}/${var.k8s_service_account}]"
+}
+resource "google_service_account" "bot" { project = var.project_id; account_id = var.sa_account_id ... }
+resource "google_service_account_iam_member" "workload_identity" {
+  service_account_id = google_service_account.bot.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = local.wi_member
+}
+```
+
+and the k8s side closes the loop with a dedicated SA carrying the annotation:
+
+```yaml
+# argocd-v2/mgmt/platform/pam-slack-bot/manifests/base/serviceaccount.yaml
+  annotations:
+    iam.gke.io/gcp-service-account: pam-slack-bot@mntn-gke-management-01.iam.gserviceaccount.com
+# deployment.yaml:34
+      serviceAccountName: pam-slack-bot
+```
+
+**A dedicated SA is the house pattern here, not a deviation.** `slack-ai-bot`'s own
+`serviceaccount.yaml` header argues the case: the shared `automations-runner` in the mgmt cluster
+is *"a 5-line bare SA"* owned by switchback, and *"owning a separate SA isolates us from any
+future change to switchback's bare SA without coordination."* §9 recommended a dedicated KSA on
+blast-radius grounds; the repo already recommends it on ownership grounds too.
+
+**Note there are two different `automations-runner` SAs** — the one in
+`mntn-devops/automations/apps/base/rbac.yaml` (with a Role and RoleBinding) and switchback's bare
+one in `argocd-v2/mgmt/platform/switchback/manifests/base/serviceaccount.yaml`. Do not assume the
+`automations/` overlay's version is what is live in the mgmt-cluster namespace.
+
+**Corrected final PR set — all in `mntn-devops`:**
+
+| Path | Change |
+|---|---|
+| `automations/apps/spark-optimizer/` | source + Dockerfile |
+| `.github/workflows/build-automation-images.yaml` | a build job copying `build-slack-bot-c3po` (dual-push GHCR + GAR via OIDC WIF) |
+| `terragrunt/.../mntn-gke-management-01/spark-optimizer/{terragrunt.hcl,main.tf,variables.tf}` | GSA `spark-optimizer@mntn-gke-management-01`, its Workload Identity binding, and the four cross-project grants into `mntn-prj-prod-00` and the two buckets |
+| `argocd-v2/mgmt/platform/spark-optimizer/` | `applicationset.yaml` + `manifests/base/{cronjob,serviceaccount,kustomization}.yaml` + `manifests/overlays/production/{kustomization,externalsecret}.yaml` |
+| Basecamp | **Onboard** Team Secret at `secrets/team-engineering-targeting/spark-optimizer-secrets/` |
+
+The `automations/apps/base/` + overlay route from §9 is the *other* deployment path in this repo
+(the nonprod/prod kustomize overlays). `pam-slack-bot` and `slack-ai-bot` both moved off it onto
+`argocd-v2/mgmt/platform/<name>/` with their own ApplicationSet. **Follow the newer path** — it is
+where the two most recent automations live, and it avoids the prod-overlay `$patch: delete`
+footgun §9 flagged entirely.
