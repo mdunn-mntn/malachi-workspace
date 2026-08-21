@@ -23,12 +23,15 @@ dest_for() {
     if [[ "$parent" == eventlog_v2_* ]]; then echo "${root}/${parent}"; else echo "$root"; fi
 }
 
-WORKSPACE="/Users/malachi/Developer/work/mntn/workspace"
+# Overridable so the same script runs unattended in the automations container, where the
+# repo checkout does not exist and the artifacts go to GCS instead of a ticket folder.
+WORKSPACE="${OPTIMIZER_WORKSPACE:-/Users/malachi/Developer/work/mntn/workspace}"
 PREFIX="${SPARK_EVENTS_PREFIX:-gs://mntn-data-archive-prod/spark-events}"
 CAP="${OPTIMIZER_LOG_CAP:-200}"       # newest N logs per run; ~160/day, so 200 covers a full day
 PHS="${OPTIMIZER_PHS:-1}"             # 0 skips the ipdsc/tpa PHS half
 DATE="$(date +%F)"
-OUTDIR="${WORKSPACE}/tickets/audi_1194_optimizer_efficiency_crawler/outputs"
+OUTDIR="${OPTIMIZER_OUTDIR:-${WORKSPACE}/tickets/audi_1194_optimizer_efficiency_crawler/outputs}"
+LEDGER="${OPTIMIZER_LEDGER:-${OUTDIR}/optimization_ledger.jsonl}"
 REPORT="${OUTDIR}/optimizer_backlog_${DATE}.md"
 
 cd "$WORKSPACE"
@@ -81,7 +84,8 @@ fi
 # ---- Local-dir mode (testing): crawl a directory that already holds event logs. ----------
 if [[ $# -ge 1 && -d "$1" ]]; then
     echo "[daily_optimizer] local mode: crawling $1"
-    python3 -m airflow_optimizer.sweep "$1" --date "$DATE" --source "local: $1"
+    python3 -m airflow_optimizer.sweep "$1" --date "$DATE" --source "local: $1" \
+        --outdir "$OUTDIR" --ledger "$LEDGER"
     exit 0
 fi
 
@@ -159,4 +163,6 @@ fi
 python3 -m airflow_optimizer.sweep "$TMP" \
     --date "$DATE" \
     --source "${PREFIX} (newest ${n} logs, cap ${CAP}) + ${phs_n} PHS batch log(s)." \
-    --airflow-base "$base"
+    --airflow-base "$base" \
+    --outdir "$OUTDIR" \
+    --ledger "$LEDGER"
