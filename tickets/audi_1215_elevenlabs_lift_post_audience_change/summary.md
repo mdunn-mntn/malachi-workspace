@@ -39,7 +39,15 @@ ElevenLabs (AID 51660) is a B2B advertiser on US CTV (Beeswax leg). TI-1044 (Jun
 4. Synthesize: pre/post lift table with CI/p + delta, caveats signed; reply to Mike; Jira completion comment.
 
 ## 4. Investigation & Findings
-_Workflow in flight (wf_8b658238-b57); findings land here on completion._
+
+### 4.0 Matt Brorby's benchmark (Slack 2026-08-21 1:39 PM, Compass-formatted BQ results)
+Matt's own pre/post run (blackout 07-01..07-10), to reconcile against ours:
+- **Visits: +11% pre → +16.5% post** ("always incremental, improved").
+- **Conversions: 0% pre → +15.6% post, NOT significant either period.**
+- Compass link: https://basecamp.in.mountain.com/mcp-chat?join=c0cf4001-aeb7-4829-9634-c1bdd851da68&atSeq=1
+- **Reconciliation flag:** Matt's pre +11% visit lift vs TI-1044's clean ITT ~0–2% (n.s., June cohorts) — likely different instrument (his pipeline / holdout lineage vs entry-cohort ghost-bid ITT), different windows, possibly advertiser-level vs CGID 122748. Resolve which instrument and grain his numbers come from before calling agreement or disagreement.
+
+_Workflow in flight (wf_8b658238-b57); our numbers land here on completion._
 
 ## 5. Solution
 _Pending._
