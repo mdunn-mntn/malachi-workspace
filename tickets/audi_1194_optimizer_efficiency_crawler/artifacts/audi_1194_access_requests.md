@@ -25,12 +25,13 @@ Below is every ask, grouped by who owns it. Each is one line.
 
 **Two questions I need answered before I can write the PR:**
 
-4. **Where does the compute manifest for a scheduled Cloud Run job live?** I found the IAM for
-   `daily-jedi-media-spend` in Terragrunt, but `kind: V2Job` greps empty in both
-   `mntn-argocd` and `argocd-v2/mgmt/platform/crossplane`.
-5. **Direct bindings on the service account, or add it to `audience-intelligence@`?** I'd prefer
-   direct so the grant is visible to the IAM audit (it can't expand Workspace groups), but tell
-   me if the group is the house pattern.
+4. **Does the `gcp-cloudrun` chart support a Cloud Run *Job* plus a Scheduler trigger, or only a
+   Service?** All three existing users (`ironclad-fetcher`, `-extractor`, `-receiver`) declare
+   `cloudRun.enabled` Services. No `cloudRunJob` or scheduler key appears anywhere in `apps-v3`,
+   and chart `gcp-cloudrun` v0.1.0 is not in `mntn-argocd`, so I can't read it to check.
+5. **A Vault GCP auth role for the runner**, so it can read its two third-party tokens at
+   runtime the way `ironclad-fetcher` reads `teams/team-engineering-billing/ironclad-prod` with
+   role `ironclad-cloud-run`. Who creates that role, and what's the request path?
 
 ## Databricks — Victor / TI
 
@@ -55,7 +56,8 @@ Below is every ask, grouped by who owns it. Each is one line.
     token and the Databricks client id/secret, via the **Update Team Secret** template in
     `mntn-team-credentials` (not `rotate-secret` — that breaks Vault delivery). The team already
     owns a `databricks` entry for ShopperGraph; I want a separate entry so revoking one workload
-    doesn't hit the other. **Who approves that PR?**
+    doesn't hit the other. **Who approves that PR?** Paired with ask 5: the TeamSecret puts the
+    values in Vault, the GCP auth role is what lets the running job read them.
 
 ## GitHub — no ask
 
@@ -73,3 +75,44 @@ A stale token produces a green cron run and an empty report, which is worse than
 **Constraint I'm holding to:** no downloaded service-account key, and no long-lived credential on
 a laptop. The Cloud Run job's attached identity covers GCP with no secret at all; only the two
 third-party tokens need a store, and that store is Vault.
+
+
+---
+
+## What the repos already answer (read directly, 2026-08-20)
+
+Three of the original questions are closed by evidence, so they are no longer asks.
+
+**Where a Cloud Run compute manifest lives: `mntn-argocd`, not `mntn-devops`.**
+`apps-v3/<team>/<service>/service.yaml` is a `kind: PlatformService`
+(`apiVersion: platform.mntn.dev/v1alpha1`) naming chart `gcp-cloudrun` v0.1.0, with a
+`values-<env>.yaml` beside it, deployed into `crossplane-system` on `mntn-gke-management-01`.
+`kind: V2Job` greps empty because the repo holds a **claim**, not the rendered Crossplane
+resource — the chart renders it. `daily-jedi-media-spend` was a bad precedent to chase: only its
+IAM is in `mntn-devops` and it does not appear in `mntn-argocd` at all. **`ironclad-fetcher` is
+the pattern to copy.**
+
+**How the service account gets made: the chart makes it, Terragrunt adds the IAM.**
+`values-prod.yaml` sets `serviceAccount.enabled: true` with an `externalName`, and its own header
+says *"GSA + bucket/project IAM: DEV-7890 Terragrunt (adopt via serviceAccount.externalName)."*
+So the mntn-devops PR carries the bindings, and the argocd PR carries the SA and the compute.
+
+**How a Cloud Run job reads a Vault secret: runtime Vault GCP auth. No Secret Manager, no
+ExternalSecret, no key.** `ironclad-fetcher` sets `VAULT_ADDR`,
+`VAULT_GCP_AUTH_ROLE: ironclad-cloud-run`, `VAULT_SECRET_PATH:
+teams/team-engineering-billing/ironclad-prod`, and its header says *"runtime Vault GCP auth —
+not GSM or GKE ExternalSecret."* That is the same shape the optimizer needs for the Astro and
+Databricks tokens, against `teams/team-engineering-targeting/`.
+
+**Files the PRs touch:**
+
+| Repo | File | Change |
+|---|---|---|
+| mntn-devops | `terragrunt/.../mntn-prj-prod-00/service-accounts/terragrunt.hcl` | add `spark_optimizer` SA, or omit and let the chart adopt it |
+| mntn-devops | `terragrunt/.../mntn-prj-prod-00/iam/terragrunt.hcl` | `roles/dataproc.viewer` for the SA |
+| mntn-devops | `terragrunt/.../iam/storage_buckets_iam/spark-optimizer/terragrunt.hcl` | new dir, `additive` mode, mirrors `mntn-marketo` |
+| mntn-argocd | `apps-v3/targeting/spark-optimizer/{service,values-prod}.yaml` | new, mirrors `ironclad-fetcher` |
+| mntn-team-credentials | `secrets/team-engineering-targeting/spark-optimizer/teamsecret.yaml` | new sibling |
+
+**Still genuinely unknown:** whether `gcp-cloudrun` renders a Job as well as a Service, and how a
+Vault GCP auth role is requested. Both are asks 4 and 5.

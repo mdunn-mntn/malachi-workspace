@@ -282,3 +282,52 @@ leads plus a few things that were fully retrieved.
 Confirm **no personal-account binding remains** on the two buckets or the project — IAM Policy
 Analyzer, and the SA resolving in `v_current_findings` with a resolvable `iac_source`. That is the
 test that the personal-SSO path is *gone*, not merely supplemented.
+
+---
+
+## 5. RESOLVED 2026-08-20 — the manifest's home, read directly from the repos
+
+§3 recorded the Cloud Run compute manifest's home as **unresolved** after Compass found
+`kind: V2Job` greps empty. Cloning both repos closes it, and the answer is that the earlier
+search was looking for the wrong artifact in the wrong repo.
+
+**The manifest lives in `mntn-argocd`, as a claim, not a rendered resource.**
+`apps-v3/<team>/<service>/service.yaml` is `kind: PlatformService`
+(`apiVersion: platform.mntn.dev/v1alpha1`) naming chart **`gcp-cloudrun` v0.1.0**, with
+`values-<env>.yaml` beside it, targeting `crossplane-system` on `mntn-gke-management-01`.
+`V2Job` never appears in git because the chart renders it at deploy time. Three users today:
+`apps-v3/billing/ironclad-{fetcher,extractor,receiver}`.
+
+**`daily-jedi-media-spend` was the wrong precedent.** Only its `run.jobsExecutor` binding is in
+`mntn-devops`; it does not appear in `mntn-argocd` at all, and the `intake` path its header cites
+(`apps-v3/integrations/intake/values-prod.yaml`) **does not exist** — that comment is stale.
+Chasing it is what produced the unresolved finding. **`ironclad-fetcher` is the pattern.**
+
+**Two things ironclad-fetcher settles that this doc had open:**
+
+1. **The SA is created by the chart, and Terragrunt only adds IAM.** `values-prod.yaml` sets
+   `serviceAccount.enabled: true` + `externalName`, and its header reads *"GSA + bucket/project
+   IAM: DEV-7890 Terragrunt (adopt via serviceAccount.externalName)."* So §4's split is right but
+   inverted from what was assumed: the argocd PR owns the identity, the devops PR owns the grants.
+2. **A Cloud Run job reads Vault at runtime via GCP auth — not Secret Manager, not an
+   ExternalSecret, not a key.** `VAULT_ADDR`, `VAULT_GCP_AUTH_ROLE: ironclad-cloud-run`,
+   `VAULT_SECRET_PATH: teams/team-engineering-billing/ironclad-prod`, with the header stating
+   *"runtime Vault GCP auth — not GSM or GKE ExternalSecret."* This is the missing half of §2:
+   the `TeamSecret` puts the values in Vault, and a Vault GCP auth role is what lets the running
+   job read them. **§4's Astro row said "assumed by analogy — no Astro precedent found"; the
+   analogy is now a verified mechanism**, though still not an Astro-specific one.
+
+**What stays open, narrowed:** whether `gcp-cloudrun` renders a Cloud Run **Job** plus a Scheduler
+trigger or only a **Service** — all three users declare `cloudRun.enabled` Services, no
+`cloudRunJob` or scheduler key appears anywhere in `apps-v3`, and the chart itself is not in
+`mntn-argocd` to read. And how a Vault GCP auth role is requested. Both are questions for
+team-engineering-dev-ops.
+
+**Also resolved: reuse an existing SA?** Ryan Kleck suggested `airflow-ti-prod` or a targeting
+user. `airflow-ti-prod@mntn-prj-prod-00` holds `dataproc.editor`, `storage.objectAdmin` and
+`bigquery.admin`, so it would work — and that is the argument against it, since a read-only
+observer would inherit write on everything it observes and its audit-log activity would be
+indistinguishable from the pipeline's own. **No targeting service account exists in that project**
+(only `airflow-ti-prod`, `airflow-camperbid-prod`, `airflow-reporting-prod`). Ryan and Dustin
+Niehoff independently landed on "make a new one"; Dustin scoped it as *"Dplat would give the
+service account storage access, but you'll need to make the service account."*
