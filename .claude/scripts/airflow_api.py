@@ -16,6 +16,8 @@ Airflow-3 specifics baked in (see plan / research brief):
   - logs come back as structured JSON {content, continuation_token} or NDJSON, never plaintext —
     both are flattened to text here
   - terminal states: success, failed, upstream_failed, skipped, removed
+  - the SSO token expires ~1h, so a 401 mid-run triggers ONE automatic renewal (any `astro` CLI
+    call re-mints it on disk) and a retry; an explicitly supplied token is never replaced
 """
 
 import argparse
@@ -41,13 +43,23 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 
 
 # --------------------------------------------------------------------------- auth
+# The astro SSO token expires ~1h, so a long poller 401s mid-run. An explicitly supplied token
+# (--token / $AIRFLOW_BEARER, e.g. a Deployment API token) is NOT renewable here and must not be
+# replaced by whatever happens to be in the astro context.
+_RENEWABLE = False
+_TOKEN = None
+
+
 def resolve_bearer(explicit=None):
     """Return a bearer token (no 'Bearer ' prefix) from --token, env, or the astro context."""
+    global _RENEWABLE, _TOKEN
     tok = explicit or os.environ.get("AIRFLOW_BEARER")
     if tok:
-        return tok.strip().removeprefix("Bearer ").strip()
+        _RENEWABLE, _TOKEN = False, tok.strip().removeprefix("Bearer ").strip()
+        return _TOKEN
     tok = _token_from_astro_config()
     if tok:
+        _RENEWABLE, _TOKEN = True, tok
         return tok
     sys.exit(
         "airflow_api: no bearer token. Run `astro login`, or export AIRFLOW_BEARER=<token>.\n"
@@ -118,12 +130,37 @@ def _token_from_astro_config():
 
 
 # --------------------------------------------------------------------------- http
+def renew_astro_token():
+    """Refresh the on-disk astro token and return it if it actually changed.
+
+    Any `astro` CLI call re-mints the SSO token into ~/.astro/config.yaml, so the cheapest
+    read doubles as the refresh. Returns None when the token is not renewable (explicitly
+    supplied), the CLI is missing, or the value did not move — so a genuinely revoked
+    credential fails once instead of looping.
+    """
+    global _TOKEN
+    if not _RENEWABLE:
+        return None
+    try:
+        subprocess.run(["astro", "deployment", "list"], capture_output=True, text=True, timeout=60)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
+    fresh = _token_from_astro_config()
+    if fresh and fresh != _TOKEN:
+        _TOKEN = fresh
+        return fresh
+    return None
+
+
 def _request(method, url, token, body=None, accept="application/json", retries=3):
     data = json.dumps(body).encode() if body is not None else None
+    # A renewal updates the module token; callers still hold the stale one they were given.
+    token = _TOKEN or token
     headers = {"Authorization": f"Bearer {token}", "Accept": accept}
     if data is not None:
         headers["Content-Type"] = "application/json"
     last = None
+    renewed = False
     for attempt in range(retries):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
@@ -131,6 +168,13 @@ def _request(method, url, token, body=None, accept="application/json", retries=3
                 return resp.status, resp.read()
         except urllib.error.HTTPError as e:
             payload = e.read()
+            if e.code == 401 and not renewed:
+                renewed = True  # one renewal per request, whatever the retry budget
+                fresh = renew_astro_token()
+                if fresh:
+                    headers["Authorization"] = f"Bearer {fresh}"
+                    continue
+                return e.code, payload
             if e.code in (429, 500, 502, 503, 504) and attempt < retries - 1:
                 time.sleep(2**attempt)
                 last = (e.code, payload)
@@ -169,7 +213,8 @@ def _die_on_status(status, obj, what):
         return
     if status in (401, 403):
         sys.exit(
-            f"airflow_api: auth failed (HTTP {status}) on {what}. Token expired/invalid; run `astro login`."
+            f"airflow_api: auth failed (HTTP {status}) on {what} after an automatic token renewal."
+            " Run `astro login` (SSO), or export AIRFLOW_BEARER=<deployment api token>."
         )
     detail = obj.get("detail") or obj.get("_raw") or obj if isinstance(obj, dict) else obj
     sys.exit(f"airflow_api: {what} failed (HTTP {status}): {str(detail)[:300]}")
