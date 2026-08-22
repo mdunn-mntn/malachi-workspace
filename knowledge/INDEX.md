@@ -374,6 +374,7 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 - [Improvements Backlog](../improvements_backlog.md) — Single lightweight tracker for improvement ideas / durable fixes / tech-debt we want to remember but not put on the Jira board yet. On-call durable-fixes feed it; so can anything. Promote a row to Jira only when it's actually prioritized.  ·  _verified 2026-08-15_
 
 ## reference
+- [Action list — what only Malachi can do](../on-call/malachi_action_list.md) — The short list of things blocked on Malachi personally, as of 2026-08-21: three PRs, two credential actions, two external tickets, one share-out. Everything else in improvements_backlog.md is owned by another team or sits in the working queue.  ·  _verified 2026-08-21_
 - [Folder definitions — where every file belongs](folder_definitions.md) —   ·  _verified 2026-08-11_
 - [Retrieval Eval Probes — cold-start regression suite](eval_probes.md) — Cold-start retrieval probes: a fresh chat using only START_HERE + _ROUTING + tickets/INDEX must reach each probe's targets. Every real cold-start miss becomes a new probe here.
 - [Service Account Ask — every automation, every surface](../on-call/service_account_ask.md) — The request list for moving this workspace's automations off a personal identity, rebuilt 2026-08-21 on the pattern AUDI-1194 actually shipped. Copy the spark-optimizer unit rather than re-deriving; do not ship a container. One row per identity with the shape, the owner, and what breaks without it.  ·  _verified 2026-08-21_
