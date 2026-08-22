@@ -36,3 +36,27 @@ one bounded synthesis call; its design deliberately puts the credential on the M
 prod path key-free. See [[project_airflow_debugger]], [[reference_pi5_server]].
 
 Same pattern is the right home for any other secret still sitting plaintext in the shell profile.
+
+## A second Keychain secret: the Astro deployment token (2026-08-21)
+
+Same pattern, same reasoning. `astro_deployment_token` in the login Keychain, resolved in
+`~/.zshrc` alongside the Anthropic key:
+
+```bash
+export AIRFLOW_BEARER=$(security find-generic-password -a "$USER" -s astro_deployment_token -w 2>/dev/null)
+export AIRFLOW_TI_API_URL="https://cmd6bd10c0gl901rfuokgryiq.iq.astronomer.run/dokgryiq/api/v2"
+export AIRFLOW_API_BASE="$AIRFLOW_TI_API_URL"
+```
+
+`DEPLOYMENT_ADMIN` on `airflow-ti`, expires 2027-08-21. **This is the non-human path**:
+`airflow_api.resolve_bearer()` prefers `$AIRFLOW_BEARER` over the personal `astro login` context
+and never auto-renews an explicitly supplied token, so it does not silently fall back to a person.
+
+**The base URL is NOT what `astro deployment inspect` prints plus `/api/v2` in the obvious way** —
+it is `https://<deployment-id>.iq.astronomer.run/<suffix>/api/v2`, where the suffix is the tail of
+the id. Take it from `inspect`, do not construct it.
+
+**Never paste a token into a chat, a ticket, or a commit.** This one was pasted, and the honest
+status is that it should be rotated (`astro deployment token rotate --deployment-id <id>`); it was
+stored on an explicit instruction to keep it. Rotation is a one-liner and the Keychain entry is
+the only thing to update.
