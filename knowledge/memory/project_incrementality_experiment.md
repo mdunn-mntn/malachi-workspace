@@ -6,12 +6,14 @@ metadata:
   type: project
   originSessionId: 9c582365-7ebc-49fa-9d1e-6d93ac47841b
 doc_type: memory
-keywords: [incrementality, ber-2250, ghost-bid lift, persuadables gradient, liftlab, kochava, guid_log, clickpass_log, ti-835, incremental roas, matt brorby, remove-ds14 experiment, ds14 availability gate, kirsa, audi-1176, audi-1117, audi-1215, elevenlabs]
+keywords: [incrementality, ber-2250, ghost-bid lift, persuadables gradient, liftlab, kochava, guid_log, clickpass_log, ti-835, incremental roas, matt brorby, remove-ds14 experiment, ds14 availability gate, kirsa, audi-1176, audi-1117, audi-1215, elevenlabs, mde calculator, ui mde view, nick scialli, chris franz, audi-1213]
 domain: [incrementality, experimentation, project]
 lifecycle: active
-last_verified: 2026-08-21
+last_verified: 2026-08-24
 ---
 BER-2250 "Incrementality Overhaul" is the highest-leverage initiative for Q2 2026.
+
+**UPDATE (2026-08-24) — UI MDE view moved to Nick Scialli (eng).** Nick Scialli is implementing the in-product MDE view for incrementality testing (prior UI track: Chris Franz's gary-ql PR #4445, `Advertiser.mdeInputs`). Al Beretta routed him the TI-1019 gist calculator; we handed off `ti_884_mde_calculator.py` as source of truth with a warning not to port the gist JS spend conversion (holdout charged for impressions: required spend 1.1111x high, displayed MDE 1.0541x high, the AUDI-1213 defect). An eng-owned UI view may change who the AUDI-1213 refresh serves. See `tickets/audi_1213_mde_calculator_refresh/summary.md` §8.
 
 **UPDATE (2026-08-21) — ElevenLabs escalation (AUDI-1215).** Customer paused the $770K CGID 122748 campaign 2026-08-20 citing no lift ($10-12M annual account). Verdict: visit lift real in both periods (+11.1% pre / +16.5% post, change n.s.), but incremental visit volume fell ~4x and the powered fixed-holdout conversion instrument shows lift fell 36% after the 6/30-7/29 change bundle. Frequency finding (lift peaks at 2-10 exposures, -17.7% at 11+) backs the frequency-target recommendation. Gruns frequency spot-check floated by Edgar as a follow-up. See `tickets/audi_1215_elevenlabs_lift_post_audience_change/summary.md` and [[reference_holdout_lift_lineage]].
 

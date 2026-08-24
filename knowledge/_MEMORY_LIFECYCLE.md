@@ -211,7 +211,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | databricks | reference | 2026-08-21 | [doc](memory/reference_databricks.md) |
 | feedback_branch_from_origin_not_local_main | feedback | 2026-08-21 | [doc](memory/feedback_branch_from_origin_not_local_main.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-21 | [doc](memory/feedback_review_own_pr_before_asking.md) |
-| incrementality-experiment-ber-2250 | project | 2026-08-21 | [doc](memory/project_incrementality_experiment.md) |
 | project_airflow_optimizer | project | 2026-08-21 | [doc](memory/project_airflow_optimizer.md) |
 | project_dsh_harness_spike | project | 2026-08-21 | [doc](memory/project_dsh_harness_spike.md) |
 | reference_dsh_harness | reference | 2026-08-21 | [doc](memory/reference_dsh_harness.md) |
@@ -221,3 +220,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_youtube_transcript_methods | reference | 2026-08-21 | [doc](memory/reference_youtube_transcript_methods.md) |
 | sparse_code_comments | feedback | 2026-08-21 | [doc](memory/feedback_sparse_code_comments.md) |
 | feedback_no_label_colon_titles | feedback | 2026-08-24 | [doc](memory/feedback_no_label_colon_titles.md) |
+| incrementality-experiment-ber-2250 | project | 2026-08-24 | [doc](memory/project_incrementality_experiment.md) |
