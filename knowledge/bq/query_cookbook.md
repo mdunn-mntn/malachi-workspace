@@ -278,6 +278,7 @@ Real, measured wins from the perf log and ticket work. The `perf-analyst` agent 
 | Don't double-aggregate (per-adv AND pooled in one query) | 4-way join runs twice, shuffles billions, hit 6h wall / silent timeout | drop the pooled CTE, reconstruct `pooled = SUM(per_adv)` in Python | TI-933 |
 | `APPROX_COUNT_DISTINCT`/short window, not exact `COUNT(DISTINCT ip)` over 30d | ~30.5 TB billed sizing ~24 DS35 categories | short 3-7d window or APPROX, single load-day | TI-1053 |
 | Query the three log tables individually, not one UNION ALL | one job processes all three, no early exit | three jobs, skip tables early, better slot allocation | TI-650 |
+| `REGEXP_CONTAINS` over raw `audience_segments.expression` text to test `data_source_id` membership, joined to `campaigns` + `cost_impression_log` | 2 runs / 542.5 GB billed total (perf log `ac0220ca…`) | **candidate, unverified — needs a follow-up ticket to confirm:** narrow to the needed `campaign_id`s in `audience_audience_segments`/`campaigns` *before* joining to `cost_impression_log` (the log table is the expensive side of the join); avoid re-deriving the DS-membership regex per run if the same `campaign_id` set repeats. See [[reference_fangorn_audience_overlay]] for why segment expressions carry DS13/DS19/DS46 as compiled text rather than a queryable column — that's why the regex scan exists at all. | perf log 2026-08-23, `bq_perf_log.jsonl` |
 
 ---
 
