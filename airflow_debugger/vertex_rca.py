@@ -33,6 +33,8 @@ from .dataproc_rca import (
     error_region,
     logging_messages,
 )
+from .masks import detect as detect_mask
+from .masks import note as mask_note
 from .signatures import classify
 
 REGION = "us-central1"
@@ -47,10 +49,6 @@ _DATAPROC_JOB_RE = re.compile(
 )
 _CLUSTER_RE = re.compile(r"parallel jobs to cluster (\S+)")
 
-# The component's cleanup delete 404s when the refused create made no cluster (INC-025).
-_DELETE_404_RE = re.compile(
-    r"NotFound: 404 Not found: Cluster projects/[^/]+/regions/[^/]+/clusters/(\S+)"
-)
 _LAST_JOB_RE = re.compile(r"last job_id: ([0-9a-f-]{36})")
 
 
@@ -207,17 +205,31 @@ def analyze_pipeline_run(
         if why:
             ev.notes.append(why)
 
-    masked = _DELETE_404_RE.search(f"{ev.error_text or ''}\n{msgs}")
-    if masked:
-        ev.cluster_name = ev.cluster_name or masked.group(1)
-        text, why = _cluster_create_error(masked.group(1), project)
-        if text:
-            ev.error_text, ev.error_layer = text, "dataproc-create"
-        else:
-            ev.notes.append(why or f"no CreateCluster audit entry for {masked.group(1)}")
+    ev.error_text, ev.error_layer = _past_the_mask(ev, msgs, project)
 
     ev.signature = _classified(ev.error_text)
     return ev
+
+
+def _past_the_mask(ev: VertexEvidence, msgs: str, project: str) -> tuple[str | None, str | None]:
+    """Follow a masking error to the real one, or say in the notes that we stopped on a mask."""
+    blob = f"{ev.error_text or ''}\n{msgs}"
+    mask = detect_mask(blob)
+    if not mask or mask.key != "dataproc_cleanup_delete_404":
+        if mask:
+            ev.notes.append(mask_note(mask))
+        return ev.error_text, ev.error_layer
+
+    import re as _re
+
+    m = _re.search(mask.pattern, blob, _re.IGNORECASE)
+    cluster = m.group(1) if m else None
+    ev.cluster_name = ev.cluster_name or cluster
+    text, why = _cluster_create_error(cluster, project) if cluster else (None, "no cluster name")
+    if text:
+        return text, "dataproc-create"
+    ev.notes.append(f"{mask_note(mask)} ({why or 'no CreateCluster audit entry'})")
+    return ev.error_text, ev.error_layer
 
 
 def _cluster_create_error(cluster_name: str, project: str) -> tuple[str | None, str | None]:

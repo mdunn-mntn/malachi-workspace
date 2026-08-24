@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from airflow_debugger import external_task_rca, vertex_rca
+from airflow_debugger import external_task_rca, masks, vertex_rca
 from airflow_debugger.parse import diagnose, parse_log
+from airflow_debugger.report import build_report
 from airflow_debugger.signatures import classify
 
 # 2026-08-20 fangorn_hhid_inference_pipeline_run/challenger_inference_pipeline, try 1.
@@ -165,8 +166,6 @@ def test_a_routed_verdict_is_high_confidence_not_unclassified() -> None:
         "spark": asdict(ev),
         "root_signature": ev.signature,
     }
-    from airflow_debugger.report import build_report
-
     report = build_report(diag)
     assert "upstream/external-task-failed" in report
     assert "unclassified" not in report
@@ -189,9 +188,10 @@ _MASKING_404 = (
 
 def test_the_cleanup_404_is_recognised_as_a_mask_not_a_cause() -> None:
     """A missing cluster at the replica layer is a symptom; the real fault is one hop deeper."""
-    m = vertex_rca._DELETE_404_RE.search(_MASKING_404)
-    assert m
-    assert m.group(1) == "fangorn-challenger-a483e22d"
+    mask = masks.detect(_MASKING_404)
+    assert mask is not None
+    assert mask.key == "dataproc_cleanup_delete_404"
+    assert mask.resolver == "vertex_rca._cluster_create_error"
 
 
 def test_the_create_refusal_beats_the_cleanup_404() -> None:
@@ -230,6 +230,51 @@ def test_a_replica_404_with_no_audit_entry_stays_at_the_replica_layer() -> None:
         vertex_rca.logging_messages = orig
     assert text is None
     assert err == "permission denied"
+
+
+def test_every_mask_declares_what_it_hides_and_where_to_look() -> None:
+    """A mask with no next hop is worse than no mask: it stops the chain and says nothing."""
+    assert masks.MASKS
+    keys = [m.key for m in masks.MASKS]
+    assert len(keys) == len(set(keys))
+    for m in masks.MASKS:
+        assert m.hides and m.next_hop, m.key
+        assert masks.note(m).startswith("This is not the cause")
+        assert m.next_hop in masks.note(m)
+
+
+def test_the_notifier_failure_is_a_mask_not_the_task_failure() -> None:
+    """INC corpus: 7 logs where the on-failure Slack callback is the last thing that raises."""
+    mask = masks.detect("slack_sdk.errors.SlackApiError: channel_not_found")
+    assert mask is not None
+    assert mask.key == "slack_notifier_failed"
+
+
+def test_a_reattached_batch_is_a_mask_not_a_fresh_fault() -> None:
+    """The retry inherits the first attempt's error; reporting it as new hides the real one."""
+    mask = masks.detect("AlreadyExists: 409 Batch with given id already exists")
+    assert mask is not None
+    assert mask.key == "dataproc_batch_reattach"
+
+
+def test_a_real_error_is_not_a_mask() -> None:
+    """The registry must stay narrow: a genuine cause has to pass straight through."""
+    assert masks.detect("java.lang.OutOfMemoryError: Java heap space") is None
+    assert masks.detect("Insufficient 'N2_CPUS' quota. Requested 4672.0") is None
+    assert masks.detect(None) is None
+    assert masks.detect("") is None
+
+
+def test_the_report_refuses_to_present_a_mask_as_the_verdict() -> None:
+    """The whole point: a masked verdict says so in the report, never stands alone."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "t"},
+        "root_error": _MASKING_404,
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "This is not the cause" in out
+    assert "audit log" in out
 
 
 if __name__ == "__main__":

@@ -14,6 +14,9 @@ import re
 import subprocess
 from pathlib import Path
 
+from .masks import detect as detect_mask
+from .masks import note as mask_note
+
 DBX_HOST = "https://1262887251702944.4.gcp.databricks.com"
 DATAPROC_CONSOLE = "https://console.cloud.google.com/dataproc/batches/us-central1"
 VERTEX_CONSOLE = "https://console.cloud.google.com/vertex-ai/locations/{loc}/pipelines/runs"
@@ -99,6 +102,9 @@ def build_report(diag: dict) -> str:
         lines.append(link)
     if not root and diag.get("no_error_text"):
         lines.append(_no_output_note(diag.get("ti_state")))
+    mask = detect_mask(_verdict_text(diag))
+    if mask:
+        lines.append(mask_note(mask))
     if not root:
         notes = "; ".join(
             (diag.get("notes") or []) + ((diag.get("spark") or {}).get("notes") or [])
@@ -119,6 +125,21 @@ def build_report(diag: dict) -> str:
     if len(report) > _MAX:
         report = report[: _MAX - 1].rstrip() + "…"
     return report
+
+
+def _verdict_text(diag: dict) -> str:
+    """The error the report is about to stand behind, whatever layer it came from."""
+    spark = diag.get("spark") or {}
+    return " ".join(
+        str(x)
+        for x in (
+            diag.get("root_error"),
+            spark.get("error_text"),
+            spark.get("state_message"),
+            (diag.get("root_signature") or {}).get("matched_on"),
+        )
+        if x
+    )
 
 
 def _repo_paths() -> dict[str, list[str]]:
