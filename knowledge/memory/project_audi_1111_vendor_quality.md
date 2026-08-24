@@ -1,6 +1,6 @@
 ---
 name: audi-1111-vendor-quality
-description: "AUDI-1111 epic (Vendor Data Quality & Valuation) — 1115/1116/1117 measured+verified 07-16/17; billing=WON-impression single charge (BAE ddp_mm_winners_imp), ~0.2% of ingested bills; per-imp media CPM ~$10.7 vendor-independent → rate fine, preemption is the lever; two grains of vendor-unique (5.6M membership vs 27.5M impression); RTC vendor-independent 0.01%; DS14 pool 97M free-stale vs 95.7M vendor-only; routing Alyson→Mike+Kale→Paulo"
+description: "AUDI-1111 epic (Vendor Data Quality & Valuation) — 1115/1116/1117 measured+verified 07-16/17, closed Done 2026-08-24; 1144 merged into 1113; billing=WON-impression single charge (BAE ddp_mm_winners_imp), ~0.2% of ingested bills; per-imp media CPM ~$10.7 vendor-independent → rate fine, preemption is the lever; two grains of vendor-unique (5.6M membership vs 27.5M impression); RTC vendor-independent 0.01%; DS14 pool 97M free-stale vs 95.7M vendor-only; routing Alyson→Mike+Kale→Paulo"
 metadata: 
   node_type: memory
   type: project
@@ -9,7 +9,7 @@ doc_type: memory
 keywords: [audi_1111, vendor data quality, valuation epic, willingness to pay, preemption, ddp_mm_winners_imp, rtc vendor-independent, ds14, cpm layer, 33across, won impression billing, bae-4923, preemption run rate, mm_dsid_count]
 domain: [project, pricing]
 lifecycle: active
-last_verified: 2026-08-05
+last_verified: 2026-08-24
 ---
 **AUDI-1111** epic (research-for-a-proposal; implementation separate) from the 2026-07-16
 AUDI-1089 stakeholder readout. Children: AUDI-1093 (preemption spec, re-parented) + 1113
@@ -21,9 +21,16 @@ Alyson?) + 1115/1116/1117 (Malachi analyses). Folder `tickets/audi_1111_vendor_q
 confirmed (1/N split, free logs in divisor at $0 CPM, meter does not preempt), overpayment
 quantified at two grains (domain floor ~$275K / vertical-targeting $412.4K, roster $812.4K→$400.0K),
 fix spec validated by the BAE billing team and handed off. Execution lives in AUDI-1113 (impl) +
-AUDI-1144 (contract-owner discussion) + AUDI-1145 (pipeline ownership). ⚠ DUP: AUDI-1113 (epic
-child) and standalone AUDI-1143 are the SAME impl ticket ("no paid-vendor credit when a free log
-covers the imp") — both Backlog; one should be closed as a duplicate / re-parented. Flagged to user.
+AUDI-1145 (crediting rules/loop, description rewritten 2026-08-24). Duplicates resolved: AUDI-1143
+closed as 1113's duplicate 2026-07-22; **AUDI-1144 closed Duplicate 2026-08-24, merged into
+AUDI-1113** — its open item (scenario C preemption ruling, $768,916/yr, from Kale/Paulo via
+#identity-crediting; Andy Everson contract terms only) carried as 1113 comment 610683.
+
+**2026-08-24 backlog audit:** AUDI-1115/1116/1117 transitioned Done in Jira (analyses were complete
++ verified since 07-16/17, never transitioned; completion comments cite comments 596162/596246-7,
+596106, 596107). AUDI-1145 reframed to the post-2026-08-19 crediting state (formalize Vendor List 1
+rules, get into Maya's AP-run monthly-script loop, absorb the AUDI-694-routed fixes: scenario B
+mismatch, 39.3% uncredited gap, 33Across dedup). Epic + AUDI-1113/1114 remain open.
 
 **All three analyses MEASURED + 5-agent adversarially VERIFIED (2026-07-16/17):**
 - **1115 WTP, 4 lenses (L0 meter / L1 ingested / L2 flow-filtered unique / L3 bid-won):**

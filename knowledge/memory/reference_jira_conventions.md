@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3]
 domain: [jira-process]
 lifecycle: active
-last_verified: 2026-08-05
+last_verified: 2026-08-24
 ---
 ## from feedback_jira_formatting.md
 
@@ -251,5 +251,6 @@ Single-issue reads (`/rest/api/2/issue/KEY`), comment/create writes (REST v2, se
 
 - **Sprint field = `customfield_10321`** (NOT 10020 — that read None). To find the active sprint: AUDI scrum board id **1814** → `GET /rest/agile/1.0/board/1814/sprint?state=active`. To add an issue: `POST /rest/agile/1.0/sprint/<id>/issue -d '{"issues":["AUDI-XXXX"]}'` (204); to pull it back out: `POST /rest/agile/1.0/backlog/issue -d '{"issues":[...]}'`.
 - **Transitions:** `GET .../issue/KEY/transitions` then `POST .../transitions -d '{"transition":{"id":"6"}}'`. On the AUDI workflow, **Done=6**, Backlog=671, In Progress=771, On Hold=3, Blocked=61, Ready(Dev)=461. There's a direct Backlog→Done, fine for logging already-complete work as Done.
+- **issueLink type names (verified 2026-08-24, AUDI-882→AUDI-1100):** the relates link is `{"type":{"name":"Relates To"}}` on this instance — POSTing `"Relates"` returns 404 ("No issue link type with name 'Relates' found"). `"Duplicate"` works as-is. Resolution ids for the Close transition (re-verified on the 2026-08-24 backlog-audit closes): Done=`10000`, Won't Do=`10100`, Duplicate=`3`; AUDI transition id 6 = Close.
 - **No DELETE permission (403)** on the AUDI project ("You do not have permission to delete issues"). To neutralize a mis-created ticket: transition to Backlog, rename `[VOID - duplicate of AUDI-XXXX]`, move out of the sprint, link Duplicate (`POST /rest/api/2/issueLink -d '{"type":{"name":"Duplicate"},"outwardIssue":{"key":"<void>"},"inwardIssue":{"key":"<keep>"}}'`), comment, and flag a human to delete.
 - **A ticket represents the STAKEHOLDER DELIVERABLE (the ask), not the internal work done in service of it.** Logged AUDI-1177 "xlsx format-system uplift" for a session that was really about giving Kirsa the Select lift numbers — Malachi corrected it; the deliverable = AUDI-1172 (the numbers). Tooling/format improvements made along the way are not their own ticket unless separately requested. See [[feedback_ticket_writing_rule]].

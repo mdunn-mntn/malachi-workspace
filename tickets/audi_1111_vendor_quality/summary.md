@@ -50,12 +50,12 @@ evidence base lives in `tickets/audi_1089_ddp_vendor_evaluations/` (Done, standa
 
 | Ticket | What | Owner | Folder |
 |---|---|---|---|
-| [AUDI-1093](https://mntn.atlassian.net/browse/AUDI-1093) | Free-log credit preemption — investigate + spec (In Progress; re-parented into this epic) | Malachi | (pre-epic, work in audi_1089 runbook) |
-| [AUDI-1113](https://mntn.atlassian.net/browse/AUDI-1113) | Implement free-log credit preemption in billing (**$768,916/yr stake** at the corrected Jul-2026 impression-winner run-rate; BAE-confirmed on BAE-4923) | TBD (Sean Yang's team?) | — |
+| [AUDI-1093](https://mntn.atlassian.net/browse/AUDI-1093) | Free-log credit preemption — investigate + spec (**Done 2026-07-22**; re-parented into this epic) | Malachi | (pre-epic, work in audi_1089 runbook) |
+| [AUDI-1113](https://mntn.atlassian.net/browse/AUDI-1113) | Implement free-log credit preemption in billing (**$768,916/yr stake** at the corrected Jul-2026 impression-winner run-rate; BAE-confirmed on BAE-4923). AUDI-1144 merged in 2026-08-24 (closed Duplicate) — carried open item: get the scenario C preemption ruling from Kale/Paulo via #identity-crediting (1113 comment 610683) | TBD (Sean Yang's team?) | — |
 | [AUDI-1114](https://mntn.atlassian.net/browse/AUDI-1114) | Vendor data-quality outreach — 5 asks (33Across webmail/bots, Sovrn malformed URLs, Justuno user_agent, 5x5 outbrain iframes, ShareThis/Predactiv adult) | TBD (Alyson?) | — |
-| [AUDI-1115](https://mntn.atlassian.net/browse/AUDI-1115) | True willingness-to-pay CPM per vendor — 3 lenses | Malachi | `audi_1115_wtp_cpm/` |
-| [AUDI-1116](https://mntn.atlassian.net/browse/AUDI-1116) | RTC × free logs — feed, timing, hourly-grain check | Malachi | (folder on start) |
-| [AUDI-1117](https://mntn.atlassian.net/browse/AUDI-1117) | DS14 availability gate vs site_visit_signal overlap | Malachi | (folder on start) |
+| [AUDI-1115](https://mntn.atlassian.net/browse/AUDI-1115) | True willingness-to-pay CPM per vendor — 3 lenses (**Done 2026-08-24**) | Malachi | `audi_1115_wtp_cpm/` |
+| [AUDI-1116](https://mntn.atlassian.net/browse/AUDI-1116) | RTC × free logs — feed, timing, hourly-grain check (**Done 2026-08-24**) | Malachi | `audi_1116_rtc_free_logs/` |
+| [AUDI-1117](https://mntn.atlassian.net/browse/AUDI-1117) | DS14 availability gate vs site_visit_signal overlap (**Done 2026-08-24**) | Malachi | `audi_1117_ds14_svs_overlap/` |
 
 ## 3. Meeting decisions driving this epic (2026-07-16 readout)
 
@@ -259,6 +259,11 @@ settled, the live ask is implementation (AUDI-1113), not further proof.
       effect on totals. Native `mm_dsid_count` settled. **$768,916/yr is the figure to quote.**
 - [ ] Decide whether to re-raise AUDI-1113 implementation now that BAE has independently confirmed
       the thesis from the billing side — the case is no longer ours alone
+- 2026-08-24 backlog audit: children AUDI-1115/1116/1117 closed Done in Jira (analyses were
+  complete since 07-16/17, never transitioned); AUDI-1144 closed Duplicate, merged into
+  AUDI-1113 with the scenario C preemption ruling carried as 1113 comment 610683; AUDI-1145
+  description rewritten to the post-2026-08-19 state (formalize Vendor List 1 crediting
+  rules, join Maya's monthly-script loop, absorb the AUDI-694-routed crediting fixes)
 - [ ] AUDI-1113/1114 owner assignment at grooming
 - [ ] Monday 2026-07-20 meeting: billing credit-assignment rule (fractional vs first-reporter)
 - [ ] Proposal routing: pre-read Alyson → Mike + Kale → Paulo (after analyses land)

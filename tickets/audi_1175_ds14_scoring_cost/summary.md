@@ -1,7 +1,7 @@
 ---
 doc_type: ticket
 title: "AUDI-1175: Quantify $ cost of scoring non-addressable MM/vertical IPs (DS14 gate)"
-status: backlog
+status: done
 date: 2026-07-28
 summary: "Cost the MM/vertical IPs DS14's 8-day gate makes non-biddable; go/no-go on gating scoring"
 result: "Gate is safe across all consumers (HHST auction-scoped); worth ~$2-11k/mo; impl = AUDI-1176"
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1175: Quantify $ cost of scoring non-addressable MM/vertical IPs (DS14 gate)
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1175
-**Status:** Backlog
+**Status:** Done (Jira transitioned 2026-08-24)
 **Date Started:** 2026-07-28
 **Assignee:** Malachi
 **Blocks:** [AUDI-1176](https://mntn.atlassian.net/browse/AUDI-1176) (gate scoring input to DS14-addressable set)
@@ -170,6 +170,7 @@ Confidence: LOW / order-of-magnitude. Executor sizes/tiers/ceilings are exact fr
 
 ## 8. Open Items / Follow-ups
 
+- **2026-08-24: Jira closed Done (backlog audit)** — deliverable existed since 2026-07-28 and the RFD is published; the 2026-07-28 keep-in-Backlog directive is superseded. Billing firm-up (GCP billing IAM) + owner validation carry on AUDI-1176 as sprint-start steps.
 - **RFD published to Confluence (TAR / Targeting) 2026-07-29** → [TAR page](https://mntn.atlassian.net/wiki/spaces/TAR/pages/3722346650) (tiny https://mntn.atlassian.net/x/moDe3Q). Source `artifacts/audi_1175_rfd_draft.md`, adversarially hardened against 2 reviews (`artifacts/audi_1175_rfd_adversarial_review.md`). Socialize with the `audience_intent` owner (likely Ryan Kleck / AUDI team) + heads-up DDM/Devon before beginning AUDI-1176. The ask: approve the work, name a co-owner, agree the shadow-run delivery-parity gate.
 
 - **$ figure — DONE (order-of-magnitude):** gate optimization saves ~$1.3k/mo (DS13) to ~$11k/mo (~$130k/yr, if DS19 cut is applied to `prospecting_keywords` where the volume lands). Whole scoring DAG ≈ $39k/mo. Firm up to a point estimate via GCP Billing BQ export / `gcloud dataproc batches describe` (DCU-seconds per batch).

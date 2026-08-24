@@ -81,7 +81,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_minimize_complexity | feedback | 2026-07-22 | [doc](memory/feedback_minimize_complexity.md) |
 | reference_audience_intent_scoring_dag | reference | 2026-07-22 | [doc](memory/reference_audience_intent_scoring_dag.md) |
 | reference_mntn_campaign_stages | reference | 2026-07-22 | [doc](memory/reference_mntn_campaign_stages.md) |
-| feedback-adversarial-workflow-authoring | feedback | 2026-07-23 | [doc](memory/feedback_adversarial_workflow_authoring.md) |
 | reference-ticket-context-eval-tooling | reference | 2026-07-23 | [doc](memory/reference_ticket_context_eval_tooling.md) |
 | reference_causal_impact_dashboard | reference | 2026-07-23 | [doc](memory/reference_causal_impact_dashboard.md) |
 | reference_mm_component_taxonomy | reference | 2026-07-23 | [doc](memory/reference_mm_component_taxonomy.md) |
@@ -122,7 +121,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | sprint_ready_plan | feedback | 2026-07-29 | [doc](memory/feedback_sprint_ready_plan.md) |
 | feedback_read_full_source_before_verdict | feedback | 2026-07-30 | [doc](memory/feedback_read_full_source_before_verdict.md) |
 | feedback_self_qa_before_shipping | feedback | 2026-07-30 | [doc](memory/feedback_self_qa_before_shipping.md) |
-| project_audi_1175_ds14_scoring_cost | project | 2026-07-30 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | reference_bash_inline_unicode_gotcha | reference | 2026-07-30 | [doc](memory/reference_bash_inline_unicode_gotcha.md) |
 | reference_confluence_api_access | reference | 2026-07-30 | [doc](memory/reference_confluence_api_access.md) |
 | reference_openai_sdk_pagination | reference | 2026-07-30 | [doc](memory/reference_openai_sdk_pagination.md) |
@@ -132,8 +130,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_data_eng_mcp | reference | 2026-07-31 | [doc](memory/reference_data_eng_mcp.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-07-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_ruff_code_standards | reference | 2026-07-31 | [doc](memory/reference_ruff_code_standards.md) |
-| audi-1111-vendor-quality | project | 2026-08-05 | [doc](memory/project_audi_1111_vendor_quality.md) |
-| jira-conventions | reference | 2026-08-05 | [doc](memory/reference_jira_conventions.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
 | reference-ddp-billing-logic | reference | 2026-08-05 | [doc](memory/reference_ddp_billing_logic.md) |
 | feedback_hold_evidenced_verdict | feedback | 2026-08-06 | [doc](memory/feedback_hold_evidenced_verdict.md) |
@@ -215,10 +211,14 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_holdout_lift_lineage | reference | 2026-08-21 | [doc](memory/reference_holdout_lift_lineage.md) |
 | reference_youtube_transcript_methods | reference | 2026-08-21 | [doc](memory/reference_youtube_transcript_methods.md) |
 | sparse_code_comments | feedback | 2026-08-21 | [doc](memory/feedback_sparse_code_comments.md) |
+| audi-1111-vendor-quality | project | 2026-08-24 | [doc](memory/project_audi_1111_vendor_quality.md) |
+| feedback-adversarial-workflow-authoring | feedback | 2026-08-24 | [doc](memory/feedback_adversarial_workflow_authoring.md) |
 | feedback_no_label_colon_titles | feedback | 2026-08-24 | [doc](memory/feedback_no_label_colon_titles.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-24 | [doc](memory/feedback_review_own_pr_before_asking.md) |
 | incrementality-experiment-ber-2250 | project | 2026-08-24 | [doc](memory/project_incrementality_experiment.md) |
+| jira-conventions | reference | 2026-08-24 | [doc](memory/reference_jira_conventions.md) |
 | project_audi_1142_shopper_graph_spike | project | 2026-08-24 | [doc](memory/project_audi_1142_shopper_graph_spike.md) |
+| project_audi_1175_ds14_scoring_cost | project | 2026-08-24 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-24 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-24 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_test_budget_from_rates | reference | 2026-08-24 | [doc](memory/reference_test_budget_from_rates.md) |

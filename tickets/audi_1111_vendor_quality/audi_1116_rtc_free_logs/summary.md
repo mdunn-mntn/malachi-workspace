@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1116: RTC x Free Logs — Feed, Timing, Hourly-Grain Check"
-status: in_progress
+status: done
 date: 2026-07-17
 summary: "Whether vendor delivery timing lets RTC firings depend on paid vendor feeds"
-result: "RTC vendor-independent — vendors 2.4-8.6h stale, only 0.01% of RTC volume vendor-only"
+result: "RTC vendor-independent — vendors 2.4-8.6h stale, only 0.01% of RTC volume vendor-only; Jira Done 2026-08-24"
 keywords: [rtc, real-time conquest, vendor-independent, ulid, ingest latency, site_visit_signal, svs, guid_log, augmentor_log, fpa_site_visit_batch_serverless, 33across, 5x5, predactiv, audi-1116, hourly batch]
 ---
 
@@ -12,7 +12,7 @@ keywords: [rtc, real-time conquest, vendor-independent, ulid, ingest latency, si
 
 **Q:** Does vendor delivery timing let RTC firings depend on paid vendor feeds? (AUDI-1116)
 
-**A:** No, RTC is effectively vendor-independent. RTC runs on two pipelines: (1) guid_log Kafka streaming (~real-time, Zach S.) and (2) a TI-run HOURLY batch over svs-minus-guid, so vendors CAN in principle drive RTC firings via the batch path, but measured dependence is negligible. Using a ULID ingest-latency instrument (svs uid first 10 Crockford-base32 chars = ms mint timestamp; mint minus time = delivery lag), the free logs (guid_log, augmentor_log) are the only real-time sources (0.0 min median), while every vendor delivers hours late: 33Across ~8.6h flat, 5x5 ~5.5h, most others ~2.9h, Predactiv bimodal (per-hour medians 2.6-12.1h). These match the CONFIGURED per-DS lag hours in the fpa_site_visit_batch_serverless DAG (5x5=5h, aug/guid=1h, 33across=8h), so the staleness is structural, not incidental. For RTC-fired impressions in valuation week 2026-07-02..08 (30,604,353 imps on 4,004,751 IPv4 IPs): free_covered = 99.99%, vendor_only = 0.01% (3,040 imps / 2,184 IPs); 99.59% is on guid-delivered (real-time Kafka) IPs. Dropping all 8 vendors risks ~0.01% of realized RTC volume. Caveats (verify-pass): vendor_only 0.01% is a coverage-based (not strictly causal) bound; the ULID lag is a lower bound on RTC-visible staleness; free_covered proves in-window delivery, not pre-impression causal qualification. Solution section still pending; status In Progress.
+**A:** No, RTC is effectively vendor-independent. RTC runs on two pipelines: (1) guid_log Kafka streaming (~real-time, Zach S.) and (2) a TI-run HOURLY batch over svs-minus-guid, so vendors CAN in principle drive RTC firings via the batch path, but measured dependence is negligible. Using a ULID ingest-latency instrument (svs uid first 10 Crockford-base32 chars = ms mint timestamp; mint minus time = delivery lag), the free logs (guid_log, augmentor_log) are the only real-time sources (0.0 min median), while every vendor delivers hours late: 33Across ~8.6h flat, 5x5 ~5.5h, most others ~2.9h, Predactiv bimodal (per-hour medians 2.6-12.1h). These match the CONFIGURED per-DS lag hours in the fpa_site_visit_batch_serverless DAG (5x5=5h, aug/guid=1h, 33across=8h), so the staleness is structural, not incidental. For RTC-fired impressions in valuation week 2026-07-02..08 (30,604,353 imps on 4,004,751 IPv4 IPs): free_covered = 99.99%, vendor_only = 0.01% (3,040 imps / 2,184 IPs); 99.59% is on guid-delivered (real-time Kafka) IPs. Dropping all 8 vendors risks ~0.01% of realized RTC volume. Caveats (verify-pass): vendor_only 0.01% is a coverage-based (not strictly causal) bound; the ULID lag is a lower bound on RTC-visible staleness; free_covered proves in-window delivery, not pre-impression causal qualification. Status: done — 5-agent adversarial verify pass complete, results posted as Jira comment 596106 (2026-07-16), transitioned Done 2026-08-24 (backlog audit).
 
 **How:** ULID latency probe: decode svs uid first 10 chars as ms mint timestamp, subtract event time for delivery lag; per-source medians on 2026-07-01 via audi_1116_hourly_arrival.sql. RTC vendor-dependence via audi_1116_rtc_vendor_share.sql: RTC-fired imps (valuation week) intersected with 37d svs membership masks, split into guid_realtime/hourly_batch_only/no_svs and free_covered/vendor_only. IPv4-only.
 
@@ -37,7 +37,7 @@ keywords: [rtc, real-time conquest, vendor-independent, ulid, ingest latency, si
 # AUDI-1116: RTC × free logs — feed, timing, hourly-grain check
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1116
-**Status:** In Progress
+**Status:** Done (Jira transitioned 2026-08-24; results posted 2026-07-16 as comment 596106)
 **Date Started:** 2026-07-16
 **Assignee:** Malachi
 
@@ -153,20 +153,32 @@ given 99.59% guid-real-time coverage.
 
 ## 5. Solution
 
-*(pending)*
+**RTC is effectively vendor-independent — vendor feeds cannot be a reason to keep paying.**
+Free logs qualify IPs in real time (0.0 min median lag) while every vendor arrives hours
+late (2.4–8.6h typical, Predactiv up to ~12.1h), matching the CONFIGURED per-DS lag hours in
+`fpa_site_visit_batch_serverless` — the staleness is structural. Measured on valuation week
+2026-07-02..08: 99.99% of RTC-fired imps are free_covered, vendor_only = 0.01% (3,040 imps /
+2,184 IPs). Dropping all 8 vendors risks ~0.01% of realized RTC volume; the freshness SLA is
+a renegotiation lever. Results posted as Jira comment 596106 (2026-07-16); Jira transitioned
+Done 2026-08-24.
 
 ## 6. Questions Answered
 
 - **Q:** What feeds RTC?
   **A:** Two pipelines — guid_log Kafka streaming (real-time) + TI hourly batch over
   svs-minus-guid (2026-07-16 readout, documented in data_knowledge §RTC).
+- **Q:** Does vendor delivery timing let RTC firings depend on paid vendor feeds?
+  **A:** No — vendors are 2.4–8.6h stale vs free logs at 0 min; vendor_only = 0.01% of
+  RTC-fired imps (coverage-based, not strictly causal, bound).
 
 ## 7. Data Documentation Updates
 
 - data_knowledge §RTC: two-pipeline architecture (committed 2026-07-16).
-- Pending: ULID latency instrument → data_catalog svs entry once full-day run lands.
+- data_knowledge §svs: ULID ingest-latency instrument (uid first 10 Crockford-base32 chars =
+  ms mint timestamp) + per-source lag findings (committed 2026-07-16).
 
 ## 8. Open Items / Follow-ups
 
-- [ ] Where exactly does the hourly batch job live (Airflow DAG name)? Ask Sean/Zach if
-      needed after empirical pass.
+- [x] Where the hourly batch job lives — `fpa_site_visit_batch_serverless` (the DAG whose
+      configured per-DS lag hours the measured lags reproduce).
+- 2026-08-24: Jira closed Done (backlog audit), completion comment citing comment 596106.

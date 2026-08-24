@@ -6,10 +6,10 @@ metadata:
   type: feedback
   originSessionId: 45f5f508-2584-4aba-8aa8-efdac5abeb02
 doc_type: memory
-keywords: [adversarial workflow authoring, multi-agent verify, blocking gate, fixer loop, JSON.parse args, silent drops, try catch stages, token waste]
+keywords: [adversarial workflow authoring, multi-agent verify, blocking gate, fixer loop, JSON.parse args, silent drops, try catch stages, token waste, scratchpad file race, unique payload filenames, concurrent subagents, parallel write collision]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-07-23
+last_verified: 2026-08-24
 ---
 When authoring Workflow-tool multi-agent passes with an adversarial verify gate:
 
@@ -21,5 +21,6 @@ When authoring Workflow-tool multi-agent passes with an adversarial verify gate:
 - **Parse args.** Workflow `args` can arrive as a JSON string — `JSON.parse` it before use, or `args.tickets` is undefined and the run silently falls back to the full default list (this cost one ~12M-token full re-run).
 - **No silent caps.** A thrown pipeline stage drops the item to `null`, vanishing from BOTH pass and fail lists. Wrap stages in try/catch and record `extract_error`/`converge_error` so a retry-cap failure is a tracked row, never a silent gap.
 - **Hand-finish the tail.** For a few persistent schema-cap failures, hand-author those cards from source rather than re-running the whole pass.
+- **Parallel subagents sharing the session scratchpad must write uniquely named payload/draft files (2026-08-24).** Two concurrent Jira-write agents both used a generic `desc_payload.json`; the race briefly PUT AUDI-1061's description onto AUDI-882 (caught and corrected the same minute; both re-verified correct). Suffix every scratch file with the work-unit key (`desc_payload_audi_882.json`), and after any parallel write wave re-read the targets to confirm each landed on its own unit.
 
 Links: [[project_self_optimizing_context]], [[reference_ticket_context_eval_tooling]], [[feedback_bq_workflow]].

@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1115: True willingness-to-pay CPM per vendor"
-status: in_progress
+status: done
 date: 2026-07-17
 summary: "Compute effective CPM and willingness-to-pay ceiling per data vendor across lenses"
-result: "No metered vendor breaks even at $0.50 under any lens; 33Across API closest"
+result: "No metered vendor breaks even at $0.50 under any lens; 33Across API closest; Jira Done 2026-08-24"
 keywords: [audi-1115, willingness-to-pay, wtp cpm, ddp vendor, 33across, preemption, free-log co-hold, flow filter, ddp_mm_winners_imp, tv_cpm, fractional credit, break-even cpm, lens-invariant]
 ---
 
@@ -12,7 +12,7 @@ keywords: [audi-1115, willingness-to-pay, wtp cpm, ddp vendor, 33across, preempt
 
 **Q:** What is the true willingness-to-pay CPM per data vendor across lenses (AUDI-1115)?
 
-**A:** No metered vendor breaks even at the $0.50 rate under any lens or margin assumption; 33Across API is consistently closest, and the conclusion is lens-invariant. L0 (billing meter) break-even CPMs: 33Across $0.086-0.257, 33A API $0.127-0.381, Sovrn $0.048-0.145, Justuno $0.024-0.072, Cybba $0.023-0.068. On L2 (flow-filtered unique triples, annualized) every metered vendor's effective cost exceeds its WTP-high ceiling (33A API 1.3x over, 33Across 1.9x, Sovrn 3.4x, Justuno 6.9x, Cybba 7.4x). Two lenses shift the picture: on L0p (post-AUDI-1113-preemption meter = meter x (1 - free co-hold share)) the 33Across family alone reaches fair at the top of the band (33Across HIGH $0.542 > $0.50; 33A API HIGH exactly $0.50) - the other three stay far under because their co-hold is tiny (credit is junk/unique, not overlap). On L0f (fractional per-won-impression media credit) break-even is ~$1.0-3.3 for EVERY vendor because it is just MNTN's ~$10.7 CTV media CPM x margin, essentially vendor-independent - but l0f is flagged a PRICING lens NOT a keep/drop test (over-credits, would greenlight the current deal). Reconciled plan: preemption is THE lever (removes ~90% of billed volume; savings from volume not a rate cut); on the residual $0.50 is below break-even (~$1-3) so keep ~$0.50; vendors differ by residual VOLUME (33Across 20.2M, 33A API 9.2M, Justuno 4.1M, Sovrn 2.3M, Cybba 0.56M/mo), which ranks keep-priority; an incrementality read is mandatory before cutting below $0.50 since the residual value assumes the vendor's signal is why we won. Status in_progress; 24 remaining PENDING xlsx cells are flat-fee bill amounts (Maya). Flat-fee vendors (5x5, Predactiv, Klickly) have WTP ceilings computed but meter/bill cells pending.
+**A:** No metered vendor breaks even at the $0.50 rate under any lens or margin assumption; 33Across API is consistently closest, and the conclusion is lens-invariant. L0 (billing meter) break-even CPMs: 33Across $0.086-0.257, 33A API $0.127-0.381, Sovrn $0.048-0.145, Justuno $0.024-0.072, Cybba $0.023-0.068. On L2 (flow-filtered unique triples, annualized) every metered vendor's effective cost exceeds its WTP-high ceiling (33A API 1.3x over, 33Across 1.9x, Sovrn 3.4x, Justuno 6.9x, Cybba 7.4x). Two lenses shift the picture: on L0p (post-AUDI-1113-preemption meter = meter x (1 - free co-hold share)) the 33Across family alone reaches fair at the top of the band (33Across HIGH $0.542 > $0.50; 33A API HIGH exactly $0.50) - the other three stay far under because their co-hold is tiny (credit is junk/unique, not overlap). On L0f (fractional per-won-impression media credit) break-even is ~$1.0-3.3 for EVERY vendor because it is just MNTN's ~$10.7 CTV media CPM x margin, essentially vendor-independent - but l0f is flagged a PRICING lens NOT a keep/drop test (over-credits, would greenlight the current deal). Reconciled plan: preemption is THE lever (removes ~90% of billed volume; savings from volume not a rate cut); on the residual $0.50 is below break-even (~$1-3) so keep ~$0.50; vendors differ by residual VOLUME (33Across 20.2M, 33A API 9.2M, Justuno 4.1M, Sovrn 2.3M, Cybba 0.56M/mo), which ranks keep-priority; an incrementality read is mandatory before cutting below $0.50 since the residual value assumes the vendor's signal is why we won. Status: done — verdict lens-invariant and robust to ±40% meter ambiguity; Jira transitioned Done 2026-08-24. Residual open items (Maya's 24 flat-fee bill cells for 5x5/Predactiv/Klickly, exact BAE allocation rule, incrementality read before cutting below $0.50) do not change the verdict and are carried under AUDI-1111/AUDI-1113 follow-through.
 
 **How:** Four lenses per vendor. Value side always excludes free logs (q8b solo cohort = media on IPs neither free log delivered) x 52 x 10-30% internal margin band. L0 = deck_d3 credited imps x12 meter; L0p = meter x (1 - free co-hold share, deck_d1); L0f = split each won impression's media across paid co-winners, free-log winners preempt; L2 = flow-filtered unique vendor triples (free log earns coverage credit for an IPxdomain on day D only if it delivered that pair in [D-30, D-1]; same-day-only earns none), annualized x365/30. L2 scan hit BigQuery's hard 6-hour job limit as a single query, reworked into a day-bitmask formulation (days 0..59, per-pair delivery days as one INT64 bitmask, credit = mask & bits [di-30, di-1]) run as 4 IP-hash shards (MOD(ABS(FARM_FINGERPRINT(ip)),4)) merged additively; anchors reproduced deck_d1 trips_standalone exactly (universe 13,286,674,041, drift 0.00000%). L0f billing structure confirmed empirically on BAE ddp_mm_winners_imp keyed on ad_served_id.
 
@@ -39,7 +39,7 @@ keywords: [audi-1115, willingness-to-pay, wtp cpm, ddp vendor, 33across, preempt
 # AUDI-1115: True willingness-to-pay CPM per vendor — 3 lenses
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1115
-**Status:** In Progress
+**Status:** Done (Jira transitioned 2026-08-24; results posted 2026-07-17 as comments 596162 / 596246-7)
 **Date Started:** 2026-07-16
 **Assignee:** Malachi
 
@@ -265,16 +265,40 @@ reproduces the AUDI-1089 post-preemption ladder finding. The renegotiation sente
 
 ## 5. Solution
 
-*(pending)*
+**No metered vendor breaks even at $0.50 on any lens (L0/L0p/L0f/L2); 33Across API is
+closest; the verdict is lens-invariant and robust to ±40% meter ambiguity.** Preemption
+(AUDI-1113) is THE lever — it removes ~88-97% of billed volume; on the residual, $0.50 is
+below the ~$1-3 break-even, so the rate is not the problem. Canonical deliverable:
+`outputs/audi_1115_wtp_cpm.xlsx` (4-lens WTP table, 2026-07-17) plus the epic workbook
+`outputs/audi_1111_findings.xlsx`. Findings posted as Jira comments 596162 and 596246/596247;
+Jira transitioned Done 2026-08-24.
 
 ## 6. Questions Answered
 
-*(pending)*
+- **Q:** What is the true willingness-to-pay CPM per vendor? **A:** L0 break-even bands per
+  vendor (33Across $0.086-0.257, 33A API $0.127-0.381, Sovrn/Justuno/Cybba ≤$0.15); no
+  metered vendor clears $0.50 on any lens or margin assumption.
+- **Q:** Does the lens choice change the keep/drop answer? **A:** No — lens-invariant. L0f
+  is a PRICING lens for the post-preemption residual, not a keep/drop test (over-credits).
+- **Q:** Is the rate or the volume the lever? **A:** Volume — free-log preemption removes
+  ~88-97% of each vendor's won impressions; per-credited-impression media CPM ~$10.7 is
+  vendor-independent, so break-even ($1-3) sits above $0.50 for every vendor.
 
 ## 7. Data Documentation Updates
 
-*(pending)*
+- `knowledge/data_knowledge.md` §billing — WON-impression billing grain
+  (`ddp_mm_winners_imp` keyed on `ad_served_id`), cross-path fractional splitting, two
+  grains of vendor-unique (committed 2026-07-17).
+- Memories `reference_ddp_billing_logic` + `project_audi_1111_vendor_quality` — billing
+  structure + CPM-layer findings.
+- L2 day-bitmask + IP-hash-shard pattern recorded in the epic summary (reusable for any
+  pair-history scan that hits the 6h BQ job limit).
 
 ## 8. Open Items / Follow-ups
 
-- [ ] L2 scan write + launch
+- [x] L2 scan write + launch — done (day-bitmask, 4 shards, anchors exact; <1h).
+- Residual (routed to AUDI-1111/AUDI-1113 follow-through, does not change the verdict):
+  Maya's 24 flat-fee bill cells; exact BAE allocation rule (only BAE can settle);
+  incrementality read before cutting below $0.50.
+- 2026-08-24: Jira closed Done (backlog audit) citing the xlsx and the lens-invariant
+  no-break-even verdict.
