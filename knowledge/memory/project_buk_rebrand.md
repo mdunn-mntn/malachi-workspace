@@ -1,6 +1,6 @@
 ---
 name: BUK rebranded to Behavior Keywords
-description: BUK (Bottoms-Up Keywords) renamed to Behavior Keywords for all exec/buyer-facing language. Aligned with Mike Dolt (Malachi's boss) 2026-04-20.
+description: BUK (Bottoms-Up Keywords) renamed to Behavior Keywords for all exec/buyer-facing language. Aligned with Mike Dolt (then fill-in manager) 2026-04-20.
 type: project
 originSessionId: 20225215-ae6f-4fad-a328-fabdd040b56f
 doc_type: memory
@@ -17,5 +17,5 @@ BUK (Bottoms-Up Keywords) is renamed to **Behavior Keywords** for all exec-facin
 - In any deck, script, Jira comment, Slack message, Loom, or advertiser-facing doc: use **Behavior Keywords**.
 - Internal engineering discussions, DAG names, code identifiers, feature-store field names, airflow-ti references: BUK is fine.
 - When explaining the rebrand to someone new: *"Behavior Keywords are the keywords we derive from what users actually do on the advertiser's site — not just the query they typed into Google."*
-- Stakeholder alignment: Mike Dolt (boss) chose this term. If someone pushes an alternative (True Intent, Site Intent, Intent Trails were runners-up), default to Behavior Keywords unless Mike signals otherwise.
+- Stakeholder alignment: Mike Dolt chose this term (as fill-in manager while Alyson Lefkowitz, Malachi's actual manager, was out; corrected 2026-08-24). If someone pushes an alternative (True Intent, Site Intent, Intent Trails were runners-up), default to Behavior Keywords unless Mike signals otherwise.
 - Related work: TI-797 (knowledge transfer), TI-803 (value analysis), TI-813 (500 advertiser scale), TI-887 (exec Loom).
