@@ -431,6 +431,89 @@ intact in the manifest.
 deployment variables (IMP-065). Without them the sweep logs a skip and succeeds, so merging is
 safe either way.
 
+### INC-025 and the mask registry — the debugger's own "one hop short" failure mode (2026-08-24)
+
+**The first alert the shipped DAG was pointed at exposed a structural gap, not a missing signature.**
+`fangorn_inference_pipeline_run/challenger_inference_pipeline` failed both tries on 2026-08-23.
+The debugger classified it `[high] vertex/pipeline-task-failed` and walked the 5-layer Vertex chain
+correctly, ending on the deepest exception in the `ml_job` replica log:
+
+```
+google.api_core.exceptions.NotFound: 404 Not found: Cluster
+projects/mntn-targeting-prj-prod/regions/us-central1/clusters/fangorn-challenger-a483e22d
+```
+
+**That error is real, reproducible, and completely wrong as a verdict.** It sends the reader after a
+deletion race. The actual cause is `CreateCluster` being refused with `Insufficient 'N2_CPUS' quota.
+Requested 4672.0, available 328.0` (and `DISKS_TOTAL_GB` 145,500 vs 74,280 available), which exists
+**only** in the `ClusterController` admin audit log. The component's `_delete_cluster_before_retry`
+runs inside the create's `except` handler, so when a refused create leaves nothing to delete its
+`delete_cluster` raises from there and replaces the original error.
+
+**Two consequences, and the second is worse than the diagnosis problem.** The escaping `NotFound`
+also aborts the `MAX_CREATE_RETRIES = 3` / `RETRY_WAIT_SECONDS = 300` loop, so the backoff that
+exists precisely for a transient quota shortage has never been able to run for one. The siblings
+released their quota at 23:00; the last try was 22:58.
+
+**The generalizable lesson: the deepest error is not always the cause, and a classifier that always
+trusts it will be confidently wrong.** A cleanup handler, a failure callback, or a retry that
+reattaches to a prior attempt each produce a real exception that *stands in front of* the fault. So
+`airflow_debugger/masks.py` registers them as a class:
+
+| Mask | Hides | Next hop | Resolver |
+|---|---|---|---|
+| `dataproc_cleanup_delete_404` | the CreateCluster refusal that left nothing to delete | the ClusterController audit log for that cluster name | `vertex_rca._cluster_create_error` |
+| `slack_notifier_failed` | the task failure the on-failure callback was announcing | the task's own error, above the callback frames | none (advisory) |
+| `dataproc_batch_reattach` | the earlier attempt's failure, inherited not caused | the first attempt's batch driver output | none (advisory) |
+
+**The invariant is that a mask can never silently end a chain.** Either a resolver reaches the next
+hop, or `report.build_report` prints `This is not the cause: it hides <X>. Read <Y>.` A pinned test
+asserts every registry entry declares both `hides` and `next_hop`, and another asserts a genuine
+error (`OutOfMemoryError`, the quota text itself) is **not** matched — the registry has to stay
+narrow or it starts refusing real verdicts.
+
+**Result on the live log:** `[high] infra/quota` with `similar: INC-025(0.851)`, no LLM, where
+before the fix it stopped at `vertex/pipeline-task-failed` — a pointer, not an answer.
+
+**Also fixed here: the report never reached GCS.** The 2026-08-24 verification run diagnosed 7 of 7
+and then 403'd on both uploads. `gsutil cp` stats its destination before writing, and
+`storage.objects.list` is evaluated against the **bucket**, so an IAM condition scoped to the
+`debugger/` object prefix can never grant it. Replaced with a JSON API media upload
+(`POST /upload/storage/v1/b/<bucket>/o?uploadType=media&name=<obj>`): one request against one object
+name, which the condition does cover. No IAM change needed. Confirmed the request shape empirically
+before shipping.
+
+**Blast-radius check before merging into fangorn** (`artifacts/audi_1191_retry_loop_simulation.py`
+runs the real loop, old and new, against a fake Dataproc client):
+
+| Scenario | main | PR #93 |
+|---|---|---|
+| create succeeds first try | 1 create, SUCCEEDED | 1 create, SUCCEEDED — **identical; the changed code never runs** |
+| quota refuses twice then frees (INC-025) | 1 create, dies on `NotFound: 404` | 3 creates, **SUCCEEDED** |
+| quota never frees | 1 create, dies on `NotFound: 404` | 3 creates, dies on the real quota text |
+
+The only behavioural delta on a healthy run is none: `_delete_cluster_before_retry` is reached only
+from the failure paths. The worst case for a deterministic create error is a slower failure (up to
+3x300s), which is what `MAX_CREATE_RETRIES` was written to do and has never been able to.
+
+**Merging is the deploy, in both repos.** targeting-infra-ml's `on-merge-compile.yml` fires on any
+push to `main` touching `vertex/*/pipelines/*.py` and runs `deploy-pipeline.yml` with
+`compile_only: true`, which compiles the KFP template and uploads it to the prod bucket; the next
+scheduled run picks it up. That is fail-safe in the direction that matters: a compile error uploads
+nothing and prod keeps running the previous template. airflow-ti merges trigger the Astro deploy,
+with the usual 25-40 minute bundle-adoption lag.
+
+**PRs.** airflow-ti#1215 (publish + masks), targeting-infra-ml#93 (the cleanup fix, applied to all
+four pipelines carrying the helper). Incident: on-call INC-025. Backlog: IMP-067 (the quota itself —
+the challenger cluster alone requests 4,672 of the 5,000 regional `N2_CPUS`, so it only starts when
+every sibling is down), IMP-068 (closed by #93).
+
+**Contradiction recorded, not overwritten.** The §2 catalog row for `inference_pipeline` says the
+challenger "is NEVER the contender" because it is sequentially downstream. The audit log disagrees:
+`fangorn-inference-26f05d0f` was alive across the challenger's create, and the cross-DAG
+`fangorn-hhid-inference-f68824f0` held quota across both tries. Both claims are kept in the runbook
+with the discriminating check named (re-read the task dependencies in the DAG).
+
 ### Optimization UNBLOCKED — event logs already flow to GCS; crawl validated on real prod (2026-08-04)
 - **Ryan pointed to `gs://mntn-data-archive-prod/spark-events/`** — real Spark event logs already land there (49 `.zstd`, from a window in Nov 2025). So the optimization half is **not gated** for jobs that log there; the enablement ask is now "keep it on + wire the remaining models," not "turn it on from zero." (Ryan also flagged: the bucket needs a TTL / cleanup of old logs.)
 - **Download gotcha:** `gcloud storage cp` corrupts the `.zstd` (hash mismatch → 0 bytes, the crc32c/decompress gatekeeper). **Workaround: `gsutil -o "GSUtil:check_hashes=never" cp`** (gcloud `-m` bulk is flaky/crashes here; download small batches).
