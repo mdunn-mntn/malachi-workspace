@@ -29,10 +29,14 @@ results = {}
 
 def cadence(key):
     gaps = con.execute(f"""
-    WITH g AS (
-      SELECT customer_id, {key} AS k, order_date,
-             order_date - LAG(order_date) OVER (PARTITION BY customer_id, {key} ORDER BY order_date) AS gap
+    WITH dd AS (
+      SELECT DISTINCT customer_id, {key} AS k, order_date
       FROM cust_day WHERE {key} IS NOT NULL
+    ),
+    g AS (
+      SELECT customer_id, k, order_date,
+             order_date - LAG(order_date) OVER (PARTITION BY customer_id, k ORDER BY order_date) AS gap
+      FROM dd
     ),
     per_cust AS (
       SELECT customer_id, k, MEDIAN(gap) AS cust_median
@@ -57,10 +61,14 @@ def cadence(key):
 
 results["category_level"] = cadence("category")
 results["item_level_products_50plus"] = con.execute("""
-WITH g AS (
+WITH dd AS (
+  SELECT DISTINCT customer_id, product_id, order_date
+  FROM cust_day WHERE product_id IS NOT NULL
+),
+g AS (
   SELECT customer_id, product_id, order_date,
          order_date - LAG(order_date) OVER (PARTITION BY customer_id, product_id ORDER BY order_date) AS gap
-  FROM cust_day WHERE product_id IS NOT NULL
+  FROM dd
 ),
 eligible AS (
   SELECT product_id FROM g WHERE gap IS NOT NULL
@@ -73,10 +81,14 @@ FROM g JOIN eligible USING (product_id) WHERE gap IS NOT NULL
 """).fetchdf().to_dict("records")[0]
 
 per_cat = con.execute("""
-WITH g AS (
+WITH dd AS (
+  SELECT DISTINCT customer_id, category, order_date
+  FROM cust_day WHERE category IS NOT NULL
+),
+g AS (
   SELECT customer_id, category, order_date,
          order_date - LAG(order_date) OVER (PARTITION BY customer_id, category ORDER BY order_date) AS gap
-  FROM cust_day WHERE category IS NOT NULL
+  FROM dd
 )
 SELECT category, COUNT(*) AS n_gaps, MEDIAN(gap) AS median_days,
        QUANTILE_CONT(gap, 0.25) AS p25, QUANTILE_CONT(gap, 0.75) AS p75

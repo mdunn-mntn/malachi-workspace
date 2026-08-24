@@ -77,6 +77,25 @@ Scale: 79,965,455 orders · 162,031,287 line items · 1,163 brands · 32.6M cust
 - Items nulls: line_item_product_id 22.34% NULL, taxonomy L1 23.61% NULL (≈1/4 of line items unclassifiable), L2 25.32%, L3 77.67%, L4 88.09%, L5 96.90% — usable taxonomy is effectively L1/L2.
 - items.order_id/line_item_id delivered VARCHAR vs dictionary BIGINT (basket.order_id IS BIGINT — join needs a cast).
 
+### Q-results (2026-08-24, first full pass; scripts in analysis/, raw JSON/CSV in outputs/)
+
+**Q1 repurchase cadence** (02_cadence.py; day-grain dedup per (customer, key) — first run had a same-day-duplicate bug that read median 0, fixed): category level (Shopify taxonomy L1): pooled median gap **30 days** (p25 19, p75 55), median-of-customer-medians 32d, n=32.2M gaps. Item level (products with ≥50 repurchasers, n=13,343 products): pooled median **30 days** (p25 27, p75 51). 28.48% of (customer, category) pairs repurchase within the file. Right-censoring: 1-yr window biases medians short.
+
+**Q2 cross-category affinity** (03_affinity.py; censoring-safe anchors, windows 30/60/90d): real structure exists. 30d base rate (any follow-up purchase) 24.21%; top lifts: Software→Health & Beauty 42.99% (1.78x), Vehicles & Parts→Health & Beauty 36.55% (1.51x), Software→Home & Garden 35.11% (1.45x). 60d base 33.60%, same pairs strengthen (Software→H&B 52.43%). Full matrices outputs/q2_affinity_{30,60,90}d.csv, first-purchase Markov transitions outputs/q2_first_purchase_transitions.csv.
+
+**Q3 brand roster/concentration** (04_concentration.py; USD, non-refunded: excludes 0.35% non-USD + 1.28% refunded): 1,112 brands, **$10.06B GMV/yr**, 78.66M orders. Concentration LOW: top-10 = 25.06% of GMV, top-50 = 53.93%, top-100 = 70.46%, HHI 0.0101; long tail (<100 orders/yr) only 9.7% of brands. Category GMV: Fashion $3.64B, Home $2.39B, Health $1.59B, Beauty $0.96B. **Monthly active brands DECLINE 1,082 (Jul-25) → 878 (Jul-26), -19% over the year** — panel attrition or consolidation; vendor question.
+
+**Q4 identity/overlap** (05_identity_overlap.py; estimator = matches x100/k / N, k=1% FARM_FINGERPRINT samples; Wilson 95% CI): of 23,506,901 distinct Proxima IPv4:
+- **DS14 addressable gate: 91.99% [91.60, 92.37] are in-gate** — vs the <5% fast-NOGO line, addressability is a non-issue. Stable across recency: last-30d-order IPs 93.27%, 31-90d 92.51%, 91-365d 91.39% (residential IPs churn slowly).
+- CIL 30d served: 40.15% [39.90, 40.41] of Proxima IPv4 were served an MNTN impression in the last 30d.
+- Score-band mix: 44.9% of the Proxima∩CIL slice is ever-HI (8000-10000) vs 40.45% CIL base rate — mild HI enrichment (1.11x), Proxima households skew slightly high-intent.
+- **The "served-but-unscored" AUDI-1089 lens is EMPTY: 100% of the 497,478 CIL sample IPs have household_score populated** (ever_scored=1 on every row, window 2026-07-25..08-23). Score coverage on served rows is now effectively universal; that vendor-value lens no longer discriminates. [also a data_knowledge candidate fact]
+- Every ip_mapping IP belongs to a customer with ≥1 basket order (ips_with_no_basket_order = 0).
+
+**Q6 new-to-brand** (07_ntb.py): NTB is identifiable and the curve behaves: 89.59% (Jul-25, left-censored) → plateaus by month ~5-6 → steady state **~44-46% of orders are first-time-at-brand** (Jul-26 43.71%). A 6-mo lookback suffices for NTB separation; the 1-yr file is adequate. 54.73% of beauty-36mo-flagged customers have zero observed beauty transactions → the vendor flags DO carry history beyond the file window (consistent with their 36mo claim; combine with the monotonicity violations when weighing flag trust). Guest checkout 0%.
+
+**Q7 freshness** (08_freshness.py): max order 2026-07-15 10:54, delivery 2026-07-17 → **nominal lag 2 days**; daily volume holds ≥95% of trailing median through 2026-07-14 (ramp-down = 1 day) → **effective lag ~2-3 days**. Trailing median 187,980 orders/day. Cadence beyond one drop unmeasurable (single delivery); vendor states weekly standard, sub-weekly negotiable (AUDI-935). Feedback-class framing: at ~2-3d lag + weekly drops, purchase signals arrive 2-9 days post-purchase — usable for measurement/seeding and post-purchase suppression/cross-sell windows (30d median cadence gives runway), but NOT as pre-exposure bid-time features without the leakage split (TI-789/790).
+
 ## 5. Solution
 (pending)
 
