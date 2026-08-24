@@ -63,7 +63,7 @@ cg2 = pd.DataFrame([
     ["Week of 8/10", "Visits", 799875, 86655, 0.0016328, 0.0015002, 0.0884, "-9.3% to +27.0%", 0.95, "0.34", "No"],
 ], columns=["Window", "Outcome", "Reached IPs", "Holdout IPs", "Reached rate", "Holdout rate", "Rel lift", "95% CI (rel)", "z", "p", "Significant"])
 wb.table("New Campaign 130550", cg2,
-    finding="Visit lift +6.1% on 16 days of data, inside a -3% to +15% interval, too early to call; conversions are noise.",
+    finding="Visit lift +6.1% and conversion lift +69% on 16 days of data, neither significant.",
     method="Same randomized ghost-bid method, campaign group 130550 (elevencreative prospecting CTV), lift data from 8/1, outcomes through 8/23. Holdout share 0.099. Needs 2-3 more weeks to resolve.",
     formats={"Reached rate": PCT4, "Holdout rate": PCT4, "Rel lift": FMT.PCT2},
     kind="data", toc="The August campaign, early read", query="audi_1215_cg130550_itt.sql")
