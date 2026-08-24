@@ -26,10 +26,13 @@ means nothing to credit. Together these closed AUDI-694 with no AUDI work requir
 
 **Running it:** AP (Maya Triman) runs the monthly DDP crediting script from the August 2026 payout; BAE
 supplies the updated script; the crediting *rules* are decided in #identity-crediting, not by whoever runs it.
-**Ownership drift (Maya's word, Slack 2026-08-24, vs the 08-19 decision above that AUDI owns Vendor List 1):**
-AP reviewed the DS63-update crediting script with Jack and Wei on 08-24 and Jack agreed to AP's proposal, with
-AUDI not in the room; Maya did not know AUDI-1145 existed. Hypothesis: rule-making has consolidated into AP.
-Settling check: the 08-24 meeting recording (requested) or an explicit ownership call in #identity-crediting.
+**Ownership resolved (Maya's word, Slack 2026-08-24, supersedes the drift hypothesis from earlier that day):**
+from September 2026 Mike Dolt + Jaime own the crediting logic; AP only helped with the August updates (DS63 is
+part of the August change, so AP updated the script with Jack and Wei, Jack agreed to the proposal; no recording
+exists). Maya's crediting examples, DS4 tab plus planned DS63 approach:
+https://docs.google.com/spreadsheets/d/1yZXxU7RNf0TUgiZxXYJjD351qsVKwLyuQwMoks_7-0o/edit?gid=552399317
+Open: whether AUDI-1145 folds into Mike/Jaime's ownership or stays as Malachi's support ticket (over-crediting
+examples from the AUDI-694 findings: scenario B mismatch, 39.3% uncredited gap, 33Across dedup).
 
 **Gotchas that cost time:**
 - The timestamp column is **`translation_timestamp`**, never `translation_date`. `bae-sql-utility#24` reads
