@@ -220,12 +220,14 @@ def _logging_via_curl(filt: str, project: str) -> tuple[str, str | None]:
     return "\n".join(m for m in lines if m), None
 
 
-def logging_messages(filt: str, project: str, limit: int = _LOG_LIMIT) -> tuple[str, str | None]:
-    """`jsonPayload.message` lines for any Cloud Logging filter, with the pinned-IP fallback."""
+def logging_messages(
+    filt: str, project: str, limit: int = _LOG_LIMIT, field: str = "jsonPayload.message"
+) -> tuple[str, str | None]:
+    """Lines of one field for any Cloud Logging filter, with the pinned-IP fallback."""
     stdout, err = _run(
         ["gcloud", "logging", "read", filt, "--project", project,
          "--limit", str(limit), "--freshness", _LOG_FRESHNESS,
-         "--order", "desc", "--format", "value(jsonPayload.message)"]
+         "--order", "desc", "--format", f"value({field})"]
     )  # fmt: skip
     if stdout or not err:
         return stdout or "", err
@@ -387,8 +389,7 @@ def analyze_batch(
     else:
         ev.notes.append("no driver log via Cloud Logging (check freshness window)")
 
-    # Fallback: Cloud Logging gave no error text -> read the staging driveroutput
-    # the stateMessage names (INC-012's cause lived only there).
+    # Fallback: no Cloud Logging error text -> the driveroutput the stateMessage names.
     if not ev.error_text:
         uri = driveroutput_uri(ev.state_message)
         if uri:

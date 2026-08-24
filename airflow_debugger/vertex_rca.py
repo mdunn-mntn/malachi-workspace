@@ -39,15 +39,18 @@ REGION = "us-central1"
 _ML_JOB_LOG_LIMIT = 400  # the component traceback prints line-per-entry; 80 truncates it
 _MAX_DATAPROC_JOBS = 3  # the executor retries an index 3x; describing every retry is noise
 
-# The leaf error embeds the replica's log link, percent-encoded:
-#   resource=ml_job%2Fjob_id%2F4569671626135699456
-#   resource.labels.job_id%3D%224569671626135699456%22
+# The leaf error embeds the replica's log link percent-encoded, in either of two shapes.
 _ML_JOB_RE = re.compile(r"ml_job%2Fjob_id%2F(\d{6,})|job_id(?:%3D%22|=\")(\d{6,})")
 _DATAPROC_JOB_RE = re.compile(
     r"job (?:index \d+ as |[0-9a-f-]{36} \(index)?.*?([0-9a-f]{8}-[0-9a-f]{4}-"
     r"[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
 )
 _CLUSTER_RE = re.compile(r"parallel jobs to cluster (\S+)")
+
+# The component's cleanup delete 404s when the refused create made no cluster (INC-025).
+_DELETE_404_RE = re.compile(
+    r"NotFound: 404 Not found: Cluster projects/[^/]+/regions/[^/]+/clusters/(\S+)"
+)
 _LAST_JOB_RE = re.compile(r"last job_id: ([0-9a-f-]{36})")
 
 
@@ -204,8 +207,30 @@ def analyze_pipeline_run(
         if why:
             ev.notes.append(why)
 
+    masked = _DELETE_404_RE.search(f"{ev.error_text or ''}\n{msgs}")
+    if masked:
+        ev.cluster_name = ev.cluster_name or masked.group(1)
+        text, why = _cluster_create_error(masked.group(1), project)
+        if text:
+            ev.error_text, ev.error_layer = text, "dataproc-create"
+        else:
+            ev.notes.append(why or f"no CreateCluster audit entry for {masked.group(1)}")
+
     ev.signature = _classified(ev.error_text)
     return ev
+
+
+def _cluster_create_error(cluster_name: str, project: str) -> tuple[str | None, str | None]:
+    """Why CreateCluster refused, from the admin audit log the delete-404 traceback buries."""
+    filt = (
+        'protoPayload.methodName="google.cloud.dataproc.v1.ClusterController.CreateCluster" '
+        f'AND protoPayload.resourceName:"{cluster_name}"'
+    )
+    text, err = logging_messages(filt, project, limit=5, field="protoPayload.status.message")
+    text = (text or "").strip()
+    if not text:
+        return None, err
+    return text, None
 
 
 def _messages_text(raw: str) -> str:

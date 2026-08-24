@@ -141,6 +141,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | `tpa_ipdsc_export / tpa_export` | Alert quotes `exited with 137 code ... potentially signifies a memory pressure` on **try 2+**, but try 1 ran ~44 min and tries 2+ die in 6-18s. Tries 2+ logs say verbatim `Batch with given id already exists.` / `Attaching to the job ... if it is still running.` | TWO stacked failures. (1) Driver SIGKILL 137 on try 1, which here landed AFTER the write completed. (2) The batch id is minted by upstream `create_batch_id__2` and cached in XCom; that task does NOT re-run on a downstream retry, so every retry reattaches to the failed batch and inherits its error. The 137 in the try-2 alert is INHERITED text, not a fresh OOM. | **transient_infra + dag_bug** — check GCS for `_SUCCESS` + object count BEFORE re-running (the work may already be done). To genuinely re-run, clear `create_batch_id__2` WITH downstream so a fresh id is minted (deleting the Dataproc batch also frees the id). Never read the retry's 137 as a second OOM. | INC-016 |
 | `materialize_mntn_first_party / materialize` (hourly `50 * * * *`) | Alert on **try 2 of 3**, `Batch job mntn-first-party-<dt>-<epoch> failed with error: Google Cloud Dataproc Agent reports job failure` (boilerplate). try 1 ~1.8m real, tries 2-3 die in 6-12s with `Batch with given id already exists.` / `Attaching to the job ...`. | Same shared-helper defect as INC-016: `create_batch_id` is an `@task` (`include/util/dag_vars.py:31`) that runs ONCE and caches the id in XCom, so every retry reattaches to the failed batch. try 1's real cause is PAM-gated in the staging bucket's `driveroutput.*`. | **transient_infra (cause UNCONFIRMED) + dag_bug.** 1 failure in 100 runs, next hour green, prior 7 days all 24/24 hours. **This DAG does NOT self-heal** (each run owns exactly one `hh`), so the failed hour stays missing until re-run. Re-run = clear `create_batch_id` **WITH downstream**. | INC-017 |
 | `materialize_mntn_select / materialize` (hourly `45 * * * *`) | Repeated `Dataproc Agent reports job failure` on try 1, batches dying at a **constant ~12.0-12.6 min** while healthy hours finish in ~7 min. Airflow log is boilerplate; driver output shows the GCS reads SUCCEEDING, then `java.lang.OutOfMemoryError: Java heap space` in `map-output-dispatcher` threads. | Driver-side MapOutputTracker OOM: `spark.driver.memory=9600m` against `spark.sql.shuffle.partitions=5000`. Map-status memory scales with map tasks x reduce partitions, so the driver sat at its ceiling and tips over on heavier hours (intermittent, not every hour). NOT a GCS listing timeout (INC-012) and NOT the batch-id defect. | **transient_infra trending to dag_bug (capacity).** Constant death interval = resource ceiling, not a data bug. Pull `driveroutput` (needs `dataproc-debug` PAM) before theorising. Fix = raise driver memory for the one DAG ([#1198](https://github.com/SteelHouse/airflow-ti/pull/1198), 16g + 4g). Re-run missing `hh=` only AFTER the bundle refreshes, else they OOM again. | INC-018 |
+| `fangorn_inference_pipeline_run / challenger_inference_pipeline` | Vertex `code: 9`, failed task `[create-dataproc-cluster]`; replica traceback ends on `NotFound: 404 ... Cluster` | Regional `N2_CPUS`/`DISKS_TOTAL_GB` quota refused the create while two sibling fangorn pipelines held it; the component's cleanup delete then 404s and masks the refusal | **Resource contention** (quota, not a stockout) | INC-025 |
 
 | `hashed_email_{guid_log,ds_26}_signals / wait_fpa` | `AirflowSensorTimeout: Sensor has timed out; run duration of 958.x seconds exceeds the specified timeout of 900.0.` on **both** consumer DAGs in the same hour. NOT the INC-011 fast-fail (that one dies in ~5s on `ExternalTaskFailedError`). | Producer `fpa_site_visit_batch_serverless` **SUCCEEDED** but ran longer than the sensor's 15-min budget (19.5 min on 2026-08-16T01:00Z; median run is 10.0 min, 6/99 runs exceed 15 min). Sensors quit 40s-3min before the external task went green. | **late_data** — clear `wait_fpa` with downstream on the affected run; it passes on the first poke. **A sensor timeout does NOT retry** (`AirflowSensorTimeout` fails the task outright), so `retries: 1` never fires and every occurrence is a manual clear + an hourly hole that stays open until someone notices. Durable fix = IMP-043 / [airflow-ti#1199](https://github.com/SteelHouse/airflow-ti/pull/1199). | INC-019 |
 
@@ -1613,3 +1614,52 @@ curl -s -H "Authorization: Bearer $TOK" \
 **Owner confirmed same day (2026-08-20 16:06 PT):** Brian McAdams took the fix and said "thought this might happen" — so dropping the challenger alias on a re-registration is a **known, anticipated failure mode**, not a surprise. That raises IMP-056 from a nice-to-have to the real ask: the guardrail (re-apply aliases on re-register, or check for `challenger-v*` before provisioning) is what stops it recurring, since the manual fix is already understood and will be needed again.
 
 **Note on `fetch-advertisers` SKIPPED:** expected — the component is conditional and the challenger path skips it. Not part of this failure.
+
+### INC-025 — `fangorn_inference_pipeline_run` `challenger_inference_pipeline` — three sibling pipelines race for one regional N2 quota, and the component's cleanup hides it
+
+**2026-08-23** (logical date; ran 2026-08-24 18:00Z) · PagerDuty · `[prod] Airflow Targeting FAILURE [fangorn_inference_pipeline_run/challenger_inference_pipeline]`, both tries failed. **STATUS: RESOLVED (cause verified from the admin audit log).**
+
+**Verdict: `resource_contention` — quota, not a stockout.** `CreateCluster` was refused twice with `Insufficient 'N2_CPUS' quota. Requested 4672.0, available 328.0` and `Insufficient 'DISKS_TOTAL_GB' quota. Requested 145500.0, available 74280.0`. The regional `N2_CPUS` limit is 5,000 and the challenger cluster alone asks for 4,672 of them, so it succeeds only when every sibling is down. This is the opposite of INC-022, where `GCP_INSUFFICIENT_CAPACITY`/`ZONE_RESOURCE_POOL_EXHAUSTED` meant Google had no machines. Here the machines exist and MNTN's own ceiling refused them.
+
+**Timeline that pins it** (all 2026-08-24 UTC, `ClusterController` audit log):
+
+| Time | Event |
+|---|---|
+| 22:42, 22:44 | `fangorn-hhid-inference-f68824f0` and `fangorn-inference-26f05d0f` created — siblings in the same DAG run take the quota |
+| 22:46:29 | `fangorn-challenger-54637823` CreateCluster → **code 3, quota** (try 1) |
+| 22:58:48 | `fangorn-challenger-a483e22d` CreateCluster → **code 3, quota** (try 2) |
+| 23:00-23:01 | siblings deleted, quota released |
+| 23:07 | `fangorn-daily-drift-fad58de7` created without incident |
+
+Read after the fact the region looks innocent (`N2_CPUS` usage 80 of 5,000), which is why the quota number has to come from the audit log at failure time and not from a live `gcloud compute regions describe`.
+
+**The trap: the traceback names the wrong fault.** The component wraps its own create failure in `_delete_cluster_before_retry`, which calls `delete_cluster` on a cluster the refused create never made. That raises `NotFound: 404 Not found: Cluster .../fangorn-challenger-a483e22d`, and *that* is the last exception in the replica log. Anyone reading the deepest traceback concludes "the cluster disappeared" and goes looking for a deletion race. The real error is only in the admin audit log.
+
+**Diagnosis, copy-paste:**
+
+```bash
+# 1. Airflow log -> class only. The debugger now walks the rest by itself.
+python3 -m airflow_debugger.orchestrate <log> --no-llm        # -> [high] vertex/pipeline-task-failed
+
+# 2. the full chain, ending on the CreateCluster refusal (error_layer == "dataproc-create")
+python3 -c "from airflow_debugger import vertex_rca as V; \
+  ev=V.analyze_pipeline_run('<pipeline-run-id>','mntn-targeting-prj-prod','us-central1'); \
+  print(ev.error_layer, ev.signature); print(ev.error_text)"
+
+# 3. by hand, if you want the raw audit rows: create AND delete, in order
+gcloud logging read 'protoPayload.methodName=~"ClusterController.(Create|Delete)Cluster"' \
+  --project mntn-targeting-prj-prod --limit 25 --freshness=1d \
+  --format="value(timestamp,protoPayload.methodName,protoPayload.resourceName,protoPayload.status.message)"
+```
+
+**Decision tree for next time:**
+
+1. Alert is Vertex `code: 9` naming `[create-dataproc-cluster]` → run the chain in step 2. If `error_layer` is `dataproc-create`, the verdict is already classified; read `error_text`.
+2. `Insufficient '<METRIC>' quota` → **`resource_contention`.** Do NOT blind-re-run: a re-run while a sibling holds the quota fails identically and costs another 12 minutes. Check `gcloud dataproc clusters list --region us-central1 --project mntn-targeting-prj-prod` first; clear the task only once the siblings are gone.
+3. `ZONE_RESOURCE_POOL_EXHAUSTED` / `GCP_INSUFFICIENT_CAPACITY` instead → that is INC-022's class, a real stockout, and waiting is the only lever.
+4. `NotFound: 404 ... Cluster` as the deepest error → it is a mask, never the cause. Go to the audit log.
+
+**This contradicts a line already in §2, and both are kept.** The `fangorn_inference_pipeline_run / inference_pipeline` catalog row says "⚠ `inference_pipeline` is UPSTREAM of `challenger_inference_pipeline` (sequential) — the challenger is NEVER the contender." The 2026-08-24 audit log disagrees: `fangorn-inference-26f05d0f` was created 22:44 and deleted 22:58:46, so it was alive across the challenger's 22:46 create, and `fangorn-hhid-inference-f68824f0` (a *different* DAG, `fangorn_hhid_inference_pipeline_run`) held quota from 22:42 to 23:01 across both. Evidence class: admin audit log, which beats the sequencing inference the older row rests on. Reconciling hypothesis: the two are not upstream of each other in this DAG — they sit on separate sensors (`wait_for_features` vs `wait_for_challenger_features`) and start independently, and the cross-DAG hhid pipeline was never in the older row's picture at all. Check that settles it: re-read the task dependencies in `dags/fangorn_inference_pipeline_run.py`. Until then, do not assume the challenger cannot be starved by a sibling.
+
+**Durable fix is not on-call's to make.** The pipeline requests 93% of the regional N2 ceiling and three siblings run concurrently, so this recurs whenever they overlap. Options are a quota raise, a smaller challenger cluster, or serialising the three. Logged as IMP-067; the masking cleanup handler is IMP-068. Owner: targeting-ml.
+

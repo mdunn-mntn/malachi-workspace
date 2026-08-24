@@ -179,6 +179,59 @@ def test_diagnose_does_not_route_a_log_with_no_handle() -> None:
     assert diag["spark_outcome"] == "none"
 
 
+# Verbatim from INC-025's ml_job replica log.
+_MASKING_404 = (
+    "google.api_core.exceptions.NotFound: 404 Not found: Cluster "
+    "projects/mntn-targeting-prj-prod/regions/us-central1/clusters/fangorn-challenger-a483e22d\n"
+    "    raise exceptions.from_grpc_error(exc) from exc\n"
+)
+
+
+def test_the_cleanup_404_is_recognised_as_a_mask_not_a_cause() -> None:
+    """A missing cluster at the replica layer is a symptom; the real fault is one hop deeper."""
+    m = vertex_rca._DELETE_404_RE.search(_MASKING_404)
+    assert m
+    assert m.group(1) == "fangorn-challenger-a483e22d"
+
+
+def test_the_create_refusal_beats_the_cleanup_404() -> None:
+    """The audit log's CreateCluster status is what classifies, and it classifies as quota."""
+    calls = []
+
+    def _fake(filt: str, project: str, limit: int = 0, field: str = "") -> tuple[str, None]:
+        calls.append((filt, field))
+        return (
+            "Multiple validation errors:\n"
+            " - Insufficient 'N2_CPUS' quota. Requested 4672.0, available 328.0.",
+            None,
+        )
+
+    orig = vertex_rca.logging_messages
+    vertex_rca.logging_messages = _fake
+    try:
+        text, err = vertex_rca._cluster_create_error("fangorn-challenger-a483e22d", "p")
+    finally:
+        vertex_rca.logging_messages = orig
+
+    assert err is None
+    assert "N2_CPUS" in text
+    assert calls[0][1] == "protoPayload.status.message"
+    assert "CreateCluster" in calls[0][0]
+    assert classify(text).key == "quota_exhaustion"
+
+
+def test_a_replica_404_with_no_audit_entry_stays_at_the_replica_layer() -> None:
+    """No audit entry must leave the honest symptom in place, never a blank verdict."""
+    orig = vertex_rca.logging_messages
+    vertex_rca.logging_messages = lambda *a, **k: ("", "permission denied")
+    try:
+        text, err = vertex_rca._cluster_create_error("nope", "p")
+    finally:
+        vertex_rca.logging_messages = orig
+    assert text is None
+    assert err == "permission denied"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(dict(globals()).items()):
         if name.startswith("test_") and callable(fn):
