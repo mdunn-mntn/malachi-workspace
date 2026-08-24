@@ -12,8 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "outputs" / "proxima_20260717"
 DELIVERY = "DATE '2026-07-17'"
 
-con = duckdb.connect()
-con.execute(f"CREATE VIEW basket AS SELECT * FROM read_parquet('{DATA}/basket/*')")
+con = duckdb.connect(str(ROOT / "outputs" / "proxima.duckdb"), read_only=True)
 
 row = con.execute(f"""
 SELECT MAX(order_created_at) AS max_ts,

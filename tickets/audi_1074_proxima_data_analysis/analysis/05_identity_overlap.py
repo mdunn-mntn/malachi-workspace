@@ -19,10 +19,9 @@ OUT = ROOT / "outputs"
 K_PCT = 1
 
 con = duckdb.connect()
-con.execute(f"""
-CREATE VIEW ipmap AS SELECT _COL_0 AS customer_id, _COL_1 AS ip_address
-FROM read_parquet('{DATA}/ip_mapping/*')""")
-con.execute(f"CREATE VIEW basket AS SELECT * FROM read_parquet('{DATA}/basket/*')")
+con.execute(f"ATTACH '{ROOT / 'outputs' / 'proxima.duckdb'}' AS px (READ_ONLY)")
+con.execute("CREATE VIEW ipmap AS SELECT * FROM px.ipmap")
+con.execute("CREATE VIEW basket AS SELECT * FROM px.basket")
 con.execute(f"CREATE TABLE ds14 AS SELECT ip FROM read_csv('{OUT}/ds14_ip_sample_1pct.csv')")
 con.execute(f"""
 CREATE TABLE cil AS SELECT ip, ever_hi, ever_scored

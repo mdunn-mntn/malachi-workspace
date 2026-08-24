@@ -38,8 +38,8 @@ def q1(sql):
 
 def section(name, data):
     results[name] = data
-    print(f"\n== {name} ==")
-    print(json.dumps(data, indent=2, default=str))
+    print(f"\n== {name} ==", flush=True)
+    print(json.dumps(data, indent=2, default=str), flush=True)
 
 
 DICT_BASKET = [
@@ -52,12 +52,7 @@ DICT_BASKET = [
     *[f"category_{c}_buyer_{w}" for c in CATEGORIES for w in ("6mo", "12mo", "36mo")],
 ]
 
-con = duckdb.connect()
-con.execute(f"CREATE VIEW basket AS SELECT * FROM read_parquet('{DATA}/basket/*')")
-con.execute(f"CREATE VIEW items AS SELECT * FROM read_parquet('{DATA}/items/*')")
-con.execute(
-    f"CREATE VIEW ipmap AS SELECT _COL_0 AS customer_id, _COL_1 AS ip_address "
-    f"FROM read_parquet('{DATA}/ip_mapping/*')")
+con = duckdb.connect(str(ROOT / "outputs" / "proxima.duckdb"), read_only=True)
 
 delivered = [r[0] for r in q("DESCRIBE basket")]
 section("dictionary_vs_delivery", {

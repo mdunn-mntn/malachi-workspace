@@ -13,8 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "outputs" / "proxima_20260717"
 OUT = ROOT / "outputs"
 
-con = duckdb.connect()
-con.execute(f"CREATE VIEW basket AS SELECT * FROM read_parquet('{DATA}/basket/*')")
+con = duckdb.connect(str(ROOT / "outputs" / "proxima.duckdb"), read_only=True)
 
 results = {}
 results["excluded"] = con.execute("""

@@ -14,9 +14,7 @@ DATA = ROOT / "outputs" / "proxima_20260717"
 OUT = ROOT / "outputs"
 WINDOWS = [30, 60, 90]
 
-con = duckdb.connect()
-con.execute(f"CREATE VIEW basket AS SELECT * FROM read_parquet('{DATA}/basket/*')")
-con.execute(f"CREATE VIEW items AS SELECT * FROM read_parquet('{DATA}/items/*')")
+con = duckdb.connect(str(ROOT / "outputs" / "proxima.duckdb"), read_only=True)
 
 con.execute("""
 CREATE TEMP TABLE purch AS
