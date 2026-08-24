@@ -340,6 +340,53 @@ deployment variables; minting needs `WORKSPACE_OWNER`, which Ryan Kleck has. (2)
 `storage.objectUser` IAM condition is scoped to the `optimizer/` prefix, so the publish to
 `debugger/` will 403 until it is widened; a publish failure warns rather than failing the sweep.
 
+### Self-review, PII, and the first live run (2026-08-21..24)
+
+**PR #1214 is out of draft and ready to merge as of 2026-08-24.** Full review record:
+`outputs/audi_1191_pr_1214_self_review.md`.
+
+**Reviewing my own PR before asking a human found 5 blocking defects + 4 non-blocking, all mine.**
+Every blocking one was an **environment assumption**, which is why `ruff` + 106 tests +
+`compileall` were all green: a hardcoded `malachi@mountain.com` Databricks profile; a
+`Path.home()` laptop path shipped as a fallback that never fires; a service account with **no**
+`logging.viewer` and **zero** bindings in `mntn-targeting-prj-prod`; `external_task_rca` importing
+a workspace script and shelling to the `astro` CLI, neither present in a DAG bundle; and
+`data_interval_start.subtract(days=1)`, which diagnosed **two** days back on every run. Each fix is
+pinned by a test, and the personal-path check is now a CI step rather than a habit.
+
+**The identity finding is the one worth repeating.** My PR description said "identity copies the
+optimizer" and I treated that as sufficient. It is not: the optimizer reads event logs from one
+bucket, the debugger reads Cloud Logging and a second project. Live IAM showed only
+`dataproc.viewer`. The DAG would have run green and published a report where every Dataproc finding
+read `driver log fetch failed` — thin results, not a visible break.
+
+**Wiz flagged PII in the vendored incident corpus** (`resolved_by`, `note`, `action` carry
+colleagues' names). Fixed by **projection, not `#wiz_ignore`**: the bundled copy now carries only
+`CORPUS_FIELDS`, the nine fields `incident_match` actually reads, with a test enforcing the
+allowlist so a regeneration cannot put the names back.
+
+**First live run, 2026-08-21, with a real Astro deployment token:**
+
+| | |
+|---|---|
+| Failed tasks on 2026-08-20 | 7 |
+| Diagnosed | 7 |
+| Root-caused deterministically | 4 (`analysis_exception`, `dbt_test_failure`, `task_execution_timeout`) |
+
+The run found a defect in thirty seconds that the whole suite could not: the taskInstances POST
+body takes **`page_limit`/`page_offset`**, not `limit`/`offset`, and 422s otherwise — so
+`pull.failed_task_instances` had **never worked**. No mocked test touches a live API.
+
+**Identity landed via Crossplane, not my Terragrunt unit.** Cristina Szumilo closed #4985 and
+rebuilt it as [mntn-devops#4990](https://github.com/SteelHouse/mntn-devops/pull/4990) (merged +
+synced 2026-08-24), because Crossplane self-syncs rather than waiting for someone to apply a plan.
+All five project grants verified live; the bucket grants and the `debugger/` condition survived
+intact in the manifest.
+
+**Still open before it does real work:** `AIRFLOW_BEARER` + `AIRFLOW_API_BASE` as **secret**
+deployment variables (IMP-065). Without them the sweep logs a skip and succeeds, so merging is
+safe either way.
+
 ### Optimization UNBLOCKED — event logs already flow to GCS; crawl validated on real prod (2026-08-04)
 - **Ryan pointed to `gs://mntn-data-archive-prod/spark-events/`** — real Spark event logs already land there (49 `.zstd`, from a window in Nov 2025). So the optimization half is **not gated** for jobs that log there; the enablement ask is now "keep it on + wire the remaining models," not "turn it on from zero." (Ryan also flagged: the bucket needs a TTL / cleanup of old logs.)
 - **Download gotcha:** `gcloud storage cp` corrupts the `.zstd` (hash mismatch → 0 bytes, the crc32c/decompress gatekeeper). **Workaround: `gsutil -o "GSUtil:check_hashes=never" cp`** (gcloud `-m` bulk is flaky/crashes here; download small batches).

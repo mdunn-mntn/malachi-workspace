@@ -205,3 +205,11 @@ print(b.dags['<dag_id>'].get_task('<task>').upstream_task_ids)"
 ## Cross-DAG ExternalTaskSensor: skip-as-failure gotcha (INC-011, 2026-08-05)
 - **An `ExternalTaskSensor` with `"skipped"` in `failed_states` HARD-FAILS (fast, ~5s, single poke) on a BENIGN upstream skip** and raises the **IDENTICAL** `ExternalTaskFailedError: Some of the external tasks [...] failed.` message it raises for a true failure. So **a log regex cannot tell a skip from a fail** — you must resolve the external task's ACTUAL final state (`skipped` vs `failed`/`upstream_failed`) via the REST taskInstances endpoint before judging it.
 - **The provider's documented remedy:** move `skipped` out of `failed_states` into `skipped_states=[State.SKIPPED]` — then a legitimate no-data upstream skip makes the sensor **SKIP** (propagates the skip) instead of FAIL+page. Shipped for both `wait_fpa` DAGs in airflow-ti#1175 (AUDI-1195). Only apply where an upstream skip is genuinely benign (a producer short-circuit on missing partner data); where a skip means a real break (e.g. `keyword_ddp_reporting`), keep it in `failed_states`. Incident detail: runbook §2/§3 INC-011.
+
+**Airflow 3 REST: `page_limit` / `page_offset`, not `limit` / `offset` (2026-08-24).** The
+`POST /api/v2/dags/~/dagRuns/~/taskInstances/list` body is a **strict** schema and returns
+`422 extra_forbidden` on the query-param names. Window it on `start_date_gte`/`start_date_lte`,
+not `logical_date`, which is nullable for asset and manual runs. Also: the deployment's API base
+is `https://<deployment-id>.iq.astronomer.run/<suffix>/api/v2` — take it from
+`astro deployment inspect ... --key metadata.airflow_api_url`, do not construct it from the id.
+Found the first time a real deployment token existed; no mocked test can catch it.

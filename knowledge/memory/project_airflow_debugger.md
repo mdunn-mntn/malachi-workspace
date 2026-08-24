@@ -13,6 +13,29 @@ last_verified: 2026-08-20
 
 ## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
 
+**Status 2026-08-24: PR #1214 is out of draft and ready to merge.** Its identity blocker cleared —
+`airflow-debugger@mntn-prj-prod-00` is live via Crossplane ([mntn-devops#4990](https://github.com/SteelHouse/mntn-devops/pull/4990),
+merged + synced; my Terragrunt #4985 closed as superseded). Verified against live IAM, not the diff:
+`dataproc.viewer` + `logging.viewer` on `mntn-prj-prod-00`, and `aiplatform.viewer` +
+`dataproc.viewer` + `logging.viewer` on `mntn-targeting-prj-prod`. Bucket grants and the `debugger/`
+prefix condition are manifest-verified only (`storage.buckets.getIamPolicy` is denied to
+`malachi@mountain.com`). New IAM goes in Crossplane now, not Terragrunt: [[reference_mntn_devops_permissions]].
+
+**Self-review before asking for a human found 5 blocking defects I had introduced**, all of them
+environment assumptions that ruff + 106 tests + compileall could not see. Detail and the
+generalizable lesson: [[feedback_review_own_pr_before_asking]] and
+`tickets/audi_1191_.../outputs/audi_1191_pr_1214_self_review.md`.
+
+**First live run (2026-08-21), with a real Astro deployment token: 7 failed tasks on 2026-08-20,
+7 diagnosed, 4 root-caused deterministically.** The run immediately exposed a defect no test could:
+the taskInstances POST takes `page_limit`/`page_offset`, so `pull.failed_task_instances` had
+**never worked**. One real invocation beat 106 mocked tests.
+
+**The vendored incident corpus is a PROJECTION, not a copy.** Wiz flagged colleagues' names
+(`resolved_by`, `note`, `action`) in the first push. Fixed by projecting onto `CORPUS_FIELDS` — the
+nine fields `incident_match` actually reads — with a test enforcing the allowlist, rather than an
+ignore rule.
+
 `airflow_debugger_daily` (`dags/airflow_debugger_daily.py`, package vendored at
 `include/airflow_debugger/`), 17:00 UTC = 10:00 PT. Deliberately mirrors `spark_optimizer_daily`:
 same identity, same vendoring, its own `pr_airflow_debugger.yaml` (the existing workflows filter to
