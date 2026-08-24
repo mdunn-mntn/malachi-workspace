@@ -150,7 +150,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_terse_chat_replies | feedback | 2026-08-11 | [doc](memory/feedback_terse_chat_replies.md) |
 | project_audi_431_list_refresh | project | 2026-08-11 | [doc](memory/project_audi_431_list_refresh.md) |
 | reference_build_index_frontmatter_parsing | reference | 2026-08-11 | [doc](memory/reference_build_index_frontmatter_parsing.md) |
-| reference_test_budget_from_rates | reference | 2026-08-11 | [doc](memory/reference_test_budget_from_rates.md) |
 | Terse tickets and docs | feedback | 2026-08-12 | [doc](memory/feedback_terse_tickets.md) |
 | feedback_contradictions_are_appended | feedback | 2026-08-12 | [doc](memory/feedback_contradictions_are_appended.md) |
 | feedback_no_unrequested_subagents | feedback | 2026-08-12 | [doc](memory/feedback_no_unrequested_subagents.md) |
@@ -221,3 +220,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_no_label_colon_titles | feedback | 2026-08-24 | [doc](memory/feedback_no_label_colon_titles.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-24 | [doc](memory/feedback_review_own_pr_before_asking.md) |
 | incrementality-experiment-ber-2250 | project | 2026-08-24 | [doc](memory/project_incrementality_experiment.md) |
+| reference_test_budget_from_rates | reference | 2026-08-24 | [doc](memory/reference_test_budget_from_rates.md) |
