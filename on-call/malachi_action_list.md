@@ -9,7 +9,7 @@ tags: [workflow, status]
 
 # Action list
 
-Generated 2026-08-21. Only items **blocked on Malachi personally**. The 44 open rows in
+Generated 2026-08-21, updated 2026-08-24. Only items **blocked on Malachi personally**. The 44 open rows in
 `improvements_backlog.md` are mostly owned by other teams; those are tracked there, not here.
 
 ---
@@ -35,11 +35,15 @@ live (`storage.buckets.getIamPolicy` denied), so that half is manifest-verified 
 | # | Action | Why now |
 |---|---|---|
 | **a** | **Revoke `SLACK_BOT_TOKEN` and `ANTHROPIC_API_KEY`** | Both sat in plaintext in the decommissioned Slack bot's LaunchAgent, firing nightly from 2026-06-10 to 2026-08-20. Agent unloaded and plist deleted, but the credentials themselves are still valid. IMP-064 |
-| **b** | **Rotate the Astro deployment token**, then update the one Keychain entry | It was pasted into a chat. `astro deployment token rotate --deployment-id cmd6bd10c0gl901rfuokgryiq`, then `security add-generic-password -a "$USER" -s astro_deployment_token -w '<new>' -U` |
-| **c** | Set `AIRFLOW_BEARER` + `AIRFLOW_API_BASE` as **secret** deployment variables in Astro | The Keychain copy only serves the laptop. Without this the DAG itself skips instead of diagnosing. IMP-065 |
+| ~~b~~ | ~~Rotate the Astro token~~ | **Decided 2026-08-24: leave it.** Raised twice, declined twice. If it is ever rotated, two places need the new value: the Keychain entry `astro_deployment_token` and the `AIRFLOW_BEARER` deployment variable |
+| ~~c~~ | ~~Set the deployment variables~~ | **DONE 2026-08-24.** `AIRFLOW_BEARER` (secret) + `AIRFLOW_API_BASE` are set; the deployment restarted and a verification run diagnosed 7 of 7, 4 deterministically. IMP-065 closed |
 
 `AIRFLOW_API_BASE` is `https://cmd6bd10c0gl901rfuokgryiq.iq.astronomer.run/dokgryiq/api/v2` — take
 it from `astro deployment inspect`, do not construct it.
+
+**The DAG is live, unpaused and verified in prod as of 2026-08-24.** Next scheduled run 17:00 UTC.
+One thing unconfirmed: whether the GCS publish to `gs://mntn-data-archive-prod/debugger/` succeeds
+under the `objectUser` prefix condition. The verification run diagnosed but did not publish.
 
 ---
 
