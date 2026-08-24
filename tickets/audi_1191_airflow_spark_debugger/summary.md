@@ -508,11 +508,15 @@ four pipelines carrying the helper). Incident: on-call INC-025. Backlog: IMP-067
 the challenger cluster alone requests 4,672 of the 5,000 regional `N2_CPUS`, so it only starts when
 every sibling is down), IMP-068 (closed by #93).
 
-**Contradiction recorded, not overwritten.** The §2 catalog row for `inference_pipeline` says the
-challenger "is NEVER the contender" because it is sequentially downstream. The audit log disagrees:
-`fangorn-inference-26f05d0f` was alive across the challenger's create, and the cross-DAG
-`fangorn-hhid-inference-f68824f0` held quota across both tries. Both claims are kept in the runbook
-with the discriminating check named (re-read the task dependencies in the DAG).
+**Contradiction withdrawn the same day, and the real finding is better.** I first read the audit
+log as showing the sibling `inference_pipeline` contending with the challenger, and wrote that up as
+a contradiction against the runbook's "the challenger is NEVER the contender". Wrong: the DAG is
+explicitly sequential (`fangorn_inference_pipeline_run.py:92`) and the sibling's cluster was gone by
+22:37, before the challenger's first create. Checking `principalEmail` on the CreateCluster audit
+entries gave the actual holders: `fangorn-hhid-inference-f68824f0` (**prod**, a different DAG) and
+`fangorn-inference-26f05d0f` created by **`vertex-ai-qa@`** — a QA run. QA and prod share one GCP
+project and one regional `N2_CPUS` pool, so a QA iteration can starve prod. Lesson: cluster NAMES
+looked like they answered "whose is this" and did not; the identity field did.
 
 ### Optimization UNBLOCKED — event logs already flow to GCS; crawl validated on real prod (2026-08-04)
 - **Ryan pointed to `gs://mntn-data-archive-prod/spark-events/`** — real Spark event logs already land there (49 `.zstd`, from a window in Nov 2025). So the optimization half is **not gated** for jobs that log there; the enablement ask is now "keep it on + wire the remaining models," not "turn it on from zero." (Ryan also flagged: the bucket needs a TTL / cleanup of old logs.)

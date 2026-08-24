@@ -1659,7 +1659,33 @@ gcloud logging read 'protoPayload.methodName=~"ClusterController.(Create|Delete)
 3. `ZONE_RESOURCE_POOL_EXHAUSTED` / `GCP_INSUFFICIENT_CAPACITY` instead → that is INC-022's class, a real stockout, and waiting is the only lever.
 4. `NotFound: 404 ... Cluster` as the deepest error → it is a mask, never the cause. Go to the audit log.
 
-**This contradicts a line already in §2, and both are kept.** The `fangorn_inference_pipeline_run / inference_pipeline` catalog row says "⚠ `inference_pipeline` is UPSTREAM of `challenger_inference_pipeline` (sequential) — the challenger is NEVER the contender." The 2026-08-24 audit log disagrees: `fangorn-inference-26f05d0f` was created 22:44 and deleted 22:58:46, so it was alive across the challenger's 22:46 create, and `fangorn-hhid-inference-f68824f0` (a *different* DAG, `fangorn_hhid_inference_pipeline_run`) held quota from 22:42 to 23:01 across both. Evidence class: admin audit log, which beats the sequencing inference the older row rests on. Reconciling hypothesis: the two are not upstream of each other in this DAG — they sit on separate sensors (`wait_for_features` vs `wait_for_challenger_features`) and start independently, and the cross-DAG hhid pipeline was never in the older row's picture at all. Check that settles it: re-read the task dependencies in `dags/fangorn_inference_pipeline_run.py`. Until then, do not assume the challenger cannot be starved by a sibling.
+**CORRECTED 2026-08-24, same day.** An earlier version of this entry claimed the sibling
+`inference_pipeline` was one of the contenders and that this contradicted the §2 catalog line
+"the challenger is NEVER the contender". That was wrong on both counts, and the catalog line is
+right. `dags/machine_learning/fangorn_inference_pipeline_run.py:92` is explicit —
+`wait_for_features >> inference_pipeline >> challenger_inference_pipeline >> daily_drift_pipeline`
+— and the sibling's cluster `fangorn-inference-944275db` was deleted 22:35:56-22:37:22, before the
+challenger's first create at 22:46. The contradiction is withdrawn.
+
+**The two clusters actually holding the quota, by `principalEmail` on the CreateCluster audit
+entries:**
+
+| Cluster | Created | Identity | Whose |
+|---|---|---|---|
+| `fangorn-hhid-inference-f68824f0` | 22:42:15, 22:44:57 | `vertex-ai@` | **prod**, a different DAG (`fangorn_hhid_inference_pipeline_run`) |
+| `fangorn-inference-26f05d0f` | 22:44:00, 22:46:35 | `vertex-ai-qa@` | **QA** |
+
+**So prod was starved partly by a QA run.** QA and prod share one GCP project and therefore one
+regional `N2_CPUS` pool (targeting-infra-ml `CLAUDE.md`: "Both environments run in the same GCP
+project — separation is by bucket and registry suffix"). The same identity ran QA inference
+clusters at 20:13, 20:20 and 20:27 that evening, so this was someone iterating in QA, not a
+one-off. With the challenger needing 4,672 of 5,000, **any** concurrent cluster above 328 CPUs
+starves it, whatever environment it belongs to. That is the finding to act on, not the sibling
+ordering.
+
+**Try 3 was a manual clear, not an automatic retry.** `retries = 1` for prod in the DAG (line 23),
+so the task had two tries. `max_tries` read 3 afterwards because clearing a task bumps it. Sean
+Yang cleared it at 23:22:26; do not read a post-hoc `max_tries` as the configured value.
 
 **Durable fix is not on-call's to make.** The pipeline requests 93% of the regional N2 ceiling and three siblings run concurrently, so this recurs whenever they overlap. Options are a quota raise, a smaller challenger cluster, or serialising the three. Logged as IMP-067; the masking cleanup handler is IMP-068. Owner: targeting-ml.
 
