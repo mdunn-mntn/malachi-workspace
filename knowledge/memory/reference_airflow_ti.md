@@ -213,3 +213,26 @@ not `logical_date`, which is nullable for asset and manual runs. Also: the deplo
 is `https://<deployment-id>.iq.astronomer.run/<suffix>/api/v2` — take it from
 `astro deployment inspect ... --key metadata.airflow_api_url`, do not construct it from the id.
 Found the first time a real deployment token existed; no mocked test can catch it.
+
+**A green "Deploy to Prod" does NOT mean the DAG bundle refreshed — CONTRADICTION, 2026-08-24.**
+Line above (recorded 2026-08-04 from the #1169 merge) says merging to `main` triggers the workflow
+*and* refreshes the prod bundle. Direct observation on the #1214 merge says otherwise, and both
+claims are kept because only one has been tested against the workflow file:
+
+- **Evidence for the new claim:** `deploy_prod.yaml` calls only `deploy_gcs.yaml` (uploads the
+  `spark/` folder to `gs://mntn-data-archive-<env>/ti_resources`) and `deploy_model_to_gcs.yaml`.
+  **Neither pushes a DAG bundle.** After the #1214 merge (`504fe947`, 18:59Z) the workflow went
+  green, yet 25+ minutes later `bundle_version` was still `2026-08-21T20:02:24Z` and
+  `airflow_debugger_daily` was absent from `/dags` with **zero import errors**.
+- **Why the old claim looked true:** the 2026-08-21 bundle stamp (20:02:24Z) sits one minute after
+  that day's `deploy_prod` run (20:01). That is consistent with causation *and* with both reacting
+  to the same push, which is the reconciling hypothesis: **prod refreshes via Astro's git
+  integration on `main`, the same mechanism dev uses on `dev`** — usually fast, so it is easy to
+  credit the Actions run for it.
+- **The check that settles it either way:** `GET /api/v2/dags/<any_dag>` returns `bundle_name`
+  (`main`) and `bundle_version` (an ISO timestamp). **A DAG is live when that timestamp moves past
+  your merge, not when CI is green.** `GET /dags?dag_id_pattern=<x>` confirms registration, and
+  `GET /importErrors` distinguishes "not deployed" (0 errors, absent) from "deployed but broken".
+
+**So: never report a DAG as shipped on the strength of a merge plus a green deploy.** Check
+`bundle_version`. The same class as the `spark/` sync lag recorded above (40s to 2h15m observed).

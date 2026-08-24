@@ -13,7 +13,20 @@ last_verified: 2026-08-20
 
 ## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
 
-**Status 2026-08-24: PR #1214 is out of draft and ready to merge.** Its identity blocker cleared —
+**Status 2026-08-24: PR #1214 is MERGED** (`504fe947`, 18:59Z). **Not yet live**: `deploy_prod`
+went green but the Astro DAG bundle is still on `2026-08-21T20:02:24Z`, so `airflow_debugger_daily`
+is absent from `/dags` with zero import errors. A green deploy is not a refreshed bundle — see
+[[reference_airflow_ti]] for the check (`bundle_version` on any DAG).
+
+**Sean Yang pushed back on the PR's size** (28 files / 5,226 lines) and was half right:
+`context_parse.py` is the Phase-3 in-callback tier, Phase 3 is held, and nothing in the bundle
+imported it. Removed with its test (240 lines). The rest is 2,779 lines of vendored engine (moved,
+not written), 2,125 of tests, 322 of DAG + CI + docs — genuinely new surface is 152 lines. Kept the
+tests: they are what pin the five defects self-review found. **Vendoring a package is a good moment
+to ask which modules the new entrypoint actually reaches** — held or deferred tiers travel along
+silently otherwise.
+
+**Prior status (2026-08-24, superseded above): out of draft and ready to merge.** Its identity blocker cleared —
 `airflow-debugger@mntn-prj-prod-00` is live via Crossplane ([mntn-devops#4990](https://github.com/SteelHouse/mntn-devops/pull/4990),
 merged + synced; my Terragrunt #4985 closed as superseded). Verified against live IAM, not the diff:
 `dataproc.viewer` + `logging.viewer` on `mntn-prj-prod-00`, and `aiplatform.viewer` +

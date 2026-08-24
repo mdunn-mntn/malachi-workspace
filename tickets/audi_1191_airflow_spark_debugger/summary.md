@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Datab
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress (DAG shipped 2026-08-21, airflow-ti PR #1214) — RCA debugger (Dataproc+Databricks) validated on INC-005/009 + live prod (INC-010); eventLog PR #1169 MERGED to prod 2026-08-04 (merge cef446a3: batch-operator path + local runner + BaseModel observe; workflow-op deferred, ipdsc reverted/PHS kept). Optimizer split out to AUDI-1194 (own ticket + airflow_optimizer/ package, 2026-08-05). Remaining: follow-up PRs (workflow-op eventLog, Databricks GCS-write, spark-events TTL) + Phase 3 auto-fire"
+result: "in progress (PR #1214 MERGED 2026-08-24; awaiting the Astro bundle refresh) — RCA debugger (Dataproc+Databricks) validated on INC-005/009 + live prod (INC-010); eventLog PR #1169 MERGED to prod 2026-08-04 (merge cef446a3: batch-operator path + local runner + BaseModel observe; workflow-op deferred, ipdsc reverted/PHS kept). Optimizer split out to AUDI-1194 (own ticket + airflow_optimizer/ package, 2026-08-05). Remaining: follow-up PRs (workflow-op eventLog, Databricks GCS-write, spark-events TTL) + Phase 3 auto-fire"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -339,6 +339,41 @@ tests would exist and never run, since `pr_model.yaml` is filtered to `models/**
 deployment variables; minting needs `WORKSPACE_OWNER`, which Ryan Kleck has. (2) The SA's
 `storage.objectUser` IAM condition is scoped to the `optimizer/` prefix, so the publish to
 `debugger/` will 403 until it is widened; a publish failure warns rather than failing the sweep.
+
+### MERGED 2026-08-24 — and a green deploy is not a live DAG
+
+**PR #1214 merged** as `504fe947` at 18:59Z after Sean Yang's review. 28 files, 5,226 lines.
+
+**Sean's review question was "do we need that many new files?" and one file genuinely had to go.**
+`context_parse.py` (+ its test, 240 lines) is the Phase-3 in-callback tier; Phase 3 is held, and
+nothing in the bundle imported it. It travelled along silently because vendoring copies a package
+wholesale. **Lesson: when vendoring, check which modules the new entrypoint actually reaches.** The
+remainder answered honestly: 2,779 lines of engine (moved, not written), 2,125 of tests, 322 of
+DAG + CI + docs — the genuinely new surface is 152 lines. I declined to cut the tests, since each
+of the five self-review defects is pinned by one.
+
+**It is merged but NOT live, and that distinction cost a real check.** `deploy_prod` went green on
+the merge commit, yet:
+
+| Check | Result |
+|---|---|
+| `dags/airflow_debugger_daily.py` on `origin/main` | present |
+| `deploy_prod` workflow | success |
+| `airflow_debugger_daily` in `/api/v2/dags` | **absent** |
+| `/importErrors` | **0** |
+| Astro `bundle_version` | still `2026-08-21T20:02:24Z` |
+
+**`deploy_prod.yaml` does not deploy DAGs at all** — it calls `deploy_gcs.yaml` (uploads `spark/`
+to `gs://mntn-data-archive-prod/ti_resources`) and `deploy_model_to_gcs.yaml`. The bundle refresh
+comes from Astro's git integration on `main`, the same mechanism dev uses on `dev`. This
+**contradicts** the 2026-08-04 note that a merge "both syncs the model .py to prod GCS AND
+redeploys the bundle"; both readings are kept in `reference_airflow_ti` with the reconciling
+hypothesis (the 08-21 bundle stamp sits one minute after that day's workflow run, which is equally
+consistent with both reacting to the same push).
+
+**The check to use from now on:** `GET /api/v2/dags/<any_dag>` → `bundle_version`. A DAG is live
+when that timestamp moves past the merge, not when CI is green. Zero import errors plus an absent
+DAG means *not deployed*, not *deployed and broken*.
 
 ### Self-review, PII, and the first live run (2026-08-21..24)
 

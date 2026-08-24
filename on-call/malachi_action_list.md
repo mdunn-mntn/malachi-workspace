@@ -19,7 +19,7 @@ Generated 2026-08-21. Only items **blocked on Malachi personally**. The 44 open 
 | Order | PR | State | Action |
 |---|---|---|---|
 | ~~1~~ | ~~[mntn-devops#4985](https://github.com/SteelHouse/mntn-devops/pull/4985)~~ | **CLOSED, superseded** | Cristina rebuilt it as Crossplane in [#4990](https://github.com/SteelHouse/mntn-devops/pull/4990), **merged and synced 2026-08-24**. Nothing to do |
-| **1** | [airflow-ti#1214](https://github.com/SteelHouse/airflow-ti/pull/1214) | ready for review | **Unblocked** — the identity is live. Review and merge |
+| ~~1~~ | ~~[airflow-ti#1214](https://github.com/SteelHouse/airflow-ti/pull/1214)~~ | **MERGED 2026-08-24** | Not live yet: the Astro bundle is still on `2026-08-21T20:02`. Check `bundle_version`, not the green deploy |
 | — | [airflow#1497](https://github.com/SteelHouse/airflow/pull/1497) | open since **2025-05-24** | `TGT-4076: Ddp week dev`. Fifteen months old. Merge, rebase or close |
 
 **The blocker cleared on 2026-08-24.** Verified live, not assumed: `airflow-debugger@` now holds
