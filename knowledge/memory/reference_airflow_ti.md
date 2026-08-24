@@ -234,5 +234,25 @@ claims are kept because only one has been tested against the workflow file:
   your merge, not when CI is green.** `GET /dags?dag_id_pattern=<x>` confirms registration, and
   `GET /importErrors` distinguishes "not deployed" (0 errors, absent) from "deployed but broken".
 
-**So: never report a DAG as shipped on the strength of a merge plus a green deploy.** Check
-`bundle_version`. The same class as the `spark/` sync lag recorded above (40s to 2h15m observed).
+**RESOLVED the same evening — the bundle is stamped at merge time but ADOPTED with a lag.** The
+new bundle turned out to be stamped `2026-08-24T19:00:21Z`, ~1.5 min after the 18:59Z merge, yet
+the running deployment kept serving `2026-08-21T20:02:24Z` for roughly **25-40 minutes**, during
+which `/dags` had no `airflow_debugger_daily` and `/importErrors` was empty. So:
+
+- **`deploy_prod.yaml` still does not push DAGs** (that part of the finding holds): it only calls
+  `deploy_gcs.yaml` and `deploy_model_to_gcs.yaml`. Astro's git integration on `main` creates the
+  bundle, which is why its stamp tracks the merge, not the workflow.
+- **The lag is adoption, not creation.** Do not conclude from a stale `bundle_version` that the
+  deploy failed; it usually means the deployment has not switched over yet. The 2026-08-04 note is
+  therefore right in effect (a merge does refresh the prod bundle) and wrong in mechanism (the
+  Actions run is not what does it).
+
+**So: never report a DAG as shipped on the strength of a merge plus a green deploy — poll until
+`bundle_version` moves past the merge, and expect tens of minutes.** Same class as the `spark/`
+sync lag recorded above (40s to 2h15m observed).
+
+**A newly deployed DAG arrives PAUSED.** `airflow_debugger_daily` registered with
+`is_paused: true`; it will not run until someone unpauses it. With `catchup=False` and a
+`0 17 * * *` schedule, `next_dagrun_logical_date` was already in the past on arrival
+(`2026-08-23T17:00`), so unpausing fires a run immediately for the most recent closed interval
+rather than waiting for tomorrow. Budget for that before unpausing anything expensive.

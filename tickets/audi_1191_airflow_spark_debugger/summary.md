@@ -340,7 +340,7 @@ deployment variables; minting needs `WORKSPACE_OWNER`, which Ryan Kleck has. (2)
 `storage.objectUser` IAM condition is scoped to the `optimizer/` prefix, so the publish to
 `debugger/` will 403 until it is widened; a publish failure warns rather than failing the sweep.
 
-### MERGED 2026-08-24 — and a green deploy is not a live DAG
+### MERGED + LIVE 2026-08-24 (paused) — and the bundle adoption lag
 
 **PR #1214 merged** as `504fe947` at 18:59Z after Sean Yang's review. 28 files, 5,226 lines.
 
@@ -371,9 +371,18 @@ redeploys the bundle"; both readings are kept in `reference_airflow_ti` with the
 hypothesis (the 08-21 bundle stamp sits one minute after that day's workflow run, which is equally
 consistent with both reacting to the same push).
 
-**The check to use from now on:** `GET /api/v2/dags/<any_dag>` → `bundle_version`. A DAG is live
-when that timestamp moves past the merge, not when CI is green. Zero import errors plus an absent
-DAG means *not deployed*, not *deployed and broken*.
+**Resolved the same evening: the lag is ADOPTION, not creation.** The new bundle was stamped
+`2026-08-24T19:00:21Z`, ~1.5 min after the merge, but the deployment kept serving the 08-21 bundle
+for ~25-40 minutes. So the 2026-08-04 note is right in effect (a merge does refresh the prod
+bundle) and wrong in mechanism (`deploy_prod` is not what does it — Astro's git integration is).
+
+**The check to use from now on:** `GET /api/v2/dags/<any_dag>` → `bundle_version`, polled until it
+moves past the merge. Zero import errors plus an absent DAG means *not adopted yet*, not *broken*.
+
+**It arrived PAUSED**, as new DAGs do. With `catchup=False` and `0 17 * * *`,
+`next_dagrun_logical_date` was already `2026-08-23T17:00` on arrival, so **unpausing fires a run
+immediately** for the last closed day. Harmless today: without `AIRFLOW_BEARER` in the deployment
+the sweep logs a skip and succeeds (IMP-065).
 
 ### Self-review, PII, and the first live run (2026-08-21..24)
 

@@ -13,10 +13,12 @@ last_verified: 2026-08-20
 
 ## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
 
-**Status 2026-08-24: PR #1214 is MERGED** (`504fe947`, 18:59Z). **Not yet live**: `deploy_prod`
-went green but the Astro DAG bundle is still on `2026-08-21T20:02:24Z`, so `airflow_debugger_daily`
-is absent from `/dags` with zero import errors. A green deploy is not a refreshed bundle — see
-[[reference_airflow_ti]] for the check (`bundle_version` on any DAG).
+**Status 2026-08-24: PR #1214 is MERGED** (`504fe947`, 18:59Z). **LIVE and REGISTERED** on bundle
+`2026-08-24T19:00:21Z`, schedule `0 17 * * *`, zero import errors — but **arrived PAUSED**, as new
+DAGs do, so it will not run until someone unpauses it. The bundle was stamped ~1.5 min after the
+merge yet only adopted ~25-40 min later, which is the lag to expect; see [[reference_airflow_ti]].
+With `catchup=False`, `next_dagrun_logical_date` was already `2026-08-23T17:00`, so unpausing
+fires a run immediately for the last closed day rather than waiting.
 
 **Sean Yang pushed back on the PR's size** (28 files / 5,226 lines) and was half right:
 `context_parse.py` is the Phase-3 in-callback tier, Phase 3 is held, and nothing in the bundle
