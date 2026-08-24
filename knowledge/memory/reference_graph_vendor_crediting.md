@@ -33,8 +33,14 @@ exists). Maya's crediting examples, DS4 tab plus planned DS63 approach:
 https://docs.google.com/spreadsheets/d/1yZXxU7RNf0TUgiZxXYJjD351qsVKwLyuQwMoks_7-0o/edit?gid=552399317
 Sharper read (2026-08-24, from the table above): the meeting was the DS63 update, and DS63 needs no List 1,
 so Maya's statement covers the graph legs (Lists 2/3) plus script-running; it does not displace the 08-18 call
-that List 1 rule-making is AUDI's. AUDI-1145 (List 1 rules) likely stays with Malachi. Open question for
-Mike Dolt/Jaime: confirm the boundary — they own the script + graph-leg logic, AUDI-1145 keeps List 1 rules.
+that List 1 rule-making is AUDI's. AUDI-1145 (List 1 rules) likely stays with Malachi.
+**Ownership is UNSETTLED — three claims on record, all 2026-08-24 or earlier, none authoritative:**
+- Jack Barbey's map (08-18, table above): List 1 AUDI, Lists 2/3 Identity.
+- Maya Triman (Slack 08-24): from September Mike Dolt + Jaime own the crediting logic; AP helped for August.
+- Mike Dolt (Slack 08-24): "the other way around" — his side owns the monthly script, and they planned Maya's
+  team owns the graph part; he does not know who owns the logic and asked Malachi to start a clarifying thread
+  with him/Jaime + ID folks + Maya. Settling mechanism: that thread (venue: #identity-crediting, where the
+  rules are decided). Until it lands, do not treat any single claim as the ownership answer.
 
 **Gotchas that cost time:**
 - The timestamp column is **`translation_timestamp`**, never `translation_date`. `bae-sql-utility#24` reads
