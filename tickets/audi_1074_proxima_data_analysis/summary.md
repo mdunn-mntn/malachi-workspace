@@ -104,7 +104,8 @@ Scale: 79,965,455 orders · 162,031,287 line items · 1,163 brands · 32.6M cust
 - Caveats: matched subsample = IPs with any 90d Proxima order (39,859 of 497,478 sample IPs ≈ 8.0%); IP-grain join mixes household members; ever-HI = HI for ANY advertiser (dilution); 90d window.
 
 ## 5. Solution
-(pending)
+- **Official report shipped 2026-08-24:** branded workbook at Drive `My Drive/Tickets/AUDI-1074/AUDI-1074 Proxima Sample Evaluation.xlsx` (builder: `artifacts/audi_1074_build_xlsx.py`, regenerable from outputs/). 13 tabs: Overview cover, question-per-row answers scorecard, delivery gaps, Q1-Q7 detail tabs, Read me, Method & caveats (incl. the -1 sentinel retraction), Queries (both BQ sample pulls via sql_dir).
+- Remaining: GO/NOGO recommendation comment + reusable ecomm-vendor rubric doc.
 
 ## 6. Questions Answered
 - **Q:** Is the Proxima sample still accessible after the July pause?
