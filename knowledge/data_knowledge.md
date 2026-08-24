@@ -2240,7 +2240,9 @@ form), which AND-layers platform automation on top. Every MNTN campaign's segmen
 - **DS14 cat [1] "MNTN Global Data", `op:"any"` — an IP-recency availability gate.** CORRECTED 2026-07-30: the "~7-day augmentor" reading was a decode error.
   Build window = `augmentor_log` 1d + `guid_log` 4d; **8-day serving TTL** ⇒ an IP is biddable up to ~9-12 days from its last log sighting
   (verified `create_mntn_global_data_pyspark.py` + membership-db `config.yml` `data_source_ttls['14']=8`; empirical no-cliff / CTV-soft-edge in AUDI-1117).
-  **DS14 IS materialized in IPDSC** (table `ipdsc__v1`, partition `data_source_id=14`; ~149M distinct IPs on dt=2026-07-27).
+  **DS14 IS materialized in IPDSC** (table `ipdsc__v1`, partition `data_source_id=14`; ~149M distinct IPs on dt=2026-07-27;
+  **201.0M distinct IPv4 on dt=2026-08-23** — AUDI-1074 1% FARM_FINGERPRINT sample, 2,010,355 rows. The daily set GREW ~35%
+  in 4 weeks; treat the per-day size as a moving quantity and re-measure same-day when using it as a denominator).
   CORRECTED 2026-07-28 (DS14-opt spike): the earlier "not materialized / computed at bid time" reading was wrong. DS14 is
   built into IPDSC daily by `populate_data_source.py`, and its **effective serving window is an 8-day TTL, not the 1-4d build
   window** (membership-db `data_source_ttls['14']=8`, per-IP epoch decay, not archive overwrite; see the DS14-opt block below).

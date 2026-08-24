@@ -21,7 +21,7 @@
 SELECT
   ip,
   MAX(IF(household_score BETWEEN 8000 AND 10000, 1, 0)) AS ever_hi,
-  MAX(IF(household_score IS NOT NULL, 1, 0)) AS ever_scored
+  MAX(IF(household_score IS NOT NULL AND household_score != -1, 1, 0)) AS ever_scored
 FROM `dw-main-silver.logdata.cost_impression_log`
 WHERE DATE(time) BETWEEN '2026-07-25' AND '2026-08-23'
   AND ip IS NOT NULL AND ip NOT LIKE '%:%'
