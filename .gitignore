@@ -102,3 +102,6 @@ claude-prompts/workflow_audits/.structure_findings.json
 
 # Spark UI HTML exports (SPA shell, no data - reference only)
 on-call/*.html
+
+# AUDI-1074: raw Proxima vendor drop (extensionless Trino file names dodge the *.parquet blanket)
+tickets/audi_1074_proxima_data_analysis/outputs/

@@ -5,7 +5,7 @@ Prior work, newest first. `result` = the blessed one-line answer (skip re-readin
 
 | date | ticket | summary | status | result | doc |
 |------|--------|---------|--------|--------|-----|
-| 2026-08-24 | AUDI-1074: proxima data analysis | proxima data analysis | backlog | not started | [doc](audi_1074_proxima_data_analysis/summary.md) |
+| 2026-08-24 | AUDI-1074: proxima data analysis | Evaluate Proxima's DTC Shopify transaction sample against the 7 AUDI-929 data-property questions; GO/NOGO + reusable ecomm-vendor rubric | in_progress | in progress | [doc](audi_1074_proxima_data_analysis/summary.md) |
 | 2026-08-24 | AUDI-1142: shopper graph vertical spike | SPIKE: estimate AUDI-1086 (Shopper Graph /vertical optimizations for Select recommendations) | in_progress | in progress | [doc](audi_1142_shopper_graph_vertical_spike/summary.md) |
 | 2026-08-21 | AUDI-1215: ElevenLabs lift pre/post 6/30 audience change (CGID 122748) | Did ElevenLabs incrementality lift change after the 2026-06-30 audience change on CGID 122748? | in_progress | Reopened 2026-08-24 for CG 130550 + combined deck. Visit lift +11.1% pre vs +16.5% post (change n.s.); incremental volume fell ~4x; powered conversion instrument shows lift fell 36% | [doc](audi_1215_elevenlabs_lift_post_audience_change/summary.md) |
 | 2026-08-21 | AUDI-XXXX: Spark optimizer delivery, coverage, and Databricks | Slack delivery, per-DAG digest ranking, fix the Airflow 3 coverage pass, batch the download, and land the Databricks EXPLAIN COST bridge | backlog | not started | [doc](audi_next_spark_optimizer_delivery/summary.md) |
