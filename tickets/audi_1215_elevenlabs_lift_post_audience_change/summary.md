@@ -91,6 +91,9 @@ All 11 strata rows pass every quality flag; ghost_frac 0.094. Overall visit lift
 ### 4.6 Attributed panel (context only; `queries/audi_1215_daily_panel.sql`, `outputs/audi_1215_daily_panel.csv`)
 At flat delivery (~19M imps/period), attributed visitor rate per unique −63.4% (0.0329 → 0.0120), CVR per unique −62.5%, visits/1k imps −49.5%; uniques +12.6% (broader reach, lower frequency). Slide began days BEFORE 06-30, continued through blackout, still falling mid-August (visits/1k imps 3.13 → 2.42 → 1.95 across POST thirds). Concentrated in the prospecting campaign (visits −77%, conv −75%); MT campaigns fell far less. Attributed ≠ incremental; cannot separate targeting quality from attribution-match-rate change (new audience = different device/IP mix).
 
+### 4.8 CG 130550 (new campaign, added 2026-08-24 for Mike's combined deck)
+"elevencreative_mntn_prospecting_ctv_us_english" (first launch 07-14, lift data floor 08-01). Entry-cohort ITT, anchors 08-01..08-16 (edge = MAX(dt) 08-23 - 7d), partner 8: submitted 3,482,494 IPs / 5,319 visited / 108 conv; ghost 382,031 / 550 / 7. Visit lift +6.09% (CI -2.7..+14.9, p=0.18); conv +69.3% (p=0.09); ghost_frac 0.09886. Weekly +12.3/+2.4/+8.8%. VERIFIED: independent repro agent matched every number exactly (different SQL construction); gold lift__ghost_bid_results cross-check +6.081% all-time with all quality flags passing (conv +48% all-time, lower because late anchors carry truncated windows). In workbook sheet "New Campaign 130550". Queries: audi_1215_cg130550_itt.sql; outputs: audi_1215_cg130550_itt.json.
+
 ## 5. Solution
 **Answer to Mike: the July changes did not improve incrementality, and the best-powered evidence says conversion lift declined.**
 1. **Visit lift is real and significant in BOTH periods** (+11.1% pre, +16.5% post) — directly rebuts "no incremental lift" on visits.
