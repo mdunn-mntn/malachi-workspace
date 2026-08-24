@@ -1,0 +1,6 @@
+AUDI-1142 estimate: 7 SP core, 9 with the data-quality guard.
+* New /vertical_from_url endpoint (clones the /autopilot_from_url pattern) plus Select client method: 3 SP
+* Domain-map fallback in /vertical so a second advertiser on a shared domain inherits the root vertical: 2 SP
+* Optional guard for the ~561 domain-map rows that disagree with company_url: +2 SP
+* Separate Argo app for the Select-facing endpoints: 2 SP, config only
+Findings: /vertical never consults the domain map (/autopilot does). 97% of prod POST /vertical calls fail on scrape (626 of 643, Aug 23), the same 563 advertisers daily. Vertical failures no longer reach the select DLQ: the error is acked on the embedding path and Temporal retries recommendations. Evidence in AUDI-1142.

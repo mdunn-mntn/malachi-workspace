@@ -53,16 +53,62 @@ MNTN Select builds audience recommendations by calling the Shopper Graph service
 - Isolation status quo: ONE Deployment in prod-targeting serves all endpoints; no per-endpoint isolation. Pod logs export every 30 min to `gs://mntn-data-archive-prod/ti_argocd_logs/shopper_graph/<date>/<HH-MM>.jsonl`.
 - Known DQ landmine: ~561 `fpa.mm_domain_map` rows where domain != `advertisers.company_url` (knowledge/data_catalog.md:2944, found 2026-04-20). A domain-fallback fix could silently reuse the WRONG root profile on those rows.
 
+### Adversarial verify of the code claims (local clone @6626756, 2026-08-24)
+All five claims held; two precision fixes to the root-cause narrative:
+- The scrape+classify path is NOT gated on a cache miss. Any POST /vertical without `vertical_id` runs the full scrape+GPT path (`vertical_wrapper.py:664,700`, fine-tuned model `ft:gpt-4.1-mini-2025-04-14:mntn::BMhxthUA`); an existing row only changes INSERT to UPDATE (`:741-743`). "Caching" on the POST path is nonexistent, not merely miss-prone.
+- The `public.advertisers.company_url` fetch happens only when the request supplies no `company_url` param (`:648`), not unconditionally.
+- Confirmed verbatim: zero `domain` references in vertical_wrapper.py; `/vertical` route (`api.py:164-181`) never touches DomainMapHandler; autopilot consults `domain_map.get_mapping` on miss (`autopilot_wrapper.py:312-327`) and in from_url (`:424-432`); api_spec.yaml POST companyUrl `required: false` (`:682-688`), GET has no company_url param (`:425-431`); `Semaphore(1)` + 429/Retry-After 30 (`:32,:465-471`).
+
+### Who calls POST /vertical (outputs/audi_1142_vertical_callers.md)
+All callers send advertiser_id+company_url with no vertical_id, so all hit the expensive path; nobody uses the cheap set-branch:
+1. **airflow-ti precache DAG** (dominant): `models/vertical_categorization/verticals_auto_assignment.py`, up to 200 AIDs/run, cron `0,30 * * * *` (`dags/machine_learning/mntn_match_verticals_precache_v1_1.py`).
+2. **gary-ql** `storeCompanyVertical()` (`src/utils/services/MntnMatched.ts`): fired per registration / first company_url set, fire-and-forget, errors swallowed.
+3. njs-rmq-scraper: QA host only.
+select-app client is GET-only. gary-ql vertical READS are DB-direct (sequelize over fpa.advertiser_verticals + Redis 1h TTL), never shopper-graph HTTP: GraphQL reads are out of blast radius.
+
+### BQ blast radius (queries/audi_1142_blast_radius.sql, outputs/audi_1142_blast_radius.md, 2026-08-24)
+- 37,802 active advertisers (deleted=FALSE, is_test=FALSE); 37,696 with a valid normalized domain.
+- 2,018 domains shared by >1 AID; 9,211 AIDs (24.4%) sit on shared domains. Composition is dominated by placeholder/social URLs (youtube.com 955 AIDs, google 326, mountain.com 294, instagram 259, facebook 251, gmail 238, tiktok 229, example.com 70); genuine franchise hoteling is far smaller (orangetheory.com 149, metalsupermarkets.com 103; BAE's curated `dw-main-gold.bae.v_aid_flagged_dup_domain` = 823 AIDs / 312 domains).
+- True shared-domain miss population: 2,740 shared-domain AIDs have NO fpa_advertiser_verticals row. Context: 8,025 active AIDs (21.2%) have no vertical row at all.
+- **fpa.mm_domain_map is NOT in BigQuery** (region-wide INFORMATION_SCHEMA sweep, us-central1 + US, bronze/silver/gold: zero hits). The ~561 mismatch count stays a Postgres-side 2026-04-20 observation; reconfirming needs a coredb read (DS/targeting).
+
+### Prod log evidence (outputs/audi_1142_prod_log_evidence.md, 2026-08-22/23)
+- **97% of POST /vertical requests fail.** 08-23: 643 VERTICAL_HANDLER COMPLETE = 626x400 + 17x200. 08-22: 636 = 622x400 + 14x200.
+- Failure mode is NOT the scrape exception (SCRAPING FAILED fired zero times): scrape returns invalid text (bot-challenge/too-short) -> self-selection fallback -> fallback almost never succeeds (0 and 3) -> 400.
+- 563 of the failing AIDs are IDENTICAL across both days (90% overlap): a recurring re-failing population the precache DAG re-hammers daily (batch spike hour 00 UTC). Zero GETs observed; zero /autopilot_from_url traffic; zero 429s.
+- /autopilot for context: 551 and 526 completions/day.
+
+### DLQ evidence (outputs/audi_1142_dlq_evidence.md, select-app@eaf611f)
+**The ticket's "we were getting DLQs" is not reproducible from current code paths; the absence is structural:**
+- On the embedding path, `SHOPPER_GRAPH_CLIENT_ERROR` + `SHOPPER_GRAPH_CLIENT_ERROR_RETRY_DISABLED` (code default TRUE, a QA workaround) means the message is ACKED as success: no retry, no DLQ. /vertical outages are invisible to the DLQ alert on that path.
+- Recommendations moved to Temporal (`apps/select-workflow`): shopper-graph failures surface as workflow retries / OTel spans, not RMQ DLQ messages.
+- The one recorded DLQ incident (2026-06-01, 486 msgs in select-dlq.v3) was Gary -> audience-service ECONNRESET, not Shopper Graph. No incident doc mentions shopper.
+- DLQ mechanics: select-queue.v5 -> select-dlq.v5, 5 retries x ~10 min TTL; Grafana alert fires on >0 ready for 2m.
+
 ## 5. Solution
-(estimate pending steps 3-6)
+
+### Story-point estimate for AUDI-1086 (drafted 2026-08-24, posting gated on Bryce's scope reply)
+| Item | SP | Anchor |
+|---|---|---|
+| 1. New `/vertical_from_url` endpoint (autopilot_from_url pattern: domain-map lookup, Semaphore throttle, spec, tests) + select-app client method | 3 | Pattern exists end-to-end in `autopilot_wrapper.py:424-476`; client 429 handling already present |
+| 2. Domain-map fallback in `/vertical` (hoteled AID inherits root vertical, mirroring `autopilot_wrapper.py:312-327`) | 2 | Same handler, same DomainMapHandler; touches one wrapper + spec |
+| 3. Validation guard on item 2 (mm_domain_map vs company_url mismatch, ~561 rows Apr 2026; `DomainAdvertiserMismatch` guard exists in domain_map_wrapper.py write path) | +2 | Only if DS wants the guard/backfill in scope |
+| 4. Separate Argo app for Select-facing endpoints (mntn-argocd second app + hostname + select-queue-listener URL flip per env) | 2 | Same image, config-only; mostly infra review cycles |
+Core total: 7 SP; 9 with the DQ guard.
+Risks flagged, not pointed: DS-team review latency (cannot self-merge shopper_graph); QA data availability (shopper-graph QA reads coredbdev, unsynced; Select actively uses QA); the 97% scrape-failure rate means a domain-map fallback helps only AIDs whose root HAS a vertical row: the 563-AID recurring-failure population needs a scraper/bot-challenge fix or backfill, which is a separate work item not in AUDI-1086's text.
 
 ## 6. Questions Answered
 - **Q:** What is the /vertical cache and why does it miss when two AIDs share a domain?
-  **A:** It is not a cache object; it is the `fpa.advertiser_verticals` Postgres table keyed on advertiser_id. Sharing a domain does not share the row, and unlike /autopilot, /vertical never falls back to `fpa.mm_domain_map`, so the second AID pays the full scrape+classify path or fails.
+  **A:** It is not a cache object; it is the `fpa.advertiser_verticals` Postgres table keyed on advertiser_id. Sharing a domain does not share the row, and unlike /autopilot, /vertical never falls back to `fpa.mm_domain_map`, so the second AID pays the full scrape+classify path or fails. Worse: POST without vertical_id re-scrapes even on a hit.
+- **Q:** Are the DLQs in AUDI-1086's description still happening?
+  **A:** Not via /vertical today, structurally (errors acked on the embedding path; recommendations path is Temporal, which retries instead of dead-lettering). The pain today is the 97% POST failure rate and 8,025 active advertisers with no vertical row.
+- **Q:** Is company_url optional as the schema says?
+  **A:** Spec says optional on POST (api_spec.yaml:682-688); in practice the expensive path 400s without a resolvable URL, and GET does not accept company_url at all.
 
 ## 7. Data Documentation Updates
-(pending /capture)
+(pending /capture; queued facts: mm_domain_map absent from BQ; shopper-graph pod-log export path + markers; POST /vertical always-scrape semantics; select DLQ structural bypass for shopper-graph errors; gsutil -m hang on this Mac)
 
 ## 8. Open Items / Follow-ups
-- Bryce's reply on spike scope (estimate-only vs design input) — gates posting/close.
-- fpa.mm_domain_map producer still unidentified (open unknown carried from ti_1058).
+- Bryce's reply on spike scope (estimate-only vs design input) — gates posting the estimate + closing.
+- fpa.mm_domain_map producer still unidentified (open unknown carried from ti_1058); table not mirrored to BQ, needs coredb access to requantify the ~561 mismatches.
+- 563-AID recurring scrape-failure population (bot challenges) is daily wasted LLM spend on the precache DAG; separate durable-fix candidate, not in AUDI-1086 scope.
