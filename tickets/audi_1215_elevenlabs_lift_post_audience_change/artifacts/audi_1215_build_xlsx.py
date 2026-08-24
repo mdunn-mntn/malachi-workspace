@@ -58,6 +58,9 @@ wb.table("Frequency Vs Lift", freq,
 cg2 = pd.DataFrame([
     ["8/1-8/16 (all)", "Visits", 3482494, 382031, 0.0015274, 0.0014397, 0.0609, "-2.7% to +14.9%", 1.35, "0.18", "No"],
     ["8/1-8/16 (all)", "Conversions", 3482494, 382031, 0.0000310, 0.0000183, 0.6925, "-11% to +150%", 1.68, "0.09", "No"],
+    ["Week of 7/27", "Visits", 755468, 88247, 0.0014891, 0.0013258, 0.1232, "-6.9% to +31.6%", 1.25, "0.21", "No"],
+    ["Week of 8/3", "Visits", 1927151, 207129, 0.0014986, 0.0014629, 0.0244, "-9.4% to +14.3%", 0.40, "0.69", "No"],
+    ["Week of 8/10", "Visits", 799875, 86655, 0.0016328, 0.0015002, 0.0884, "-9.3% to +27.0%", 0.95, "0.34", "No"],
 ], columns=["Window", "Outcome", "Reached IPs", "Holdout IPs", "Reached rate", "Holdout rate", "Rel lift", "95% CI (rel)", "z", "p", "Significant"])
 wb.table("New Campaign 130550", cg2,
     finding="Too early to call: visit lift +6.1% on 16 days of data, inside a -3% to +15% interval; conversions 108 vs 7, noise.",
