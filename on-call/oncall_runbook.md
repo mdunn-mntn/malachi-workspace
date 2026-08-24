@@ -1667,21 +1667,32 @@ right. `dags/machine_learning/fangorn_inference_pipeline_run.py:92` is explicit 
 — and the sibling's cluster `fangorn-inference-944275db` was deleted 22:35:56-22:37:22, before the
 challenger's first create at 22:46. The contradiction is withdrawn.
 
-**The two clusters actually holding the quota, by `principalEmail` on the CreateCluster audit
-entries:**
+**SETTLED by arithmetic, 2026-08-24.** Reading the `cluster.config` out of the CreateCluster audit
+requests and summing `numInstances x machineType` gives a single holder, not two:
 
-| Cluster | Created | Identity | Whose |
+| Created | Identity | Cluster | N2 vCPU |
 |---|---|---|---|
-| `fangorn-hhid-inference-f68824f0` | 22:42:15, 22:44:57 | `vertex-ai@` | **prod**, a different DAG (`fangorn_hhid_inference_pipeline_run`) |
-| `fangorn-inference-26f05d0f` | 22:44:00, 22:46:35 | `vertex-ai-qa@` | **QA** |
+| 22:42:15 | `vertex-ai@` (prod) | `fangorn-hhid-inference-f68824f0` | **0** — it is `n2d-standard-16`, which bills to `N2D_CPUS`, a different metric |
+| 22:44:00 | **`vertex-ai-qa@`** | `fangorn-inference-26f05d0f` | **4,672** |
+| 22:46:29 | `vertex-ai@` (prod) | `fangorn-challenger-54637823` | 4,672 requested, **refused** |
 
-**So prod was starved partly by a QA run.** QA and prod share one GCP project and therefore one
-regional `N2_CPUS` pool (targeting-infra-ml `CLAUDE.md`: "Both environments run in the same GCP
-project — separation is by bucket and registry suffix"). The same identity ran QA inference
-clusters at 20:13, 20:20 and 20:27 that evening, so this was someone iterating in QA, not a
-one-off. With the challenger needing 4,672 of 5,000, **any** concurrent cluster above 328 CPUs
-starves it, whatever environment it belongs to. That is the finding to act on, not the sibling
-ordering.
+**5,000 - 4,672 = 328, which is exactly the `available 328.0` in the error.** One QA cluster held
+the entire regional `N2_CPUS` pool. The hhid pipeline is irrelevant to this incident; an earlier
+version of this entry named it as a co-holder and that was wrong.
+
+**QA runs the identical 4,672-vCPU shape as prod** (`1x n2-standard-32 + 290x n2-standard-16`), and
+ran it four times that evening: 19:59, 20:13, 20:27, 22:44. Each one locks prod out completely for
+its lifetime, because two of them cannot coexist under a 5,000 ceiling. QA and prod share one GCP
+project (targeting-infra-ml `CLAUDE.md`: "Both environments run in the same GCP project — separation
+is by bucket and registry suffix"), so they share the quota.
+
+**Consequence for the fix.** The component's inner retry (3 x 300s) would NOT have saved this run:
+attempts at ~22:46, ~22:51, ~22:56, and the QA cluster was not deleted until 22:58:46-23:00:10. It
+misses by about four minutes. The retry fix is still correct — today it cannot run at all, and it
+also hides the real error — but the durable fix is separating QA's quota from prod's.
+
+**Identity, not the cluster name, answers "whose is this".** `fangorn-inference-*` is the same name
+in both environments; only `protoPayload.authenticationInfo.principalEmail` distinguishes them.
 
 **Try 3 was a manual clear, not an automatic retry.** `retries = 1` for prod in the DAG (line 23),
 so the task had two tries. `max_tries` read 3 afterwards because clearing a task bumps it. Sean
