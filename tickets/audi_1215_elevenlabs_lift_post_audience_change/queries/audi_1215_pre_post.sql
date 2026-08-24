@@ -1,3 +1,4 @@
+-- audi_1215_pre_post.sql
 -- AUDI-1215: PRE (2026-06-01..06-30) vs POST (2026-07-11..08-10) attributed aggregates, CGID 122748
 -- Attributed metrics only, NOT incrementality. Blackout 2026-07-01..07-10 excluded by construction.
 -- uniques / site_visitors are period-level HLL merges (dedup across days), not sums of daily counts.

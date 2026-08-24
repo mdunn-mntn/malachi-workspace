@@ -51,7 +51,7 @@ freq = pd.DataFrame([
 ], columns=["Exposure band", "Reached IPs", "Holdout IPs", "Visit lift", "p", "Significant"])
 wb.table("Frequency Vs Lift", freq,
     finding="Lift peaks at 2-10 exposures (+18-20%) and turns significantly negative at 11+ (-17.7%).",
-    method="Ghost-bid results by bid-count stratum, all dates 6/22-8/20. 70% of households see 3 or fewer impressions; the 11+ band absorbs spend at negative lift.",
+    method="Ghost-bid results by bid-count stratum, all dates 6/22-8/20. 70% of households at 3 or fewer impressions is from the 8/21 delivery frequency pull; the 11+ band absorbs spend at negative lift.",
     formats={"Visit lift": FMT.PCT2},
     kind="data", toc="Where frequency helps and where it hurts", query="audi_1215_gold_strata.sql")
 
@@ -95,14 +95,14 @@ wb.table("What Changed", tl,
 panel = pd.DataFrame([
     ["Attributed visitor rate per unique", 0.032886, 0.012034, -0.634],
     ["Attributed CVR per unique", 0.001595, 0.000598, -0.625],
-    ["Visits per 1,000 impressions", 5.28, 2.67, -0.495],
+    ["Visits per 1,000 impressions", 5.455, 2.755, -0.495],
     ["Distinct households reached (index, flat imps)", 1.00, 1.126, 0.126],
 ], columns=["Attributed metric (not incrementality)", "Pre", "Post", "Change"])
 wb.table("Attributed Panel", panel,
     finding="Attributed visit and conversion rates fell ~60% at flat delivery; 13% more households reached, responding far less.",
     method="Campaign-group totals, pre 6/1-6/30 vs post 7/11-8/10, blackout excluded. Attributed metrics credit exposure; context only, never the lift verdict. The slide begins days before 6/30.",
     formats={"Pre": "0.0000", "Post": "0.0000", "Change": FMT.PCT2},
-    kind="detail", toc="What the dashboards show (attributed, context only)", query="audi_1215_daily_panel.sql")
+    kind="detail", toc="What the dashboards show (attributed, context only)", query="audi_1215_pre_post.sql")
 
 wb.notes("How Ghost Bidding Works", [
     ("Why attribution is not enough", "Attribution credits a visit to an ad whenever the ad touched it; it cannot say whether the visit would have happened anyway. Incrementality answers the harder question: how many visits happened only because the ad ran. It adds to attribution rather than replacing it."),
@@ -128,7 +128,7 @@ wb.glossary("Read Me", [
 
 wb.sql_dir("Queries", f"{T}/queries",
     order=["audi_1215_ghost_itt_prepost.sql", "audi_1215_holdout_prepost.sql", "audi_1215_gold_strata.sql"],
-    note="All queries ran read-only on the us-central1 reservation via bq_run.sh.")
+    note="All queries ran read-only on the us-central1 reservation via bq_run.sh. Every z, p, and CI is computed from these outputs by queries/audi_1215_ghost_itt_stats.py in the ticket repo.")
 
 wb.notes("Method And Caveats", [
     ("The verdict standard", "Every number here was independently reproduced by a second fresh query pass (exact match) and adversarially reviewed before shipping. The review verdict reshaped the headline: lead with the decline evidence, not the flat relative-lift read."),
