@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1215: ElevenLabs lift pre/post 6/30 audience change (CGID 122748)"
-status: done
+status: in_progress
 date: 2026-08-21
 summary: "Did ElevenLabs incrementality lift change after the 2026-06-30 audience change on CGID 122748?"
-result: "Visit lift +11.1% pre vs +16.5% post (change n.s.); incremental volume fell ~4x; powered conversion instrument shows lift fell 36%"
+result: "Reopened 2026-08-24 for CG 130550 + combined deck. Visit lift +11.1% pre vs +16.5% post (change n.s.); incremental volume fell ~4x; powered conversion instrument shows lift fell 36%"
 question: "Did incrementality lift for CGID 122748 change after the 2026-06-30 audience change?"
 framing_state: locked
 ---
@@ -12,9 +12,8 @@ framing_state: locked
 # AUDI-1215: ElevenLabs lift pre/post 6/30 audience change (CGID 122748)
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1215
-**Status:** Done
+**Status:** In Progress (reopened 2026-08-24)
 **Date Started:** 2026-08-21
-**Date Completed:** 2026-08-21
 **Assignee:** Malachi
 
 ---
