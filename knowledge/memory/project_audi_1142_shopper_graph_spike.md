@@ -31,3 +31,6 @@ path without re-deriving them.
 **How to apply:** on Bryce's reply — estimate-only: lint + post the draft on AUDI-1086, close
 AUDI-1142, set this memory `lifecycle: archived`; design input: expand the frame per summary.md §0.
 [[reference_shopper_graph_deploy]]
+
+
+Update 2026-08-24: spike CLOSED by Malachi. Estimate (7 SP core / 9 with DQ guard) is on AUDI-1086 comment 610650. Brian McAdams will assess it later; any design decisions land on AUDI-1086, not the spike.

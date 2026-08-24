@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1142: shopper graph vertical spike"
-status: in_progress
+status: done
 date: 2026-08-24
 summary: "SPIKE: estimate AUDI-1086 (Shopper Graph /vertical optimizations for Select recommendations)"
-result: "in progress"
+result: "7 SP core / 9 with DQ guard posted to AUDI-1086; spike closed 2026-08-24"
 question: "What is the per-work-item story-point cost to give Select a company_url-capable /vertical and fix the shared-domain cache miss (AUDI-1086), and what evidence supports it?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1142: shopper graph vertical spike
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1142
-**Status:** in_progress
+**Status:** done
 **Date Started:** 2026-08-24
 **Assignee:** Malachi
 
@@ -117,6 +117,6 @@ Routed by /capture 2026-08-24:
 - `self_review/self_review_2.md`: AUDI-1142 entry (Speed + Craft).
 
 ## 8. Open Items / Follow-ups
-- Estimate POSTED 2026-08-24: AUDI-1086 comment 610650, AUDI-1142 note 610651 (user approved). Bryce's scope reply now gates only the spike CLOSE (transition 6 Close, resolution Done).
+- Estimate POSTED 2026-08-24 (AUDI-1086 comment 610650, AUDI-1142 note 610651). Spike CLOSED by Malachi 2026-08-24. Brian McAdams will assess the estimate later; his design calls (new endpoints vs patch, pod ownership) may revise the SP split on AUDI-1086 itself.
 - fpa.mm_domain_map producer still unidentified (open unknown carried from ti_1058); table not mirrored to BQ, needs coredb access to requantify the ~561 mismatches.
 - 563-AID recurring scrape-failure population (bot challenges) is daily wasted LLM spend on the precache DAG; separate durable-fix candidate, not in AUDI-1086 scope.
