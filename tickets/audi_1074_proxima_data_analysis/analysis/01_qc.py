@@ -42,10 +42,29 @@ def section(name, data):
     print(json.dumps(data, indent=2, default=str))
 
 
+DICT_BASKET = [
+    "order_id", "brand_id", "brand_category", "order_created_at", "order_subtotal",
+    "order_discount_percent", "order_total_tax", "order_total_shipping_price",
+    "order_total", "currency", "financial_status", "email_marketing_consent",
+    "sms_marketing_consent", "browser_ip", "customer_id",
+    *[f"{k}_address_{f}" for k in ("billing", "shipping", "default")
+      for f in ("city", "state", "zipcode", "country")],
+    *[f"category_{c}_buyer_{w}" for c in CATEGORIES for w in ("6mo", "12mo", "36mo")],
+]
+
 con = duckdb.connect()
 con.execute(f"CREATE VIEW basket AS SELECT * FROM read_parquet('{DATA}/basket/*')")
 con.execute(f"CREATE VIEW items AS SELECT * FROM read_parquet('{DATA}/items/*')")
-con.execute(f"CREATE VIEW ipmap AS SELECT * FROM read_parquet('{DATA}/ip_mapping/*')")
+con.execute(
+    f"CREATE VIEW ipmap AS SELECT _COL_0 AS customer_id, _COL_1 AS ip_address "
+    f"FROM read_parquet('{DATA}/ip_mapping/*')")
+
+delivered = [r[0] for r in q("DESCRIBE basket")]
+section("dictionary_vs_delivery", {
+    "basket_missing_vs_dictionary": [c for c in DICT_BASKET if c not in delivered],
+    "basket_extra_vs_dictionary": [c for c in delivered if c not in DICT_BASKET],
+    "ipmap_positional_headers": True,
+})
 
 section("manifest", {
     d.name: {
@@ -126,8 +145,24 @@ def ip_profile(table, col):
     }
 
 
-section("ip_basket_browser_ip", ip_profile("basket", "browser_ip"))
 section("ip_ipmap_ip_address", ip_profile("ipmap", "ip_address"))
+section("ipmap_join", {
+    "basket_customers_with_ipmap_pct": q1(
+        "SELECT 100.0*COUNT(DISTINCT b.customer_id)/(SELECT COUNT(DISTINCT customer_id) FROM basket) "
+        "FROM basket b WHERE EXISTS (SELECT 1 FROM ipmap m WHERE m.customer_id = b.customer_id)"),
+    "ipmap_customers_in_basket_pct": q1(
+        "SELECT 100.0*COUNT(DISTINCT m.customer_id)/(SELECT COUNT(DISTINCT customer_id) FROM ipmap) "
+        "FROM ipmap m WHERE EXISTS (SELECT 1 FROM basket b WHERE b.customer_id = m.customer_id)"),
+    "ips_per_customer_p50_p90_max": q(
+        "SELECT QUANTILE_CONT(n, 0.5), QUANTILE_CONT(n, 0.9), MAX(n) FROM ("
+        "  SELECT customer_id, COUNT(DISTINCT ip_address) n FROM ipmap GROUP BY 1)")[0],
+    "customers_per_ip_p50_p99_max": q(
+        "SELECT QUANTILE_CONT(n, 0.5), QUANTILE_CONT(n, 0.99), MAX(n) FROM ("
+        "  SELECT ip_address, COUNT(DISTINCT customer_id) n FROM ipmap GROUP BY 1)")[0],
+    "mega_ip_gt10_customers_pct": q1(
+        "SELECT 100.0*SUM(CASE WHEN n > 10 THEN 1 ELSE 0 END)/COUNT(*) FROM ("
+        "  SELECT ip_address, COUNT(DISTINCT customer_id) n FROM ipmap GROUP BY 1)"),
+})
 
 mono = {}
 for c in CATEGORIES:

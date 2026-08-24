@@ -50,8 +50,11 @@ Full plan: approved 2026-08-24 (plan file archived in session; timeline targets 
 7. Jira cadence: Day-1 kickoff (received/scope/Q5 cohort choice), Day-2/3 QC+data-gap comment, Day-5 midpoint numbers, Day-9/10 GO/NOGO cross-linked to AUDI-929. /capture at close.
 
 ## 4. Investigation & Findings
-- 2026-08-24: s3 access verified with the 7/17 emailed creds: 175 objects, 13,037,949,694 bytes (13.0 GB) under `20260717/{basket,items,ip_mapping}/`. Items files are extensionless (Trino/Presto-style names `20260717_062534_00115_x8848_<uuid>`, ~233MB each); basket and ip_mapping are `.snappy.parquet`.
-- 2026-08-24: AUDI-1074 has zero Jira comments to date; description points at AUDI-935, AUDI-929, and comment 574269.
+- 2026-08-24: s3 access verified with the 7/17 emailed creds: 175 objects, 13,037,949,694 bytes (13.0 GB) under `20260717/{basket,items,ip_mapping}/`. Basket and items files are extensionless (Trino/Presto-style names); ip_mapping is `.snappy.parquet`.
+- 2026-08-24: AUDI-1074 had zero Jira comments; kickoff posted (comment 610622).
+- 2026-08-24 **DELIVERY GAP (major): basket has 44 columns, not the dictionary's 57 — `browser_ip` and all 12 billing/shipping/default address columns are absent.** Verified consistent across sampled complete files. The 7/17 delivery email explicitly says "NOTE: This dataset contains browser_ip address at time of purchase" — it does not. Consequences: (a) every IP analysis must route through `ip_mapping` (customer grain, no timestamps), so Q4 recency bucketing degrades to customer-last-order-date grain; (b) Q5 geographic mix and all address fill-rate checks are unanswerable; (c) joins email/phone absence on the integration-cost axis and the vendor-questions list. Also missing vs the AUDI-935 scoping: customer_email, customer_phone (never in the dictionary either).
+- 2026-08-24 **ip_mapping ships positional headers `_COL_0`/`_COL_1`** (no column names in the parquet) — the exact "schema risk" flag from data_vendor_valuation_framework.md Step 1. `_COL_0` = 32-hex customer_id, `_COL_1` = ip_address (dotted-quad observed).
+- 2026-08-24 BQ denominator pulls (1% FARM_FINGERPRINT samples, outputs/): CIL 30d served IPv4 sample = 497,479 rows → **~49.7M distinct served IPv4 in 30d** (2026-07-25..08-23, RTC excluded), with per-IP ever_hi/ever_scored flags. DS14 gate (dt=2026-08-23): first pull hit the 2M max_rows cap → gate is >200M IPs, larger than the ~149M 2026-07-27 anchor; rerun with 10M cap in flight.
 
 ## 5. Solution
 (pending)
