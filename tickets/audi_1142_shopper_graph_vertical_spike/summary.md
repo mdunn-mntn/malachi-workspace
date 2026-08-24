@@ -117,6 +117,6 @@ Routed by /capture 2026-08-24:
 - `self_review/self_review_2.md`: AUDI-1142 entry (Speed + Craft).
 
 ## 8. Open Items / Follow-ups
-- Bryce's reply on spike scope (estimate-only vs design input) — gates posting the estimate + closing.
+- Estimate POSTED 2026-08-24: AUDI-1086 comment 610650, AUDI-1142 note 610651 (user approved). Bryce's scope reply now gates only the spike CLOSE (transition 6 Close, resolution Done).
 - fpa.mm_domain_map producer still unidentified (open unknown carried from ti_1058); table not mirrored to BQ, needs coredb access to requantify the ~561 mismatches.
 - 563-AID recurring scrape-failure population (bot challenges) is daily wasted LLM spend on the precache DAG; separate durable-fix candidate, not in AUDI-1086 scope.
