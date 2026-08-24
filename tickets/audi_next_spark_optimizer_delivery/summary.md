@@ -56,32 +56,35 @@ finding so one bad DAG fills the page, and two of the three planned inputs are m
   raise CPU only if that is not enough.
 
 **Databricks, the missing engine.**
-- **`system.lakeflow` cannot be enabled by anyone at MNTN.** Confirmed 2026-08-21: an account
-  admin (Brian McAdams) ran the enable call and got
-  `PERMISSION_DENIED: lakeflow system schema can only be enabled by Databricks` (request
-  `bcd7e37e-27b5-4887-946d-ef440b685610`); a non-account-admin gets the different error
-  `User does not have MANAGE on Schema 'system.lakeflow'`. The first error is the real wall:
-  the schema is enabled by Databricks staff on the metastore, so this is a Databricks support
-  ticket, not an internal permission grant. Malachi is filing it. Service principal
-  `spark_optimizer` (`07f36af7-614d-4d57-8143-2dbcd3cb58c2`) exists and `EXPLAIN COST` is
-  validated against warehouse `14b311ac86ee2ca2`, so only run *enumeration* is blocked.
+- **The blocker is a missing metastore admin, not a Databricks-side enable.** Corrected
+  2026-08-24 by David Qiu (Databricks). `system.lakeflow` is Databricks-managed and enabled
+  automatically, so `PUT .../systemschemas/lakeflow` always rejects with
+  `lakeflow system schema can only be enabled by Databricks` and that error is a red herring.
+  The real one is `User does not have MANAGE on Schema 'system.lakeflow'`: granting on system
+  schemas needs **metastore admin**, which account admin does not confer. Accounts created
+  after Nov 2023 ship with no metastore admin assigned, which is why nobody at MNTN has MANAGE.
+- **Assigning it is console-only.** An account admin sets it in the account console under
+  Catalog > metastore `c5dc6763-eaae-4d6c-9ae2-7af6147595bb` > Metastore Admin > Edit. It must
+  be a **group**, and there is no API or Terraform path today. Then a member of that group runs
+  the grants.
+- **Three grants, not two.** The original ask omitted catalog-level access:
+  `GRANT USE CATALOG ON CATALOG system`, `GRANT USE SCHEMA ON SCHEMA system.lakeflow`, and
+  `GRANT SELECT ON SCHEMA system.lakeflow`, each to `07f36af7-614d-4d57-8143-2dbcd3cb58c2`.
+- **Enumeration is one table, no joins.** `system.lakeflow.job_run_timeline` filtered
+  `run_type = 'SUBMIT_RUN'` returns the ephemeral submissions, with `run_name` carrying whatever
+  `runs/submit` was given (the dbt identifier). **Do not join `system.lakeflow.jobs` for a job
+  name** — ephemeral runs have no row there, so the join silently drops 100% of them. Join
+  `job_task_run_timeline` on `job_run_id` only for per-task detail. System tables are batch
+  ingested: expect ~10 minutes of lag before a run appears.
+- Service principal `spark_optimizer` (`07f36af7-614d-4d57-8143-2dbcd3cb58c2`) exists and
+  `EXPLAIN COST` is validated against warehouse `14b311ac86ee2ca2`, so only run enumeration is
+  blocked.
 - **The query-path error does not tell you what is enabled.** Probed 2026-08-21 as
-  malachi@mountain.com against warehouse `14b311ac86ee2ca2`: `system.query.history`,
-  `system.access.audit`, `system.billing.usage`, `system.compute.clusters` and
-  `system.lakeflow.job_run_timeline` all return the identical
+  malachi@mountain.com: `system.query.history`, `system.access.audit`, `system.billing.usage`,
+  `system.compute.clusters` and `system.lakeflow.job_run_timeline` all return the identical
   `INSUFFICIENT_PERMISSIONS ... does not have USE SCHEMA on Schema 'system.<x>'`. Missing grant
-  and not-enabled are indistinguishable from a query. Only
-  `GET /api/2.1/unity-catalog/metastores/c5dc6763-eaae-4d6c-9ae2-7af6147595bb/systemschemas`
-  gives the real state, and it needs an account admin (`User is not an account admin for
-  Account`). `databricks schemas list system` shows only `ai` and `information_schema` to a
-  workspace user.
-- **Enumeration fallback while the Databricks ticket sits:** `system.billing` is enabled by
-  default on every metastore and `system.query` / `system.access` are account-admin-grantable,
-  so ask Brian McAdams for `USE SCHEMA` + `SELECT` on those three before assuming lakeflow is
-  the only path. `system.query.history` covers SQL-warehouse queries only, so it bridges
-  `EXPLAIN COST` but not job-compute dbt runs; `system.access.audit` carries job run events.
-- Then bridge `artifacts/audi_1194_databricks_explain_cost.py` into the sweep. The enumeration
-  gap is unchanged: mapping an ephemeral dbt run to the query it ran.
+  and not-enabled are indistinguishable from a query, and every one of them is gated behind the
+  same missing metastore admin.
 
 **Debt this inherits.**
 - `include/spark_optimizer/` ships multi-line rationale comments throughout, which its own
