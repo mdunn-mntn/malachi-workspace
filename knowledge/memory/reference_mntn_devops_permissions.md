@@ -20,3 +20,41 @@ last_verified: 2026-08-20
 - **Request the review explicitly — a PR nobody is assigned to just sits.** mntn-devops#4724 stayed a DRAFT with ZERO reviewers from 2026-08-07 to 2026-08-20 with all CI green and `mergeable: true`; nothing technical was blocking it. `gh pr ready <n>` then `gh pr edit <n> --add-reviewer SteelHouse/devops --add-reviewer csz-mntn`. CODEOWNERS on `mntn-devops` is the catch-all `* @SteelHouse/devops`, and every other open PR there requests that **team**, so request the team AND ping Cristina.
 - **`gh pr update-branch`** handles drift: #4724 was 219 commits behind main and still `mergeable`/`rebaseable` because terragrunt IAM PRs add a new file rather than editing a shared one.
 - Use this for the AUDI-1191 Databricks event-log delivery (the Databricks user can't write to the `spark-events` GCS folder → needs a mountain-devops PR for that grant). See [[project_airflow_debugger]].
+
+## IAM at MNTN is Crossplane now, not a Terragrunt unit (2026-08-24)
+
+**Cristina Szumilo migrated both AUDI service-account units to Crossplane** and merged them:
+[#4992](https://github.com/SteelHouse/mntn-devops/pull/4992) for `spark-optimizer` (originally
+#4971) and [#4990](https://github.com/SteelHouse/mntn-devops/pull/4990) for `airflow-debugger`
+(originally my #4985, now **closed**). Her reason, worth carrying forward: **Crossplane syncs
+automatically, so nobody has to remember to apply a plan when the file changes.** A Terragrunt IAM
+unit is only as live as the last person who ran it.
+
+**So: write the next IAM change as Crossplane manifests, not a Terragrunt unit.** Path shape:
+
+```
+argocd-v2/mgmt/platform/crossplane/managed-resources/prod/manifests/base/
+  <project>/iam/<identity>/
+    service-account.yaml      kind: ServiceAccount        (crossplane.io/external-name)
+    project-permissions.yaml  kind: ProjectIAMMember      (one doc per role, incl. cross-project)
+    bucket-iam.yaml           kind: BucketIAMMember       (condition supported, keep it)
+    token-creator.yaml        kind: ServiceAccountIAMMember
+    kustomization.yaml        + a line in the parent iam/kustomization.yaml
+```
+
+Details that matter, from reading the merged manifests:
+- `apiVersion: storage.gcp.upbound.io/v1beta2`, provider `providerConfigRef: {name: default}`.
+- **Sync order is `argocd.argoproj.io/sync-wave`** — the SA is an earlier wave than its bindings.
+- **`deletionPolicy: Orphan`** on the bindings, so removing a manifest does not revoke live access.
+- **A cross-project grant is just another `ProjectIAMMember` with a different `project:`** — it
+  lives under the *identity's home project* directory, not the target project's.
+- **IAM conditions survive the migration** — the `debugger/` prefix condition came across intact.
+
+**Verify a migration by reading live IAM, not the diff.** A migration is exactly where a grant
+gets quietly dropped. `gcloud projects get-iam-policy <project> --flatten="bindings[].members"
+--filter="bindings.members:<sa>" --format="value(bindings.role)"` confirmed all five project
+grants. Note that **bucket** IAM is not readable this way without `storage.buckets.getIamPolicy`,
+which `malachi@mountain.com` does not have, so bucket bindings can only be manifest-verified.
+
+Supersedes the Terragrunt-unit shape recorded above for anything new. See
+[[reference_gcs_iam_creator_vs_user]] for the role choices themselves, which did not change.

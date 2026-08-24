@@ -18,14 +18,15 @@ Generated 2026-08-21. Only items **blocked on Malachi personally**. The 44 open 
 
 | Order | PR | State | Action |
 |---|---|---|---|
-| **1** | [mntn-devops#4985](https://github.com/SteelHouse/mntn-devops/pull/4985) | open, review required | Get devops review, merge. Creates the `airflow-debugger` SA + its grants |
-| **2** | [airflow-ti#1214](https://github.com/SteelHouse/airflow-ti/pull/1214) | **draft**, review required | Un-draft only after #4985 merges, then review and merge |
+| ~~1~~ | ~~[mntn-devops#4985](https://github.com/SteelHouse/mntn-devops/pull/4985)~~ | **CLOSED, superseded** | Cristina rebuilt it as Crossplane in [#4990](https://github.com/SteelHouse/mntn-devops/pull/4990), **merged and synced 2026-08-24**. Nothing to do |
+| **1** | [airflow-ti#1214](https://github.com/SteelHouse/airflow-ti/pull/1214) | ready for review | **Unblocked** — the identity is live. Review and merge |
 | — | [airflow#1497](https://github.com/SteelHouse/airflow/pull/1497) | open since **2025-05-24** | `TGT-4076: Ddp week dev`. Fifteen months old. Merge, rebase or close |
 
-**Why the order.** Without #4985 the DAG has no `logging.viewer` and nothing in the targeting
-project, so it would run green and publish a report where every Dataproc finding reads
-`driver log fetch failed` and every Vertex one reads `pipelineJobs GET failed`. That reads as thin
-results, not as a broken grant, which is the worst failure mode available.
+**The blocker cleared on 2026-08-24.** Verified live, not assumed: `airflow-debugger@` now holds
+`dataproc.viewer` + `logging.viewer` on `mntn-prj-prod-00` and `aiplatform.viewer` +
+`dataproc.viewer` + `logging.viewer` on `mntn-targeting-prj-prod`. The two bucket grants and the
+`debugger/` prefix condition are in the merged manifest; I cannot read bucket IAM to confirm them
+live (`storage.buckets.getIamPolicy` denied), so that half is manifest-verified only.
 
 ---
 

@@ -1,7 +1,7 @@
 # PR #1214 self-review — 5 blocking defects
 
 > **All fixed 2026-08-21.** airflow-ti#1214 carries the code half (CI green); the IAM half is
-> [mntn-devops#4985](https://github.com/SteelHouse/mntn-devops/pull/4985), a **new
+> [mntn-devops#4990](https://github.com/SteelHouse/mntn-devops/pull/4990) (Crossplane; my #4985 was closed and superseded), a **new
 > `airflow-debugger` service account** rather than a widening of `spark-optimizer`. Each fix is
 > pinned by a test in `include/airflow_debugger/tests/test_bundle.py`, and the personal-path check
 > is now a CI step, not a habit.
@@ -17,7 +17,7 @@ Three of the five are things I introduced; two are latent bugs the vendoring exp
 |---|---|---|
 | 1 | `PROFILE` reads `$DATABRICKS_PROFILE`, no default; unset means the Databricks layer is skipped | `test_the_databricks_profile_has_no_default` |
 | 2 | `_AIRFLOW_TI_LOCAL` is the bundle root, `$AIRFLOW_TI_ROOT` to override | `test_the_repo_root_is_the_bundle_not_a_checkout` |
-| 3 | New `airflow-debugger` GSA: `logging.viewer` here, plus the four targeting-project grants for the Vertex chain | mntn-devops#4985 |
+| 3 | New `airflow-debugger` GSA: `logging.viewer` here, plus the four targeting-project grants for the Vertex chain | mntn-devops#4990, **merged + synced 2026-08-24** |
 | 4 | Sensor router uses `pull`'s REST client; no importlib, no astro CLI | `test_the_sensor_router_needs_no_astro_cli` |
 | 5 | `.subtract(days=1)` dropped | `test_dag_reads_the_day_that_just_closed` |
 | all | Leak grep over the diff | CI step + `test_no_personal_path_or_identity_ships_in_the_bundle` |
@@ -25,7 +25,7 @@ Three of the five are things I introduced; two are latent bugs the vendoring exp
 Non-blocking 6, 7, 8 and 10 are also fixed: the corpus prints its own age when stale, the git
 shell-out is skipped when there is no `.git`, missing binaries are named once up front instead of
 surfacing as per-finding fetch failures, and the deployment URL derives from `AIRFLOW_API_BASE`.
-Item 9 is mntn-devops#4985.
+Item 9 is mntn-devops#4990.
 
 ---
 
