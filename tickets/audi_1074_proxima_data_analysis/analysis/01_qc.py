@@ -183,8 +183,6 @@ section("distributions", {
         "SELECT financial_status, COUNT(*) FROM basket GROUP BY 1 ORDER BY 2 DESC LIMIT 10")},
     "currency": {r[0]: r[1] for r in q(
         "SELECT currency, COUNT(*) FROM basket GROUP BY 1 ORDER BY 2 DESC LIMIT 10")},
-    "shipping_country_top10": {r[0]: r[1] for r in q(
-        "SELECT shipping_address_country, COUNT(*) FROM basket GROUP BY 1 ORDER BY 2 DESC LIMIT 10")},
     "brand_category": {r[0]: r[1] for r in q(
         "SELECT brand_category, COUNT(*) FROM basket GROUP BY 1 ORDER BY 2 DESC LIMIT 20")},
     "distinct_brands": q1("SELECT COUNT(DISTINCT brand_id) FROM basket"),

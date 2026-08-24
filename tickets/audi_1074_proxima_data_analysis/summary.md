@@ -56,6 +56,27 @@ Full plan: approved 2026-08-24 (plan file archived in session; timeline targets 
 - 2026-08-24 **ip_mapping ships positional headers `_COL_0`/`_COL_1`** (no column names in the parquet) — the exact "schema risk" flag from data_vendor_valuation_framework.md Step 1. `_COL_0` = 32-hex customer_id, `_COL_1` = ip_address (dotted-quad observed).
 - 2026-08-24 BQ denominator pulls (1% FARM_FINGERPRINT samples, outputs/): CIL 30d served IPv4 sample = 497,479 rows → **~49.7M distinct served IPv4 in 30d** (2026-07-25..08-23, RTC excluded), with per-IP ever_hi/ever_scored flags. DS14 gate (dt=2026-08-23): 2,010,355-row 1% sample (uncapped rerun) → **gate ≈ 201.0M IPv4**, up from the ~149M 2026-07-27 anchor (ds_catalog also cites ~259M elsewhere — the gate size moves; use the same-day 201M as this eval's denominator).
 
+### QC battery results (2026-08-24, analysis/01_qc.py → outputs/qc_results.json)
+**All three kill-criteria PASS — the eval proceeds on the full plan:**
+- Grain exact: order_id dup rate 0.0000%, line_item_id dup 0.0000%, items→basket orphan rate 0.0000%, orders-without-items 0.045%.
+- Date span exactly as sold: 2025-07-16 00:00:00 → 2026-07-15 10:54:04 (1 year). Monthly volume 3.7M (partial Jul-25) → 9.1M peak Nov-25 → 5.5-6.5M/mo steady; Jul-26 2.68M in 15 days = no cliff.
+- **customer_id is CROSS-BRAND**: 32,635,713 distinct customers, 19.20% bought from 2+ brands (4.0M at 2, 1.2M at 3, max observed 20+). Proxima resolves identity across stores; cross-brand Q2/Q6 are possible.
+
+Scale: 79,965,455 orders · 162,031,287 line items · 1,163 brands · 32.6M customers · 100% have customer_id (0% guest rows) · 99.65% USD · financial_status: 2.44% refunded/partially_refunded/voided.
+
+**Freshness headline (feeds Q7): max order_created_at = 2026-07-15 10:54, delivered 2026-07-17 → nominal lag ≈ 2 days.**
+
+**Identity/IP reality (feeds Q4 + integration cost):**
+- ip_mapping: 33,458,138 rows, 14,829,909 customers, 24,668,002 distinct IPs (96.09% IPv4 → 23,506,901 distinct IPv4; 3.91% IPv6; 0.00% bogon/private).
+- **Only 45.44% of basket customers have any ip_mapping row** — the identity-signal fill rate, well below the "60-80% IP fill" scoped in AUDI-935 (that claim was per-transaction browser_ip, which was not delivered at all).
+- Cardinality healthy: IPs/customer p50=2 p90=4 max=131; customers/IP p50=1 p99=4; IPs with >10 customers = 0.0004%.
+- 100% of ipmap customers exist in basket.
+
+**Vendor-data-quality flags (feed the scorecard + vendor questions):**
+- **category_*_buyer flag monotonicity VIOLATIONS** (6mo=true but 12mo=false is logically impossible): fashion 10.36%/8.90% (6>12 / 12>36), health 8.71%/8.80%, home 7.35%/8.43%, beauty 5.28%/6.65%, fooddrink 4.02%/5.04%; travel/other <1%. Per-customer flag values are perfectly consistent across rows (0% conflicts), so the flags look like snapshots computed at DIFFERENT times per window. Vendor question.
+- Items nulls: line_item_product_id 22.34% NULL, taxonomy L1 23.61% NULL (≈1/4 of line items unclassifiable), L2 25.32%, L3 77.67%, L4 88.09%, L5 96.90% — usable taxonomy is effectively L1/L2.
+- items.order_id/line_item_id delivered VARCHAR vs dictionary BIGINT (basket.order_id IS BIGINT — join needs a cast).
+
 ## 5. Solution
 (pending)
 
