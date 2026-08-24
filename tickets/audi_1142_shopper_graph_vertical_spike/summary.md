@@ -106,7 +106,15 @@ Risks flagged, not pointed: DS-team review latency (cannot self-merge shopper_gr
   **A:** Spec says optional on POST (api_spec.yaml:682-688); in practice the expensive path 400s without a resolvable URL, and GET does not accept company_url at all.
 
 ## 7. Data Documentation Updates
-(pending /capture; queued facts: mm_domain_map absent from BQ; shopper-graph pod-log export path + markers; POST /vertical always-scrape semantics; select DLQ structural bypass for shopper-graph errors; gsutil -m hang on this Mac)
+Routed by /capture 2026-08-24:
+- `knowledge/data_catalog.md` (fpa.mm_domain_map entry): NOT mirrored to BQ (region-wide INFORMATION_SCHEMA sweep, zero hits; only fpa_advertiser_verticals + fpa_categories mirror from the fpa schema); ~561 mismatch count is Postgres-side only; BQ proxy `dw-main-gold.bae.v_aid_flagged_dup_domain` (823 AIDs / 312 domains, 2026-08-24).
+- `knowledge/data_knowledge.md` § Shopper Graph API: /vertical semantics (always-scrape POST, no mm_domain_map fallback, spec-vs-reality, from_url throttle), POST caller inventory, 97%-failure gotcha (563-AID recurring population), Select DLQ structural bypass.
+- `knowledge/glossary.md`: hoteling / fpa.mm_domain_map row.
+- memory `reference_shopper_graph_deploy`: pod-log GCS export path + the four grep markers with line numbers.
+- memory `reference_gcloud_storage_over_gsutil`: gsutil -m hang re-confirmed 2026-08-24; sequential cp works; cause hypotheses appended (LibreSSL vs Python 3.9 multiprocessing).
+- memory `project_audi_1142_shopper_graph_spike` (new): spike state, SP numbers, Bryce gate, clone path.
+- `improvements_backlog.md` IMP-067: fix/quarantine the 563-AID recurring scrape-failure population in the precache DAG.
+- `self_review/self_review_2.md`: AUDI-1142 entry (Speed + Craft).
 
 ## 8. Open Items / Follow-ups
 - Bryce's reply on spike scope (estimate-only vs design input) — gates posting the estimate + closing.

@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py]
+keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py, ti_argocd_logs, pod logs GCS, VERTICAL_HANDLER COMPLETE, SCRAPING FAILED, VALIDATION PASSED, AUTOPILOT_FROM_URL 429]
 domain: [repos, infra, routing-people]
 lifecycle: active
-last_verified: 2026-08-20
+last_verified: 2026-08-24
 ---
 `SteelHouse/shopper_graph` = the **MNTN Matched backend** ("Shopper Graph" is the original name for MNTN
 Matched — Alyson Lefkowitz + Brian McAdams, INC-006 2026-07-30). Its API services the **entire MNTN Match
@@ -66,6 +66,14 @@ from `8b23620`. `#299` (a manual after-cursor loop) closed as superseded. Both t
 and this INC-007 cleanup fix (#298) now live on the same `gcp-prod` image tag; `batch_cleanup` verified green
 on the #298 image. (Because `image_pull_policy=Always`, cleanup tasks whose pods started before vs after the
 #297 deploy ran different code — see [[reference_mntn_matched_batch_pipeline]].)
+
+## Prod pod logs in GCS (log-based evidence without Argo access)
+Prod middleware pod logs export **every 30 min** to
+`gs://mntn-data-archive-prod/ti_argocd_logs/shopper_graph/<date>/<HH-MM>.jsonl`.
+Grep markers (line numbers @6626756, verified AUDI-1142 2026-08-24): `VERTICAL_HANDLER COMPLETE`
+(api.py:178) · `SCRAPING FAILED` (vertical_wrapper.py:667) · `VALIDATION PASSED`
+(vertical_wrapper.py:695) · `AUTOPILOT_FROM_URL` 429 "Service busy" (autopilot_wrapper.py:466).
+Pull with `gcloud -q storage cp`, never `gsutil -m` ([[reference_gcloud_storage_over_gsutil]]).
 
 ## Access
 - **Argo:** request via the **IT service desk** (HR → IT support). In the ticket comment ask for
