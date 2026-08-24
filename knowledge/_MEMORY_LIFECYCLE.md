@@ -205,7 +205,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mntn_devops_permissions | reference | 2026-08-20 | [doc](memory/reference_mntn_devops_permissions.md) |
 | reference_oncall_runbook | reference | 2026-08-20 | [doc](memory/reference_oncall_runbook.md) |
 | reference_pihole_dns_contaminates_fetch | reference | 2026-08-20 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
-| reference_shopper_graph_deploy | reference | 2026-08-20 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
 | databricks | reference | 2026-08-21 | [doc](memory/reference_databricks.md) |
 | feedback_branch_from_origin_not_local_main | feedback | 2026-08-21 | [doc](memory/feedback_branch_from_origin_not_local_main.md) |
@@ -220,4 +219,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_no_label_colon_titles | feedback | 2026-08-24 | [doc](memory/feedback_no_label_colon_titles.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-24 | [doc](memory/feedback_review_own_pr_before_asking.md) |
 | incrementality-experiment-ber-2250 | project | 2026-08-24 | [doc](memory/project_incrementality_experiment.md) |
+| reference_shopper_graph_deploy | reference | 2026-08-24 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_test_budget_from_rates | reference | 2026-08-24 | [doc](memory/reference_test_budget_from_rates.md) |
