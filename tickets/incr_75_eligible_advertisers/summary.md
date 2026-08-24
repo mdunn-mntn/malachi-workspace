@@ -310,6 +310,12 @@ Caveat on both readings: this is bid-grain ITT (win-rate diluted), not served-gr
 2. **AUDI-789 WS1 guidance needs revisiting** — the "a visit/spend-optimized scorer de-optimizes incrementality" warning rests on the reversed band ordering.
 3. Imani will want a fresh per-advertiser pull once the beta advertisers are chosen; that is `incr_75_entry_cohort_clean.sql` filtered to their IDs.
 
+## R+Co (39377) test-budget discrepancy reconciled, 2026-08-24 (Edgar von Trotha question)
+
+Edgar compared the two circulating workbooks and found R+Co needing $105,816 to prove a 5% IVR lift in `incr_75_eligible_advertisers.xlsx` but only $28,794 in `incr_75_lift_test_candidates.xlsx`. Both cells are the SAME column (`budget_for_mde_ivr_5pct`, TI-884 `spend_required`); the books differ only in data vintage. June run vs 2026-08-19 rerun for 39377: CPM 115.84 → 29.13, imps/IP 1.626 → 2.313, IVR 5.29% → 6.84%. Decomposition verifies exactly: cost-per-treated-IP ratio (29.13×2.313)/(115.84×1.626)=0.358, required-IP ratio ((1−.0684)/.0684)/((1−.0529)/.0529)=0.761, product 0.272 = 28,793.57/105,815.81. R+Co's delivery genuinely changed: same ~$15.5k trailing-30d spend now buys ~532k imps (was ~137k) at 4x lower CPM, and visit rate rose. Displayed monthly spend also moved ($4,977 → $14,219) partly from the §9.1 definitional change (media-only → advertiser-facing total).
+
+**Operational issue: the June "Eligible Advertisers" workbook is superseded but still shared and being read side-by-side with the rerun.** Answer given to Edgar: use the Lift Test Candidates book ($28.8k). Consider a deprecation banner on the June Drive file.
+
 ## Orangetheory National (39718) lift reads reconciled, 2026-08-20
 
 Two lift numbers exist for 39718 and they are not the same read:
