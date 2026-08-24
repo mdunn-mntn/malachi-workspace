@@ -41,6 +41,10 @@ that List 1 rule-making is AUDI's. AUDI-1145 (List 1 rules) likely stays with Ma
   team owns the graph part; he does not know who owns the logic and asked Malachi to start a clarifying thread
   with him/Jaime + ID folks + Maya. Settling mechanism: that thread (venue: #identity-crediting, where the
   rules are decided). Until it lands, do not treat any single claim as the ownership answer.
+- Jack Barbey (thread reply, 08-24 4:54pm): per their call, **Jaime Mutale takes over RUNNING the assembly
+  SQL** (all lists); still open whether Jaime or Maya maintains/updates the code. **Lists 2/3 logic proposal
+  (Maya, Jack endorses): if DeepSync was incremental for either list, it is incremental for the whole
+  impression.** List 1 logic ownership (the AUDI-1145 question) still unanswered in the thread.
 
 **Gotchas that cost time:**
 - The timestamp column is **`translation_timestamp`**, never `translation_date`. `bae-sql-utility#24` reads
