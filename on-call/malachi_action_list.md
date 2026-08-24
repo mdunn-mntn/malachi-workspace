@@ -47,12 +47,21 @@ under the `objectUser` prefix condition. The verification run diagnosed but did 
 
 ---
 
-## 3. External tickets — nobody at MNTN can do these
+## 3. Databricks — one internal ask, not two
+
+**Settled 2026-08-24 by David Qiu (Databricks).** `system.lakeflow` is Databricks-managed and
+enabled automatically; the `lakeflow system schema can only be enabled by Databricks` error is
+expected and ignorable. The 2026-08-21 reading of it as "nobody internal can help" was wrong, and
+the support ticket it produced is closed. Nothing here is external any more.
 
 | # | Ask | Who |
 |---|---|---|
-| **a** | `system.lakeflow` enablement | **Databricks support.** Enabling it returns `lakeflow system schema can only be enabled by Databricks`, so no customer-side admin can. You said you would file this |
-| **b** | `system.billing` read (`USE SCHEMA` + `SELECT ON system.billing.usage`) | Databricks **account/metastore admin**. Different schema, not known to carry the lakeflow restriction. This is what turns the flexible-node-types cost commitment from a promise into a measurement. IMP-062 |
+| **a** | **Assign a metastore admin group** on metastore `c5dc6763-eaae-4d6c-9ae2-7af6147595bb` | An MNTN **account admin**, in the account console (Catalog > metastore > Metastore Admin > Edit). Console-only: no API, no Terraform. Post-Nov-2023 accounts ship with none assigned, which is why `owner` reads `System user` and every `system.*` grant denies |
+| **b** | Then the grants, run by a member of that group | `USE CATALOG ON CATALOG system` (easy to omit, blocks on its own), then `USE SCHEMA` + `SELECT` on `system.lakeflow` and on `system.billing`. Same gate for both, so they land together. IMP-062 |
+
+`system.billing.usage` is what turns the flexible-node-types cost commitment from a promise into a
+measurement. `system.lakeflow.job_run_timeline` is the only enumeration surface for ephemeral dbt
+submissions.
 
 ---
 

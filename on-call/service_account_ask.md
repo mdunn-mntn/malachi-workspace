@@ -139,13 +139,19 @@ is in the scrollback. Store via Vault's Update Team Secret template under
 ShopperGraph), and do not use `rotate-secret` on `mntn-team-credentials` — that breaks Vault
 delivery (SOP 055).
 
-**`system.lakeflow` is NOT an internal ask — do not raise it in this conversation.** Enabling it
-returns `lakeflow system schema can only be enabled by Databricks.` (2026-08-21). No customer-side
-admin can turn it on; the route is a Databricks support ticket, filed 2026-08-21.
+**`system.lakeflow` IS an internal ask, corrected 2026-08-24.** The line here previously said it
+was Databricks-side only, reading `lakeflow system schema can only be enabled by Databricks.` as a
+wall. David Qiu (Databricks) settled it: lakeflow is Databricks-managed and enabled automatically,
+so that error is expected and means nothing. The real blocker is `User does not have MANAGE on
+Schema 'system.lakeflow'`, which needs a **metastore admin** — and MNTN has none assigned
+(post-Nov-2023 accounts ship without one).
 
-**`system.billing` (IMP-062) may still be an internal ask** and is the one worth raising: it turns
-the flexible-node-types cost commitment from a promise into a measurement. It is a different
-schema, so do not assume the lakeflow answer applies until it has been tried.
+**Ask for the metastore admin group, not for individual schemas.** That one gate sits in front of
+`system.lakeflow`, `system.billing`, `system.query`, `system.access` and `system.compute` alike, so
+IMP-062's "is billing different" question is moot until it is set. Assignment is console-only
+(Catalog > metastore `c5dc6763-eaae-4d6c-9ae2-7af6147595bb` > Metastore Admin > Edit) and must be a
+group; then a member of that group runs `USE CATALOG ON CATALOG system` plus `USE SCHEMA`/`SELECT`
+per schema.
 
 ---
 

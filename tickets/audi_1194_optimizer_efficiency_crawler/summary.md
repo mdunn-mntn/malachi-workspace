@@ -239,7 +239,7 @@ this one:
 - **Presentation.** The digest currently lists eight `fangorn_score_monitor` findings in a row
   because ranking is per-finding, not per-DAG (IMP-046). One line per DAG with its worst finding
   would read far better.
-- **Databricks.** ~~`USE SCHEMA` on `system.lakeflow` needs a Databricks **account** admin~~ — **wrong, corrected 2026-08-21.** The API returns `lakeflow system schema can only be enabled by Databricks`, so no customer-side admin can enable it and there is nobody internal to escalate to. A Databricks support ticket was filed 2026-08-21. Originally recorded as:
+- **Databricks.** ~~`USE SCHEMA` on `system.lakeflow` needs a Databricks **account** admin~~ — first corrected 2026-08-21 to "Databricks-side only, nobody internal to escalate to", then **corrected again 2026-08-24 and that reading was also wrong.** David Qiu (Databricks) settled it on the support thread: lakeflow is Databricks-managed and enabled automatically, so `lakeflow system schema can only be enabled by Databricks` is expected and ignorable. The real blocker is `User does not have MANAGE`, i.e. a **metastore admin**, which MNTN has never assigned (post-Nov-2023 default, `owner: System user`). Assignment is console-only and must be a group. Original 2026-08-20 note kept below for the record:
   workspace admin is not enough (`grants update` → `User is not an account admin`), which
   corrects Ryan's assumption. Then the `EXPLAIN COST` bridge from
   `artifacts/audi_1194_databricks_explain_cost.py` into the sweep.

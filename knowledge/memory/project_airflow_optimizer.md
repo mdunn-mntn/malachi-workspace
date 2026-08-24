@@ -109,6 +109,4 @@ the GCS URL, because `run()` passes the local path through. Cosmetic but useless
 
 ### Not yet built
 Slack delivery (the digest already renders Slack markup; `compass-slack` in mntn-devops is the
-transport), the Databricks `EXPLAIN COST` bridge, and `USE SCHEMA` on `system.lakeflow` — which **Closed as unobtainable 2026-08-21:** enabling `system.lakeflow` returns `lakeflow system schema can only be enabled by Databricks`, so no MNTN admin can grant it; a Databricks support ticket was filed. Stop treating it as a pending internal ask.
-needs a Databricks **account** admin, not a workspace admin. Ryan Kleck said workspace admin
-would be enough; it is not, `grants update` returns `User is not an account admin`.
+transport), the Databricks `EXPLAIN COST` bridge, and `USE SCHEMA` on `system.lakeflow` — **reopened as an internal ask 2026-08-24.** The 2026-08-21 note here ("unobtainable, Databricks-side only") misread the enable error; David Qiu (Databricks) confirmed lakeflow is enabled automatically and that error is expected. The real gate is **metastore admin**, which MNTN has never assigned, and it blocks every `system.*` schema. Workspace admin is not enough and neither is account admin on its own (`grants update` → `User is not an account admin`); Ryan Kleck's assumption that workspace admin would do it is wrong. See [[reference_databricks]].
