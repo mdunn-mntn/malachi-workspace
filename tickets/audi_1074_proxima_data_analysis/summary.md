@@ -96,6 +96,12 @@ Scale: 79,965,455 orders · 162,031,287 line items · 1,163 brands · 32.6M cust
 
 **Q7 freshness** (08_freshness.py): max order 2026-07-15 10:54, delivery 2026-07-17 → **nominal lag 2 days**; daily volume holds ≥95% of trailing median through 2026-07-14 (ramp-down = 1 day) → **effective lag ~2-3 days**. Trailing median 187,980 orders/day. Cadence beyond one drop unmeasurable (single delivery); vendor states weekly standard, sub-weekly negotiable (AUDI-935). Feedback-class framing: at ~2-3d lag + weekly drops, purchase signals arrive 2-9 days post-purchase — usable for measurement/seeding and post-purchase suppression/cross-sell windows (30d median cadence gives runway), but NOT as pre-exposure bid-time features without the leakage split (TI-789/790).
 
+**Q5 cohort separability** (06_cohorts.py; cohorts = CIL 30d served IPv4 sample split ever-HI (n=201,246) vs never-HI (n=296,232); Proxima side = last-90d orders via ip_mapping; matched 18,205 vs 21,654 IPs — above the 1k/cohort power floor): **NO separability.**
+- 5-fold CV logistic AUC on 14 Proxima-only features (orders, AOV, GMV, brand count, 6 category shares, 4 vendor 12mo flags): **0.506 ± 0.007 — chance.**
+- Category-mix JS divergence 1.49e-5 (distributions essentially identical: fashion 24.5% vs 24.4%, health 22.9% both, home 20.2% both). Medians identical (AOV $81.85 vs $81.67; orders 1 vs 1). brands_90d Mann-Whitney p=8.7e-6 but zero effect size (median 1 vs 1; n=40K makes noise significant).
+- Reading: on this test, Proxima purchase behavior is ORTHOGONAL to Fangorn's intent signal. Cuts both ways: no demographic/behavioral separability of the score bands (the AUDI-929 Q5 ask, answered NO), but orthogonality does not preclude incremental lift on OUTCOMES (visits/conversions) — that requires the out-of-scope offline lift test (follow-up ticket, leakage-controlled per TI-789/790).
+- Caveats: matched subsample = IPs with any 90d Proxima order (39,859 of 497,478 sample IPs ≈ 8.0%); IP-grain join mixes household members; ever-HI = HI for ANY advertiser (dilution); 90d window.
+
 ## 5. Solution
 (pending)
 
