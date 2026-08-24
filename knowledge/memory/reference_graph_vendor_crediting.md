@@ -31,8 +31,10 @@ from September 2026 Mike Dolt + Jaime own the crediting logic; AP only helped wi
 part of the August change, so AP updated the script with Jack and Wei, Jack agreed to the proposal; no recording
 exists). Maya's crediting examples, DS4 tab plus planned DS63 approach:
 https://docs.google.com/spreadsheets/d/1yZXxU7RNf0TUgiZxXYJjD351qsVKwLyuQwMoks_7-0o/edit?gid=552399317
-Open: whether AUDI-1145 folds into Mike/Jaime's ownership or stays as Malachi's support ticket (over-crediting
-examples from the AUDI-694 findings: scenario B mismatch, 39.3% uncredited gap, 33Across dedup).
+Sharper read (2026-08-24, from the table above): the meeting was the DS63 update, and DS63 needs no List 1,
+so Maya's statement covers the graph legs (Lists 2/3) plus script-running; it does not displace the 08-18 call
+that List 1 rule-making is AUDI's. AUDI-1145 (List 1 rules) likely stays with Malachi. Open question for
+Mike Dolt/Jaime: confirm the boundary — they own the script + graph-leg logic, AUDI-1145 keeps List 1 rules.
 
 **Gotchas that cost time:**
 - The timestamp column is **`translation_timestamp`**, never `translation_date`. `bae-sql-utility#24` reads
