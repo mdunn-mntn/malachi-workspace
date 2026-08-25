@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: 6b830d36-17fc-4962-b8c0-c9c838b6e689
 doc_type: memory
-keywords: [pi5 server, raspberry pi, pihole5, ssh key, slack knowledge bot, workflow audit cron, deploy key, unbound, decommissioned bot, tailscale, commit gate on pi, run_workflow_audit --no-verify, redeploy runner]
+keywords: [slack token prod service allowed, alerts-tpa-pipeline, C08CURMGNMQ, openai key alyson, pi5 server, raspberry pi, pihole5, ssh key, slack knowledge bot, workflow audit cron, deploy key, unbound, decommissioned bot, tailscale, commit gate on pi, run_workflow_audit --no-verify, redeploy runner]
 domain: [infra]
 lifecycle: active
 last_verified: 2026-07-24
@@ -25,6 +25,7 @@ last_verified: 2026-07-24
 ## Services Running
 
 ### Slack Knowledge Bot — DECOMMISSIONED 2026-06-10 (do NOT recreate)
+- **NARROWED 2026-08-25 by Malachi: the ban is on LOCAL apps/keys, not on a Slack token for a prod service.** A bot token held by a prod deployment (Astro `airflow-ti`) for the AUDI-1191 debugger to reply in `#alerts-tpa-pipeline` (`C08CURMGNMQ`) is acceptable; an OpenAI key exists and comes from Alyson Lefkowitz. Both prior readings are kept: the 2026-06-10 policy below is real and still governs anything running on a laptop or the Pi. The distinction that reconciles them is WHERE the credential lives, not whether Slack is involved. Do not use this to justify a local token.
 - **Retired by security policy.** Robin Fox confirmed MNTN no longer allows local Slack apps or API keys in local env. App was deliberately deleted (not an accident). Recreating it just gets it deleted again. Compliant replacement = rebuild as a **Compass** agent (Harvey Yau's group). See `slack_bot/RECOVERY.md` (reframed to migration) + `knowledge/mntn_business.md` security-policy note.
 - **Cron DISABLED** 2026-06-10 (line commented in crontab). Code kept as reference for the Compass port. Last good run 2026-06-10 00:00 (commit 22043f6) — no data lost.
 - **Wrapper:** `~/run_slack_bot.sh` — sources env, activates venv, pulls latest code, runs pipeline
