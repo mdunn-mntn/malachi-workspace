@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [airflow debugger, AUDI-1191, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-24
+last_verified: 2026-08-25
 ---
 
 ## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
@@ -177,4 +177,22 @@ Building an automated Airflow/Spark failure-triage agent under **AUDI-1191** (th
 **Manual-run trap: `logical_date` must sit inside `[the DAG's start_date, now]`.** Outside it Airflow reports the run **success with zero task instances** — no error, no log, indistinguishable from a clean run unless you read `total_entries` on `/taskInstances`. Cost three verification attempts: `2026-08-26` queued forever (future), `2026-08-19` instant success with no tasks (before `start_date` 2026-08-21). Never read a green manual run as evidence without checking the task count.
 
 See [[reference_fangorn_inference_dataproc]], [[reference_gcs_iam_creator_vs_user]], [[reference_oncall_runbook]].
+
+## The 30-day replay and the five gaps it closed (2026-08-25)
+
+**211 failed-state logs collapse to 67 distinct failures**, keyed `(dag_id, task_id, signature)`. Each replayed through the real `orchestrate.investigate(use_llm=False)`. After the fixes: **47 root-caused, 0 bare `unclassified`** — every low-confidence result is now a named condition (stub naming its culprit, pod never started, process killed mid-poke, sensor gave up in another try, evidence expired) rather than a residue. Harness: `tickets/audi_1191_airflow_spark_debugger/artifacts/audi_1191_replay30.py`.
+
+**Two of the five backlog rows were WRONG about their own cause, and reading the log changed the fix both times.**
+- **IMP-077** was filed as "the traceback did not serialise, and the Databricks run-id extractor is missing". It is neither: a `KubernetesPodOperator` waited 120s for its pod to reach Running, deleted it, and raised with an EMPTY message. The pod name was the handle all along. Detection is structural — budget announced + `Deleting pod:` + no root error — because there is no text to match.
+- **IMP-075** was filed as a signature for the heartbeat `500` / `psycopg2.OperationalError` / PgBouncer strings. **Those never appear in the task's own log** (verified: zero matches on the task that died inside Astronomer's maintenance window); they live in Astronomer's API-server logs. What ships instead: 22 pokes with **zero** reschedules means the sensor was polling in-process, so a log that stops mid-poke means the PROCESS was killed, not that the sensor timed out.
+
+**Writing a backlog row from the symptom and implementing it without re-reading the log would have shipped two wrong fixes.**
+
+**A stub's run must be matched on the stub's OWN state.** An `upstream_failed` log's filename carries its day, never its run id. `vertical_classification_api` had **21 runs on 2026-08-21 and one failure**, so "the first run containing this task" matched a SUCCESS run and answered confidently wrong. Rank failed runs first, then require the task's state to equal the stub's.
+
+**The replay harness had the same class of bug it was built to find.** It picked each group's most recent log as the representative; for a group whose newest member is an empty 69-byte stub that reports the whole group as "no error text" and hides a real gap. Selecting the member with the longest error text changed the gap analysis completely. **A sampling harness that silently picks the wrong member looks exactly like a clean result.**
+
+**`db_credential_rejected` came from a live failure, not the corpus** (IMP-080): `PSQLException: FATAL: password authentication failed` matched nothing, so a Vertex code-9 stopped at "read the step's logs". A database rejecting a credential is not a missing IAM grant, so it is ordered BEFORE `auth_error`.
+
+**Still open:** seven stubs whose culprit does not resolve, and IMP-081 — acquisition pulls only the `tpa` and `Machine Learning` tags, so a control-plane outage that killed four tasks across three DAGs is visible as ONE log and the cross-log co-occurrence detector cannot be built.
 

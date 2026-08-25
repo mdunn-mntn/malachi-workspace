@@ -256,3 +256,6 @@ sync lag recorded above (40s to 2h15m observed).
 `0 17 * * *` schedule, `next_dagrun_logical_date` was already in the past on arrival
 (`2026-08-23T17:00`), so unpausing fires a run immediately for the most recent closed interval
 rather than waiting for tomorrow. Budget for that before unpausing anything expensive.
+
+**`airflow_pull.sh` was silently broken for any unfiltered pull until 2026-08-25.** With `set -u`, `"${PY_ARGS[@]}"` on an EMPTY array is an unbound-variable error on this bash, so `--date <D>` alone died with `PY_ARGS[@]: unbound variable` while `--date <D> --dag <x>` worked. Every backfill anyone ever ran had happened to pass `--dag` or `--tag`, so the break went unnoticed and five days of corpus were never pulled. Fix is `${PY_ARGS[@]+"${PY_ARGS[@]}"}`. **Any bash array expansion under `set -u` needs that guard**, and the bug only shows on the code path nobody exercises.
+

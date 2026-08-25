@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [fangorn_hhid_inference_pipeline_run, challenger model alias, challenger-v alias missing, resolve_model_uri, vertex model registry, versionAliases, No version found with alias pattern, fangorn-hhid-xgboost, re-registration drops aliases, submit-parallel-inference-jobs, ml_job replica exited, INC-024, fangorn_inference_pipeline_run, inference_pipeline, challenger_inference_pipeline, daily_drift_pipeline, wait_for_features, wait_for_challenger_features, champion upstream of challenger, fangorn dataproc cluster, 290 workers, N2_CPUS quota, DISKS_TOTAL_GB, us-central1 stockout, mntn-targeting-prj-prod, create-dataproc-cluster, vertex pipeline, fangorn_inference_dataproc_pipeline, INC-008, IMP-015, 94% cap, 93% quota, INC-025, QA starves prod, vertex-ai-qa, shared regional quota, N2D_CPUS different metric, principalEmail cluster owner, quota refusal base rate, hackathon week deferral, IMP-070, delete_cluster_before_retry, cleanup masks quota error, INC-015, run_daily_feature_drift, LOOKBACK_DAYS, drift lookback window, feature drift pipeline, guid_log_pivot_ip_vertical_id sensor, challenger sensor 18h timeout, vertex job_id not resource id, pipelineJobs list orderBy create_time, driverOutputResourceUri, dataproc driver output gsutil, targeting-infra-ml drift, fangorn-daily-feature-drift-pipeline]
+keywords: [fangorn_hhid_inference_pipeline_run, challenger model alias, challenger-v alias missing, resolve_model_uri, vertex model registry, versionAliases, No version found with alias pattern, fangorn-hhid-xgboost, re-registration drops aliases, submit-parallel-inference-jobs, ml_job replica exited, INC-024, fangorn_inference_pipeline_run, inference_pipeline, challenger_inference_pipeline, daily_drift_pipeline, wait_for_features, wait_for_challenger_features, champion upstream of challenger, fangorn dataproc cluster, 290 workers, N2_CPUS quota, DISKS_TOTAL_GB, us-central1 stockout, mntn-targeting-prj-prod, create-dataproc-cluster, vertex pipeline, fangorn_inference_dataproc_pipeline, INC-008, IMP-015, 94% cap, 93% quota, instance_flexibility_policy, instance_selection_list, e2-standard-16, google-cloud-dataproc 5.10.1, proto field absent in 5.4.0, machine family stockout rate, targeting-infra-ml 94, INC-025, QA starves prod, vertex-ai-qa, shared regional quota, N2D_CPUS different metric, principalEmail cluster owner, quota refusal base rate, hackathon week deferral, IMP-070, delete_cluster_before_retry, cleanup masks quota error, INC-015, run_daily_feature_drift, LOOKBACK_DAYS, drift lookback window, feature drift pipeline, guid_log_pivot_ip_vertical_id sensor, challenger sensor 18h timeout, vertex job_id not resource id, pipelineJobs list orderBy create_time, driverOutputResourceUri, dataproc driver output gsutil, targeting-infra-ml drift, fangorn-daily-feature-drift-pipeline]
 domain: [infra]
 lifecycle: active
-last_verified: 2026-08-24
+last_verified: 2026-08-25
 ---
 How the Fangorn inference pipeline is wired + why its Dataproc creates fail (from on-call INC-008, 2026-07-30).
 
@@ -36,6 +36,24 @@ wait_for_challenger_features → ───────────────�
 **The cleanup masks the cause, and kills the retry (fixed by [targeting-infra-ml#93](https://github.com/SteelHouse/targeting-infra-ml/pull/93)).** `_delete_cluster_before_retry` runs inside the create's `except Exception as e`, so on a refused create it calls `delete_cluster` on a name that was never created, raises `NotFound: 404` from inside the handler, and escapes. Two effects: the surfaced error is a missing cluster rather than the quota text, and `MAX_CREATE_RETRIES = 3` / `RETRY_WAIT_SECONDS = 300` **never runs a second attempt** — the backoff written for exactly this has never executed. On INC-025 it would still have missed by ~4 minutes (attempts ~22:46/22:51/22:56, QA released 22:58:46), so it is resilience, not the fix.
 
 **DEFERRED by owner decision, 2026-08-24: Sean Yang moved the durable fix to hackathon week when Brian McAdams is back.** Recorded reasoning was "no clear pattern"; the 7-in-30-days base rate above was measured after that call and was not in front of him. The two fixes on the table: raise `N2_CPUS` in us-central1 from 5,000 to ~15,000 (a Google quota request, no code), and cap the QA cluster so it stops requesting the full prod shape. Tracked as **IMP-070**; Malachi set a reminder for **Tuesday 2026-08-25**, when Brian is back; Sean confirmed the two fixes. Do not let it lapse.
+
+**The stockout half got a real fix on 2026-08-25, and it is an INSTANCE FLEXIBILITY POLICY, not a machine swap.** [targeting-infra-ml#94](https://github.com/SteelHouse/targeting-infra-ml/pull/94) (Sean Yang) replaces the fixed `machine_type_uri` on `worker_config` with:
+
+```python
+"instance_flexibility_policy": {
+    "instance_selection_list": [
+        {"machine_types": ["n2-standard-16", "n2d-standard-16", "e2-standard-16"], "rank": 0},
+    ],
+},
+```
+
+**The library pin is load-bearing, not incidental.** It also bumps `google-cloud-dataproc` 5.4.0 to 5.10.1. Verified by installing both: `instance_flexibility_policy` is **absent** from `InstanceGroupConfig` in 5.4.0 and present in 5.10.1, so on the old pin the field would have been silently dropped and the cluster would still have been single-family. Check a proto field before trusting it: `python -c "from google.cloud.dataproc_v1.types import InstanceGroupConfig; print([f.name for f in InstanceGroupConfig.pb(InstanceGroupConfig()).DESCRIPTOR.fields])"`.
+
+**The policy is valid on PRIMARY `worker_config`**, not only on secondary workers — confirmed against the 5.10.1 descriptor. All three types are 16 vCPU / 64 GB so there is no memory skew, but **`e2-standard-16` has no local SSD and is a different performance class**: a cluster that lands mostly on E2 may start and then run long. Read what was actually acquired with `gcloud dataproc clusters describe`, never assume the preferred type won.
+
+**Machine-family stockout rates, 30 days to 2026-08-25** (`CreateCluster` `status.code=14`): hhid `n2d` 8/94 (8.5%), `fangorn-inference` `n2` 21/104 (20%), `fangorn-challenger` `n2` 21/113 (19%). **Do not read that as "AMD is 2x better"** — hhid requests 11 nodes and the other two request 290, so family and size are confounded and the comparison isolates neither. A superseded PR of mine swapped both files to `n2d` on that reasoning; #94 is strictly better and mine was closed.
+
+**Only `fangorn_inference_dataproc` is covered by #94.** `fangorn_challenger_inference` still hardcodes `n2-standard-16` at a near-identical stockout rate.
 
 **Diagnose by pulling ALL 3 surfaces + reconciling** (one underdetermines it): `gcloud dataproc operations describe <failed-create> --format="value(error)"` (zonal), the Vertex `service`/worker-pool log (quota), and `gcloud compute regions describe us-central1` quota-vs-usage. Delete any lingering ERROR cluster before retrying. Durable fix = **IMP-015** (raise N2/DISK quota, auto-delete failed clusters, multi-zone, or a smaller cluster). Full incident: on-call runbook §3 INC-008.
 
