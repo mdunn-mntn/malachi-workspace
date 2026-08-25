@@ -46,6 +46,7 @@ class Entry:
     key: str  # "<detector>:<stage>" - stable across runs of the same job
     impact: str
     title: str
+    fix: str = ""
     owner: str = ""
     dcu_h: float | None = None
     exec_h: float | None = None
@@ -196,7 +197,8 @@ def record(reports: list, date: str, owners: dict | None = None, dcu: dict | Non
             entries.append(Entry(
                 date=date, dag_id=dag_id, app_id=getattr(r, "source", ""),
                 key=finding_key(f), impact=getattr(f, "impact", ""),
-                title=getattr(f, "title", ""), owner=owners.get(dag_id, ""),
+                title=getattr(f, "title", ""), fix=getattr(f, "fix", ""),
+                owner=owners.get(dag_id, ""),
                 dcu_h=dcu.get(dag_id),
                 exec_h=round(getattr(r, "exec_h", 0.0), 1) or None,
             ))

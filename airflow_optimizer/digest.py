@@ -78,6 +78,54 @@ def _section(title: str, entries: list, base: str, known: set | None = None,
     return lines + [""]
 
 
+def _worst_first(entries: list) -> list:
+    """Entries ordered by impact, then by the executor-hours the run held."""
+    return sorted(entries, key=lambda e: (_RANK.get(getattr(e, "impact", ""), 3),
+                                          -(getattr(e, "exec_h", None) or 0)))
+
+
+def by_dag(entries: list, cap: int = 3) -> list:
+    """The `cap` worst DAGs, each with its own findings worst-first.
+
+    Ranking per finding lets one bad DAG fill the page: the 2026-08-21 digest opened with
+    eight consecutive `fangorn_score_monitor` lines and showed nothing else.
+    """
+    groups: dict = {}
+    for e in entries:
+        groups.setdefault(getattr(e, "dag_id", "") or "unknown", []).append(e)
+    ranked = sorted(groups.items(),
+                    key=lambda kv: (_RANK.get(_worst_first(kv[1])[0].impact, 3),
+                                    -max((getattr(e, "exec_h", None) or 0 for e in kv[1]),
+                                         default=0),
+                                    -len(kv[1])))
+    return [(dag, _worst_first(rows)) for dag, rows in ranked[:cap]]
+
+
+def _blocks(dag: str, rows: list, base: str, known: set | None) -> list[str]:
+    """One DAG as What / Where / Why / How, the same four blocks every day."""
+    worst = rows[0]
+    others = len(rows) - 1
+    what = getattr(worst, "title", "")
+    if others:
+        what += f" (+{others} more finding{'s' if others != 1 else ''} on this DAG)"
+    why = f"{SEV.get(getattr(worst, 'impact', ''), 'LOW')} impact"
+    dcu = getattr(worst, "dcu_h", None)
+    # Per RUN, not per finding: every finding on a DAG shares the one run's hours.
+    hours = max((getattr(e, "exec_h", None) or 0 for e in rows), default=0)
+    if dcu:
+        why += f", {dcu:,.0f} DCU-h/day"
+    elif hours:
+        why += f", {hours:,.0f} executor-hours held on this run"
+    streak = getattr(worst, "streak", 0)
+    if streak > 1:
+        why += f", firing {streak} sweeps running"
+    return [f"  *What*  {what}",
+            f"  *Where* {dag_link(dag, base, known)} · `{getattr(worst, 'app_id', '')}`",
+            f"  *Why*   {why}",
+            f"  *How*   {getattr(worst, 'fix', '') or 'See the backlog for the fix.'}",
+            ""]
+
+
 def render(delta: object, scanned: int, findings: int, high: int, date: str,
            coverage: object | None = None, backlog_path: str = "",
            base: str = AIRFLOW_UI) -> str:
@@ -90,9 +138,10 @@ def render(delta: object, scanned: int, findings: int, high: int, date: str,
 
     known = {d.dag_id for d in getattr(coverage, "dags", [])} or None if coverage else None
     out = [head, ""]
-    out += _section("Fix not working", getattr(delta, "fix_not_working", []), base, known)
-    out += _section("New today", getattr(delta, "new", []), base, known)
-    out += _section("Chronic", getattr(delta, "chronic", []), base, known)
+    actionable = (list(getattr(delta, "fix_not_working", []))
+                  + list(getattr(delta, "new", [])) + list(getattr(delta, "chronic", [])))
+    for dag, rows in by_dag(actionable):
+        out += _blocks(dag, rows, base, known)
     out += _section("With the owner", getattr(delta, "notified", []), base, known)
     resolved = getattr(delta, "resolved", [])
     if resolved:

@@ -137,7 +137,8 @@ def test_digest_leads_with_the_delta_and_links_the_dag(tmp_path: Path) -> None:
     text = digest.render(ledger.delta(entries), scanned=214, findings=278, high=197,
                          date="2026-08-18", backlog_path="outputs/b.md", base=UI)
     assert "214 Spark jobs scanned, 278 findings, 197 high." in text
-    assert "*New today*" in text
+    for block in ("*What*", "*Where*", "*Why*", "*How*"):
+        assert block in text
     assert "|site_network_hourly>" in text  # a link, not a bare name
     assert "8,663 DCU-h/day" in text
 
@@ -223,3 +224,22 @@ def test_a_finding_carries_the_executor_hours_of_the_run_that_produced_it(tmp_pa
     got = {e.dag_id: e.exec_h for e in rows}
     assert got == {"cheap": 0.4, "expensive": 812.5}
     assert all(e.dcu_h is None for e in rows)          # measured DCU is a separate, unset field
+
+
+def test_one_bad_dag_cannot_fill_the_whole_digest(tmp_path: Path) -> None:
+    """The 2026-08-21 digest opened with eight consecutive fangorn_score_monitor lines."""
+    class _R:
+        def __init__(self, name, n, hours):
+            self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
+            self.findings = [OptFinding(f"d{i}", f"stage {i} spills", "high", "w", f"fix {i}")
+                             for i in range(n)]
+
+    entries = ledger.record([_R("noisy_cheap", 8, 2.0), _R("quiet_expensive", 1, 900.0)],
+                            "2026-08-25", path=str(tmp_path / "l.jsonl"))
+    text = digest.render(ledger.delta(entries), scanned=2, findings=9, high=9, date="2026-08-25")
+
+    assert text.index("quiet_expensive") < text.index("noisy_cheap")   # cost outranks count
+    assert text.count("*What*") == 2                                   # one block per DAG
+    assert "+7 more findings on this DAG" in text
+    assert "900 executor-hours" in text
+    assert text.count("executor-hours") == 2   # per run, never summed across its findings
