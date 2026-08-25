@@ -20,7 +20,7 @@ last_verified: 2026-08-20
 
 **Connecting Claude Code to these (2026-08-25):**
 - Atlas Code MCP: configured for this workspace under `projects.<workspace>.mcpServers.mountain` in `~/.claude.json` (the `claude mcp add` CLI was broken locally, native binary missing, so it was written directly). Tools connect on next session start; verify with `/mcp`.
-- Direct Compass (`compass-query`) as an MCP tool: goes through ContextForge on the same agent-gateway, but the exact MCP path and its auth are NOT yet recorded here. `POST https://basecamp.in.mountain.com/api/basecamp-chat/a2a` verified live 2026-08-25 but returns 401 AuthenticationError without credentials; the credential type (SSO cookie vs service token) is unconfirmed. Ask #dev-basecamp (Harvey Yau) for the ContextForge MCP endpoint + auth, then register it like `mountain` above and record both here.
+- Direct Compass from Claude Code — ANSWERED by Harvey Yau, #dev-basecamp 2026-08-25: no separate compass-query MCP registration needed. **Atlas MCP includes a tool that builds a Compass investigation from inside Claude Code**; paste the resulting Basecamp URL back into the chat to download the entire Compass conversation + context. Works in both directions (start in Compass, continue in Atlas; Compass can also review a PR and Atlas pulls that context in). Atlas is deliberately lighter (essential tools, no multi-agent harness); if a tool is blatantly missing, tell Harvey. The a2a endpoint (401 without credentials, probed 2026-08-25) is NOT the intended path for this.
 
 **Coverage gap:** Quickframe (QF) platforms mostly NOT covered (built outside core infra) — only thin billing/GCP. Don't use for deep QF work.
 
