@@ -116,6 +116,16 @@ Scale: 79,965,455 orders · 162,031,287 line items · 1,163 brands · 32.6M cust
 
 ## 8. Open Items / Follow-ups
 - **Linked-ticket coverage check (2026-08-24, user ask):** AUDI-1074 carries no formal issuelinks; AUDI-929↔AUDI-935 link only to each other and both were reviewed in full (descriptions + all comments) at session start. Beyond the 7 questions, AUDI-929's five higher-level asks map to: (1) predictive power → Q5 proxy answered (AUC 0.51), full offline lift test = follow-up ticket; (2) uniqueness vs Audience Acuity / Shopify-partnership data → NOT computable (AA S3 behavioral data never integrated, no AA eval exists; no Shopify-partnership dataset found in ds_catalog) — GO/NOGO states this; (3) match rate vs AA benchmark → answered in absolute terms (no AA baseline exists); (4) integration shape → scorecard integration-cost axis; (5) reusable framework → the rubric deliverable.
-- Vendor questions accumulating for the user's thread (send at user's discretion): refresh cadence + sub-weekly options, append-only vs updated-order semantics (refunds), email/phone fields absent vs scoping, brand_id → brand-name mapping, customer_id cross-brand scope confirmation.
+- **Vendor questions FINAL (2026-08-24, with Alyson for review before sending).** Email carries asks 1-3; 4-9 are midpoint-call agenda:
+  1. Can you redeliver basket with browser_ip and the address columns? Files carry 44 of the 57 dictionary columns.
+  2. Can you walk us through how the category buyer flags are computed? 5-10% of rows read 6mo=true but 12mo=false.
+  3. Can you resend ip_mapping with column headers? Files arrive as unnamed _COL_0/_COL_1.
+  4. What share of customers should have an IP mapping? Observed 45%; scoping discussed 60-80%.
+  5. Are email or phone signals available in the full product? In scoping, not in the dictionary.
+  6. What's the refresh cadence, and are sub-weekly deliveries an option? Unmeasurable from one drop.
+  7. Are orders append-only, or restated after refunds? Refunded statuses present; update semantics unknown.
+  8. Is a brand_id to brand-name mapping available? Opaque IDs block advertiser-roster overlap checks.
+  9. Should we expect the active-brand count to move much? Observed 1,082 → 878 over the file year.
+- Jira comments to date: 610622 kickoff · 610694 QC gaps · 610700 findings · 610742 per-question answers.
 - Follow-up ticket candidate (post-GO only): Fangorn offline lift test via champion/challenger slot, with feedback-class leakage handling (TI-789/790 split).
 - Receipt confirmation + midpoint meeting scheduling: user-owned; decision 2026-08-24 was no reply yet (Kale owns the thread).
