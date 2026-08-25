@@ -55,12 +55,15 @@ Fix mechanical failures directly (they are deterministic), re-run to green, then
 ## Step 3 — Dispatch the loop
 
 ```
-Workflow({ name: 'pr_gauntlet',
+Workflow({ scriptPath: '<workspace>/.claude/workflows/pr_gauntlet.js',
            args: { repo, base, files, prNumber, description } })
 ```
 
-If name resolution fails, fall back to `scriptPath: <repo>/.claude/workflows/pr_gauntlet.js`.
-Runs in the background — per always-on §12, arm the stall detector immediately:
+Dispatch by `scriptPath`, not by name: `Workflow({name})` snapshots the script at first
+resolution and keeps serving that copy for the session (proven 2026-08-24), and the same
+staleness applies to agent types — the workflow falls back to role-file prompts when the
+registry predates the `pr-gauntlet-*` agents. Runs in the background — per always-on §12, arm
+the stall detector immediately:
 
 ```
 Monitor({ command: "bash .claude/scripts/stall_monitor.sh <workflow transcript dir> 15 300",
