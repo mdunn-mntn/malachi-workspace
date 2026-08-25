@@ -35,10 +35,24 @@ Spawned from INCR-75 (see `tickets/incr_75_eligible_advertisers/summary.md`, 202
 
 ## 3. Plan of Action
 1. Matt Brorby is checking the pipeline side (Slack, 2026-08-25).
-2. If needed: check `bid_price_log` (10-day TTL) for ghostBid rows for a few absentees — bidder-side vs pipeline-side split. Advertiser filter costs ~7.8 TB/day unfiltered; scope by ip-cluster or ask Matt for the cheap path.
+2. ~~Check `bid_price_log` for ghostBid rows for a few absentees~~ DONE 2026-08-25: present with ghost bids → pipeline-side.
 3. Document the coverage rule in `knowledge/experimentation.md` ghost-bid section once named.
 
 ## 4. Investigation & Findings
+
+### Raw-log probe settles it: the gap is in the SQLMesh silver model (2026-08-25)
+
+Matt's discriminating test: if the absentees are in `dw-main-bronze.raw.bid_price_log` for these campaigns, "something is up with the sqlmesh model." They are. One-hour window (2026-08-24 18:00-19:00 UTC, 395 GB on-reservation, `queries/audi_1223_raw_bid_log_probe.sql`):
+
+| Advertiser | ghostBid rows | submitted ('' reason) | ghost/submitted |
+|---|---:|---:|---:|
+| 7 For All Mankind (31602, ABSENT) | 1,820 | 40,857 | 4.5% |
+| Sur La Table (32244, ABSENT) | 992 | 9,893 | 10.0% |
+| ThirdLove (32127, ABSENT) | 28 | 1,901 | 1.5% |
+| Gruns (42097, control, PRESENT) | 15,051 | 93,221 | 16.1% |
+
+Absent advertisers have both ghost bids and submitted bids in the raw log, across multiple campaigns each, yet zero rows in `enriched.lift__ghost_bid_visits`. Bidder-side logging is fine; the silver SQLMesh build drops them. With Matt to trace the model. (Single-hour ghost/submitted ratios are noisy; presence, not ratio, is the finding.)
+
 See INCR-75 summary 2026-08-25 sections for the full verification trail. Advertiser list: INCR-75 `outputs/incr_75_ghost_absent_prospectors.csv` (gitignored; attached to AUDI-1223, also on Drive as "INCR-75 Ghost Bid Coverage Gap.xlsx").
 
 ## 5. Solution
