@@ -330,3 +330,19 @@ The entry-cohort figure is the weaker read and its own row labels it "flat so fa
 **Budget implication.** MDE scales as 1/sqrt(budget): 5% at $190,064 total, so 3.08% at $500,000. Against a true effect whose 95% CI floor is 3.93%, a $500k test detects even the pessimistic end; a $190k test at 5% MDE does not. The case for the larger budget is downside coverage, not extra precision. Conversions are noise here: `conv_rel_lift` -1.7% on a holdout of 38 converting IPs, and `budget_for_mde_cvr_15pct` is $378,847.
 
 **Defect:** `prior_lift_pp` is blank and `has_prior_lift` is FALSE for 39718 in `outputs/incr_75_final_tiered.csv` even though the gold IVW carries a significant result. The prior-lift join drops it. Check before the workbook is quoted again.
+
+## ThirdLove (32127) "no data yet" traced to a ghost-pipeline coverage gap, 2026-08-25 (Edgar von Trotha question)
+
+Edgar asked what a blank Measured lift + "no data yet" Lift status means on the All eligible tab (row 123, ThirdLove), context: weighing a LiftLab-to-Ghost-Bidding-beta pivot and wanting confidence they'd show lift.
+
+**What the status means (by construction, `incr_75_fold_final.py`):** `no data yet` = the advertiser has zero rows in the ghost-bid measurement source for the clean window, so nothing was measured. Blank = unmeasured, not zero and not bad. 437 of 1,215 eligible advertisers share it (too early 380 / flat so far 258 / confirmed + 140).
+
+**Why ThirdLove specifically — verified 2026-08-25, and it is NOT inactivity:**
+- Zero rows in silver `enriched.lift__ghost_bid_visits` for AID 32127 over the table's FULL history, both partner legs (147 GB probe, 4.56B rows scanned, 0 returned).
+- Zero rows in gold `lift__ghost_bid_rollup` (3,652 entities, none = 32127).
+- Yet CIL shows continuous delivery ~200-300K imps/wk from June through August (9 campaigns), including active Beeswax Television Prospecting (objective_id 1, funnel_level 1, channel 8, partner_id 8) at 463K imps / trailing 30d — the exact leg the measurement reads. Several prospecting campaigns carry household-score thresholds (10000 / 8801 / 6666), so the scored path exists.
+- Direct `bid_price_log` check skipped: advertiser filter dry-runs at 7.8 TB (ip-clustered, not advertiser).
+
+**Conclusion:** an actively-prospecting Beeswax advertiser that never enters the ghost-bid source is a measurement-pipeline coverage gap, not an advertiser-side property. Open question for Matt Brorby: what determines which advertisers the ghost-bid pipeline covers (it held 1,498 of ~1,859 delivering advertisers over its window)?
+
+**Answer given to Edgar:** blank = never measured, not zero; the spend/power column is a separate forecast instrument (ThirdLove is powered for a 5% test at ~$35.3K/mo, budget $33.1K); there is no measured-lift evidence for or against ThirdLove, and entering the Ghost Bidding beta is itself what would produce the first measurement — provided the coverage gap is resolved first, otherwise the beta yields no readout either.
