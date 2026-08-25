@@ -983,6 +983,8 @@ MM audience. [[reference_fangorn_audience_overlay]]
 |---|---|---|---|---|---|---|---|
 | — | ✓ | — | 1,559 | 859 | $18.7M | 42.7% | **Keyword-Only / "MM Core"** (Matt's tier association: Max Reach) — bids IP states 2/4/6; CANNOT bid pure-PP IPs (state 5 matches only on a vertical anchor) |
 | — | — | — | 1,042 | 450 | $11.7M | 26.8% | **Not MM** — 3P-only / 1P / IP-list / CRM / DS14-only run-of-network |
+
+**DS14 purpose (Zach Schoenberger, Slack 2026-08-25):** it exists to keep audience-size numbers sane — sizes were "super inflated" without it, pacing historically had an audience-size component, and it reduces cost. It is always appended (`data_source_id:14, category_ids:[1]`) to every audience segment at creation; there is no scenario today where it is absent (confirmed same thread, Macie Kluting's overlay work).
 | — | ✓ | ✓ | 1,314 | 606 | $8.3M | 18.9% | **MM Core + Peak Performance v2** — the Fangorn flagship; keyword layer kept, vertical anchor on PP v2 scoring |
 | — | — | ✓ | 235 | 115 | $2.8M | 6.5% | **Peak Performance v2 only** ("vertical only") — ex-vertical-only, flip swapped 13→46; no keyword layer; delivers the PP band ONLY (6666–8000; the v2 HI band requires DS19 — verified, see scoring-generations bullet) |
 | ✓ | ✓ | — | 403 | 286 | $1.7M | 4.0% | **MM Core + Peak Performance (v1)** — the config that shipped as the Oct-2025 PP product (canonical detector = DS13+DS19+RTC, TI-896); only DS19-bearing config that also bids the 8000 tier |
