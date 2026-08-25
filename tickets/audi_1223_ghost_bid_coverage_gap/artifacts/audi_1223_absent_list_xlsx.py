@@ -1,4 +1,4 @@
-"""INCR-75 — workbook of eligible advertisers missing from the ghost-bid data."""
+"""AUDI-1223 — workbook of eligible advertisers missing from the ghost-bid data."""
 import csv
 import sys
 
@@ -19,7 +19,7 @@ df = pd.DataFrame([{
 
 wb = MntnWorkbook(
     title="Ghost Bid Coverage Gap",
-    ticket="INCR-75",
+    ticket="AUDI-1223",
     subtitle="Eligible advertisers running prospecting that never appear in the ghost-bid lift data",
     period=f"Prospecting activity measured {WINDOW}",
     generated="2026-08-25",
@@ -31,6 +31,13 @@ wb.table(
     formats={"Prospecting impressions in window": FMT.INT, "Advertiser ID": "0"},
     kind="headline",
     toc="The advertisers the measurement never covers",
+)
+wb.sql_dir(
+    "Queries", f"{T}/../audi_1223_ghost_bid_coverage_gap/queries",
+    order=["audi_1223_beeswax_prospecting_advertisers.sql",
+           "audi_1223_ghost_presence_probe.sql",
+           "audi_1223_targeting_polarity_parse.sql"],
+    note="Activity window from impressions; presence probe with a positive control; targeting parse that rules out audience setup.",
 )
 wb.cover(takeaways=[
     f"{len(df)} eligible advertisers prospect on the measured bidder but never enter the ghost-bid data.",
