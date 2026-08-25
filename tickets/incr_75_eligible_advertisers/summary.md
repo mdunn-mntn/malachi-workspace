@@ -356,3 +356,12 @@ Edgar asked what a blank Measured lift + "no data yet" Lift status means on the 
 5. **ThirdLove is not a one-off.** Of 1,250 advertisers with ≥10K Beeswax prospecting (obj 1 / funnel 1 / partner 8) imps in the clean window: 689 are eligible AND in the ghost table, but **142 are eligible and "no data yet"** — actively prospecting on the measured leg yet never entering the measurement. Largest absentees: 7 For All Mankind (474K imps), Sur La Table (396K), Shea Homes (391K), Seasons 52 (364K), Aceable (307K), ThirdLove (226K). Coverage is therefore a systematic rule (enrollment/config), not a per-advertiser accident — reframes the Matt Brorby question from "why is ThirdLove missing" to "what determines which advertisers the ghost-bid pipeline covers".
 
 Scratch: `scratchpad/prospecting_advertisers.csv` (session-local). Queries logged to `knowledge/bq_perf_log.jsonl` under INCR-75.
+
+### Targeting-side hypothesis ELIMINATED (Matt: "standard prospecting should show up"), 2026-08-25
+
+Matt's first guess was non-standard prospecting. Tested both at the advertiser and the class level with the TI-999 polarity-aware AST parse over `audience_audience_segments` (expression_type_id=2, is_targeted=TRUE, obj 1 / funnel 1):
+
+- **ThirdLove 573186 is textbook standard prospecting:** positive clauses = DS19 keywords (58 category ids) + DS14; DS2, DS47 CRM, DS34 pageview, DS21 conversion all NEGATIVE (suppression hygiene, per [[feedback_crm_excluded_from_prospecting]] still prospecting).
+- **The class shows no targeting split.** Positive-clause DS profiles for the 142 absent vs 689 present advertisers are near-identical (DS14 100%/100%, DS19 87%/90%, DS35 59%/66%, DS46 48%/45%, DS4-positive 18%/18%); the most common signature (DS14, DS19) tops BOTH groups. Even DS4-positive (true list-style prospecting) advertisers appear among the PRESENT group, so positive CRM does not block coverage either.
+
+**Conclusion: the gap is not explained by delivery, bidder leg, score-threshold config, or audience targeting. It is pipeline-side (enrollment, logging rollout, or a build filter) — only Matt can see that layer.** Handed him `outputs/incr_75_ghost_absent_prospectors.csv` (the 142: id, name, clean-window Beeswax prospecting imps).
