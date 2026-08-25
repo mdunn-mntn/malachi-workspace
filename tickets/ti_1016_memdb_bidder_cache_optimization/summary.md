@@ -283,3 +283,5 @@ Done (2026-06-09, from the Abbas sys-design walkthrough + Confluence BP pages):
 - [ ] Cross-check with the **Victor + Abbas "what we can filter out" follow-up** that happened immediately after this meeting — align so we're not duplicating.
 - [ ] (De-prioritized) Original MM-OR-include footprint quantification — Abbas confirmed marginal because key=IP; keep only as a sizing sanity check, not the headline.
 - [ ] Decision: package the no-segment-score-suppression as a sys-design RFC for the bidder team if sizing justifies it.
+
+**2026-08-25 Eric Salinger (owns membership consumer, store is ScyllaDB not Aerospike now):** ~92% of segment writes are empty; filtering would cut ~400k tps to ~40k. Scylla-side conditional writes REJECTED (LWT-class cost; a cache to make them performant ~$20k/mo, deemed too expensive). Agreed fix: upstream, do not supply duplicate empty-segment records. Supersedes the June consumer-side conditional-write framing (Abbas/Ryan). Next: identify the feed emitting duplicate empties, filter TI-side.
