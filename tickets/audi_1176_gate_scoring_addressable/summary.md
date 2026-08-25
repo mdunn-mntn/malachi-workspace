@@ -116,3 +116,5 @@ Intersect the scoring **input** with the **current DS14 (8-day union)** set befo
 - Input pre-filter (max compute win) vs output intersection (simpler) per job — pick per risk tolerance.
 - Whether the Fangorn 14-day path is already partially gated by `ipdsc_inclusion_flag`.
 - Firm the $ with the GCP billing export before/at kickoff.
+
+**2026-08-25 — the blocking premise collapsed.** Kirsa does not recognize the experiment attributed to her (direct DM), Sean Yang didn't know its status, and the 7/30 claim has no recorded provenance. The hold is void unless someone at the 2:30 Kirsa meeting (Sean/Zach/Ryan are the recorded sign-off names) claims an actual remove-DS14 experiment. If nobody does: unpark, run the §3 shadow-run plan (output-only variant remains the belt-and-suspenders option).

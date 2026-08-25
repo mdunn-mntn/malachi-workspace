@@ -21,3 +21,5 @@ When reporting a data finding, be explicit about **where each value came from** 
 - Inference is fine, but label it as inference, not a queried fact.
 
 Related: [[feedback_hold_evidenced_verdict]], [[feedback_read_full_source_before_verdict]], [[feedback_facts_not_presentation]], [[feedback_slack_reply_voice]].
+
+**Extension (2026-08-25, AUDI-1176):** the same rule applies to GATING claims. A second-hand claim ("Kirsa's remove-DS14 experiment needs ungated scoring") parked a sprint-ready $1.3-11k/mo ticket for 4 weeks; when finally checked, the named owner had never heard of it, and the 7/30 capture recorded the conclusion with no source (who said it, where, when). **Any claim that blocks or sequences work must carry its provenance at capture time** — if you cannot name the source, record it as unverified and set a check-by date instead of parking indefinitely.
