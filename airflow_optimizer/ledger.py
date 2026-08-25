@@ -48,6 +48,7 @@ class Entry:
     title: str
     owner: str = ""
     dcu_h: float | None = None
+    exec_h: float | None = None
     state: str = "new"
     streak: int = 1
     note: str = ""
@@ -197,6 +198,7 @@ def record(reports: list, date: str, owners: dict | None = None, dcu: dict | Non
                 key=finding_key(f), impact=getattr(f, "impact", ""),
                 title=getattr(f, "title", ""), owner=owners.get(dag_id, ""),
                 dcu_h=dcu.get(dag_id),
+                exec_h=round(getattr(r, "exec_h", 0.0), 1) or None,
             ))
     entries = _dedup(entries)
     classify(entries, read(path), date, complete=complete)
@@ -277,6 +279,7 @@ def mark_applied(dag_id: str, key: str, fix_pr: str, date: str, note: str = "",
         date=date, dag_id=dag_id, app_id=last.get("app_id", ""), key=key,
         impact=last.get("impact", ""), title=last.get("title", ""),
         owner=last.get("owner", ""), dcu_h=last.get("dcu_h"),
+        exec_h=last.get("exec_h"),
         state="applied", streak=int(last.get("streak", 1)), note=note,
         fix_pr=fix_pr, applied_date=date,
     )

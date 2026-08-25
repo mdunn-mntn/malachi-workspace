@@ -209,3 +209,17 @@ def test_ui_base_prefers_the_override_then_airflow_config(monkeypatch: object) -
     monkeypatch.delenv("AIRFLOW__API__BASE_URL")
     monkeypatch.delenv("AIRFLOW__WEBSERVER__BASE_URL", raising=False)
     assert digest._ui_base() == ""
+
+
+def test_a_finding_carries_the_executor_hours_of_the_run_that_produced_it(tmp_path) -> None:
+    """Ranking by finding count puts a chatty cheap job above a quiet expensive one."""
+    class _R:
+        def __init__(self, name, hours):
+            self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
+            self.findings = [OptFinding("shuffle_fetch_wait", "t", "high", "w", "f")]
+
+    path = str(tmp_path / "l.jsonl")
+    rows = ledger.record([_R("cheap", 0.4), _R("expensive", 812.5)], "2026-08-25", path=path)
+    got = {e.dag_id: e.exec_h for e in rows}
+    assert got == {"cheap": 0.4, "expensive": 812.5}
+    assert all(e.dcu_h is None for e in rows)          # measured DCU is a separate, unset field

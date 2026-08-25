@@ -70,7 +70,8 @@ def _section(title: str, entries: list, base: str, known: set | None = None,
     if not entries:
         return []
     ordered = sorted(entries, key=lambda e: (
-        _RANK.get(getattr(e, "impact", ""), 3), -(getattr(e, "dcu_h", None) or 0)))
+        _RANK.get(getattr(e, "impact", ""), 3),
+                             -(getattr(e, "exec_h", None) or getattr(e, "dcu_h", None) or 0)))
     lines = [f"*{title}*"] + [_line(e, base, known) for e in ordered[:cap]]
     if len(ordered) > cap:
         lines.append(f"- _…{len(ordered) - cap} more in the full backlog_")

@@ -23,6 +23,7 @@ class JobReport:
     findings: list = field(default_factory=list)
     error: str | None = None
     app_name: str | None = None  # from spark.app.name - the human label for the job
+    exec_h: float = 0.0
 
     @property
     def n_high(self) -> int:
@@ -64,6 +65,15 @@ def _event_logs(paths: list[str]) -> list[str]:
     return sorted(set(out))
 
 
+def executor_hours(run: object) -> float:
+    """Executor-hours the run held, billed whether or not a task was running."""
+    execs = [e for e in getattr(run, "executors", []) if getattr(e, "added_ts", None)]
+    end = getattr(run, "app_end_ts", None)
+    if not execs or not end:
+        return 0.0
+    return sum(max((e.removed_ts or end) - e.added_ts, 0) for e in execs) / 3_600_000
+
+
 def crawl(paths: list[str]) -> list[JobReport]:
     """Run the optimizer on every event log; return per-job reports ranked worst-first."""
     reports = []
@@ -83,7 +93,8 @@ def crawl(paths: list[str]) -> list[JobReport]:
                     source=base,
                     error="log parsed but contains no jobs or stages (truncated or empty)"))
                 continue
-            reports.append(JobReport(source=base, findings=findings, app_name=run.app_name))
+            reports.append(JobReport(source=base, findings=findings,
+                                     app_name=run.app_name, exec_h=executor_hours(run)))
         except Exception as e:  # a bad log must not sink the crawl
             reports.append(JobReport(source=base, error=str(e)[:120]))
     reports.sort(key=lambda r: r.score, reverse=True)
