@@ -298,7 +298,7 @@ def test_analyze_batch_expired_reads_as_expired() -> None:
         ev = analyze_batch("old-batch")
     note = " ".join(ev.notes)
     assert "expired" in note
-    assert "@mountain.com" not in note, "a published report must not carry an account"
+    assert "@example.com" not in note, "a published report must not carry an account"
 
 
 def test_analyze_batch_surfaces_logging_stderr() -> None:
