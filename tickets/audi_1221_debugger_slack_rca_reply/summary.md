@@ -37,6 +37,17 @@ The agreed question, why it matters, and how we plan to answer it. Locked before
 Robin is the right person: he is who retired local Slack apps on 2026-06-10, so his answer settles
 whether a prod-held token is the exception rather than us assuming it.
 
+### There are TWO alert channels, not one (found 2026-08-25)
+
+`airflow-ti-alerts` posts to both `monitor-tpa` (`C067ZM2EC5S`) and `#alerts-tpa-pipeline`
+(`C08CURMGNMQ`). The fangorn quota alert landed in the second; the `bottom_up_keywords` failure the
+same day landed in the first. Whatever routing decides that is not yet understood.
+
+**Consequence for this ticket:** the bot must be invited to, and scoped for, whichever channel it
+threads onto. If we only cover `C08CURMGNMQ` the debugger will be silent on an unknown fraction of
+failures, and silence is indistinguishable from "nothing failed". Resolve the routing rule before
+the token request is finalised, so the scope list is right the first time and Robin reviews once.
+
 ### Scopes to request, and why each is needed
 
 | Scope | Why |
