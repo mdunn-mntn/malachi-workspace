@@ -2,7 +2,7 @@
 doc_type: reference
 title: Action list — what only Malachi can do
 summary: "The short list of things blocked on Malachi personally, as of 2026-08-21: three PRs, two credential actions, two external tickets, one share-out. Everything else in improvements_backlog.md is owned by another team or sits in the working queue."
-last_verified: 2026-08-21
+last_verified: 2026-08-24
 keywords: [action list, todo, my list, what do i have to do, open prs, blocked on me, merge order, rotate token, revoke credentials, IMP-064, IMP-065]
 tags: [workflow, status]
 ---
@@ -20,7 +20,7 @@ Generated 2026-08-21, updated 2026-08-24. Only items **blocked on Malachi person
 |---|---|---|---|
 | ~~1~~ | ~~[mntn-devops#4985](https://github.com/SteelHouse/mntn-devops/pull/4985)~~ | **CLOSED, superseded** | Cristina rebuilt it as Crossplane in [#4990](https://github.com/SteelHouse/mntn-devops/pull/4990), **merged and synced 2026-08-24**. Nothing to do |
 | ~~1~~ | ~~[airflow-ti#1214](https://github.com/SteelHouse/airflow-ti/pull/1214)~~ | **MERGED 2026-08-24** | **Live and registered** on bundle `2026-08-24T19:00:21`, 0 import errors — but **arrived PAUSED**. Unpause when you want it running; it fires immediately for 2026-08-23 |
-| — | [airflow#1497](https://github.com/SteelHouse/airflow/pull/1497) | open since **2025-05-24** | `TGT-4076: Ddp week dev`. Fifteen months old. Merge, rebase or close |
+| 1 | [airflow#1497](https://github.com/SteelHouse/airflow/pull/1497) | open since **2025-05-24** | `TGT-4076: Ddp week dev`. Fifteen months old. Merge, rebase or close |
 
 **The blocker cleared on 2026-08-24.** Verified live, not assumed: `airflow-debugger@` now holds
 `dataproc.viewer` + `logging.viewer` on `mntn-prj-prod-00` and `aiplatform.viewer` +
@@ -70,6 +70,17 @@ the support ticket it produced is closed. Nothing here is external any more.
 `system.billing.usage` is what turns the flexible-node-types cost commitment from a promise into a
 measurement. `system.lakeflow.job_run_timeline` is the only enumeration surface for ephemeral dbt
 submissions.
+
+---
+
+## 3b. New from INC-025 (2026-08-24)
+
+| # | Item | Note |
+|---|---|---|
+| **a** | [AUDI-1217](https://mntn.atlassian.net/browse/AUDI-1217) — fangorn N2 quota | **Tuesday 2026-08-25**, when Brian McAdams is back. Sean Yang already agreed to both: raise `N2_CPUS` 5,000 to ~15,000, and cap the QA cluster. In the active sprint, assigned to you |
+
+**Nothing else from tonight is outstanding.** targeting-infra-ml#93 and airflow-ti#1215 are merged
+and verified live in prod; the debugger's GCS publish works.
 
 ---
 
