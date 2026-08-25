@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [storage.objectCreator, storage.objectUser, objectAdmin, overwrite existing object, IAM condition prefix, serviceAccountTokenCreator, workloadIdentityUser, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, impersonation, Astro KSA, airflow-ti-prod, ape-ingestion, airflow_astronomer]
+keywords: [storage.objectCreator, storage.objectUser, objectAdmin, overwrite existing object, IAM condition prefix, serviceAccountTokenCreator, workloadIdentityUser, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, impersonation, Astro KSA, airflow-ti-prod, ape-ingestion, airflow_astronomer, storage.objects.list denied, objects.list bucket scoped, gsutil cp stats destination, 403 does not have storage.objects.list, media upload uploadType=media, JSON API upload, prefix condition cannot grant list, mntn-data-archive-prod debugger]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-08-21
+last_verified: 2026-08-24
 ---
 Two IAM mistakes caught in review of mntn-devops#4971 (Cristina Szumilo, 2026-08-21). Both were
 written from a plausible-looking precedent and both would have failed in production.
@@ -57,3 +57,17 @@ Flow to state in the PR so a reviewer can check it in one line:
 
 See [[project_airflow_optimizer]] for the workload, and [[reference_mntn_devops_permissions]] for
 how the PR gets approved.
+
+**`storage.objects.list` is BUCKET-scoped, so an object-prefix condition can never grant it (AUDI-1191, 2026-08-24).** A grant conditioned on `resource.name.startsWith("projects/_/buckets/<b>/objects/<prefix>")` covers object get/create/delete under that prefix and **nothing else** — the list permission is evaluated against the *bucket* resource, which the condition does not match, so it always denies. The failure is not obvious from the write path you asked for: **`gsutil cp` and `gcloud storage cp` stat their destination before writing**, so a plain copy into an allowed prefix returns `403 ... does not have storage.objects.list access to the Google Cloud Storage bucket`, naming a permission you never wanted.
+
+**Fix by not listing, not by widening IAM.** Upload through the JSON API's media endpoint, which is one request against one fully-named object:
+
+```bash
+curl -sS --fail-with-body -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/octet-stream" --data-binary @local.json \
+  "https://storage.googleapis.com/upload/storage/v1/b/<bucket>/o?uploadType=media&name=<url-encoded/object/path>"
+```
+
+The alternative — adding an unconditioned bucket-level role so list works — grants read over the **whole** bucket, since list cannot be prefix-filtered by IAM. That trades a one-prefix blast radius for a whole-bucket one to satisfy a stat call the workload never needed. Verified live 2026-08-24: `airflow-debugger@mntn-prj-prod-00` publishes `rca_<date>.json`/`.md` to `gs://mntn-data-archive-prod/debugger/` under the conditioned `objectUser` grant with no IAM change. Shipped in [airflow-ti#1215](https://github.com/SteelHouse/airflow-ti/pull/1215). See [[project_airflow_debugger]].
+

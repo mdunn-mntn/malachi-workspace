@@ -1,6 +1,6 @@
 ---
 name: project_airflow_debugger
-description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held). Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
+description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode. Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
 metadata:
   node_type: memory
   type: project
@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [airflow debugger, AUDI-1191, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-20
+last_verified: 2026-08-24
 ---
 
 ## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
@@ -157,3 +157,24 @@ Building an automated Airflow/Spark failure-triage agent under **AUDI-1191** (th
 - **Explainer workbook is now 14 tabs** (`AUDI-1191 Failure-Debugger How It Works.xlsx`): INC-013 end to end with all 28 Airflow and 99 driver lines verbatim, each tagged with the step that consumed it, plus the chain, the verbatim report, the proposed Slack reply, and a 7-step live demo. Evidence is captured to `artifacts/audi_1191_worked_example.json` by `audi_1191_capture_worked_example.py` so the workbook regenerates without a live PAM grant.
 - **HARD CONSTRAINT (user, 2026-08-20): the tool must NEVER open a PR, push a branch, commit code, or change a prod resource, in any phase, behind any flag.** The old "propose-only PR" item is DROPPED, not deferred. Read-only GitHub is fine and is what the code-link resolver already uses. Phase 3 remains HELD.
 - **Live-fire (INC-024, 2026-08-20):** the `vertex_pipeline_task_failed` signature written that morning fired `[high]` on a real PagerDuty page hours later. It correctly named the class and pointed one layer down; the actual cause was five layers down in the Vertex Model Registry ([[reference_fangorn_inference_dataproc]]).
+
+## Shipped to prod and verified end to end (2026-08-24)
+
+**`airflow_debugger_daily` runs in airflow-ti**, unpaused, identity `airflow-debugger@mntn-prj-prod-00` (Crossplane, mntn-devops#4990). Two post-merge PRs closed the last gaps: [airflow-ti#1214](https://github.com/SteelHouse/airflow-ti/pull/1214) shipped it, [#1215](https://github.com/SteelHouse/airflow-ti/pull/1215) fixed publishing and added the mask registry. Verified live, not assumed: `rca_2026-08-23.json` + `.md` landed under `gs://mntn-data-archive-prod/debugger/` at 00:37Z.
+
+**`masks.py` — a masking error can never be the verdict.** INC-025's deepest exception was the fangorn component's own cleanup `NotFound: 404`, raised because a quota-refused create left no cluster to delete. Real, reproducible, and completely wrong as a root cause: it sends the reader after a deletion race while the actual `Insufficient 'N2_CPUS' quota` text exists only in the ClusterController admin audit log. **The generalizable failure mode is that the deepest error in a log is not always the cause** — a cleanup handler, a failure callback, or a retry that reattaches to a prior attempt each raise something real that stands *in front of* the fault, and a classifier that always trusts the deepest frame is confidently wrong. Registry entries, each declaring `hides` + `next_hop` + an optional resolver:
+
+| Mask | Hides | Next hop |
+|---|---|---|
+| `dataproc_cleanup_delete_404` | the CreateCluster refusal that left nothing to delete | the ClusterController audit log (resolver: `vertex_rca._cluster_create_error`) |
+| `slack_notifier_failed` | the task failure the on-failure callback was announcing | the task's own error, above the callback frames |
+| `dataproc_batch_reattach` | the earlier attempt's failure, inherited not caused | the first attempt's batch driver output |
+
+**The invariant: a mask never silently ends a chain.** Either a resolver reaches the next hop, or `report.build_report` prints `This is not the cause: it hides <X>. Read <Y>.` so "one hop short" surfaces as a known gap instead of a plausible answer. Pinned tests assert every entry declares both fields **and** that a genuine error (`OutOfMemoryError`, the quota text itself) is NOT matched — the registry must stay narrow or it starts refusing real verdicts. Net effect on INC-025's log: `[high] infra/quota`, `similar: INC-025(0.851)`, no LLM, where before it stopped at `vertex/pipeline-task-failed` (a pointer, not an answer).
+
+**Vertex chain is now 6 layers**, `error_layer` ∈ {pipeline, component, replica, dataproc-driver, **dataproc-create**}. The sixth reads `protoPayload.status.message` off the CreateCluster audit entry — `logging_messages()` took a `field` parameter for this, since audit logs carry the text there rather than in `jsonPayload.message`.
+
+**Manual-run trap: `logical_date` must sit inside `[the DAG's start_date, now]`.** Outside it Airflow reports the run **success with zero task instances** — no error, no log, indistinguishable from a clean run unless you read `total_entries` on `/taskInstances`. Cost three verification attempts: `2026-08-26` queued forever (future), `2026-08-19` instant success with no tasks (before `start_date` 2026-08-21). Never read a green manual run as evidence without checking the task count.
+
+See [[reference_fangorn_inference_dataproc]], [[reference_gcs_iam_creator_vs_user]], [[reference_oncall_runbook]].
+

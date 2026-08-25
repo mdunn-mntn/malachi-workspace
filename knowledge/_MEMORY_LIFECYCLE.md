@@ -188,7 +188,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_shared_worktree_commits | feedback | 2026-08-20 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_slack_channel_one_liners | feedback | 2026-08-20 | [doc](memory/feedback_slack_channel_one_liners.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-20 | [doc](memory/feedback_validated_is_not_correct.md) |
-| project_airflow_debugger | project | 2026-08-20 | [doc](memory/project_airflow_debugger.md) |
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
 | reference_airflow_log_puller | reference | 2026-08-20 | [doc](memory/reference_airflow_log_puller.md) |
@@ -206,7 +205,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_dsh_harness_spike | project | 2026-08-21 | [doc](memory/project_dsh_harness_spike.md) |
 | reference_dsh_harness | reference | 2026-08-21 | [doc](memory/reference_dsh_harness.md) |
 | reference_dsh_lab_runtime | reference | 2026-08-21 | [doc](memory/reference_dsh_lab_runtime.md) |
-| reference_gcs_iam_creator_vs_user | reference | 2026-08-21 | [doc](memory/reference_gcs_iam_creator_vs_user.md) |
 | reference_holdout_lift_lineage | reference | 2026-08-21 | [doc](memory/reference_holdout_lift_lineage.md) |
 | reference_youtube_transcript_methods | reference | 2026-08-21 | [doc](memory/reference_youtube_transcript_methods.md) |
 | sparse_code_comments | feedback | 2026-08-21 | [doc](memory/feedback_sparse_code_comments.md) |
@@ -216,11 +214,13 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_review_own_pr_before_asking | feedback | 2026-08-24 | [doc](memory/feedback_review_own_pr_before_asking.md) |
 | incrementality-experiment-ber-2250 | project | 2026-08-24 | [doc](memory/project_incrementality_experiment.md) |
 | jira-conventions | reference | 2026-08-24 | [doc](memory/reference_jira_conventions.md) |
+| project_airflow_debugger | project | 2026-08-24 | [doc](memory/project_airflow_debugger.md) |
 | project_audi_1142_shopper_graph_spike | project | 2026-08-24 | [doc](memory/project_audi_1142_shopper_graph_spike.md) |
 | project_audi_1175_ds14_scoring_cost | project | 2026-08-24 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | project_backlog_gate_pings | project | 2026-08-24 | [doc](memory/project_backlog_gate_pings.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-08-24 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-24 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
+| reference_gcs_iam_creator_vs_user | reference | 2026-08-24 | [doc](memory/reference_gcs_iam_creator_vs_user.md) |
 | reference_local_vendor_data_analysis | reference | 2026-08-24 | [doc](memory/reference_local_vendor_data_analysis.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-24 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_test_budget_from_rates | reference | 2026-08-24 | [doc](memory/reference_test_budget_from_rates.md) |
