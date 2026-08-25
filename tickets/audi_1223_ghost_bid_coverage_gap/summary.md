@@ -65,8 +65,17 @@ Fix is on the bidder/model side (Matt). Once fixed, re-run the INCR-75 fold to r
 
 See INCR-75 summary 2026-08-25 sections for the full verification trail. Advertiser list: INCR-75 `outputs/incr_75_ghost_absent_prospectors.csv` (gitignored; attached to AUDI-1223, also on Drive as "INCR-75 Ghost Bid Coverage Gap.xlsx").
 
+### Implications of widening the SQLMesh model beyond env='prod' (for Matt, 2026-08-25)
+
+Matt offered to make the model change and asked for implications. Assessment (evidence: `queries/audi_1223_env_by_campaign.sql`, `audi_1223_burnin_holdout_integrity.sql`):
+
+1. **Forward-only fix.** Raw `bid_price_log` TTL is ~10 days; the silver table accumulates but was built prod-only. Widening the filter recovers at most ~10 days of burnin history. The 142 advertisers' June-July clean-window history is unrecoverable; their measured-lift status stays "no data yet" until a fresh clean window accrues post-deploy (~2 weeks, given the entry-cohort's ~15-day validity cap).
+2. **No double-counting observed.** In the probed hour every campaign logs exactly ONE env, and zero IPs appear in both arms (mixed_arm_ips = 0 across 18 campaign×env cells for 4 advertisers). Straight inclusion should not duplicate bids. But env labels flip over time (Gruns CG 126905: measurable June-July, burnin 2026-08-24), so the model should CARRY env as a column rather than just widen the WHERE — keeps the seam visible for later audits.
+3. **Left-edge stock artifact will recur at the deploy date.** IPs that have been bidding under burnin for weeks will "first-appear" in the silver table on deploy day — the same accumulated-stock bias as the 2026-06-22 left edge (INCR-75 §4). Any lift read must drop the first day(s) after deploy and anchor on post-deploy entries.
+4. **ghost_frac compliance gates need re-deriving, and burnin holdout share needs validation.** Gold results/rollup compliance flags are computed on observed ghost_frac; adding burnin campaigns changes every advertiser's mix. In the single-hour probe, single-bid-IP ghost share: Gruns prod prospecting 13.0%, a Gruns burnin campaign 11.9% (near design), but ThirdLove burnin prospecting only 2.3% (expected ~62 ghost IPs of 625, saw 15). One hour is thin evidence — run a proper multi-day IP-grain check on burnin campaigns before trusting their lift numbers.
+
 ## 5. Solution
-Not started.
+Not started. Matt to make the model change; validation checklist above.
 
 ## 6. Questions Answered
 None yet.
