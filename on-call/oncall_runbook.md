@@ -1710,5 +1710,5 @@ in both environments; only `protoPayload.authenticationInfo.principalEmail` dist
 so the task had two tries. `max_tries` read 3 afterwards because clearing a task bumps it. Sean
 Yang cleared it at 23:22:26; do not read a post-hoc `max_tries` as the configured value.
 
-**Durable fix is not on-call's to make.** The pipeline requests 93% of the regional N2 ceiling and three siblings run concurrently, so this recurs whenever they overlap. Options are a quota raise, a smaller challenger cluster, or serialising the three. Logged as IMP-067; the masking cleanup handler is IMP-068. Owner: targeting-ml.
+**Durable fix is not on-call's to make.** The pipeline requests 93% of the regional N2 ceiling and three siblings run concurrently, so this recurs whenever they overlap. Options are a quota raise, a smaller challenger cluster, or serialising the three. Logged as IMP-070; the masking cleanup handler is IMP-071. Owner: targeting-ml.
 

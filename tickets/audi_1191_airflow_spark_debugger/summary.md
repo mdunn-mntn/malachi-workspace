@@ -504,9 +504,9 @@ nothing and prod keeps running the previous template. airflow-ti merges trigger 
 with the usual 25-40 minute bundle-adoption lag.
 
 **PRs.** airflow-ti#1215 (publish + masks), targeting-infra-ml#93 (the cleanup fix, applied to all
-four pipelines carrying the helper). Incident: on-call INC-025. Backlog: IMP-067 (the quota itself —
+four pipelines carrying the helper). Incident: on-call INC-025. Backlog: IMP-070 (the quota itself —
 the challenger cluster alone requests 4,672 of the 5,000 regional `N2_CPUS`, so it only starts when
-every sibling is down), IMP-068 (closed by #93).
+every sibling is down), IMP-071 (closed by #93).
 
 **Contradiction withdrawn the same day, and the real finding is better.** I first read the audit
 log as showing the sibling `inference_pipeline` contending with the challenger, and wrote that up as
