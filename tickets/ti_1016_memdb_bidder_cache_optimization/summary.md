@@ -1,14 +1,16 @@
 ---
 doc_type: ticket
-title: "TI-1016: MemDB → Bidder cache — bidder-inert IP storage"
+title: "AUDI-1016: Stop supplying duplicate empty-segment writes to MembershipDB (~92% of ~400k tps)"
 status: in_progress
-date: 2026-06-09
-summary: "Investigate whether MemDB→Bidder caches bidder-inert 3P-OR-include IPs wastefully"
-result: "Cache-shrink idea killed (key=IP); new lever: skip score writes for segmentless IPs"
-keywords: [ti-1016, memdb, membership consumer, aerospike, bidder cache, 3p-or-include, mountain match, intent score, segments, hhst, max reach, zach schoenberger, abbas, ryan, eric]
+date: 2026-08-25
+summary: "Upstream fix for duplicate empty-segment records: ~92% of segment writes into the membership consumer are empty dupes; spike on pure-Kafka streaming vs delta delivery"
+result: "June cache-shrink + conditional-write framings dead; 2026-08-25 direction: filter upstream. Eric ranks pure Kafka #1, deltas #2, suppress-dupes #3; AUDI-1016 becomes the feasibility spike"
+keywords: [audi-1016, ti-1016, memdb, membership consumer, scylladb, aerospike, empty segments, duplicate empty, gcs dump, kafka, segment-updates-burnin-proto, tpa_membership_update_log, segment scores, intent score, ttl, dlq, max reach, holdout, eric salinger, matt brorby, zach schoenberger, abbas, ryan]
 ---
 
 ## TL;DR
+
+**Current state (2026-08-25):** The ticket is now the upstream empty-segment fix. ~92% of segment-score messages into `rtb-membership-consumer-service` (ScyllaDB, not Aerospike) are duplicate empties riding the 4-hourly GCS full-snapshot dump; filtering cuts ~400k tps to ~40k. Nothing is ever deleted today — an empty write is a full REPLACE that resets the row's TTL, so empty IPs recirculate forever. Scylla-side conditional writes rejected (~$20k/mo). Eric Salinger's ranking: pure-Kafka streaming #1, producer deltas #2, suppress-duplicate-empties #3, qualified by "whatever is easiest for you guys"; consumer needs only a DLQ per Eric (his AI-written doc lists six bidder work items — unresolved). AUDI-1016 becomes a feasibility SPIKE (Kafka vs deltas), next sprint. TI sizing: the daily BQ sweep copy is ~57% pure-noise records (~1.71B/sweep). Sources: §4.4 (Eric's doc), §4.5 (meeting 03 + conflict table), §4.3 (sizing), §5b (direction), §8 (spike scope). The June card below is historical.
 
 **Q:** TL;DR card for TI-1016 (MemDB to Bidder cache optimization), plus delta facts not already in the knowledge docs.
 
@@ -180,6 +182,7 @@ Aerospike (household profile)  ── PRIMARY KEY = IP address
    - Scoring team writes scores to a **GCS bucket** → GCS event trigger → **PubSub** → **RabbitMQ**. Membership consumer consumes RabbitMQ messages, each carrying a **GCS file URL**.
    - Downloads the GCS file locally, processes the (large) file, writes to **Aerospike**.
    - Internal logic: **intent scores grouped + written in one batch** (not line-by-line); **if an IP's segment list is empty → the IP is deleted from Aerospike** ("no longer important"); special write handling for holdout IPs.
+     - **[CONTRADICTED 2026-08-25, kept per append-only rule.]** Eric Salinger (current consumer owner, meeting 03): "We don't delete anything" — an empty segment list executes a full `REPLACE` (collection tombstones per his doc, `gcs.rs:929-936`); the row survives and its TTL resets on every 4-hourly write. Reconciling hypothesis: Abbas described the OLD Kotlin membership-consumer-oracle/Aerospike behavior, or delete-on-empty was design intent that never shipped in the Rust/Scylla consumer. Check: git history of the Rust consumer's empty-record path. See §4.5 Q4.
    - Handles **anything household-profile related**. Lives in **Kubernetes** (scalable).
    - **Scores are NOT stored in MembershipDB** — they go GCS → membership consumer → Aerospike. MembershipDB emits the **segments**; membership consumer writes those too. (Reconciles the open question of "where do scores live": GCS is the durable source, Aerospike is the serving copy.)
 3. **PCS (Pacing Controller Service) + Campaign Metadata Service (CMS):** performance-pacing team. Write the **static pacing data** (flight budgets/thresholds/weights) via a separate service. Currently → Aerospike, moving to **Redis** soon.
@@ -209,11 +212,13 @@ All spend-pipeline services run in **Kubernetes** (scalable for spiky load — W
 - Likely **read directly from GCS** instead of via RabbitMQ (skip a hop, faster load) if PubSub limits allow.
 - PCS/CMS static pacing data → Redis (from Aerospike).
 
-### 4.3 Empirical sizing (TBD)
+### 4.3 Empirical sizing
 
-Open. Queries to be added to `queries/`. Target outputs in `outputs/`:
+Original MM-footprint targets (de-prioritized, see §8):
 - Cache-footprint estimate per MM campaign with/without 3P-OR-include.
 - Max Reach impression / spend share by campaign.
+
+**2026-08-25 — empty-segment sizing DONE on the BQ copy of the GCS dump:** results in [outputs/ti_1016_empty_segment_sizing_2026_08_25.md](outputs/ti_1016_empty_segment_sizing_2026_08_25.md), queries in [queries/ti_1016_empty_segment_sizing.sql](queries/ti_1016_empty_segment_sizing.sql). Headlines: `bronze.raw.tpa_membership_update_log` carries ONLY the daily 08:00 UTC sweep (every row of 2026-08-23 has `hh='08'`, `source_version='v2'`, `delta=false`) — 1 of 6 sweeps, ~3.0B records/day, ~1.23 TiB/day, 90-day partition expiry. Within that sweep: **~57% fully empty** (`in_segments` AND `out_segments` both empty — the duplicate-empty class, ~1.71B records/sweep), ~17% just-became-empty transitions (`out_segments` non-empty), ~26% carry segments; `scores.key_value` populated in 0 of 2.7M sampled rows. Eric's 92.9% is a different measure (all 6 sweeps + possibly Kafka, and keyed on empty segment SCORES); both agree the empty-and-unchanged class dominates. Volume reconciliation open: 6 × 3.0B = 18B ≠ Eric's 10.60B/day.
 
 ### 4.4 Eric Salinger's written proposal: "Reducing segment write load and moving the bidder to Kafka" (2026-08-25)
 
@@ -245,9 +250,60 @@ Filed verbatim at [ti_1016_eric_segment_path_consolidation.md](ti_1016_eric_segm
 
 ### 4.5 Meeting 03: Eric Salinger + Matt Brorby, "Discuss Empty Segments" (2026-08-25)
 
-Transcript: [meetings/ti_1016_03_eric_matt_empty_segments_2026_08_25.txt](meetings/ti_1016_03_eric_matt_empty_segments_2026_08_25.txt)
+Transcript: [meetings/ti_1016_03_eric_matt_empty_segments_2026_08_25.txt](meetings/ti_1016_03_eric_matt_empty_segments_2026_08_25.txt) (~28 min; local whisper only, OpenAI provider failed validation; speakers UNLABELED — all attributions inferred from content). Extraction was run through a 14-agent extract+adversarial-verify pass against both the transcript and Eric's doc; conflicts below are reported side by side, never merged. **Weight calibration:** Eric's doc is AI-authored from a code investigation ("the document that I had my AI write... some of this looks reasonable" [08:33-08:51]; "Claude wrote it" [17:49]) — Eric skimmed it and invited pushback; the meeting is his live position, the doc is code-derived evidence. Where they disagree, the doc's file:line claims are testable, Eric's recollections are not.
 
-*(Transcription in progress — meeting-sourced confirmations, divergences from the doc, owners, and timing to be folded in here.)*
+#### The six questions, as answered in the meeting
+
+**Q1 pathway:** Exact topic/queue/bucket names were asked for [04:17-04:33] and never given live — "it's in ArgoCD, I can certainly pull it" [04:38-04:44]; the doc supplies them (§4.4). Meeting establishes: segment scores arrive from TWO locations (GCS dump every 4h + Kafka topic "whenever they happen" [00:47-01:03]); intent scores from ONE [00:47-00:55]. GCS mechanics: files land in a bucket, PubSub notifications on the bucket, consumer reads file by file [15:25-15:35]. The junk rides the 4-hourly dump. Kafka today (hedged, "I think"): mostly retargeting notifications [05:05-05:27]; per Zach (secondhand) "a subset of the full dump... not everything" [14:02-14:10]. The paths overlap: Kafka updates get re-written when the dump re-delivers the same data [01:41-01:57].
+
+**Q2 duplicate-empty definition + measurement:** NOT one entry per IP per dump [05:55-06:04]; it is the same IP arriving with no segments in every successive 4-hour dump, "forever, or at least until you stop sending us that IP" [06:04-06:30]; delta test: "if you take the delta between the previous dump and the current dump, there are no changes on that address" [06:40-06:45]. Measurement: a check Eric added to the membership-consumer dashboard, "% of incoming messages... [with] empty segment scores", "pretty consistently like 92%" [01:11-01:29] (later loose: "92 or 97% or whatever" [03:38-03:45]); no panel name, window, or per-feed split stated. Producer-side corroboration (Malachi): ~8% of households are high/mid intent, the only ones scored — aligns with 92% empty [23:42-24:06]. Denominator note: if his check included Kafka, the doc's numbers give 9.85/(10.60+1.03) = 84.7%, not 92-93% — so the check is likely GCS-scoped/dominated, or Kafka also carries empties.
+
+**Q3 snapshot + fix preference:** Full snapshot on the GCS path, yes. Eric's three options, easiest-first [07:30-08:29]: (1) don't re-send duplicate empties (send once, "or maybe send it like once a day"), quantified ~400k TPS → "like 4K per hour" [10:11-10:17] (unit possibly per-second; unreconciled with the doc's 0.75B non-empty/day ≈ 8.7k/s); (2) producer writes deltas between consecutive rollouts; also "the simplest stupidest solution": a small standalone job diffing old vs new GCS files into a new location the consumer is repointed at [17:02-17:21]; (3) THE DREAM: skip the 4-hour job for the bidder entirely, stream all updates via "Kafka or some other stream. I don't really care" [03:02-03:08], "either directly into Scylla or so we can pick it up" [08:23-08:29]. **Explicit ranking on read-back: pure Kafka stream #1 ("correct" [16:34-16:41]), deltas #2 [16:47-16:53]**, suppress-dupes third by elimination. Overriding qualifier, twice: "whatever is the easiest thing for you guys" [07:24-07:30]; "I also would like you to not make yourself insane" [15:00-15:03]. Rationale for #1: real-time desire from the business (chaotic, no SLA [12:14-12:46]; producer names real-time conquesting, small effect, + advertiser audience edits [13:29-13:50]) and decoupling — guaranteed Kafka coverage means the dump can change for its other consumers without the bidder involved [16:03-16:15].
+
+**Q4 delete semantics — the June premise is WRONG:** Producer side asserted "today an empty list deletes the key" [09:05]. Eric: **"We don't delete anything"** [09:27] — one Scylla row holds both intent scores and segment scores [09:30-09:36]; the consumer receives "the segment with no segments attached to it. We don't get instructions to delete it" [09:44-09:54]. How empties leave: "there's a TTL on the table for like 30 days, but you update us every four hours... the TTL gets reset when we do the update" [10:27-10:45] — empty rows never expire while we keep re-sending. Under suppression, the just-became-empty transition still goes out as a change ("still a meaningful update that we should write" [03:45-03:56]); empty is informative ONCE, "then maybe periodically every few days" [23:05-23:37]. Under change-only delivery Eric would "modify the TTLs" so a campaign quiet for 30 days doesn't drop from cache [14:16-14:36]. (The [12:50-12:57] "Could we add some TTL... Absolutely not" exchange is Eric mock-quoting the business, not a decision.)
+
+**Q5 consumer changes:** For the pure-Kafka EXTREME case: "I don't think we would need to make any changes" [10:57-11:12] except implementing a DLQ [11:13-11:42] — "there just isn't one"; he thinks a segment update has never failed in production (hedged "I think"), but with no fallback a failure "would be bad". Reiterated: DLQ is "the only thing" for pure Kafka [14:54-15:10]. Producer-filter case answered a fortiori (never directly). The TTL modification [14:16-14:36] is conditioned on "depending on how you're going to do this", not tied to pure Kafka. Consumer is versatile by design: supports each score type via Kafka but not GCS and vice versa [14:36-14:47].
+
+**Q6 validation:** The metric is Eric's dashboard check (% incoming messages with empty segment scores) plus the TPS load (~400k → ~4K claimed). **No staging path exists or was mentioned; validation as described is prod-only.** No numeric acceptance threshold; nearest criterion is "told once... then maybe periodically every few days" [23:20-23:37]. Doc-side hazard for cutover validation: the ms-vs-µs broker-timestamp trap silently drops every write with NO error — nothing on the dashboard would catch it (§4.4).
+
+#### Decisions and owners
+
+- **Malachi converts AUDI-1016 to a SPIKE: feasibility of direct Kafka stream vs deltas** — first floated [16:15-16:29], committed [17:29-17:36], restated at close [24:07-24:19]; "I'll make it a spike ticket because I had a ticket for this" [26:42-26:46]. Target: next sprint (aspirational) [24:33-24:40]. Matt confirmed scope is feasibility-only [26:34-26:40]. No architecture chosen in the meeting.
+- Producer side (TI) owns the fix; Eric owns the consumer. **Eric offers to build the producer side himself given a safe path** ("I can probably [A-]team this in my spare time"), blocked only by not knowing our systems — e.g. fear of instrumenting "the legacy Google cloud dump that isn't really the one that you want" [27:39-28:15].
+- Eric downloaded his doc as markdown and sent it after Malachi couldn't open the company-Claude artifact [20:19-21:15, 24:19-24:28] (filed as §4.4).
+
+#### Terminology collision (cross-team score naming)
+
+Membership consumer does two things: segment scores + intent scores [18:42-18:48]. Producer-side mapping: "what we would call the household score or the campaign intent score is probably the segment scores, and then there's the advertiser score which is... a little tricky" [22:14-22:29]. Eric would rename for uniformity [22:29-22:34]; his rule: prefix scores with team name ("bidder intent score") [22:34-23:05]. Eric's own definition of segment scores is vague: "every campaign targeting string gets turned into segment scores... mapped to campaigns somehow" [21:26-21:43].
+
+#### Intent-score pipeline facts (context, not the pressing concern)
+
+One source location; dumps start ~midnight PT, take 4-6h [19:02-19:27]; slow down when segment dumps run concurrently [19:27-19:31]; once daily = "plenty of headroom", "annoying but very manageable" [19:34-20:02]. Malachi is paged when it breaks [19:14].
+
+#### History / color
+
+Eric's prior asks on this were rejected repeatedly [24:40-24:44, 18:48-18:54]; producer side admits tech-debt self-deprioritization [26:50-27:03]. Old consumer = "membership consumer oracle" (Kotlin); Rust rewrite improved performance [25:44-25:54]. Eric doubts consumer-mediated writes beat direct Airflow→Scylla writes, but prior direct-write tests "haven't really worked well... it's hard to know why" [25:38-26:28]. D-Plat wants streaming too [25:07-25:12].
+
+#### Meeting-vs-doc conflicts (append-only; each needs its named check to settle)
+
+| # | Meeting (Eric live) | Doc (AI code-read) | Discriminating check |
+|---|---|---|---|
+| 1 | Scylla TTL "like 30 days" [10:28], repeated [14:20-14:29] | 7 days (`DEFAULT_TTL_SECS`, `household_profiles.rs:42`); 30d in doc is MDB's membership window | read `household_profiles.rs:42` in `rtb-scylla-models` |
+| 2 | TTL remedy: modify the table TTLs [14:16-14:36] | remove TTL entirely + per-path delete-on-empty; per-cell stamping means a config change can't clear existing clocks (final sweep required) | Scylla docs + crate; doc's mechanism argument is testable |
+| 3 | Pure Kafka: "no changes" beyond DLQ [10:57-11:42] | six bidder work items (broker ts, delete GCS consumer, alerting, DLQ, TTL removal, cutover) | walk the work breakdown with Eric |
+| 4 | DLQ: "there just isn't one" [11:20] | `rtb.membership-consumer.dlq` constant exists (`constants.rs:10-11`), consumer-failures only, no redrive consumer; segment-path DLQ still to add | read `constants.rs:10-11` |
+| 5 | "a segment update has never actually failed" (hedged) [11:27-11:32] | live silent-failure mode: no `epoch==0` guard → writes silently drop; BID-3440 revert | failures would be INVISIBLE, not absent; check the guard |
+| 6 | Kafka topic = mostly retargeting / "subset of the full dump" (Zach, secondhand) [05:05-05:27, 14:02-14:10] | activity-driven path, 1.03B msgs/day > all non-empty GCS output | sample `segment-updates-burnin-proto` |
+| 7 | The two paths carry "the same data" [01:41-01:50] | paths disagree on holdout filtering → holdout households flip-flop every 4h | diff `segment_update.rs:40-63` vs `gcs.rs:864-882` |
+| 8 | 4-hour job might die entirely [02:40-03:00] | dump is a shared data product, ~8 consumers, MUST keep being produced | confirm the consumer table in §4.4 with owning teams |
+| 9 | Delta mechanism: producer deltas or a standalone GCS-diff job [16:47-17:21] | digest in the ETL sidecar; presence-only diffs are blind to score/tag/version changes | decide in the spike |
+| 10 | Pure-Kafka sub-variant: write directly into Scylla, bypass the consumer [08:23-08:29, 25:38-26:33] | consumer stays in the loop; direct writes never considered | spike; also explain why prior direct-write tests failed |
+| 11 | Empties re-sent periodically ("once a day" / "every few days") [07:50, 23:29-23:37] | no periodic re-send; correctness = no-TTL + delete-on-empty | settle cadence in the spike design |
+| 12 | June premise "empty list deletes the key" (Abbas/Ryan 2026-06-09, §4.2) | both meeting AND doc refute: full `REPLACE` with collection tombstones, row survives, TTL resets | settled — June note corrected, see §5 |
+
+#### Open gaps after meeting + doc
+
+Live TTL value (7 vs 30d); what `segment-updates-burnin-proto` actually carries (no empirical sample); empty re-send cadence; which option the spike recommends; whether the in-flight SlateDB storage-engine migration lands first and moots the MCRocks-level design; per-consumer requirements of the ~8 GCS-dump consumers (code-derived list, unconfirmed); the "4K per hour" unit; why prior Airflow→Scylla direct-write tests failed; whether a "legacy GCS dump" exists alongside the live one.
 
 ## 5. Solution
 
@@ -270,6 +326,19 @@ So the per-IP record gets marginally smaller (fewer segment entries), but the 39
 - **Max Reach is preserved** — this only suppresses scores for IPs that have *no segments at all*, not unscored-but-segmented IPs that Max Reach can still open up.
 
 **Status:** Victor + Abbas had a follow-up call immediately after this meeting specifically about "what we can filter out." Next step is to size this empirically (how many scoreless-no-segment IPs are we writing?) and confirm feasibility of the conditional write with Eric (owns the membership consumer now).
+
+**[SUPERSEDED 2026-08-25.]** The June consumer-side conditional-write framing is dead: the store is ScyllaDB (not Aerospike), and Scylla-side conditional writes are rejected (LWT-class cost; the cache to make them performant ~$20k/mo). Two of its premises were also contradicted (empty-list-deletes-the-key — see §4.2 correction; delete-on-empty exists only as PROPOSED behavior in Eric's doc). Current direction below.
+
+### 5b. Direction as of 2026-08-25 (Eric meeting + doc, §4.4-§4.5)
+
+**The fix is upstream: stop supplying duplicate empty-segment records.** ~92% of segment-score messages into `rtb-membership-consumer-service` are empty duplicates (Eric's dashboard; his doc measures 92.9% of the GCS path); filtering cuts ~400k tps to ~40k (Eric's Slack figure; in-meeting he said "4K per hour", unit unresolved). Independent TI-side check (§4.3): the daily-roster sweep in BQ is ~57% pure-noise records.
+
+**Three candidate designs, Eric's stated ranking (meeting, read-back confirmed [16:34-16:53]):**
+1. **Pure streaming ("the dream"):** all segment updates flow via Kafka (or any stream), bidder stops consuming the GCS dump; dump keeps being produced for its other consumers (~8 per Eric's doc). Consumer side needs only a DLQ per Eric (his doc lists six bidder work items — conflict #3, §4.5).
+2. **Deltas:** producer emits only changes between consecutive rollouts (in the ETL sidecar per the doc, or a standalone GCS-diff job per the meeting).
+3. **Suppress duplicate empties at the producer:** send an empty once (cadence TBD: once / daily / every few days), then stop. Simplest, "would probably do most of the heavy lifting".
+
+Eric's overriding qualifier: whatever is easiest for our side. **Decision: none yet — AUDI-1016 becomes a feasibility SPIKE (Kafka stream vs deltas), Malachi files it, target next sprint.** Delete semantics under any option: the just-became-empty transition must still be delivered once (it is the delete signal); TTL handling must be settled (30d-vs-7d conflict #1, and modify-vs-remove conflict #2, §4.5). Max Reach/holdout handling: the Kafka mapper currently FILTERS holdout-tagged segments while the GCS mapper does not (doc, conflict #7) — any pure-Kafka design must resolve which behavior is correct before cutover.
 
 ## 6. Questions Answered
 
@@ -300,6 +369,26 @@ So the per-IP record gets marginally smaller (fewer segment entries), but the 39
 - **Q:** Where does holdout logic live (relevant to ghost bidding / BER-2250)?
   **A:** **MembershipDB.** Holdout IPs are also mirrored into the Aerospike household profile. Ryan flagged that moving geo-radius targeting into the bidder would force ghost-bid holdout logic to move there too. (Ryan, 2026-06-09.)
 
+*The six 2026-08-25 clarifying questions (full answers with timestamps: §4.5; doc evidence: §4.4):*
+
+- **Q:** Which pathway carries the junk?
+  **A:** The **4-hourly GCS full-snapshot dump** (GCS bucket → PubSub notification → consumer reads file by file → Scylla `REPLACE`). Doc names: Kafka prod topic `segment-updates-burnin-proto`, GCS consumer `run_segment_batch_consumer` on `GCS_SEGMENT_SUBSCRIPTION`, bucket notification `gcs-rtb-segment-updates`; sole producer `membership-db/etl` (VM sweep deployment; the k8s deployment runs the Kafka path). Kafka is the activity path, not the problem. (Eric meeting + doc, 2026-08-25.)
+
+- **Q:** What counts as "duplicate empty" and how was 92% measured?
+  **A:** Same IP re-sent with an empty segment list every 4-hour dump until we stop sending that IP; equivalently, dump-over-dump delta = no change. Measured by a dashboard check Eric added: % of incoming messages with empty segment scores, consistently ~92% (doc: 92.9% of 10.60B GCS records/24h, peak 402,907/s). Producer-side sanity check agrees: only ~8% of households are high/mid-intent scored. TI reproduction: only the daily 08:00 sweep lands in BQ; it is ~57% fully-empty records (§4.3). (Eric meeting + doc + BQ, 2026-08-25.)
+
+- **Q:** Full snapshot today, and which fix does Eric prefer?
+  **A:** Yes, full snapshot every 4h with NO emission filter (the sibling strategy's filter is dead code). Preference ranking: **pure Kafka/streaming #1, deltas #2, suppress-duplicate-empties #3** — qualified by "whatever is the easiest thing for you guys". His doc commits to the additive change-only-Kafka variant. No decision yet; feasibility spike. (Eric meeting + doc, 2026-08-25.)
+
+- **Q:** Delete semantics — does an empty list delete the key today?
+  **A:** **No — nothing is ever deleted** (June note corrected, §4.2). An empty write is a full `REPLACE` that clears segment columns, keeps the row, and RESETS its TTL (Eric: ~30 days; doc: 7 days — unresolved, discriminating check = `DEFAULT_TTL_SECS` in `rtb-scylla-models`). Under suppression the just-became-empty transition still goes out once as a change; re-send cadence (never / daily / every few days) unsettled. (Eric meeting + doc, 2026-08-25.)
+
+- **Q:** Does the consumer need any change if we filter at the producer?
+  **A:** Per Eric: essentially no — even pure Kafka needs "no changes" except adding a DLQ (none exists for the segment path); a TTL modification applies to any change-only delivery. His doc's bidder work breakdown is larger (six items) — conflict #3, §4.5. (Eric meeting vs doc, 2026-08-25.)
+
+- **Q:** Which metric validates the tps drop, and is there a staging path?
+  **A:** Eric's membership-consumer dashboard check (% empty incoming messages) + the TPS load (~400k → "4K per hour" claimed; doc: 402k/s peak eliminated, ~93% Scylla write reduction). **No staging path exists; validation is prod-only.** Doc adds Kafka-lag alerting replacing the Pub/Sub freshness page, and warns the ms-vs-µs broker-timestamp trap fails silently. (Eric meeting + doc, 2026-08-25.)
+
 ## 7. Data Documentation Updates
 
 Done (2026-06-09, from the Abbas sys-design walkthrough + Confluence BP pages):
@@ -309,14 +398,17 @@ Done (2026-06-09, from the Abbas sys-design walkthrough + Confluence BP pages):
 
 ## 8. Open Items / Follow-ups
 
+Closed June items:
 - [x] ~~Sync with Abbas (bidder team)~~ — done 2026-06-09, transcript filed as `ti_1016_02_abbas_bidder_sys_design_caching_2026_06_09.txt`, §4.2 filled.
 - [x] ~~Extract canonical Confluence pages~~ — BP "Bidder" + "Aerospike Datastore" pages captured into `knowledge/data_knowledge.md` + `data_catalog.md` (2026-06-09); PDF archived at `documentation/docs/bidder_platform_confluence_reference.pdf`.
-- [ ] **Follow-up meeting pending** on the new bidder infra/architecture (Aerospike→ScyllaDB migration, next-gen membership-consumer split into cse/oracle/recency) — owner **Eric** (perf-pacing). When it happens: transcribe → extract into the knowledge docs (the "current vs future state" notes there are the baseline to update).
-- [ ] **New primary thread:** size the "don't write intent scores for IPs with no segments" optimization — how many scoreless-no-segment IPs are we currently writing to GCS/Aerospike? (TI side: query the score dump vs segment membership.)
-- [ ] Confirm conditional-write feasibility on the bidder side with **Eric** (now owns the membership consumer; Abbas moved to perf-pacing). Alkaif is secondary.
-- [ ] Cross-check with the **Victor + Abbas "what we can filter out" follow-up** that happened immediately after this meeting — align so we're not duplicating.
-- [ ] (De-prioritized) Original MM-OR-include footprint quantification — Abbas confirmed marginal because key=IP; keep only as a sizing sanity check, not the headline.
-- [ ] Decision: package the no-segment-score-suppression as a sys-design RFC for the bidder team if sizing justifies it.
+- [x] ~~Follow-up meeting with Eric on new bidder infra~~ — done 2026-08-25 (meeting 03, §4.5) plus his written proposal (§4.4). Store confirmed ScyllaDB.
+- [x] ~~Confirm conditional-write feasibility with Eric~~ — REJECTED (Scylla LWT-class cost, ~$20k/mo cache to make performant); replaced by the upstream filter direction (§5b).
+- [ ] (Dormant) June threads: size the no-segment-score-suppression; Victor+Abbas "what we can filter out" cross-check; MM-OR-include footprint sanity check. Revisit only if the upstream fix stalls.
 
-**2026-08-25 Eric Salinger (owns membership consumer, store is ScyllaDB not Aerospike now):** ~92% of segment writes are empty; filtering would cut ~400k tps to ~40k. Scylla-side conditional writes REJECTED (LWT-class cost; a cache to make them performant ~$20k/mo, deemed too expensive). Agreed fix: upstream, do not supply duplicate empty-segment records. Supersedes the June consumer-side conditional-write framing (Abbas/Ryan). Next: identify the feed emitting duplicate empties, filter TI-side.
-**2026-08-25 addendum:** Eric confirmed the upstream filter is what they'd want; his named alternative is switching the supply to diff-based delivery on the Kafka pathway (only changed records flow, empties/dupes disappear structurally). Two design options for the build: (a) filter the existing snapshot feed, (b) diffs-to-Kafka.
+Active (2026-08-25 scope — AUDI-1016 as feasibility spike):
+- [ ] **Convert AUDI-1016 in Jira to a [SPIKE]: feasibility of pure-Kafka streaming vs delta delivery** (decision in meeting 03); get it into next sprint.
+- [ ] **Spike content:** producer-side effort for each of the three options (§5b); where delta/change detection lives (ETL sidecar digest vs standalone GCS-diff job); TTL policy (settle 7-vs-30d, modify-vs-remove); empty re-send cadence; holdout-filtering divergence between the two consumer mappers; whether the SlateDB migration lands first and moots MCRocks-level design.
+- [ ] **Verify Eric's doc's testable claims via Atlas Code MCP** (auth pending — needs `/mcp` in an interactive session): `DEFAULT_TTL_SECS` (7d vs Eric's 30d), the dead-code emission filter, the epoch==0 silent-drop bug, `segment-updates-burnin-proto` contents, the ~8-consumer list of the GCS dump.
+- [ ] **Reconcile the volume numbers:** 6 sweeps × 3.0B (BQ single-sweep) = 18B ≠ doc's 10.60B/day; Eric's dashboard 92% denominator (GCS-only vs GCS+Kafka, 84.7% arithmetic — §4.5 Q2); the "4K per hour" unit.
+- [ ] Get from Eric: ArgoCD locations of the topic/subscription/bucket (he offered [04:38-04:44]); the dashboard panel name for the empty-share check.
+- [ ] Loop in Zach on what `segment-updates-burnin-proto` actually carries (his "subset of the full dump" claim vs the doc's 1.03B msgs/day).
