@@ -67,6 +67,7 @@ class Coverage:
     date: str
     dags: list = field(default_factory=list)
     error: str = ""
+    warning: str = ""
     report_path: str = ""
 
     @property
@@ -84,7 +85,10 @@ class Coverage:
         if self.error:
             return f"DAG coverage unknown ({self.error})."
         n = len(self.unprofiled)
-        return f"{n} active DAG{'s' if n != 1 else ''} had no Spark task to profile."
+        line = f"{n} DAG{'s' if n != 1 else ''} had no Spark task to profile."
+        if self.warning:
+            line += " Paused DAGs are counted as active this run."
+        return line
 
 
 def _airflow(base: str, token: str, path: str, params: dict) -> dict:
@@ -138,7 +142,7 @@ def collect(base: str, date: str, token: str | None = None) -> Coverage:
         token = token or _bearer()
         dags = _active_dags(base, token)
     except Exception as e:  # a coverage failure must not sink the sweep
-        cov.error = str(e)[:160]
+        cov.error = _first_line(e)
         return cov
 
     for d in dags:
@@ -164,28 +168,26 @@ def collect(base: str, date: str, token: str | None = None) -> Coverage:
     return cov
 
 
-def _load_bag_and_paused(dag_folder: str | None) -> tuple[dict, set]:
-    """Parse the DAG bundle and read which DAGs are paused. Airflow-only; seam for tests.
+def _first_line(e: Exception) -> str:
+    """Airflow 3 raises multi-paragraph diagnostics; a headline needs one line."""
+    return (str(e).strip().splitlines() or [""])[0][:160]
 
-    The paused query runs FIRST and deliberately. Parsing the bundle executes the module-level
-    code of every DAG in the deployment, including their `Variable.get()` calls, which is
-    hundreds of MB and a burst of API-server RPCs from inside one worker slot. Doing that and
-    then discovering the DB is unreachable pays the whole cost for nothing, which is what the
-    original order did. If the session fails, this raises before the parse.
 
-    A worker in a deployment that denies direct metadata-DB access will raise here every run;
-    that is intended. `collect_local` turns it into a stated gap on the report rather than a
-    silent one, and `sweep` then declines to write ledger rows it cannot key correctly.
-    """
+def _paused_dag_ids() -> set:
+    """DAG ids currently paused. Airflow-only; seam for tests."""
     from airflow.models import DagModel
-    from airflow.models.dagbag import DagBag
     from airflow.utils.session import create_session
 
     with create_session() as session:
-        paused = {row[0] for row in session.query(DagModel.dag_id).filter(
+        return {row[0] for row in session.query(DagModel.dag_id).filter(
             DagModel.is_paused.is_(True)).all()}
-    bag = DagBag(dag_folder=dag_folder, include_examples=False)
-    return bag.dags, paused
+
+
+def _load_bag(dag_folder: str | None) -> dict:
+    """Parse the DAG bundle off disk. Airflow-only; seam for tests."""
+    from airflow.models.dagbag import DagBag
+
+    return DagBag(dag_folder=dag_folder, include_examples=False).dags
 
 
 def collect_local(date: str, dag_folder: str | None = None) -> Coverage:
@@ -195,13 +197,22 @@ def collect_local(date: str, dag_folder: str | None = None) -> Coverage:
     files are on disk and no deployment token is needed at all. This is the preferred path:
     a token is a credential to store, rotate and leak, and this needs none.
 
-    Paused DAGs are excluded to match the API path, which filters `paused=false`.
+    Paused DAGs are excluded to match the API path, which filters `paused=false`. A deployment
+    that denies task code direct metadata-DB access loses only that exclusion: the bundle still
+    parses, the active-DAG set the ledger keys on is still produced, and the report says paused
+    DAGs are counted as active. Losing the whole enumeration over it froze change tracking for
+    three sweeps after the prod launch.
     """
     cov = Coverage(date=date, report_path=REPORT.format(date=date))
     try:
-        dags, paused = _load_bag_and_paused(dag_folder)
+        paused = _paused_dag_ids()
     except Exception as e:
-        cov.error = str(e)[:160]
+        paused = set()
+        cov.warning = f"paused state unavailable: {_first_line(e)}"
+    try:
+        dags = _load_bag(dag_folder)
+    except Exception as e:
+        cov.error = f"DAG bundle unreadable: {_first_line(e)}"
         return cov
 
     for dag_id, dag in sorted(dags.items()):
@@ -225,6 +236,9 @@ def render(cov: Coverage, profiled_dags: set | None = None) -> str:
     """The coverage report: what was read, what was not, and why not."""
     profiled = profiled_dags or set()
     lines = [f"# Optimizer coverage — {cov.date}", ""]
+    if cov.warning:
+        lines += [f"Paused DAGs could not be excluded ({cov.warning}), so every DAG in the "
+                  "bundle is counted as active below.", ""]
     if cov.error:
         lines += [f"Could not enumerate DAGs: {cov.error}", "",
                   "The backlog for this sweep covers only the event logs that were present.",

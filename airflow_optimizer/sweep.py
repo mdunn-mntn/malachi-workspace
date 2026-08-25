@@ -26,8 +26,7 @@ from . import ledger as ledger_mod
 from .crawl import crawl, render_crawl
 
 OUTDIR = os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out")
-# gsutil, not `gcloud storage`: the same decompressive-transcoding gatekeeper that corrupts
-# a .zstd download also has to be bypassed on the way back up for anything compressed.
+# gsutil, not `gcloud storage`: decompressive transcoding corrupts compressed objects.
 _GSUTIL = ["gsutil", "-o", "GSUtil:check_hashes=never"]
 
 
@@ -52,8 +51,7 @@ def publish(files: list[str], gcs_prefix: str) -> list[str]:
         try:
             r = subprocess.run([*_GSUTIL, "cp", f, dest], capture_output=True, timeout=300)
         except subprocess.TimeoutExpired:
-            # "never raises" has to include the timeout, or the contract is a comment rather
-            # than a guarantee and a slow bucket loses the whole sweep.
+            # "never raises" has to include the timeout.
             print(f"[sweep] upload timed out {dest}")
             continue
         if r.returncode == 0:
@@ -85,13 +83,11 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             fh.write(f"Source: {source}\n\n")
         fh.write(render_crawl(reports) + "\n")
 
-    # Coverage runs FIRST: its active-DAG set is what lets the ledger tell a run index
-    # (materialize_mntn_select_16) from a data-source id (ipdsc_ds_67).
+    # Runs first: the ledger keys on its active-DAG set.
     cov, known = None, None
     if airflow_base:
         try:
-            # "local" means the sweep is running inside Airflow, where the DAG files are on
-            # disk and no deployment token is needed.
+            # "local" = running inside Airflow, where the DAG files are already on disk.
             cov = (cov_mod.collect_local(date) if airflow_base == "local"
                    else cov_mod.collect(airflow_base, date))
             known = {d.dag_id for d in cov.dags} or None
@@ -99,17 +95,10 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             print(f"[sweep] coverage skipped: {str(e)[:160]}")
             cov = None
 
-    # The ledger keys a finding by DAG, and `known` is what resolves an ambiguous trailing
-    # suffix. Without it the same job keys differently (materialize_mntn_select_16 vs
-    # materialize_mntn_select), which reads as a brand-new finding now and as a resolved one
-    # three sweeps later. Both are lies, so when coverage failed and the ledger already holds
-    # history, decline to write rather than write under a second namespace.
     entries, delta = [], ledger_mod.Delta()
     ledger_note = ""
     prior = ledger_mod.read(ledger_path)
-    # Only when coverage was ASKED FOR and failed. A sweep that never requests coverage keys
-    # every run the same way, so there is nothing to be inconsistent with; the damage comes
-    # from a history written WITH the active-DAG set and a run appended without it.
+    # Without `known`, a job re-keys under a second name and reads as new, then as resolved.
     if airflow_base and known is None and prior:
         ledger_note = ("coverage unavailable, so this sweep was not recorded: without the "
                        "active-DAG set the same job keys differently and would read as new")
@@ -128,8 +117,10 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         with open(cov.report_path, "w") as fh:
             fh.write(cov_mod.render(cov, _dag_ids(reports, known)))
 
+    backlog_ref = (f"{gcs_prefix.rstrip('/')}/{os.path.basename(backlog)}"
+                   if gcs_prefix else backlog)
     text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high,
-                             date=date, coverage=cov, backlog_path=backlog)
+                             date=date, coverage=cov, backlog_path=backlog_ref)
     if not complete:
         text += ("\n\n_Partial sweep: some event logs could not be downloaded, so nothing is "
                  "reported as resolved this run._")

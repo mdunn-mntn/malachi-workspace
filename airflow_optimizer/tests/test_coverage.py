@@ -36,10 +36,11 @@ def test_collect_local_classifies_without_a_token(monkeypatch: pytest.MonkeyPatc
     dag = type("D", (), {"tasks": [spark, dbx, plain], "owner": "audi", "tags": ["spark"]})()
     quiet = type("D", (), {"tasks": [plain], "owner": "other", "tags": []})()
 
-    monkeypatch.setattr(coverage, "_load_bag_and_paused",
-                        lambda _f: ({"live": dag, "quiet": quiet, "off": dag}, {"off"}))
+    monkeypatch.setattr(coverage, "_paused_dag_ids", lambda: {"off"})
+    monkeypatch.setattr(coverage, "_load_bag",
+                        lambda _f: {"live": dag, "quiet": quiet, "off": dag})
     cov = coverage.collect_local("2026-08-21")
-    assert cov.error == ""
+    assert cov.error == "" and cov.warning == ""
     assert [d.dag_id for d in cov.dags] == ["live", "quiet"]        # paused DAG dropped
     assert [d.dag_id for d in cov.profilable] == ["live"]
     assert [d.dag_id for d in cov.unprofiled] == ["quiet"]
@@ -54,23 +55,40 @@ def test_collect_local_reports_a_failure_instead_of_raising(monkeypatch: pytest.
     The previous version of this test asserted only that `cov.error` was set, which it always
     is when Airflow is not installed, so it passed without exercising anything.
     """
-    def _boom(_folder: str | None) -> tuple[dict, set]:
-        raise RuntimeError("metadata DB unreachable from the task")
+    def _boom(_folder: str | None) -> dict:
+        raise RuntimeError("bundle directory is empty")
 
-    monkeypatch.setattr(coverage, "_load_bag_and_paused", _boom)
+    monkeypatch.setattr(coverage, "_paused_dag_ids", lambda: set())
+    monkeypatch.setattr(coverage, "_load_bag", _boom)
     cov = coverage.collect_local("2026-08-21")
     assert not cov.dags
-    assert "metadata DB unreachable" in cov.error
+    assert "bundle directory is empty" in cov.error
     assert "Could not enumerate DAGs" in coverage.render(cov)
 
 
-def test_paused_set_is_read_before_the_bundle_is_parsed() -> None:
-    """Parsing the bundle runs every DAG's module code; doing it then discarding it is waste.
+def test_an_unreachable_metadata_db_degrades_instead_of_blinding_the_sweep(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Airflow 3 forbids ORM access from task code, and losing paused state lost everything.
 
-    Guards the ORDER inside the helper, which is the whole point of the fix: an unreachable DB
-    must fail before hundreds of MB of DAG parsing, not after.
+    In prod that meant `known` came back empty, so `sweep` declined to write ledger rows and
+    change tracking sat frozen for three days. The bundle is on disk and parses fine; only the
+    paused exclusion needs the DB, so only the paused exclusion may be lost.
     """
-    import inspect
+    dag = type("D", (), {"tasks": [type("DataprocSubmitJobOperator", (),
+                                        {"task_id": "run"})()], "owner": "audi", "tags": []})()
 
-    src = inspect.getsource(coverage._load_bag_and_paused)
-    assert src.index("create_session") < src.index("DagBag(")
+    def _forbidden() -> set:
+        raise RuntimeError("could not access attribute query because airflow session use is "
+                           "forbidden in this context. Context manager was entered here:\n"
+                           '  File "/astro-agent-package/astro-runtime/supervisor.py", line 1')
+
+    monkeypatch.setattr(coverage, "_paused_dag_ids", _forbidden)
+    monkeypatch.setattr(coverage, "_load_bag", lambda _f: {"live": dag, "off": dag})
+    cov = coverage.collect_local("2026-08-21")
+
+    assert cov.error == ""
+    assert {d.dag_id for d in cov.dags} == {"live", "off"}       # the ledger can key on this
+    assert "forbidden in this context" in cov.warning
+    assert "\n" not in cov.warning                               # one line, not a traceback
+    assert "counted as active" in coverage.render(cov)
+    assert "Paused DAGs are counted as active" in cov.unprofiled_line()

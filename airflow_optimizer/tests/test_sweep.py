@@ -174,3 +174,12 @@ def test_cap_never_cuts_a_rolling_log_in_half(monkeypatch: pytest.MonkeyPatch) -
     got = fetch.newest_logs("gs://b/p", 2)
     assert sum(1 for o in got if "eventlog_v2_batch-x" in o) == 3
     assert "gs://b/p/app-solo.zstd" in got
+
+
+def test_digest_cites_the_published_backlog_not_the_container_path(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A reader cannot open /tmp/spark_events_<rand>/ on a pod that no longer exists."""
+    monkeypatch.setattr(sweep, "publish", lambda *_a, **_k: [])
+    out = _run(fleet, "2026-08-19", gcs_prefix="gs://bucket/optimizer/")
+    assert "gs://bucket/optimizer/optimizer_backlog_2026-08-19.md" in out["slack"]
+    assert "/tmp/" not in out["slack"]
