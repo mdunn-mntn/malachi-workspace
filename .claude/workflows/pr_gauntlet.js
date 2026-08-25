@@ -155,7 +155,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
 
   const verdicts = await parallel(toRefute.map(f => async () => {
     try {
-      const v = await roleAgent('pr-gauntlet-refuter', refuteTask(f), { schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: f.severity === 'minor' ? 'medium' : 'high' })
+      const v = await roleAgent('pr-gauntlet-refuter', refuteTask(f), { schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: 'medium' })
       return { f, v }
     } catch (e) {
       return { f, v: null, err: String(e) }
