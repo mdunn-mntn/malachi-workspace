@@ -12,14 +12,37 @@ run_id, not the parent job run_id (else INVALID_PARAMETER_VALUE).
 
 from __future__ import annotations
 
+import configparser
 import json
+import os
 import re
 import subprocess
 from dataclasses import asdict, dataclass, field
 
 from .signatures import classify
 
-PROFILE = "malachi@mountain.com"  # U2M OAuth; the DEFAULT profile is invalid
+
+def _resolve_profile() -> str:
+    """The Databricks CLI profile to use: $DATABRICKS_PROFILE, else the first one configured.
+
+    Never a hardcoded name. The DEFAULT profile is invalid here, so falling back to the first
+    section of the caller's own ~/.databrickscfg is what lets anyone run this on their machine
+    without the tool naming one person (IMP-050, IMP-082).
+    """
+    env = os.environ.get("DATABRICKS_PROFILE")
+    if env:
+        return env
+    cfg = os.path.expanduser("~/.databrickscfg")
+    try:
+        parser = configparser.ConfigParser()
+        parser.read(cfg)
+    except (configparser.Error, OSError):
+        return ""
+    usable = [s for s in parser.sections() if s.lower() != "default"]
+    return usable[0] if usable else ""
+
+
+PROFILE = _resolve_profile()
 _TRACE_TAIL = 2000  # chars of error_trace kept (tail-first)
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 _FAILED_STATES = frozenset(

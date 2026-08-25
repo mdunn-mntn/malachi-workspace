@@ -39,7 +39,7 @@ airflow log ─▶ parse (identity + op_classpath→engine + job-id) ─▶ diag
 ## Auth (two separate layers)
 
 - **Data access (key-free):** Airflow via `astro` CLI token; Dataproc via `gcloud` user creds +
-  Cloud Logging; Databricks via the `malachi@mountain.com` U2M OAuth CLI profile. The staging-bucket
+  Cloud Logging; Databricks via a U2M OAuth CLI profile (`$DATABRICKS_PROFILE`, else the first one in `~/.databrickscfg`). The staging-bucket
   driveroutput fallback (fires when Cloud Logging returns no error text) needs the `dataproc-debug`
   PAM grant; without it the analyzer notes the 403 and how to unblock.
 - **LLM orchestration:** `ANTHROPIC_API_KEY` (or an `ant auth login` profile) — used only by

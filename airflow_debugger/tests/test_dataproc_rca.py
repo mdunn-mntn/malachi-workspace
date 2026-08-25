@@ -313,6 +313,48 @@ def test_an_unknown_error_survives_scrubbed_rather_than_dropped() -> None:
     assert "some novel failure mode" in note
 
 
+def test_the_databricks_profile_names_no_person() -> None:
+    """IMP-082: the package must not hardcode whose Databricks profile it runs as.
+
+    The bundle copy already refused a default; this is the laptop half. It resolves
+    $DATABRICKS_PROFILE first, then the caller's own ~/.databrickscfg, so it works for anyone
+    without the source naming a human.
+    """
+    import inspect
+
+    from airflow_debugger import databricks_rca
+
+    src = inspect.getsource(databricks_rca)
+    assert "@mountain.com" not in src, "a personal account is hardcoded again"
+    assert "os.environ.get(\"DATABRICKS_PROFILE\")" in src
+
+    import os
+
+    saved = os.environ.get("DATABRICKS_PROFILE")
+    os.environ["DATABRICKS_PROFILE"] = "explicit-wins"
+    try:
+        assert databricks_rca._resolve_profile() == "explicit-wins"
+    finally:
+        if saved is None:
+            os.environ.pop("DATABRICKS_PROFILE", None)
+        else:
+            os.environ["DATABRICKS_PROFILE"] = saved
+
+
+def test_the_default_profile_is_never_selected() -> None:
+    """`DEFAULT` is invalid for this workspace, so it must not be picked as the fallback."""
+    import configparser
+    from unittest import mock
+
+    from airflow_debugger import databricks_rca
+
+    cfg = configparser.ConfigParser()
+    cfg.read_string("[DEFAULT]\nhost = x\n[real-profile]\nhost = y\n")
+    with mock.patch.object(databricks_rca.configparser, "ConfigParser", return_value=cfg), \
+         mock.patch.dict("os.environ", {}, clear=True):
+        assert databricks_rca._resolve_profile() == "real-profile"
+
+
 if __name__ == "__main__":
     test_uri_parses_real_state_message()
     test_uri_absent_returns_none()
