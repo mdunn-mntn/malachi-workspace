@@ -1691,6 +1691,18 @@ attempts at ~22:46, ~22:51, ~22:56, and the QA cluster was not deleted until 22:
 misses by about four minutes. The retry fix is still correct — today it cannot run at all, and it
 also hides the real error — but the durable fix is separating QA's quota from prod's.
 
+**Not a one-off: 7 quota refusals in 30 days, every one of them prod.** `CreateCluster` with
+`protoPayload.status.code=3` over the last 30 days: 2026-07-27 (1), 2026-07-30 (4), 2026-08-24 (2).
+Zero refusals were served to `vertex-ai-qa@`, which is what a shared pool with a 93%-of-ceiling
+prod cluster produces: whoever asks second loses, and prod is usually second.
+
+**Two distinct flavours, and today's is new.** On 07-27 and 07-30 the refusal followed a `code 14`
+UNAVAILABLE stockout on a prod cluster minutes earlier (`fangorn-inference-f44947cb` 19:49:25,
+`fangorn-inference-445fba60` 20:03:03), so the retry was blocked by its own failed cluster's VMs.
+That is INC-008's self-block, already in §2. On 08-24 there was no `code 14` at all; the holder was
+a live QA cluster. So the catalog's "usually a stockout" reading was right for July and wrong for
+this one, and the shared-quota condition underneath is what makes both possible.
+
 **Identity, not the cluster name, answers "whose is this".** `fangorn-inference-*` is the same name
 in both environments; only `protoPayload.authenticationInfo.principalEmail` distinguishes them.
 
