@@ -132,4 +132,10 @@ Increasing executor count by reducing cores/memory per executor shrinks the gap 
 
 **§ Ownership (Dustin Niehoff, #devops, 2026-08-20):** **Victor set up all the Databricks estate for TI. DPLAT explicitly wanted nothing to do with Databricks.** So Databricks questions route to Victor / TI, not to data-platform and not to devops. Practical consequence: creating a read-only service principal for a TI workload needs no devops ticket, and `malachi@mountain.com` is already in workspace `admins`, so it is self-serve. Existing principals `prod_runner` / `dev_runner` sit in `producers_prod` / `producers_dev`; a read-only workload belongs in neither.
 
+**§ Who holds which Databricks admin tier (2026-08-24).** Three distinct tiers, and they do not nest the way the names suggest:
+- **Account admin — Brian McAdams.** Proven by the error he gets, not by a directory read: his `PUT .../systemschemas/lakeflow` returned `lakeflow system schema can only be enabled by Databricks`, a check that sits *behind* the account-admin gate, whereas `malachi@mountain.com` never reaches it and gets `User is not an account admin for Account`. **There is no API path to enumerate account admins from a workspace token** — account console > User management > Users > Role is the only list. Route console-only changes (Metastore Admin assignment, account groups) to Brian.
+- **Metastore admin — nobody.** `owner: "System user"`. See the lakeflow section above.
+- **Workspace admin — malachi@mountain.com** (`admins` group). Grants nothing at the Unity Catalog `system` level.
+Vendor contact on the support thread: **David Qiu** (Databricks). Calibration: he was right about the enable-call red herring, and twice suggested workarounds that did not survive a test (SP inheritance via account `users`, and a relay view) — test his suggestions before relaying them onward.
+
 **§ Access level:** `malachi@mountain.com` is in **`admins`** as of 2026-08-20 (groups: `producers_dev`, `users`, `admins`, a users-clone). The on-call runbook's `producers/dev/users` line is stale. Workspace `admin` still does not grant Unity Catalog `system` schema access.
