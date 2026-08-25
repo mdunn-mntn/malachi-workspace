@@ -266,6 +266,12 @@ Transcript: [meetings/ti_1016_03_eric_matt_empty_segments_2026_08_25.txt](meetin
 
 **Q6 validation:** The metric is Eric's dashboard check (% incoming messages with empty segment scores) plus the TPS load (~400k → ~4K claimed). **No staging path exists or was mentioned; validation as described is prod-only.** No numeric acceptance threshold; nearest criterion is "told once... then maybe periodically every few days" [23:20-23:37]. Doc-side hazard for cutover validation: the ms-vs-µs broker-timestamp trap silently drops every write with NO error — nothing on the dashboard would catch it (§4.4).
 
+#### Post-meeting Slack (2026-08-25, Malachi ↔ Eric)
+
+- **Ownership correction:** TI/AUDI doesn't own most of the producer side. **Segment scores = TMUL, owned/created by Zach Schoenberger; RTC = Ryan Kleck + Wei.** Malachi's working hypothesis: the majority of Eric's volume is TMUL (the GCS dump sweep), then RTC. Mapping hypothesis: the Kafka topic's "retargeting" content [05:05-05:27] = RTC (real-time conquest) — would resolve conflict #6 below; check with Ryan/Wei.
+- Eric has talked to Zach a bit: Zach "pretty protective of not making any changes."
+- **Meeting 04 scheduled for 2026-08-26, 1 hour: Eric + Zach + Ryan Kleck + Wei + Malachi** — re-run the same questions with the actual owners. Transcribe as `ti_1016_04_*` when done.
+
 #### Decisions and owners
 
 - **Malachi converts AUDI-1016 to a SPIKE: feasibility of direct Kafka stream vs deltas** — first floated [16:15-16:29], committed [17:29-17:36], restated at close [24:07-24:19]; "I'll make it a spike ticket because I had a ticket for this" [26:42-26:46]. Target: next sprint (aspirational) [24:33-24:40]. Matt confirmed scope is feasibility-only [26:34-26:40]. No architecture chosen in the meeting.
@@ -411,4 +417,4 @@ Active (2026-08-25 scope — AUDI-1016 as feasibility spike):
 - [ ] **Verify Eric's doc's testable claims via Atlas Code MCP** (auth pending — needs `/mcp` in an interactive session): `DEFAULT_TTL_SECS` (7d vs Eric's 30d), the dead-code emission filter, the epoch==0 silent-drop bug, `segment-updates-burnin-proto` contents, the ~8-consumer list of the GCS dump.
 - [ ] **Reconcile the volume numbers:** 6 sweeps × 3.0B (BQ single-sweep) = 18B ≠ doc's 10.60B/day; Eric's dashboard 92% denominator (GCS-only vs GCS+Kafka, 84.7% arithmetic — §4.5 Q2); the "4K per hour" unit.
 - [ ] Get from Eric: ArgoCD locations of the topic/subscription/bucket (he offered [04:38-04:44]); the dashboard panel name for the empty-share check.
-- [ ] Loop in Zach on what `segment-updates-burnin-proto` actually carries (his "subset of the full dump" claim vs the doc's 1.03B msgs/day).
+- [ ] ~~Loop in Zach~~ **Meeting 04, 2026-08-26 (Eric + Zach + Ryan Kleck + Wei):** settle what `segment-updates-burnin-proto` carries (RTC hypothesis), TMUL sweep ownership of the fix, and the three-option feasibility with the actual owners. Zach is change-averse here ("protective") — bring the measured numbers (92.9%, 402k/s peak, 57% BQ noise) and Eric's ranking, not a proposal.
