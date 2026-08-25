@@ -195,7 +195,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-20 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-08-20 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
-| reference_fangorn_inference_dataproc | reference | 2026-08-20 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_mm_vs_3p_scorecard | reference | 2026-08-20 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-20 | [doc](memory/reference_mntn_devops_permissions.md) |
 | reference_oncall_runbook | reference | 2026-08-20 | [doc](memory/reference_oncall_runbook.md) |
@@ -220,6 +219,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_audi_1142_shopper_graph_spike | project | 2026-08-24 | [doc](memory/project_audi_1142_shopper_graph_spike.md) |
 | project_audi_1175_ds14_scoring_cost | project | 2026-08-24 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | project_backlog_gate_pings | project | 2026-08-24 | [doc](memory/project_backlog_gate_pings.md) |
+| reference_fangorn_inference_dataproc | reference | 2026-08-24 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-08-24 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_local_vendor_data_analysis | reference | 2026-08-24 | [doc](memory/reference_local_vendor_data_analysis.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-24 | [doc](memory/reference_shopper_graph_deploy.md) |

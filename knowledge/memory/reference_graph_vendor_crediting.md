@@ -45,6 +45,10 @@ that List 1 rule-making is AUDI's. AUDI-1145 (List 1 rules) likely stays with Ma
   SQL** (all lists); still open whether Jaime or Maya maintains/updates the code. **Lists 2/3 logic proposal
   (Maya, Jack endorses): if DeepSync was incremental for either list, it is incremental for the whole
   impression.** List 1 logic ownership (the AUDI-1145 question) still unanswered in the thread.
+- Jack Barbey (thread, 08-24 ~5pm), crediting mechanics: **List 1 vendors are credited essentially
+  independently** of Lists 2/3. Whether ALL vendors get credit vs List 1 vs Lists 2/3 **depends on whether
+  the audience is built with AND or OR clauses** (true for DS63/CRM at least); **MNTN Matched will be
+  different**. Ownership of the List 1 rules still not assigned.
 
 **Gotchas that cost time:**
 - The timestamp column is **`translation_timestamp`**, never `translation_date`. `bae-sql-utility#24` reads
