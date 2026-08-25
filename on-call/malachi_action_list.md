@@ -41,9 +41,17 @@ live (`storage.buckets.getIamPolicy` denied), so that half is manifest-verified 
 `AIRFLOW_API_BASE` is `https://cmd6bd10c0gl901rfuokgryiq.iq.astronomer.run/dokgryiq/api/v2` — take
 it from `astro deployment inspect`, do not construct it.
 
-**The DAG is live, unpaused and verified in prod as of 2026-08-24.** Next scheduled run 17:00 UTC.
-One thing unconfirmed: whether the GCS publish to `gs://mntn-data-archive-prod/debugger/` succeeds
-under the `objectUser` prefix condition. The verification run diagnosed but did not publish.
+**The DAG is live, unpaused and fully verified end to end as of 2026-08-24.** The GCS publish was
+the last unconfirmed step and it now works: `rca_2026-08-23.json` and `.md` landed under
+`gs://mntn-data-archive-prod/debugger/` at 00:37Z, so the `objectUser` prefix condition holds. It
+took a code fix (airflow-ti#1215): `gsutil cp` stats its destination first and `storage.objects.list`
+is evaluated against the BUCKET, which an object-prefix IAM condition can never grant. A JSON API
+media upload is one request against one object name and stays inside the condition.
+
+**Triggering a manual run has one trap worth writing down.** The `logical_date` must fall inside
+`[the DAG's start_date, now]` — 2026-08-21 onward here. Outside that window the run reports
+**success with zero task instances**, which is indistinguishable from a clean run unless you check
+`total_entries` on `/taskInstances`. Cost three attempts.
 
 ---
 

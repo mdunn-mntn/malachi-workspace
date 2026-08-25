@@ -503,6 +503,20 @@ scheduled run picks it up. That is fail-safe in the direction that matters: a co
 nothing and prod keeps running the previous template. airflow-ti merges trigger the Astro deploy,
 with the usual 25-40 minute bundle-adoption lag.
 
+**VERIFIED END TO END 2026-08-24, after both merges.** Bundle `2026-08-25T00:23:45` picked up the
+new code; `manual__publishcheck_3` diagnosed 3 of 3 and **published**: `rca_2026-08-23.json` (2,220 B)
+and `rca_2026-08-23.md` (1,135 B) under `gs://mntn-data-archive-prod/debugger/` at 00:37Z. That was
+the last unconfirmed step in the whole ticket. The fangorn half is verified separately: the compiled
+template at `gs://targeting-infra-vertex-pipelines-prod/fangorn/fangorn_challenger_inference_pipeline.json`
+(00:20:03Z) contains the guarded delete and the chained `RuntimeError`, and the unguarded version is gone.
+
+**A manual run needs `logical_date` inside `[start_date, now]`, and violating that fails silently.**
+Outside the window Airflow marks the run **success with zero task instances** — no error, no log, and
+indistinguishable from a clean run unless you read `total_entries` on `/taskInstances`. Two of my three
+verification attempts died this way: `2026-08-26` was parked as queued forever (future), `2026-08-19`
+returned instant success with no tasks (before `start_date`). Check the window before reading a green
+manual run as evidence of anything.
+
 **PRs, both MERGED 2026-08-24** after review by Ryan Kleck: airflow-ti#1215 (publish + masks, `26c65aca`)
 and targeting-infra-ml#93 (the cleanup fix, `bc60c8bd`, applied to all four pipelines carrying the
 helper). Incident: on-call INC-025. Backlog: IMP-070 (the quota itself —
