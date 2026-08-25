@@ -74,6 +74,37 @@ finding so one bad DAG fills the page, and two of the three planned inputs are m
   `run_name`. `EXPLAIN COST` is already validated against warehouse `14b311ac86ee2ca2`. The
   enumeration gap that blocked this for five days is closed.
 
+**Slack delivery spec (agreed 2026-08-25).**
+
+Detection stays deterministic. The 14 detectors already emit a `why:` and a `fix:` per finding
+with measured numbers, so nothing about *finding* the problem needs a model. A model is only
+worth adding for the last mile: turning a finding plus the offending source into a proposed
+diff, and writing the one-line summary. Scope it there and the sweep stays reproducible.
+
+**Credential.** Use the company OpenAI key the team already owns in Vault at
+`teams/team-engineering-targeting/openai` (`SteelHouse/mntn-team-credentials`,
+`secrets/team-engineering-targeting/openai/teamsecret.yaml`). Do NOT carry Malachi's personal
+`ANTHROPIC_API_KEY` into a scheduled job; AUDI-1191's debugger runs on it today and moves to
+the same Vault entry. SOP 052 prefers identity over a secret, but a third-party API key fails
+its first condition, so the Vault/ESO path is correct here.
+
+**Channel.** New channel plus a bot token, both requested through devops. The digest posts once
+a day after the sweep.
+
+**Every post is the same four-block shape, BLUF.** Headline first: the one thing a reader who
+stops there must get. Then, per finding, at most three findings per post:
+- **What** — the finding in one line, with the measured number that makes it real.
+- **Where** — the DAG's Astro/Airflow run URL, plus a GitHub permalink to the exact lines
+  (`blob/<sha>/<path>#L<start>-L<end>`), never a bare file name.
+- **Why** — the cost in the unit we can defend: idle executor-hours, GiB spilled, share of task
+  time. Carry the CUD caveat on any dollar figure.
+- **How** — the proposed change. A diff only when it is small; past a threshold, link the lines
+  and describe the change in a sentence. A giant diff in Slack is not readable and is not the
+  deliverable.
+
+Same block order, same headings, every day, so a reader learns the shape once. Anything that
+does not fit those four blocks does not go in the post.
+
 **Debt this inherits.**
 - `include/spark_optimizer/` ships multi-line rationale comments throughout, which its own
   `lint_comments.py` would now fail. Own PR, before anything else lands on the package.
