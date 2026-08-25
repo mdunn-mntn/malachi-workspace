@@ -21,8 +21,8 @@ import subprocess
 import time
 from dataclasses import dataclass
 
-PROFILE = os.environ.get("DATABRICKS_PROFILE", "malachi@mountain.com")
-WAREHOUSE = os.environ.get("DATABRICKS_WAREHOUSE", "14b311ac86ee2ca2")
+PROFILE = os.environ.get("DATABRICKS_PROFILE", "DEFAULT")
+WAREHOUSE = os.environ.get("DATABRICKS_WAREHOUSE", "")
 
 # Every SUBMIT_RUN name ends in the submission's own uuid, so grouping raw gives one row a run.
 _RUN_UUID = re.compile(r"-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -61,9 +61,11 @@ def _api(method: str, path: str, body: dict | None = None) -> dict:
 
 def query(sql: str, warehouse: str = "", poll_s: int = 3, tries: int = 20) -> list[list]:
     """Run one statement and return its rows. Raises on a failed statement."""
+    target = warehouse or WAREHOUSE
+    if not target:
+        raise RuntimeError("no warehouse: pass one or set DATABRICKS_WAREHOUSE")
     res = _api("post", "/api/2.0/sql/statements",
-               {"warehouse_id": warehouse or WAREHOUSE, "statement": sql,
-                "wait_timeout": "50s"})
+               {"warehouse_id": target, "statement": sql, "wait_timeout": "50s"})
     sid = res.get("statement_id")
     for _ in range(tries):
         state = res.get("status", {}).get("state")
