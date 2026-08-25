@@ -11,6 +11,15 @@ import re
 from airflow_debugger.signatures import SIGNATURES, classify
 
 CASES = [
+    # Verbatim from bottom_up_keywords_pipeline_run/training_pipeline, 2026-08-25, the
+    # data-preparation component's Spark JDBC read.
+    (
+        "bottom_up_keywords_pg_auth",
+        "py4j.protocol.Py4JJavaError: An error occurred while calling o56.load.\n"
+        ": org.postgresql.util.PSQLException: FATAL: password authentication failed\n"
+        "\tat org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:693)",
+        "db_credential_rejected",
+    ),
     # (label, error_text, expected_key)
     (
         "inc009_table_exists",

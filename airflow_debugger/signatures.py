@@ -354,6 +354,18 @@ SIGNATURES: list[Signature] = [
         "no",
     ),
     Signature(
+        "db_credential_rejected",
+        r"PSQLException: FATAL: password authentication failed|"
+        r"password authentication failed for user|"
+        r"Access denied for user '[^']+'@|"
+        r"ORA-01017|Login failed for user",
+        "auth/database-credential",
+        "The database rejected the credential itself, which is not the same as a missing grant: "
+        "the password is wrong, rotated, or the secret the job reads is stale. Check when the "
+        "secret last changed against the last green run before touching the job.",
+        "no",
+    ),
+    Signature(
         "auth_error",
         r"AccessDenied|PERMISSION_DENIED|Unauthorized|invalid[_ ]token|token.{0,20}expired|"
         r"(?<![0-9])(401|403)(?![0-9]).{0,30}(Forbidden|Unauthorized|denied)",
