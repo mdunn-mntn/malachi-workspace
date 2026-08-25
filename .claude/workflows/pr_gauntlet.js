@@ -1,5 +1,5 @@
 // pr_gauntlet.js — adversarial PR review loop: two blind reviewers -> default-refute verify ->
-// one fixer, fresh agents every round, until a full round confirms nothing (cap 4).
+// one fixer, fresh agents every round, until a full round confirms nothing (cap 2).
 // Invoked by /pr_gauntlet with args {repo, base, files, prNumber?, description?}.
 // Verdicts: PASS | FAIL_MAX_ROUNDS | THRASH | ERROR. Never commits; the main loop commits.
 export const meta = {
@@ -8,8 +8,8 @@ export const meta = {
   whenToUse: 'Dispatched by the /pr_gauntlet skill on a PR, branch, or diff before it ships',
 }
 
-const MAX_ROUNDS = 4
-const MAX_REFUTERS_PER_ROUND = 12
+const MAX_ROUNDS = 2
+const MAX_REFUTERS_PER_ROUND = 6
 const LINE_BUCKET = 10
 
 const FINDINGS_SCHEMA = {
@@ -155,7 +155,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
 
   const verdicts = await parallel(toRefute.map(f => async () => {
     try {
-      const v = await roleAgent('pr-gauntlet-refuter', refuteTask(f), { schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: 'high' })
+      const v = await roleAgent('pr-gauntlet-refuter', refuteTask(f), { schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: f.severity === 'minor' ? 'medium' : 'high' })
       return { f, v }
     } catch (e) {
       return { f, v: null, err: String(e) }
