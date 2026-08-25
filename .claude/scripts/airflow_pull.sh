@@ -82,8 +82,8 @@ case "$MODE" in
     check)
         exec $PY version ;;
     list)
-        exec $PY list --date "$DATE" --outdir "$OUTDIR" "${PY_ARGS[@]}" ;;
+        exec $PY list --date "$DATE" --outdir "$OUTDIR" ${PY_ARGS[@]+"${PY_ARGS[@]}"} ;;
     watch)
         exec $PY watch --date "$DATE" --outdir "$OUTDIR" --oncall-dir "$ONCALL_DIR" \
-            --interval "$INTERVAL" $PERSISTENT "${PY_ARGS[@]}" ;;
+            --interval "$INTERVAL" $PERSISTENT ${PY_ARGS[@]+"${PY_ARGS[@]}"} ;;
 esac
