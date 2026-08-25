@@ -64,8 +64,8 @@ the support ticket it produced is closed. Nothing here is external any more.
 
 | # | Ask | Who |
 |---|---|---|
-| **a** | **Assign a metastore admin group** on metastore `c5dc6763-eaae-4d6c-9ae2-7af6147595bb` | An MNTN **account admin**, in the account console (Catalog > metastore > Metastore Admin > Edit). Console-only: no API, no Terraform. Post-Nov-2023 accounts ship with none assigned, which is why `owner` reads `System user` and every `system.*` grant denies |
-| **b** | Then the grants, run by a member of that group | `USE CATALOG ON CATALOG system` (easy to omit, blocks on its own), then `USE SCHEMA` + `SELECT` on `system.lakeflow` and on `system.billing`. Same gate for both, so they land together. IMP-062 |
+| ~~a~~ | ~~Assign a metastore admin group~~ | **DONE 2026-08-25.** `system.lakeflow` is readable. It needed THREE tiers, not two: metastore admin (a console-assigned group) grants `USE CATALOG ON CATALOG system` and nothing deeper; every SCHEMA-level grant under `system` needs a **full account admin**. Alyson Lefkowitz holds both and did it in two passes |
+| **b** | `system.billing` still needs the same second pass | Ask Alyson Lefkowitz to repeat the account-admin schema grant for `system.billing`. Verify any principal with `databricks api get /api/2.1/unity-catalog/permissions/schema/system.billing`. IMP-062 |
 
 `system.billing.usage` is what turns the flexible-node-types cost commitment from a promise into a
 measurement. `system.lakeflow.job_run_timeline` is the only enumeration surface for ephemeral dbt
