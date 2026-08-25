@@ -491,6 +491,68 @@ def test_a_reschedule_sensor_is_not_read_as_a_killed_process() -> None:
     assert "killed mid-poke" not in out
 
 
+# Verbatim shape from databricks_guid_geos/run_databricks_job, 2026-08-20. The operator announces
+# a startup budget, the pod never logs anything, and the task raises with an empty message.
+_POD_TIMEOUT = (
+    "2026-08-20T01:01:12.453165Z [info] DbxDbtOperator Building pod run-databricks-job-xrc0t925\n"
+    "2026-08-20T01:01:12.772400Z [info] PodManager Waiting up to 120s to get the POD scheduled...\n"
+    "2026-08-20T01:01:12.808300Z [info] PodManager Waiting 120s to get the POD running...\n"
+    "2026-08-20T01:03:13.560881Z [info] DbxDbtOperator Deleting pod: run-databricks-job-xrc0t925\n"
+    "2026-08-20T01:03:13.636975Z [error] task Task failed with exception\n"
+)
+
+
+def test_a_pod_that_never_started_is_parsed_from_the_wait_and_delete_pair() -> None:
+    """There is no error text to match, so the evidence has to be structural."""
+    p = parse_log(_POD_TIMEOUT)
+    assert p.pod_name == "run-databricks-job-xrc0t925"
+    assert p.pod_wait_seconds == 120
+    assert p.pod_deleted is True
+
+
+def test_the_empty_exception_is_explained_instead_of_left_unclassified() -> None:
+    """`Task failed with exception` with no payload is the log's whole content."""
+    diag = {
+        "identity": {"dag_id": "databricks_guid_geos", "task_id": "run_databricks_job"},
+        "pod_name": "run-databricks-job-xrc0t925",
+        "pod_wait_seconds": 120,
+        "pod_deleted": True,
+        "root_error": "",
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "run-databricks-job-xrc0t925" in out
+    assert "120s budget" in out
+    assert "Nothing in this log is the cause" in out
+
+
+def test_a_pod_note_never_overrides_a_real_error() -> None:
+    """A pod that was deleted AFTER a genuine failure must not steal the verdict."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "t"},
+        "pod_name": "p-123",
+        "pod_wait_seconds": 120,
+        "pod_deleted": True,
+        "root_error": "java.lang.OutOfMemoryError: Java heap space",
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "did not reach Running" not in out
+
+
+def test_a_pod_that_started_fine_produces_no_note() -> None:
+    """No delete means the operator never gave up waiting."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "t"},
+        "pod_name": "p-123",
+        "pod_wait_seconds": 120,
+        "pod_deleted": False,
+        "root_error": "",
+        "root_signature": {},
+    }
+    assert "did not reach Running" not in build_report(diag)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(dict(globals()).items()):
         if name.startswith("test_") and callable(fn):

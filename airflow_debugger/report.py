@@ -135,6 +135,10 @@ def build_report(diag: dict) -> str:
                 bool(diag.get("reschedule_count")),
             )
         )
+    if not root and not diag.get("no_error_text"):
+        pod = _pod_startup_note(diag)
+        if pod:
+            lines.append(pod)
     mask = detect_mask(_verdict_text(diag))
     if mask:
         lines.append(mask_note(mask))
@@ -158,6 +162,24 @@ def build_report(diag: dict) -> str:
     if len(report) > _MAX:
         report = report[: _MAX - 1].rstrip() + "…"
     return report
+
+
+def _pod_startup_note(diag: dict) -> str | None:
+    """A KubernetesPodOperator that gave up waiting raises with an EMPTY message.
+
+    The log looks like it has an error line and carries no error at all, so nothing classifies.
+    The evidence is structural: the operator announced a startup budget, then deleted the pod.
+    """
+    if not (diag.get("pod_deleted") and diag.get("pod_wait_seconds")):
+        return None
+    if (diag.get("root_error") or "").strip():
+        return None
+    pod = diag.get("pod_name") or "the pod"
+    return (
+        f"The pod {pod} did not reach Running inside its {diag['pod_wait_seconds']}s budget, so the "
+        "operator deleted it and raised with an empty message. Nothing in this log is the cause: "
+        "check node capacity and image-pull time for that pod, not the task's code."
+    )
 
 
 def _verdict_text(diag: dict) -> str:

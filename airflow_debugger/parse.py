@@ -44,6 +44,11 @@ _EXTERNAL_POKE_RE = re.compile(
 # clean poke loop attached to a failed task.
 _GCS_POKE_RE = re.compile(r"Sensor checks existence of : (\S+?), (\S+)")
 _RESCHEDULE_RE = re.compile(r"marking task as UP_FOR_RESCHEDULE")
+# KubernetesPodOperator waits a fixed budget for the pod to reach Running, then deletes it and
+# raises with an EMPTY message. The log therefore has no error text at all, and the only evidence
+# that anything went wrong is the wait/delete pair around a pod that never logged output.
+_POD_WAIT_RE = re.compile(r"Waiting (?:up to )?(\d+)s to get the POD (?:scheduled|running)")
+_POD_NAME_RE = re.compile(r"(?:Building|Deleting) pod:? (\S+)")
 
 
 @dataclass
@@ -69,6 +74,9 @@ class ParsedFailure:
     airflow_signature: dict | None = None  # signature of the Airflow-task-level failure
     has_error_text: bool = True  # False = the task never ran / emitted no diagnostic output
     ti_state: str | None = None  # terminal state from the filename: failed | upstream_failed | ...
+    pod_name: str | None = None  # the k8s pod a KubernetesPodOperator built for this task
+    pod_wait_seconds: int | None = None  # its startup budget, when the log shows the operator waiting
+    pod_deleted: bool = False
     poke_target: str | None = None  # what a sensor was waiting on, when the log is a poke loop
     poke_count: int = 0
     reschedule_count: int = 0
@@ -182,6 +190,13 @@ def parse_log(text: str) -> ParsedFailure:
         p.poke_target = f"gs://{bucket}/{obj}"
         p.poke_count = len(pokes)
     p.reschedule_count = len(_RESCHEDULE_RE.findall(text))
+    waits = _POD_WAIT_RE.findall(text)
+    if waits:
+        p.pod_wait_seconds = max(int(w) for w in waits)
+    names = _POD_NAME_RE.findall(text)
+    if names:
+        p.pod_name = names[-1]
+    p.pod_deleted = "Deleting pod:" in text
     p.has_error_text = has_error_text(text)
     return p
 
@@ -246,6 +261,9 @@ def diagnose(parsed: ParsedFailure) -> dict:
         "airflow_signature": parsed.airflow_signature,
         "no_error_text": not parsed.has_error_text,
         "ti_state": parsed.ti_state,
+        "pod_name": parsed.pod_name,
+        "pod_wait_seconds": parsed.pod_wait_seconds,
+        "pod_deleted": parsed.pod_deleted,
         "poke_target": parsed.poke_target,
         "poke_count": parsed.poke_count,
         "reschedule_count": parsed.reschedule_count,
