@@ -158,7 +158,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ticket_framing_gate | reference | 2026-08-12 | [doc](memory/reference_ticket_framing_gate.md) |
 | reference_workflow_kit_porting | reference | 2026-08-12 | [doc](memory/reference_workflow_kit_porting.md) |
 | reference_xlsx_subtitle_caps | reference | 2026-08-12 | [doc](memory/reference_xlsx_subtitle_caps.md) |
-| Astronomer/Airflow — clear failed task with "Run with latest bundle version | feedback | 2026-08-15 | [doc](memory/feedback_astronomer_clear_with_latest_bundle.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-15 | [doc](memory/reference_airflow_ti.md) |
 | background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |
 | feedback_slack_reply_voice | feedback | 2026-08-17 | [doc](memory/feedback_slack_reply_voice.md) |
@@ -226,3 +225,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_shopper_graph_deploy | reference | 2026-08-24 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_test_budget_from_rates | reference | 2026-08-24 | [doc](memory/reference_test_budget_from_rates.md) |
 | user_manager_alyson | user | 2026-08-24 | [doc](memory/user_manager_alyson.md) |
+| Astronomer/Airflow — clear failed task with "Run with latest bundle version | feedback | 2026-08-25 | [doc](memory/feedback_astronomer_clear_with_latest_bundle.md) |
