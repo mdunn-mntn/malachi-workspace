@@ -197,7 +197,7 @@ def test_task_owner_resolves_a_job_name_to_the_dag_that_runs_it() -> None:
     """A Spark app names the table it populates, which is a task id, never a dag_id.
 
     Matching job names against dag_ids alone resolved 0 of 57 names in the 2026-08-25 prod
-    sweep, which is why most digest lines carried no Airflow link.
+    sweep, which counted every DAG that ran one of them as having produced no log.
     """
     cov = coverage.Coverage(date="2026-08-25", dag_ids_including_paused={"feature_store_hourly",
                                                                         "audience_intent"})
@@ -240,10 +240,32 @@ def test_the_report_names_every_job_it_could_not_tie_to_a_dag() -> None:
         coverage.DagCoverage(dag_id="b", spark_tasks=["shared"]),
     ]
     why = dict(cov.unresolved({"aug_log_ip_hourly", "shared", "app-20260825010524489-0368",
-                               "segment-updates-to-parquet-2026-08-25-[11]", "never_heard_of_it"}))
+                               "never_heard_of_it"}))
     assert "aug_log_ip_hourly" not in why                       # resolved, so not listed
     assert "named by 2 DAGs" in why["shared"]
     assert "no app name" in why["app-20260825010524489-0368"]
-    assert "no app name" in why["segment-updates-to-parquet-2026-08-25-[11]"]
     assert "no DAG in the bundle" in why["never_heard_of_it"]
     assert "could not be tied to a DAG" in coverage.render(cov, set(), {"shared"})
+
+
+def test_a_name_that_is_one_dags_task_and_another_dags_id_reads_as_ambiguous() -> None:
+    """One index for both views, so `unresolved` cannot deny a DAG the same object indexes."""
+    cov = coverage.Coverage(date="x", dag_ids_including_paused={"feature_store_hourly",
+                                                               "aug_log_ip_hourly"})
+    cov.dags = [
+        coverage.DagCoverage(dag_id="feature_store_hourly", spark_tasks=["grp.aug_log_ip_hourly"]),
+        coverage.DagCoverage(dag_id="aug_log_ip_hourly", spark_tasks=["aug_log_ip_hourly"]),
+    ]
+    assert coverage.normalise_job("aug_log_ip_hourly") not in cov.task_owner
+    assert dict(cov.unresolved({"aug_log_ip_hourly"}))["aug_log_ip_hourly"].startswith(
+        "named by 2 DAGs")
+
+
+def test_a_profiled_job_is_counted_against_the_dag_that_runs_it() -> None:
+    """The sweep profiles job NAMES, so counting them against dag_ids called a live DAG dark."""
+    cov = coverage.Coverage(date="x", dag_ids_including_paused={"feature_store_hourly"})
+    cov.dags = [coverage.DagCoverage(dag_id="feature_store_hourly",
+                                     spark_tasks=["grp.aug_log_ip_hourly"])]
+    page = coverage.render(cov, {"aug_log_ip_hourly"}, set())
+    assert "- profiled this sweep: 1" in page
+    assert "produced no log" not in page

@@ -30,11 +30,6 @@ OUTDIR = os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out")
 _GSUTIL = ["gsutil", "-o", "GSUtil:check_hashes=never"]
 
 
-def _job_names(reports: list) -> set:
-    """The normalised job name of every report that produced a finding."""
-    return {ledger_mod._dag_id(r) for r in reports if not r.error and r.findings}
-
-
 def _dag_ids(reports: list, known: set | None = None) -> set:
     """The normalised job names this sweep produced findings for."""
     return {ledger_mod._dag_id(r, known) for r in reports if not r.error and r.findings}
@@ -106,7 +101,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         try:
             cov = (cov_mod.collect_local(date) if airflow_base == "local"
                    else cov_mod.collect(airflow_base, date))
-            known = cov.task_owner or cov.dag_ids_including_paused or None
+            known = cov.dag_ids_including_paused or None
         except Exception as e:
             print(f"[sweep] coverage skipped: {str(e)[:160]}")
             cov = None
@@ -119,9 +114,8 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         print(f"[sweep] ledger skipped: {ledger_note}")
     else:
         # Ids the ledger already keyed hold a job steady whenever coverage's set is short.
-        settled = {e["dag_id"] for e in ledger_mod.read(ledger_path) if e.get("dag_id")}
-        known = ({**{k: k for k in settled}, **known} if isinstance(known, dict)
-                 else (known or set()) | settled)
+        known = (known or set()) | {e["dag_id"] for e in ledger_mod.read(ledger_path)
+                                    if e.get("dag_id")}
         try:
             entries = ledger_mod.record(reports, date, path=ledger_path, known=known,
                                         complete=complete)
@@ -135,7 +129,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         coverage_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
         with open(coverage_path, "w") as fh:
             fh.write(cov_mod.render(cov, _dag_ids(reports, known),
-                                    _job_names(reports)))
+                                    {ledger_mod._dag_id(r) for r in scored}))
 
     # The digest cites the other two files, so they are uploaded before it is written.
     published = publish([backlog, coverage_path, ledger_path], gcs_prefix)

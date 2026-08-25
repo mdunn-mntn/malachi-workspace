@@ -22,6 +22,7 @@ Modules:
 
 __all__ = [
     "crawl",
+    "databricks",
     "eventlog",
     "optimizations",
     "optimize",

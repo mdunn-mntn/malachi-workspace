@@ -51,8 +51,8 @@ OPAQUE_OPERATORS = {
 
 
 _TASK_SUFFIX = re.compile(r"_(?:ds\d+|\d{1,3})$")
-# `app-20260825010524489-0368`, `segment-updates-to-parquet-2026-08-25-[11]`: an app id, not a name.
-_NO_APP_NAME = re.compile(r"^(?:app-\d|application_\d)|\[\d+\]$")
+# `app-20260825010524489-0368`: Spark fell back to the app id, so there is no name to match.
+_NO_APP_NAME = re.compile(r"^(?:app-\d|application_\d)")
 
 
 def normalise_job(name: str) -> str:
@@ -98,27 +98,32 @@ class Coverage:
 
     def unresolved(self, job_names: set) -> list:
         """(job name, why) for every scanned job this pass could not tie to a DAG."""
-        owner, ambiguous = self.task_owner, self._ambiguous()
-        out = []
+        owners, out = self._owners(), []
         for name in sorted(job_names):
             key = normalise_job(name)
-            if owner.get(key):
+            dags = owners.get(key, set()) if key else set()
+            if len(dags) == 1:
                 continue
-            if key in ambiguous:
-                out.append((name, f"named by {len(ambiguous[key])} DAGs: "
-                                  f"{', '.join(sorted(ambiguous[key])[:3])}"))
+            if dags:
+                out.append((name, f"named by {len(dags)} DAGs: "
+                                  f"{', '.join(sorted(dags)[:3])}"))
             elif not key or _NO_APP_NAME.search(name):
                 out.append((name, "Spark set no app name, so there is nothing to match"))
             else:
-                out.append((name, "no DAG in the bundle defines a task with this name"))
+                caveat = ("; the DAG files that failed to import are not in this index"
+                          if self.unparsed_files else "")
+                out.append((name, f"no DAG in the bundle defines a task with this name{caveat}"))
         return out
 
-    def _ambiguous(self) -> dict:
+    def _owners(self) -> dict:
+        """Normalised name -> every DAG that could own it, Spark task ids and DAG ids alike."""
         seen: dict = {}
+        for dag_id in self.dag_ids_including_paused:
+            seen.setdefault(normalise_job(dag_id), set()).add(dag_id)
         for d in self.dags:
             for t in d.spark_tasks:
                 seen.setdefault(normalise_job(t), set()).add(d.dag_id)
-        return {k: v for k, v in seen.items() if len(v) > 1}
+        return seen
 
     @property
     def task_owner(self) -> dict:
@@ -126,16 +131,11 @@ class Coverage:
 
         A Spark app names the TABLE it populates, which is the task id, never the dag_id, so
         matching a job against dag_ids alone matched 0 of 57 job names in prod. DAG ids are
-        indexed too, so a job that IS named for its DAG still resolves. A name two DAGs both
-        define is dropped rather than guessed - a wrong Airflow link is worse than no link.
+        indexed too, so a job that IS named for its DAG still resolves. `render` reads it to
+        credit a profiled job to the DAG that ran it; a name two DAGs both define is dropped
+        rather than guessed, so no DAG is reported dark on the strength of another's log.
         """
-        seen: dict = {}
-        for dag_id in self.dag_ids_including_paused:
-            seen.setdefault(normalise_job(dag_id), set()).add(dag_id)
-        for d in self.dags:
-            for t in d.spark_tasks:
-                seen.setdefault(normalise_job(t), set()).add(d.dag_id)
-        return {k: next(iter(v)) for k, v in seen.items() if k and len(v) == 1}
+        return {k: next(iter(v)) for k, v in self._owners().items() if k and len(v) == 1}
 
     @property
     def unprofiled(self) -> list:
@@ -326,7 +326,6 @@ def collect_local(date: str, dag_folder: str | None = None) -> Coverage:
 def render(cov: Coverage, profiled_dags: set | None = None,
            scanned_jobs: set | None = None) -> str:
     """The coverage report: what was read, what was not, and why not."""
-    profiled = profiled_dags or set()
     lines = [f"# Optimizer coverage — {cov.date}", ""]
     if cov.error:
         lines += [f"Could not enumerate DAGs: {cov.error}", "",
@@ -338,8 +337,9 @@ def render(cov: Coverage, profiled_dags: set | None = None,
                   "bundle is counted as active below.", ""]
     unresolved = cov.unresolved(scanned_jobs) if scanned_jobs else []
     if unresolved:
-        lines += [f"## {len(unresolved)} scanned jobs could not be tied to a DAG", "",
-                  "Their findings appear in the backlog without an Airflow link.", ""]
+        n = len(unresolved)
+        lines += [f"## {n} scanned job{'s' if n != 1 else ''} could not be tied to a DAG", "",
+                  "Any finding they raise appears in the backlog without an Airflow link.", ""]
         lines += [f"- `{n}` — {why}" for n, why in unresolved]
         lines.append("")
     if cov.unparsed_files:
@@ -349,6 +349,8 @@ def render(cov: Coverage, profiled_dags: set | None = None,
         lines.append("")
 
     spark = cov.profilable
+    owner = cov.task_owner
+    profiled = {owner.get(normalise_job(j), j) for j in (profiled_dags or set())}
     seen = [d for d in spark if d.dag_id in profiled]
     missed = [d for d in spark if d.dag_id not in profiled]
     lines += [
