@@ -28,3 +28,5 @@ find nothing.
 Verdicts: PASS (write the marker, ship) · FAIL_MAX_ROUNDS / THRASH (no ship, report open findings) ·
 ERROR (infra; re-dispatch is safe). First live target (commit f02f9a52) took 3 runs / 40 findings /
 27 confirmed, ended FAIL_MAX_ROUNDS with the good fixes committed and the rest logged as IMP-072.
+`args.report_only: true` = archaeology mode for merged/foreign PRs: one review+refute round, no
+fixer, verdict REPORT — proven on merged airflow-ti#1215 (12 confirmed, 0 refuted, → IMP-073).
