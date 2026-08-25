@@ -2716,6 +2716,8 @@ SSP/Beeswax win-notif → Notification service (HTTP webhook) → raw wins to
 
 **Intent/MM scores are NOT stored in MembershipDB.** Scoring team → **GCS** (durable source) → membership consumer → **Aerospike** (serving copy). MembershipDB emits the **segments**; the membership consumer writes those too. So: GCS = system of record for scores, Aerospike = bid-time serving store, MembershipDB = segment/membership authority + holdout logic.
 
+**Score-column ownership in the Scylla household profile (authoritative map, Zach Schoenberger Slack 2026-08-25):** `advertiser_scores` + `campaign_scores` ← **AUDI** (the intent-score GCS dumps above); `segment_scores` ← **AP** (mostly RTC, in place for over a year). **In-flight migration:** AP now consumes AUDI's advertiser/campaign scores and should be testing sending down segment scores carrying the same waterfall score, after which **the bidder stops reading the advertiser/campaign scores AUDI sends** — a consumer migration of AUDI's score feed (see memory `project_ap_score_feed_migration`). This score plumbing is 100% independent of the empty-segment-update problem; the two got conflated repeatedly because "segment scores" is overloaded across teams.
+
 **Three inputs gate a bid (TI-1016):** (1) score (GCS→consumer→Aerospike), (2) segments (MembershipDB), (3) HHST
 threshold. To safely drop data for an IP you need **no threshold AND no score, OR no segments** — the clean, safe cut
 is no-segments → don't write the intent score.
