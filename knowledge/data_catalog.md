@@ -3251,6 +3251,7 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
   `bidder_bid_events` (silver) is MNTN-bidder only and has NO ghost rows; the GCS bucket is access-gated.
 - **Partition:** HOUR on `time`. **Clustered on `ip`** (NOT advertiser_id → advertiser filters scan full
   partitions; narrow the date window to cut cost). **TTL ~10 days.** ~72B rows/day (all advertisers).
+- **⚠ `env` column gates downstream ghost-bid coverage (AUDI-1223, Matt Brorby, 2026-08-25):** rows carry `env` = `'prod'` or `'burnin'`, assigned per CAMPAIGN (one advertiser can have prod retargeting + burnin prospecting simultaneously — ThirdLove 32127 did). The SQLMesh silver model behind `enriched.lift__ghost_bid_visits` keeps `env='prod'` only, so an all-burnin-prospecting advertiser is INVISIBLE to ghost-bid lift (142 of 1,215 INCR-75-eligible advertisers as of 2026-08-25, same root cause as Matt's test-campaigns issue). Burnin dominates raw volume for every advertiser probed (Gruns: 11.9M burnin vs 1.9M prod rows/hr), so never read bid volume from this table without an env filter. Labels appear to move over time (Gruns CG 126905 measurable June-July, burnin on 2026-08-24) — check env freshly, don't cache the answer.
 - **Ghost-bid (holdout) flag:** `threshold_failure_reasons = 'ghostBid'` (Beeswax camelCase). Empty/NULL
   reason = bid placed (targeted, entered auction). Other values = dropped (missingIntentScore, cappedOrPaced,
   etc.). Ghost logging live since **2026-05-27** (Ryan Kleck); no backfill. **No ghost-WIN logging** → win

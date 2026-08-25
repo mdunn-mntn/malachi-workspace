@@ -53,6 +53,16 @@ Matt's discriminating test: if the absentees are in `dw-main-bronze.raw.bid_pric
 
 Absent advertisers have both ghost bids and submitted bids in the raw log, across multiple campaigns each, yet zero rows in `enriched.lift__ghost_bid_visits`. Bidder-side logging is fine; the silver SQLMesh build drops them. With Matt to trace the model. (Single-hour ghost/submitted ratios are noisy; presence, not ratio, is the finding.)
 
+### ROOT CAUSE: per-campaign env label; silver model keeps env='prod' only (Matt Brorby + verified, 2026-08-25)
+
+Matt: "same issue as the test-campaigns. in bid_price_log the env variable is burnin instead of the expected prod." Verified same hour window (`queries/audi_1223_env_by_campaign.sql`):
+
+- **env is assigned per CAMPAIGN, not per advertiser.** ThirdLove: prospecting/MT trio 573186/573185/573188 (CG 115424) 100% burnin; its ONLY prod rows are the TV Retargeting campaigns (199776-79, 390309-10). Shea Homes (44720): no prod ghost/submitted rows at all. Gruns (control): old prospecting 578184/431456 in prod (7,400 + 6,555 ghost bids/hr) — which is why it IS covered.
+- **Burnin dominates raw volume for everyone** (even Gruns: 11.9M burnin vs 1.9M prod rows/hr, all reasons) — the env='prod' filter is doing heavy lifting in the model.
+- **Coverage nuance beyond the 142:** Gruns' newer campaigns 626274/626275/626276 (CG 126905, the AUDI-1148 group) read burnin in this hour, yet that CG had June-July rows in the silver table. So either env labels changed over time or campaigns migrate burnin→prod. Means COVERED advertisers can still be missing individual campaigns from measurement — the campaign-level coverage question is open even where advertiser-level presence looks fine.
+
+Fix is on the bidder/model side (Matt). Once fixed, re-run the INCR-75 fold to re-gate the 437 "no data yet" advertisers.
+
 See INCR-75 summary 2026-08-25 sections for the full verification trail. Advertiser list: INCR-75 `outputs/incr_75_ghost_absent_prospectors.csv` (gitignored; attached to AUDI-1223, also on Drive as "INCR-75 Ghost Bid Coverage Gap.xlsx").
 
 ## 5. Solution
@@ -65,4 +75,6 @@ None yet.
 None yet.
 
 ## 8. Open Items / Follow-ups
-- Matt Brorby's read on the pipeline (pending, Slack 2026-08-25).
+- Matt Brorby: fix env labeling (bidder) or model filter; then re-run INCR-75 fold to re-gate "no data yet".
+- Campaign-level coverage audit for PRESENT advertisers (burnin campaigns of covered advertisers are invisible too, e.g. Gruns 626276 as of 2026-08-24).
+- Did env labels CHANGE over time? CG 126905 was measurable June-July but reads burnin now.
