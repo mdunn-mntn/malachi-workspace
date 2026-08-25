@@ -191,3 +191,41 @@ def test_collect_keys_on_paused_dags_too(monkeypatch: pytest.MonkeyPatch) -> Non
     cov = coverage.collect("https://astro.example/api/v2", "2026-08-21", token="tok")
     assert cov.dag_ids_including_paused == {"live", "off"}
     assert [d.dag_id for d in cov.dags] == ["live"]
+
+
+def test_task_owner_resolves_a_job_name_to_the_dag_that_runs_it() -> None:
+    """A Spark app names the table it populates, which is a task id, never a dag_id.
+
+    Matching job names against dag_ids alone resolved 0 of 57 names in the 2026-08-25 prod
+    sweep, which is why most digest lines carried no Airflow link.
+    """
+    cov = coverage.Coverage(date="2026-08-25", dag_ids_including_paused={"feature_store_hourly",
+                                                                        "audience_intent"})
+    cov.dags = [
+        coverage.DagCoverage(dag_id="feature_store_hourly",
+                             spark_tasks=["feature_group_1_source.aug_log_ip_hourly"]),
+        coverage.DagCoverage(dag_id="audience_intent", spark_tasks=["fangorn_score_monitor"]),
+    ]
+    idx = cov.task_owner
+    assert idx[coverage.normalise_job("aug_log_ip_hourly")] == "feature_store_hourly"
+    assert idx[coverage.normalise_job("fangorn_score_monitor")] == "audience_intent"
+    assert idx[coverage.normalise_job("audience_intent")] == "audience_intent"
+
+
+def test_a_task_name_two_dags_share_is_dropped_not_guessed() -> None:
+    """A wrong Airflow link sends an owner to someone else's DAG, which is worse than no link."""
+    cov = coverage.Coverage(date="x", dag_ids_including_paused={"dag_a", "dag_b"})
+    cov.dags = [coverage.DagCoverage(dag_id="dag_a", spark_tasks=["run"]),
+                coverage.DagCoverage(dag_id="dag_b", spark_tasks=["run"])]
+    assert "run" not in cov.task_owner
+    assert cov.task_owner[coverage.normalise_job("dag_a")] == "dag_a"
+
+
+def test_normalise_job_strips_only_what_it_can_justify() -> None:
+    """A data-source or run index is a per-run stamp; anything else is part of the name."""
+    assert coverage.normalise_job("Populate site_network_hourly.SiteNetworkHourly") == "sitenetworkhourly"
+    assert coverage.normalise_job("feature_group_1_source.aug_log_ip_hourly") == "aug_log_ip_hourly"
+    assert coverage.normalise_job("ipdsc_ds_13") == "ipdsc_ds"
+    assert coverage.normalise_job("audience_intent_scoring_staging_ds46") == "audience_intent_scoring_staging"
+    assert coverage.normalise_job("materialize_mntn_select_16") == "materialize_mntn_select"
+    assert coverage.normalise_job("conv_log_derived_ip") == "conv_log_derived_ip"

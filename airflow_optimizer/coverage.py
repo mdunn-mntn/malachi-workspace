@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import urllib.error
 import urllib.parse
@@ -47,6 +48,16 @@ OPAQUE_OPERATORS = {
     "DataprocInstantiateInlineWorkflowTemplateOperator":
         "managed cluster, no spark.eventLog.dir and not a batch",
 }
+
+
+_TASK_SUFFIX = re.compile(r"_(?:ds\d+|\d{1,3})$")
+
+
+def normalise_job(name: str) -> str:
+    """The comparable form of a Spark app name or an Airflow task id."""
+    name = (name or "").strip().removeprefix("Populate ")
+    name = name.split(".")[-1].strip().lower()
+    return _TASK_SUFFIX.sub("", name)
 
 
 @dataclass
@@ -82,6 +93,23 @@ class Coverage:
     def profilable(self) -> list:
         """Active DAGs with at least one readable Spark task."""
         return [d for d in self.dags if d.profilable]
+
+    @property
+    def task_owner(self) -> dict:
+        """Normalised Spark task name -> the DAG that runs it.
+
+        A Spark app names the TABLE it populates, which is the task id, never the dag_id, so
+        matching a job against dag_ids alone matched 0 of 57 job names in prod. DAG ids are
+        indexed too, so a job that IS named for its DAG still resolves. A name two DAGs both
+        define is dropped rather than guessed - a wrong Airflow link is worse than no link.
+        """
+        seen: dict = {}
+        for dag_id in self.dag_ids_including_paused:
+            seen.setdefault(normalise_job(dag_id), set()).add(dag_id)
+        for d in self.dags:
+            for t in d.spark_tasks:
+                seen.setdefault(normalise_job(t), set()).add(d.dag_id)
+        return {k: next(iter(v)) for k, v in seen.items() if k and len(v) == 1}
 
     @property
     def unprofiled(self) -> list:

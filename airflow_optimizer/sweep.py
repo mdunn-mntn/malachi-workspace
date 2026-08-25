@@ -101,7 +101,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         try:
             cov = (cov_mod.collect_local(date) if airflow_base == "local"
                    else cov_mod.collect(airflow_base, date))
-            known = cov.dag_ids_including_paused or None
+            known = cov.task_owner or cov.dag_ids_including_paused or None
         except Exception as e:
             print(f"[sweep] coverage skipped: {str(e)[:160]}")
             cov = None
@@ -114,8 +114,9 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         print(f"[sweep] ledger skipped: {ledger_note}")
     else:
         # Ids the ledger already keyed hold a job steady whenever coverage's set is short.
-        known = (known or set()) | {e["dag_id"] for e in ledger_mod.read(ledger_path)
-                                    if e.get("dag_id")}
+        settled = {e["dag_id"] for e in ledger_mod.read(ledger_path) if e.get("dag_id")}
+        known = ({**{k: k for k in settled}, **known} if isinstance(known, dict)
+                 else (known or set()) | settled)
         try:
             entries = ledger_mod.record(reports, date, path=ledger_path, known=known,
                                         complete=complete)

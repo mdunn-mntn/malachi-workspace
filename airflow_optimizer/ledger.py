@@ -27,7 +27,10 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
+
+from . import coverage as cov_mod
 
 LEDGER = os.environ.get("OPTIMIZER_LEDGER",
                         os.path.join("optimizer_out", "optimization_ledger.jsonl"))
@@ -231,18 +234,24 @@ _RUN_STAMP = re.compile(
 _TRAILING_INDEX = re.compile(r"_\d{1,3}$")
 
 
-def _dag_id(report: object, known: set | None = None) -> str:
-    """`Populate site_network_hourly.SiteNetworkHourly` -> `site_network_hourly`.
+def _dag_id(report: object, known: object = None) -> str:
+    """`Populate site_network_hourly.SiteNetworkHourly` -> the DAG that runs it.
 
-    Strips per-run stamps so an hourly job keeps ONE identity across sweeps. The result is
-    a normalised job name, not a guaranteed Airflow dag_id - the digest only links it when
-    it matches a DAG coverage saw.
+    A Spark app names the table it populates, which is an Airflow TASK id. When `known` is a
+    task-owner mapping the result is the real dag_id; when it is a bare set, or nothing
+    matches, the result is the normalised job name, which still keys the ledger consistently.
     """
     name = getattr(report, "app_name", None) or getattr(report, "source", "")
     name = name.removeprefix("Populate ").strip()
     if "." in name:
         name = name.split(".")[0]
     name = _RUN_STAMP.sub("", name).rstrip("-_") or name
+    if isinstance(known, Mapping):
+        for cand in (name, _TRAILING_INDEX.sub("", name)):
+            owner = known.get(cov_mod.normalise_job(cand))
+            if owner:
+                return owner
+        return name
     if known and name not in known:
         stripped = _TRAILING_INDEX.sub("", name)
         if stripped != name and stripped in known:
