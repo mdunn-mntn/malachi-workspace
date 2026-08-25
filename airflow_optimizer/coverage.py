@@ -4,8 +4,8 @@ The optimizer reads Spark event logs. A BigQuery operator, a sensor or a plain P
 callable emits nothing to read, so a backlog built only from the logs that happen to
 exist looks complete while silently omitting most of the fleet.
 
-This enumerates every unpaused DAG from the Airflow API, classifies each task by whether
-it can produce an event log, and reports the gap by name.
+This enumerates every DAG the deployment knows, classifies each unpaused one's tasks by
+whether they can produce an event log, and reports the gap by name.
 
 Two ways in. Running as an Airflow task, `collect_local` parses the DAG bundle already on
 disk and needs no credential at all; that is the path the DAG uses. Running outside Airflow,
@@ -22,6 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
+from pathlib import Path
 
 # Local-developer fallback only. Absent in any deployed copy, which uses the env token.
 AIRFLOW_API = os.environ.get("AIRFLOW_API_HELPER", ".claude/scripts/airflow_api.py")
@@ -31,6 +32,8 @@ REPORT = os.path.join(os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out"),
 # Operators that submit a Spark job and therefore leave an event log behind.
 SPARK_OPERATORS = {
     "ModelPysparkBatchOperator",
+    "TiPysparkBatchOperator",
+    "RetrySafeDataprocCreateBatchOperator",
     "DataprocCreateBatchOperator",
     "DataprocSubmitJobOperator",
     "DataprocInstantiateWorkflowTemplateOperator",
@@ -40,6 +43,9 @@ OPAQUE_OPERATORS = {
     "DbxDbtOperator": "Databricks job cluster, no cluster_log_conf",
     "DatabricksSubmitRunOperator": "Databricks job cluster, no cluster_log_conf",
     "CustomVertexAIPipelineJobOperator": "Vertex pipeline, Spark runs in another project",
+    "ModelPysparkWorkflowOperator": "managed cluster, no spark.eventLog.dir and not a batch",
+    "DataprocInstantiateInlineWorkflowTemplateOperator":
+        "managed cluster, no spark.eventLog.dir and not a batch",
 }
 
 
@@ -66,8 +72,10 @@ class Coverage:
 
     date: str
     dags: list = field(default_factory=list)
+    dag_ids_including_paused: set = field(default_factory=set)
     error: str = ""
     warning: str = ""
+    unparsed_files: list = field(default_factory=list)
     report_path: str = ""
 
     @property
@@ -88,6 +96,10 @@ class Coverage:
         line = f"{n} DAG{'s' if n != 1 else ''} had no Spark task to profile."
         if self.warning:
             line += " Paused DAGs are counted as active this run."
+        bad = len(self.unparsed_files)
+        if bad:
+            line += (f" {bad} DAG file{'s' if bad != 1 else ''} failed to import, so this "
+                     "count is short.")
         return line
 
 
@@ -122,11 +134,10 @@ def _bearer() -> str:
     return r.stdout.strip()
 
 
-def _active_dags(base: str, token: str) -> list[dict]:
+def _all_dags(base: str, token: str) -> list[dict]:
     out, offset = [], 0
     while True:
-        body = _airflow(base, token, "/dags",
-                        {"paused": "false", "limit": 100, "offset": offset})
+        body = _airflow(base, token, "/dags", {"limit": 100, "offset": offset})
         page = body.get("dags", [])
         out += page
         offset += len(page)
@@ -136,17 +147,23 @@ def _active_dags(base: str, token: str) -> list[dict]:
 
 
 def collect(base: str, date: str, token: str | None = None) -> Coverage:
-    """Enumerate active DAGs and classify every task. Never raises - errors land on the report."""
+    """Enumerate every DAG, classify the unpaused ones. Never raises - errors land on the report."""
     cov = Coverage(date=date, report_path=REPORT.format(date=date))
     try:
         token = token or _bearer()
-        dags = _active_dags(base, token)
+        dags = _all_dags(base, token)
     except Exception as e:  # a coverage failure must not sink the sweep
         cov.error = _first_line(e)
+        return cov
+    if not dags:
+        cov.error = f"{base} returned no DAGs; the base URL or the token's scope is wrong"
         return cov
 
     for d in dags:
         dag_id = d.get("dag_id", "")
+        cov.dag_ids_including_paused.add(dag_id)
+        if d.get("is_paused"):
+            continue
         dc = DagCoverage(dag_id=dag_id, owners=", ".join(d.get("owners") or []),
                          tags=[t.get("name") for t in (d.get("tags") or [])])
         try:
@@ -170,7 +187,7 @@ def collect(base: str, date: str, token: str | None = None) -> Coverage:
 
 def _first_line(e: Exception) -> str:
     """Airflow 3 raises multi-paragraph diagnostics; a headline needs one line."""
-    return (str(e).strip().splitlines() or [""])[0][:160]
+    return str(e).strip().partition("\n")[0].rstrip(" :")[:160] or type(e).__name__
 
 
 def _paused_dag_ids() -> set:
@@ -183,37 +200,57 @@ def _paused_dag_ids() -> set:
             DagModel.is_paused.is_(True)).all()}
 
 
-def _load_bag(dag_folder: str | None) -> dict:
-    """Parse the DAG bundle off disk. Airflow-only; seam for tests."""
+def _bundle_dag_folder() -> str | None:
+    """The folder this task's own DAG was parsed from, which on Astro is a bundle under /tmp."""
+    try:
+        from airflow.sdk import get_current_context
+
+        fileloc = getattr(get_current_context().get("dag"), "fileloc", "")
+    except Exception:
+        return None
+    if not fileloc:
+        return None
+    path = Path(fileloc).resolve()
+    for parent in path.parents:
+        if parent.name == "dags":
+            return str(parent)
+    return str(path.parent)
+
+
+def _load_bag(dag_folder: str | None) -> tuple[dict, dict]:
+    """Parse the DAG bundle off disk, returning the DAGs and the files that failed to import."""
     from airflow.models.dagbag import DagBag
 
-    return DagBag(dag_folder=dag_folder, include_examples=False).dags
+    bag = DagBag(dag_folder=dag_folder, include_examples=False)
+    return bag.dags, bag.import_errors
+
+
+def _known_operator(task: object) -> str:
+    """The nearest classified ancestor, so an in-repo subclass is not read as a non-Spark task."""
+    for cls in type(task).__mro__:
+        if cls.__name__ in SPARK_OPERATORS or cls.__name__ in OPAQUE_OPERATORS:
+            return cls.__name__
+    return type(task).__name__
 
 
 def collect_local(date: str, dag_folder: str | None = None) -> Coverage:
-    """Same Coverage, built by parsing the DAG bundle instead of calling the REST API.
-
-    When the sweep runs as an Airflow task it is already inside the deployment, so the DAG
-    files are on disk and no deployment token is needed at all. This is the preferred path:
-    a token is a credential to store, rotate and leak, and this needs none.
-
-    Paused DAGs are excluded to match the API path, which filters `paused=false`. A deployment
-    that denies task code direct metadata-DB access loses only that exclusion: the bundle still
-    parses, the active-DAG set the ledger keys on is still produced, and the report says paused
-    DAGs are counted as active. Losing the whole enumeration over it froze change tracking for
-    three sweeps after the prod launch.
-    """
+    """Same Coverage from the bundle; a subclass resolves to the base the REST path cannot see."""
     cov = Coverage(date=date, report_path=REPORT.format(date=date))
     try:
         paused = _paused_dag_ids()
     except Exception as e:
         paused = set()
-        cov.warning = f"paused state unavailable: {_first_line(e)}"
+        cov.warning = _first_line(e)
     try:
-        dags = _load_bag(dag_folder)
+        dags, import_errors = _load_bag(dag_folder or _bundle_dag_folder())
     except Exception as e:
         cov.error = f"DAG bundle unreadable: {_first_line(e)}"
         return cov
+    if not dags and not import_errors:
+        cov.error = "DAG bundle held no DAGs; the folder it was parsed from is not the deployed one"
+        return cov
+    cov.unparsed_files = sorted(os.path.basename(f) for f in import_errors)
+    cov.dag_ids_including_paused = set(dags)
 
     for dag_id, dag in sorted(dags.items()):
         if dag_id in paused:
@@ -221,7 +258,7 @@ def collect_local(date: str, dag_folder: str | None = None) -> Coverage:
         owner = getattr(dag, "owner", "") or ""
         dc = DagCoverage(dag_id=dag_id, owners=owner, tags=sorted(getattr(dag, "tags", []) or []))
         for t in dag.tasks:
-            op, tid = type(t).__name__, t.task_id
+            op, tid = _known_operator(t), t.task_id
             if op in SPARK_OPERATORS:
                 dc.spark_tasks.append(tid)
             elif op in OPAQUE_OPERATORS:
@@ -236,14 +273,19 @@ def render(cov: Coverage, profiled_dags: set | None = None) -> str:
     """The coverage report: what was read, what was not, and why not."""
     profiled = profiled_dags or set()
     lines = [f"# Optimizer coverage — {cov.date}", ""]
-    if cov.warning:
-        lines += [f"Paused DAGs could not be excluded ({cov.warning}), so every DAG in the "
-                  "bundle is counted as active below.", ""]
     if cov.error:
         lines += [f"Could not enumerate DAGs: {cov.error}", "",
                   "The backlog for this sweep covers only the event logs that were present.",
                   "Treat its completeness as unknown.", ""]
         return "\n".join(lines)
+    if cov.warning:
+        lines += [f"Paused DAGs could not be excluded ({cov.warning}), so every DAG in the "
+                  "bundle is counted as active below.", ""]
+    if cov.unparsed_files:
+        lines += ["These DAG files failed to import, so the DAGs they define are missing from "
+                  "every count below:", ""]
+        lines += [f"- `{f}`" for f in cov.unparsed_files]
+        lines.append("")
 
     spark = cov.profilable
     seen = [d for d in spark if d.dag_id in profiled]
@@ -276,7 +318,8 @@ def render(cov: Coverage, profiled_dags: set | None = None) -> str:
                   "Nothing to profile. Listed so the backlog is not mistaken for the fleet.", ""]
         for d in sorted(cov.unprofiled, key=lambda d: d.dag_id):
             ops = sorted({op for (_, op) in d.other_tasks})[:3]
-            lines.append(f"- `{d.dag_id}` — {', '.join(ops) or 'no tasks'}")
+            empty = "Spark we cannot read" if d.opaque_tasks else "no tasks"
+            lines.append(f"- `{d.dag_id}` — {', '.join(ops) or empty}")
         lines.append("")
     return "\n".join(lines)
 

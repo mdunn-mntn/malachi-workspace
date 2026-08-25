@@ -20,6 +20,17 @@ def _report(app: str, name: str = "Populate site_network_hourly.SiteNetworkHourl
     return JobReport(source=f"{app}.zstd", findings=[FETCH], app_name=name)
 
 
+class _Upload:
+    """What `gsutil cp` returns, as `subprocess.run` reports it."""
+
+    def __init__(self, rc: int) -> None:
+        self.returncode, self.stderr = rc, b"denied"
+
+
+def _blind(_d: str) -> object:
+    raise RuntimeError("metadata DB unreachable")
+
+
 def _run(tmp: Path, date: str, **kw) -> dict:
     return sweep.run([str(tmp / "logs")], date, outdir=str(tmp / "out"),
                      ledger_path=str(tmp / "out" / "l.jsonl"), **kw)
@@ -76,12 +87,10 @@ def test_coverage_failure_does_not_rekey_the_ledger(fleet: Path,
     """
     real = cov_mod.Coverage(date="2026-08-10",
                             dags=[cov_mod.DagCoverage(dag_id="site_network_hourly",
-                                                      spark_tasks=["run"])])
+                                                      spark_tasks=["run"])],
+                            dag_ids_including_paused={"site_network_hourly"})
     monkeypatch.setattr(sweep.cov_mod, "collect_local", lambda _d: real)
     _run(fleet, "2026-08-10", airflow_base="local")
-
-    def _blind(_d: str) -> object:
-        raise RuntimeError("metadata DB unreachable")
 
     monkeypatch.setattr(sweep.cov_mod, "collect_local", _blind)
     out = _run(fleet, "2026-08-11", airflow_base="local")
@@ -97,13 +106,9 @@ def test_publish_never_raises_and_reports_what_landed(fleet: Path,
     """The only GCS write in the product. An upload fault must not lose the local artifacts."""
     calls = []
 
-    class _R:
-        def __init__(self, rc: int) -> None:
-            self.returncode, self.stderr = rc, b"denied"
-
-    def _cp(cmd: list, **_kw) -> _R:
+    def _cp(cmd: list, **_kw) -> _Upload:
         calls.append(cmd[-1])
-        return _R(0 if "digest" in cmd[-1] else 1)
+        return _Upload(0 if "digest" in cmd[-1] else 1)
 
     monkeypatch.setattr(sweep.subprocess, "run", _cp)
     a, b = fleet / "a.md", fleet / "digest.md"
@@ -176,10 +181,129 @@ def test_cap_never_cuts_a_rolling_log_in_half(monkeypatch: pytest.MonkeyPatch) -
     assert "gs://b/p/app-solo.zstd" in got
 
 
-def test_digest_cites_the_published_backlog_not_the_container_path(
+def test_digest_cites_the_published_artifacts_not_the_container_path(
         fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A reader cannot open /tmp/spark_events_<rand>/ on a pod that no longer exists."""
-    monkeypatch.setattr(sweep, "publish", lambda *_a, **_k: [])
-    out = _run(fleet, "2026-08-19", gcs_prefix="gs://bucket/optimizer/")
+    blind = cov_mod.Coverage(
+        date="2026-08-19", dag_ids_including_paused={"site_network_hourly", "notify_only"},
+        dags=[cov_mod.DagCoverage(dag_id="site_network_hourly", spark_tasks=["run"]),
+              cov_mod.DagCoverage(dag_id="notify_only", other_tasks=[("ping", "PythonOperator")])],
+        report_path="optimizer_out/optimizer_coverage_2026-08-19.md")
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", lambda _d: blind)
+    monkeypatch.setattr(sweep.subprocess, "run", lambda *_a, **_k: _Upload(0))
+    out = _run(fleet, "2026-08-19", airflow_base="local", gcs_prefix="gs://bucket/optimizer/")
+
     assert "gs://bucket/optimizer/optimizer_backlog_2026-08-19.md" in out["slack"]
-    assert "/tmp/" not in out["slack"]
+    assert "gs://bucket/optimizer/optimizer_coverage_2026-08-19.md" in out["slack"]
+    assert "Not scanned" in out["slack"]
+    assert str(fleet) not in out["slack"]
+    assert os.path.exists(out["coverage"])
+
+
+def test_a_local_run_cites_the_paths_it_actually_wrote(fleet: Path,
+                                                       monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without a GCS prefix nothing is published, so the on-disk paths are the only real ones."""
+    blind = cov_mod.Coverage(
+        date="2026-08-20", dag_ids_including_paused={"notify_only"},
+        dags=[cov_mod.DagCoverage(dag_id="notify_only", other_tasks=[("ping", "PythonOperator")])])
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", lambda _d: blind)
+    out = _run(fleet, "2026-08-20", airflow_base="local")
+    assert out["coverage"] in out["slack"] and out["backlog"] in out["slack"]
+
+
+def test_a_ledger_key_does_not_move_when_paused_state_is_unavailable(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`known` is the name index. If it shrinks when the DB answers, one finding becomes two."""
+    bundle = {"materialize_mntn_select", "other_dag"}
+    monkeypatch.setattr(sweep, "crawl",
+                        lambda _p: [_report("a", "materialize_mntn_select_16")])
+
+    def _cov(paused: set) -> object:
+        return cov_mod.Coverage(
+            date="x", dag_ids_including_paused=bundle,
+            dags=[cov_mod.DagCoverage(dag_id=d, spark_tasks=["run"])
+                  for d in sorted(bundle - paused)])
+
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", lambda _d: _cov({"materialize_mntn_select"}))
+    _run(fleet, "2026-08-21", airflow_base="local")
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", lambda _d: _cov(set()))
+    out = _run(fleet, "2026-08-22", airflow_base="local")
+
+    rows = ledger.read(str(fleet / "out" / "l.jsonl"))
+    assert {r["dag_id"] for r in rows} == {"materialize_mntn_select"}
+    assert "New today" not in out["slack"]
+    assert [r["streak"] for r in rows if r["date"] == "2026-08-22"] == [2]
+
+
+def test_the_digest_never_cites_an_upload_that_failed(fleet: Path,
+                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+    """A gs:// URL in the digest is a promise, so an upload that failed must not be cited."""
+    blind = cov_mod.Coverage(
+        date="2026-08-23", dag_ids_including_paused={"site_network_hourly", "notify_only"},
+        dags=[cov_mod.DagCoverage(dag_id="site_network_hourly", spark_tasks=["run"]),
+              cov_mod.DagCoverage(dag_id="notify_only", other_tasks=[("ping", "PythonOperator")])])
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", lambda _d: blind)
+    monkeypatch.setattr(sweep.subprocess, "run",
+                        lambda cmd, **_k: _Upload(1 if "backlog" in cmd[-1] else 0))
+    out = _run(fleet, "2026-08-23", airflow_base="local", gcs_prefix="gs://bucket/optimizer/")
+
+    assert "gs://bucket/optimizer/optimizer_backlog_2026-08-23.md" not in out["slack"]
+    assert out["backlog"] in out["slack"]
+    assert "upload failed" in out["slack"]      # that local path dies with the pod
+    assert "gs://bucket/optimizer/optimizer_coverage_2026-08-23.md" in out["slack"]
+
+
+def _short_cov(unparsed: list) -> object:
+    """Coverage as an unimportable `targeting_dag.py` leaves it: the DAG-id set is short."""
+    known = {"other_dag"} if unparsed else {"materialize_mntn_select", "other_dag"}
+    return cov_mod.Coverage(
+        date="x", dag_ids_including_paused=known, unparsed_files=unparsed,
+        dags=[cov_mod.DagCoverage(dag_id=d, spark_tasks=["run"]) for d in sorted(known)])
+
+
+def test_a_run_indexed_job_keeps_one_ledger_key_while_the_id_set_is_short(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A trailing `_<n>` keys against the DAG-id set, so a short set must not fork the row."""
+    monkeypatch.setattr(sweep, "crawl", lambda _p: [_report("a", "materialize_mntn_select_16")])
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", lambda _d: _short_cov([]))
+    for d in ("2026-09-01", "2026-09-02", "2026-09-03"):
+        _run(fleet, d, airflow_base="local")
+
+    monkeypatch.setattr(sweep.cov_mod, "collect_local",
+                        lambda _d: _short_cov(["targeting_dag.py"]))
+    for d in ("2026-09-04", "2026-09-05", "2026-09-06"):
+        out = _run(fleet, d, airflow_base="local")
+        assert out["ledger_entries"] == 1
+        assert "Stopped firing" not in out["slack"]
+
+    rows = ledger.read(str(fleet / "out" / "l.jsonl"))
+    assert {r["dag_id"] for r in rows} == {"materialize_mntn_select"}
+    assert [r["streak"] for r in rows if r["date"] == "2026-09-06"] == [6]
+
+
+def test_an_unrelated_import_error_does_not_stop_a_fix_from_resolving(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Resolution is gated on what was actually held out, not on the bundle being whole."""
+    live = [_report("a"), _report("b", "Populate aug_log_ip_hourly.AugLogIp")]
+    monkeypatch.setattr(sweep.cov_mod, "collect_local",
+                        lambda _d: _short_cov(["unrelated_broken_dag.py"]))
+    monkeypatch.setattr(sweep, "crawl", lambda _p: live)
+    for d in ("2026-10-01", "2026-10-02", "2026-10-03"):
+        _run(fleet, d, airflow_base="local")
+
+    monkeypatch.setattr(sweep, "crawl", lambda _p: [live[1]])
+    for d in ("2026-10-04", "2026-10-05", "2026-10-06"):
+        out = _run(fleet, d, airflow_base="local")
+    assert "Stopped firing" in out["slack"]
+    assert [r["state"] for r in ledger.read(str(fleet / "out" / "l.jsonl"))
+            if r["dag_id"] == "site_network_hourly" and r["date"] == "2026-10-06"] == ["resolved"]
+
+
+def test_a_first_sweep_without_coverage_writes_no_ledger_rows(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An empty ledger is no licence to key blind: those rows are what re-key on the next sweep."""
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", _blind)
+    out = _run(fleet, "2026-10-10", airflow_base="local")
+    assert out["ledger_entries"] == 0
+    assert ledger.read(str(fleet / "out" / "l.jsonl")) == []
+

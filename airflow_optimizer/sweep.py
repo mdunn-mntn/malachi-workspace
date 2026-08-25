@@ -35,6 +35,19 @@ def _dag_ids(reports: list, known: set | None = None) -> set:
     return {ledger_mod._dag_id(r, known) for r in reports if not r.error and r.findings}
 
 
+def _gcs_dest(path: str, gcs_prefix: str) -> str:
+    """The object this file is uploaded to."""
+    return f"{gcs_prefix.rstrip('/')}/{os.path.basename(path)}"
+
+
+def _published_ref(path: str, gcs_prefix: str, landed: list[str]) -> str:
+    """What to cite: the GCS copy once it has landed, else the local path, marked unpublished."""
+    if not gcs_prefix:
+        return path
+    dest = _gcs_dest(path, gcs_prefix)
+    return dest if dest in landed else f"{path} (upload failed, local to the run)"
+
+
 def publish(files: list[str], gcs_prefix: str) -> list[str]:
     """Copy the sweep's artifacts to GCS. Returns what landed; never raises, including on timeout.
 
@@ -47,11 +60,10 @@ def publish(files: list[str], gcs_prefix: str) -> list[str]:
     for f in files:
         if not f or not os.path.exists(f):
             continue
-        dest = f"{gcs_prefix.rstrip('/')}/{os.path.basename(f)}"
+        dest = _gcs_dest(f, gcs_prefix)
         try:
             r = subprocess.run([*_GSUTIL, "cp", f, dest], capture_output=True, timeout=300)
         except subprocess.TimeoutExpired:
-            # "never raises" has to include the timeout.
             print(f"[sweep] upload timed out {dest}")
             continue
         if r.returncode == 0:
@@ -83,27 +95,27 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             fh.write(f"Source: {source}\n\n")
         fh.write(render_crawl(reports) + "\n")
 
-    # Runs first: the ledger keys on its active-DAG set.
+    # Runs first: the ledger resolves job names against the DAG ids it enumerates.
     cov, known = None, None
     if airflow_base:
         try:
-            # "local" = running inside Airflow, where the DAG files are already on disk.
             cov = (cov_mod.collect_local(date) if airflow_base == "local"
                    else cov_mod.collect(airflow_base, date))
-            known = {d.dag_id for d in cov.dags} or None
+            known = cov.dag_ids_including_paused or None
         except Exception as e:
             print(f"[sweep] coverage skipped: {str(e)[:160]}")
             cov = None
 
     entries, delta = [], ledger_mod.Delta()
     ledger_note = ""
-    prior = ledger_mod.read(ledger_path)
-    # Without `known`, a job re-keys under a second name and reads as new, then as resolved.
-    if airflow_base and known is None and prior:
-        ledger_note = ("coverage unavailable, so this sweep was not recorded: without the "
-                       "active-DAG set the same job keys differently and would read as new")
+    if airflow_base and known is None:
+        ledger_note = ("coverage unavailable, so without the DAG-id set the same job keys "
+                       "differently and would read as new")
         print(f"[sweep] ledger skipped: {ledger_note}")
     else:
+        # Ids the ledger already keyed hold a job steady whenever coverage's set is short.
+        known = (known or set()) | {e["dag_id"] for e in ledger_mod.read(ledger_path)
+                                    if e.get("dag_id")}
         try:
             entries = ledger_mod.record(reports, date, path=ledger_path, known=known,
                                         complete=complete)
@@ -112,15 +124,20 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             ledger_note = f"ledger step failed: {str(e)[:160]}"
             print(f"[sweep] {ledger_note}")
 
+    coverage_path = ""
     if cov is not None:
-        cov.report_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
-        with open(cov.report_path, "w") as fh:
+        coverage_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
+        with open(coverage_path, "w") as fh:
             fh.write(cov_mod.render(cov, _dag_ids(reports, known)))
 
-    backlog_ref = (f"{gcs_prefix.rstrip('/')}/{os.path.basename(backlog)}"
-                   if gcs_prefix else backlog)
-    text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high,
-                             date=date, coverage=cov, backlog_path=backlog_ref)
+    # The digest cites the other two files, so they are uploaded before it is written.
+    published = publish([backlog, coverage_path, ledger_path], gcs_prefix)
+    if cov is not None:
+        cov.report_path = _published_ref(coverage_path, gcs_prefix, published)
+
+    text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high, date=date,
+                             coverage=cov,
+                             backlog_path=_published_ref(backlog, gcs_prefix, published))
     if not complete:
         text += ("\n\n_Partial sweep: some event logs could not be downloaded, so nothing is "
                  "reported as resolved this run._")
@@ -130,12 +147,11 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     with open(digest_path, "w") as fh:
         fh.write(digest_mod.render_plain(text))
 
-    published = publish([backlog, digest_path, cov.report_path if cov else "", ledger_path],
-                        gcs_prefix)
+    published += publish([digest_path], gcs_prefix)
 
     return {
         "backlog": backlog, "digest": digest_path,
-        "coverage": cov.report_path if cov else "",
+        "coverage": coverage_path,
         "scanned": len(scored), "findings": findings, "high": high,
         "ledger_entries": len(entries), "slack": text, "published": published,
         "complete": complete, "ledger_note": ledger_note,
