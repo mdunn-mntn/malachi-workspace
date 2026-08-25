@@ -105,6 +105,17 @@ stops there must get. Then, per finding, at most three findings per post:
 Same block order, same headings, every day, so a reader learns the shape once. Anything that
 does not fit those four blocks does not go in the post.
 
+**Two defects found triggering a manual run 2026-08-25.**
+- **The DAG cannot be triggered without an explicit `logical_date`.** Airflow 3 gives a manual
+  run created with `logical_date: null` no data interval at all, so the task raises
+  `KeyError('ds')` in seconds. The 9am schedule is unaffected because a scheduled run always
+  carries one. Anyone testing a change has to pass
+  `{"logical_date": "<ISO8601>"}`, which is a trap worth removing: default the date to
+  `data_interval_end or run_after` inside the task rather than templating `{{ ds }}`.
+- **The failure callback's Slack post is broken:** `chat.postMessage` returns
+  `{'ok': False, 'error': 'channel_not_found'}`. So a failed sweep currently notifies nobody.
+  Fix this alongside the digest delivery work, since both need the same bot token and channel.
+
 **Debt this inherits.**
 - `include/spark_optimizer/` ships multi-line rationale comments throughout, which its own
   `lint_comments.py` would now fail. Own PR, before anything else lands on the package.
