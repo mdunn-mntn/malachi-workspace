@@ -67,9 +67,13 @@ def _link(diag: dict) -> str | None:
     return None
 
 
-def _no_output_note(ti_state: str | None) -> str:
+def _no_output_note(ti_state: str | None, culprits: list[str] | None = None) -> str:
     """An empty log means different things for a failed task and an upstream_failed one."""
     if ti_state == "upstream_failed":
+        if culprits:
+            named = ", ".join(f"`{c}`" for c in culprits[:3])
+            more = f" (+{len(culprits) - 3} more)" if len(culprits) > 3 else ""
+            return f"The task never ran. The failure is {named}{more}; diagnose that."
         return "The task never ran; diagnose the upstream task that failed."
     if ti_state == "failed":
         # INC-021: the worker died rather than the task raising, so Airflow has no exception.
@@ -101,7 +105,7 @@ def build_report(diag: dict) -> str:
     if link:
         lines.append(link)
     if not root and diag.get("no_error_text"):
-        lines.append(_no_output_note(diag.get("ti_state")))
+        lines.append(_no_output_note(diag.get("ti_state"), diag.get("upstream_failed_tasks")))
     mask = detect_mask(_verdict_text(diag))
     if mask:
         lines.append(mask_note(mask))

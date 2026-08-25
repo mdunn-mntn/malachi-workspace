@@ -289,6 +289,31 @@ def _ttl_seconds(ttl: str | None) -> int | None:
     return None
 
 
+def describe_failure_note(batch_id: str, err: str | None) -> str:
+    """Why the batch could not be read, without pasting a raw CLI error into a published report.
+
+    Dataproc ages batches out, so NOT_FOUND on a historical failure is expected rather than a
+    fault. The raw gcloud string also names the authenticated user, which must not reach a report
+    published to a shared bucket.
+    """
+    text = err or ""
+    if "NOT_FOUND" in text or "was not found" in text:
+        return (
+            f"batch {batch_id} expired; Dataproc no longer retains it, so the driver output and "
+            "state message are unrecoverable for this run"
+        )
+    if "PERMISSION_DENIED" in text or "does not have" in text:
+        return f"batch {batch_id} unreadable: the identity lacks dataproc.batches.get"
+    return f"batch {batch_id} describe failed: {_scrub(text)}"
+
+
+def _scrub(text: str) -> str:
+    """Strip identities and account hints out of a CLI error before it is published."""
+    text = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "<account>", text)
+    text = re.sub(r"This command is authenticated as[^.]*\.", "", text)
+    return " ".join(text.split())[:200]
+
+
 def _runtime_seconds(create: str | None, end: str | None) -> int | None:
     if not create or not end:
         return None
@@ -355,7 +380,7 @@ def analyze_batch(
     ev = DataprocEvidence(batch_id=batch_id)
     d, err = _describe(batch_id, project, region)
     if err or d is None:
-        ev.notes.append(f"describe failed: {err}")
+        ev.notes.append(describe_failure_note(batch_id, err))
         return ev
 
     ev.state = d.get("state")

@@ -278,10 +278,27 @@ def test_run_nonzero_empty_output_is_error() -> None:
 
 
 def test_analyze_batch_phantom_describe() -> None:
-    """A silent describe failure notes 'describe failed', not a phantom empty batch."""
+    """A silent describe failure is reported as such, never as a phantom empty batch."""
     with mock.patch("airflow_debugger.dataproc_rca.subprocess.run", return_value=_proc(1)):
         ev = analyze_batch("phantom-batch")
-    assert any(n.startswith("describe failed:") for n in ev.notes)
+    assert any("phantom-batch" in n and "describe failed" in n for n in ev.notes), ev.notes
+
+
+def test_analyze_batch_expired_reads_as_expired() -> None:
+    """Dataproc ages batches out, so a historical NOT_FOUND is expected rather than a fault."""
+    not_found = _proc(
+        1,
+        stderr=(
+            "ERROR: (gcloud.dataproc.batches.describe) NOT_FOUND: Not found: Batch "
+            "projects/p/locations/us-central1/batches/old-batch. This command is "
+            "authenticated as someone@mountain.com which is the active account."
+        ),
+    )
+    with mock.patch("airflow_debugger.dataproc_rca.subprocess.run", return_value=not_found):
+        ev = analyze_batch("old-batch")
+    note = " ".join(ev.notes)
+    assert "expired" in note
+    assert "@mountain.com" not in note, "a published report must not carry an account"
 
 
 def test_analyze_batch_surfaces_logging_stderr() -> None:

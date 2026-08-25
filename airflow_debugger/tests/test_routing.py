@@ -277,6 +277,131 @@ def test_the_report_refuses_to_present_a_mask_as_the_verdict() -> None:
     assert "audit log" in out
 
 
+def test_an_empty_stub_names_the_task_that_actually_failed() -> None:
+    """"Diagnose the upstream task" is correct and useless; the reader wants to know which one."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "t"},
+        "no_error_text": True,
+        "ti_state": "upstream_failed",
+        "upstream_failed_tasks": ["tpa_export"],
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "`tpa_export`" in out
+    assert "never ran" in out
+
+
+def test_many_culprits_are_capped_and_counted() -> None:
+    """A fan-in can fail on twenty tasks; a report that lists all of them is unreadable."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "t"},
+        "no_error_text": True,
+        "ti_state": "upstream_failed",
+        "upstream_failed_tasks": [f"task_{i}" for i in range(9)],
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "+6 more" in out
+    assert "task_8" not in out
+
+
+def test_the_stub_still_reports_when_the_lookup_fails() -> None:
+    """An unreachable API must degrade to the old wording, never blank the verdict."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "t"},
+        "no_error_text": True,
+        "ti_state": "upstream_failed",
+        "upstream_failed_tasks": [],
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "diagnose the upstream task that failed" in out
+
+
+def test_the_lookup_excludes_the_asking_task_itself() -> None:
+    """A task cannot be its own upstream cause."""
+    calls = {}
+
+    class _Api:
+        @staticmethod
+        def resolve_bearer() -> str:
+            return "tok"
+
+        @staticmethod
+        def list_task_instances_in_run(
+            base: str, token: str, dag_id: str, run_id: str
+        ) -> list[dict]:
+            calls["run_id"] = run_id
+            return [
+                {"task_id": "me", "state": "upstream_failed"},
+                {"task_id": "producer", "state": "failed"},
+                {"task_id": "other", "state": "success"},
+            ]
+
+    orig_api, orig_base = external_task_rca._api, external_task_rca._resolve_base
+    external_task_rca._api = lambda: _Api
+    external_task_rca._resolve_base = lambda: "https://x/api/v2"
+    try:
+        failed, note = external_task_rca.upstream_failures("d", "run-1", "me")
+    finally:
+        external_task_rca._api, external_task_rca._resolve_base = orig_api, orig_base
+
+    assert failed == ["producer"]
+    assert note is None
+    assert calls["run_id"] == "run-1"
+
+
+def test_the_run_is_matched_on_state_not_merely_on_containing_the_task() -> None:
+    """An hourly DAG's day is mostly green; matching the first run found reports a SUCCESS run.
+
+    Verbatim shape from 2026-08-21 `vertical_classification_api`, which had 21 runs that day and
+    only one failure. Matching on presence alone picked a green run and answered confidently wrong.
+    """
+    runs = [
+        {"dag_run_id": "green-1", "state": "success", "start_date": "2026-08-21T01:30:00Z"},
+        {"dag_run_id": "bad-1", "state": "failed", "start_date": "2026-08-21T02:30:00Z"},
+        {"dag_run_id": "green-2", "state": "success", "start_date": "2026-08-21T03:30:00Z"},
+    ]
+    per_run = {
+        "green-1": [{"task_id": "response_tests", "state": "success"}],
+        "bad-1": [
+            {"task_id": "ddp_vertical_classification_api", "state": "failed"},
+            {"task_id": "response_tests", "state": "upstream_failed"},
+        ],
+        "green-2": [{"task_id": "response_tests", "state": "success"}],
+    }
+
+    class _Api:
+        @staticmethod
+        def resolve_bearer() -> str:
+            return "tok"
+
+        @staticmethod
+        def day_window(day: str) -> tuple[str, str]:
+            return (f"{day}T00:00:00Z", f"{day}T23:59:59Z")
+
+        @staticmethod
+        def list_runs_for_day(base: str, token: str, dag_id: str, s: str, e: str) -> list[dict]:
+            return runs
+
+        @staticmethod
+        def list_task_instances_in_run(base: str, token: str, dag_id: str, rid: str) -> list[dict]:
+            return per_run[rid]
+
+    orig_api, orig_base = external_task_rca._api, external_task_rca._resolve_base
+    external_task_rca._api = lambda: _Api
+    external_task_rca._resolve_base = lambda: "https://x/api/v2"
+    try:
+        failed, note = external_task_rca.upstream_failures(
+            "vertical_classification_api", None, "response_tests", "2026-08-21", "upstream_failed"
+        )
+    finally:
+        external_task_rca._api, external_task_rca._resolve_base = orig_api, orig_base
+
+    assert failed == ["ddp_vertical_classification_api"], failed
+    assert note is None
+
+
 if __name__ == "__main__":
     for name, fn in sorted(dict(globals()).items()):
         if name.startswith("test_") and callable(fn):

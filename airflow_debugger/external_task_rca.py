@@ -26,6 +26,7 @@ from dataclasses import asdict, dataclass, field
 from .signatures import Match
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_MAX_RUNS_SCANNED = 12  # a day rarely has more; an unbounded scan is one call per run
 _API_PATH = os.path.join(_ROOT, ".claude", "scripts", "airflow_api.py")
 _CONFIG = os.path.join(_ROOT, ".claude", "scripts", "config.env")
 
@@ -210,6 +211,76 @@ def analyze_external_task(
         )
     )
     return ev
+
+
+def upstream_failures(
+    dag_id: str,
+    run_id: str | None,
+    task_id: str,
+    on_date: str | None = None,
+    ti_state: str | None = None,
+) -> tuple[list[str], str | None]:
+    """Which tasks in this run actually failed, for a task whose own log is an empty stub.
+
+    An `upstream_failed` task never ran, so its log is ~69 bytes and says nothing. "Diagnose the
+    upstream task" is the right verdict and a useless one on its own: the reader's next question is
+    always WHICH upstream task, and the same dag_run answers it in one call.
+    """
+    try:
+        api = _api()
+        token = api.resolve_bearer()
+        base = _resolve_base()
+        if not run_id:
+            run_id = _run_holding(api, base, token, dag_id, task_id, on_date, ti_state)
+            if not run_id:
+                return [], "could not identify the run this task belonged to"
+        tis = api.list_task_instances_in_run(base, token, dag_id, run_id) or []
+    except Exception as e:
+        return [], f"Airflow API unavailable ({e})"
+    failed = sorted(
+        t["task_id"]
+        for t in tis
+        if t.get("state") == "failed" and t.get("task_id") and t.get("task_id") != task_id
+    )
+    if not failed:
+        return [], "no failed task in this run; the cause is outside it"
+    return failed, None
+
+
+def _run_holding(
+    api: object,
+    base: str,
+    token: str,
+    dag_id: str,
+    task_id: str,
+    on_date: str | None,
+    ti_state: str | None = None,
+) -> str | None:
+    """The run this stub belonged to. A stub's filename carries its day, never its run id.
+
+    An hourly DAG can have twenty runs that day and most of them green, so "the first run
+    containing this task" matches a SUCCESS run and reports the wrong thing confidently. Match on
+    the stub's own state instead, and look at failed runs first.
+    """
+    if not on_date:
+        return None
+    start, end = api.day_window(on_date)
+    runs = api.list_runs_for_day(base, token, dag_id, start, end) or []
+    ranked = sorted(
+        runs,
+        key=lambda r: (r.get("state") != "failed", str(r.get("start_date"))),
+    )
+    for run in ranked[:_MAX_RUNS_SCANNED]:
+        rid = run.get("dag_run_id")
+        if not rid:
+            continue
+        tis = api.list_task_instances_in_run(base, token, dag_id, rid) or []
+        for ti in tis:
+            if ti.get("task_id") != task_id:
+                continue
+            if ti_state is None or ti.get("state") == ti_state:
+                return rid
+    return None
 
 
 def _moved_on_after(end_date: str | None, failed_at: str | None) -> bool:

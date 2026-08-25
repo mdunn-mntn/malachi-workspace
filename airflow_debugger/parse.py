@@ -64,6 +64,7 @@ class ParsedFailure:
     airflow_signature: dict | None = None  # signature of the Airflow-task-level failure
     has_error_text: bool = True  # False = the task never ran / emitted no diagnostic output
     ti_state: str | None = None  # terminal state from the filename: failed | upstream_failed | ...
+    log_date: str | None = None  # the acquisition day, from the containing directory
     notes: list = field(default_factory=list)
 
 
@@ -198,6 +199,16 @@ def diagnose(parsed: ParsedFailure) -> dict:
     spark = None
     if _has_downstream(parsed):
         spark = route(parsed)
+
+    # An upstream_failed stub has nothing to classify, so the only useful answer is WHICH task
+    # failed. One dag_run call away, and skipped entirely when there is a local cause to read.
+    culprits, culprit_note = [], None
+    if parsed.ti_state == "upstream_failed" and not parsed.has_error_text:
+        from .external_task_rca import upstream_failures
+
+        culprits, culprit_note = upstream_failures(
+            parsed.dag_id, parsed.run_id, parsed.task_id, parsed.log_date, parsed.ti_state
+        )
     spark_sig = (spark or {}).get("signature")
     spark_ok = _spark_succeeded(spark)
     orchestration_only = bool(spark_ok and parsed.airflow_signature)
@@ -221,6 +232,8 @@ def diagnose(parsed: ParsedFailure) -> dict:
         "airflow_signature": parsed.airflow_signature,
         "no_error_text": not parsed.has_error_text,
         "ti_state": parsed.ti_state,
+        "upstream_failed_tasks": culprits,
+        "upstream_lookup_note": culprit_note,
         "spark": spark,
         "spark_outcome": "succeeded" if spark_ok else ("failed" if spark else "none"),
         "orchestration_only": orchestration_only,
@@ -253,6 +266,9 @@ def parse_log_file(path: str) -> ParsedFailure:
         if p.map_index is None and m.group("map") is not None:
             p.map_index = int(m.group("map"))
         p.ti_state = m.group("state")
+    day = os.path.basename(os.path.dirname(os.path.abspath(path)))
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
+        p.log_date = day
     return p
 
 

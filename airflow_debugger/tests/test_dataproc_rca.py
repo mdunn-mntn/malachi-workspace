@@ -278,6 +278,41 @@ def test_public_ip_skips_sinkhole_and_takes_the_real_answer() -> None:
         dataproc_rca._run = orig
 
 
+_REAL_NOT_FOUND = (
+    "ERROR: (gcloud.dataproc.batches.describe) NOT_FOUND: Not found: Batch "
+    "projects/mntn-prj-prod-00/locations/us-central1/batches/tpa-export-2026-08-15-1786992151-2. "
+    "This command is authenticated as malachi@mountain.com which is the active account."
+)
+
+
+def test_an_expired_batch_reads_as_expired_not_as_an_error() -> None:
+    """Dataproc ages batches out; a historical failure is expected, not a fault."""
+    note = dataproc_rca.describe_failure_note("tpa-export-2026-08-15-1786992151-2", _REAL_NOT_FOUND)
+    assert "expired" in note
+    assert "unrecoverable" in note
+    assert "gcloud" not in note
+
+
+def test_no_account_reaches_a_published_report() -> None:
+    """The report lands in a shared bucket, so a CLI error must not carry whose account ran it."""
+    for err in (_REAL_NOT_FOUND, "quota exceeded for malachi@mountain.com on project x"):
+        note = dataproc_rca.describe_failure_note("b", err)
+        assert "@mountain.com" not in note, note
+        assert "malachi" not in note, note
+
+
+def test_a_permission_error_is_named_as_one() -> None:
+    """A missing grant and an expired batch need different actions, so name which one it is."""
+    note = dataproc_rca.describe_failure_note("b", "PERMISSION_DENIED: caller does not have access")
+    assert "lacks dataproc.batches.get" in note
+
+
+def test_an_unknown_error_survives_scrubbed_rather_than_dropped() -> None:
+    """Losing the error entirely would be worse than publishing a redacted one."""
+    note = dataproc_rca.describe_failure_note("b", "some novel failure mode")
+    assert "some novel failure mode" in note
+
+
 if __name__ == "__main__":
     test_uri_parses_real_state_message()
     test_uri_absent_returns_none()
