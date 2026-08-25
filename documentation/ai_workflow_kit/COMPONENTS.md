@@ -10,8 +10,8 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 |-------|---------|--------|--------------|------------|
 | PreToolUse | Bash | `enforce_bq_wrapper.sh` | Bash — block a raw `bq … query` so every real query goes through .claude/scripts/bq_run.sh (cost + provenance logging + net-new-table detection) | yes (exit 2) |
 | PreToolUse | Bash | `comms_lint_precheck.sh` | when a Bash command is a Jira REST v2 write (comment or issue-create curl), lint the payload against the Terse Comms Standard BEFORE it posts | no |
-| PreToolUse | Bash | `pr_gauntlet_reminder.sh` | advisory backstop for the PR gauntlet: when a PR is about to be created and HEAD has no gauntlet pass marker, remind to run /pr_gauntlet first | no |
-| PreToolUse | mcp__github__create_pull_request | `pr_gauntlet_reminder.sh` | advisory backstop for the PR gauntlet: when a PR is about to be created and HEAD has no gauntlet pass marker, remind to run /pr_gauntlet first | no |
+| PreToolUse | Bash | `pr_gauntlet_reminder.sh` | the PR gauntlet GATE: BLOCKS (exit 2) any PR creation whose HEAD has no gauntlet pass marker, so the session must run /pr_gauntlet and retry | yes (exit 2) |
+| PreToolUse | mcp__github__create_pull_request | `pr_gauntlet_reminder.sh` | the PR gauntlet GATE: BLOCKS (exit 2) any PR creation whose HEAD has no gauntlet pass marker, so the session must run /pr_gauntlet and retry | yes (exit 2) |
 | PostToolUse | Bash | `flag_net_new_tables.sh` | Bash — after a scripts/bq_run.sh call, flag any referenced table that has no catalog doc into knowledge/bq/_UNDOCUMENTED.queue (the… | no |
 | UserPromptSubmit | — | `memory_recall.py` | deterministic per-prompt memory recall | no |
 | UserPromptSubmit | — | `log_request.py` | UserPromptSubmit hook | no |

@@ -66,4 +66,4 @@ Mounted at `~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/`. 
 
 Remote `git@github.com:mdunn-mntn/malachi-workspace.git`, root `/Users/malachi/Developer/work/mntn/workspace/`. Commit and push after every meaningful change, no batching. No `Co-Authored-By` lines.
 
-**Shipping a PR (any repo)? Run `/pr_gauntlet` first** — adversarial review loop until two fresh reviewers confirm nothing; `pr_gauntlet_reminder.sh` nags any un-gauntleted `gh pr create` (procedure lives in the skill).
+**PR creation auto-fires `/pr_gauntlet` — no asking, no prompting.** The moment a PR is about to be created (or the user says one is ready), run the gauntlet first, unprompted; `pr_gauntlet_reminder.sh` hard-BLOCKS any `gh pr create` whose HEAD lacks the pass marker, so an un-gauntleted PR cannot ship (procedure lives in the skill; bypass only on the user's explicit say-so).

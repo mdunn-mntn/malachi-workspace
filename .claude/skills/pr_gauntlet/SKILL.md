@@ -10,6 +10,12 @@ description: >-
 
 # /pr_gauntlet — adversarial PR review gate
 
+**This skill is auto-invoked** (mirror of `/capture` §13): the moment PR creation is imminent —
+you are about to run `gh pr create` / the GitHub create-PR tool, or the user says a PR or branch
+is ready — run the gauntlet unprompted. Never ask permission, never wait to be told. The
+`pr_gauntlet_reminder.sh` hook hard-blocks un-gauntleted PR creation (exit 2), so skipping it
+just bounces; `PR_GAUNTLET_SKIP=1` exists for emergencies on the user's explicit say-so only.
+
 A PR ships only when it survives: two independent adversarial reviewers with opposite premises
 ("this PR is wrong" / "this PR is badly written") tear the diff apart, every finding must survive
 an independent refuter before any code changes, one fixer applies what survives, and the loop
