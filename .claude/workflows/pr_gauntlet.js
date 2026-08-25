@@ -69,6 +69,15 @@ if (!a || !a.repo || !a.base || !Array.isArray(a.files) || a.files.length === 0)
 const fileList = a.files.join('\n  ')
 const desc = a.description ? `PR description under review:\n---\n${a.description}\n---` : 'No PR description exists yet.'
 
+const ARBITER_SCHEMA = {
+  type: 'object',
+  required: ['same', 'evidence'],
+  properties: {
+    same: { type: 'boolean', description: 'true only if the new finding is the same defect the earlier fix claimed to resolve' },
+    evidence: { type: 'string' },
+  },
+}
+
 const key = f => `${f.file}:${f.class}:${Math.floor(f.line / LINE_BUCKET)}`
 const adjudicated = new Map()
 const tallies = []
@@ -129,7 +138,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
     if (seenThisRound.has(k)) continue
     seenThisRound.add(k)
     const prior = adjudicated.get(k)
-    if (prior === 'refuted' || prior === 'rejected') { t.auto_dropped++; continue }
+    if (prior && (prior.status === 'refuted' || prior.status === 'rejected')) { t.auto_dropped++; continue }
     fresh.push({ ...f, key: k })
   }
 
@@ -156,9 +165,17 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
   const confirmed = []
   for (const row of verdicts.filter(Boolean)) {
     if (!row.v) { t.errors.push(`refuter failed on ${row.f.key}${row.err ? ': ' + row.err : ''}`); continue }
-    if (row.v.refuted) { t.refuted++; adjudicated.set(row.f.key, 'refuted'); continue }
-    if (adjudicated.get(row.f.key) === 'fixed') {
-      return { verdict: 'THRASH', detail: `fixed finding recurred confirmed: ${row.f.key} — ${row.f.title}`, oscillating: row.f, tallies }
+    if (row.v.refuted) { t.refuted++; adjudicated.set(row.f.key, { status: 'refuted', finding: row.f }); continue }
+    const prior = adjudicated.get(row.f.key)
+    if (prior && prior.status === 'fixed') {
+      const ruling = await agent(`Two review findings share the location bucket ${row.f.key}. The first was confirmed and a fixer claims it is fixed; the second was just confirmed by a fresh round. Read the current code at that location in ${a.repo} and rule: is the new finding the SAME defect (the fix failed or regressed), or a DIFFERENT defect that happens to sit nearby?
+Earlier (claimed fixed): ${JSON.stringify(prior.finding)}
+New (just confirmed): ${JSON.stringify(row.f)}`,
+        { schema: ARBITER_SCHEMA, phase: `Round ${round} verify`, label: `arbiter ${row.f.key}`, effort: 'high' })
+      if (ruling && ruling.same) {
+        return { verdict: 'THRASH', detail: `fixed finding recurred confirmed: ${row.f.key} — ${row.f.title}`, arbiter_evidence: ruling.evidence, oscillating: row.f, tallies }
+      }
+      if (!ruling) t.errors.push(`arbiter failed on ${row.f.key}; treating as a distinct finding`)
     }
     confirmed.push({ ...row.f, refuter_evidence: row.v.evidence })
   }
@@ -192,8 +209,9 @@ ${JSON.stringify(confirmed, null, 2)}`,
   }
   t.fixed = fix.fixed.length
   t.rejected = fix.rejected.length
-  for (const k of fix.fixed) adjudicated.set(k, 'fixed')
-  for (const r of fix.rejected) adjudicated.set(r.key, 'rejected')
+  const byKey = new Map(confirmed.map(f => [f.key, f]))
+  for (const k of fix.fixed) adjudicated.set(k, { status: 'fixed', finding: byKey.get(k) || { key: k } })
+  for (const r of fix.rejected) adjudicated.set(r.key, { status: 'rejected', finding: byKey.get(r.key) || { key: r.key } })
   if (fix.new_files.length) log(`Round ${round}: fixer created ${fix.new_files.join(', ')}`)
   log(`Round ${round}: fixed ${t.fixed}, rejected ${t.rejected} — next round re-reviews the fixes with fresh agents`)
 }

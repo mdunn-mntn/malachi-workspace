@@ -3,10 +3,11 @@
 # Reused by the git commit gate (.githooks/) and the weekly audit (workflow_audit.sh §11).
 #
 # Modes:
-#   (default) full — whole-repo: the 3 front-matter linters + index-freshness + hook self-test,
-#                    plus an advisory structure summary. Exit 1 on any HARD failure.
-#   --staged       — pre-commit subset: same linters but FAIL ONLY on violations in files THIS
-#                    commit stages (+ staged-aware index-freshness). Skips the hook self-test.
+#   (default) full — whole-repo: the 3 front-matter linters + ruff on all durable Python +
+#                    index-freshness + hook self-test + advisory structure summary. Exit 1 on HARD failure.
+#   --staged       — pre-commit subset: those linters + comment density (lint_comments --staged,
+#                    durable tier only), failing ONLY on violations in files THIS commit stages
+#                    (+ staged-aware index-freshness). Skips the hook self-test.
 #   --fix          — auto-repair: lint_memory --fix, ruff repair, rebuild indexes, re-stage.
 #
 # Philosophy: mechanical correctness only; judgment checks stay propose-only in workflow_audit.sh.
@@ -24,7 +25,7 @@ GEN_INDEXES=(knowledge/INDEX.md knowledge/_ROUTING.md knowledge/_MEMORY_INDEX.md
 
 if [ "$MODE" = "--fix" ]; then
   python3 "$S/lint_memory.py" --fix >/dev/null 2>&1 || true
-  # ruff format + safe fixes on staged durable Python, then re-stage, mirroring the index re-stage below
+  # --force-exclude keeps pyproject's tickets/** + slack_bot/** exclusions for files passed by path
   if command -v ruff >/dev/null 2>&1; then
     fix_py=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(lib/|\.claude/scripts/).*\.py$' || true)
     if [ -n "$fix_py" ]; then
@@ -52,7 +53,8 @@ run_linter() {
   local label="$1" prefix="$2"; shift 2
   local out rc; out=$("$@" 2>&1); rc=$?
   local viols; viols=$(grep '^VIOLATION ' <<<"$out" || true)
-  if [ "$rc" -ne 0 ] && [ -z "$viols" ]; then
+  # linters exit 0/1 by contract; exit >1 or a traceback is a crash even after partial output
+  if { [ "$rc" -ne 0 ] && [ -z "$viols" ]; } || [ "$rc" -gt 1 ] || grep -q 'Traceback (most recent call last)' <<<"$out"; then
     fail "$label — linter crashed (exit $rc), refusing to pass"
     sed 's/^/      /' <<<"$out" | head -6
     return
