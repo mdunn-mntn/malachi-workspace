@@ -31,11 +31,36 @@ The agreed question, why it matters, and how we plan to answer it. Locked before
 
 | Ask | Owner | State |
 |---|---|---|
-| Slack bot token for `#alerts-tpa-pipeline` (`C08CURMGNMQ`) | Robin Fox | **Raised 2026-08-25.** Needs `chat:write` AND `channels:history` — threading onto the alert requires reading the alert message |
+| Slack bot token for `#alerts-tpa-pipeline` (`C08CURMGNMQ`) | Malachi to create, Robin Fox to approve | **APPROVED PATH 2026-08-25.** Robin: create the app at api.slack.com/apps, generate the bot token, request workspace install from the app management page; he gets the review notification and approves the scopes. His one condition: the token is handled and stored safely |
 | Company OpenAI key | Alyson Lefkowitz | Not yet raised |
 
 Robin is the right person: he is who retired local Slack apps on 2026-06-10, so his answer settles
 whether a prod-held token is the exception rather than us assuming it.
+
+### Scopes to request, and why each is needed
+
+| Scope | Why |
+|---|---|
+| `chat:write` | post the reply |
+| `channels:history` | **threading requires this.** To reply under the alert we must first find the alert's `ts` via `conversations.history`; without it the only option is a standalone channel post |
+| `channels:read` | resolve the channel and confirm membership |
+
+Do not request `chat:write.public` — invite the bot to `C08CURMGNMQ` instead, so its reach is one
+channel rather than every public channel in the workspace. Ask for the narrowest set: Robin reviews
+the scopes by hand, and a short list approves faster than a broad one.
+
+### Where the token lives
+
+**Never in `~/.zshrc`, a plist, or any file in this repo.** That is exactly the IMP-064 exposure —
+`SLACK_BOT_TOKEN` sat in plaintext in the decommissioned bot's LaunchAgent for ten weeks and is
+still pending revocation.
+
+- **Prod (the DAG):** an Astro deployment variable marked **secret**, the same handling as
+  `AIRFLOW_BEARER`. It is masked in logs and never reaches the bundle.
+- **Local (development and testing):** the macOS login Keychain, read at call time
+  (`security find-generic-password -s slack_debugger_token -w`), matching the `ANTHROPIC_API_KEY`
+  pattern in [[reference_anthropic_api_key_keychain]].
+- **Rotation:** one place per environment, so a rotation is two edits and no grep.
 
 ## 1b. Introduction
 Brief context: what system/feature/data is involved, and why this ticket exists.
