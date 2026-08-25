@@ -126,7 +126,8 @@ Three separate failures before a single query ran. All three look like broken SQ
    (`Unknown command line flag ' audi_1141_cohort_scorecard.sql'`). Put any `--` filename header at the
    END of the file. `mntn_xlsx.sql()` needs a `--` line naming the file for its query deep-links, so a
    trailing `-- source: <file>.sql` satisfies both.
-2. **`CREATE TEMP FUNCTION` scripts need `--nouse_legacy_sql`.** Without it bq runs legacy SQL and errors
+2. **`--nouse_legacy_sql` is needed for ANY standard SQL, not just TEMP FUNCTION (widened 2026-08-25, AUDI-1016).** `~/.bigqueryrc` sets only `location`; with no `use_legacy_sql=false` there, bare `bq query` (and `bq_run.sh`, which doesn't inject the flag) parses backtick identifiers as legacy SQL — a `` `dw-main-bronze`.`ds`.`t` `` reference fails with `Invalid project ID '`dw-main-bronze'`. Pass `--nouse_legacy_sql` through `bq_run.sh` on every backticked query. Related TABLESAMPLE gotchas (same session): `--maximum_bytes_billed` validates against the UN-sampled upper bound (a 0.001% TABLESAMPLE of a 110TiB table quotes the full 104TB and gets rejected; combined with a partition WHERE it quotes the full partition) — on the us-central1 reservation, run TABLESAMPLE uncapped and let actual sampled-block billing apply (~1GB for 0.001% of 273B rows); block sampling clusters by partition, so a small sample may land in ONE hour/partition per day — don't infer hh/time distributions from it.
+   Original narrower finding: **`CREATE TEMP FUNCTION` scripts need `--nouse_legacy_sql`.** Without it bq runs legacy SQL and errors
    `Encountered "CREATE" ... Was expecting: <EOF>` at the function line.
 3. **Pass `--project_id=dw-main-silver` explicitly.** After a fresh `gcloud auth login` the default
    project resolved to `mntn-coredw-prod`, giving

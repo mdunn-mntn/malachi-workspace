@@ -152,7 +152,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_fangorn_on_mntn_id | project | 2026-08-12 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | project_hot_path_budget | project | 2026-08-12 | [doc](memory/project_hot_path_budget.md) |
 | reference_agent_harness_portability | reference | 2026-08-12 | [doc](memory/reference_agent_harness_portability.md) |
-| reference_bidder_serving_stores | reference | 2026-08-12 | [doc](memory/reference_bidder_serving_stores.md) |
 | reference_commit_gate | reference | 2026-08-12 | [doc](memory/reference_commit_gate.md) |
 | reference_geo_category_boolean_logic | reference | 2026-08-12 | [doc](memory/reference_geo_category_boolean_logic.md) |
 | reference_ticket_framing_gate | reference | 2026-08-12 | [doc](memory/reference_ticket_framing_gate.md) |
@@ -226,3 +225,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_test_budget_from_rates | reference | 2026-08-24 | [doc](memory/reference_test_budget_from_rates.md) |
 | user_manager_alyson | user | 2026-08-24 | [doc](memory/user_manager_alyson.md) |
 | Astronomer/Airflow — clear failed task with "Run with latest bundle version | feedback | 2026-08-25 | [doc](memory/feedback_astronomer_clear_with_latest_bundle.md) |
+| reference_bidder_serving_stores | reference | 2026-08-25 | [doc](memory/reference_bidder_serving_stores.md) |

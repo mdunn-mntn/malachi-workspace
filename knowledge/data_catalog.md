@@ -2686,21 +2686,24 @@ Exclude this value when counting qualifying HEMs.
 ---
 
 ## bronze.raw.tpa_membership_update_log (full entry)
-- **Type:** VIEW (in bronze.raw) → physical table in `bronze.sqlmesh__raw`
-- **Partition:** `dt` (STRING 'YYYY-MM-DD') + `hh` (STRING, zero-padded hour, e.g. '00'–'23')
-- **Data available from:** 2025-11-21
-- **Use for:** Change log of IP segment membership (when IPs enter/leave segments). Complements
-  tmul_daily but goes back further and has finer-grained change events.
+- **Type:** VIEW (in bronze.raw) → physical `bronze.sqlmesh__raw.raw__tpa_membership_update_log__546164626`
+- **Partition (CORRECTED 2026-08-25, AUDI-1016):** physical table is a native TABLE, **DAY-partitioned on `time` (TIMESTAMP) with 90-day partition expiration**. `dt`/`hh` are plain STRING columns (no pruning; no clustering) — filter `DATE(time)`, not `dt`, for partition pruning.
+- **Data available:** rolling last ~90 days (expiration), ~273B rows / ~110 TiB total, **~3.0B rows / ~1.23 TiB per day**.
+- **Use for (CORRECTED 2026-08-25):** BQ landing of the membership-db GCS segment dump — but it receives **ONLY the daily 08:00 UTC sweep (1 of the 6 four-hourly sweeps; every row has `hh='08'`, `source_version='v2'`, `delta=false`)**. NOT a change log despite the name: with no stored producer state, `in_segments` re-emits the FULL current membership every sweep. Composition of a day (2026-08-23 exact + 9-day sample, AUDI-1016): **~57% rows have in_segments AND out_segments both empty** (duplicate-empty noise), ~17% out_segments only (just-became-empty transitions), ~26% carry segments. The consumer-side 24h load (10.6B records, 92.9% empty per Eric Salinger's doc) is NOT reproducible here — 5 of 6 sweeps + the Kafka feed never land in BQ.
 - **Data sources:** DS 2 and DS 3. DS 4 (CRM) not confirmed to appear here.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id / ip | STRING | IP address |
+| time / activity_time | TIMESTAMP | `time` = partition column |
 | data_source_id | INTEGER | |
-| in_segments | RECORD | Segments IP joined |
-| out_segments | RECORD | Segments IP left |
-| dt | STRING | Partition date (always filter this!) |
-| hh | STRING | Partition hour (zero-padded, e.g. '08') |
+| in_segments | RECORD | `.segments[]`: advertiser_id, campaign_id, segment_id, version, score, tags — FULL current set per sweep |
+| out_segments | RECORD | same shape; segments removed since prior sweep |
+| metadata_info | RECORD | key/value |
+| scores | RECORD | key/value scores map — **never populated** (0 of 2.7M sampled rows, 2026-08-25) |
+| delta | BOOLEAN | always false in landed data |
+| dt / hh | STRING | plain columns, NOT partitions; hh always '08' |
+| source_version | STRING | 'v2' uniformly |
 
 **Unnest pattern (DIFFERENT from tmul_daily):**
 ```sql
