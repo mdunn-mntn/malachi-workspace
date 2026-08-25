@@ -26,6 +26,18 @@ The agreed question, why it matters, and how we plan to answer it. Locked before
 - **What would change the answer:** If the deterministic share stays below ~50% *and* the LLM cannot close the rest, this is a notifier for a diagnosis nobody trusts — stop and spend the effort on taxonomy instead. If alert-message matching proves unreliable, ship channel posts rather than a flaky thread. If the callback adds meaningful latency or risk to a watched DAG, revert to the daily digest.
 
 ## 1. Introduction
+
+**Blocking asks, as of 2026-08-25:**
+
+| Ask | Owner | State |
+|---|---|---|
+| Slack bot token for `#alerts-tpa-pipeline` (`C08CURMGNMQ`) | Robin Fox | **Raised 2026-08-25.** Needs `chat:write` AND `channels:history` — threading onto the alert requires reading the alert message |
+| Company OpenAI key | Alyson Lefkowitz | Not yet raised |
+
+Robin is the right person: he is who retired local Slack apps on 2026-06-10, so his answer settles
+whether a prod-held token is the exception rather than us assuming it.
+
+## 1b. Introduction
 Brief context: what system/feature/data is involved, and why this ticket exists.
 
 ## 2. The Problem
