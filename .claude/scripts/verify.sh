@@ -3,14 +3,13 @@
 # Reused by the git commit gate (.githooks/) and the weekly audit (workflow_audit.sh §11).
 #
 # Modes:
-#   (default) full   — whole-repo: the 3 front-matter linters + index-freshness + hook self-test.
-#                       Advisory structure summary. Exit 1 on any HARD failure.
-#   --staged          — pre-commit subset: same linters but FAIL ONLY on violations in files THIS
-#                       commit stages (+ staged-aware index-freshness). Skips the hook self-test.
-#   --fix             — auto-repair: lint_memory --fix, rebuild indexes, git-add the regenerated
-#                       index files. (The gate's failure message points here.)
+#   (default) full — whole-repo: the 3 front-matter linters + index-freshness + hook self-test,
+#                    plus an advisory structure summary. Exit 1 on any HARD failure.
+#   --staged       — pre-commit subset: same linters but FAIL ONLY on violations in files THIS
+#                    commit stages (+ staged-aware index-freshness). Skips the hook self-test.
+#   --fix          — auto-repair: lint_memory --fix, ruff repair, rebuild indexes, re-stage.
 #
-# Philosophy: enforce MECHANICAL correctness (front-matter schema, index sync, formatting). JUDGMENT checks (cov
+# Philosophy: mechanical correctness only; judgment checks stay propose-only in workflow_audit.sh.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 S="$ROOT/.claude/scripts"
@@ -25,7 +24,7 @@ GEN_INDEXES=(knowledge/INDEX.md knowledge/_ROUTING.md knowledge/_MEMORY_INDEX.md
 
 if [ "$MODE" = "--fix" ]; then
   python3 "$S/lint_memory.py" --fix >/dev/null 2>&1 || true
-  # ruff auto-repair on STAGED durable Python (format + safe fixes), then re-stage — mirrors the index re-stage be
+  # ruff format + safe fixes on staged durable Python, then re-stage, mirroring the index re-stage below
   if command -v ruff >/dev/null 2>&1; then
     fix_py=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(lib/|\.claude/scripts/).*\.py$' || true)
     if [ -n "$fix_py" ]; then
@@ -48,11 +47,16 @@ pass() { echo "  ✓ $1"; }
 STAGED=""
 [ "$MODE" = "--staged" ] && STAGED=$(git diff --cached --name-only)
 
-# run a linter; in --staged, fail only on violations whose (prefixed) path is staged. args: <label> <path_prefix
+# run_linter <label> <path_prefix> <cmd...>; in --staged, keep only violations whose prefix+path is staged
 run_linter() {
   local label="$1" prefix="$2"; shift 2
-  local out; out=$("$@" 2>&1)
+  local out rc; out=$("$@" 2>&1); rc=$?
   local viols; viols=$(grep '^VIOLATION ' <<<"$out" || true)
+  if [ "$rc" -ne 0 ] && [ -z "$viols" ]; then
+    fail "$label — linter crashed (exit $rc), refusing to pass"
+    sed 's/^/      /' <<<"$out" | head -6
+    return
+  fi
   if [ "$MODE" = "--staged" ] && [ -n "$viols" ]; then
     local keep=""
     while IFS= read -r line; do
@@ -74,12 +78,9 @@ run_linter "bq_table front-matter (lint_coverage)" "knowledge/" python3 "$S/lint
 run_linter "ticket/framing front-matter (lint_tickets)" "" python3 "$S/lint_tickets.py" --check
 run_linter "memory front-matter (lint_memory)" "" python3 "$S/lint_memory.py" --check
 
-if [ "$MODE" = "--staged" ]; then
-  if out=$(python3 "$S/lint_comments.py" --staged 2>&1); then pass "comment density (lint_comments)"
-  else fail "comment density — one-line comments only; the why goes in the PR or commit"; echo "$out" | sed 's/^/    /'; fi
-fi
+[ "$MODE" = "--staged" ] && run_linter "comment density (lint_comments)" "" python3 "$S/lint_comments.py" --staged
 
-# --- ruff: durable-tier Python (lib/ + .claude/scripts). Staged-scoped in --staged (block only on files THIS co
+# --- ruff on durable-tier Python (lib/ + .claude/scripts); --staged blocks only on staged files ---
 if ! command -v ruff >/dev/null 2>&1; then
   echo "  · ruff not installed — skipping Python lint (pip install 'ruff>=0.16,<0.17')"
 elif [ "$MODE" = "--staged" ]; then
@@ -108,7 +109,7 @@ else
   fi
 fi
 
-# --- index freshness: regenerate, then any generated index that differs from what's staged/committed is out of 
+# --- index freshness: regenerate, then flag any generated index that differs from staged/committed ---
 if [ "$MODE" = "--staged" ] && ! grep -qE '^(knowledge/|on-call/.*\.md$|tickets/.*/summary\.md$|[^/]+\.md$|\.claude/(hooks|scripts|skills|agents)/)' <<<"$STAGED"; then
   pass "index freshness (no front-matter docs staged)"
 else
@@ -131,7 +132,7 @@ if [ "$MODE" != "--staged" ]; then
   python3 "$S/audit_structure.py" --json /tmp/verify_struct.json >/dev/null 2>&1 || true
   hi=$(python3 -c "import json;d=json.load(open('/tmp/verify_struct.json'));f=d if isinstance(d,list) else d.get('findings',[]);print(sum(1 for x in f if x.get('severity')=='high'))" 2>/dev/null || echo "?")
   echo "  · structure: ${hi} high-severity finding(s) — advisory (propose-only; see workflow_audit §1)"
-  # ~/.claude/CLAUDE.md is the only instruction file with no git history. Advisory, never a gate: it is the user's
+  # ~/.claude/CLAUDE.md has no git history; the drift check is advisory, never a gate
   gdrift=$(bash "$S/sync_global_claude_md.sh" --check 2>&1) || echo "  · $gdrift"
 fi
 
