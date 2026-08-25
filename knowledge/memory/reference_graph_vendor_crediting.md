@@ -48,10 +48,11 @@ that List 1 rule-making is AUDI's. AUDI-1145 (List 1 rules) likely stays with Ma
 - **Kristen Colley's handoff timeline (AP lead, via Maya 08-24, settles the org-level split):** 8/20 Jaime
   test run on July data; 8/24 Maya reviews DS63 script changes for sign-off; 9/1 Jaime does the August run
   (steps 3-5, BAE consult); Sherwin/Maya do steps 6-8 (audit+reporting) once. Going forward **steps 6-8 =
-  BAE; steps 1-5 and ANY new DDP additions/changes in logic = Kale's org** (AUDI/Targeting sit there, which
-  reconciles Maya's and Mike's earlier claims). Steps doc:
+  BAE; steps 1-5 and ANY new DDP additions/changes in logic = Kale's org** (= AUDI + AP; Mike Dolt manages AP,
+  Jaime is AP, which reconciles Maya's and Mike's earlier claims). Steps doc:
   https://docs.google.com/spreadsheets/d/1dkfLXy42un-NcpQqUUjg0OMNiQ_Lij8CXZikal46xXQ/edit?gid=1144817884
-  Person-level owner of List 1 rules inside Kale's org still unnamed; AUDI-1145 remains the vehicle.
+  Malachi's call 08-24: since AP/Jaime own the run and the logic changes, List 1 rules go to AP too —
+  AUDI-1145 transfers to Jaime rather than staying in AUDI.
 - Jack Barbey (thread, 08-24 ~5pm), crediting mechanics: **List 1 vendors are credited essentially
   independently** of Lists 2/3. Whether ALL vendors get credit vs List 1 vs Lists 2/3 **depends on whether
   the audience is built with AND or OR clauses** (true for DS63/CRM at least); **MNTN Matched will be

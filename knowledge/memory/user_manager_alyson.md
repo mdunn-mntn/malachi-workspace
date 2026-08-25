@@ -11,4 +11,4 @@ lifecycle: active
 last_verified: 2026-08-24
 ---
 
-Malachi's manager is Alyson Lefkowitz (stated by Malachi 2026-08-24). Mike Dolt was the fill-in manager while Alyson was gone; several spring-2026 notes call Mike "boss" from that window ([[project_buk_rebrand]] corrected). Route manager-level asks (reviews, priorities, escalation) to Alyson; Mike still owns Targeting roadmap direction and, from Sept 2026 with Jaime, the DDP crediting logic.
+Malachi's manager is Alyson Lefkowitz (stated by Malachi 2026-08-24). Mike Dolt was the fill-in manager while Alyson was gone; several spring-2026 notes call Mike "boss" from that window ([[project_buk_rebrand]] corrected). Route manager-level asks (reviews, priorities, escalation) to Alyson. Mike Dolt manages AP (Jaime's team); Kale's org covers both AUDI and AP. Mike also presented the Q2 2026 Targeting roadmap.
