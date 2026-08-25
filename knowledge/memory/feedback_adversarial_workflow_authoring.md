@@ -23,4 +23,10 @@ When authoring Workflow-tool multi-agent passes with an adversarial verify gate:
 - **Hand-finish the tail.** For a few persistent schema-cap failures, hand-author those cards from source rather than re-running the whole pass.
 - **Parallel subagents sharing the session scratchpad must write uniquely named payload/draft files (2026-08-24).** Two concurrent Jira-write agents both used a generic `desc_payload.json`; the race briefly PUT AUDI-1061's description onto AUDI-882 (caught and corrected the same minute; both re-verified correct). Suffix every scratch file with the work-unit key (`desc_payload_audi_882.json`), and after any parallel write wave re-read the targets to confirm each landed on its own unit.
 
+Four more, from building the pr_gauntlet loop (2026-08-24, [[reference_pr_gauntlet]]):
+- **`Workflow({name})` snapshots the script at its first per-session resolution** and keeps serving that copy — an edit + re-invoke by name reran the STALE script. Iterating? Dispatch by `scriptPath`.
+- **`agentType` resolves against a registry snapshotted at session start.** Agent files written mid-session are invisible to workflows until a new session; catch the "not found" throw and fall back to a default agent prompted to Read the role file.
+- **A line-bucket dedupe key is not a thrash detector.** Two DIFFERENT defects at lines 55 and 58 collided into one `file:class:bucket10` key and false-aborted the loop as THRASH. Any "fixed finding recurred" guard needs a semantic check — one arbiter agent ruling same-defect vs neighbor — before aborting.
+- **Fixers diverge by ADDING surface.** Told only "fix the confirmed findings," fixers grew a 124-line linter to 350 lines over 3 rounds; every addition spawned next-round findings and the run hit FAIL_MAX_ROUNDS. The fixer prompt must mandate the smallest correct fix, forbid new features/flags, and prefer deleting a prior round's addition over patching it.
+
 Links: [[project_self_optimizing_context]], [[reference_ticket_context_eval_tooling]], [[feedback_bq_workflow]].

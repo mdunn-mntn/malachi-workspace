@@ -16,7 +16,9 @@ except Exception:
     sys.exit(0)
 tool = d.get("tool_name", "")
 cmd = (d.get("tool_input") or {}).get("command", "")
-if tool != "mcp__github__create_pull_request" and not re.search(r"\bgh\s+pr\s+create\b", cmd):
+if tool != "mcp__github__create_pull_request" and not re.search(
+    r"(?:^|[;&|]|\$\()\s*gh\s+pr\s+create\b", cmd, re.M
+):
     sys.exit(0)
 if "PR_GAUNTLET_SKIP=1" in cmd:
     sys.exit(0)
