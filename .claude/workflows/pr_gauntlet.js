@@ -181,6 +181,9 @@ New (just confirmed): ${JSON.stringify(row.f)}`,
   }
   t.confirmed = confirmed.length
 
+  if (a.report_only) {
+    return { verdict: 'REPORT', findings: confirmed, tallies }
+  }
   if (confirmed.length === 0 && t.errors.length === 0 && t.refuter_capped === 0) {
     log(`Round ${round}: every finding refuted — CONVERGED`)
     return { verdict: 'PASS', rounds_run: round, tallies, clean: false }
