@@ -1,6 +1,6 @@
 ---
 name: project_audi_1175_ds14_scoring_cost
-description: "DS14 scoring-cost optimization — spike AUDI-1175 closed Done 2026-08-24; impl AUDI-1176 backlog, sprint-ready, gate-safe, ~$2-11k/mo, parked behind Kirsa's remove-DS14 experiment"
+description: "DS14 scoring-cost optimization — spike AUDI-1175 Done; impl AUDI-1176 CLOSED Won't Do 2026-08-25 by owner decision (the blocking experiment never existed); full reopen path preserved"
 metadata: 
   node_type: memory
   type: project
@@ -24,3 +24,5 @@ DS14 ("MNTN Global Data") is an **availability gate** ANDed onto ~every audience
 **Key safety finding (why it's safe):** the prod HHST threshold recommender does NOT couple to the scored universe. Its population is **auction-scoped** — chain = camperbid **v3/v4** compute → CoreDB `performance.optimized_intent_thresholds` → **`SteelHouse/idso` BOS** hourly-cron upsert (sole writer of `dso.household_score_thresholds`, PK campaign_id, ~2K PTV camps/day). Only the fenced DDM `test_hhst_campaigns` pilot reads `prospecting_intent`, and it never writes the applied table. Applied-threshold distribution: 65% of 32,550 campaigns already at Max Reach (threshold=0). Full detail lives in git `knowledge/data_knowledge.md` (DS14-opt block) + the ticket summaries.
 
 See [[reference_hhst_efficiency_sizing]], [[reference_frequency_capping]], [[reference_causal_impact_pattern]].
+
+**2026-08-25 FINAL: AUDI-1176 closed Won't Do by owner decision.** The July hold traced to a floated-and-downgraded idea, never a real experiment ([[project_incrementality_experiment]]); rather than unpark, Malachi chose to drop the change. Reopen path: sizing ($2-11k/mo) in AUDI-1175, implementation plan + shadow-run design in tickets/audi_1176_gate_scoring_addressable/summary.md, RFD on Confluence TAR 3722346650.
