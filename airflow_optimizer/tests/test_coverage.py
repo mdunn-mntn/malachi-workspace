@@ -229,3 +229,21 @@ def test_normalise_job_strips_only_what_it_can_justify() -> None:
     assert coverage.normalise_job("audience_intent_scoring_staging_ds46") == "audience_intent_scoring_staging"
     assert coverage.normalise_job("materialize_mntn_select_16") == "materialize_mntn_select"
     assert coverage.normalise_job("conv_log_derived_ip") == "conv_log_derived_ip"
+
+
+def test_the_report_names_every_job_it_could_not_tie_to_a_dag() -> None:
+    """A silent gap reads as full coverage. Each miss states which of the three causes it is."""
+    cov = coverage.Coverage(date="x", dag_ids_including_paused={"feature_store_hourly", "a", "b"})
+    cov.dags = [
+        coverage.DagCoverage(dag_id="feature_store_hourly", spark_tasks=["src.aug_log_ip_hourly"]),
+        coverage.DagCoverage(dag_id="a", spark_tasks=["shared"]),
+        coverage.DagCoverage(dag_id="b", spark_tasks=["shared"]),
+    ]
+    why = dict(cov.unresolved({"aug_log_ip_hourly", "shared", "app-20260825010524489-0368",
+                               "segment-updates-to-parquet-2026-08-25-[11]", "never_heard_of_it"}))
+    assert "aug_log_ip_hourly" not in why                       # resolved, so not listed
+    assert "named by 2 DAGs" in why["shared"]
+    assert "no app name" in why["app-20260825010524489-0368"]
+    assert "no app name" in why["segment-updates-to-parquet-2026-08-25-[11]"]
+    assert "no DAG in the bundle" in why["never_heard_of_it"]
+    assert "could not be tied to a DAG" in coverage.render(cov, set(), {"shared"})

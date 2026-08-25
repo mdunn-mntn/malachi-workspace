@@ -51,6 +51,8 @@ OPAQUE_OPERATORS = {
 
 
 _TASK_SUFFIX = re.compile(r"_(?:ds\d+|\d{1,3})$")
+# `app-20260825010524489-0368`, `segment-updates-to-parquet-2026-08-25-[11]`: an app id, not a name.
+_NO_APP_NAME = re.compile(r"^(?:app-\d|application_\d)|\[\d+\]$")
 
 
 def normalise_job(name: str) -> str:
@@ -93,6 +95,30 @@ class Coverage:
     def profilable(self) -> list:
         """Active DAGs with at least one readable Spark task."""
         return [d for d in self.dags if d.profilable]
+
+    def unresolved(self, job_names: set) -> list:
+        """(job name, why) for every scanned job this pass could not tie to a DAG."""
+        owner, ambiguous = self.task_owner, self._ambiguous()
+        out = []
+        for name in sorted(job_names):
+            key = normalise_job(name)
+            if owner.get(key):
+                continue
+            if key in ambiguous:
+                out.append((name, f"named by {len(ambiguous[key])} DAGs: "
+                                  f"{', '.join(sorted(ambiguous[key])[:3])}"))
+            elif not key or _NO_APP_NAME.search(name):
+                out.append((name, "Spark set no app name, so there is nothing to match"))
+            else:
+                out.append((name, "no DAG in the bundle defines a task with this name"))
+        return out
+
+    def _ambiguous(self) -> dict:
+        seen: dict = {}
+        for d in self.dags:
+            for t in d.spark_tasks:
+                seen.setdefault(normalise_job(t), set()).add(d.dag_id)
+        return {k: v for k, v in seen.items() if len(v) > 1}
 
     @property
     def task_owner(self) -> dict:
@@ -297,7 +323,8 @@ def collect_local(date: str, dag_folder: str | None = None) -> Coverage:
     return cov
 
 
-def render(cov: Coverage, profiled_dags: set | None = None) -> str:
+def render(cov: Coverage, profiled_dags: set | None = None,
+           scanned_jobs: set | None = None) -> str:
     """The coverage report: what was read, what was not, and why not."""
     profiled = profiled_dags or set()
     lines = [f"# Optimizer coverage — {cov.date}", ""]
@@ -309,6 +336,12 @@ def render(cov: Coverage, profiled_dags: set | None = None) -> str:
     if cov.warning:
         lines += [f"Paused DAGs could not be excluded ({cov.warning}), so every DAG in the "
                   "bundle is counted as active below.", ""]
+    unresolved = cov.unresolved(scanned_jobs) if scanned_jobs else []
+    if unresolved:
+        lines += [f"## {len(unresolved)} scanned jobs could not be tied to a DAG", "",
+                  "Their findings appear in the backlog without an Airflow link.", ""]
+        lines += [f"- `{n}` — {why}" for n, why in unresolved]
+        lines.append("")
     if cov.unparsed_files:
         lines += ["These DAG files failed to import, so the DAGs they define are missing from "
                   "every count below:", ""]
