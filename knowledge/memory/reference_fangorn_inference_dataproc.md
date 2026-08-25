@@ -37,6 +37,8 @@ wait_for_challenger_features → ───────────────�
 
 **DEFERRED by owner decision, 2026-08-24: Sean Yang moved the durable fix to hackathon week when Brian McAdams is back.** Recorded reasoning was "no clear pattern"; the 7-in-30-days base rate above was measured after that call and was not in front of him. The two fixes on the table: raise `N2_CPUS` in us-central1 from 5,000 to ~15,000 (a Google quota request, no code), and cap the QA cluster so it stops requesting the full prod shape. Tracked as **IMP-070**; Malachi set a reminder for **Tuesday 2026-08-25**, when Brian is back; Sean confirmed the two fixes. Do not let it lapse.
 
+**A stockout can last a WORKING DAY, not the "1-2h" the runbook promises (2026-08-25).** `code 14 UNAVAILABLE` on `CreateCluster` ran from **13:18 to 22:35 UTC — over nine hours** — across both `us-central1-a` and `-b`, and took `inference_pipeline` (failed 20:59) and then `challenger_inference_pipeline` (failed 22:41) in the same DAG run. The "self-recovers in ~1-2h, just re-run" guidance in §2's catalog row comes from INC-008 and is a floor, not a rule: on a long shortage, re-running burns a cluster-create cycle per try and changes nothing. Check how far back `status.code=14` goes before deciding to wait: `gcloud logging read 'protoPayload.methodName="...CreateCluster" AND protoPayload.status.code=14' --freshness=1d --format="value(timestamp)"`.
+
 **The stockout half got a real fix on 2026-08-25, and it is an INSTANCE FLEXIBILITY POLICY, not a machine swap.** [targeting-infra-ml#94](https://github.com/SteelHouse/targeting-infra-ml/pull/94) (Sean Yang) replaces the fixed `machine_type_uri` on `worker_config` with:
 
 ```python
