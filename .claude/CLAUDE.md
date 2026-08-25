@@ -65,3 +65,5 @@ Mounted at `~/Library/CloudStorage/GoogleDrive-malachi@mountain.com/My Drive/`. 
 ## Git
 
 Remote `git@github.com:mdunn-mntn/malachi-workspace.git`, root `/Users/malachi/Developer/work/mntn/workspace/`. Commit and push after every meaningful change, no batching. No `Co-Authored-By` lines.
+
+**Shipping a PR (any repo)? Run `/pr_gauntlet` first** — adversarial review loop until two fresh reviewers confirm nothing; `pr_gauntlet_reminder.sh` nags any un-gauntleted `gh pr create` (procedure lives in the skill).

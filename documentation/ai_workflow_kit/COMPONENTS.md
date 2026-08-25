@@ -4,12 +4,14 @@
 Every hook, script, skill, and agent, read straight from the files. This is the drift-proof
 source of truth for the component counts (regenerate with `.claude/scripts/build_kit_manifest.sh`).
 
-## Hooks (11)
+## Hooks (13)
 
 | event | matcher | script | what it does | can block? |
 |-------|---------|--------|--------------|------------|
 | PreToolUse | Bash | `enforce_bq_wrapper.sh` | Bash — block a raw `bq … query` so every real query goes through .claude/scripts/bq_run.sh (cost + provenance logging + net-new-table detection) | yes (exit 2) |
 | PreToolUse | Bash | `comms_lint_precheck.sh` | when a Bash command is a Jira REST v2 write (comment or issue-create curl), lint the payload against the Terse Comms Standard BEFORE it posts | no |
+| PreToolUse | Bash | `pr_gauntlet_reminder.sh` | advisory backstop for the PR gauntlet: when a PR is about to be created and HEAD has no gauntlet pass marker, remind to run /pr_gauntlet first | no |
+| PreToolUse | mcp__github__create_pull_request | `pr_gauntlet_reminder.sh` | advisory backstop for the PR gauntlet: when a PR is about to be created and HEAD has no gauntlet pass marker, remind to run /pr_gauntlet first | no |
 | PostToolUse | Bash | `flag_net_new_tables.sh` | Bash — after a scripts/bq_run.sh call, flag any referenced table that has no catalog doc into knowledge/bq/_UNDOCUMENTED.queue (the… | no |
 | UserPromptSubmit | — | `memory_recall.py` | deterministic per-prompt memory recall | no |
 | UserPromptSubmit | — | `log_request.py` | UserPromptSubmit hook | no |
@@ -58,18 +60,19 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `verify.sh` | the AI Workflow Kit "doctor" |
 | `workflow_audit.sh` | deterministic signal aggregator for the weekly System-retro loop |
 
-## Skills (6)
+## Skills (7)
 
 | skill | description |
 |-------|-------------|
 | `/capture` | Sweep the current session for everything learned and route each fact to its correct home — the knowledge/*.md docs, the active ticket's summary.md… |
 | `/frame` | Frame a ticket BEFORE work starts — agree the single question it answers, why it matters, what "done" looks like, and how we'll answer it |
 | `/oncall` | Handle an on-call alert end-to-end AND enforce the write-back so the runbook gets smarter every time |
+| `/pr_gauntlet` | Run a PR, branch, or diff through the adversarial review gauntlet before it ships: two blind adversarial reviewers (Skeptic + Stylist) per round, a… |
 | `/present` | Build any deck, chart set, or *_presentation.md to the MNTN standard — resolving persuasion-vs-plain-facts by audience, applying the playbook and… |
 | `/transcribe` | Transcribe the newest unprocessed Zoom recording (or a named one) and file it correctly |
 | `/workflow-audit` | The System-retro loop — the workflow reviews itself |
 
-## Agents (8)
+## Agents (11)
 
 | agent | description |
 |-------|-------------|
@@ -79,6 +82,9 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `fixer` | Dispatch after both adversarial reviews to apply their findings to the doc — verifying each against source, rejecting the wrong ones with evidence |
 | `implementer` | Dispatch to author ONE knowledge doc from ONE source unit during the ingestion pass (per-object doc or a _staging fragment) |
 | `perf-analyst` | Dispatch on cadence (not per query) to mine the perf log and fold cost findings into the table docs, playbook, and cookbook |
+| `pr-gauntlet-refuter` | Dispatch one per gauntlet finding to refute it — default-refute; a finding survives only if execution or source evidence forces it to |
+| `pr-gauntlet-skeptic` | Dispatch as a fresh context each gauntlet round to prove the PR wrong — correctness bugs, silent failures, environment assumptions, violated… |
+| `pr-gauntlet-stylist` | Dispatch as a fresh context each gauntlet round to prove the PR badly written — structure, naming, dead code, needless complexity, comment-rule and… |
 | `reviewer-adversarial` | Dispatch (twice, as two independent fresh contexts) to adversarially review one produced doc against only its source — find every discrepancy; never… |
 | `synthesizer` | Dispatch once at the end of an ingestion pass (barrier step) to merge all _staging fragments into the single-file master docs and clear staging |
 
