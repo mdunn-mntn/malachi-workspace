@@ -1,0 +1,368 @@
+[00:00] Oh, all good. All right. And so I joined the meeting and I'm not hearing anything. And I'm
+[00:03] just like, oh, well, the reason I'm not hearing anything is because no one is in the meeting.
+[00:09] No worries. No worries. Hey, so I just wanted to kind of start from the top real quick,
+[00:13] just to make sure we can clarify, I guess, basically what the issue is, and then ultimately
+[00:20] figure out what portion of this is going to be owned by our team to see what we can do to actually
+[00:28] help this uh this problem so i mean i'll leave it to you eric because you kind of are the i would
+[00:35] say the mastermind behind this part but then i mean we could figure out yeah go ahead you're good
+[00:41] sorry um so so i mean here's here's the bottom line right uh we have this membership consumer
+[00:47] uh membership consumer currently gets segment scores from two locations and intense scores
+[00:53] from one location.
+[00:55] And the two locations we get segment scores from are,
+[00:59] one, this GCS cloud dump that happens every four hours,
+[01:03] and two, these Kafka topic updates that happen whenever they happen.
+[01:11] I added on the membership consumer dashboard a check to see
+[01:17] what percentage of incoming messages for membership consumer
+[01:21] have empty segment scores.
+[01:25] And the answer is pretty consistently like 92%.
+[01:29] So the vast majority of segment score data
+[01:33] that we're writing is garbage.
+[01:38] And it gets rewritten every four hours.
+[01:41] I've also noticed that like when we get Kafka updates,
+[01:45] we then write the same data into segment scores
+[01:50] where we get the same segment score updates from the cache.
+[01:57] So there's sort of two asks, and they're kind of commingled
+[02:01] because I don't really – I have opinions,
+[02:05] but I don't know how your service works and the stuff that you guys work on,
+[02:08] so I don't know what's easy or hard.
+[02:11] What I would like to do, if I could have everything that I wanted,
+[02:17] is I would just switch segment scores to be streaming.
+[02:20] So whenever there's a change to a campaign that produces a change in segments, that change is just streamed to membership consumer.
+[02:31] And then membership consumer picks it up and puts it into the appropriate database.
+[02:40] We get rid of completely the four-hour job.
+[02:45] That to me is the ultimate goal.
+[02:49] That is the dream.
+[02:50] And maybe the four-hour job still lives somewhere because someone else is consuming segment data and, you know, they actually do need the empty segments every four hours.
+[03:00] Like, that's important for them.
+[03:02] But we can just listen entirely to Kafka or some other stream.
+[03:07] I don't really care.
+[03:08] And get the data written into Scylla.
+[03:11] It doesn't really matter to me.
+[03:13] um the more reasonable compromise and i think this is a compromise but because i don't know
+[03:20] who else consumes segments it might not be is what if instead of writing only um
+[03:29] instead of writing every segment every four hours we switch to writing just deltas of segments every
+[03:38] hours. So again, those, those like 97.2, you know, the 92 or 97% or whatever it is,
+[03:45] um, rights that are empty, mostly go away. Obviously if an IP address goes from having
+[03:51] segments to not having segments, that's still a meaningful update that we should write.
+[03:56] Um, but we should just stop writing the empty segment updates constantly. Um, so I, I guess
+[04:04] arguably as opposed to just saying deltas um the even simpler version which would probably do most
+[04:12] of the heavy lifting and look like it works to me is um i think you're raising your hand am i
+[04:17] am i saying that right yeah i just wanted to ask a question so you can yeah so the the kafka topic
+[04:25] uh the gcs path um the q name that the consumer reads segments from do you have the location of
+[04:33] those like could you provide that so i could just see i thought it was in the doc that i shared with
+[04:38] you maybe it wasn't but uh it might have been it's in argo cd i can certainly pull it yeah i just
+[04:44] wanted to take a look at that yeah um because the doc i wrote sort of had a whole section on how to
+[04:49] on how to do that but i can i can you want me to find it right now um it doesn't have to be right
+[04:55] now i just don't want to forget because i had a couple questions i just wanted to make sure that
+[04:59] i have accurate i just i'm aware of where all these things are i i think what that topic is
+[05:05] supposed to do is like it's not it's not every segment when it gets updated i think it's like
+[05:11] there's um there's like some retargeting stuff like we have campaigns like you've seen the initial
+[05:16] creatives then you get to see the retargeting creative i think that's mostly what it's used
+[05:21] for right now like when we get a notification you've seen the creative we um the oh retarget
+[05:27] notification comes in on that but for my money um i would just as soon
+[05:33] not do it that way i would just as soon what what counts as a duplicate and or sorry excuse me
+[05:43] a duplicate empty um so i mean i mean the short answer is like uh so so to be to be very clear
+[05:55] about this um it's not that every data dump gives us one entry for every ip um it's just that if if
+[06:04] the if the data dump at you know oh 400 am has ip 1.2.3.4 with no segments in it then at 8 a.m
+[06:15] will get ip 1.2.3.4 with no segments in it and at you know and in the um and at noon we'll get
+[06:24] 1.2.3.4 with no segments in it we'll get them sort of forever or at least until you stop sending us
+[06:30] that ip um so to me like that's that's what it would be is it's like same i you know effectively
+[06:40] It's just if you take the delta between the previous dump and the current dump, there's
+[06:45] no there are no changes on that address.
+[06:49] Mm-hmm.
+[06:51] Okay.
+[06:52] That makes sense.
+[06:58] My original thought was that some of this was because, like, oh, let me take a look
+[07:01] here.
+[07:02] So I think this is the right.
+[07:09] So just to make it clear, though, so you want to do where you don't want to do it where the producer skips empty and unchanged records, or you want to do the diff to Kafka pathway that you talked about?
+[07:24] I would like to do whatever is the easiest thing for you guys.
+[07:30] And to me, there are three options, right?
+[07:33] The easiest, I don't know what's easier or harder.
+[07:36] um the the the most elementary option to me is just don't write and don't duplicate empties like
+[07:44] so if you've written an empty uh an empty uh segment id at like four it's like four in the
+[07:50] morning stop sending that um or maybe send it like once a day or something um the second option
+[07:58] is to actually switch from like what we're doing right now to like building deltas between
+[08:03] the current segment rollout
+[08:06] and the last segment rollout
+[08:07] and only sending us those deltas.
+[08:11] And then
+[08:11] the third option, which to me is the dream,
+[08:14] is just don't touch the segment
+[08:15] pipeline at all and just
+[08:17] pass all the actual updates.
+[08:20] Do the delta work,
+[08:22] but stream it via
+[08:23] Kafka or some other streaming service
+[08:25] either directly into
+[08:27] Scylla or so we can pick it up and write it at
+[08:29] Scylla.
+[08:31] Okay.
+[08:33] And, you know, the document that I had my AI write and I sent to you, Malachi, and I looked at it and I said, huh, yeah, some of this looks reasonable, was based around the premise that it actually wouldn't be that hard to just write everything to Kafka.
+[08:51] But I don't know your systems very well.
+[08:55] And you're very, very, very welcome to tell me, like, actually, that would be insane.
+[09:03] Okay.
+[09:05] Well, today an empty list deletes the key.
+[09:09] So if we suppress the empties,
+[09:11] what do we do when we have a situation
+[09:16] where just became empty IP still gets its delete?
+[09:22] Excuse me, how does it still get deleted?
+[09:26] What do you mean?
+[09:27] We don't delete anything.
+[09:30] Because we can have intent scores and segment scores
+[09:33] for a single row in our Scylla table.
+[09:36] So, I mean, the issue here is,
+[09:39] maybe I'm misunderstanding something here,
+[09:41] or maybe there's a level in between you and us,
+[09:44] but when we don't get deletes,
+[09:47] we get the segment with no segments attached to it.
+[09:51] We don't get instructions to delete it.
+[09:54] We could, but again, then the issue is that we're still,
+[09:58] we have to process like 400k TPS
+[10:01] to manage the number of updates we get from you every four hours.
+[10:04] And if we want to add more IPs with actual data,
+[10:07] like, you know, we're going to have to increase that TPS number.
+[10:11] But it's like, you know, 4K per hour
+[10:14] if you simply remove all the duplicate empties.
+[10:17] So maybe I'm not understanding your question.
+[10:19] No, I just was curious how basically those IPs get removed at all.
+[10:23] But it sounds like they don't ever leave.
+[10:27] Not really.
+[10:28] I mean, there's a TTL on the table.
+[10:31] for like 30 days, but you update us every four hours.
+[10:36] So as long as you're updating us with an IP that's empty,
+[10:41] the TTL gets reset when we do the update.
+[10:45] Gotcha. Okay. So it's just a super, I mean, that makes sense.
+[10:48] That makes sense. It would be so low.
+[10:51] Yeah.
+[10:51] Does the consumer need any change at all if we filter at the producer
+[10:55] or is this like just our side?
+[10:57] If you were to switch purely to Kafka and you were able to feed segment scores to the Kafka topic, which is I think the extreme case here, even in that case, I don't think we would need to make any changes.
+[11:12] Well, okay.
+[11:13] in the extreme case where you did that i probably should implement a dead letter queue um
+[11:20] because there just there just isn't one because right now if we don't get a segment update like
+[11:27] if a segment update fails um i think a segment update has never actually failed while this has
+[11:32] been in production by the way but if one were to fail um and there were no fallback like that
+[11:37] would be bad so we would need a dead letter queue so i'd probably have to add dlq processing but
+[11:42] like again i don't know if that's even the approach you want to take
+[11:46] i don't really i don't know if i have the qualifications to make that decision
+[11:55] um i mean it really just depends um matt i don't know if you have any preference for it because
+[12:02] like at least when it comes to scoring i'm not really touching that part of scoring very often
+[12:07] so i don't actually have the um the know-how at least of that part of the that pipeline
+[12:14] i mean i will tell you that the sense that i've gotten from the business to me is
+[12:18] what the business wants to me is very um the vibe is chaotic i think um like it's extremely
+[12:26] important that we update i get told that it's extremely important that as soon as we get a
+[12:29] segment update we update segments immediately but we may not get a segment update immediately
+[12:34] because we have a job that runs every four hours.
+[12:39] But when you do get the update,
+[12:41] it's very important that you update immediately.
+[12:42] You have to, and it's like,
+[12:43] but the update is literal garbage.
+[12:46] No, but you have to update, okay?
+[12:50] Could we add some time to live on these or something
+[12:53] so that we could just let the empty segments go?
+[12:57] Absolutely not, okay?
+[12:59] um the the amount of energy which we seem to be spending to deal with these empty segments is
+[13:08] very confusing to me i think that's the best way i can say that
+[13:12] um from my perspective the right thing to do is to stream these because there does seem to
+[13:20] be a concern about like a real or a desire for a real-time component um and obviously streaming
+[13:28] makes more sense for that yeah i would imagine the reason which i think has a
+[13:38] very small effect is just that real-time conquesting possibly also any changes that
+[13:46] the advertiser makes to their own audience if they're if they're messing around with their
+[13:50] audience yes but my understanding is that if an advertiser makes like an audience change
+[13:55] that doesn't necessarily get propagated for another four hours like yes according to according to zach
+[14:02] um the kafka the the stuff which is currently written to kafka is a subset of the full dump
+[14:10] it is not everything so if it were if the subset of kafka were just every change
+[14:16] i guess i guess the other thing i would have to do if we depending on how you're going to do this
+[14:20] is I'd have to write, make a change to the solo table
+[14:22] to modify the TTLs
+[14:24] because I can imagine a situation
+[14:27] where a campaign goes unupdated for 30 days
+[14:29] and we wouldn't want it to suddenly delete from the cache.
+[14:36] But yeah, I mean, the system is set up to be very versatile.
+[14:40] It supports writing intense scores,
+[14:42] but not segment scores,
+[14:43] segment scores, but not intense scores,
+[14:45] intense scores via Kafka, but not...
+[14:47] but not GCS, vice versa.
+[14:54] So, yeah, no, the only thing from my perspective,
+[14:57] if you went pure Kafka, which is, again,
+[14:59] I would like you to go pure Kafka,
+[15:00] but I also would like you to not make yourself insane.
+[15:03] But if you did go pure Kafka,
+[15:05] the thing for me would be needing to implement a DLQ,
+[15:10] which is not the end of the world.
+[15:17] What is it right now? I mean, I know it's not pure Kafka, but we're writing them to a GCS bucket?
+[15:25] Yeah. They get written to a GCS bucket. I get PubSub notifications on the bucket.
+[15:30] And then I read the files in file by file and they get processed.
+[15:35] And so if we just did the processing and then just all the store, does it, sorry, I'm not super
+[15:41] familiar with Kafka, at least how it works because I haven't done it. But does that mean that we
+[15:45] could write directly to Kafka so there would be no GCS storage location at all uh yes asterisk
+[15:54] the asterisk is I believe other people use segment scores oh yeah that's part of why I'm like you
+[16:03] should do this you should just stream to us via Kafka because then that way if we can guarantee
+[16:08] that we get all of the segment scores via Kafka then you can change things for us and no one else
+[16:15] task to deal with it okay so i guess we just need to i don't know matt it sounds like we need to do
+[16:29] like a spike ticket to kind of look into how difficult it would be for us to
+[16:34] so you sorry you said that the most optimal strategy is just the kafka scream stream
+[16:41] correct yeah i mean i'm willing to scream at this point too kofka okay but then but then the
+[16:47] alternative though of that like what's the second best option i think the second best option is for
+[16:53] you to write deltas um between the updates okay um i because again there are consumers who use
+[17:02] this data it's possible that that's just like the the the simplest stupidest solution is to
+[17:09] build a little job that reads the gcs bucket and like when there are updates it finds like the old
+[17:16] files and the new files and it does a delta and it dumps them into a new place and then point up
+[17:21] and then we can point our service at the new place to get deltas okay how about this matt i'm going
+[17:29] to create a spike ticket to look into the feasibility of this stuff um eric where did you
+[17:36] post that document. I remember in the beginning I asked for some locations of some of this
+[17:46] stuff. But you said it's all in there. So I'd rather just ‑‑
+[17:49] Yeah, let me see if I can find it. Claude wrote it and it hopefully saved it to
+[17:55] its artifact storage. And I was like, oh, that's cool. I will paste it in this chat
+[18:05] if I can figure out how to use Zoom.
+[18:31] Was that in that group chat where all of us were in there?
+[18:34] yeah let me scroll down there i didn't know if there were two separate things going on because
+[18:39] i know we had like some thread where we were talking about it well there's so membership
+[18:42] consumer does two separate things um or it does two separate things it does segment scores and
+[18:48] it does intent scores and the intent score people seem to really like me and the segment score people
+[18:54] tell me to go fuck myself um and the issue is that like the intent scores are annoying
+[19:02] but much more manageable than the segment scores are because yes it does take several hours for
+[19:08] the intense score dumps to happen but they start at like midnight or a little after midnight pacific
+[19:14] time oh i know they wake me up if that breaks yeah yeah yeah so they happen really late in the
+[19:21] day so like from my money i get up at 8 a.m and they're done they take like four to six hours to
+[19:27] process which is longer than i'd like but they slow down when the segment score dumps happen
+[19:31] and there's just more data in there.
+[19:34] There are things about intent scores
+[19:35] that I would like to be different,
+[19:38] but to me, they're not the pressing concern.
+[19:41] Like the big pressing concern is the segment data.
+[19:46] So I sort of push off the intent score people.
+[19:51] And then when everyone thinks I'm talking about this,
+[19:53] like, oh, you mean the intent scores?
+[19:54] And I'm like, no, I don't.
+[19:55] I mean the segment scores.
+[19:57] The intent scores are annoying, but very manageable.
+[20:00] because they happen once a day we have plenty of headroom for that
+[20:03] okay sorry i'm trying to look here why can't i find i'm like looking everywhere in my notifications
+[20:13] i can't find uh i pasted it in the zoom chat okay that's great because i've just been sitting here
+[20:19] looking for it the whole time oh okay you got the artifact there oh are you using the company
+[20:26] artifact yeah oh is it did i do something wrong no no no no you didn't do anything wrong i don't
+[20:32] use the company uh ai i use my own so i can't open up certain artifacts um is there a way to
+[20:38] download that artifact and send it over slack or is that is there only one way to access artifacts
+[20:44] i have well there's a share button what does the share button do that doesn't help me there's uh
+[20:52] What is that button?
+[20:53] I don't know.
+[20:54] Duplicate this artifact.
+[20:58] So if I were to duplicate this,
+[21:00] is there a way to download it?
+[21:04] That's what I was wondering.
+[21:05] Yeah, I've had issues trying to do that with Claude as well.
+[21:08] Like get the art back into a better format.
+[21:12] Normally I just have it write me a .md file.
+[21:15] I'm just gonna open up a thread here.
+[21:18] That would be cool.
+[21:19] Cause-
+[21:20] So what are the, I'm a little confused.
+[21:21] What are the segment scores then if not,
+[21:24] they're not the intent scores, which is fine.
+[21:26] So they are.
+[21:28] I believe segment scores are like effectively every campaign targeting
+[21:32] string gets turned into segment scores.
+[21:36] And then the segment scores can be mapped to campaigns somehow.
+[21:39] Okay.
+[21:40] Is my vague understanding of it.
+[21:43] Yeah.
+[21:44] This, this side of the pipelines, I don't really understand the intent score
+[21:48] stuff. I understand.
+[21:49] Yeah.
+[21:50] I feel like on this side, we got to flip everything.
+[21:54] Yeah, my understanding is that the intent scores are like for advertisers
+[21:57] or like fallbacks or something.
+[21:59] I don't really understand.
+[22:01] I don't really understand why these two things are different.
+[22:03] Got it.
+[22:04] Okay, now I'm getting it.
+[22:05] Yeah, it's different names for different teams, I think.
+[22:12] Because, yeah, we have multiple scores.
+[22:14] what we would call the household score or the campaign intent score is probably the segment
+[22:22] scores and then there's the in the advertiser score which is i don't know it's a little tricky
+[22:29] yeah i mean i would i would just as soon change the naming so that everyone has the same naming
+[22:34] but yeah the thing i've learned from working in advertising for a long time is that you have to
+[22:38] like preface the score with like your team name so it's to be like the bitter intense score and
+[22:44] then you have to know that the bitter intense score is actually like the advertising segment
+[22:51] score or the or the advertising the advertising advertiser score um and then and then the you
+[22:58] know like you have to yeah it's it's very annoying the way that these things get overloaded
+[23:05] Yeah, and it's kind of annoying because we've encoded meaning into receiving an empty segment list for an IP.
+[23:20] It's like used, that is actually informative in some way, even though you don't need to be told it every four hours, but it is.
+[23:29] We need to be told it once.
+[23:30] Yes.
+[23:31] and then maybe periodically every few days
+[23:34] afterwards maybe
+[23:35] yeah okay
+[23:37] but that's about it
+[23:42] yeah these like 92%
+[23:51] empty records kind of aligns with
+[23:52] our scoring which is
+[23:54] about 8%
+[23:56] are high intent
+[23:58] or mid intent which are the ones that we
+[24:00] produce the scores for yeah yeah okay so just going off this because we only got five minutes
+[24:07] left um it sounds like i will create a spike ticket to look into the feasibility of either
+[24:13] direct kafka stream or stream i don't know i can't talk today and then um or the alternative
+[24:19] which is sending uh deltas is what you said um i just got the markdown that you sent as well
+[24:28] thank you yeah yeah i just downloaded that and sent it to you yep okay and then i'll take that
+[24:33] and then um i'm gonna hopefully try to get this on the next sprint uh to put it in there kind of
+[24:40] you i was really just asking how feasible it was because every time i've asked about this before
+[24:44] i've basically been told to go fuck myself well i mean we should look into it not by you to be clear
+[24:49] no we should definitely look into it because there's a lot of optimization stuff that we
+[24:54] should be doing um in fact uh totally different topic but um i have two airflow dags right now
+[25:02] that are almost done it's just been a pain in the butt to get all the uh yeah i mean i mean i mean
+[25:07] frankly um if i mean i want to move i want us to move towards streaming i know d plat wants to move
+[25:12] towards streaming but like frankly i feel like membership consumer only exists because rogus
+[25:17] wants to have someone to yell at um because ultimately like you could like like like this
+[25:23] is like it's like an ops thing um if there were a problem with the segment scores right um or rather
+[25:29] if there were a problem with the segment scores and we were just streaming everything like we
+[25:33] wouldn't have a good fallback option but realistically if you're running an airflow job
+[25:38] you can write directly to Scylla instead of writing to Google Cloud where I have to read it
+[25:44] and then write to Scylla and I understand that Rust is fast and we've definitely seen performance
+[25:49] improvements in our service over you know membership consumer oracle which was the old
+[25:54] one in like kotlin or something but it is hard for me to understand how the rust service could
+[26:01] possibly do this better and cheaper and you know with like with bells on than just the raw right
+[26:09] if you see what i mean from from the airflow job um really just sort of doesn't agree with me there
+[26:17] and when we've done tests
+[26:20] they haven't really worked well
+[26:21] but I do sort of feel that way
+[26:24] and it's hard to know why the tests haven't been
+[26:28] working well
+[26:29] so then Malachi
+[26:32] that's okay so Malachi
+[26:34] you try and get this into the next sprint
+[26:36] which is basically just that
+[26:38] seeing the feasibility is a spike
+[26:40] yeah yeah yeah not actually just look into it
+[26:42] and I'll make it
+[26:44] a spike ticket because I had a ticket for
+[26:46] this but um yeah yeah and and pretty much anything in this area of work which is like tech improvement
+[26:55] tech debt we also tell ourselves to go fuck ourselves eric so that's not only you yeah no
+[27:03] i mean tech debt just let it accumulate we have other things that we need to do yeah no i mean
+[27:08] again um you know i i'm not i'm from i grew up in new york so when i say go fuck myself it's not
+[27:14] you know yeah but it's still it's still just like like it's just funny to be in the end
+[27:19] school people like yes we would love to help you we would love to do streaming we would love to do
+[27:21] this but i'm like oh okay hold on and then the segments where people like no
+[27:25] i have i have a shiba inu so i'm very used to no but um
+[27:31] uh yeah um all right well thank you so much i really do appreciate you guys taking this seriously
+[27:39] like um and yeah no i mean let me know if like there's stuff i can do to help with this too like
+[27:45] frankly if you if you figure out that it's safe and you can give me something resembling a path
+[27:50] like i can probably await team this in my spare time but the issue from my perspective around
+[27:56] doing that is just um i don't know how your stuff works and i don't want to like cause a problem for
+[28:04] you because, oh, you needed to know that we actually have to use this file and not that
+[28:09] file or, oh yeah, you found the legacy Google cloud dump that isn't really the one that
+[28:14] you want.
+[28:15] You know, something like that.
+[28:17] Okay, cool.
+[28:18] Well, I will update you guys with that.
+[28:21] I'll throw a spike ticket and then yeah, we'll talk about this in the future.
+[28:24] Great.
+[28:24] Thank you so much.
+[28:25] Yep.
+[28:25] Thanks, Eric.
+[28:26] Thanks, Matt.
+[28:26] Bye.
+[28:27] See ya.
