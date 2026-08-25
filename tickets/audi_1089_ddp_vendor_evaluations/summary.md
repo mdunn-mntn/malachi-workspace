@@ -664,7 +664,11 @@ Maya Triman present the 8-step pipeline) and `meetings/audi_1089_04_ddp_creditin
   own pixel; those visits are overwhelmingly the household's own behavior (organic/direct), not
   vendor-manufactured — a speculative edge case. **Keep free logs = guid + augmentor together; no
   augmentor-only carve-out.** The $275K/$412K numbers stand.
-- **OWNERSHIP: nobody owns the credit logic.** BAE (Sherwin/Maya under Kristen) execute MM-launch instructions;
+- **OWNERSHIP: nobody owns the credit logic.** (RESOLVED 2026-08-24, Kristen Colley's handoff timeline via
+  #identity-crediting thread: steps 1-5 + any new DDP logic changes = Kale's org (AUDI+AP, Jaime Mutale runs
+  from the September payout), steps 6-8 audit/reporting = BAE. Person-level owner of Vendor List 1 rules
+  pending Mike Dolt's call on AUDI-1145; details in memory reference_graph_vendor_crediting.) Original 07-21
+  state: BAE (Sherwin/Maya under Kristen) execute MM-launch instructions;
   **Andy Everson owns vendor contracts/terms + the flat-fee $ (BAE has no visibility)**; a change needs Andy's
   blessing + contract check; Mike Doltz/Kristen can formalize review time.
 

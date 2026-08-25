@@ -48,3 +48,13 @@ Refined the 7d Phase-0 curve into a 30d, all-stage, household-grain delivered cu
 - **Run the household-randomized cap RCT** (design + prereg): **3 arms** — A control / B cap-8 / C cap-3 (arm H suppression = Phase-2); randomize on the TI-837-validated `MOD(ABS(CAST(CONCAT('0x',SUBSTR(TO_HEX(MD5(CONCAT(CAST(advertiser_id AS STRING),':',ip))),1,16)) AS INT64)),1000)` (arms 100-399/400-699/700-999, disjoint from the 0-99 holdout); **primary = mean total site visit-days/hh (a COUNT; guid_log deduped, attribution-independent), non-inferiority 5% relative via household bootstrap** + cost/hh superiority; N provisional (off the critical path); prospecting/retargeting separate strata. Needs a small `@SteelHouse/rtb` bidder feature first (arms not config-only).
 - Identify the bidder-team (`rtb-campaign-service`) actuation owner as RCT co-owner.
 - Phase 2: HHST intent-gate bandit reuses the randomized-holdout lift infra the RCT builds.
+
+## 6. Merge into AUDI-1216 (2026-08-24)
+
+Matt Brorby agreed (Slack 2026-08-24) to fold this ticket's RCT design into **AUDI-1216 (Frequency Cap
+Incrementality Experiment, Project AMOS partnership)**: "AMOS is basically a bandit-like approach to this,
+specifically with the frequency levers... makes sense to merge them." Malachi co-owns randomization
+(apply_flag assignment, the §5 MD5 hash scheme carries over) and measurement design (stable assignment
+window for visit-window closure) in 1216. This ticket now covers ONLY the bidder-side cap feature
+(`@SteelHouse/rtb`) if AMOS turns out not to provide it. Merge comments posted on both tickets 2026-08-24.
+This supersedes §5's "run the RCT" as a standalone plan; the design itself is unchanged and lives on in 1216.
