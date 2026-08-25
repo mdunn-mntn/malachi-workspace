@@ -218,8 +218,7 @@ def _dedup(entries: list[Entry]) -> list[Entry]:
     return list(best.values())
 
 
-# Unambiguous per-RUN decorations Spark bakes into spark.app.name. Left in, every run
-# mints a new ledger key and nothing is ever chronic.
+# Per-run decorations Spark bakes into spark.app.name; left in, nothing is ever chronic.
 _RUN_STAMP = re.compile(
     r"(?:"
     r"[-_]\d{4}-\d{2}-\d{2}(?:-\d+)*"    # -2026-08-20, -2026-08-20-1787259024
@@ -228,9 +227,7 @@ _RUN_STAMP = re.compile(
     r"|[-_]+$"
     r")+$"
 )
-# A trailing _<n> is AMBIGUOUS: a run index in `materialize_mntn_select_16`, a data-source
-# id in `ipdsc_ds_67`. Stripping it blindly merges ds_13/ds_14/ds_67 into one key, so it is
-# only removed when the stripped form is a DAG the coverage pass actually saw.
+# A trailing _<n> is a run index or a data-source id, so it is stripped only to find a match.
 _TRAILING_INDEX = re.compile(r"_\d{1,3}$")
 
 
@@ -317,8 +314,7 @@ def shipped(path: str = LEDGER) -> list[dict]:
         row["applied_date"] = e.get("applied_date") or row["applied_date"]
         if e.get("state") in ("resolved", "fix_not_working"):
             row["outcome"] = e["state"]
-    # Cost is per-DAG, and the question is what the DAG costs now vs before, so read any
-    # entry for that dag_id - not just this key, which by design stops firing when it works.
+    # Any entry for the dag_id: this key stops firing once the fix lands, by design.
     for e in read(path):
         dag = e.get("dag_id", "")
         if e.get("dcu_h") is None:
