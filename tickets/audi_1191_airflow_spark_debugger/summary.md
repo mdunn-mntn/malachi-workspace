@@ -503,8 +503,9 @@ scheduled run picks it up. That is fail-safe in the direction that matters: a co
 nothing and prod keeps running the previous template. airflow-ti merges trigger the Astro deploy,
 with the usual 25-40 minute bundle-adoption lag.
 
-**PRs.** airflow-ti#1215 (publish + masks), targeting-infra-ml#93 (the cleanup fix, applied to all
-four pipelines carrying the helper). Incident: on-call INC-025. Backlog: IMP-070 (the quota itself —
+**PRs, both MERGED 2026-08-24** after review by Ryan Kleck: airflow-ti#1215 (publish + masks, `26c65aca`)
+and targeting-infra-ml#93 (the cleanup fix, `bc60c8bd`, applied to all four pipelines carrying the
+helper). Incident: on-call INC-025. Backlog: IMP-070 (the quota itself —
 the challenger cluster alone requests 4,672 of the 5,000 regional `N2_CPUS`, so it only starts when
 every sibling is down), IMP-071 (closed by #93).
 
