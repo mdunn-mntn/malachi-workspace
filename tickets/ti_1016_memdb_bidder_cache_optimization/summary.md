@@ -1,7 +1,7 @@
 ---
 doc_type: ticket
 title: "AUDI-1016: Stop supplying duplicate empty-segment writes to MembershipDB (~92% of ~400k tps)"
-status: in_progress
+status: done
 date: 2026-08-25
 summary: "Upstream fix for duplicate empty-segment records: ~92% of segment writes into the membership consumer are empty dupes; spike on pure-Kafka streaming vs delta delivery"
 result: "June cache-shrink + conditional-write framings dead; 2026-08-25 direction: filter upstream. Eric ranks pure Kafka #1, deltas #2, suppress-dupes #3; AUDI-1016 becomes the feasibility spike"
@@ -434,11 +434,13 @@ Closed June items:
 - [x] ~~Confirm conditional-write feasibility with Eric~~ — REJECTED (Scylla LWT-class cost, ~$20k/mo cache to make performant); replaced by the upstream filter direction (§5b).
 - [ ] (Dormant) June threads: size the no-segment-score-suppression; Victor+Abbas "what we can filter out" cross-check; MM-OR-include footprint sanity check. Revisit only if the upstream fix stalls.
 
-Active (2026-08-25 scope — AUDI-1016 as feasibility spike):
-- [ ] **Convert AUDI-1016 in Jira to a [SPIKE]: feasibility of pure-Kafka streaming vs delta delivery** (decision in meeting 03); get it into next sprint.
-- [ ] **Spike content:** producer-side effort for each of the three options (§5b); where delta/change detection lives (ETL sidecar digest vs standalone GCS-diff job); TTL policy (settle 7-vs-30d, modify-vs-remove); empty re-send cadence; holdout-filtering divergence between the two consumer mappers; whether the SlateDB migration lands first and moots MCRocks-level design.
-- [ ] **Verify Eric's doc's testable claims via Atlas Code MCP** (auth pending — needs `/mcp` in an interactive session): `DEFAULT_TTL_SECS` (7d vs Eric's 30d), the dead-code emission filter, the epoch==0 silent-drop bug, `segment-updates-burnin-proto` contents, the ~8-consumer list of the GCS dump.
-- [ ] **Reconcile the volume numbers:** 6 sweeps × 3.0B (BQ single-sweep) = 18B ≠ doc's 10.60B/day; Eric's dashboard 92% denominator (GCS-only vs GCS+Kafka, 84.7% arithmetic — §4.5 Q2); the "4K per hour" unit.
-- [ ] Get from Eric: ArgoCD locations of the topic/subscription/bucket (he offered [04:38-04:44]); the dashboard panel name for the empty-share check.
+**TICKET CLOSED 2026-08-25 (Jira Done, resolution Done, completion comment 611443).** All follow-up work below is CANCELLED — both problems resolve via in-flight work owned elsewhere (Eric/AP/Zach: AP waterfall migration, MemDB dedup work, MNTN-ID migration). The one surviving thread lives OUTSIDE this ticket: memory `project_ap_score_feed_migration` (confirm with Alyson that AUDI knows the bidder will stop reading its score feed) and DPlat's informal incremental-intent-drop ask (no ticket until someone files it).
+
+Cancelled spike scope (kept for the record):
+- [x] ~~Convert AUDI-1016 to [SPIKE], into sprint~~ — done 2026-08-25, then closed same day.
+- ~~Spike content: producer effort per option, delta mechanism, TTL policy, cadence, holdout divergence, SlateDB timing~~ — moot; owning teams carry it.
+- ~~Verify remaining doc claims via Atlas Code MCP~~ — partially done via GitHub (TTL, RTC, sweep timestamp, dead-code filter structure); rest moot.
+- ~~Reconcile volume numbers (18B vs 10.6B; 92% denominator; "4K per hour" unit)~~ — moot for AUDI.
+- ~~Get ArgoCD locations + dashboard panel name from Eric~~ — moot.
 - [ ] ~~Loop in Zach~~ **Meeting 04, 2026-08-26 (Eric + Zach + Ryan Kleck + Wei):** settle what `segment-updates-burnin-proto` carries (RTC hypothesis), TMUL sweep ownership of the fix, and the three-option feasibility with the actual owners. Zach is change-averse here ("protective") — bring the measured numbers (92.9%, 402k/s peak, 57% BQ noise) and Eric's ranking, not a proposal.
 - [ ] **Meeting 04 agenda — final five questions (after self-serve verification pass, 2026-08-25):** (1) Zach: can the 4-hour refresh skip unchanged-empty IPs or send only changes, and what would it take; (2) Zach: what triggers a `segment-updates-burnin-proto` message, and could it carry every segment change so the bidder drops the GCS dump; (3) everyone: who actually needs the empty records in the dump; (4) ~~Eric: crate dedup in flight?~~ CLOSED by Eric's 12:10 Slack: read-before-write adds Scylla requests, only viable behind a ~$20k/mo Redis cache, rejected; residual = why the crate helpers exist; (5) Ryan/Wei: keep or drop the RTC DS13 publish (real-time conquest signal; not the empties source). Answered and OFF the list: TTL (7d per-write + 30d table default), RTC mechanism, delete semantics, why-empties-persist, dump consumer list (doc, confirm-only), read-before-write (Eric 12:10). Spike success metric per Eric: **net Scylla requests/sec**, not writes.
