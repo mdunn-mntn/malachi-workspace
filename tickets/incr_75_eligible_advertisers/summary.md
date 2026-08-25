@@ -346,3 +346,13 @@ Edgar asked what a blank Measured lift + "no data yet" Lift status means on the 
 **Conclusion:** an actively-prospecting Beeswax advertiser that never enters the ghost-bid source is a measurement-pipeline coverage gap, not an advertiser-side property. Open question for Matt Brorby: what determines which advertisers the ghost-bid pipeline covers (it held 1,498 of ~1,859 delivering advertisers over its window)?
 
 **Answer given to Edgar:** blank = never measured, not zero; the spend/power column is a separate forecast instrument (ThirdLove is powered for a 5% test at ~$35.3K/mo, budget $33.1K); there is no measured-lift evidence for or against ThirdLove, and entering the Ghost Bidding beta is itself what would produce the first measurement — provided the coverage gap is resolved first, otherwise the beta yields no readout either.
+
+### Double-check pass (user asked "are we sure?"), 2026-08-25 — the zero is real and ThirdLove is one of a CLASS
+
+1. **One account only.** `integrationprod.advertisers` has exactly one ThirdLove: 32127 (active, not deleted, not test). No id-confusion.
+2. **Positive control validates the probe.** The identical query with `advertiser_id IN (42097, 32127)` returns Gruns: 22,969,270 rows spanning 2026-06-22..08-24 — and nothing for ThirdLove. The probe shape is not the problem.
+3. **Zero by campaign ids too.** Keying `lift__ghost_bid_visits` on ThirdLove's own `campaign_id`/`campaign_group_id` set (130 campaigns, in case rows carry a wrong/NULL advertiser_id) also returns 0 rows.
+4. **Not inactivity, and on the covered path.** The delivering prospecting campaign is 573186 (CG 115424, "Beeswax Television Prospecting", objective_id 1 / funnel_level 1, partner 8) with a live household-score threshold of 8801 — scored-intent Beeswax prospecting, the exact profile the measurement reads — and it served 237,449 imps INSIDE the clean window 2026-06-23..07-07.
+5. **ThirdLove is not a one-off.** Of 1,250 advertisers with ≥10K Beeswax prospecting (obj 1 / funnel 1 / partner 8) imps in the clean window: 689 are eligible AND in the ghost table, but **142 are eligible and "no data yet"** — actively prospecting on the measured leg yet never entering the measurement. Largest absentees: 7 For All Mankind (474K imps), Sur La Table (396K), Shea Homes (391K), Seasons 52 (364K), Aceable (307K), ThirdLove (226K). Coverage is therefore a systematic rule (enrollment/config), not a per-advertiser accident — reframes the Matt Brorby question from "why is ThirdLove missing" to "what determines which advertisers the ghost-bid pipeline covers".
+
+Scratch: `scratchpad/prospecting_advertisers.csv` (session-local). Queries logged to `knowledge/bq_perf_log.jsonl` under INCR-75.
