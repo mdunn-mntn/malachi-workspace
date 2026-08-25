@@ -402,6 +402,95 @@ def test_the_run_is_matched_on_state_not_merely_on_containing_the_task() -> None
     assert note is None
 
 
+# Verbatim shape from fangorn_inference_pipeline_run/wait_for_challenger_features, 2026-08-08:
+# a 216 KB log of poke lines with no exception anywhere in it.
+_POKE_LOOP = (
+    "2026-08-08T17:27:28.901651Z [info] airflow.task.operators...GCSObjectExistenceSensor "
+    "Sensor checks existence of : mntn-data-archive-prod, "
+    "feature_store/feature_group_3_pivoted/guid_log_pivot_ip_vertical_id/dt=2026-08-07/_SUCCESS\n"
+    "2026-08-08T17:27:29.190161Z [info] task Rescheduling task, marking task as UP_FOR_RESCHEDULE\n"
+) * 3
+
+
+def test_a_poke_loop_names_what_the_sensor_waited_on() -> None:
+    """The log looks healthy and the task is failed; the answer is the target, not the log."""
+    p = parse_log(_POKE_LOOP)
+    assert p.poke_count == 3
+    assert p.reschedule_count == 3
+    assert p.poke_target.endswith("dt=2026-08-07/_SUCCESS")
+    assert p.poke_target.startswith("gs://mntn-data-archive-prod/")
+
+
+def test_a_failed_sensor_with_no_timeout_line_is_explained_not_left_blank() -> None:
+    """The AirflowSensorTimeout lands in a different try, so this try has nothing to classify."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "wait_for_x"},
+        "no_error_text": True,
+        "ti_state": "failed",
+        "poke_target": "gs://b/o/_SUCCESS",
+        "poke_count": 60,
+        "reschedule_count": 60,
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "gs://b/o/_SUCCESS" in out
+    assert "60 time(s)" in out
+    assert "different try" in out
+
+
+def test_an_empty_failed_log_without_pokes_still_reports_the_worker_death() -> None:
+    """A sensor verdict must not swallow the plain empty-log case."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "t"},
+        "no_error_text": True,
+        "ti_state": "failed",
+        "poke_target": None,
+        "poke_count": 0,
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "worker died" in out
+
+
+def test_a_process_killed_mid_poke_is_not_read_as_a_sensor_giving_up() -> None:
+    """audience_intent/wait_for_ipdsc_geo, 2026-08-19 06:39Z, inside Astronomer's DB maintenance.
+
+    22 pokes and ZERO reschedules: the sensor was polling in-process, so it never handed control
+    back. The log stopping there means the process was killed, not that the sensor timed out, and
+    the two need opposite actions.
+    """
+    diag = {
+        "identity": {"dag_id": "audience_intent", "task_id": "wait_for_ipdsc_geo"},
+        "no_error_text": True,
+        "ti_state": "failed",
+        "poke_target": "gs://mntn-data-archive-prod/ipdsc_geo/dt=2026-08-18/_SUCCESS",
+        "poke_count": 22,
+        "reschedule_count": 0,
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "killed mid-poke" in out
+    assert "Nothing here is the cause" in out
+    assert "control-plane" in out
+    assert "time(s) and never saw it" not in out, "must not read as a sensor timeout"
+
+
+def test_a_reschedule_sensor_is_not_read_as_a_killed_process() -> None:
+    """The mirror image: reschedules present means the sensor DID hand control back."""
+    diag = {
+        "identity": {"dag_id": "d", "task_id": "wait_for_x"},
+        "no_error_text": True,
+        "ti_state": "failed",
+        "poke_target": "gs://b/o/_SUCCESS",
+        "poke_count": 60,
+        "reschedule_count": 60,
+        "root_signature": {},
+    }
+    out = build_report(diag)
+    assert "different try" in out
+    assert "killed mid-poke" not in out
+
+
 if __name__ == "__main__":
     for name, fn in sorted(dict(globals()).items()):
         if name.startswith("test_") and callable(fn):

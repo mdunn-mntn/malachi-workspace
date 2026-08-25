@@ -67,7 +67,13 @@ def _link(diag: dict) -> str | None:
     return None
 
 
-def _no_output_note(ti_state: str | None, culprits: list[str] | None = None) -> str:
+def _no_output_note(
+    ti_state: str | None,
+    culprits: list[str] | None = None,
+    poke_target: str | None = None,
+    poke_count: int = 0,
+    rescheduled: bool = False,
+) -> str:
     """An empty log means different things for a failed task and an upstream_failed one."""
     if ti_state == "upstream_failed":
         if culprits:
@@ -75,6 +81,21 @@ def _no_output_note(ti_state: str | None, culprits: list[str] | None = None) -> 
             more = f" (+{len(culprits) - 3} more)" if len(culprits) > 3 else ""
             return f"The task never ran. The failure is {named}{more}; diagnose that."
         return "The task never ran; diagnose the upstream task that failed."
+    if ti_state == "failed" and poke_target and not rescheduled:
+        # No reschedule line means the sensor was polling in-process, so it did not hand control
+        # back: the log stops mid-poke because something killed the process (INC-025's class,
+        # Astronomer ticket #98048 was a database maintenance window).
+        return (
+            f"The process was killed mid-poke while watching {poke_target}; the log stops with no "
+            "exception and no reschedule. Nothing here is the cause. Check for a control-plane or "
+            "infra event at the last log timestamp before looking at the DAG."
+        )
+    if ti_state == "failed" and poke_target:
+        return (
+            f"A reschedule-mode sensor polled {poke_target} {poke_count} time(s) and never saw it. "
+            "This try holds no timeout line because the sensor gave up in a different try; the "
+            "question is whether the object ever landed, not why this log looks healthy."
+        )
     if ti_state == "failed":
         # INC-021: the worker died rather than the task raising, so Airflow has no exception.
         return (
@@ -105,7 +126,15 @@ def build_report(diag: dict) -> str:
     if link:
         lines.append(link)
     if not root and diag.get("no_error_text"):
-        lines.append(_no_output_note(diag.get("ti_state"), diag.get("upstream_failed_tasks")))
+        lines.append(
+            _no_output_note(
+                diag.get("ti_state"),
+                diag.get("upstream_failed_tasks"),
+                diag.get("poke_target"),
+                diag.get("poke_count", 0),
+                bool(diag.get("reschedule_count")),
+            )
+        )
     mask = detect_mask(_verdict_text(diag))
     if mask:
         lines.append(mask_note(mask))

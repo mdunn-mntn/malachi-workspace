@@ -39,6 +39,11 @@ _VERTEX_RUN_RE = re.compile(
 _EXTERNAL_POKE_RE = re.compile(
     r"Poking for tasks \[([^\]]*)\] in dag (\S+) on (\S+?)\s*\.\.\."
 )
+# A reschedule-mode sensor writes one of these per poke and NO exception. When it finally gives
+# up, the AirflowSensorTimeout lands in whichever try was last, so an earlier try's log is a
+# clean poke loop attached to a failed task.
+_GCS_POKE_RE = re.compile(r"Sensor checks existence of : (\S+?), (\S+)")
+_RESCHEDULE_RE = re.compile(r"marking task as UP_FOR_RESCHEDULE")
 
 
 @dataclass
@@ -64,6 +69,9 @@ class ParsedFailure:
     airflow_signature: dict | None = None  # signature of the Airflow-task-level failure
     has_error_text: bool = True  # False = the task never ran / emitted no diagnostic output
     ti_state: str | None = None  # terminal state from the filename: failed | upstream_failed | ...
+    poke_target: str | None = None  # what a sensor was waiting on, when the log is a poke loop
+    poke_count: int = 0
+    reschedule_count: int = 0
     log_date: str | None = None  # the acquisition day, from the containing directory
     notes: list = field(default_factory=list)
 
@@ -168,6 +176,12 @@ def parse_log(text: str) -> ParsedFailure:
 
     asig = classify(text)
     p.airflow_signature = asdict(asig) if asig else None
+    pokes = _GCS_POKE_RE.findall(text)
+    if pokes:
+        bucket, obj = pokes[-1]
+        p.poke_target = f"gs://{bucket}/{obj}"
+        p.poke_count = len(pokes)
+    p.reschedule_count = len(_RESCHEDULE_RE.findall(text))
     p.has_error_text = has_error_text(text)
     return p
 
@@ -232,6 +246,9 @@ def diagnose(parsed: ParsedFailure) -> dict:
         "airflow_signature": parsed.airflow_signature,
         "no_error_text": not parsed.has_error_text,
         "ti_state": parsed.ti_state,
+        "poke_target": parsed.poke_target,
+        "poke_count": parsed.poke_count,
+        "reschedule_count": parsed.reschedule_count,
         "upstream_failed_tasks": culprits,
         "upstream_lookup_note": culprit_note,
         "spark": spark,
