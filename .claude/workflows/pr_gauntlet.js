@@ -91,10 +91,20 @@ Claim: ${f.claim}
 Evidence given: ${f.evidence}`
 }
 
+async function roleAgent(agentType, task, opts) {
+  try {
+    return await agent(task, { ...opts, agentType })
+  } catch (e) {
+    if (!String(e).includes('not found')) throw e
+    const fallback = `Read ${a.repo}/.claude/agents/${agentType}.md and adopt it as your complete role instructions (this session's agent registry predates that file). Obey its tools line: Read and read-only Bash only — never edit, never commit.\n\n${task}`
+    return await agent(fallback, opts)
+  }
+}
+
 async function dispatchReviewer(role, agentType, round) {
-  const opts = { agentType, schema: FINDINGS_SCHEMA, phase: `Round ${round} review`, label: `${agentType} r${round}` }
-  let r = await agent(reviewTask(role), opts)
-  if (r === null) r = await agent(reviewTask(role), { ...opts, label: `${agentType} r${round} retry` })
+  const opts = { schema: FINDINGS_SCHEMA, phase: `Round ${round} review`, label: `${agentType} r${round}` }
+  let r = await roleAgent(agentType, reviewTask(role), opts)
+  if (r === null) r = await roleAgent(agentType, reviewTask(role), { ...opts, label: `${agentType} r${round} retry` })
   if (r === null) return null
   return r.findings.map(f => ({ ...f, class: role }))
 }
@@ -136,7 +146,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
 
   const verdicts = await parallel(toRefute.map(f => async () => {
     try {
-      const v = await agent(refuteTask(f), { agentType: 'pr-gauntlet-refuter', schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: 'high' })
+      const v = await roleAgent('pr-gauntlet-refuter', refuteTask(f), { schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: 'high' })
       return { f, v }
     } catch (e) {
       return { f, v: null, err: String(e) }
