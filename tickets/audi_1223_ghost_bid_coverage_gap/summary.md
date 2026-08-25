@@ -14,7 +14,7 @@ framing_state: draft
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1223
 **Status:** backlog (sprint 8303, 2026-08-24..09-07)
 **Date Started:** 2026-08-25
-**Assignee:** Malachi
+**Assignee:** Matt Brorby (reassigned 2026-08-25, fix is bidder/model-side)
 
 ---
 ## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
