@@ -85,3 +85,5 @@ What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a re
 Anything not resolved, handed off, or deferred.
 
 - 2026-08-24: Nick Scialli (eng) is implementing the UI MDE view and asked for the formula behind the gist calculator. Verified numerically: gist JS `mdeBinomial` matches `ti_884_mde_calculator.py` exactly (0.206719 both at nT=90k, nC=10k, p=0.02), but `spendRequired` returns 1.1111x high ($769,190 vs $692,271, holdout charged for impressions) and `computeMDE` displays MDE 1.0541x high, reproducing defect 3 above. Sent Nick the ti_884 Python as source of truth with a warning not to port the JS spend conversion. UI implementation may change who the AUDI-1213 refresh serves.
+
+**2026-08-25 scope shrink:** Nick Scialli confirmed the in-product MDE view covers delivering advertisers only, so this ticket is now the lapsed-cohort build alone (2,546 advertisers, 365d): spend-basis + arm-split fixes and the INCR-75 repoint stay, the delivering half and its Mode port are dropped (the UI owns them). Jira description rewritten to match.

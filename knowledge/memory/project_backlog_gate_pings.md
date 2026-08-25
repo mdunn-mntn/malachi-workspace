@@ -13,7 +13,7 @@ last_verified: 2026-08-24
 
 All 7 gate pings for the open backlog tickets were sent on Slack 2026-08-24 (per the backlog audit ranking). On any reply, act per the branch and update this file; when all are resolved, archive it.
 
-- AUDI-1213 → Nick Scialli: UI MDE covers lapsed advertisers? yes = close ticket, no = shrink scope to lapsed cohort.
+- AUDI-1213 → Nick Scialli: RESOLVED 2026-08-25, UI covers delivering only. Scope shrunk in Jira (description + comment): lapsed-cohort-only build (2,546 advertisers), spend-basis + arm-split fixes stay, no Mode port of the delivering half.
 - AUDI-1173 → Matt Brorby: RESOLVED 2026-08-24, Matt said yes ("AMOS is basically a bandit-like approach... makes sense to merge"). Merge comments posted on both tickets; Malachi co-owns randomization (apply_flag) + measurement design in AUDI-1216; 1173 keeps only the bidder-side cap feature if AMOS lacks it.
 - AUDI-802 → Zach Schoenberger: RESOLVED 2026-08-24. Zach never investigated the missing list but agreed to close; root cause of the ~30 all-time untraceable rows stays unknown. Closed Done 2026-08-24 with completion comment; Zach flags when there's bandwidth to finish; residual + reopen triggers logged as IMP-069 in improvements_backlog.md.
 - AUDI-1176 → Sean Yang: REPLIED 2026-08-24, status unknown to Sean; he thinks all experiments are held off for the MNTN-ID work and will raise it in the Kirsa meeting 2026-08-25. If that confirms the experiment is parked, the sequencing premise is gone: ship the output-only gate variant (keeps full scoring) per [[project_audi_1175_ds14_scoring_cost]] §3. Await tomorrow's answer.
