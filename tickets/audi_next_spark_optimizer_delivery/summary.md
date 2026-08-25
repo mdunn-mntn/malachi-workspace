@@ -56,35 +56,23 @@ finding so one bad DAG fills the page, and two of the three planned inputs are m
   raise CPU only if that is not enough.
 
 **Databricks, the missing engine.**
-- **The blocker is a missing metastore admin, not a Databricks-side enable.** Corrected
-  2026-08-24 by David Qiu (Databricks). `system.lakeflow` is Databricks-managed and enabled
-  automatically, so `PUT .../systemschemas/lakeflow` always rejects with
-  `lakeflow system schema can only be enabled by Databricks` and that error is a red herring.
-  The real one is `User does not have MANAGE on Schema 'system.lakeflow'`: granting on system
-  schemas needs **metastore admin**, which account admin does not confer. Accounts created
-  after Nov 2023 ship with no metastore admin assigned, which is why nobody at MNTN has MANAGE.
-- **Assigning it is console-only.** An account admin sets it in the account console under
-  Catalog > metastore `c5dc6763-eaae-4d6c-9ae2-7af6147595bb` > Metastore Admin > Edit. It must
-  be a **group**, and there is no API or Terraform path today. Then a member of that group runs
-  the grants.
-- **Three grants, not two.** The original ask omitted catalog-level access:
-  `GRANT USE CATALOG ON CATALOG system`, `GRANT USE SCHEMA ON SCHEMA system.lakeflow`, and
-  `GRANT SELECT ON SCHEMA system.lakeflow`, each to `07f36af7-614d-4d57-8143-2dbcd3cb58c2`.
-- **Enumeration is one table, no joins.** `system.lakeflow.job_run_timeline` filtered
-  `run_type = 'SUBMIT_RUN'` returns the ephemeral submissions, with `run_name` carrying whatever
-  `runs/submit` was given (the dbt identifier). **Do not join `system.lakeflow.jobs` for a job
-  name** — ephemeral runs have no row there, so the join silently drops 100% of them. Join
-  `job_task_run_timeline` on `job_run_id` only for per-task detail. System tables are batch
-  ingested: expect ~10 minutes of lag before a run appears.
-- Service principal `spark_optimizer` (`07f36af7-614d-4d57-8143-2dbcd3cb58c2`) exists and
-  `EXPLAIN COST` is validated against warehouse `14b311ac86ee2ca2`, so only run enumeration is
-  blocked.
-- **The query-path error does not tell you what is enabled.** Probed 2026-08-21 as
-  malachi@mountain.com: `system.query.history`, `system.access.audit`, `system.billing.usage`,
-  `system.compute.clusters` and `system.lakeflow.job_run_timeline` all return the identical
-  `INSUFFICIENT_PERMISSIONS ... does not have USE SCHEMA on Schema 'system.<x>'`. Missing grant
-  and not-enabled are indistinguishable from a query, and every one of them is gated behind the
-  same missing metastore admin.
+- **UNBLOCKED 2026-08-25.** `system.lakeflow.job_run_timeline` is readable by the
+  `spark_optimizer` SP and by `malachi@mountain.com`, both holding `SELECT` + `USE_SCHEMA`.
+  Verification query returns 1,505 `SUBMIT_RUN` rows over 7 days. The grant ladder and the
+  five-day blocker chain are recorded in memory `reference_databricks`; the short version is
+  that it needed a metastore admin GROUP (console only, account admin assigns it) for
+  `USE CATALOG ON CATALOG system`, and then an ACCOUNT admin for the schema-level grants,
+  which metastore admin does not confer. Alyson Lefkowitz did both.
+- **Three query gotchas, all confirmed on the first real read.** `run_duration_seconds` is 0
+  on every `SUBMIT_RUN` row, so derive it from `period_end_time - period_start_time`.
+  `run_name` carries a per-run uuid suffix, so strip
+  `-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$` before grouping; what
+  remains is the dbt identifier as `prod-<schema>-<model>`. `compute_ids` is empty, so this
+  table does NOT bridge a submission to its cluster.
+- **What is left on the Databricks half:** bridge
+  `artifacts/audi_1194_databricks_explain_cost.py` into the sweep, keyed on the stripped
+  `run_name`. `EXPLAIN COST` is already validated against warehouse `14b311ac86ee2ca2`. The
+  enumeration gap that blocked this for five days is closed.
 
 **Debt this inherits.**
 - `include/spark_optimizer/` ships multi-line rationale comments throughout, which its own
