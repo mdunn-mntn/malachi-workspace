@@ -3,7 +3,7 @@
 ## Shipped today
 - **airflow-ti #1222 merged and live in prod.** Verified on a real sweep: `profiled this sweep`
   went **2 → 12**, and only **7 of 217** scanned jobs cannot be tied to a DAG.
-- **airflow-ti #1223 open** (manual trigger without a date). Gauntlet PASS, 2 rounds.
+- **airflow-ti #1223 merged** (manual trigger without a date). Gauntlet PASS, 2 rounds; approved by Ryan Kleck, squashed 2026-08-26.
 - **Databricks grants complete.** `system.{lakeflow,query,billing,compute,access,storage}` for
   both `malachi@mountain.com` and the `spark_optimizer` SP, plus `SELECT` + `USE CATALOG` on
   `CATALOG prod` for the SP. All verified by reading rows, never by the grants table.
@@ -69,5 +69,4 @@ grants are done, so this is credential plumbing, not access.
 ## Still on Malachi
 - **Slack app** — blocks digest delivery entirely. `chat:write` only; Robin Fox reviews scopes.
 - **`/frame` the follow-up ticket** and file it in Jira.
-- **Review #1223.**
 - Paste the Databricks + identity handoff into the AUDI-1191 debugger chat.
