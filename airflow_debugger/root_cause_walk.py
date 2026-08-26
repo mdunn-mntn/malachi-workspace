@@ -24,14 +24,36 @@ from .signatures import classify
 MAX_HOPS = 4
 
 
-def _failed_try(api: object, base: str, token: str, ti: dict) -> dict:
-    """The try that actually failed. The newest try can be a green retry carrying no cause."""
-    try:
-        tries = api.expand_tries(base, token, ti) or [ti]
-    except Exception:
-        return ti
-    failed = [t for t in tries if t.get("state") == "failed"]
-    return (failed or tries)[-1]
+class Client:
+    """The four API calls the walk needs, so the bundle can swap its own REST client in."""
+
+    def __init__(self) -> None:
+        self.api = _api()
+        self.token = self.api.resolve_bearer()
+        self.base = _resolve_base()
+
+    def tis_in_run(self, dag_id: str, run_id: str) -> list:
+        """Every task instance in one run."""
+        return self.api.list_task_instances_in_run(self.base, self.token, dag_id, run_id) or []
+
+    def failed_try(self, ti: dict) -> dict:
+        """The try that actually failed. The newest can be a green retry carrying no cause."""
+        try:
+            tries = self.api.expand_tries(self.base, self.token, ti) or [ti]
+        except Exception:
+            return ti
+        failed = [t for t in tries if t.get("state") == "failed"]
+        return (failed or tries)[-1]
+
+    def log_text(self, ti: dict) -> str:
+        """One task instance's log, flattened."""
+        return self.api.fetch_log(self.base, self.token, ti) or ""
+
+    def find_run(
+        self, dag_id: str, task_id: str, on_date: str | None, ti_state: str | None
+    ) -> str | None:
+        """The run this task ran in, when only its day is known."""
+        return _run_holding(self.api, self.base, self.token, dag_id, task_id, on_date, ti_state)
 
 
 def _diagnose_text(text: str) -> tuple[dict | None, str | None]:
@@ -52,12 +74,15 @@ def _diagnose_text(text: str) -> tuple[dict | None, str | None]:
     return None, text.strip()[-400:] or None
 
 
+_CLIENT = Client  # the bundle swaps this for one built on its own REST client
+
+
 def _next_in_run(
-    api: object, base: str, token: str, dag_id: str, run_id: str, task_id: str
+    client: Client, dag_id: str, run_id: str, task_id: str
 ) -> tuple[list[dict], str | None]:
     """The failed task instances in this run, excluding the one we came from."""
     try:
-        tis = api.list_task_instances_in_run(base, token, dag_id, run_id) or []
+        tis = client.tis_in_run(dag_id, run_id)
     except Exception as e:
         return [], f"Airflow API unavailable ({e})"
     failed = [t for t in tis if t.get("state") == "failed" and t.get("task_id") != task_id]
@@ -96,14 +121,12 @@ def walk(diag: dict, on_date: str | None = None, max_hops: int = MAX_HOPS) -> di
         return None
 
     try:
-        api = _api()
-        token = api.resolve_bearer()
-        base = _resolve_base()
+        client = _CLIENT()
     except Exception as e:
         return {"hops": [], "root": None, "note": f"Airflow API unavailable ({e})"}
 
     if not run_id and not external:
-        run_id = _run_holding(api, base, token, dag_id, task_id, on_date, diag.get("ti_state"))
+        run_id = client.find_run(dag_id, task_id, on_date, diag.get("ti_state"))
         if not run_id:
             return {"hops": [], "root": None, "note": "could not identify the run this task ran in"}
 
@@ -118,7 +141,7 @@ def walk(diag: dict, on_date: str | None = None, max_hops: int = MAX_HOPS) -> di
             candidates = [{"dag_id": target[0], "dag_run_id": target[1], "task_id": target[2]}]
             note, target = None, None
         else:
-            candidates, note = _next_in_run(api, base, token, cur_dag, cur_run, cur_task)
+            candidates, note = _next_in_run(client, cur_dag, cur_run, cur_task)
         if not candidates:
             return {"hops": hops, "root": None, "note": note or "nothing further upstream"}
 
@@ -129,9 +152,9 @@ def walk(diag: dict, on_date: str | None = None, max_hops: int = MAX_HOPS) -> di
             return {"hops": hops, "root": None, "note": f"the chain loops back to {ti['task_id']}"}
         seen.add(key)
 
-        ti = _failed_try(api, base, token, ti)
+        ti = client.failed_try(ti)
         try:
-            text = api.fetch_log(base, token, ti) or ""
+            text = client.log_text(ti)
         except Exception as e:
             return {
                 "hops": hops,
