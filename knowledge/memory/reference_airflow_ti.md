@@ -259,3 +259,16 @@ rather than waiting for tomorrow. Budget for that before unpausing anything expe
 
 **`airflow_pull.sh` was silently broken for any unfiltered pull until 2026-08-25.** With `set -u`, `"${PY_ARGS[@]}"` on an EMPTY array is an unbound-variable error on this bash, so `--date <D>` alone died with `PY_ARGS[@]: unbound variable` while `--date <D> --dag <x>` worked. Every backfill anyone ever ran had happened to pass `--dag` or `--tag`, so the break went unnoticed and five days of corpus were never pulled. Fix is `${PY_ARGS[@]+"${PY_ARGS[@]}"}`. **Any bash array expansion under `set -u` needs that guard**, and the bug only shows on the code path nobody exercises.
 
+**A green `Deploy to Prod` does NOT mean your code is in prod, and the gap can be TWELVE HOURS (2026-08-26).** Two PRs merged at 03:42Z with both deploy workflows green. At 16:03Z a live run still loaded `/tmp/airflow/dag_bundles/astro/main/dags/2026-08-25T23:15:06.../` — the PREVIOUS day's bundle. A new bundle finally appeared stamped 15:55:02Z and was adopted around 16:18Z. Re-triggering the deploy by `workflow_dispatch` got no credit: the bundle predates the dispatch.
+
+**Two separate delays, do not conflate them.** (a) CREATION: merge to new bundle stamp — normally under a minute (#1217: 23:14:22 merge, 23:15:06 bundle), but 12 hours on 2026-08-26, cause unexplained. (b) ADOPTION: bundle stamp to the deployment serving it — 8 to 40 minutes observed.
+
+**The only check that settles it is the DagBag line in a real task log**, because `bundle_version` on the DAG record is the version it was last PARSED from: a PR touching only `include/` changes no DAG file, so no re-parse happens and the field stays stale even after the bundle refreshes. `GET /dags/<id>` and `/dagVersions` both mislead here.
+
+```bash
+# fire a run, then grep its log:
+#   "Filling up the DagBag from /tmp/airflow/dag_bundles/astro/main/dags/<BUNDLE>/..."
+```
+
+**Never report a merge as shipped on a green workflow alone.** Confirm the bundle path in a run that executed after it.
+
