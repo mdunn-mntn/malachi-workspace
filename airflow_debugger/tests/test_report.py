@@ -39,6 +39,7 @@ _DIAG = {
     ),
     "root_signature": {
         "key": "gcs_list_timeout",
+        "remedy": "Replace the input glob with literal partition paths, or set fs.gs.glob.flat.enable=false. A re-run clears the immediate failure.",
         "sig_class": "transient-infra/gcs-listing",
         "likely_cause": "Driver-side GCS listing of a huge prefix timed out during input discovery.",
         "programmatic_fix": "sometimes",
@@ -164,7 +165,7 @@ def test_low_score_fix_pr_not_claimed() -> None:
     ]
     out = build_troubleshooting(_DIAG, weak, repo_paths=_REPO)
     assert "Known fix" not in out
-    assert "Code fix possible" in out  # falls back to the signature's fix flag
+    assert "literal partition paths" in out  # the signature's own remedy
 
 
 def test_log_newlines_cannot_forge_package_lines() -> None:

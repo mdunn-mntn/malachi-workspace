@@ -3,11 +3,12 @@
 On-call learns one layout, so the eye lands in the same place every time. That constraint is the
 product — a post whose structure varies with the failure is a second thing to read, not a summary.
 
-Four sources fill Why, in strict precedence: the deterministic classifier, the condition the log
-structure states outright (the task never ran, the pod never started), the LLM, then an honest
-statement of where the chain stopped. Which one spoke is always labelled, because a model's guess
-and a matched signature are not the same evidence and must never look the same. The stated
-condition outranks the LLM for the same reason: it is read off the log, not inferred.
+Five sources fill Why, in strict precedence: the deterministic classifier, the root the upstream
+walk reached, the condition the log structure states outright (the task never ran, the pod never
+started), the LLM, then an honest statement of where the chain stopped. Which one spoke is always
+labelled, because a model's guess and a matched signature are not the same evidence and must never
+look the same. Both walked and stated outrank the LLM for that reason: they are read off logs and
+API state, not inferred.
 
 How is a POINTER, never a patch: file, line range, permalink. Auto-PR was ruled out and a diff
 pasted into a channel is the same act with extra steps.
@@ -18,12 +19,21 @@ from __future__ import annotations
 import os
 
 from .masks import detect as detect_mask
-from .report import _link, _one_line, code_links, stated_condition, stated_next_step
+from .report import (
+    _link,
+    _one_line,
+    code_links,
+    fix_line,
+    stated_condition,
+    stated_next_step,
+    walked_cause,
+)
 
 MAX_BLOCK = 2900  # Slack hard-caps a section block at 3000 chars
 _ASTRO_UI = (os.environ.get("AIRFLOW_API_BASE") or "").rstrip("/").removesuffix("/api/v2")
 
 WHY_DETERMINISTIC = "signature"
+WHY_WALKED = "walked"
 WHY_STATED = "stated"
 WHY_LLM = "llm"
 WHY_GAP = "gap"
@@ -41,6 +51,9 @@ def why(diag: dict, llm_cause: str | None = None) -> tuple[str, str]:
     root = diag.get("root_signature") or {}
     if root.get("likely_cause"):
         return _one_line(root["likely_cause"], 600), WHY_DETERMINISTIC
+    walked = walked_cause(diag)
+    if walked:
+        return _one_line(walked[0], 600), WHY_WALKED
     stated = stated_condition(diag)
     if stated:
         return _one_line(stated, 600), WHY_STATED
@@ -60,6 +73,8 @@ def why(diag: dict, llm_cause: str | None = None) -> tuple[str, str]:
 
 def how(diag: dict, source: str) -> str:
     """The next action. On a gap that is the next hop to read, never a guessed fix."""
+    if source == WHY_WALKED:
+        return walked_cause(diag)[1]
     if source == WHY_STATED:
         return stated_next_step(diag)
     if source == WHY_GAP:
@@ -74,9 +89,10 @@ def how(diag: dict, source: str) -> str:
             return f"Read {mask.next_hop}."
         return "Open the task log; this class is not yet in the taxonomy."
     root = diag.get("root_signature") or {}
-    if root.get("programmatic_fix") == "yes":
-        return "Code fix possible; verify against the linked lines before changing anything."
-    return "Not a code fix (compute, infra or upstream)."
+    remedy = (root.get("remedy") or "").strip()
+    if remedy and root.get("programmatic_fix") == "yes":
+        return f"{remedy} Verify against the linked lines before changing anything."
+    return remedy or fix_line(root) or "No remedy on record; diagnose from the log tail."
 
 
 def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = None) -> str:
@@ -87,7 +103,11 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
     root = diag.get("root_signature") or {}
     cause_text, source = why(diag, llm_cause)
 
-    klass = root.get("sig_class") or ("no-cause-in-log" if source == WHY_STATED else "unclassified")
+    walked_sig = ((diag.get("upstream_walk") or {}).get("root") or {}).get("signature") or {}
+    klass = root.get("sig_class") or {
+        WHY_WALKED: walked_sig.get("sig_class") or "upstream/root-cause-walked",
+        WHY_STATED: "no-cause-in-log",
+    }.get(source, "unclassified")
     what = f"*{who}* — {klass}"
 
     where = [f"`{who}`"]
@@ -102,6 +122,7 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
 
     label = {
         WHY_DETERMINISTIC: "matched signature",
+        WHY_WALKED: "walked upstream",
         WHY_STATED: "no cause in this log",
         WHY_LLM: "LLM, unverified",
         WHY_GAP: "no cause found",

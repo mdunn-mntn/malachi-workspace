@@ -87,6 +87,7 @@ def _asdict_match(m: Any) -> dict:
         "likely_cause": m.likely_cause,
         "programmatic_fix": m.programmatic_fix,
         "matched_on": m.matched_on,
+        "remedy": m.remedy,
     }
 
 

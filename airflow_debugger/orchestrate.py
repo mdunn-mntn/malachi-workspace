@@ -19,6 +19,14 @@ def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) 
     """Run the full chain on one failed-task log; return report + provenance."""
     parsed = parse_log_file(log_path)
     diag = diagnose(parsed)
+    try:
+        from .root_cause_walk import walk
+
+        walked = walk(diag, on_date=parsed.log_date)
+    except Exception:  # a walk failure degrades to the one-hop verdict, never kills the diagnosis
+        walked = None
+    if walked:
+        diag["upstream_walk"] = walked
     if profile_perf:  # perf-shaped failures only (IMP-032); never on other classes
         try:
             from .perf_profile import profile

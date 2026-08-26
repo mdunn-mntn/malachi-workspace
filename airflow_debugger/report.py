@@ -36,6 +36,11 @@ _FIX_ACTION = {
 }
 
 
+def fix_line(root: dict) -> str | None:
+    """What to change. The signature's own remedy when it has one, else the category."""
+    return (root.get("remedy") or "").strip() or _FIX_ACTION.get(root.get("programmatic_fix"))
+
+
 def _confidence(diag: dict) -> str:
     return "high" if diag.get("root_signature") else "low"
 
@@ -47,8 +52,12 @@ def _short_cause(diag: dict) -> str:
     m = re.search(r"\[([A-Z0-9_]{4,}(?:\.[A-Z0-9_]+)*)\]", err)
     if m and not diag.get("orchestration_only"):
         return m.group(1)
-    if not root and diag.get("no_error_text"):
-        return "no error text in log"
+    if not root:
+        walked = ((diag.get("upstream_walk") or {}).get("root") or {}).get("signature") or {}
+        if walked.get("sig_class"):
+            return f"{walked['sig_class']} (upstream)"
+        if diag.get("no_error_text"):
+            return "no error text in log"
     return root.get("sig_class") or "unclassified"
 
 
@@ -117,15 +126,19 @@ def build_report(diag: dict) -> str:
     if likely:
         lines.append(likely if likely.endswith(".") else likely + ".")
         cause_idx = len(lines) - 1
-    fix = _FIX_ACTION.get(root.get("programmatic_fix"))
+    fix = fix_line(root)
     if fix:
         lines.append(fix)
     link = _link(diag)
     if link:
         lines.append(link)
-    stated = stated_condition(diag)
-    if stated:
-        lines.append(stated)
+    walked = walked_cause(diag)
+    if walked:
+        lines += [walked[0], walked[1]]
+    else:
+        stated = stated_condition(diag)
+        if stated:
+            lines.append(stated)
     mask = detect_mask(_verdict_text(diag))
     if mask:
         lines.append(mask_note(mask))
@@ -151,6 +164,31 @@ def build_report(diag: dict) -> str:
     return report
 
 
+def walked_cause(diag: dict) -> tuple[str, str] | None:
+    """(why, how) from the upstream walk's root, or None when the walk reached nothing.
+
+    This outranks the stub verdict: "the task never ran, diagnose X" is a pointer, and the walk
+    already followed it. Reporting the pointer once the destination is known wastes the trip.
+    """
+    walked = diag.get("upstream_walk") or {}
+    root = walked.get("root")
+    if not root:
+        return None
+    hops = walked.get("hops") or []
+    who = f"{root.get('dag_id')}.{root.get('task_id')}"
+    trail = ""
+    if len(hops) > 1:
+        trail = " via " + " -> ".join(h["task_id"] for h in hops[:-1])
+    sig = root.get("signature") or {}
+    if sig.get("likely_cause"):
+        why = f"Root cause is {who}{trail}: {_one_line(sig['likely_cause'], 300)}"
+        how = fix_line(sig) or f"Fix {who}; this task never ran."
+    else:
+        why = f"Root cause is {who}{trail}, which raised: {_one_line(root.get('error') or '', 240)}"
+        how = f"Fix {who}. This task never ran, so nothing here needs changing."
+    return why, how
+
+
 def stated_condition(diag: dict) -> str | None:
     """The named condition behind a failure no signature matched, or None when there is not one.
 
@@ -171,10 +209,20 @@ def stated_condition(diag: dict) -> str | None:
     return _pod_startup_note(diag)
 
 
+def walk_note(diag: dict) -> str | None:
+    """Why the upstream walk did not reach a root. Silence would read as "there was nothing"."""
+    walked = diag.get("upstream_walk") or {}
+    if walked.get("root") or not walked.get("note"):
+        return None
+    return f"Could not follow the chain: {walked['note']}."
+
+
 def stated_next_step(diag: dict) -> str:
     """Where to go next for a stated condition. The cause is rarely in this task's own log."""
+    note = walk_note(diag)
     if diag.get("ti_state") == "upstream_failed":
-        return "Diagnose the upstream task named above; this one never started."
+        step = "Diagnose the upstream task named above; this one never started."
+        return f"{step} {note}" if note else step
     if diag.get("pod_deleted"):
         return "Check node capacity and image-pull time for that pod, not the task's code."
     if diag.get("poke_target"):
@@ -324,7 +372,7 @@ def build_troubleshooting(
     known = _known_fix(diag, matches)
     if known:
         lines.append(f"Known fix: {known['fix_pr']} ({known['inc']}, runbook §3)")
-    fix = _FIX_ACTION.get(root.get("programmatic_fix"))
+    fix = fix_line(root)
     if fix:
         lines.append(fix)
     if not known and not fix:

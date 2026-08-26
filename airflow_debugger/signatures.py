@@ -22,6 +22,7 @@ class Signature:
     sig_class: str
     likely_cause: str
     programmatic_fix: str  # "yes" | "sometimes" | "no"
+    remedy: str = ""  # the concrete change to make, not a category
     engine: str = "any"  # "any" | "dataproc" | "databricks"
 
 
@@ -33,6 +34,10 @@ SIGNATURES: list[Signature] = [
         "A prior (orphaned or retried) run already created the target table; the re-run collides. "
         "The overwrite/create is not idempotent under retry.",
         "sometimes",
+        remedy=(
+            "Make the write idempotent (CREATE OR REPLACE, or overwrite mode), or drop the "
+            "orphaned table before retrying. Check for a still-running earlier attempt first."
+        ),
     ),
     Signature(
         "concurrent_delta_write",
@@ -40,6 +45,10 @@ SIGNATURES: list[Signature] = [
         "concurrency",
         "Concurrent writes to the same Delta table/partition.",
         "sometimes",
+        remedy=(
+            "Serialise the two writers, or partition them so they touch different partitions. "
+            "Retrying alone re-races and fails the same way."
+        ),
     ),
     Signature(
         "executor_oom_yarn",
@@ -48,6 +57,11 @@ SIGNATURES: list[Signature] = [
         "executor-oom",
         "Executor exceeded memory/overhead (skew or under-provisioned memory).",
         "no",
+        remedy=(
+            "Raise executor memory or memoryOverhead, or cut the skew feeding the stage. Check "
+            "the largest partition's size first: a 10x skewed key is cheaper to salt than to "
+            "fund."
+        ),
     ),
     Signature(
         "driver_oom",
@@ -55,6 +69,10 @@ SIGNATURES: list[Signature] = [
         "driver-oom",
         "Driver OOM, often after collect()/toPandas() pulling too much to the driver.",
         "sometimes",
+        remedy=(
+            "Remove the collect()/toPandas() pulling the result to the driver, or raise driver "
+            "memory. Writing from the executors avoids the problem entirely."
+        ),
     ),
     Signature(
         "shuffle_oom",
@@ -62,6 +80,10 @@ SIGNATURES: list[Signature] = [
         "shuffle-oom",
         "Shuffle OOM: too few shuffle partitions or skew.",
         "sometimes",
+        remedy=(
+            "Raise spark.sql.shuffle.partitions, or salt the skewed join key. More executor "
+            "memory only postpones it."
+        ),
     ),
     Signature(
         "shuffle_fetch_failure",
@@ -69,6 +91,10 @@ SIGNATURES: list[Signature] = [
         "shuffle-fetch-failure",
         "Executor loss/downscale/bad node, or a >2GB shuffle block.",
         "no",
+        remedy=(
+            "Re-run once; a lost executor is the usual cause. Repeating at the same stage means a "
+            "shuffle block over 2GB, so raise the partition count."
+        ),
     ),
     Signature(
         "spot_preemption",
@@ -77,6 +103,10 @@ SIGNATURES: list[Signature] = [
         "infra/spot-preemption",
         "Spot/preemptible instance reclaimed mid-run.",
         "no",
+        remedy=(
+            "Re-run. If it recurs on the same DAG, move that job's workers off spot or give it a "
+            "non-preemptible primary pool."
+        ),
     ),
     Signature(
         "gcs_list_timeout",
@@ -92,6 +122,10 @@ SIGNATURES: list[Signature] = [
         "fs.gs.glob.flat.enable=false. The evidence lives in the staging-bucket driveroutput, "
         "not the Airflow log.",
         "sometimes",
+        remedy=(
+            "Replace the input glob with literal partition paths, or set "
+            "fs.gs.glob.flat.enable=false. A re-run clears the immediate failure."
+        ),
     ),
     Signature(
         "executor_lost",
@@ -101,6 +135,10 @@ SIGNATURES: list[Signature] = [
         "executor-lost",
         "Executor lost: OOM, spot preemption, or an unhealthy node (disk >90%).",
         "no",
+        remedy=(
+            "Read the executor's own log before acting: OOM, preemption and a full disk all land "
+            "here and each needs a different change."
+        ),
     ),
     Signature(
         "broadcast_timeout",
@@ -108,6 +146,10 @@ SIGNATURES: list[Signature] = [
         "broadcast-join",
         "Broadcast side too large or slow.",
         "yes",
+        remedy=(
+            "Raise spark.sql.broadcastTimeout, or set autoBroadcastJoinThreshold=-1 for this join "
+            "if the build side has outgrown broadcasting."
+        ),
     ),
     Signature(
         "schema_drift",
@@ -115,6 +157,10 @@ SIGNATURES: list[Signature] = [
         "schema-drift",
         "Upstream schema change.",
         "sometimes",
+        remedy=(
+            "Align the reader's schema with the producer's, or add an explicit cast. Ask the "
+            "producing team what changed before widening types."
+        ),
     ),
     Signature(
         "dbt_test_failure",
@@ -126,6 +172,10 @@ SIGNATURES: list[Signature] = [
         "violated an expectation - route to the model owner to fix the source data or adjust the "
         "test bound; not an auto-fixable code crash.",
         "no",
+        remedy=(
+            "Route to the model owner: either the source data is wrong or the test bound is. Do "
+            "not re-run, the test trips again on the same rows."
+        ),
     ),
     Signature(
         "invalid_output_path_config",
@@ -136,6 +186,10 @@ SIGNATURES: list[Signature] = [
         "reference (e.g. write_location) is passed instead of its call result write_location(), "
         "so the bucket becomes the method's repr. A real code fix in the model, not a re-run.",
         "yes",
+        remedy=(
+            "Fix the path expression in the model. A method reference passed without its call "
+            "parentheses is the usual cause; a re-run cannot help."
+        ),
     ),
     Signature(
         "path_not_found_late_data",
@@ -147,6 +201,10 @@ SIGNATURES: list[Signature] = [
         "Usually the upstream producer runs late or FAILED (timing race or a broken producer); "
         "verify the partition + _SUCCESS then re-run the consumer, else fix/re-run the producer.",
         "no",
+        remedy=(
+            "Check the partition and its _SUCCESS marker. Present, re-run this task. Absent, fix "
+            "or re-run the producer; do not widen the sensor to hide it."
+        ),
     ),
     Signature(
         "vertex_param_contract",
@@ -157,6 +215,10 @@ SIGNATURES: list[Signature] = [
         "(e.g. reference_date vs run_date), so PipelineJob rejects it before submission. "
         "Fix = rename the KFP pipeline param to match + recompile/redeploy the template.",
         "yes",
+        remedy=(
+            "Rename the KFP pipeline parameter to match what the operator sends, then recompile "
+            "and redeploy the template."
+        ),
     ),
     Signature(
         "vertex_pipeline_task_failed",
@@ -171,6 +233,10 @@ SIGNATURES: list[Signature] = [
         "that step's own logs (Vertex console run URL is logged just above the traceback). "
         "The step is usually a Dataproc/custom job whose real error lives one layer down.",
         "no",
+        remedy=(
+            "Open the named step's own logs at the logged job_id. The change belongs to whatever "
+            "that step runs, not to this DAG."
+        ),
     ),
     Signature(
         "model_alias_not_found",
@@ -184,6 +250,10 @@ SIGNATURES: list[Signature] = [
         "replaces, so this fires on every run until the owner re-applies the alias. "
         "Check the registry before re-running: a retry cannot recreate an alias.",
         "no",
+        remedy=(
+            "Re-apply the alias to the intended model version in the registry. A retry cannot "
+            "recreate an alias, so every run fails until someone does."
+        ),
     ),
     Signature(
         "analysis_exception",
@@ -191,6 +261,10 @@ SIGNATURES: list[Signature] = [
         "query/schema-error",
         "Invalid SQL, missing column/table.",
         "yes",
+        remedy=(
+            "Fix the query: the named table or column does not resolve. Check whether an upstream "
+            "rename landed before editing the SQL."
+        ),
     ),
     Signature(
         "pod_evicted_404",
@@ -200,6 +274,10 @@ SIGNATURES: list[Signature] = [
         "K8s pod evicted or lost mid-run (orchestration-only; the Spark/Databricks job may have "
         "succeeded and written data).",
         "no",
+        remedy=(
+            "Check whether the underlying job succeeded and wrote its output before re-running. "
+            "This is orchestration loss, not job failure."
+        ),
     ),
     Signature(
         "ttl_exceeded",
@@ -210,6 +288,10 @@ SIGNATURES: list[Signature] = [
         "ttl/wall-clock",
         "Job cancelled at its TTL / wall-clock limit (often a perf regression).",
         "sometimes",
+        remedy=(
+            "Compare the runtime against recent green runs. Creeping up, find the regression or "
+            "raise the TTL. Flat then stalled, the job is stuck and a longer TTL hides it."
+        ),
     ),
     Signature(
         "openai_file_quota",
@@ -219,6 +301,10 @@ SIGNATURES: list[Signature] = [
         "OpenAI project hit its 2.5TB file-storage quota, so the batch-input upload is rejected "
         "(deterministic 400 - retries cannot fix it). Purge old OpenAI files / let expiry clear it.",
         "no",
+        remedy=(
+            "Delete old files in the OpenAI project, or set an expiry on batch inputs. The "
+            "rejection is deterministic, so retries cannot clear it."
+        ),
     ),
     Signature(
         "cluster_create_stockout",
@@ -230,6 +316,11 @@ SIGNATURES: list[Signature] = [
         "self-blocks the retry on quota), then re-run. Also hits Databricks-on-GCP cluster "
         "launches, so engine is 'any'.",
         "no",
+        remedy=(
+            "Delete the lingering ERROR cluster first (it holds quota and blocks the retry), then "
+            "re-run in 1-2h. Recurring in one zone means pinning another zone or widening the "
+            "machine family."
+        ),
     ),
     Signature(
         "quota_exhaustion",
@@ -241,6 +332,11 @@ SIGNATURES: list[Signature] = [
         "Raise quota / delete the lingering cluster / shrink the request. Also hits "
         "Databricks-on-GCP cluster launches, so engine is 'any'.",
         "no",
+        remedy=(
+            "Raise the quota named in the error, or shrink the request. Check first whether "
+            "another cluster is holding the headroom: a QA cluster taking the region's N2_CPUS "
+            "reads identically (INC-025, AUDI-1217)."
+        ),
     ),
     Signature(
         "sensor_timeout",
@@ -251,6 +347,10 @@ SIGNATURES: list[Signature] = [
         "(optional 3P partner skipped that day) or the upstream is still running; verify source "
         "presence before treating it as a real failure.",
         "no",
+        remedy=(
+            "Check whether the awaited object exists. Present, clear the sensor. Absent by design "
+            "(partner skipped the day), no-op it. Absent unexpectedly, chase the producer."
+        ),
     ),
     Signature(
         "external_task_failed",
@@ -265,6 +365,10 @@ SIGNATURES: list[Signature] = [
         "data', no-op the hour, do not backfill; failed/upstream_failed -> audit the upstream chain. "
         "Never clear-to-retry a skip - the awaited partition will not land.",
         "no",
+        remedy=(
+            "Resolve the external task's real state first. Skipped means no-op and do not "
+            "backfill; failed means fix that task, because this one is only the symptom."
+        ),
     ),
     Signature(
         "batch_id_attach_trap",
@@ -275,6 +379,10 @@ SIGNATURES: list[Signature] = [
         "is not a fresh fault. Check GCS for _SUCCESS before re-running; to genuinely re-run, "
         "clear the id-minting task WITH downstream so a new id is minted.",
         "yes",
+        remedy=(
+            "Clear the id-minting task WITH downstream so a new batch id is minted. Clearing this "
+            "task alone reattaches to the same failed batch."
+        ),
     ),
     Signature(
         "impersonation_unavailable",
@@ -286,6 +394,10 @@ SIGNATURES: list[Signature] = [
         "clean up. Confirm the log never reaches a batch state, then check whether the DAG "
         "self-heals or has retries before acting.",
         "no",
+        remedy=(
+            "Re-run once; the credential service returned 503 and nothing was submitted. If it "
+            "repeats, raise it with the IAM owners rather than the DAG owner."
+        ),
     ),
     Signature(
         "slack_notify_failed",
@@ -297,6 +409,10 @@ SIGNATURES: list[Signature] = [
         "channel id is wrong or renamed. Fix the channel id in the DAG config or invite the "
         "app to the channel.",
         "yes",
+        remedy=(
+            "Invite the app to the channel, or correct the channel id in the DAG config. The "
+            "task's own work may well have succeeded."
+        ),
     ),
     Signature(
         "task_execution_timeout",
@@ -306,6 +422,11 @@ SIGNATURES: list[Signature] = [
         "slow, so read the runtime trend before raising the timeout: a task that crept past "
         "the budget is a capacity problem, one that hangs is not.",
         "sometimes",
+        remedy=(
+            "Read the runtime trend before changing the budget. Creeping up is a capacity or "
+            "data-volume regression; flat then a cliff means it hung, and a longer timeout hides "
+            "that."
+        ),
     ),
     Signature(
         "dbt_model_runtime_error",
@@ -315,6 +436,10 @@ SIGNATURES: list[Signature] = [
         "the Python traceback printed under the Runtime Error line; dbt's own line numbers "
         "are templated and do not match the source file.",
         "sometimes",
+        remedy=(
+            "Read the Python traceback under the Runtime Error line and fix it in the model's "
+            "source. dbt's own line numbers are templated and point at the wrong place."
+        ),
     ),
     Signature(
         "dag_not_found_at_startup",
@@ -324,6 +449,10 @@ SIGNATURES: list[Signature] = [
         "any of its own code. Usually a deploy or DAG-bundle race: the scheduler queued the task "
         "against a bundle version the worker no longer has. Re-run once the bundle settles.",
         "no",
+        remedy=(
+            "Re-run once the bundle version settles. Repeating across a deploy means the bundle "
+            "did not propagate; check the deploy rather than editing the DAG."
+        ),
     ),
     Signature(
         "batch_id_missing",
@@ -333,6 +462,10 @@ SIGNATURES: list[Signature] = [
         "nothing, so no batch was ever submitted. The missing id IS the fault. Fix the producer "
         "of the id (usually a create_batch_id task whose XCom is empty), not the Spark job.",
         "yes",
+        remedy=(
+            "Fix the upstream task that returns the batch id, whose XCom came back empty. The "
+            "Spark job never ran, so there is nothing wrong with it."
+        ),
     ),
     Signature(
         "batch_cancelled",
@@ -342,6 +475,10 @@ SIGNATURES: list[Signature] = [
         "the Airflow task while the batch was still running, which cancels it and can record the "
         "next try as a green run with no output. Check the batch state history before re-running.",
         "no",
+        remedy=(
+            "Check the batch state history. A TTL cancel is a timeout; a human clear means re-run "
+            "and expect no output from the cancelled attempt."
+        ),
     ),
     Signature(
         "task_externally_terminated",
@@ -352,6 +489,10 @@ SIGNATURES: list[Signature] = [
         "DAG-run reset, or the scheduler adopting the instance. This try's log holds no cause: "
         "if the task really is broken, the reason is in an EARLIER try.",
         "no",
+        remedy=(
+            "Read the earlier try; this one holds no cause. If no earlier try failed, the kill "
+            "was a clear or a scheduler adoption and nothing is broken."
+        ),
     ),
     Signature(
         "db_credential_rejected",
@@ -364,6 +505,10 @@ SIGNATURES: list[Signature] = [
         "the password is wrong, rotated, or the secret the job reads is stale. Check when the "
         "secret last changed against the last green run before touching the job.",
         "no",
+        remedy=(
+            "Compare the secret's last rotation against the last green run, then repoint the job "
+            "at the current secret. Re-running with the same credential fails identically."
+        ),
     ),
     Signature(
         "auth_error",
@@ -372,6 +517,10 @@ SIGNATURES: list[Signature] = [
         "auth",
         "Expired token or missing IAM/UC grant.",
         "no",
+        remedy=(
+            "Read the principal and resource out of the error, then grant or refresh. An expired "
+            "token re-runs clean; a missing grant never will."
+        ),
     ),
     # LAST by design: fires only when nothing specific matched, i.e. the Airflow log is
     # pure wrapper and the cause lives one layer down.
@@ -386,6 +535,10 @@ SIGNATURES: list[Signature] = [
         "batch id is logged above) or the Kubernetes pod log. Do not read the wrapper text "
         "as the root cause.",
         "no",
+        remedy=(
+            "Pull the downstream job's own log (Dataproc driver output, or the pod log) and "
+            "diagnose there. Nothing in the Airflow log is the cause."
+        ),
     ),
 ]
 
@@ -399,6 +552,7 @@ class Match:
     likely_cause: str
     programmatic_fix: str
     matched_on: str
+    remedy: str = ""
 
 
 def classify(text: str, engine: str = "any") -> Match | None:
@@ -410,5 +564,12 @@ def classify(text: str, engine: str = "any") -> Match | None:
             continue
         m = re.search(s.pattern, text, re.IGNORECASE | re.DOTALL)
         if m:
-            return Match(s.key, s.sig_class, s.likely_cause, s.programmatic_fix, m.group(0)[:120])
+            return Match(
+                s.key,
+                s.sig_class,
+                s.likely_cause,
+                s.programmatic_fix,
+                m.group(0)[:120],
+                s.remedy,
+            )
     return None

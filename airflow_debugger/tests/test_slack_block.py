@@ -12,7 +12,10 @@ from airflow_debugger import slack_block
 _LABELS = ("*What*", "*Where*", "*Why*", "*How*")
 
 _QUOTA = {
-    "identity": {"dag_id": "fangorn_inference_pipeline_run", "task_id": "challenger_inference_pipeline"},
+    "identity": {
+        "dag_id": "fangorn_inference_pipeline_run",
+        "task_id": "challenger_inference_pipeline",
+    },
     "engine": "vertex",
     "vertex_run_id": "fangorn-challenger-inference-pipeline-20260824225530",
     "vertex_project": "mntn-targeting-prj-prod",
@@ -23,6 +26,7 @@ _QUOTA = {
         "sig_class": "infra/quota",
         "likely_cause": "The request is at/over a regional quota ceiling.",
         "programmatic_fix": "no",
+        "remedy": "Raise the quota named in the error, or shrink the request. Check first whether another cluster is holding the headroom: a QA cluster taking the region's N2_CPUS reads identically (INC-025, AUDI-1217).",
     },
 }
 
@@ -35,7 +39,11 @@ _MASKED = {
     "root_signature": {},
 }
 
-_UNKNOWN = {"identity": {"dag_id": "d", "task_id": "t"}, "root_error": "something odd", "root_signature": {}}
+_UNKNOWN = {
+    "identity": {"dag_id": "d", "task_id": "t"},
+    "root_error": "something odd",
+    "root_signature": {},
+}
 
 
 def _order(text: str) -> list[int]:
@@ -55,14 +63,16 @@ def test_a_matched_signature_is_labelled_as_evidence() -> None:
     out = slack_block.render(_QUOTA, repo_paths={})
     assert "(matched signature)" in out
     assert "regional quota ceiling" in out
-    assert "Not a code fix" in out
+    assert "Raise the quota named in the error" in out
 
 
 def test_an_llm_cause_is_labelled_unverified_and_never_outranks_a_signature() -> None:
     """A model's guess must never be presentable as a matched signature."""
     text, source = slack_block.why(_UNKNOWN, llm_cause="probably a bad credential")
     assert source == slack_block.WHY_LLM
-    assert "LLM, unverified" in slack_block.render(_UNKNOWN, llm_cause="probably a bad credential", repo_paths={})
+    assert "LLM, unverified" in slack_block.render(
+        _UNKNOWN, llm_cause="probably a bad credential", repo_paths={}
+    )
 
     text, source = slack_block.why(_QUOTA, llm_cause="probably a bad credential")
     assert source == slack_block.WHY_DETERMINISTIC

@@ -188,10 +188,10 @@ CASES = [
     (
         # Older incident capture (INC-002): same wrapper on real newlines.
         "vertex_code9_real_newlines",
-        "RuntimeError: Job failed with:\ncode: 9\nmessage: \" The DAG failed because some "
+        'RuntimeError: Job failed with:\ncode: 9\nmessage: " The DAG failed because some '
         "tasks failed. The failed tasks are: [create-dataproc-cluster].; Job (project_id = "
         "mntn-targeting-prj-prod, job_id = 951702149350293504) is failed due to the above "
-        "error.\"",
+        'error."',
         "vertex_pipeline_task_failed",
     ),
     (
@@ -206,7 +206,7 @@ CASES = [
         "impersonated_credentials_503",
         "'exception': ServiceUnavailable('Getting metadata from plugin failed with error: "
         "(\\'Unable to acquire impersonated credentials\\', \\'{\\\\n  \"error\": {\\\\n    "
-        "\"code\": 503,\\\\n    \"status\": \"UNAVAILABLE\"}}\\')')",
+        '"code": 503,\\\\n    "status": "UNAVAILABLE"}}\\\')\')',
         "impersonation_unavailable",
     ),
     (
@@ -229,7 +229,7 @@ CASES = [
         "'exception': AirflowException(\"Batch job mntn-select-2026-08-06-1786049114 failed "
         "with error: Google Cloud Dataproc Agent reports job failure. If logs are available, "
         "they can be found at:\\nhttps://console.cloud.google.com/dataproc/batches/us-central1"
-        "/mntn-select-2026\")",
+        '/mntn-select-2026")',
         "downstream_job_no_local_cause",
     ),
     (
@@ -406,6 +406,20 @@ def test_gcp_capacity_signatures_reachable_from_databricks() -> None:
         engine="databricks",
     )
     assert m is not None and m.key == "cluster_create_stockout"
+
+
+def test_every_signature_carries_a_remedy() -> None:
+    """A class name is not an answer. On-call needs the change to make, so a new signature
+    cannot ship without one."""
+    missing = [s.key for s in SIGNATURES if not (s.remedy or "").strip()]
+    assert not missing, f"signatures with no remedy: {missing}"
+
+
+def test_a_remedy_is_an_instruction_not_a_category() -> None:
+    """The old fix line said "not a code fix" and told nobody anything. Guard the regression."""
+    for s in SIGNATURES:
+        assert len(s.remedy) > 40, f"{s.key}: remedy too short to be actionable"
+        assert "not a code fix" not in s.remedy.lower(), f"{s.key}: remedy is a category"
 
 
 if __name__ == "__main__":

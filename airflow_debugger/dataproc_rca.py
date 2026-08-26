@@ -452,6 +452,8 @@ def analyze_batch(
                 "rarely fixes it.",
                 "sometimes",
                 f"CANCELLED at ttl {ev.ttl}",
+                "Profile the event log for spill, skew or uncached recompute and fix that. Raise "
+                "the TTL only once the runtime trend explains why the job needs longer.",
             )
         )
     else:

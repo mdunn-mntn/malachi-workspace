@@ -52,6 +52,23 @@ _SIG_CLASS = {
     "queued": ("external_task_target_unfinished", "sensor/target-not-started", "sometimes"),
     "success": ("external_task_window_mismatch", "sensor/window-mismatch", "yes"),
 }
+_REMEDY = {
+    "external_task_target_failed": (
+        "Fix the target task, then clear this sensor. Nothing about the sensor is wrong."
+    ),
+    "external_task_target_skipped": (
+        "Add the target's skip to the sensor's allowed states (skipped_states, or soft_fail) so a "
+        "by-design skip stops paging. Do not backfill: the awaited partition will not land."
+    ),
+    "external_task_target_unfinished": (
+        "Give the sensor a window that covers the target's real runtime, or move it later. The "
+        "target was still working when the sensor gave up."
+    ),
+    "external_task_window_mismatch": (
+        "Correct the sensor's execution_delta or logical-date mapping: the target succeeded and "
+        "the sensor looked at the wrong run."
+    ),
+}
 _LATE_SIG = (
     "external_task_target_unfinished",
     "sensor/target-unfinished-at-poke",
@@ -208,6 +225,7 @@ def analyze_external_task(
             likely_cause=f"{ev.error_text}. {cause}",
             programmatic_fix=fix,
             matched_on=f"Airflow API state of {dag_id}.{who}",
+            remedy=_REMEDY.get(key, ""),
         )
     )
     return ev

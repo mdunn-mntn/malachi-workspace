@@ -207,7 +207,7 @@ def test_report_orchestration_only_no_emdash() -> None:
 # Real truncation shape (2026-08-06 vertical_classification_api log): 301-char
 # dbt_test_failure cause + identity + fix line + full Databricks deep link > 500.
 def test_report_truncation_keeps_url_whole() -> None:
-    """Over-budget report shrinks the cause; the deep link and fix line survive whole."""
+    """Over-budget report shrinks the cause; the deep link and remedy survive whole."""
     diag = {
         "identity": {
             "dag_id": "vertical_classification_api",
@@ -222,12 +222,12 @@ def test_report_truncation_keeps_url_whole() -> None:
     link = "https://1262887251702944.4.gcp.databricks.com/jobs/794948123456789/runs/485768712345678"
     assert len(r) <= 500
     assert link in r  # whole URL, never cut mid-number
-    assert "Not a code fix" in r
+    assert "Route to the model owner" in r  # the remedy, not the fix category
     assert "…" in r  # the cause carries the truncation, not the link
 
 
 def test_report_long_cause_leaves_room_for_fix_line() -> None:
-    """A 599-char external_task_failed cause no longer swallows the fix-action line."""
+    """A 599-char external_task_failed cause no longer swallows the remedy line."""
     diag = {
         "identity": {"dag_id": "hashed_email_ds_26_signals", "task_id": "wait_fpa"},
         "engine": "unknown",
@@ -235,7 +235,7 @@ def test_report_long_cause_leaves_room_for_fix_line() -> None:
     }
     r = build_report(diag)
     assert len(r) <= 500
-    assert "Not a code fix" in r
+    assert "Resolve the external task's real state first" in r
     assert "…" in r
 
 
