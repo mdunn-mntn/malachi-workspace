@@ -598,6 +598,31 @@ looked like they answered "whose is this" and did not; the identity field did.
 ## 7. Data Documentation Updates
 Pending. Capture: the operator→engine map, the `MCP_*_BASE64` breadcrumb protocol, the Databricks-access resolution, and any Spark-signature taxonomy additions.
 
+## 7b. Full-corpus replay, 2026-08-26
+
+216 failed-state logs over 25 days pulled, collapsed to 67 distinct failures, every one replayed
+through the live chain. 47 matched a signature (139 logs); 20 returned a named condition and a next
+hop (77 logs); nothing crashed and nothing came back bare. Record:
+`outputs/audi_1191_every_failure_2026_08_26.md`, rebuildable with
+`artifacts/audi_1191_render_replay.py <replay.json> <out.md>` from a saved replay, no second live pass.
+
+Volume split: actionable 83 (38%), weather 56 (26%), no cause in the log 77 (36%). The conclusion
+from 2026-08-25 holds — most alert volume is capacity, which is the AUDI-1217 argument.
+
+**One real defect found by this replay, now fixed.** The five gap fixes from 2026-08-25 landed in
+`report.py` and never reached `slack_block.py`, so every one of the 20 low-confidence groups rendered
+a Slack post reading "no cause found / this class is not yet in the taxonomy" about failures the
+report had already resolved to a named upstream task. 77 of 216 logs, the largest group 39. Cause:
+two renderers reading the same diagnosis, only one of which was updated. `stated_condition()` and
+`stated_next_step()` now live in `report.py` and both renderers call them; Why precedence is
+signature > stated condition > LLM > gap, because a condition read off the log structure is evidence
+and a model's guess about it is not. Four regression tests in `test_slack_block.py`.
+
+**The prod bundle does not have this fix.** `include/airflow_debugger/slack_block.py` in airflow-ti
+is the pre-fix copy (merged as #1219). It is inert today — no `SLACK_BOT_TOKEN` in the deployment, so
+nothing posts — but the sync has to ship in the same PR as the token work or the first real post will
+carry the wrong verdict on a third of the volume.
+
 ## 8. Open Items / Follow-ups
 - **Adversarial multi-agent review of the whole implementation (2026-08-04, 6 dimensions + per-finding verify):** verdict was **fix-before-merge**; caught a real regression I introduced + missed. **FIXED (must-fix):** changing `get_config(...)` to default `env="prod"` + hardcode the eventLog dir meant the callers I didn't thread `env` into routed **non-prod** event logs to the **prod** bucket — `materialize_mntn_select.py:47`, `materialize_mntn_first_party_dag.py:45`, `test_dataproc_vault.py:32` (all import `get_config`/`get_env` from `ipdsc_emr_cluster`). Threaded `env=` to all three; pushed to PR #1169 + cherry-picked to the live `dev` branch (dev was already running the change, so it was actively at risk). **FIXED (mine):** weekly cron listing matched `.inprogress` (crawler discards them → wasted download budget + a misleading "0 jobs" report) → now `grep '\.zstd$'`; `eventlog.py` per-line JSON parse now tolerates a truncated final line (salvages crashed/`.inprogress` logs). **RESOLVED at merge (scope narrowed, 2026-08-04):** (a) the `ModelPysparkWorkflowOperator` (managed-cluster) eventLog commit (`a140807`) was **DROPPED** from PR #1169 → deferred to its own follow-up PR after a dev `data_set_iceberg` run proves the managed-cluster write path (covers `data_set_a`, `data_set_iceberg`, and the live scheduled `adv_score_live_cg_monitor`); (b) the ipdsc/tpa path was **reverted** and the **PHS is KEPT**, so `guid_geos_summary_to_integration` retains its history-server observability — the earlier "lost PHS" gap is moot. **BACKLOG (tool robustness):** `eventlog.py` 500MB guard defeated by the uncapped `zstd -dc` subprocess fallback (OOM on the largest/highest-value logs, swallowed as "SKIPPED ()"); v2 rolling-dir handling reads only the first chunk (latent). **CONFIRMED CLEAN:** batch-operator injection, both dev bug fixes, absent-block-updates handling, crawl isolation, Databricks omission (uses cluster_log_conf, defensible).
 - **Runtime eventLog-write test: DONE, PASSED (2026-08-04).** Deployed PR #1169 to dev (cherry-pick onto `dev` → auto-deploys) and ran `feature_store_hourly` → **the dev SA writes real event logs to `gs://mntn-data-archive-dev/spark-events`** (`app-*.zstd`, multi-MB, both hourly tasks, live). SA-write confirmed; eventLog enablement works end-to-end. **Two prod-breaking bugs caught in dev + fixed in the PR** (invisible to py_compile/CI): (1) Airflow 3 `Variable.get` kwarg is `default=` not `default_var=` (TypeError before submit → every Dataproc DAG fails); (2) Dataproc Serverless rejects `spark.eventLog.logBlockUpdates.enabled` (unsupported property → every batch rejected; and the cache/block-update surface is uncapturable on Dataproc Serverless). PR #1169 now has 4 commits and is correct/safe to merge. Note: CLI/`model_run.py` self-submit blocked by `actAs` on the dev SA (only the Astro runner has it); dev Airflow is the impersonation-free test path. Dev deploy = auto-pickup on `dev`-branch push (Astro bumps the bundle version); code root pinned by gitignored `dags/current_branch.json` else defaults to `dev`.

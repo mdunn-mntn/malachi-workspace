@@ -154,3 +154,11 @@ board uncluttered while making sure a good idea (a durable fix, a tooling gap, a
 - ENGINE-PROPOSE `c-2026-08-25-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: doc_debt] — AWAITING APPROVAL (rung above current auto tier)
 
 - ENGINE-PROPOSE `c-2026-08-25-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-26-001` (knowledge_edit/costly_query): query shape run 2x billing 5366.8 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-26-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-26-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- IMP-082 | debugger | Sync `include/airflow_debugger/` in airflow-ti with the workspace copy before the Slack token lands. The bundle carries the pre-fix `slack_block.py`, which posts "no cause found" on 36% of failure volume. | Status: idea | Ref: AUDI-1191 replay 2026-08-26
