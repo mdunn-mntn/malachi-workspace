@@ -110,6 +110,9 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
 
     run_id = ident.get("run_id")
     this_run = next((t for t in bad if t.get("dag_run_id") == run_id), None)
+    # A kill well under the declared limit means the limit changed after it, so it proves nothing.
+    if this_run and this_run["duration"] < 0.95 * budget:
+        return None
     third = len(ok) // 3
     trended = third >= 2
     recent = statistics.median(ok[:third]) if trended else ok[0]
