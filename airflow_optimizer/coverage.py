@@ -63,12 +63,8 @@ def _clean(part: str) -> str:
 def job_keys(name: str) -> list[str]:
     """Every comparable form of a Spark app name or an Airflow task id, best candidate first.
 
-    A Spark app is named `Populate <table>.<Class>` and the Airflow task is the TABLE, the
-    segment BEFORE the dot. But a task id can itself be dotted
-    (`feature_group_1_source.aug_log_ip_hourly`) and there the task is the segment AFTER it.
-    One segment cannot serve both sides, which is why keying on either alone tied 0 of 62
-    prod job names to a DAG. Both are offered and the caller takes the first candidate that
-    names exactly one DAG.
+    A Spark app name puts the job BEFORE the dot and an Airflow task id puts it AFTER, so
+    one segment cannot serve both and both are offered.
     """
     name = (name or "").strip().removeprefix("Populate ").strip()
     parts = [p for p in name.split(".") if p.strip()]
@@ -163,18 +159,6 @@ class Coverage:
                     seen.setdefault(k, set()).add(d.dag_id)
         self._owner_index = seen
         return seen
-
-    @property
-    def task_owner(self) -> dict:
-        """Normalised Spark task name -> the DAG that runs it.
-
-        A Spark app names the TABLE it populates, which is the task id, never the dag_id, so
-        matching a job against dag_ids alone matched 0 of 57 job names in prod. DAG ids are
-        indexed too, so a job that IS named for its DAG still resolves. `render` reads it to
-        credit a profiled job to the DAG that ran it; a name two DAGs both define is dropped
-        rather than guessed, so no DAG is reported dark on the strength of another's log.
-        """
-        return {k: next(iter(v)) for k, v in self._owners().items() if k and len(v) == 1}
 
     @property
     def unprofiled(self) -> list:

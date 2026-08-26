@@ -38,12 +38,7 @@ _RANK = {"high": 0, "medium": 1, "low": 2}
 
 
 def dag_link(name: str, base: str = AIRFLOW_UI, resolve: object = None) -> str:
-    """Slack link to the DAG page for a Spark job, plus the task name when they differ.
-
-    A Spark app is named for the TABLE it populates, not for its DAG, so linking the app
-    name unconditionally ships dead links. `resolve` maps the job to the DAG coverage saw;
-    without one, or when nothing resolves, the name is rendered unlinked.
-    """
+    """Slack link to the DAG `resolve` maps this job to, plus the job name when they differ."""
     dag = name if resolve is None else (resolve(name) or "")
     if not base or not dag:
         return f"`{name}`"

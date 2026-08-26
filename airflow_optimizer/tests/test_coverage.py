@@ -193,7 +193,7 @@ def test_collect_keys_on_paused_dags_too(monkeypatch: pytest.MonkeyPatch) -> Non
     assert [d.dag_id for d in cov.dags] == ["live"]
 
 
-def test_task_owner_resolves_a_job_name_to_the_dag_that_runs_it() -> None:
+def test_resolve_ties_a_job_name_to_the_dag_that_runs_it() -> None:
     """A Spark app names the table it populates, which is a task id, never a dag_id.
 
     Matching job names against dag_ids alone resolved 0 of 57 names in the 2026-08-25 prod
@@ -206,10 +206,9 @@ def test_task_owner_resolves_a_job_name_to_the_dag_that_runs_it() -> None:
                              spark_tasks=["feature_group_1_source.aug_log_ip_hourly"]),
         coverage.DagCoverage(dag_id="audience_intent", spark_tasks=["fangorn_score_monitor"]),
     ]
-    idx = cov.task_owner
-    assert idx["aug_log_ip_hourly"] == "feature_store_hourly"
-    assert idx["fangorn_score_monitor"] == "audience_intent"
-    assert idx["audience_intent"] == "audience_intent"
+    assert cov.resolve("aug_log_ip_hourly") == "feature_store_hourly"
+    assert cov.resolve("fangorn_score_monitor") == "audience_intent"
+    assert cov.resolve("audience_intent") == "audience_intent"
 
 
 def test_a_task_name_two_dags_share_is_dropped_not_guessed() -> None:
@@ -217,8 +216,8 @@ def test_a_task_name_two_dags_share_is_dropped_not_guessed() -> None:
     cov = coverage.Coverage(date="x", dag_ids_including_paused={"dag_a", "dag_b"})
     cov.dags = [coverage.DagCoverage(dag_id="dag_a", spark_tasks=["run"]),
                 coverage.DagCoverage(dag_id="dag_b", spark_tasks=["run"])]
-    assert "run" not in cov.task_owner
-    assert cov.task_owner["dag_a"] == "dag_a"
+    assert cov.resolve("run") == ""
+    assert cov.resolve("dag_a") == "dag_a"
 
 
 def test_job_keys_strips_only_what_it_can_justify() -> None:
@@ -262,7 +261,7 @@ def test_a_name_that_is_one_dags_task_and_another_dags_id_reads_as_ambiguous() -
         coverage.DagCoverage(dag_id="feature_store_hourly", spark_tasks=["grp.aug_log_ip_hourly"]),
         coverage.DagCoverage(dag_id="aug_log_ip_hourly", spark_tasks=["aug_log_ip_hourly"]),
     ]
-    assert "aug_log_ip_hourly" not in cov.task_owner
+    assert cov.resolve("aug_log_ip_hourly") == ""
     assert dict(cov.unresolved({"aug_log_ip_hourly"}))["aug_log_ip_hourly"].startswith(
         "named by 2 DAGs")
 
