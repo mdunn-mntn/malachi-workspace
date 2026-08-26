@@ -307,3 +307,26 @@ def test_a_first_sweep_without_coverage_writes_no_ledger_rows(
     assert out["ledger_entries"] == 0
     assert ledger.read(str(fleet / "out" / "l.jsonl")) == []
 
+
+
+def test_a_sweep_without_a_slack_credential_renders_but_does_not_post(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """The gate is the credential, so a local run cannot post by accident."""
+    from airflow_optimizer import notify
+
+    monkeypatch.delenv(notify.TOKEN_ENV, raising=False)
+    monkeypatch.delenv(notify.CHANNEL_ENV, raising=False)
+    assert not notify.enabled()
+    assert notify.deliver("a digest")["reason"].startswith("no ")
+
+
+def test_delivery_reports_the_slack_error_rather_than_raising(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A bot that was never invited returns channel_not_found; the sweep must survive it."""
+    from airflow_optimizer import notify
+
+    monkeypatch.setenv(notify.TOKEN_ENV, "x")
+    monkeypatch.setenv(notify.CHANNEL_ENV, "C123")
+    monkeypatch.setattr(notify, "_post",
+                        lambda m, p: {"ok": False, "error": "channel_not_found"})
+    assert notify.deliver("a digest") == {"sent": False, "error": "channel_not_found"}

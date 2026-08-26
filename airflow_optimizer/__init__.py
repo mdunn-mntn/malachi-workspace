@@ -24,6 +24,7 @@ __all__ = [
     "crawl",
     "databricks",
     "eventlog",
+    "notify",
     "optimizations",
     "optimize",
     "phs",

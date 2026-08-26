@@ -23,6 +23,7 @@ import subprocess
 from . import coverage as cov_mod
 from . import digest as digest_mod
 from . import ledger as ledger_mod
+from . import notify as notify_mod
 from .crawl import crawl, render_crawl
 
 OUTDIR = os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out")
@@ -169,13 +170,16 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         fh.write(digest_mod.render_plain(text))
 
     published += publish([digest_path], gcs_prefix)
+    delivery = notify_mod.deliver(text)
+    if delivery.get("error"):
+        print(f"[sweep] slack post failed: {delivery['error']}")
 
     return {
         "backlog": backlog, "digest": digest_path,
         "coverage": coverage_path, "databricks": dbx_path,
         "scanned": len(scored), "findings": findings, "high": high,
         "ledger_entries": len(entries), "slack": text, "published": published,
-        "complete": complete, "ledger_note": ledger_note,
+        "complete": complete, "ledger_note": ledger_note, "delivery": delivery,
     }
 
 
