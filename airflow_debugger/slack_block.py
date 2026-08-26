@@ -3,9 +3,11 @@
 On-call learns one layout, so the eye lands in the same place every time. That constraint is the
 product — a post whose structure varies with the failure is a second thing to read, not a summary.
 
-Three sources fill Why, in strict precedence: the deterministic classifier, then the LLM, then an
-honest statement of where the chain stopped. Which one spoke is always labelled, because a model's
-guess and a matched signature are not the same evidence and must never look the same.
+Four sources fill Why, in strict precedence: the deterministic classifier, the condition the log
+structure states outright (the task never ran, the pod never started), the LLM, then an honest
+statement of where the chain stopped. Which one spoke is always labelled, because a model's guess
+and a matched signature are not the same evidence and must never look the same. The stated
+condition outranks the LLM for the same reason: it is read off the log, not inferred.
 
 How is a POINTER, never a patch: file, line range, permalink. Auto-PR was ruled out and a diff
 pasted into a channel is the same act with extra steps.
@@ -16,12 +18,13 @@ from __future__ import annotations
 import os
 
 from .masks import detect as detect_mask
-from .report import _link, _one_line, code_links
+from .report import _link, _one_line, code_links, stated_condition, stated_next_step
 
 MAX_BLOCK = 2900  # Slack hard-caps a section block at 3000 chars
 _ASTRO_UI = (os.environ.get("AIRFLOW_API_BASE") or "").rstrip("/").removesuffix("/api/v2")
 
 WHY_DETERMINISTIC = "signature"
+WHY_STATED = "stated"
 WHY_LLM = "llm"
 WHY_GAP = "gap"
 
@@ -38,6 +41,9 @@ def why(diag: dict, llm_cause: str | None = None) -> tuple[str, str]:
     root = diag.get("root_signature") or {}
     if root.get("likely_cause"):
         return _one_line(root["likely_cause"], 600), WHY_DETERMINISTIC
+    stated = stated_condition(diag)
+    if stated:
+        return _one_line(stated, 600), WHY_STATED
     if llm_cause:
         return _one_line(llm_cause, 600), WHY_LLM
     mask = detect_mask(
@@ -54,6 +60,8 @@ def why(diag: dict, llm_cause: str | None = None) -> tuple[str, str]:
 
 def how(diag: dict, source: str) -> str:
     """The next action. On a gap that is the next hop to read, never a guessed fix."""
+    if source == WHY_STATED:
+        return stated_next_step(diag)
     if source == WHY_GAP:
         mask = detect_mask(
             " ".join(
@@ -79,7 +87,8 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
     root = diag.get("root_signature") or {}
     cause_text, source = why(diag, llm_cause)
 
-    what = f"*{who}* — {root.get('sig_class') or 'unclassified'}"
+    klass = root.get("sig_class") or ("no-cause-in-log" if source == WHY_STATED else "unclassified")
+    what = f"*{who}* — {klass}"
 
     where = [f"`{who}`"]
     run_url = _astro_run_url(dag_id, ident.get("run_id"))
@@ -93,6 +102,7 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
 
     label = {
         WHY_DETERMINISTIC: "matched signature",
+        WHY_STATED: "no cause in this log",
         WHY_LLM: "LLM, unverified",
         WHY_GAP: "no cause found",
     }[source]

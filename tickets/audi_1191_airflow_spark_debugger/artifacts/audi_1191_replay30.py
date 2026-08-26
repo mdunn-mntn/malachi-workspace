@@ -1,4 +1,8 @@
-"""Replay every distinct failure in the corpus through the full debugger chain."""
+"""Replay every distinct failure in the corpus through the full debugger chain.
+
+The diagnosis dict is kept alongside the rendered output so a renderer change can be checked
+without a second live pass over GCP.
+"""
 import glob
 import json
 import os
@@ -23,8 +27,7 @@ paths = sorted(glob.glob("on-call/airflow_logs/*/*.log"))
 paths = [p for p in paths if p.endswith(("__failed.log", "__upstream_failed.log"))]
 print(f"failed-state logs: {len(paths)}", flush=True)
 
-# Group offline first: the full chain hits live GCP, so it must run once per DISTINCT failure,
-# not once per log. Key = who failed + what it looked like.
+# Group offline first: the full chain hits live GCP, so run it once per DISTINCT failure.
 groups: dict[tuple, list[str]] = {}
 for p in paths:
     try:
@@ -48,8 +51,7 @@ print(f"distinct failures: {len(groups)}", flush=True)
 repo = _repo_paths()
 rows = []
 for i, (key, members) in enumerate(sorted(groups.items()), 1):
-    # Prefer a member that actually carries error text: picking the newest log silently selects an
-    # empty upstream_failed stub and reports the whole group as a gap it is not.
+    # Prefer a member carrying error text: the newest log is often an empty stub that hides the gap.
     def _texted(path: str) -> int:
         try:
             dd = diagnose(parse_log_file(path))
@@ -74,6 +76,7 @@ for i, (key, members) in enumerate(sorted(groups.items()), 1):
                 "confidence": res["confidence"],
                 "report": res["report"],
                 "slack": block,
+                "diagnosis": diag,
                 "similar": [m.get("inc") for m in res.get("similar_incidents", [])[:3]],
                 "elapsed": round(time.time() - t0, 1),
             }

@@ -82,9 +82,7 @@ def _no_output_note(
             return f"The task never ran. The failure is {named}{more}; diagnose that."
         return "The task never ran; diagnose the upstream task that failed."
     if ti_state == "failed" and poke_target and not rescheduled:
-        # No reschedule line means the sensor was polling in-process, so it did not hand control
-        # back: the log stops mid-poke because something killed the process (INC-025's class,
-        # Astronomer ticket #98048 was a database maintenance window).
+        # No reschedule line means the sensor never handed control back, so something killed it (INC-025).
         return (
             f"The process was killed mid-poke while watching {poke_target}; the log stops with no "
             "exception and no reschedule. Nothing here is the cause. Check for a control-plane or "
@@ -125,20 +123,9 @@ def build_report(diag: dict) -> str:
     link = _link(diag)
     if link:
         lines.append(link)
-    if not root and diag.get("no_error_text"):
-        lines.append(
-            _no_output_note(
-                diag.get("ti_state"),
-                diag.get("upstream_failed_tasks"),
-                diag.get("poke_target"),
-                diag.get("poke_count", 0),
-                bool(diag.get("reschedule_count")),
-            )
-        )
-    if not root and not diag.get("no_error_text"):
-        pod = _pod_startup_note(diag)
-        if pod:
-            lines.append(pod)
+    stated = stated_condition(diag)
+    if stated:
+        lines.append(stated)
     mask = detect_mask(_verdict_text(diag))
     if mask:
         lines.append(mask_note(mask))
@@ -162,6 +149,37 @@ def build_report(diag: dict) -> str:
     if len(report) > _MAX:
         report = report[: _MAX - 1].rstrip() + "…"
     return report
+
+
+def stated_condition(diag: dict) -> str | None:
+    """The named condition behind a failure no signature matched, or None when there is not one.
+
+    Both the report and the Slack post must stand behind the same sentence. Keeping the wording in
+    one place is what stops the channel saying "no cause found" about a failure the report has
+    already resolved to a named upstream task.
+    """
+    if diag.get("root_signature"):
+        return None
+    if diag.get("no_error_text"):
+        return _no_output_note(
+            diag.get("ti_state"),
+            diag.get("upstream_failed_tasks"),
+            diag.get("poke_target"),
+            diag.get("poke_count", 0),
+            bool(diag.get("reschedule_count")),
+        )
+    return _pod_startup_note(diag)
+
+
+def stated_next_step(diag: dict) -> str:
+    """Where to go next for a stated condition. The cause is rarely in this task's own log."""
+    if diag.get("ti_state") == "upstream_failed":
+        return "Diagnose the upstream task named above; this one never started."
+    if diag.get("pod_deleted"):
+        return "Check node capacity and image-pull time for that pod, not the task's code."
+    if diag.get("poke_target"):
+        return "Check whether the awaited object landed, and for a control-plane event at the last timestamp."
+    return "Check whether it already retried; the worker died before the task could raise."
 
 
 def _pod_startup_note(diag: dict) -> str | None:

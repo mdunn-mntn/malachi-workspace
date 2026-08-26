@@ -84,6 +84,53 @@ def test_an_unknown_failure_admits_it() -> None:
     assert "not yet in the taxonomy" in out
 
 
+_STUB = {
+    "identity": {"dag_id": "vertical_classification_api", "task_id": "response_tests"},
+    "ti_state": "upstream_failed",
+    "no_error_text": True,
+    "upstream_failed_tasks": ["ddp_vertical_classification_api"],
+}
+
+_POD = {
+    "identity": {"dag_id": "databricks_guid_geos", "task_id": "run_databricks_job"},
+    "ti_state": "failed",
+    "pod_deleted": True,
+    "pod_wait_seconds": 120,
+    "pod_name": "run-databricks-job-xrc0t925",
+}
+
+
+def test_a_stub_names_its_culprit_in_slack_not_just_in_the_report() -> None:
+    """The 39-log case. The report resolved the upstream task; the post said "no cause found"."""
+    out = slack_block.render(_STUB, repo_paths={})
+    assert "(no cause in this log)" in out
+    assert "ddp_vertical_classification_api" in out
+    assert "no cause found" not in out
+    assert "not yet in the taxonomy" not in out
+
+
+def test_a_pod_that_never_started_says_so_in_slack() -> None:
+    """An empty exception is a startup timeout, and the channel has to carry that, not a shrug."""
+    out = slack_block.render(_POD, repo_paths={})
+    assert "(no cause in this log)" in out
+    assert "run-databricks-job-xrc0t925" in out
+    assert "node capacity" in out
+
+
+def test_a_stated_condition_outranks_the_llm() -> None:
+    """A condition read off the log is evidence; a model's guess about it is not."""
+    text, source = slack_block.why(_STUB, llm_cause="probably a bad credential")
+    assert source == slack_block.WHY_STATED
+    assert "ddp_vertical_classification_api" in text
+
+
+def test_a_matched_signature_still_outranks_a_stated_condition() -> None:
+    """Precedence is not reordered by the new source."""
+    diag = dict(_QUOTA, ti_state="failed", no_error_text=True)
+    _, source = slack_block.why(diag)
+    assert source == slack_block.WHY_DETERMINISTIC
+
+
 def test_the_body_stays_inside_slack_s_block_limit() -> None:
     """Slack rejects a section block over 3000 chars, so truncate rather than fail to post."""
     big = dict(_QUOTA)
