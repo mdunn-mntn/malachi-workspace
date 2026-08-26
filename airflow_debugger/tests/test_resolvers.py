@@ -35,18 +35,41 @@ def test_a_timeout_that_crept_up_is_called_capacity_not_a_hang() -> None:
     """Green runs already near the budget mean the work grew into it."""
     client = _History(ok=[3300, 3200, 3250, 3100, 3000, 2900], bad=[3600])
     res = resolvers.resolve(_TIMEOUT_DIAG, "execution_timeout 3600 seconds", client)
-    assert "crept past the budget" in res.verdict
-    assert "capacity" in res.verdict
-    assert any("Raise execution_timeout" in s for s in res.solutions)
-    assert "green runs median" in res.evidence
+    assert "outgrew its time limit" in res.verdict
+    assert any("raise execution_timeout" in s for s in res.solutions)
+    assert any("holds for about" in s for s in res.solutions)
+    assert any("input row count" in s for s in res.solutions)
+    assert "successful runs took" in res.evidence
 
 
 def test_a_timeout_whose_green_runs_are_fast_is_called_a_hang() -> None:
     """The opposite branch, and the one where raising the timeout is the wrong move."""
     client = _History(ok=[600, 620, 590, 610, 580, 600], bad=[3600])
     res = resolvers.resolve(_TIMEOUT_DIAG, "execution_timeout 3600 seconds", client)
-    assert "It hung" in res.verdict
-    assert any("do not raise it first" in s for s in res.solutions)
+    assert "hung" in res.verdict
+    assert any("Do not raise the time limit" in s for s in res.solutions)
+    assert any("re-run it once" in s for s in res.solutions)
+
+
+def test_the_new_limit_says_how_long_it_holds() -> None:
+    """ "Raise it" without a horizon is the same paging again next month. The growth rate is
+    known, so the answer carries how many runs the new limit survives."""
+    client = _History(ok=[2050, 2040, 2020, 2000, 1980, 1950, 1930, 1920], bad=[2700])
+    res = resolvers.resolve(_TIMEOUT_DIAG, "execution_timeout 2700 seconds", client)
+    horizon = next(s for s in res.solutions if "holds for" in s)
+    assert "more runs" in horizon
+
+
+def test_no_internal_vocabulary_reaches_the_reader() -> None:
+    """A solution the reader has to decode is not a solution. Ban the shorthand outright."""
+    for client in (
+        _History(ok=[3300, 3200, 3250, 3100, 3000, 2900], bad=[3600]),
+        _History(ok=[600, 620, 590, 610, 580, 600], bad=[3600]),
+    ):
+        res = resolvers.resolve(_TIMEOUT_DIAG, "execution_timeout 3600 seconds", client)
+        blob = " ".join([res.verdict, res.evidence, *res.solutions]).lower()
+        for banned in ("green median", "green runs", "cut the work", "the budget"):
+            assert banned not in blob, f"{banned!r} leaked into the answer"
 
 
 def test_too_little_history_settles_nothing() -> None:

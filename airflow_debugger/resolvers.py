@@ -1,8 +1,8 @@
 """Settle the question the signature leaves open, instead of handing it to the reader.
 
 A signature says what class of failure this is. For most classes that still leaves a fork the
-on-call has to resolve by hand: a task killed at its timeout either crept past a budget it has
-been growing into, or hung; a missing partition either landed late or never landed. "Read the
+on-call has to resolve by hand: a task killed at its timeout either outgrew a limit it has been
+creeping toward, or hung; a missing partition either landed late or never landed. "Read the
 runtime trend" and "check whether the object exists" are the two halves of that work, and the
 debugger can do both. A verdict that ends in an instruction to go look is not a verdict.
 
@@ -76,7 +76,7 @@ def _timeout_budget(text: str) -> float | None:
 
 
 def _execution_timeout(diag: dict, text: str, client: object | None) -> Resolution | None:
-    """Crept past the budget, or hung? The run history answers it; the log alone does not."""
+    """Outgrew its limit, or hung? The run history answers it; the log alone does not."""
     if client is None:
         return None
     ident = diag.get("identity") or {}
@@ -100,35 +100,58 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
     growth = (recent - older) / older if older else 0.0
 
     ev = (
-        f"killed at {killed / 60:.0f}m against a {budget / 60:.0f}m budget; "
-        f"{len(ok)} green runs median {median / 60:.0f}m "
-        f"({older / 60:.0f}m -> {recent / 60:.0f}m, {growth:+.0%})"
+        f"killed at {killed / 60:.0f}m against a {budget / 60:.0f}m limit; the last "
+        f"{len(ok)} successful runs took {older / 60:.0f}m rising to {recent / 60:.0f}m "
+        f"({growth:+.0%})"
     )
     if median >= 0.6 * budget:
+        headroom = _runs_until_breach(recent, growth, budget)
+        when = (
+            f"about {headroom} more runs at the current growth rate"
+            if headroom
+            else "indefinitely, since runtime is not growing"
+        )
+        new_limit = max(budget * 1.5, recent * 1.5)
         return Resolution(
             verdict=(
-                "It crept past the budget. The green runs already sit close to the timeout, so "
-                "this is a capacity or data-volume problem, not a hang."
+                "The task outgrew its time limit. Successful runs already use most of the time "
+                "allowed, so it ran out of time doing real work rather than hanging."
             ),
             evidence=ev,
             solutions=[
-                f"Raise execution_timeout to about {budget * 1.5 / 60:.0f}m to stop the paging now.",
-                "Then cut the work: the green median is still growing, so the timeout will be hit again.",
-                "Check input volume for the same period; a step change there explains the growth.",
+                f"Now: raise execution_timeout from {budget / 60:.0f}m to {new_limit / 60:.0f}m. "
+                f"That holds for {when}.",
+                f"Then find out why it got slower: runtime rose {growth:+.0%} across these runs. "
+                "Compare the input row count or file count for the same period.",
+                "If the input did not grow, the task itself got slower: profile the longest stage "
+                "of a recent successful run against an older one.",
             ],
         )
     return Resolution(
         verdict=(
-            "It hung. The green runs finish well inside the budget, so the killed run was not "
+            "The task hung. Successful runs finish in about "
+            f"{median / 60:.0f}m against a {budget / 60:.0f}m limit, so the killed run was not "
             "doing more work, it stopped making progress."
         ),
         evidence=ev,
         solutions=[
-            "Find where it stalled: compare the last log line of the killed run against a green one.",
-            "A longer timeout hides this rather than fixing it; do not raise it first.",
-            "Check for a lock, an unresponsive dependency, or a retry loop at that point.",
+            "Now: re-run it once. A hang that does not reproduce was a stuck dependency.",
+            "Read the killed run's last log line and compare it with a successful run's line at "
+            "the same point; the gap is where it stopped.",
+            "Do not raise the time limit. It would only make the next hang take longer to page.",
         ],
     )
+
+
+def _runs_until_breach(current: float, growth: float, budget: float) -> int | None:
+    """How many more runs the new limit survives at the observed growth rate."""
+    if growth <= 0 or current <= 0:
+        return None
+    limit, runs, dur = budget * 1.5, 0, current
+    while dur < limit and runs < 200:
+        dur *= 1 + growth
+        runs += 1
+    return runs
 
 
 def _dbt_runtime(diag: dict, text: str, client: object | None) -> Resolution | None:
@@ -300,8 +323,7 @@ def resolve(diag: dict, log_text: str = "", client: object | None = None) -> Res
     fn = RESOLVERS.get(root.get("key") or "")
     if not fn:
         return None
-    # Serialise the whole engine bundle: the detail that settles a fork sits in a different key
-    # per engine, and missing it silently costs a verdict.
+    # Whole engine bundle: the detail that settles a fork sits in a different key per engine.
     text = "\n".join(
         str(x)
         for x in (
