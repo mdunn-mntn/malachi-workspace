@@ -54,8 +54,8 @@ def investigate(
         from .root_cause_walk import Client
 
         with open(log_path, encoding="utf-8", errors="replace") as f:
-            # The whole log, not the tail: the line that settles a fork can sit 400 KB from the end.
-            whole = f.read()[:_RESOLVER_MAX_CHARS]
+            # Keep the END: cutting from the front discards the exception the resolver needs.
+            whole = f.read()[-_RESOLVER_MAX_CHARS:]
         client = Client()
         res = resolve(diag, whole, client)
         if not res:
