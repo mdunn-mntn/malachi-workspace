@@ -81,7 +81,7 @@ def _strip_top_markers(local: str) -> list[str]:
 
 
 # A batch dir is a recursive copy of unknown size, so an uncapped fetch fills the worker disk.
-MAX_BATCHES = 60
+MAX_BATCHES = 150
 MAX_BYTES = 4 * 1024**3
 
 
@@ -96,7 +96,7 @@ def _dir_bytes(path: str) -> int:
 
 def fetch_logs(batches: list[dict], dest: str, bucket: str = PHS_TEMP_BUCKET,
                max_batches: int = MAX_BATCHES, max_bytes: int = MAX_BYTES) -> list[str]:
-    """Download each batch's event log; skip unreachable (403/absent) quietly. Returns paths.
+    """Download each batch's event log; skip an unreadable or absent one quietly. Returns paths.
 
     Bounded on both axes. Stopping early loses the tail of an already-ranked list, which costs
     coverage; not stopping risks filling the worker's disk, which costs correctness.
