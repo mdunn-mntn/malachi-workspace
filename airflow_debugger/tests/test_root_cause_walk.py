@@ -25,37 +25,35 @@ _TIMEOUT_LOG = "[2026-08-25T05:38:00Z] ERROR - [error] task Process timed out"
 
 
 class _Api:
-    """Minimal stand-in for the on-call puller: only what the walk actually calls."""
+    """A fake Client. Patching the seam keeps this file identical in the workspace and the bundle,
+    which hold two different REST clients behind the same four methods."""
 
     def __init__(self, tis: dict, logs: dict) -> None:
         self.tis, self.logs = tis, logs
         self.fetched: list[str] = []
 
-    def resolve_bearer(self, explicit: str | None = None) -> str:
-        return "tok"
-
-    def list_task_instances_in_run(self, base: str, token: str, dag_id: str, run_id: str) -> list:
+    def tis_in_run(self, dag_id: str, run_id: str) -> list:
+        """Every task instance in one run."""
         return self.tis.get((dag_id, run_id), [])
 
-    def expand_tries(self, base: str, token: str, ti: dict) -> list:
-        return [ti]
+    def failed_try(self, ti: dict) -> dict:
+        """The try that actually failed."""
+        return ti
 
-    def fetch_log(self, base: str, token: str, ti: dict) -> str:
+    def log_text(self, ti: dict) -> str:
+        """One task instance's log."""
         self.fetched.append(ti["task_id"])
         return self.logs.get(ti["task_id"], "")
 
-    def day_window(self, date_str: str) -> tuple:
-        return f"{date_str}T00:00:00Z", f"{date_str}T23:59:59Z"
-
-    def list_runs_for_day(self, base: str, token: str, dag_id: str, start: str, end: str) -> list:
-        return []
+    def find_run(
+        self, dag_id: str, task_id: str, on_date: str | None, ti_state: str | None
+    ) -> str | None:
+        """The run this task ran in, when only its day is known."""
+        return None
 
 
 def _run(api: _Api, diag: dict | None = None, **kw: object) -> dict:
-    with (
-        mock.patch.object(walker, "_api", lambda: api),
-        mock.patch.object(walker, "_resolve_base", lambda: "https://x/api/v2"),
-    ):
+    with mock.patch.object(walker, "_CLIENT", lambda: api):
         return walker.walk(diag or _STUB, **kw)
 
 
@@ -164,10 +162,10 @@ def test_an_api_failure_is_reported_not_raised() -> None:
     """A walk failure must never take the diagnosis that produced it down with it."""
 
     class _Dead(_Api):
-        def list_task_instances_in_run(self, *a: object, **k: object) -> list:
+        def tis_in_run(self, *a: object, **k: object) -> list:
             raise RuntimeError("HTTP 403")
 
-    out = _run(_Dead({}, {}))
+    out = _run(_Dead({("vertical_classification_api", _STUB["identity"]["run_id"]): []}, {}))
     assert out["root"] is None
     assert "403" in out["note"]
 
