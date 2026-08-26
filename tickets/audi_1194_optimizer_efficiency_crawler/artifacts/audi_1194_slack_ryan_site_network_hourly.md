@@ -1,3 +1,31 @@
+# site_network_hourly — the stage 9 ask is WITHDRAWN, 2026-08-26
+
+**Do not send the message below.** Measuring every run in the archive overturned it. Stage 9's
+fetch wait is a median **0.28%** of the run's executor-hours; the "57-90% of task time" the
+detector reports is a true ratio on a tiny denominator, because stage 9 does almost no compute.
+Raising `initialExecutors` would have targeted 0.3% of the job's cost, and cost more to do it.
+
+**What the cost actually is.** Across the 30 heaviest runs: the job holds a median **241
+executor-hours** to perform a median **27.5 hours of task work** — a 9x over-allocation, **2.5%
+slot utilization** (max 40.7%). Fleet-wide over 302 runs, `idle_reserved_executors` fires on 236
+and accounts for **18,334 of the job's 21,200 executor-hours (86%)**. That is the target.
+
+**What is still unproven.** The right `maxExecutors` needs a trustworthy peak-concurrency figure,
+and the event log makes that harder than it looks: task-start events whose end never lands (killed
+at stage end, speculative) inflate a naive running count 50x, and executor-removed events for
+executors added before the log window drive the executor count negative. Mean concurrency is
+solid (task-hours / wall span ≈ 34 tasks against 2,160 slots held); peak is not, and peak is what
+sizes the ceiling. Settle that before any PR changes the allocation.
+
+**Also corrected:** the earlier claim that stage 15 "reads the same map output and waits ~0%" was
+read as cold-vs-warm. It is neither. Stages 29/35 fetch **26x more blocks and 25x more bytes than
+stage 9 with 0% wait** — the difference is that they do real work, so fetch time is a small share
+of a large denominator. Map-side output spread is not the mechanism.
+
+Evidence: `audi_1194_stage_read_parallelism.py` in this folder. Raw numbers in `summary.md`.
+
+---
+
 # Slack DM draft, Ryan Kleck, re: site_network_hourly Stage 9
 
 Owner routing: `JobTeamConfig.TPA_EXPORT` -> `Team.TARGETING`, `#alerts-tpa-pipeline`.

@@ -265,6 +265,52 @@ One further name (`aug_log_ip_hourly` style collision) is claimed by two DAGs an
 dropped rather than sent to the wrong owner. Their findings still publish, without a DAG link.
 
 
+
+### The site_network_hourly recommendation was wrong, and measuring every run is what caught it
+
+Malachi is able to PR this himself, so the ask stopped being "get Ryan to run an experiment" and
+became "write the change". Settling the mechanism first is what saved it from being the wrong
+change. Tooling: `artifacts/audi_1194_stage_read_parallelism.py`.
+
+**The detector's headline finding is real as a ratio and negligible as a cost.**
+`shuffle_fetch_wait` divides `fetch_wait_ms` by `run_time_ms`, both sums of TASK time. Stage 9 of
+`site_network_hourly` does almost no compute, so its denominator is tiny and the ratio is huge.
+Measured on the 25 heaviest runs: stage 9's fetch wait is a median **0.28%** of the run's
+executor-hours (max 18.6%, and that outlier is one run). The reported "57-90% of task time" is
+true and misleading in the same breath.
+
+**The fact that "did not fit" was never cold-vs-warm.** In one run, stage 9 fetched 721,452 remote
+blocks / 1.3 GiB at 57% wait, while stages 29 and 35 fetched **18.6M blocks / 33.2 GiB at 0%
+wait** — same 444 live executors, same ~1.9 KiB per block. Twenty-six times the blocks and
+twenty-five times the bytes with none of the stall. Stages 29/35 simply do real work (9.2h and
+8.1h of task time vs 0.9h), so fetch time is a small share of a large denominator. Map-side output
+spread is NOT the mechanism, and neither is a first-cold/second-warm read.
+
+**Where the money actually is.** Across the 30 heaviest runs the job holds a median **241
+executor-hours** to perform a median **27.5 hours of task work**: a 9x over-allocation at **2.5%
+slot utilization** (max 40.7%). One profiled run held **540 executors for 371 executor-hours to
+run 28.9 hours of task time — 1.9%**. Fleet-wide, `idle_reserved_executors` fires on **236 of 302
+runs**, median 11% utilization, and accounts for **18,334 of the job's 21,200 executor-hours
+(86%)**. The recommendation was aimed at 0.3% while 86% sat in plain sight.
+
+**What is still unproven, and why no PR ships yet.** Sizing `maxExecutors` needs a trustworthy
+PEAK concurrency figure and the event log resists two naive measures. A running count over
+`TaskStart`/`TaskEnd` deltas reports 3,300 concurrent tasks against 1,290 slots (>200%) because a
+task whose end never lands — killed at stage end, or speculative — stays "running" forever;
+counting only tasks with both a launch and a finish time still overshoots because
+`SparkListenerExecutorRemoved` fires for executors added before the log window and drives the
+executor count negative. Mean concurrency is solid (task-hours / wall span ≈ **34 tasks** against
+2,160 slots held) but the mean does not size a ceiling. Settle peak before changing allocation.
+
+**Two things this changes beyond one job.**
+- The Ryan draft is marked WITHDRAWN at the top of
+  `artifacts/audi_1194_slack_ryan_site_network_hourly.md` rather than deleted, so the reasoning
+  that produced a wrong ask stays readable.
+- `shuffle_fetch_wait` needs an absolute-cost gate. A ratio on task time cannot rank against
+  `idle_reserved_executors`, which is denominated in executor-hours held. Ranking the fleet
+  backlog put a 0.3% finding above an 86% one on the same job. Logged as IMP-084.
+
+
 ## 5. Solution
 - **Cadence:** daily, full-day. `.claude/scripts/oncall_daily_optimizer.sh` (renamed from `oncall_weekly_optimizer.sh`), `CAP` 40 -> 200, launchd `com.mntn.daily-spark-optimizer` at 11:00 PT.
 - **Both log sources in one sweep:** the script now runs `phs.fetch_logs` into the same download root as the archive pull, so the archive fleet and the PHS-attached ipdsc/tpa batches rank in one backlog.
