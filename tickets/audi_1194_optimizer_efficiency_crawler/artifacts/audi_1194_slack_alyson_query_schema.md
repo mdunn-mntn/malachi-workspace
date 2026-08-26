@@ -12,8 +12,8 @@ Hey Alyson, can you run the same two grants you did for `system.lakeflow` on `sy
 ```
 GRANT USE SCHEMA ON SCHEMA system.query TO `malachi@mountain.com`;
 GRANT SELECT     ON SCHEMA system.query TO `malachi@mountain.com`;
-GRANT USE SCHEMA ON SCHEMA system.query TO `07f36af7-...`;
-GRANT SELECT     ON SCHEMA system.query TO `07f36af7-...`;
+GRANT USE SCHEMA ON SCHEMA system.query TO `07f36af7-614d-4d57-8143-2dbcd3cb58c2`;
+GRANT SELECT     ON SCHEMA system.query TO `07f36af7-614d-4d57-8143-2dbcd3cb58c2`;
 ```
 
 `system.query.history` carries the SQL text of each statement that ran. Four of the optimizer's checks need a query plan to work and are dead without it, so this is the one thing standing between them and running.
