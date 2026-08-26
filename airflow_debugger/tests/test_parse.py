@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 from unittest import mock
 
-from airflow_debugger import databricks_rca
+from airflow_debugger import databricks_rca, report
 from airflow_debugger.dataproc_rca import _decode_app_id, _run, analyze_batch
 from airflow_debugger.parse import _spark_succeeded, parse_log, parse_log_file
 from airflow_debugger.report import build_report
@@ -224,6 +224,16 @@ def test_report_truncation_keeps_url_whole() -> None:
     assert link in r  # whole URL, never cut mid-number
     assert "Route to the model owner" in r  # the remedy, not the fix category
     assert "…" in r  # the cause carries the truncation, not the link
+
+
+def test_the_deep_link_is_dropped_whole_never_trimmed() -> None:
+    """`_fit` trims the longest line, and the link was a candidate. Once trimmed, the guard that
+    drops it whole could not fire, so the report shipped a URL that 404s."""
+    link = "https://1262887251702944.4.gcp.databricks.com/jobs/794948123456789/runs/485768712345678"
+    lines = ["x" * 90 for _ in range(5)] + [link]
+    out = report._fit(lines, link, 300)
+    assert len(out) <= 300
+    assert link in out or link.split("/runs/")[0] not in out, out
 
 
 def test_report_long_cause_leaves_room_for_fix_line() -> None:
@@ -494,6 +504,7 @@ if __name__ == "__main__":
         test_spark_succeeded,
         test_report_orchestration_only_no_emdash,
         test_report_truncation_keeps_url_whole,
+        test_the_deep_link_is_dropped_whole_never_trimmed,
         test_report_long_cause_leaves_room_for_fix_line,
         test_report_no_signature_surfaces_parser_notes,
         test_short_cause_dotted_error_class,

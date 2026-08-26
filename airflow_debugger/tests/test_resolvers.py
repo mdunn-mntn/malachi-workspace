@@ -65,6 +65,35 @@ def test_the_new_limit_says_how_long_it_holds() -> None:
     assert "more runs" in horizon
 
 
+def test_a_recent_step_up_is_outgrew_not_a_hang() -> None:
+    """The all-time median stays low for years after a step change, and branching on it told
+    on-call "do not raise the limit" for a task that had plainly outgrown it."""
+    client = _History(ok=[3400] * 33 + [900] * 67, bad=[3600])
+    res = resolvers.resolve(_TIMEOUT_DIAG, "", client)
+    assert "outgrew its time limit" in res.verdict, res.verdict
+    assert any("raise execution_timeout" in s for s in res.solutions)
+
+
+def test_a_task_getting_faster_is_never_narrated_as_rising() -> None:
+    """Both the evidence and the second solution hardcoded growth language, so a -10% trend
+    read as "rising to" and "find out why it got slower"."""
+    client = _History(ok=[2700, 2800, 2900, 3000, 3100, 3200], bad=[3600])
+    res = resolvers.resolve(_TIMEOUT_DIAG, "", client)
+    assert "rising" not in res.evidence, res.evidence
+    assert "falling to" in res.evidence, res.evidence
+    assert not any("runtime rose" in s for s in res.solutions), res.solutions
+
+
+def test_the_horizon_is_a_per_run_rate_not_the_whole_window() -> None:
+    """`growth` spans the whole history. Compounding it once per run shrank a ~114-run horizon
+    to "about 2 more runs", which reads as "raising the limit is pointless"."""
+    ok = [1800 + (900 * i) // 99 for i in range(99, -1, -1)]
+    res = resolvers.resolve(_TIMEOUT_DIAG, "", _History(ok=ok, bad=[3600]))
+    horizon = next(s for s in res.solutions if "holds for" in s)
+    runs = int(horizon.split("about ")[1].split(" ")[0])
+    assert runs > 50, horizon
+
+
 def test_no_internal_vocabulary_reaches_the_reader() -> None:
     """A solution the reader has to decode is not a solution. Ban the shorthand outright."""
     for client in (
@@ -259,12 +288,18 @@ def test_a_resolver_that_raises_never_takes_the_diagnosis_down() -> None:
     assert resolvers.resolve(_TIMEOUT_DIAG, "", _Boom()) is None
 
 
-def test_the_rendered_solutions_are_numbered_in_order() -> None:
-    """They are ranked, so they are numbered; an unordered list reads as interchangeable."""
-    res = resolvers.Resolution("v", "e", ["first", "second"])
-    why, how = resolvers.as_lines(res)
-    assert why == "v (e)"
-    assert how == "1. first 2. second"
+def test_the_api_host_is_never_reported_as_the_missing_permission() -> None:
+    """`dataproc.googleapis.com` is a service, not a grantable permission."""
+    log = (
+        "google.api_core.exceptions.PermissionDenied: 403 Permission "
+        "'dataproc.batches.create' denied on resource "
+        "'//dataproc.googleapis.com/projects/mntn-prj-prod-00/locations/us-central1' "
+        '[reason: "IAM_PERMISSION_DENIED" domain: "dataproc.googleapis.com" '
+        'metadata { key: "permission" value: "dataproc.batches.create" }]'
+    )
+    res = resolvers.resolve({"root_signature": {"key": "auth_error"}}, log)
+    assert "dataproc.batches.create" in res.verdict, res.verdict
+    assert "googleapis.com" not in res.verdict
 
 
 if __name__ == "__main__":

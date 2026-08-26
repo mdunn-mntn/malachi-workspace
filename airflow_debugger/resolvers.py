@@ -1,23 +1,14 @@
-"""Settle the question the signature leaves open, instead of handing it to the reader.
-
-A signature says what class of failure this is. For most classes that still leaves a fork the
-on-call has to resolve by hand: a task killed at its timeout either outgrew a limit it has been
-creeping toward, or hung; a missing partition either landed late or never landed. "Read the
-runtime trend" and "check whether the object exists" are the two halves of that work, and the
-debugger can do both. A verdict that ends in an instruction to go look is not a verdict.
-
-Each resolver returns the branch it settled, the evidence that settled it, and solutions ranked
-by what the evidence supports. When the evidence is not reachable the resolver returns nothing
-and the signature's own remedy stands, which is the honest fallback: a guessed branch is worse
-than an unresolved one.
-"""
+"""Settle the fork a signature leaves open, or return nothing."""
 
 from __future__ import annotations
 
 import json
+import math
 import re
 import statistics
 from dataclasses import dataclass, field
+
+_FLAT = 0.02  # runtime noise below this reads as flat, not a trend
 
 _TRACEBACK_TAIL = re.compile(
     r"^(?P<exc>[A-Za-z_][\w.]*(?:Error|Exception|Failure|Timeout)):\s*(?P<msg>.+)$", re.MULTILINE
@@ -32,7 +23,10 @@ _MISSING_REL = re.compile(
 )
 _PRINCIPAL = re.compile(r"([\w.+-]+@[\w-]+\.iam\.gserviceaccount\.com|[\w.+-]+@[\w.-]+\.\w+)")
 _DENY_DETAIL = re.compile(r'details\s*=\s*"([^"]{10,300})"')
-_PERMISSION = re.compile(r"\b((?:storage|bigquery|dataproc|aiplatform|compute)\.[\w.]+)\b")
+# The API host shares the service prefix, so `<service>.googleapis.com` must not read as a grant.
+_PERMISSION = re.compile(
+    r"\b((?:storage|bigquery|dataproc|aiplatform|compute)\.(?!googleapis\b)[\w.]+)\b"
+)
 _QUOTA = re.compile(
     r"Insufficient '?(?P<metric>[A-Z_0-9]+)'? quota.{0,40}?Requested (?P<req>[\d.]+),"
     r" available (?P<avail>\d+(?:\.\d+)?)",
@@ -109,10 +103,11 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
 
     run_id = ident.get("run_id")
     this_run = next((t for t in bad if t.get("dag_run_id") == run_id), None)
-    median = statistics.median(ok)
-    recent = statistics.median(ok[: max(len(ok) // 3, 3)])
-    older = statistics.median(ok[-max(len(ok) // 3, 3) :])
+    third = max(len(ok) // 3, 3)
+    recent = statistics.median(ok[:third])
+    older = statistics.median(ok[-third:])
     growth = (recent - older) / older if older else 0.0
+    span = max(len(ok) - third, 1)
 
     # Name a kill duration only for THIS run; another failure's duration reads as measured.
     hit = (
@@ -120,37 +115,43 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
         if this_run
         else f"hit its {budget / 60:.0f}m limit"
     )
-    ev = (
-        f"{hit}; the last {len(ok)} successful runs took {older / 60:.0f}m rising to "
-        f"{recent / 60:.0f}m ({growth:+.0%})"
-    )
-    if median >= 0.6 * budget:
-        headroom = _runs_until_breach(recent, growth, budget)
-        when = (
-            f"about {headroom} more runs at the current growth rate"
-            if headroom
-            else "indefinitely, since runtime is not growing"
-        )
+    ev = f"{hit}; the last {len(ok)} successful runs took {_trend(older, recent, growth)}"
+    if recent >= 0.6 * budget:
         new_limit = max(budget * 1.5, recent * 1.5)
+        headroom = _runs_until_breach(recent, growth, new_limit, span)
+        raise_it = f"Now: raise execution_timeout from {budget / 60:.0f}m to {new_limit / 60:.0f}m."
+        raise_it += (
+            f" That holds for about {headroom} more runs at the current growth rate."
+            if headroom
+            else " Runtime is not growing, so it should not need raising again."
+        )
+        if growth > _FLAT:
+            why = [
+                f"Then find out why it got slower: runtime rose {growth:+.0%} across these runs. "
+                "Compare the input row count or file count for the same period.",
+                "If the input did not grow, the task itself got slower: profile the longest "
+                "stage of a recent successful run against an older one.",
+            ]
+        else:
+            why = [
+                "Then find out why it needs the whole window: runtime is not growing, so it has "
+                "been running this close to the limit since the limit was set. Compare the input "
+                "row count or file count with a run from before it was set.",
+                "If the input is unchanged, the limit was set too tight: profile the longest "
+                "stage of a successful run to see where the time goes.",
+            ]
         return Resolution(
             verdict=(
                 "The task outgrew its time limit. Successful runs already use most of the time "
                 "allowed, so it ran out of time doing real work rather than hanging."
             ),
             evidence=ev,
-            solutions=[
-                f"Now: raise execution_timeout from {budget / 60:.0f}m to {new_limit / 60:.0f}m. "
-                f"That holds for {when}.",
-                f"Then find out why it got slower: runtime rose {growth:+.0%} across these runs. "
-                "Compare the input row count or file count for the same period.",
-                "If the input did not grow, the task itself got slower: profile the longest stage "
-                "of a recent successful run against an older one.",
-            ],
+            solutions=[raise_it, *why],
         )
     return Resolution(
         verdict=(
             "The task hung. Successful runs finish in about "
-            f"{median / 60:.0f}m against a {budget / 60:.0f}m limit, so the killed run was not "
+            f"{recent / 60:.0f}m against a {budget / 60:.0f}m limit, so the killed run was not "
             "doing more work, it stopped making progress."
         ),
         evidence=ev,
@@ -163,15 +164,24 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
     )
 
 
-def _runs_until_breach(current: float, growth: float, budget: float) -> int | None:
-    """How many more runs the new limit survives at the observed growth rate."""
-    if growth <= 0 or current <= 0:
+def _trend(older: float, recent: float, growth: float) -> str:
+    """The runtime history in words that match the sign of the change."""
+    if growth > _FLAT:
+        return f"{older / 60:.0f}m rising to {recent / 60:.0f}m ({growth:+.0%})"
+    if growth < -_FLAT:
+        return f"{older / 60:.0f}m falling to {recent / 60:.0f}m ({growth:+.0%})"
+    return f"a steady {recent / 60:.0f}m"
+
+
+def _runs_until_breach(current: float, growth: float, limit: float, span: int) -> int | None:
+    """How many more runs the raised limit survives, at the per-run share of the observed drift."""
+    if growth <= _FLAT or current <= 0 or current >= limit:
         return None
-    limit, runs, dur = budget * 1.5, 0, current
-    while dur < limit and runs < 200:
-        dur *= 1 + growth
-        runs += 1
-    return runs
+    per_run = (1 + growth) ** (1 / span) - 1
+    if per_run <= 0:
+        return None
+    runs = int(math.log(limit / current) / math.log(1 + per_run))
+    return runs or None
 
 
 def _dbt_runtime(diag: dict, text: str, client: object | None) -> Resolution | None:
@@ -425,10 +435,3 @@ def resolve(diag: dict, log_text: str = "", client: object | None = None) -> Res
         return fn(diag, text, client)
     except Exception:
         return None
-
-
-def as_lines(res: Resolution) -> tuple[str, str]:
-    """(why, how) for a settled fork. The solutions are numbered because they are ordered."""
-    why = f"{res.verdict} ({res.evidence})"
-    how = " ".join(f"{i}. {s}" for i, s in enumerate(res.solutions, 1))
-    return why, how

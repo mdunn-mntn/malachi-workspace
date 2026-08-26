@@ -164,7 +164,11 @@ def _fit(lines: list[str], link: str | None, cap: int) -> str:
     """Trim the longest line repeatedly rather than gutting one, so no line loses its meaning."""
     report = "\n".join(lines)
     while len(report) > cap:
-        idx = max(range(len(lines)), key=lambda i: len(lines[i]))
+        # The link is not a trim candidate: half a URL 404s, and the fallback below drops it whole.
+        trimmable = [i for i in range(len(lines)) if lines[i] != link]
+        if not trimmable:
+            break
+        idx = max(trimmable, key=lambda i: len(lines[i]))
         if len(lines[idx]) <= _MIN_LINE:
             break
         target = max(int(len(lines[idx]) * 0.8), _MIN_LINE)
