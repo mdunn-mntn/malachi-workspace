@@ -31,6 +31,19 @@ OUTDIR = os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out")
 _GSUTIL = ["gsutil", "-o", "GSUtil:check_hashes=never"]
 
 
+def _rendered_dags(entries: list, delta: object, scored: list, known: set | None) -> set:
+    """Every name the digest can print, so coverage judges the same strings the reader sees.
+
+    Keying the two surfaces differently let the digest render a job unlinked while coverage's
+    own unresolved list never mentioned it, which read as the tool disagreeing with itself.
+    """
+    names = {getattr(e, "dag_id", "") for e in entries}
+    for k in ("new", "chronic", "notified", "resolved", "fix_not_working"):
+        names |= {getattr(e, "dag_id", "") for e in getattr(delta, k, [])}
+    names |= {ledger_mod._dag_id(r, known) for r in scored}
+    return names - {""}
+
+
 def _databricks_report() -> str:
     """The Databricks section, or "" when no warehouse is configured or the reads failed."""
     try:
@@ -141,7 +154,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         coverage_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
         with open(coverage_path, "w") as fh:
             fh.write(cov_mod.render(cov, _dag_ids(reports, known),
-                                    {ledger_mod._dag_id(r) for r in scored}))
+                                    _rendered_dags(entries, delta, scored, known)))
 
     dbx_path = ""
     dbx = _databricks_report()

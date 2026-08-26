@@ -330,3 +330,17 @@ def test_delivery_reports_the_slack_error_rather_than_raising(
     monkeypatch.setattr(notify, "_post",
                         lambda m, p: {"ok": False, "error": "channel_not_found"})
     assert notify.deliver("a digest") == {"sent": False, "error": "channel_not_found"}
+
+
+def test_coverage_judges_every_name_the_digest_can_print() -> None:
+    """A name keyed one way in the ledger and another in coverage reads as self-disagreement."""
+    from types import SimpleNamespace
+
+    entries = [SimpleNamespace(dag_id="ipdsc_ds_35")]
+    delta = SimpleNamespace(new=[], chronic=[], notified=[],
+                            resolved=[SimpleNamespace(dag_id="fangorn_score_monitor")],
+                            fix_not_working=[])
+    scored = [JobReport(source="app-1.zstd", app_name="Populate other.Thing", findings=[1])]
+    names = sweep._rendered_dags(entries, delta, scored, None)
+    assert {"ipdsc_ds_35", "fangorn_score_monitor", "other"} <= names
+    assert "" not in names
