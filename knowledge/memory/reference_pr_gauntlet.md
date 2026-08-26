@@ -28,5 +28,31 @@ find nothing.
 Verdicts: PASS (write the marker, ship) · FAIL_MAX_ROUNDS / THRASH (no ship, report open findings) ·
 ERROR (infra; re-dispatch is safe). First live target (commit f02f9a52) took 3 runs / 40 findings /
 27 confirmed, ended FAIL_MAX_ROUNDS with the good fixes committed and the rest logged as IMP-072.
+**Cost calibration (2026-08-25/26, five AUDI-1194 runs).** At the original `MAX_ROUNDS = 4` a run took
+**~85-95 minutes and 44-62 agents** (~2.4-3.2M subagent tokens). Malachi called that extreme, and the
+data agrees: across five runs **rounds 3-4 confirmed almost nothing** while rounds 1-2 carried every
+real defect. Now `MAX_ROUNDS = 2`, `MAX_REFUTERS_PER_ROUND = 6`, refuters at `effort: 'medium'`
+(top of `pr_gauntlet.js`); refuters were ~60% of wall clock. Budget ~25 minutes.
+
+**THRASH is usually informative, not a loop bug.** Four of five runs ended THRASH and every one named a
+real defect: (1) the fixer promoting Dataproc *workflow* operators into the profilable set when they
+write no `spark.eventLog.dir` and PHS enumerates batches only; (2) three successive schemes to
+compensate for unimportable DAG files, each of which froze fleet-wide resolution because the prod
+ledger already holds `ipdsc_ds_67`, a task id that no DAG-id set can ever settle; (3) `executor_hours`
+costing a still-rolling app at 0.0. Read the arbiter evidence before assuming the loop misbehaved.
+
+**The fixer cannot `git add`, so a NEW file it writes is invisible to the next round.** airflow-ti#1218
+thrashed on "the module ships with zero tests" when the fixer had in fact written `test_databricks.py`
+and left it untracked. **On any THRASH, run `git status --short` for `??` entries before diagnosing.**
+
+**Scope creep is the loop's main failure mode.** A PR that started at ~90 lines reached 523 insertions
+because each round's fixer widened it. When a finding oscillates, the fix is usually to *delete* the
+disputed surface as out of scope, not to adjudicate it — then say so in the description so the next
+round does not re-add it.
+
+**A run can die on an Anthropic session or weekly limit mid-round** (`You've hit your weekly limit`),
+which surfaces as verdict ERROR with the round's fixer never applied. The round's earlier fixes are
+already in the working tree, so commit them, then re-dispatch fresh rather than resuming.
+
 `args.report_only: true` = archaeology mode for merged/foreign PRs: one review+refute round, no
 fixer, verdict REPORT — proven on merged airflow-ti#1215 (12 confirmed, 0 refuted, → IMP-073).
