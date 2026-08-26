@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from airflow_debugger import slack_block
 
-_LABELS = ("*What*", "*Where*", "*Why*", "*How*")
+_LABELS = ("*What failed*", "*Why*", "*Where*", "*How it failed*", "*Fix*")
 
 _QUOTA = {
     "identity": {
@@ -50,7 +50,7 @@ def _order(text: str) -> list[int]:
     return [text.index(lbl) for lbl in _LABELS]
 
 
-def test_the_four_labels_appear_in_the_same_order_every_time() -> None:
+def test_the_five_labels_appear_in_the_same_order_every_time() -> None:
     """The whole point: one layout, whatever the failure or the evidence source."""
     for diag in (_QUOTA, _MASKED, _UNKNOWN):
         out = slack_block.render(diag, repo_paths={})

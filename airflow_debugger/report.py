@@ -184,9 +184,8 @@ def resolved_cause(diag: dict) -> tuple[str, str] | None:
     res = diag.get("resolution")
     if not res:
         return None
-    why = f"{res['verdict']} ({res['evidence']})"
     how = " ".join(f"{i}. {s}" for i, s in enumerate(res.get("solutions") or [], 1))
-    return why, (how or None)
+    return res["verdict"], (how or None)
 
 
 def walked_cause(diag: dict) -> tuple[str, str] | None:

@@ -1,4 +1,4 @@
-"""One fixed Slack shape for every RCA: What / Where / Why / How.
+"""One fixed Slack shape for every RCA: what failed, why, where, how it failed, how to fix it.
 
 On-call learns one layout, so the eye lands in the same place every time. That constraint is the
 product — a post whose structure varies with the failure is a second thing to read, not a summary.
@@ -10,8 +10,10 @@ labelled, because a model's guess and a matched signature are not the same evide
 look the same. Both walked and stated outrank the LLM for that reason: they are read off logs and
 API state, not inferred.
 
-How is a POINTER, never a patch: file, line range, permalink. Auto-PR was ruled out and a diff
-pasted into a channel is the same act with extra steps.
+"How it failed" carries the mechanism and the evidence behind the verdict, so the reader can check
+the answer rather than take it. "Fix" carries the actions, numbered when there is more than one
+because they are ordered, not interchangeable. It is a POINTER, never a patch: auto-PR was ruled
+out and a diff pasted into a channel is the same act with extra steps.
 """
 
 from __future__ import annotations
@@ -39,6 +41,15 @@ WHY_WALKED = "walked"
 WHY_STATED = "stated"
 WHY_LLM = "llm"
 WHY_GAP = "gap"
+
+SOURCE_LABEL = {
+    WHY_DETERMINISTIC: "matched signature",
+    WHY_RESOLVED: "settled from evidence",
+    WHY_WALKED: "walked upstream",
+    WHY_STATED: "no cause in this log",
+    WHY_LLM: "LLM, unverified",
+    WHY_GAP: "no cause found",
+}
 
 
 def _astro_run_url(dag_id: str | None, run_id: str | None) -> str | None:
@@ -102,8 +113,56 @@ def how(diag: dict, source: str) -> str:
     return remedy or fix_line(root) or "No remedy on record; diagnose from the log tail."
 
 
+def mechanism(diag: dict, source: str) -> str:
+    """How the failure actually happened, and the evidence behind the verdict.
+
+    A verdict the reader cannot check is a verdict they have to trust. This line is what makes the
+    difference between an answer and an assertion.
+    """
+    bits = []
+    res = diag.get("resolution") or {}
+    if res.get("evidence"):
+        bits.append(res["evidence"])
+    walked = diag.get("upstream_walk") or {}
+    hops = walked.get("hops") or []
+    if walked.get("root") and hops:
+        path = " -> ".join(h["task_id"] for h in hops)
+        bits.append(f"followed the chain {path}")
+        siblings = hops[0].get("siblings") or []
+        if siblings:
+            bits.append(f"{len(siblings)} other task(s) failed in the same run")
+    elif walked.get("note"):
+        bits.append(f"could not follow the chain: {walked['note']}")
+    root = diag.get("root_signature") or {}
+    if not bits and root.get("matched_on"):
+        bits.append(f'matched on "{_one_line(root["matched_on"], 160)}"')
+    if diag.get("orchestration_only"):
+        bits.append("the downstream job SUCCEEDED, so this is orchestration-only")
+    pod = diag.get("pod_wait_seconds")
+    if pod and diag.get("pod_deleted") and not root:
+        bits.append(f"the pod was deleted after {pod}s without reaching Running")
+    if diag.get("poke_count") and not root:
+        bits.append(
+            f"{diag['poke_count']} poke(s), {diag.get('reschedule_count') or 0} reschedule(s)"
+        )
+    if not bits:
+        bits.append(SOURCE_LABEL[source])
+    return "; ".join(bits)
+
+
+def fix(diag: dict, source: str) -> str:
+    """What to do, numbered when the options are ranked. Never a category, never a shrug."""
+    res = diag.get("resolution") or {}
+    steps = res.get("solutions") or []
+    if len(steps) > 1:
+        return " ".join(f"{i}. {t}" for i, t in enumerate(steps, 1))
+    if steps:
+        return steps[0]
+    return how(diag, source)
+
+
 def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = None) -> str:
-    """The post body. Same four labels, same order, every time."""
+    """The post body. Same five labels, same order, every time."""
     ident = diag.get("identity", {})
     dag_id, task_id = ident.get("dag_id"), ident.get("task_id")
     who = "/".join(filter(None, [dag_id, task_id])) or "unknown task"
@@ -115,7 +174,6 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
         WHY_WALKED: walked_sig.get("sig_class") or "upstream/root-cause-walked",
         WHY_STATED: "no-cause-in-log",
     }.get(source, "unclassified")
-    what = f"*{who}* — {klass}"
 
     where = [f"`{who}`"]
     run_url = _astro_run_url(dag_id, ident.get("run_id"))
@@ -127,21 +185,13 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
     for url, path in code_links(diag, repo_paths):
         where.append(f"<{url}|{path}>")
 
-    label = {
-        WHY_DETERMINISTIC: "matched signature",
-        WHY_RESOLVED: "settled from evidence",
-        WHY_WALKED: "walked upstream",
-        WHY_STATED: "no cause in this log",
-        WHY_LLM: "LLM, unverified",
-        WHY_GAP: "no cause found",
-    }[source]
-
     body = "\n".join(
         [
-            f"*What*  {what}",
+            f"*What failed*  *{who}* — {klass}",
+            f"*Why*  ({SOURCE_LABEL[source]}) {cause_text}",
             f"*Where*  {' · '.join(where)}",
-            f"*Why*  ({label}) {cause_text}",
-            f"*How*  {how(diag, source)}",
+            f"*How it failed*  {mechanism(diag, source)}",
+            f"*Fix*  {fix(diag, source)}",
         ]
     )
     return body if len(body) <= MAX_BLOCK else body[: MAX_BLOCK - 1].rstrip() + "…"

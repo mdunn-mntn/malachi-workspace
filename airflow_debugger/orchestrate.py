@@ -39,7 +39,20 @@ def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) 
         with open(log_path, encoding="utf-8", errors="replace") as f:
             # The whole log, not the tail: the line that settles a fork can sit 400 KB from the end.
             whole = f.read()[:_RESOLVER_MAX_CHARS]
-        res = resolve(diag, whole, Client())
+        client = Client()
+        res = resolve(diag, whole, client)
+        if not res:
+            # The walked root carries its own signature, and it is the one the reader acts on.
+            root = (walked or {}).get("root") or {}
+            if root.get("signature"):
+                res = resolve(
+                    {
+                        "identity": {"dag_id": root["dag_id"], "task_id": root["task_id"]},
+                        "root_signature": root["signature"],
+                    },
+                    whole,
+                    client,
+                )
     except Exception:  # an unreachable resolver leaves the signature's own remedy standing
         res = None
     if res:
