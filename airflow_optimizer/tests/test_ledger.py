@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from airflow_optimizer import digest, ledger
+from airflow_optimizer import crawl, digest, ledger
 from airflow_optimizer.crawl import JobReport
 from airflow_optimizer.optimizations import OptFinding
 
@@ -263,3 +263,26 @@ def test_a_failed_fix_keeps_its_slot_and_its_label(tmp_path: Path) -> None:
     text = digest.render(ledger.delta(entries), scanned=5, findings=5, high=5, date="2026-08-05")
     assert "*Fix not working*" in text
     assert "payments_etl" in text
+
+
+def test_a_still_rolling_app_is_costed_not_ranked_free() -> None:
+    """A killed or in-flight app writes no ApplicationEnd and releases no executors.
+
+    Costing it 0.0 sorts the fleet's biggest runaway last, which is the opposite of the truth.
+    """
+    class _E:
+        def __init__(self, added: int, removed: int | None) -> None:
+            self.added_ts, self.removed_ts, self.run_time_ms = added, removed, 0
+
+    hour = 3_600_000
+    held = type("R", (), {"executors": [_E(0, None) for _ in range(40)],
+                          "app_end_ts": None, "last_event_ts": 20 * hour})()
+    assert crawl.executor_hours(held) == 800.0
+
+    ended = type("R", (), {"executors": [_E(0, 20 * hour) for _ in range(40)],
+                           "app_end_ts": None, "last_event_ts": 20 * hour})()
+    assert crawl.executor_hours(ended) == 800.0
+
+    blind = type("R", (), {"executors": [_E(0, None)], "app_end_ts": None,
+                           "last_event_ts": None})()
+    assert crawl.executor_hours(blind) == 0.0     # no clock at all: unknown, not free

@@ -98,6 +98,7 @@ class SparkRun:
     duration_ms: int | None = None
     app_start_ts: int | None = None
     app_end_ts: int | None = None
+    last_event_ts: int | None = None
     spark_props: dict = field(default_factory=dict)
     stages: list = field(default_factory=list)
     executors: list = field(default_factory=list)
@@ -107,6 +108,18 @@ class SparkRun:
     cached_rdd_bytes: int = 0
     rdd_cached_blocks: int = 0
     rdd_evictions: int = 0
+
+
+_CLOCK_KEYS = ("Timestamp", "Completion Time", "Finish Time", "Submission Time")
+
+
+def _later(current: int | None, event: dict) -> int | None:
+    """The latest wall-clock stamp seen so far, used when an app writes no ApplicationEnd."""
+    for k in _CLOCK_KEYS:
+        v = event.get(k)
+        if isinstance(v, int) and (current is None or v > current):
+            current = v
+    return current
 
 
 def _part_order(path: str) -> tuple:
@@ -215,8 +228,10 @@ def parse_eventlog(path: str) -> SparkRun:
     def execu(eid: str) -> ExecutorInfo:
         return execs.setdefault(eid, ExecutorInfo(exec_id=eid))
 
+    last_ts = None
     for e in _read_events(path):
         ev = e.get("Event", "")
+        last_ts = _later(last_ts, e)
         if ev == "SparkListenerApplicationStart":
             app_start = e.get("Timestamp")
             run.app_id = e.get("App ID") or e.get("appId")
@@ -268,6 +283,7 @@ def parse_eventlog(path: str) -> SparkRun:
     run.cached_rdd_bytes = sum(block_bytes.values())
     run.rdd_cached_blocks = sum(1 for v in block_cached.values() if v)
     run.app_start_ts, run.app_end_ts = app_start, app_end
+    run.last_event_ts = last_ts
     if app_start and app_end:
         run.duration_ms = app_end - app_start
     run.stages = _finalize_stages(stages)

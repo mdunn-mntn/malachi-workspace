@@ -66,12 +66,19 @@ def _event_logs(paths: list[str]) -> list[str]:
 
 
 def executor_hours(run: object) -> float:
-    """Executor-hours the run held, billed whether or not a task was running."""
-    execs = [e for e in getattr(run, "executors", []) if getattr(e, "added_ts", None)]
-    end = getattr(run, "app_end_ts", None)
-    if not execs or not end:
+    """Executor-hours the run held, billed whether or not a task was running.
+
+    A killed or still-rolling app writes no ApplicationEnd and releases no executors, so its
+    cost is measured to the last event the log carries. Without that fallback the largest
+    runaway in the fleet costs 0.0 and sorts last, which is the opposite of the truth.
+    """
+    end = getattr(run, "app_end_ts", None) or getattr(run, "last_event_ts", None)
+    if not end:
         return 0.0
-    return sum(max((e.removed_ts or end) - e.added_ts, 0) for e in execs) / 3_600_000
+    spans = [(e.removed_ts or end) - e.added_ts
+             for e in getattr(run, "executors", [])
+             if getattr(e, "added_ts", None) is not None]
+    return sum(max(s, 0) for s in spans) / 3_600_000
 
 
 def crawl(paths: list[str]) -> list[JobReport]:
