@@ -116,6 +116,32 @@ does not fit those four blocks does not go in the post.
   `{'ok': False, 'error': 'channel_not_found'}`. So a failed sweep currently notifies nobody.
   Fix this alongside the digest delivery work, since both need the same bot token and channel.
 
+**Shipped 2026-08-26, before this ticket formally opened.** Three merges took the sweep from
+"writes to a bucket nobody opens" to a ranked, linked artifact. airflow-ti #1216 unfroze change
+tracking (the ledger had sat at 130 rows since 2026-08-21), #1218 resolves a Spark job to the DAG
+that runs it, #1221 ranks by executor-hours and renders four fixed blocks per DAG. Detail and the
+numbers are in memory `project_airflow_optimizer`. What remains below is genuinely unbuilt.
+
+**Two prod defects still open.**
+- The DAG cannot be triggered manually without an explicit `logical_date`; it raises `KeyError('ds')`
+  in ~5s. Default the date from `data_interval_end or run_after` inside the task instead of
+  templating `{{ ds }}`.
+- The failure callback's Slack post returns `channel_not_found`, so a failed sweep notifies nobody.
+  Fix alongside digest delivery, since both need the same bot token and channel.
+
+**Slack delivery, corrected owner.** Robin Fox (2026-08-25) gave the path and it is self-serve, not a
+devops ticket: create the app at `https://api.slack.com/apps/`, generate the bot token, then request
+workspace install from inside app management, which notifies Robin to review scopes and approve. Ask
+for the narrowest scopes the job needs (`chat:write`, plus `chat:write.public` only if posting to a
+channel the bot is not in) — scope review is the gate, so a wide ask is what gets rejected. Token to
+Vault, never local. This narrows, and does not contradict, the 2026-06-10 ban recorded in memory
+`reference_pi5_server`: the ban is on unreviewed LOCAL apps and keys.
+
+**Ranking is by executor-hours, and that is deliberate.** `dcu_h` remains an unpopulated field.
+Filling it with executor-hours would put a wrong unit into a published artifact; populating it for
+real needs `runtimeInfo.approximateUsage.milliDcuSeconds` from `gcloud dataproc batches describe`,
+one call per batch. Worth doing only if executor-hours proves insufficient for prioritisation.
+
 **Debt this inherits.**
 - `include/spark_optimizer/` ships multi-line rationale comments throughout, which its own
   `lint_comments.py` would now fail. Own PR, before anything else lands on the package.
