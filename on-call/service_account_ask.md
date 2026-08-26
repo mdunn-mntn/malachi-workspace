@@ -203,3 +203,13 @@ Mechanism detail: memory `reference_gcs_iam_creator_vs_user`. Workload and prod 
 `project_airflow_optimizer`. Standing inventory: `project_deidentify_personal_credentials`
 (IMP-050). Superseded runner designs, kept only as history:
 `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_runner_and_identities.md` §3-§13.
+
+### Databricks `system` schema access — the ladder, 2026-08-26
+
+Two admin tiers, no substitution. `GRANT USE CATALOG ON CATALOG system` needs a **metastore
+admin**; `GRANT USE SCHEMA` and `GRANT SELECT` on the schema each need an **account admin**.
+Workspace `admins` confers neither. Alyson Lefkowitz holds both tiers. On this metastore
+`account users` already has the catalog grant, so most asks are just the two schema lines.
+Verify with `SHOW GRANTS ON SCHEMA <s>` through a SQL warehouse, not `databricks grants get`,
+which served stale data for an hour after a live grant. Full ladder, error-to-rung mapping and
+the ask shape that works: memory `reference_databricks_system_schema_grants`.
