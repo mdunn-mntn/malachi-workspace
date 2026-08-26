@@ -85,11 +85,7 @@ def _worst_first(entries: list) -> list:
 
 
 def by_dag(entries: list, cap: int = 3) -> list:
-    """The `cap` worst DAGs, each with its own findings worst-first.
-
-    Ranking per finding lets one bad DAG fill the page: the 2026-08-21 digest opened with
-    eight consecutive `fangorn_score_monitor` lines and showed nothing else.
-    """
+    """The `cap` worst DAGs, each with its own findings worst-first."""
     groups: dict = {}
     for e in entries:
         groups.setdefault(getattr(e, "dag_id", "") or "unknown", []).append(e)
@@ -110,12 +106,11 @@ def _blocks(dag: str, rows: list, base: str, known: set | None) -> list[str]:
         what += f" (+{others} more finding{'s' if others != 1 else ''} on this DAG)"
     why = f"{SEV.get(getattr(worst, 'impact', ''), 'LOW')} impact"
     dcu = getattr(worst, "dcu_h", None)
-    # Per RUN, not per finding: every finding on a DAG shares the one run's hours.
     hours = max((getattr(e, "exec_h", None) or 0 for e in rows), default=0)
     if dcu:
         why += f", {dcu:,.0f} DCU-h/day"
     elif hours:
-        why += f", {hours:,.0f} executor-hours held on this run"
+        why += f", {hours:,.0f} executor-hours in its worst run"
     streak = getattr(worst, "streak", 0)
     if streak > 1:
         why += f", firing {streak} sweeps running"
@@ -138,9 +133,9 @@ def render(delta: object, scanned: int, findings: int, high: int, date: str,
 
     known = {d.dag_id for d in getattr(coverage, "dags", [])} or None if coverage else None
     out = [head, ""]
-    actionable = (list(getattr(delta, "fix_not_working", []))
-                  + list(getattr(delta, "new", [])) + list(getattr(delta, "chronic", [])))
-    for dag, rows in by_dag(actionable):
+    out += _section("Fix not working", getattr(delta, "fix_not_working", []), base, known)
+    for dag, rows in by_dag(list(getattr(delta, "new", []))
+                            + list(getattr(delta, "chronic", []))):
         out += _blocks(dag, rows, base, known)
     out += _section("With the owner", getattr(delta, "notified", []), base, known)
     resolved = getattr(delta, "resolved", [])

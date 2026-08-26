@@ -243,3 +243,23 @@ def test_one_bad_dag_cannot_fill_the_whole_digest(tmp_path: Path) -> None:
     assert "+7 more findings on this DAG" in text
     assert "900 executor-hours" in text
     assert text.count("executor-hours") == 2   # per run, never summed across its findings
+
+
+def test_a_failed_fix_keeps_its_slot_and_its_label(tmp_path: Path) -> None:
+    """A shipped fix that did not work is the one thing louder DAGs must not crowd out."""
+    class _R:
+        def __init__(self, name: str, hours: float) -> None:
+            self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
+            self.findings = [FETCH]
+
+    p = str(tmp_path / "l.jsonl")
+    ledger.record([_R("payments_etl", 9.0)], "2026-08-02", path=p)
+    ledger.mark_applied("payments_etl", "shuffle_fetch_wait:9",
+                        "https://github.com/x/y/pull/42", "2026-08-02", path=p)
+    for date in ("2026-08-03", "2026-08-04", "2026-08-05"):
+        entries = ledger.record([_R("payments_etl", 9.0)]
+                                + [_R(f"noise_{i}", 10.0 + i) for i in range(4)], date, path=p)
+
+    text = digest.render(ledger.delta(entries), scanned=5, findings=5, high=5, date="2026-08-05")
+    assert "*Fix not working*" in text
+    assert "payments_etl" in text
