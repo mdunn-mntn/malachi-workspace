@@ -32,11 +32,7 @@ def _batch(state: str = "SUCCEEDED", phs: bool = True, uuid: str = "u-1",
 
 
 def test_phs_succeeded_keeps_every_batch_whose_log_is_not_in_the_archive() -> None:
-    """A batch with no eventLog.dir still writes to the temp bucket, so it must be kept.
-
-    Filtering on sparkHistoryServerConfig kept 10 of 200 prod batches and dropped 175 that
-    had a readable log at the same per-uuid path.
-    """
+    """A batch with no eventLog.dir still writes to the temp bucket, so it must be kept."""
     batches = [
         _batch(),
         _batch(state="FAILED", uuid="u-x"),
@@ -141,11 +137,7 @@ def test_newest_logs_takes_the_tail_and_drops_inprogress(monkeypatch) -> None:  
 
 
 def test_another_teams_batch_is_excluded_and_an_unlabelled_one_is_kept() -> None:
-    """The project is shared: 287 of 461 temp-bucket batches belong to camperbid.
-
-    An unlabelled batch is ours - `populate-hem-data-ds-21` and the `pixel-dsid*` family
-    carry no team label and are the very DAGs this pass exists to reach.
-    """
+    """The project is shared, and an unlabelled batch is ours."""
     batches = [_batch(uuid="ours"),
                _batch(uuid="labelled", team=phs.TEAM),
                _batch(uuid="theirs", team="camperbid")]

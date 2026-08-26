@@ -107,24 +107,14 @@ def _noop_log(path: Path, app: str, end: bool) -> None:
     path.write_text("\n".join(json.dumps(e) for e in events))
 
 
-def test_a_no_op_run_is_reported_whether_or_not_it_ended_cleanly(tmp_path: Path) -> None:
-    """An app that held executors and ran nothing is a finding, not an unreadable log.
-
-    A killed app writes no ApplicationEnd, exactly like a torn download, so keying on that
-    threw away the runs this exists to catch. Holding an executor is the discriminator.
-    Skipping them cost the 30-day corpus 15 high-impact findings over 546 executor-hours.
-    """
+def test_a_no_op_run_is_reported_only_when_the_log_says_it_ended(tmp_path: Path) -> None:
+    """A jobless log with no ApplicationEnd could equally be a half-copied download."""
     d = tmp_path / "logs"
     d.mkdir()
-    _noop_log(d / "clean.json", "clean", end=True)
+    _noop_log(d / "ended.json", "ended", end=True)
     _noop_log(d / "killed.json", "killed", end=False)
-    (d / "torn.json").write_text(json.dumps(
-        {"Event": "SparkListenerApplicationStart", "App Name": "torn", "App ID": "torn",
-         "Timestamp": 1000}))
     by_source = {r.source: r for r in crawl([str(d)])}
-    for name in ("clean.json", "killed.json"):
-        assert by_source[name].error is None, name
-        assert by_source[name].exec_h > 0, name
-        assert [f.title for f in by_source[name].findings] == [
-            "10 executors held 10.0 executor-hours with ZERO tasks run"], name
-    assert "no jobs, stages or executors" in by_source["torn.json"].error
+    assert by_source["ended.json"].error is None
+    assert [f.title for f in by_source["ended.json"].findings] == [
+        "10 executors held 10.0 executor-hours with ZERO tasks run"]
+    assert "partial download" in by_source["killed.json"].error

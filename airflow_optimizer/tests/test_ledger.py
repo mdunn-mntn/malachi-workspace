@@ -292,11 +292,7 @@ def test_a_still_rolling_app_is_costed_not_ranked_free() -> None:
 
 
 def test_digest_links_the_dag_and_names_the_job_when_they_differ(tmp_path: Path) -> None:
-    """The whole point of resolution: the link goes to the DAG, the job name stays readable.
-
-    A Spark app is named for the table it populates, so the DAG that runs it usually has a
-    different name and the reader needs both.
-    """
+    """The link goes to the DAG; the job name stays beside it because they differ."""
     class _Cov:
         dags = [type("D", (), {"dag_id": "feature_store_hourly"})()]
         unprofiled: list = []

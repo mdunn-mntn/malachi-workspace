@@ -60,24 +60,27 @@ def _clean(part: str) -> str:
     return _TASK_SUFFIX.sub("", part.strip().lower())
 
 
-def job_keys(name: str) -> list[str]:
-    """Every comparable form of a Spark app name or an Airflow task id, best candidate first.
-
-    A Spark app name puts the job BEFORE the dot and an Airflow task id puts it AFTER, so
-    one segment cannot serve both and both are offered.
-    """
-    name = (name or "").strip().removeprefix("Populate ").strip()
-    parts = [p for p in name.split(".") if p.strip()]
-    if not parts:
-        return []
+def _forms(*cands: str) -> list[str]:
     out: list[str] = []
-    for cand in (parts[0], parts[-1], name):
+    for cand in cands:
         base = _clean(cand)
         # `ipdsc_14_monitor` is one datasource's run of the `ipdsc_monitor` DAG.
-        for form in (base, _TASK_INFIX.sub("_", base)):
+        for form in (cand.strip().lower(), base, _TASK_INFIX.sub("_", base)):
             if form and form not in out:
                 out.append(form)
     return out
+
+
+def job_keys(name: str) -> list[str]:
+    """The comparable forms of a Spark job name, best candidate first."""
+    name = (name or "").strip().removeprefix("Populate ").strip()
+    return _forms(name.split(".")[0]) if name else []
+
+
+def task_keys(task_id: str) -> list[str]:
+    """The comparable forms of an Airflow task id, which may itself be dotted."""
+    parts = [p for p in (task_id or "").split(".") if p.strip()]
+    return _forms(parts[-1], task_id) if parts else []
 
 
 
@@ -136,11 +139,7 @@ class Coverage:
         return out
 
     def resolve(self, name: str) -> str:
-        """The one DAG that runs this Spark job, or "" when no candidate names exactly one.
-
-        Takes a raw Spark app name or a name `ledger._dag_id` already reduced; the sweep
-        passes the latter and a caller reading a crawl directly passes the former.
-        """
+        """The one DAG that runs this Spark job, or "" when no candidate names exactly one."""
         owners = self._owners()
         for key in job_keys(name):
             dags = owners.get(key, set())
@@ -155,11 +154,11 @@ class Coverage:
             return cached
         seen: dict = {}
         for dag_id in self.dag_ids_including_paused:
-            for k in job_keys(dag_id):
+            for k in task_keys(dag_id):
                 seen.setdefault(k, set()).add(dag_id)
         for d in self.dags:
             for t in d.spark_tasks:
-                for k in job_keys(t):
+                for k in task_keys(t):
                     seen.setdefault(k, set()).add(d.dag_id)
         self._owner_index = seen
         return seen

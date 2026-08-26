@@ -303,7 +303,8 @@ def analyze_run(run: object) -> list[OptFinding]:
     # shuffleTracking exempts executors a live job's shuffle references, so a tail pins all.
     execs = [e for e in run.executors if getattr(e, "added_ts", None) is not None]
     # A killed app writes no ApplicationEnd but still held its executors to the last event.
-    app_end = getattr(run, "app_end_ts", None) or getattr(run, "last_event_ts", None)
+    ended = getattr(run, "app_end_ts", None)
+    app_end = ended or getattr(run, "last_event_ts", None)
     cores = int(props.get("spark.executor.cores", "1") or 1)
     if execs and app_end and len(execs) >= 8:
         reg_ms = sum(max((e.removed_ts or app_end) - e.added_ts, 0) for e in execs)
@@ -311,7 +312,9 @@ def analyze_run(run: object) -> list[OptFinding]:
         util = busy_ms / (reg_ms * cores) if reg_ms else 1.0
         idle_h = (reg_ms * cores - busy_ms) / 3_600_000 / cores
         reg_h = reg_ms / 3_600_000
-        # An app that held a fleet and ran ZERO tasks is pure waste at ANY size.
+        # Until the app ends, a still-writing first log part is indistinguishable from a no-op.
+        if busy_ms == 0 and not ended:
+            return _ranked(out)
         if busy_ms == 0 and reg_h >= 2:
             out.append(OptFinding(
                 "idle_reserved_executors",
@@ -360,6 +363,11 @@ def analyze_run(run: object) -> list[OptFinding]:
             "Route as infra instability; reduce shuffle block size (more partitions) and check "
             "node health / preemption.", rec_type="failure"))
 
+    return _ranked(out)
+
+
+def _ranked(out: list) -> list:
+    """Findings worst-first."""
     rank = {"high": 0, "medium": 1, "low": 2}
     out.sort(key=lambda f: rank.get(f.impact, 3))
     return out

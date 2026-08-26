@@ -92,12 +92,13 @@ def crawl(paths: list[str]) -> list[JobReport]:
             continue
         try:
             run, findings = analyze_eventlog(log)
-            # An app that allocated executors held them whether or not it ended cleanly.
+            # Without ApplicationEnd a jobless log could equally be a half-copied one.
             empty = not getattr(run, "jobs", None) and not getattr(run, "stages", None)
-            if empty and not getattr(run, "executors", None):
+            if empty and not getattr(run, "app_end_ts", None):
                 reports.append(JobReport(
                     source=base,
-                    error="log holds no jobs, stages or executors (truncated or never started)"))
+                    error="no jobs, no stages, no ApplicationEnd: a no-op run and a partial "
+                          "download look the same here"))
                 continue
             reports.append(JobReport(source=base, findings=findings,
                                      app_name=run.app_name, exec_h=executor_hours(run)))

@@ -221,18 +221,16 @@ def test_a_task_name_two_dags_share_is_dropped_not_guessed() -> None:
 
 
 def test_job_keys_strips_only_what_it_can_justify() -> None:
-    """A data-source or run index is a per-run stamp; anything else is part of the name.
-
-    Both dotted segments are offered because a Spark app name and an Airflow task id put the
-    job in opposite halves of the dot.
-    """
+    """A data-source or run index is a per-run stamp; anything else is part of the name."""
     keys = coverage.job_keys
     assert "site_network_hourly" in keys("Populate site_network_hourly.SiteNetworkHourly")
-    assert "aug_log_ip_hourly" in keys("feature_group_1_source.aug_log_ip_hourly")
+    assert "aug_log_ip_hourly" in coverage.task_keys("feature_group_1_source.aug_log_ip_hourly")
     assert "ipdsc_monitor" in keys("Populate ipdsc_14_monitor.IPDSC14Monitor")
-    assert keys("ipdsc_ds_13") == ["ipdsc_ds"]
-    assert keys("audience_intent_scoring_staging_ds46") == ["audience_intent_scoring_staging"]
-    assert keys("materialize_mntn_select_16") == ["materialize_mntn_select"]
+    assert keys("ipdsc_ds_13") == ["ipdsc_ds_13", "ipdsc_ds"]
+    assert keys("audience_intent_scoring_staging_ds46") == [
+        "audience_intent_scoring_staging_ds46", "audience_intent_scoring_staging"]
+    assert keys("materialize_mntn_select_16") == ["materialize_mntn_select_16",
+                                                  "materialize_mntn_select"]
     assert keys("conv_log_derived_ip") == ["conv_log_derived_ip"]
 
 
@@ -277,11 +275,7 @@ def test_a_profiled_job_is_counted_against_the_dag_that_runs_it() -> None:
 
 
 def test_a_spark_app_name_resolves_to_the_dag_that_runs_it() -> None:
-    """`Populate <table>.<Class>` names the TABLE, so the segment before the dot is the task.
-
-    Keying on the segment after the dot tied 0 of 62 job names to a DAG in the 30-day corpus
-    crawled 2026-08-26, which is why the 2026-08-25 prod digest linked one DAG out of eight.
-    """
+    """`Populate <table>.<Class>` names the TABLE, so the segment before the dot is the task."""
     cov = coverage.Coverage(date="x", dag_ids_including_paused={"tpa_export", "ipdsc_monitor"})
     cov.dags = [coverage.DagCoverage(dag_id="tpa_export", spark_tasks=["site_network_hourly"]),
                 coverage.DagCoverage(dag_id="ipdsc_monitor", spark_tasks=["ipdsc_monitor"])]
@@ -293,17 +287,26 @@ def test_a_spark_app_name_resolves_to_the_dag_that_runs_it() -> None:
     assert cov.resolve("ipdsc_14_monitor") == "ipdsc_monitor"
 
 
-def test_resolve_walks_past_an_ambiguous_candidate_to_one_that_is_not() -> None:
-    """The FIRST candidate here is ambiguous, so only the fallthrough can resolve the job.
+def test_a_dotted_task_prefix_is_not_indexed_as_a_job_name() -> None:
+    """A dotted task's grouping prefix is not a job name, so it must claim no DAG."""
+    cov = coverage.Coverage(date="x", dag_ids_including_paused={"a", "b"})
+    cov.dags = [coverage.DagCoverage(dag_id="a", spark_tasks=["src.aug_log_ip"]),
+                coverage.DagCoverage(dag_id="b", spark_tasks=["src.other"])]
+    assert "src" not in cov._owners()
+    assert cov.resolve("Populate aug_log_ip.AugLogIp") == "a"
 
-    `Populate src.aug_log_ip` offers `src` first, which two DAGs claim, then `aug_log_ip`,
-    which one does. Stopping at the first ambiguous candidate would leave the job unlinked.
+
+def test_a_numbered_job_family_resolves_to_the_dag_that_defines_each_name() -> None:
+    """Five DAGs each define one `populate_hem_data_ds_<n>`; only the exact name separates them.
+
+    Stripping the index first collapses all five onto one key, so every one of them reads as
+    ambiguous and the report claims five DAGs name a task only one of them defines.
     """
-    cov = coverage.Coverage(date="x", dag_ids_including_paused={"a", "b", "feature_store"})
-    cov.dags = [coverage.DagCoverage(dag_id="a", spark_tasks=["src.shared"]),
-                coverage.DagCoverage(dag_id="b", spark_tasks=["src.other"]),
-                coverage.DagCoverage(dag_id="feature_store", spark_tasks=["src.aug_log_ip"])]
-    assert coverage.job_keys("Populate src.aug_log_ip")[0] == "src"
-    assert len(cov._owners()["src"]) == 3
-    assert cov.resolve("Populate src.aug_log_ip") == "feature_store"
-    assert cov.resolve("Populate src.Src") == ""
+    dags = {"hem_conversion_log": "populate_hem_data_ds_21",
+            "hem_experian": "populate_hem_data_ds_22",
+            "hem_guid_log": "populate_hem_data_ds_23"}
+    cov = coverage.Coverage(date="x", dag_ids_including_paused=set(dags))
+    cov.dags = [coverage.DagCoverage(dag_id=d, spark_tasks=[t]) for d, t in dags.items()]
+    assert cov.resolve("populate_hem_data_ds_21") == "hem_conversion_log"
+    assert cov.resolve("populate_hem_data_ds_23") == "hem_guid_log"
+    assert cov.unresolved({"populate_hem_data_ds_22"}) == []

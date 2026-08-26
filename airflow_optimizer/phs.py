@@ -50,16 +50,7 @@ def event_log_dir(batch: dict) -> str:
 
 def phs_succeeded(batches: list[dict], archive: str = ARCHIVE_PREFIX,
                   team: str = TEAM) -> list[dict]:
-    """This team's SUCCEEDED batches whose log lands in the temp bucket, not the archive.
-
-    Selecting on sparkHistoryServerConfig picked 10 of 200 prod batches; the other 175 with
-    no eventLog.dir at all write to the same per-uuid temp path and were dropped. Every one
-    of a 12-batch sample of them had a readable log there.
-
-    The project is shared, so another team's label is the one thing that excludes a batch:
-    of 461 temp-bucket batches in 500, 287 are camperbid's. An UNLABELLED batch is kept -
-    `populate-hem-data-ds-21` and the `pixel-dsid*` family carry no team label and are ours.
-    """
+    """This team's SUCCEEDED batches whose log lands in the temp bucket, not the archive."""
     return [b for b in batches
             if b.get("state") == "SUCCEEDED" and b.get("uuid")
             and (b.get("labels") or {}).get("team", team) == team
@@ -103,11 +94,7 @@ def _dir_bytes(path: str) -> int:
 
 def fetch_logs(batches: list[dict], dest: str, bucket: str = PHS_TEMP_BUCKET,
                max_batches: int = MAX_BATCHES, max_bytes: int = MAX_BYTES) -> list[str]:
-    """Download each batch's event log; skip an unreadable or absent one quietly. Returns paths.
-
-    Bounded on both axes. Stopping early loses the tail of an already-ranked list, which costs
-    coverage; not stopping risks filling the worker's disk, which costs correctness.
-    """
+    """Download each batch's event log; skip an unreadable or absent one quietly."""
     got = []
     if len(batches) > max_batches:
         print(f"[phs] capped at {max_batches} of {len(batches)} batches")
