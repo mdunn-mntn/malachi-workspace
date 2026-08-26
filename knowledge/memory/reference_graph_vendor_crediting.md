@@ -41,6 +41,10 @@ that List 1 rule-making is AUDI's. AUDI-1145 (List 1 rules) likely stays with Ma
   team owns the graph part; he does not know who owns the logic and asked Malachi to start a clarifying thread
   with him/Jaime + ID folks + Maya. Settling mechanism: that thread (venue: #identity-crediting, where the
   rules are decided). Until it lands, do not treat any single claim as the ownership answer.
+- **FINAL ownership ruling (Alyson + Mike Dolt, 2026-08-26): AP owns the crediting pipeline and logic
+  through END OF SEPTEMBER 2026; AUDI takes it over from October.** AUDI-1145 reassigned to Jaime Mutale
+  (handoff comment carries the AUDI-694/1089 evidence pointers). Expect the ticket or a successor back on
+  AUDI ~October.
 - Jack Barbey (thread reply, 08-24 4:54pm): per their call, **Jaime Mutale takes over RUNNING the assembly
   SQL** (all lists); still open whether Jaime or Maya maintains/updates the code. **Lists 2/3 logic proposal
   (Maya, Jack endorses): if DeepSync was incremental for either list, it is incremental for the whole
