@@ -136,7 +136,11 @@ class Coverage:
         return out
 
     def resolve(self, name: str) -> str:
-        """The one DAG that runs this Spark job, or "" when no candidate names exactly one."""
+        """The one DAG that runs this Spark job, or "" when no candidate names exactly one.
+
+        Takes a raw Spark app name or a name `ledger._dag_id` already reduced; the sweep
+        passes the latter and a caller reading a crawl directly passes the former.
+        """
         owners = self._owners()
         for key in job_keys(name):
             dags = owners.get(key, set())

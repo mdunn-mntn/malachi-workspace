@@ -11,6 +11,9 @@ on 2026-06-10, so this writes text; posting it belongs to an approved server-sid
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
+
+Resolver = Callable[[str], str] | None
 
 
 def _ui_base() -> str:
@@ -35,9 +38,10 @@ def _ui_base() -> str:
 AIRFLOW_UI = _ui_base()
 SEV = {"high": "HIGH", "medium": "MED", "low": "LOW"}
 _RANK = {"high": 0, "medium": 1, "low": 2}
+CAP = 8  # entries any one section may list before it says how many it left out
 
 
-def dag_link(name: str, base: str = AIRFLOW_UI, resolve: object = None) -> str:
+def dag_link(name: str, base: str = AIRFLOW_UI, resolve: Resolver = None) -> str:
     """Slack link to the DAG `resolve` maps this job to, plus the job name when they differ."""
     dag = name if resolve is None else (resolve(name) or "")
     if not base or not dag:
@@ -46,7 +50,7 @@ def dag_link(name: str, base: str = AIRFLOW_UI, resolve: object = None) -> str:
     return link if dag == name else f"{link} · `{name}`"
 
 
-def _line(entry: object, base: str, resolve: object = None) -> str:
+def _line(entry: object, base: str, resolve: Resolver = None) -> str:
     sev = SEV.get(getattr(entry, "impact", ""), "LOW")
     dag = getattr(entry, "dag_id", "") or "unknown"
     title = getattr(entry, "title", "")
@@ -64,8 +68,8 @@ def _line(entry: object, base: str, resolve: object = None) -> str:
     return f"- *{sev}* {dag_link(dag, base, resolve)} — {title}{tail}"
 
 
-def _section(title: str, entries: list, base: str, resolve: object = None,
-             cap: int = 8) -> list[str]:
+def _section(title: str, entries: list, base: str, resolve: Resolver = None,
+             cap: int = CAP) -> list[str]:
     if not entries:
         return []
     ordered = sorted(entries, key=lambda e: (
@@ -96,7 +100,7 @@ def by_dag(entries: list, cap: int = 3) -> list:
     return [(dag, _worst_first(rows)) for dag, rows in ranked[:cap]]
 
 
-def _blocks(dag: str, rows: list, base: str, resolve: object = None) -> list[str]:
+def _blocks(dag: str, rows: list, base: str, resolve: Resolver = None) -> list[str]:
     """One DAG as What / Where / Why / How, the same four blocks every day."""
     worst = rows[0]
     others = len(rows) - 1
@@ -139,8 +143,12 @@ def render(delta: object, scanned: int, findings: int, high: int, date: str,
     out += _section("With the owner", getattr(delta, "notified", []), base, resolve)
     resolved = getattr(delta, "resolved", [])
     if resolved:
-        names = ", ".join(sorted({getattr(e, "dag_id", "") for e in resolved}))
-        out += [f"*Stopped firing* — {names}", ""]
+        jobs = sorted({getattr(e, "dag_id", "") for e in resolved})
+        shown = ", ".join(dag_link(j, base, resolve) for j in jobs[:CAP])
+        rest = len(jobs) - CAP
+        if rest > 0:
+            shown += f", and {rest} more"
+        out += [f"*Stopped firing* — {shown}", ""]
 
     if not any(getattr(delta, k, [])
                for k in ("new", "chronic", "notified", "resolved", "fix_not_working")):

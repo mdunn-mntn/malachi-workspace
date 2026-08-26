@@ -92,12 +92,12 @@ def crawl(paths: list[str]) -> list[JobReport]:
             continue
         try:
             run, findings = analyze_eventlog(log)
-            # ApplicationEnd is what separates a truncated download from a real no-op run.
+            # An app that allocated executors held them whether or not it ended cleanly.
             empty = not getattr(run, "jobs", None) and not getattr(run, "stages", None)
-            if empty and not getattr(run, "app_end_ts", None):
+            if empty and not getattr(run, "executors", None):
                 reports.append(JobReport(
                     source=base,
-                    error="log ends mid-write, with no jobs or stages (truncated download)"))
+                    error="log holds no jobs, stages or executors (truncated or never started)"))
                 continue
             reports.append(JobReport(source=base, findings=findings,
                                      app_name=run.app_name, exec_h=executor_hours(run)))

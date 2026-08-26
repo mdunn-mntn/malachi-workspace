@@ -90,21 +90,37 @@ def test_dedup_is_stage_aware_and_keeps_higher_impact() -> None:
     assert "Stage 9 wide shuffle (60 GiB)" in titles
 
 
-def test_a_no_op_run_is_reported_and_a_truncated_one_is_skipped(tmp_path: Path) -> None:
-    """An app that allocated executors and ran nothing is a finding, not an unreadable log.
+def _noop_log(path: Path, app: str, end: bool) -> None:
+    """An app that registered an executor and never started a job, ending cleanly or not."""
+    events = [
+        {"Event": "SparkListenerApplicationStart", "App Name": app, "App ID": app,
+         "Timestamp": 1000},
+        {"Event": "SparkListenerExecutorAdded", "Timestamp": 1000, "Executor ID": "1",
+         "Executor Info": {"Total Cores": 4}},
+    ]
+    if end:
+        events.append({"Event": "SparkListenerApplicationEnd", "Timestamp": 3_601_000})
+    else:
+        events.append({"Event": "SparkListenerBlockUpdated", "Timestamp": 3_601_000})
+    path.write_text("\n".join(json.dumps(e) for e in events))
 
-    Both parse to zero jobs and zero stages; only the truncated log lacks ApplicationEnd.
-    Skipping both cost the 30-day corpus 15 high-impact findings over 546 executor-hours.
+
+def test_a_no_op_run_is_reported_whether_or_not_it_ended_cleanly(tmp_path: Path) -> None:
+    """An app that held executors and ran nothing is a finding, not an unreadable log.
+
+    A killed app writes no ApplicationEnd, exactly like a torn download, so keying on that
+    threw away the runs this exists to catch. Holding an executor is the discriminator.
+    Skipping them cost the 30-day corpus 15 high-impact findings over 546 executor-hours.
     """
     d = tmp_path / "logs"
     d.mkdir()
-    start = [{"Event": "SparkListenerApplicationStart", "App Name": "noop", "App ID": "noop",
-              "Timestamp": 1000}]
-    (d / "noop.json").write_text("\n".join(json.dumps(e) for e in
-                                 start + [{"Event": "SparkListenerApplicationEnd",
-                                           "Timestamp": 2000}]))
-    (d / "torn.json").write_text(json.dumps(start[0]))
+    _noop_log(d / "clean.json", "clean", end=True)
+    _noop_log(d / "killed.json", "killed", end=False)
+    (d / "torn.json").write_text(json.dumps(
+        {"Event": "SparkListenerApplicationStart", "App Name": "torn", "App ID": "torn",
+         "Timestamp": 1000}))
     by_source = {r.source: r for r in crawl([str(d)])}
-    assert by_source["noop.json"].error is None
-    assert by_source["noop.json"].app_name == "noop"
-    assert "truncated" in by_source["torn.json"].error
+    for name in ("clean.json", "killed.json"):
+        assert by_source[name].error is None, name
+        assert by_source[name].exec_h > 0, name
+    assert "no jobs, stages or executors" in by_source["torn.json"].error

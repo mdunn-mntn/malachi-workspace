@@ -318,3 +318,28 @@ def test_digest_links_the_dag_and_names_the_job_when_they_differ(tmp_path: Path)
     assert "dags/feature_store_hourly|feature_store_hourly>" in text
     assert "`aug_log_ip_hourly`" in text
     assert "dags/aug_log_ip_hourly|" not in text
+
+
+def test_stopped_firing_links_its_dags_and_says_what_it_left_out() -> None:
+    """The one section that used to print raw job names while every other line resolved them."""
+    class _Cov:
+        dags = [type("D", (), {"dag_id": "tpa_ipdsc_export"})()]
+        unprofiled: list = []
+        error = ""
+        report_path = ""
+
+        def resolve(self, name: str) -> str:
+            return "tpa_ipdsc_export" if name.startswith("ipdsc_ds_") else ""
+
+        def unprofiled_line(self) -> str:
+            return "0 active DAGs had no Spark task to profile."
+
+    entries = [ledger.Entry(date="2026-08-18", dag_id=f"ipdsc_ds_{i}", app_id=f"app-{i}",
+                            key="disk_spill:1", impact="high", title="Stage 1 spilled",
+                            state="resolved") for i in range(12)]
+    text = digest.render(ledger.delta(entries), scanned=12, findings=0, high=0,
+                         date="2026-08-18", coverage=_Cov(), base=UI)
+    line = next(x for x in text.splitlines() if x.startswith("*Stopped firing*"))
+    assert "dags/tpa_ipdsc_export|tpa_ipdsc_export>" in line
+    assert "and 4 more" in line
+    assert line.count("ipdsc_ds_") == digest.CAP

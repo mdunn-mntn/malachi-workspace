@@ -288,6 +288,9 @@ def test_a_spark_app_name_resolves_to_the_dag_that_runs_it() -> None:
     assert cov.resolve("Populate site_network_hourly.SiteNetworkHourly") == "tpa_export"
     assert cov.resolve("Populate ipdsc_14_monitor.IPDSC14Monitor") == "ipdsc_monitor"
     assert cov.resolve("Populate never_heard_of_it.NeverHeardOfIt") == ""
+    # what the sweep actually passes: ledger._dag_id has already reduced the name
+    assert cov.resolve("site_network_hourly") == "tpa_export"
+    assert cov.resolve("ipdsc_14_monitor") == "ipdsc_monitor"
 
 
 def test_resolve_walks_past_an_ambiguous_candidate_to_one_that_is_not() -> None:
