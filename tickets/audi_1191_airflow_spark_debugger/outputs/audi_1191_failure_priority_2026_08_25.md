@@ -2,6 +2,10 @@
 
 From the 2026-08-25 replay of 211 failed-state logs (23 days on disk, 2026-07-28 to 2026-08-24).
 
+**Superseded 2026-08-26** by the 216-log re-run in `audi_1191_every_failure_2026_08_26.md`, which
+carries the current ranking and split (actionable 83 / 38%, weather 56 / 26%, no cause 77 / 36%).
+The conclusion is unchanged: weather plus no-cause is still most of the volume.
+
 **Ranked by how much of a DAG's noise is ACTIONABLE**, not by raw failure count. A DAG that fails
 20 times on a GCP stockout needs capacity work, not debugging; one that fails 5 times on a broken
 notifier is a one-line fix nobody has made. `days` is how many distinct days it failed on — a high
