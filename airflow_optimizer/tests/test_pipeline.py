@@ -88,3 +88,23 @@ def test_dedup_is_stage_aware_and_keeps_higher_impact() -> None:
     assert "Stage 5 wide shuffle (182 GiB)" in titles  # high survives the collision
     assert "Wide shuffle on Stage 5 (~182 GiB)" not in titles
     assert "Stage 9 wide shuffle (60 GiB)" in titles
+
+
+def test_a_no_op_run_is_reported_and_a_truncated_one_is_skipped(tmp_path: Path) -> None:
+    """An app that allocated executors and ran nothing is a finding, not an unreadable log.
+
+    Both parse to zero jobs and zero stages; only the truncated log lacks ApplicationEnd.
+    Skipping both cost the 30-day corpus 15 high-impact findings over 546 executor-hours.
+    """
+    d = tmp_path / "logs"
+    d.mkdir()
+    start = [{"Event": "SparkListenerApplicationStart", "App Name": "noop", "App ID": "noop",
+              "Timestamp": 1000}]
+    (d / "noop.json").write_text("\n".join(json.dumps(e) for e in
+                                 start + [{"Event": "SparkListenerApplicationEnd",
+                                           "Timestamp": 2000}]))
+    (d / "torn.json").write_text(json.dumps(start[0]))
+    by_source = {r.source: r for r in crawl([str(d)])}
+    assert by_source["noop.json"].error is None
+    assert by_source["noop.json"].app_name == "noop"
+    assert "truncated" in by_source["torn.json"].error

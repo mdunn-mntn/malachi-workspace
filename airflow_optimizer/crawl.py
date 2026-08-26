@@ -92,11 +92,12 @@ def crawl(paths: list[str]) -> list[JobReport]:
             continue
         try:
             run, findings = analyze_eventlog(log)
-            # A truncated download parses clean, which is a wrong answer, not a missing one.
-            if not getattr(run, "jobs", None) and not getattr(run, "stages", None):
+            # ApplicationEnd is what separates a truncated download from a real no-op run.
+            empty = not getattr(run, "jobs", None) and not getattr(run, "stages", None)
+            if empty and not getattr(run, "app_end_ts", None):
                 reports.append(JobReport(
                     source=base,
-                    error="log parsed but contains no jobs or stages (truncated or empty)"))
+                    error="log ends mid-write, with no jobs or stages (truncated download)"))
                 continue
             reports.append(JobReport(source=base, findings=findings,
                                      app_name=run.app_name, exec_h=executor_hours(run)))
