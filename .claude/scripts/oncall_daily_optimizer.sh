@@ -158,6 +158,8 @@ fi
 if [[ -n "$base" ]]; then
     [[ "$base" == http*://* ]] || base="https://${base}"
     [[ "$base" == */api/v2 ]] || base="${base%/}/api/v2"
+    # Outside Airflow nothing sets AIRFLOW__API__BASE_URL, so the digest drops every DAG link.
+    export OPTIMIZER_AIRFLOW_UI="${base%/api/v2}/dags/{dag_id}"
 fi
 
 python3 -m airflow_optimizer.sweep "$TMP" \
