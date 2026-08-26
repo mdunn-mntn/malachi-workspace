@@ -100,8 +100,7 @@ def analyze_plan(text: str) -> list[OptFinding]:
     p = parse_plan_text(text)
     out: list[OptFinding] = []
 
-    # 1. Missing/partial table statistics - the optimizer itself flags this and it drives
-    #    join-strategy and shuffle-size mis-planning. Highest-leverage, cheapest fix.
+    # Missing stats drive join-strategy and shuffle-size mis-planning, so they lead.
     for tbl in p.missing_stats:
         rows = next((s.rows for s in p.scans if s.table.endswith(tbl) and s.rows), None)
         row_note = f" (~{rows:,} rows scanned)" if rows else ""
@@ -204,10 +203,7 @@ def analyze_run(run: object) -> list[OptFinding]:
     parts = props.get("spark.sql.shuffle.partitions")
 
     for s in run.stages:
-        # SKEW - one task runs far longer than the median (invisible in the plan text).
-        # Cross-check against per-task data volume: uniform data + one slow task is a
-        # STRAGGLER (slow node / IO stall), not data skew - salting won't fix it.
-        # Absolute floor: a "13x" ratio on a 0.5s task is noise that buries real tails.
+        # Uniform data behind a slow task means a straggler, not skew; salting won't fix it.
         if (s.num_tasks >= 8 and s.skew_ratio >= 5
                 and max(s.task_durs, default=0) >= SKEW_MIN_TASK_MS):
             if s.data_skew_ratio >= 2:
@@ -232,8 +228,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                     "Enable spark.speculation=true (with spark.speculation.quantile ~0.9) so a "
                     "straggling task is re-launched on an idle executor instead of pinning the stage.",
                     rec_type="infra"))
-        # SPILL - report disk (physically written) and in-memory-at-spill separately;
-        # summing them double-counts the same records and overstates ~6.5x.
+        # Disk and in-memory spill count the same records, so summing overstates ~6.5x.
         if s.disk_spill >= 2 * 1024**3 or s.mem_spill >= 32 * 1024**3:
             out.append(OptFinding(
                 "disk_spill",
@@ -245,9 +240,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                 f"over {s.num_tasks} tasks - per-task data exceeds execution memory.",
                 "Raise spark.sql.shuffle.partitions (smaller partitions) first; if it persists, raise "
                 "executor memory.", rec_type="code"))
-        # WIDE SHUFFLE with too FEW partitions (oversized reducers). Only the increase
-        # direction is safe advice: AQE coalesce already merges too-small partitions,
-        # so a "cut partitions" suggestion is noise everywhere AQE is on.
+        # Only "raise partitions" is safe advice: AQE already coalesces too-small ones.
         parts_n = int(parts) if str(parts or "").isdigit() else 200
         per_part = s.shuffle_write_bytes / parts_n
         if s.shuffle_write_bytes >= 50 * 1024**3 and per_part >= 512 * 1024**2:
@@ -293,9 +286,7 @@ def analyze_run(run: object) -> list[OptFinding]:
             "Raise executor memory / use memory-optimized workers; secondarily cut per-task data via "
             "more partitions.", rec_type="infra"))
 
-    # SPOT PREEMPTION - failed tasks ON reclaimed executors (an infra config choice).
-    # "decommission"/"lost" are NORMAL serverless scale-down strings, not preemption,
-    # and only the reclaimed executors' own failures count - not run-wide failures.
+    # "decommission"/"lost" are normal serverless scale-down strings, not preemption.
     preempted = [e for e in run.executors
                  if e.removed_reason and any(t in e.removed_reason.lower()
                                              for t in ("preempt", "spot"))]
@@ -309,13 +300,10 @@ def analyze_run(run: object) -> list[OptFinding]:
             "Raise first_on_demand / add on-demand fallback for this job, or checkpoint before the "
             "long shuffle.", rec_type="infra"))
 
-    # IDLE RESERVED EXECUTORS - the fleet is held (billed) while few tasks run. With
-    # shuffleTracking (serverless, no external shuffle service), executors holding shuffle
-    # blocks referenced by a LIVE job are never release-eligible (Spark ExecutorMonitor
-    # hasActiveShuffle exemption; shuffleTracking.timeout applies only after the referencing
-    # jobs end), so one long tail task pins every executor to the end of the run.
-    execs = [e for e in run.executors if getattr(e, "added_ts", None)]
-    app_end = getattr(run, "app_end_ts", None)
+    # shuffleTracking exempts executors a live job's shuffle references, so a tail pins all.
+    execs = [e for e in run.executors if getattr(e, "added_ts", None) is not None]
+    # A killed app writes no ApplicationEnd but still held its executors to the last event.
+    app_end = getattr(run, "app_end_ts", None) or getattr(run, "last_event_ts", None)
     cores = int(props.get("spark.executor.cores", "1") or 1)
     if execs and app_end and len(execs) >= 8:
         reg_ms = sum(max((e.removed_ts or app_end) - e.added_ts, 0) for e in execs)

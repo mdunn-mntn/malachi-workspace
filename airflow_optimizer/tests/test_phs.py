@@ -17,7 +17,7 @@ _PHS = {"sparkHistoryServerConfig": {"dataprocCluster": "projects/x/regions/y/cl
 
 
 def _batch(state: str = "SUCCEEDED", phs: bool = True, uuid: str = "u-1",
-           event_log: str = "") -> dict:
+           event_log: str = "", team: str | None = None) -> dict:
     b = {
         "name": f"projects/p/locations/r/batches/b-{uuid}",
         "state": state,
@@ -26,6 +26,8 @@ def _batch(state: str = "SUCCEEDED", phs: bool = True, uuid: str = "u-1",
     }
     if event_log:
         b["runtimeConfig"] = {"properties": {"spark:spark.eventLog.dir": event_log}}
+    if team:
+        b["labels"] = {"team": team}
     return b
 
 
@@ -136,3 +138,15 @@ def test_newest_logs_takes_the_tail_and_drops_inprogress(monkeypatch) -> None:  
                         lambda *a, **k: type("R", (), {"stdout": listing, "returncode": 0})())
     assert fetch.newest_logs("gs://b/p", 2) == ["gs://b/p/old.zstd", "gs://b/p/new.zstd"]
     assert fetch.newest_logs("gs://b/p", 1) == ["gs://b/p/new.zstd"]
+
+
+def test_another_teams_batch_is_excluded_and_an_unlabelled_one_is_kept() -> None:
+    """The project is shared: 287 of 461 temp-bucket batches belong to camperbid.
+
+    An unlabelled batch is ours - `populate-hem-data-ds-21` and the `pixel-dsid*` family
+    carry no team label and are the very DAGs this pass exists to reach.
+    """
+    batches = [_batch(uuid="ours"),
+               _batch(uuid="labelled", team=phs.TEAM),
+               _batch(uuid="theirs", team="camperbid")]
+    assert [b["uuid"] for b in phs_succeeded(batches)] == ["ours", "labelled"]

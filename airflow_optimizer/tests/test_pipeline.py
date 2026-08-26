@@ -91,12 +91,14 @@ def test_dedup_is_stage_aware_and_keeps_higher_impact() -> None:
 
 
 def _noop_log(path: Path, app: str, end: bool) -> None:
-    """An app that registered an executor and never started a job, ending cleanly or not."""
+    """An app that held ten executors and never started a job, ending cleanly or not."""
     events = [
         {"Event": "SparkListenerApplicationStart", "App Name": app, "App ID": app,
          "Timestamp": 1000},
-        {"Event": "SparkListenerExecutorAdded", "Timestamp": 1000, "Executor ID": "1",
-         "Executor Info": {"Total Cores": 4}},
+        {"Event": "SparkListenerEnvironmentUpdate",
+         "Spark Properties": {"spark.executor.cores": "4"}},
+        *[{"Event": "SparkListenerExecutorAdded", "Timestamp": 1000, "Executor ID": str(i),
+           "Executor Info": {"Total Cores": 4}} for i in range(10)],
     ]
     if end:
         events.append({"Event": "SparkListenerApplicationEnd", "Timestamp": 3_601_000})
@@ -123,4 +125,6 @@ def test_a_no_op_run_is_reported_whether_or_not_it_ended_cleanly(tmp_path: Path)
     for name in ("clean.json", "killed.json"):
         assert by_source[name].error is None, name
         assert by_source[name].exec_h > 0, name
+        assert [f.title for f in by_source[name].findings] == [
+            "10 executors held 10.0 executor-hours with ZERO tasks run"], name
     assert "no jobs, stages or executors" in by_source["torn.json"].error

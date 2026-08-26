@@ -20,6 +20,7 @@ PROJECT = "mntn-prj-prod-00"
 REGION = "us-central1"
 PHS_TEMP_BUCKET = "dataproc-temp-us-central1-995798185124-svhwvc6j"
 ARCHIVE_PREFIX = "gs://mntn-data-archive-prod/spark-events"
+TEAM = "ti"  # the batch label that says a job is ours; the project is shared
 _GSUTIL_OPTS = [
     "-o", "GSUtil:check_hashes=never",
     "-o", "GSUtil:sliced_object_download_threshold=0",
@@ -47,15 +48,21 @@ def event_log_dir(batch: dict) -> str:
     return props.get("spark:spark.eventLog.dir") or props.get("spark.eventLog.dir") or ""
 
 
-def phs_succeeded(batches: list[dict], archive: str = ARCHIVE_PREFIX) -> list[dict]:
-    """SUCCEEDED batches whose log lands in the temp bucket, not the archive the sweep reads.
+def phs_succeeded(batches: list[dict], archive: str = ARCHIVE_PREFIX,
+                  team: str = TEAM) -> list[dict]:
+    """This team's SUCCEEDED batches whose log lands in the temp bucket, not the archive.
 
     Selecting on sparkHistoryServerConfig picked 10 of 200 prod batches; the other 175 with
     no eventLog.dir at all write to the same per-uuid temp path and were dropped. Every one
     of a 12-batch sample of them had a readable log there.
+
+    The project is shared, so another team's label is the one thing that excludes a batch:
+    of 461 temp-bucket batches in 500, 287 are camperbid's. An UNLABELLED batch is kept -
+    `populate-hem-data-ds-21` and the `pixel-dsid*` family carry no team label and are ours.
     """
     return [b for b in batches
             if b.get("state") == "SUCCEEDED" and b.get("uuid")
+            and (b.get("labels") or {}).get("team", team) == team
             and not event_log_dir(b).startswith(archive)]
 
 
