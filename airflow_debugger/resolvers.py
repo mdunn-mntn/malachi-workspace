@@ -165,8 +165,12 @@ def _dbt_runtime(diag: dict, text: str, client: object | None) -> Resolution | N
         verdict=f"The model raised {exc[0]}{who}: {exc[1]}",
         evidence="deepest exception in the traceback under dbt's Runtime Error line",
         solutions=[
-            f"Fix {exc[0]} at its source; dbt's line numbers are templated and point elsewhere.",
-            "Re-run the single model before the full selector to confirm the fix.",
+            f"Now: open the model's source and fix the {exc[0]}. dbt's line numbers are "
+            "templated, so they point at the wrong line; search for the call in the message.",
+            "Then re-run this model alone before the full selector, so a second failure is not "
+            "confused with the first.",
+            "If the message names a value rather than a bug, the input data changed: check the "
+            "upstream table for the same period.",
         ],
     )
 
@@ -182,8 +186,12 @@ def _analysis(diag: dict, text: str, client: object | None) -> Resolution | None
         verdict=f"The query references `{name}`, which does not resolve.",
         evidence=f"matched on the unresolved identifier `{name}`",
         solutions=[
-            f"Confirm `{name}` exists and the job's role can see it; a rename upstream is the usual cause.",
-            f"If it was renamed, update the reference; if it was dropped, restore it or drop the read of `{name}`.",
+            f"Now: check whether `{name}` exists. If it does, the job's role cannot see it and "
+            "the fix is a grant.",
+            "If it does not exist, it was renamed or dropped upstream. Find the new name and "
+            "update the reference to it.",
+            "If nothing replaced it, the read itself is stale: remove it, or restore the object "
+            "with its owner.",
         ],
     )
 
@@ -200,8 +208,11 @@ def _auth(diag: dict, text: str, client: object | None) -> Resolution | None:
             verdict=f"The call was refused: {detail.group(1)}",
             evidence="the refusal message the service returned",
             solutions=[
-                "Grant the identity the access that message names, on the resource it names.",
-                "Retries cannot clear a refusal; confirm the grant landed before re-running.",
+                "Now: grant the identity the access that message names, on the resource it "
+                "names. At MNTN that is a Crossplane change, not a console edit.",
+                "Then confirm the grant landed before re-running; a retry cannot clear a refusal.",
+                "If the grant is already in place, the job is running as a different identity "
+                "than you think: check which service account it actually uses.",
             ],
         )
     if not (principal or perm):
@@ -218,8 +229,11 @@ def _auth(diag: dict, text: str, client: object | None) -> Resolution | None:
         verdict=f"{who} is missing `{what}`.",
         evidence=f"principal and permission read off the denial: {who} / {what}",
         solutions=[
-            f"Grant `{what}` to {who} on the named resource; retries cannot clear a missing grant.",
-            "At MNTN the grant is a Crossplane change, not a console edit.",
+            f"Now: grant `{what}` to {who} on the resource in the error. At MNTN that is a "
+            "Crossplane change, not a console edit.",
+            "Then re-run; a retry before the grant lands fails identically.",
+            f"If {who} already has it, the binding is on the wrong resource or the wrong project: "
+            "check the scope, not the role.",
         ],
     )
 
@@ -238,17 +252,24 @@ def _db_credential(diag: dict, text: str, client: object | None) -> Resolution |
             "secret the job reads is stale or points at the wrong role.",
             evidence=f"authentication failure against {where}, with no user in the message",
             solutions=[
-                f"Compare the secret this job reads for {where} against the current password.",
-                "Check when the secret last rotated against the last green run of this task.",
-                "Re-running with the same credential fails identically; fix the secret first.",
+                f"Now: compare the secret this job reads for {where} against that database's "
+                "current password.",
+                "Then check when the secret last rotated against this task's last successful run. "
+                "A rotation between the two is the cause.",
+                "If the secret matches, the job is reading a different secret than you think: "
+                "check which one the connection actually resolves.",
             ],
         )
     return Resolution(
         verdict=f"The database rejected the password for `{user}`.",
         evidence=f"the server returned an authentication failure for user `{user}`",
         solutions=[
-            f"Compare the secret the job reads for `{user}` against the database's current password.",
-            "If it rotated, repoint the job at the current secret; re-running with the old one fails identically.",
+            f"Now: compare the secret the job reads for `{user}` against that database's current "
+            "password.",
+            "Then, if it rotated, repoint the job at the current secret and re-run. The old one "
+            "fails identically every time.",
+            f"If the password is right, `{user}` may have been dropped or locked on the server "
+            "side: check the account itself.",
         ],
     )
 
@@ -264,10 +285,13 @@ def _quota(diag: dict, text: str, client: object | None) -> Resolution | None:
         verdict=f"The request needed {req:.0f} {metric} and {avail:.0f} were free, short by {short:.0f}.",
         evidence=f"{metric}: requested {req:.0f}, available {avail:.0f}",
         solutions=[
-            f"Find what holds the rest of {metric} in this region before raising anything; "
-            "a single idle cluster taking the headroom looks identical to a ceiling that is too low (INC-025).",
-            f"If nothing is holding it, raise {metric} for the region (AUDI-1217).",
-            f"To unblock this run now, shrink the request below {avail:.0f} {metric}.",
+            f"Now: list what is consuming {metric} in this region. A single idle cluster holding "
+            "the headroom looks exactly like a ceiling that is too low (INC-025), and deleting it "
+            "is faster than a quota request.",
+            f"If nothing is holding it, the ceiling really is too low: raise {metric} for the "
+            "region. That is the AUDI-1217 work.",
+            f"To unblock this one run without waiting for either, shrink the request below "
+            f"{avail:.0f} {metric}.",
         ],
     )
 
@@ -282,9 +306,12 @@ def _stockout(diag: dict, text: str, client: object | None) -> Resolution | None
         verdict=f"GCE had no capacity in {plural} {', '.join(zones)} for the requested machine type.",
         evidence=f"the refusal names {plural} {', '.join(zones)}",
         solutions=[
-            "Delete any cluster left in ERROR first; it holds quota and blocks the retry.",
-            f"Re-run in 1-2h. Autozone usually picks outside {zones[0]} on the next attempt.",
-            "Recurring in the same zone means pinning another zone or widening the machine family.",
+            "Now: delete any cluster left in ERROR. It still holds quota, so the retry fails on "
+            "quota rather than capacity and the real cause gets hidden.",
+            f"Then re-run in 1-2 hours. Autozone usually lands outside {zones[0]} on the next "
+            "attempt and the job goes green with no change.",
+            "If it keeps hitting the same zone, stop retrying: pin a different zone, or widen the "
+            "machine family so more instance types qualify.",
         ],
     )
 
@@ -299,8 +326,12 @@ def _late_data(diag: dict, text: str, client: object | None) -> Resolution | Non
         verdict=f"The job read {target} before it existed.",
         evidence=f"the read that failed names {target}",
         solutions=[
-            f"Check {target} and its _SUCCESS marker now. Present means the producer was late: re-run this task.",
-            "Absent means the producer failed or was skipped: fix or re-run the producer, and do not widen the sensor.",
+            f"Now: check whether {target} exists. If it does, the producer was simply late and "
+            "re-running this task is the whole fix.",
+            "If they do not, the producer failed or was skipped. Diagnose that task; this one is "
+            "correct to have stopped.",
+            "Do not widen the sensor window to make this pass. That hides a late producer until "
+            "it is late enough to matter.",
         ],
     )
 

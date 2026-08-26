@@ -98,7 +98,7 @@ def test_a_denial_quotes_the_service_rather_than_guessing_a_permission() -> None
     )
     res = resolvers.resolve(diag, text)
     assert "sufficient permissions for this property" in res.verdict
-    assert "Retries cannot clear a refusal" in " ".join(res.solutions)
+    assert "a retry cannot clear a refusal" in " ".join(res.solutions)
 
 
 def test_an_expired_token_is_not_reported_as_a_missing_grant() -> None:
@@ -126,6 +126,7 @@ def test_a_stockout_names_the_zone_so_the_retry_moves() -> None:
     res = resolvers.resolve(diag, text)
     assert "us-central1-a" in res.verdict
     assert any("ERROR" in s for s in res.solutions)
+    assert any(s.startswith("Now:") for s in res.solutions)
 
 
 def test_a_dbt_failure_reports_the_exception_not_dbt_s_summary() -> None:
@@ -147,8 +148,31 @@ def test_late_data_names_the_path_and_both_branches() -> None:
     text = "PATH_NOT_FOUND: gs://mntn-data-archive-prod/feature_store/dt=2026-08-07/_SUCCESS"
     res = resolvers.resolve(diag, text)
     assert "gs://mntn-data-archive-prod/feature_store/dt=2026-08-07" in res.verdict
-    assert any("re-run this task" in s for s in res.solutions)
+    assert any("re-running this task is the whole fix" in s for s in res.solutions)
     assert any("producer" in s for s in res.solutions)
+
+
+def test_every_resolver_opens_with_an_action_and_offers_alternatives() -> None:
+    """One shape for every answer: do this now, then this, and here is the case where it differs.
+    A single unranked instruction leaves the reader deciding what to try first."""
+    cases = [
+        (
+            "analysis_exception",
+            "[TABLE_OR_VIEW_NOT_FOUND] The table or view `a`.`b` cannot be found",
+        ),
+        ("auth_error", 'details = "the caller lacks access to this property and cannot read it"'),
+        ("quota_exhaustion", "Insufficient 'N2_CPUS' quota. Requested 128, available 40"),
+        ("cluster_create_stockout", "code: 14 zones/us-central1-a does not have enough resources"),
+        ("path_not_found_late_data", "PATH_NOT_FOUND: gs://bucket/dt=2026-08-07/_SUCCESS"),
+        ("dbt_model_runtime_error", "Runtime Error in model m\nValueError: bad input"),
+        ("db_credential_rejected", 'password authentication failed for user "svc_bot"'),
+    ]
+    for key, text in cases:
+        res = resolvers.resolve({"root_signature": {"key": key}}, text)
+        assert res, key
+        assert len(res.solutions) >= 3, f"{key}: only {len(res.solutions)} option(s)"
+        assert res.solutions[0].startswith("Now:"), f"{key}: first step is not an action"
+        assert res.solutions[1].startswith(("Then", "If")), f"{key}: no second step"
 
 
 def test_a_signature_with_no_resolver_settles_nothing() -> None:
