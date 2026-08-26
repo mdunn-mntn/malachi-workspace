@@ -210,15 +210,16 @@ def test_a_config_path_in_the_preamble_is_not_the_missing_partition() -> None:
     assert "daily.yaml" not in res.verdict
 
 
-def test_the_window_is_anchored_on_what_the_signature_matched() -> None:
-    """With several error regions, the one the classifier fired on is the one that matters."""
-    log = "Traceback (most recent call last)\nAnalysisException: `old`.`x` cannot be found\n"
-    log += "filler\n" * 500
-    log += "[TABLE_OR_VIEW_NOT_FOUND] The table or view `real`.`y` cannot be found."
-    diag = {
-        "root_signature": {"key": "analysis_exception", "matched_on": "TABLE_OR_VIEW_NOT_FOUND"}
-    }
-    assert "real.y" in resolvers.resolve(diag, log).verdict
+def test_only_the_failure_region_is_read_when_two_regions_match() -> None:
+    """A retried task logs its earlier failure too. Both regions match the same signature, so only
+    the window anchored on the classifier's own hit can pick the one this diagnosis is about."""
+    decoy = "[TABLE_OR_VIEW_NOT_FOUND] The table or view `old`.`gone` cannot be found.\n"
+    real = "[TABLE_OR_VIEW_NOT_FOUND] The table or view `prod`.`ml`.`live` cannot be found."
+    log = decoy + ("2026-08-24T03:00:00Z [info] airflow.task heartbeat\n" * 900) + real
+    diag = {"root_signature": {"key": "analysis_exception", "matched_on": "view `prod`"}}
+    res = resolvers.resolve(diag, log)
+    assert "prod.ml.live" in res.verdict, res.verdict
+    assert "old.gone" not in res.verdict
 
 
 def test_a_signature_with_no_resolver_settles_nothing() -> None:

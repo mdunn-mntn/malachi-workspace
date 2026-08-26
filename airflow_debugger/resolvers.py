@@ -396,13 +396,13 @@ def resolve(diag: dict, log_text: str = "", client: object | None = None) -> Res
     fn = RESOLVERS.get(root.get("key") or "")
     if not fn:
         return None
-    # Whole engine bundle: the detail that settles a fork sits in a different key per engine.
+    # Narrow sources first, then only the log around the failure, never the whole file.
     text = "\n".join(
         str(x)
         for x in (
             diag.get("root_error"),
             json.dumps(diag.get("spark") or {}, default=str),
-            log_text,
+            error_window(log_text, root.get("matched_on") or ""),
         )
         if x
     )
