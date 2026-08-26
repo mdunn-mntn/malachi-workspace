@@ -63,6 +63,14 @@ Matt: "same issue as the test-campaigns. in bid_price_log the env variable is bu
 
 Fix is on the bidder/model side (Matt). Once fixed, re-run the INCR-75 fold to re-gate the 437 "no data yet" advertisers.
 
+### What burnin actually is — second live bidder deployment + routing flag (Malachi infra dig, 2026-08-25)
+
+- `rtb-bidder-service` (Kotlin Beeswax bidder) deploys TWICE per region on the same prod clusters (`mntn-argocd/apps-v3/bidder/beeswax-bidder/`): namespace `bidder` = `env: prod` at `beeswax-bidder.{east,west}.ex.mountain.com`; namespace `bidder-burnin` = `env: burnin` at `...burnin.ex.mountain.com`. Burnin is the release soak/canary stage (deploy tag → watch Scalyr/Beeswax dash 10+ min → promote to prod); QA is a separate third environment. `env` is a Spring config property (`application-beeswax-burnin-*.yml` `bidder.env: burnin`) stamped on every logged bid — it records WHICH live deployment served the bid, nothing about test status.
+- Routing: CMS flag `burnin_bidding_enabled`, coalesced campaign → campaign_group → advertiser → default FALSE, in `integrationprod.beeswax_{campaign,campaign_group,advertiser}_sync_config`. Flagged groups are served from `rtb:campaigns:burnin` by the burnin pod instead of `rtb:campaigns:beeswax` by prod (documented in `rtb-insights`/`rtb-utils` `check_routing()`; real auctions, real spend, same targeting). Distinct hard-failure mode exists if the flag is ever set on an MNTN/Rust-bidder campaign (PER-6568 blackout-gap pattern) — not the case here.
+- **ThirdLove: CG 115424 has `burnin_bidding_enabled=true, purpose='PER-6332', bidding_strategy='MNTN_BURNIN_BIDDING_STRATEGY'`** (re-verified in BQ same day). Set at group level ~early May 2026, never touched; advertiser-level null; their other 27 groups have no sync-config row (default prod). Their 6 live campaigns are `is_test=false` — this is NOT the Liftlab test-campaign mechanism.
+- **Fix shape (supersedes "just widen the filter"):** the model (`lift__ghost_bid_audiences`) filters `env='prod'`; the `_test_campaigns` sibling already covers `is_test=TRUE` via `env='burnin'`. A bare swap would double-count that population. Correct: `env IN ('prod','burnin')` + invert the sibling's `is_test` semi-join so the two models stay partitioned.
+- **For Edgar:** the Ghost Bidding beta does NOT fix ThirdLove by itself — while the flag stays on CG 115424, their bids log `env='burnin'` and anything filtering `env='prod'` keeps dropping them. Two independent actions: (1) the SQLMesh fix; (2) rtb-bidder-squad sanity-check whether PER-6332 still needs a 4-month-old routing override on a live advertiser.
+
 See INCR-75 summary 2026-08-25 sections for the full verification trail. Advertiser list: INCR-75 `outputs/incr_75_ghost_absent_prospectors.csv` (gitignored; attached to AUDI-1223, also on Drive as "INCR-75 Ghost Bid Coverage Gap.xlsx").
 
 ### Implications of widening the SQLMesh model beyond env='prod' (for Matt, 2026-08-25)
@@ -84,6 +92,7 @@ None yet.
 None yet.
 
 ## 8. Open Items / Follow-ups
-- Matt Brorby: fix env labeling (bidder) or model filter; then re-run INCR-75 fold to re-gate "no data yet".
+- Matt Brorby: SQLMesh fix (env IN prod+burnin, exclude is_test — see fix shape above); then re-run INCR-75 fold to re-gate "no data yet".
+- rtb-bidder-squad: is PER-6332 (ThirdLove burnin routing, May 2026) still a live need?
 - Campaign-level coverage audit for PRESENT advertisers (burnin campaigns of covered advertisers are invisible too, e.g. Gruns 626276 as of 2026-08-24).
 - Did env labels CHANGE over time? CG 126905 was measurable June-July but reads burnin now.
