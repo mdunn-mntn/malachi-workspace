@@ -296,3 +296,25 @@ def test_fetch_wait_that_is_a_real_share_stays_high() -> None:
     findings = {f.key: f for f in analyze_run(_fetch_bound_run("1", execs, 1))}
     assert findings["shuffle_fetch_wait"].impact == "high"
     assert findings["shuffle_fetch_wait"].cost_h == pytest.approx(0.1)
+
+
+def test_an_executor_with_no_added_event_still_costs_its_task_span() -> None:
+    """One prod log logged ExecutorAdded for 359 of the 497 executors that ran tasks."""
+    from airflow_optimizer.crawl import executor_hours
+    from airflow_optimizer.eventlog import _task_end
+
+    run = SparkRun(app_end_ts=1_000_000_000_000 + 3_600_000)
+    seen: dict = {}
+
+    def execu(eid: str) -> ExecutorInfo:
+        return seen.setdefault(eid, ExecutorInfo(exec_id=eid))
+
+    def stage(sid: int, attempt: int = 0) -> StageMetrics:
+        return StageMetrics(stage_id=sid)
+
+    _task_end({"Stage ID": 1, "Task End Reason": {"Reason": "Success"},
+               "Task Info": {"Executor ID": "7", "Launch Time": 1_000_000_000_000},
+               "Task Metrics": {"Executor Run Time": 1000}}, stage, execu)
+    run.executors = list(seen.values())
+    assert run.executors[0].added_ts == 1_000_000_000_000
+    assert executor_hours(run) == pytest.approx(1.0)
