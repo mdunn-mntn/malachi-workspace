@@ -269,3 +269,30 @@ if __name__ == "__main__":
     test_infra_and_failure_recommendation_types()
     test_fleet_crawl_ranks_worst_first()
     print("OK - eventlog parser + detectors validated on a real Spark event log")
+
+
+def _fetch_bound_run(cores: str, execs: list, app_h: float) -> SparkRun:
+    stage = StageMetrics(stage_id=9, num_tasks=100, run_time_ms=400_000, fetch_wait_ms=360_000)
+    return SparkRun(spark_props={"spark.executor.cores": cores}, stages=[stage],
+                    executors=execs, app_end_ts=int(1_000_000_000_000 + app_h * 3_600_000))
+
+
+def test_fetch_wait_on_a_tiny_denominator_is_not_high() -> None:
+    """90% of task time is medium when it is a rounding error against the run's executor-hours."""
+    t0 = 1_000_000_000_000
+    execs = [ExecutorInfo(exec_id=str(i), added_ts=t0, run_time_ms=3_600_000) for i in range(80)]
+    findings = {f.key: f for f in analyze_run(_fetch_bound_run("4", execs, 3))}
+    assert findings["shuffle_fetch_wait"].impact == "medium"
+    assert findings["shuffle_fetch_wait"].cost_h < 0.1
+    assert findings["idle_reserved_executors"].impact == "high"
+    assert findings["idle_reserved_executors"].cost_h > 200
+
+
+def test_fetch_wait_that_is_a_real_share_stays_high() -> None:
+    """The gate demotes a small absolute cost, not a large ratio."""
+    t0 = 1_000_000_000_000
+    execs = [ExecutorInfo(exec_id=str(i), added_ts=t0, removed_ts=t0 + 225_000)
+             for i in range(8)]  # 0.5 executor-hours held
+    findings = {f.key: f for f in analyze_run(_fetch_bound_run("1", execs, 1))}
+    assert findings["shuffle_fetch_wait"].impact == "high"
+    assert findings["shuffle_fetch_wait"].cost_h == pytest.approx(0.1)

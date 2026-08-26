@@ -60,6 +60,7 @@ class OptFinding:
     evidence: str
     fix: str
     rec_type: str = "code"  # code (query/PR) | infra (cores/memory) | failure (RCA)
+    cost_h: float = 0.0  # executor-hours at stake, 0 when the detector cannot derive them
 
 
 def parse_plan_text(text: str) -> ParsedPlan:
@@ -192,6 +193,28 @@ def _gb(b: int) -> float:
     return b / 1024**3
 
 
+HIGH_MIN_SHARE = 0.10
+
+
+def _gated(tier: str, cost_h: float, run_h: float) -> str:
+    """Demote a ratio finding that is a true share of a denominator too small to matter.
+
+    `shuffle_fetch_wait` and `gc_pressure` divide by summed TASK time, so a stage doing almost
+    no compute reports 90% on a denominator worth minutes. Ranked against a detector denominated
+    in executor-hours held, that sends an owner at 0.3% of a job and past the 86%.
+    """
+    if tier != "high" or not run_h:
+        return tier
+    return tier if cost_h / run_h >= HIGH_MIN_SHARE else "medium"
+
+
+def _share(cost_h: float, run_h: float) -> str:
+    """The finding's absolute cost, against the run's own when that is known."""
+    if run_h:
+        return f"{cost_h:.1f} of the run's {run_h:.1f} executor-hours"
+    return f"{cost_h:.1f} executor-hours"
+
+
 def analyze_run(run: object) -> list[OptFinding]:
     """Detectors over a parsed SparkRun (event log) - the metrics the plan text can't give.
 
@@ -201,6 +224,13 @@ def analyze_run(run: object) -> list[OptFinding]:
     out: list[OptFinding] = []
     props = getattr(run, "spark_props", {}) or {}
     parts = props.get("spark.sql.shuffle.partitions")
+    cores = int(props.get("spark.executor.cores", "1") or 1)
+    execs = [e for e in run.executors if getattr(e, "added_ts", None) is not None]
+    # A killed app writes no ApplicationEnd but still held its executors to the last event.
+    ended = getattr(run, "app_end_ts", None)
+    app_end = ended or getattr(run, "last_event_ts", None)
+    reg_ms = sum(max((e.removed_ts or app_end) - e.added_ts, 0) for e in execs) if app_end else 0
+    run_h = reg_ms / 3_600_000
 
     for s in run.stages:
         # Uniform data behind a slow task means a straggler, not skew; salting won't fix it.
@@ -260,31 +290,34 @@ def analyze_run(run: object) -> list[OptFinding]:
         # FETCH-WAIT dominance - tasks stall waiting on shuffle fetch, not computing.
         if s.run_time_ms >= 300_000 and s.fetch_wait_ms / s.run_time_ms >= 0.3:
             ratio = s.fetch_wait_ms / s.run_time_ms
+            wait_h = s.fetch_wait_ms / cores / 3_600_000
             out.append(OptFinding(
                 "shuffle_fetch_wait",
                 f"Stage {s.stage_id} spends {100 * ratio:.0f}% of task time waiting on "
                 "shuffle fetch",
-                "high" if ratio >= 0.5 else "medium",
+                _gated("high" if ratio >= 0.5 else "medium", wait_h, run_h),
                 f"{s.fetch_wait_ms / 1000:.0f}s of {s.run_time_ms / 1000:.0f}s task time is "
-                f"shuffle-fetch wait over {s.num_tasks} tasks - the shuffle IO path is the "
-                "bottleneck, not compute.",
+                f"shuffle-fetch wait over {s.num_tasks} tasks, {_share(wait_h, run_h)} - the "
+                "shuffle IO path is the bottleneck, not compute.",
                 "Check which executors hold the map output before changing partition counts. If "
                 "it is concentrated (the map stage ran while the fleet was still scaling up), "
                 "raise dynamicAllocation.initialExecutors so the map stage spreads its output; "
                 "raising spark.sql.shuffle.partitions then makes it WORSE by multiplying block "
                 "count. Raise partitions only when the blocks themselves are large.",
-                rec_type="code"))
+                rec_type="code", cost_h=wait_h))
 
     # GC PRESSURE across the run - an infra (memory) signal.
     run_ms = sum(s.run_time_ms for s in run.stages)
     gc_ms = sum(s.gc_time_ms for s in run.stages)
     if run_ms and gc_ms / run_ms >= 0.1:
+        gc_h = gc_ms / cores / 3_600_000
         out.append(OptFinding(
             "gc_pressure", f"GC is {100 * gc_ms / run_ms:.0f}% of task time",
-            "high" if gc_ms / run_ms >= 0.2 else "medium",
-            f"{gc_ms / 1000:.0f}s GC of {run_ms / 1000:.0f}s task time - executors are memory-starved.",
+            _gated("high" if gc_ms / run_ms >= 0.2 else "medium", gc_h, run_h),
+            f"{gc_ms / 1000:.0f}s GC of {run_ms / 1000:.0f}s task time, {_share(gc_h, run_h)} - "
+            "executors are memory-starved.",
             "Raise executor memory / use memory-optimized workers; secondarily cut per-task data via "
-            "more partitions.", rec_type="infra"))
+            "more partitions.", rec_type="infra", cost_h=gc_h))
 
     # "decommission"/"lost" are normal serverless scale-down strings, not preemption.
     preempted = [e for e in run.executors
@@ -301,17 +334,11 @@ def analyze_run(run: object) -> list[OptFinding]:
             "long shuffle.", rec_type="infra"))
 
     # shuffleTracking exempts executors a live job's shuffle references, so a tail pins all.
-    execs = [e for e in run.executors if getattr(e, "added_ts", None) is not None]
-    # A killed app writes no ApplicationEnd but still held its executors to the last event.
-    ended = getattr(run, "app_end_ts", None)
-    app_end = ended or getattr(run, "last_event_ts", None)
-    cores = int(props.get("spark.executor.cores", "1") or 1)
     if execs and app_end and len(execs) >= 8:
-        reg_ms = sum(max((e.removed_ts or app_end) - e.added_ts, 0) for e in execs)
         busy_ms = sum(e.run_time_ms for e in execs)
         util = busy_ms / (reg_ms * cores) if reg_ms else 1.0
         idle_h = (reg_ms * cores - busy_ms) / 3_600_000 / cores
-        reg_h = reg_ms / 3_600_000
+        reg_h = run_h
         # Until the app ends, a still-writing first log part is indistinguishable from a no-op.
         if busy_ms == 0 and not ended:
             return _ranked(out)
@@ -324,7 +351,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                 "never ran a task - the whole allocation was billed for nothing.",
                 "Check why the driver allocated executors it never used (eager allocation before "
                 "a driver-side step, or a no-op run); lower minExecutors/initialExecutors.",
-                rec_type="infra"))
+                rec_type="infra", cost_h=reg_h))
         elif reg_h >= 20 and util < 0.4:
             removed = sum(1 for e in execs if e.removed_ts)
             tracking = props.get("spark.dynamicAllocation.shuffleTracking.enabled") == "true"
@@ -341,7 +368,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                 "Fix the tail that keeps the final job alive (speculation for stragglers, skew "
                 "fixes) - releasing executors mid-query is not achievable via "
                 "shuffleTracking.timeout, which only applies after the referencing job ends.",
-                rec_type="infra"))
+                rec_type="infra", cost_h=idle_h))
 
     # CACHE eviction - a persisted RDD got evicted (memory pressure) so it recomputes.
     if getattr(run, "rdd_evictions", 0) > 0:
