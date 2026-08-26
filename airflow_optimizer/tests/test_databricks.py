@@ -47,3 +47,33 @@ def test_explain_cost_rejects_a_planner_error_reported_as_a_plan(monkeypatch: An
     plan = "== Optimized Logical Plan ==\nScan parquet prod.ml.t, Statistics(sizeInBytes=1.0 GiB)"
     monkeypatch.setattr(databricks, "query", lambda *a, **k: [[plan]])
     assert databricks.explain_cost("select 1") == plan
+
+
+def test_costs_survive_a_row_with_no_hours_column(monkeypatch: Any) -> None:
+    """`job_costs` selects four columns and `query_costs` five; one parser reads both."""
+    monkeypatch.setattr(databricks, "query", lambda sql, wh="": [
+        ["Generate Graph & Metrics", 1, 10497.7, 1574.66],
+        [None, 0, None, None],
+    ])
+    jobs = databricks.job_costs(7, 2, "wh")
+    assert (jobs[0].name, jobs[0].runs, jobs[0].usd, jobs[0].hours) == (
+        "Generate Graph & Metrics", 1, 1574.66, 0.0)
+    assert (jobs[1].name, jobs[1].dbu) == ("", 0.0)
+
+
+def test_query_cost_sql_apportions_by_the_day_the_statement_ran(monkeypatch: Any) -> None:
+    """Dividing a warehouse's daily dollars by a whole-window denominator understates every day."""
+    seen = {}
+    monkeypatch.setattr(databricks, "query", lambda sql, wh="": seen.setdefault("sql", sql) and [])
+    databricks.query_costs(7, 5, "wh")
+    assert "GROUP BY 1, 2" in seen["sql"]
+    assert "ON q.wh = tot.wh AND q.d = tot.d" in seen["sql"]
+
+
+def test_job_cost_sql_dedupes_the_run_timeline_before_joining(monkeypatch: Any) -> None:
+    """job_run_timeline holds a row per period, so a raw join multiplies every usage record."""
+    seen = {}
+    monkeypatch.setattr(databricks, "query", lambda sql, wh="": seen.setdefault("sql", sql) and [])
+    databricks.job_costs(7, 5, "wh")
+    assert "GROUP BY run_id" in seen["sql"]
+    assert databricks._RUN_UUID.pattern in seen["sql"]

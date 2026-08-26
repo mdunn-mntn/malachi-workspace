@@ -220,3 +220,99 @@ if __name__ == "__main__":
     print(f"{'model':<60}{'runs':>6}{'hours':>9}{'fail':>6}")
     for model, n, total, bad in by_model(subs)[:25]:
         print(f"{model:<60}{n:>6}{total / 3600:>9.1f}{bad:>6}")
+
+
+@dataclass
+class Cost:
+    """What one job or dbt node consumed, in DBUs and list-price dollars."""
+
+    name: str
+    runs: int
+    dbu: float
+    usd: float
+    hours: float = 0.0
+
+
+JOB_COST_SQL = """
+WITH price AS (
+  SELECT sku_name, price_start_time, price_end_time, pricing.default AS rate
+  FROM system.billing.list_prices
+), named AS (
+  SELECT job_id, max_by(name, change_time) AS name FROM system.lakeflow.jobs GROUP BY job_id
+), runs AS (
+  SELECT run_id, min(run_name) AS run_name
+  FROM system.lakeflow.job_run_timeline
+  WHERE period_start_time > current_date() - INTERVAL {days} DAYS
+  GROUP BY run_id
+)
+SELECT
+  coalesce(nullif(regexp_replace(r.run_name, '{uuid}', ''), ''), n.name,
+           concat('job_id ', u.usage_metadata.job_id)) AS name,
+  count(DISTINCT u.usage_metadata.job_run_id) AS runs,
+  sum(u.usage_quantity) AS dbu,
+  sum(u.usage_quantity * p.rate) AS usd
+FROM system.billing.usage u
+LEFT JOIN runs r ON u.usage_metadata.job_run_id = r.run_id
+LEFT JOIN named n ON u.usage_metadata.job_id = n.job_id
+LEFT JOIN price p ON u.sku_name = p.sku_name
+  AND u.usage_start_time >= p.price_start_time
+  AND (p.price_end_time IS NULL OR u.usage_start_time < p.price_end_time)
+WHERE u.usage_start_time > current_date() - INTERVAL {days} DAYS
+  AND u.usage_metadata.job_id IS NOT NULL
+GROUP BY 1
+ORDER BY dbu DESC
+LIMIT {limit}
+"""
+
+# A warehouse bills by the hour, never per statement, so this apportions rather than measures.
+QUERY_COST_SQL = """
+WITH wh AS (
+  SELECT u.usage_metadata.warehouse_id AS wh, date(u.usage_start_time) AS d,
+         sum(u.usage_quantity) AS dbu, sum(u.usage_quantity * p.pricing.default) AS usd
+  FROM system.billing.usage u
+  LEFT JOIN system.billing.list_prices p ON u.sku_name = p.sku_name
+    AND u.usage_start_time >= p.price_start_time
+    AND (p.price_end_time IS NULL OR u.usage_start_time < p.price_end_time)
+  WHERE u.usage_start_time > current_date() - INTERVAL {days} DAYS
+    AND u.usage_metadata.warehouse_id IS NOT NULL
+  GROUP BY 1, 2
+), q AS (
+  SELECT compute.warehouse_id AS wh, date(start_time) AS d, total_duration_ms AS ms,
+         coalesce(nullif(regexp_extract(statement_text, '"node_id": "([^"]+)"', 1), ''),
+                  regexp_replace(substr(regexp_replace(statement_text, '^\\\\s*/\\\\*.*?\\\\*/\\\\s*', ''),
+                                        1, 60), '\\\\s+', ' ')) AS name
+  FROM system.query.history
+  WHERE start_time > current_date() - INTERVAL {days} DAYS
+    AND compute.warehouse_id IS NOT NULL
+), tot AS (SELECT wh, d, sum(ms) AS ms FROM q GROUP BY 1, 2)
+SELECT q.name, count(*) AS runs,
+       sum(wh.dbu * q.ms / tot.ms) AS dbu,
+       sum(wh.usd * q.ms / tot.ms) AS usd,
+       sum(q.ms) / 3600000.0 AS hours
+FROM q
+JOIN tot ON q.wh = tot.wh AND q.d = tot.d
+JOIN wh ON wh.wh = q.wh AND wh.d = q.d
+GROUP BY 1
+ORDER BY usd DESC
+LIMIT {limit}
+"""
+
+
+def _costs(sql: str, warehouse: str) -> list[Cost]:
+    out = []
+    for r in query(sql, warehouse):
+        name, runs, dbu, usd, *rest = (list(r) + [None] * 5)[:5]
+        out.append(Cost(name=str(name or ""), runs=int(runs or 0), dbu=float(dbu or 0),
+                        usd=float(usd or 0), hours=float(rest[0] or 0) if rest else 0.0))
+    return out
+
+
+def job_costs(days: int = 7, limit: int = 25, warehouse: str = "") -> list[Cost]:
+    """DBUs and list-price dollars per Databricks job, dbt submissions named by model."""
+    return _costs(JOB_COST_SQL.format(days=int(days), limit=int(limit),
+                                      uuid=_RUN_UUID.pattern), warehouse)
+
+
+def query_costs(days: int = 7, limit: int = 25, warehouse: str = "") -> list[Cost]:
+    """Warehouse dollars apportioned to each dbt node by its share of the day's query time."""
+    return _costs(QUERY_COST_SQL.format(days=int(days), limit=int(limit)), warehouse)
