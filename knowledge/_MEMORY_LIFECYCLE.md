@@ -157,7 +157,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ticket_framing_gate | reference | 2026-08-12 | [doc](memory/reference_ticket_framing_gate.md) |
 | reference_workflow_kit_porting | reference | 2026-08-12 | [doc](memory/reference_workflow_kit_porting.md) |
 | reference_xlsx_subtitle_caps | reference | 2026-08-12 | [doc](memory/reference_xlsx_subtitle_caps.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-08-15 | [doc](memory/reference_airflow_ti.md) |
 | background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |
 | feedback_slack_reply_voice | feedback | 2026-08-17 | [doc](memory/feedback_slack_reply_voice.md) |
 | reference_airflow_ti_dev_testing | reference | 2026-08-17 | [doc](memory/reference_airflow_ti_dev_testing.md) |
@@ -228,5 +227,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_bottom_up_keywords_pipeline | reference | 2026-08-25 | [doc](memory/reference_bottom_up_keywords_pipeline.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-08-25 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_ghost_bid_lift_register | reference | 2026-08-25 | [doc](memory/reference_ghost_bid_lift_register.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-08-26 | [doc](memory/reference_airflow_ti.md) |
 | reference_databricks_system_schema_grants | reference | 2026-08-26 | [doc](memory/reference_databricks_system_schema_grants.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-26 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
