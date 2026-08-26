@@ -309,6 +309,7 @@ Caveat on both readings: this is bid-grain ITT (win-rate diluted), not served-gr
 1. **Ask Matt Brorby** (a) whether partner 79's holdout write path is wired, and (b) whether the entry-cohort anchor can be redefined so a >15-day window is measurable.
 2. **AUDI-789 WS1 guidance needs revisiting** — the "a visit/spend-optimized scorer de-optimizes incrementality" warning rests on the reversed band ordering.
 3. Imani will want a fresh per-advertiser pull once the beta advertisers are chosen; that is `incr_75_entry_cohort_clean.sql` filtered to their IDs.
+4. **Re-gate the 437 "no data yet" advertisers ~2 weeks after 2026-08-25:** AUDI-1223 established the ghost-bid tables silently excluded burnin-routed live traffic (142 of the 437 were actively prospecting); the SQLMesh fix (PR 1346) is forward-only, so fresh measurement accrues from 2026-08-25 and the workbook's measured-lift columns understate coverage until re-run.
 
 ## R+Co (39377) test-budget discrepancy reconciled, 2026-08-24 (Edgar von Trotha question)
 

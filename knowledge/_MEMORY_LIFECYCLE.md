@@ -173,7 +173,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_advertiser_visit_measurement | reference | 2026-08-19 | [doc](memory/reference_advertiser_visit_measurement.md) |
 | reference_anthropic_api_key_keychain | reference | 2026-08-19 | [doc](memory/reference_anthropic_api_key_keychain.md) |
 | reference_claude_cli_npmrc_os_pin | reference | 2026-08-19 | [doc](memory/reference_claude_cli_npmrc_os_pin.md) |
-| reference_ghost_bid_lift_register | reference | 2026-08-19 | [doc](memory/reference_ghost_bid_lift_register.md) |
 | reference_graph_vendor_crediting | reference | 2026-08-19 | [doc](memory/reference_graph_vendor_crediting.md) |
 | reference_mntn_public_mcp | reference | 2026-08-19 | [doc](memory/reference_mntn_public_mcp.md) |
 | reference_ntb_definitions | reference | 2026-08-19 | [doc](memory/reference_ntb_definitions.md) |
@@ -229,3 +228,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_bidder_serving_stores | reference | 2026-08-25 | [doc](memory/reference_bidder_serving_stores.md) |
 | reference_bottom_up_keywords_pipeline | reference | 2026-08-25 | [doc](memory/reference_bottom_up_keywords_pipeline.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-08-25 | [doc](memory/reference_fangorn_inference_dataproc.md) |
+| reference_ghost_bid_lift_register | reference | 2026-08-25 | [doc](memory/reference_ghost_bid_lift_register.md) |

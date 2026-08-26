@@ -1,6 +1,7 @@
 .TABLES
 analytics_curated.enriched_impressions
 coredw.usage_reporting_data
+enriched.lift__ghost_bid_audiences__1893325949
 enriched.lift__holdout_advertisers
 enriched.lift__holdout_campaign_groups
 enriched.lift__holdout_visits
@@ -12,6 +13,7 @@ integrationprod.archives_audience_segment_archives
 integrationprod.archives_audience_x_campaign_group_archives
 integrationprod.archives_audiences_archives
 integrationprod.audience_advertiser_configurations
+integrationprod.beeswax_campaign_group_sync_config
 integrationprod.direct_data_partners
 integrationprod.fpa_categories
 integrationprod.r2_advertiser_settings
