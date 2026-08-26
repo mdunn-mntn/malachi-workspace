@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1074: proxima data analysis"
-status: in_progress
+status: done
 date: 2026-08-24
 summary: "Evaluate Proxima's DTC Shopify transaction sample against the 7 AUDI-929 data-property questions; GO/NOGO + reusable ecomm-vendor rubric"
-result: "in progress"
+result: "Conditional GO: license for measurement/attribution/seeding; model-feature decision held pending an offline lift test. Pending Brian's review."
 question: "Does Proxima's transaction feed contain enough unique, fresh, MNTN-addressable purchase signal (per the 7 AUDI-929 questions) to justify continuing toward a paid integration?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1074: proxima data analysis
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1074
-**Status:** in_progress (Spike, sprint 08/24/26–09/07/26, parent AUDI-1054 Q3 Tech Debt)
+**Status:** done 2026-08-25, recommendation pending Brian's review (Spike, sprint 08/24/26–09/07/26, parent AUDI-1054)
 **Date Started:** 2026-08-24
 **Assignee:** Malachi
 
@@ -113,12 +113,21 @@ Scale: 79,965,455 orders · 162,031,287 line items · 1,163 brands · 32.6M cust
 **7. Redelivery offered:** browser_ip + zip (they understood "zip only" from a prior call, hence the address-column absence — deliberate, not a bug), headers on ip_mapping, and email/phone signals via an updated schema discussion. New-brand onboarding backfills full history (panel composition shifts retroactively across refreshes).
 
 ## 5. Solution
-- **Official report shipped 2026-08-24:** branded workbook at Drive `My Drive/Tickets/AUDI-1074/AUDI-1074 Proxima Sample Evaluation.xlsx` (builder: `artifacts/audi_1074_build_xlsx.py`, regenerable from outputs/). 13 tabs: Overview cover, question-per-row answers scorecard, delivery gaps, Q1-Q7 detail tabs, Read me, Method & caveats (incl. the -1 sentinel retraction), Queries (both BQ sample pulls via sql_dir).
+- **Recommendation (posted 2026-08-25, Jira 612040, cross-linked AUDI-929 612041; PENDING BRIAN'S REVIEW): conditional GO.** License for measurement, attribution, and audience seeding (92% addressable, $10.1B/yr panel, clean grain, ~44% NTB, real cross-category structure). HOLD the model-feature decision until a leakage-controlled offline lift test (AUC 0.506 orthogonality; monthly refresh = ~17d mean staleness = feedback-class). Before contract: schema refresh (browser_ip, zip, email/phone, ip_mapping headers); accept that brand names are never provided and orders restate each drop.
+- **Reusable rubric shipped:** `ecomm_vendor_eval_rubric.md` (3 axes, per-row metric+threshold+script, 5 process rules) — answers AUDI-929 ask 5.
+- **Official report shipped 2026-08-24 (updated 08-25 with vendor answers):** branded workbook at Drive `My Drive/Tickets/AUDI-1074/AUDI-1074 Proxima Sample Evaluation.xlsx` (builder: `artifacts/audi_1074_build_xlsx.py`, regenerable from outputs/). 13 tabs: Overview cover, question-per-row answers scorecard, delivery gaps, Q1-Q7 detail tabs, Read me, Method & caveats (incl. the -1 sentinel retraction), Queries (both BQ sample pulls via sql_dir).
 - Remaining: GO/NOGO recommendation comment + reusable ecomm-vendor rubric doc.
 
 ## 6. Questions Answered
 - **Q:** Is the Proxima sample still accessible after the July pause?
-  **A:** Yes — bucket listed successfully 2026-08-24 with the emailed creds; contents match the 7/17 delivery email (basket/items/ip_mapping under 20260717/).
+  **A:** Yes — bucket listed 2026-08-24 with the emailed creds; contents match the 7/17 delivery email.
+- **Q1:** Repurchase cadence? **A:** 30-day median gap at item and category level (p25 19-27, p75 51-55); 28.5% of customer-category pairs repurchase in-file.
+- **Q2:** Cross-bucket purchase patterns? **A:** Real structure: Software→Health & Beauty 43% in 30d vs 24.2% any-followup base; matrices in outputs/.
+- **Q3:** Brand roster/volume? **A:** 1,112 USD brands, $10.1B GMV/yr, top-10 25.1% of GMV, HHI 0.010; names never provided (vendor policy).
+- **Q4:** IP/brand overlap with addressable inventory? **A:** 92.0% of 23.5M IPv4 in the DS14 gate, flat across order recency; 40.2% served in 30d; 44.9% of matched-served ever-HI vs 40.5% base.
+- **Q5:** Demographic separability of two IP groups? **A:** No — AUC 0.506 (chance) separating ever-HI from never-HI on 14 purchase features; mixes near-identical.
+- **Q6:** First-time-buyer identification? **A:** Yes — NTB curve plateaus month 5 at ~44-46%; 6-month lookback suffices.
+- **Q7:** Purchase-to-actionable freshness? **A:** ~2-day pipeline lag, but production refresh is monthly (sometimes weekly) → ~17d mean staleness; feedback-class for modeling.
 
 ## 7. Data Documentation Updates
 (pending — vendor-data facts stay in this ticket; any MNTN-table facts confirmed along the way go to knowledge/ via /capture)
