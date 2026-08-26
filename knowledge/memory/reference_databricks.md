@@ -169,6 +169,13 @@ CATALOG system` is already held via the metastore-admin group, so only the two s
 missing, and only an ACCOUNT admin can run them (already proven for `system.lakeflow`,
 `system.billing`, `system.access` and `system.query` on 2026-08-24). Ask drafted at
 `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_slack_alyson_query_schema.md`.
+**GRANTED and verified 2026-08-26.** `malachi@mountain.com` and the SP both hold
+`SELECT` + `USE_SCHEMA` on `system.query`; the read returns 4,520 rows over 2 days and
+`statement_text` is populated on every one (2,820 SELECTs / 132.6 query-hours). **Trap worth
+keeping:** `databricks grants get schema <s>` served STALE data for over an hour while the grant
+was already live, which sent us chasing a phantom missing grant across four re-runs and a
+metastore-mismatch theory. `SHOW GRANTS ON SCHEMA <s>` run through the SQL warehouse is the
+authoritative check; do not trust the CLI/REST `grants get` to confirm a fresh grant.
 Why it matters: Spark event logs carry plan TEXT but no `Statistics(sizeInBytes=...)` annotations,
 so `parse_plan_text` extracts 0 table nodes from 4.7 MB of plan text across a 300-run sample and
 four checks cannot fire at all. See [[project_airflow_optimizer]].
