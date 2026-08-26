@@ -15,6 +15,9 @@ from .report import build_report, build_troubleshooting
 _LOG_TAIL_CHARS = 4000  # raw log tail given to the LLM when signatures found nothing
 
 
+_RESOLVER_MAX_CHARS = 4_000_000
+
+
 def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) -> dict:
     """Run the full chain on one failed-task log; return report + provenance."""
     parsed = parse_log_file(log_path)
@@ -27,6 +30,20 @@ def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) 
         walked = None
     if walked:
         diag["upstream_walk"] = walked
+    try:
+        from dataclasses import asdict
+
+        from .resolvers import resolve
+        from .root_cause_walk import Client
+
+        with open(log_path, encoding="utf-8", errors="replace") as f:
+            # The whole log, not the tail: the line that settles a fork can sit 400 KB from the end.
+            whole = f.read()[:_RESOLVER_MAX_CHARS]
+        res = resolve(diag, whole, Client())
+    except Exception:  # an unreachable resolver leaves the signature's own remedy standing
+        res = None
+    if res:
+        diag["resolution"] = asdict(res)
     if profile_perf:  # perf-shaped failures only (IMP-032); never on other classes
         try:
             from .perf_profile import profile

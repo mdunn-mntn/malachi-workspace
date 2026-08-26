@@ -122,11 +122,12 @@ def build_report(diag: dict) -> str:
     if diag.get("orchestration_only"):
         lines.append(f"Downstream {diag.get('engine')} job SUCCEEDED, orchestration-only failure.")
     cause_idx = None
-    likely = (root.get("likely_cause") or "").strip()
+    resolved = resolved_cause(diag)
+    likely = (resolved[0] if resolved else root.get("likely_cause") or "").strip()
     if likely:
         lines.append(likely if likely.endswith(".") else likely + ".")
         cause_idx = len(lines) - 1
-    fix = fix_line(root)
+    fix = (resolved[1] if resolved and resolved[1] else None) or fix_line(root)
     if fix:
         lines.append(fix)
     link = _link(diag)
@@ -172,6 +173,20 @@ def _downstream_text(diag: dict) -> str:
         for x in (diag.get("root_error"), spark.get("error_text"), spark.get("state_message"))
         if x
     ).strip()
+
+
+def resolved_cause(diag: dict) -> tuple[str, str] | None:
+    """(why, how) from a resolver that settled the signature's open fork, when one did.
+
+    A signature names a class; most classes still hide a fork the reader would otherwise resolve
+    by hand. When the evidence settles it, the settled answer replaces the conditional remedy.
+    """
+    res = diag.get("resolution")
+    if not res:
+        return None
+    why = f"{res['verdict']} ({res['evidence']})"
+    how = " ".join(f"{i}. {s}" for i, s in enumerate(res.get("solutions") or [], 1))
+    return why, (how or None)
 
 
 def walked_cause(diag: dict) -> tuple[str, str] | None:

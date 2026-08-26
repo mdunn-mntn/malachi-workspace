@@ -24,6 +24,7 @@ from .report import (
     _one_line,
     code_links,
     fix_line,
+    resolved_cause,
     stated_condition,
     stated_next_step,
     walked_cause,
@@ -33,6 +34,7 @@ MAX_BLOCK = 2900  # Slack hard-caps a section block at 3000 chars
 _ASTRO_UI = (os.environ.get("AIRFLOW_API_BASE") or "").rstrip("/").removesuffix("/api/v2")
 
 WHY_DETERMINISTIC = "signature"
+WHY_RESOLVED = "resolved"
 WHY_WALKED = "walked"
 WHY_STATED = "stated"
 WHY_LLM = "llm"
@@ -49,6 +51,9 @@ def _astro_run_url(dag_id: str | None, run_id: str | None) -> str | None:
 def why(diag: dict, llm_cause: str | None = None) -> tuple[str, str]:
     """(text, source) for the Why line. Evidence outranks opinion, opinion outranks silence."""
     root = diag.get("root_signature") or {}
+    resolved = resolved_cause(diag)
+    if resolved:
+        return _one_line(resolved[0], 600), WHY_RESOLVED
     if root.get("likely_cause"):
         return _one_line(root["likely_cause"], 600), WHY_DETERMINISTIC
     walked = walked_cause(diag)
@@ -73,6 +78,8 @@ def why(diag: dict, llm_cause: str | None = None) -> tuple[str, str]:
 
 def how(diag: dict, source: str) -> str:
     """The next action. On a gap that is the next hop to read, never a guessed fix."""
+    if source == WHY_RESOLVED:
+        return resolved_cause(diag)[1] or fix_line(diag.get("root_signature") or {}) or ""
     if source == WHY_WALKED:
         return walked_cause(diag)[1]
     if source == WHY_STATED:
@@ -122,6 +129,7 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
 
     label = {
         WHY_DETERMINISTIC: "matched signature",
+        WHY_RESOLVED: "settled from evidence",
         WHY_WALKED: "walked upstream",
         WHY_STATED: "no cause in this log",
         WHY_LLM: "LLM, unverified",

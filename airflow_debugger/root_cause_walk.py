@@ -49,6 +49,11 @@ class Client:
         """One task instance's log, flattened."""
         return self.api.fetch_log(self.base, self.token, ti) or ""
 
+    def task_history(self, dag_id: str, task_id: str, limit: int = 100) -> list:
+        """Recent instances of one task, newest first, for a runtime trend."""
+        rows = self.api.list_task_instances_for_task(self.base, self.token, dag_id, task_id, limit)
+        return rows or []
+
     def find_run(
         self, dag_id: str, task_id: str, on_date: str | None, ti_state: str | None
     ) -> str | None:

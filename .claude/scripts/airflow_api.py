@@ -316,6 +316,21 @@ def list_task_instances_in_run(base, token, dag_id, run_id):
     return out
 
 
+def list_task_instances_for_task(base, token, dag_id, task_id, limit=100):
+    """Recent instances of ONE task across runs, newest first, for a runtime trend."""
+    dp = urllib.parse.quote(dag_id)
+    status, obj = _get_json(
+        base,
+        token,
+        f"/dags/{dp}/dagRuns/~/taskInstances",
+        {"limit": limit, "task_id": task_id, "order_by": "-start_date"},
+    )
+    if status != 200:
+        return []
+    rows = obj.get("task_instances", [])
+    return [t for t in rows if t.get("task_id") == task_id]
+
+
 def _ti_key(ti):
     """Identity of one task instance across queries (a mapped task needs map_index)."""
     return (ti.get("dag_id"), ti.get("dag_run_id"), ti.get("task_id"), ti.get("map_index", -1))
