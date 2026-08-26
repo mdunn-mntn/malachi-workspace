@@ -84,11 +84,6 @@ def job_keys(name: str) -> list[str]:
     return out
 
 
-def normalise_job(name: str) -> str:
-    """The primary comparable form: `job_keys`'s best candidate."""
-    keys = job_keys(name)
-    return keys[0] if keys else ""
-
 
 @dataclass
 class DagCoverage:

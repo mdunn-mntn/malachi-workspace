@@ -1,4 +1,4 @@
-"""PHS enumeration: the PHS-attached SUCCEEDED filter and per-uuid log-path derivation."""
+"""Temp-bucket enumeration: the SUCCEEDED filter and per-uuid log-path derivation."""
 
 from __future__ import annotations
 
@@ -16,25 +16,33 @@ from airflow_optimizer.phs import log_uri, phs_succeeded
 _PHS = {"sparkHistoryServerConfig": {"dataprocCluster": "projects/x/regions/y/clusters/phs"}}
 
 
-def _batch(state: str = "SUCCEEDED", phs: bool = True, uuid: str = "u-1") -> dict:
-    return {
+def _batch(state: str = "SUCCEEDED", phs: bool = True, uuid: str = "u-1",
+           event_log: str = "") -> dict:
+    b = {
         "name": f"projects/p/locations/r/batches/b-{uuid}",
         "state": state,
         "uuid": uuid,
         "environmentConfig": {"peripheralsConfig": _PHS if phs else {}},
     }
+    if event_log:
+        b["runtimeConfig"] = {"properties": {"spark:spark.eventLog.dir": event_log}}
+    return b
 
 
-def test_phs_succeeded_filters_state_phs_and_uuid() -> None:
-    """Only SUCCEEDED + PHS-attached + uuid-bearing batches survive the filter."""
+def test_phs_succeeded_keeps_every_batch_whose_log_is_not_in_the_archive() -> None:
+    """A batch with no eventLog.dir still writes to the temp bucket, so it must be kept.
+
+    Filtering on sparkHistoryServerConfig kept 10 of 200 prod batches and dropped 175 that
+    had a readable log at the same per-uuid path.
+    """
     batches = [
         _batch(),
-        _batch(state="FAILED"),
+        _batch(state="FAILED", uuid="u-x"),
         _batch(phs=False, uuid="u-2"),
+        _batch(uuid="u-3", event_log=phs.ARCHIVE_PREFIX),
         {"state": "SUCCEEDED", "environmentConfig": {"peripheralsConfig": _PHS}},  # no uuid
     ]
-    kept = phs_succeeded(batches)
-    assert [b["uuid"] for b in kept] == ["u-1"]
+    assert [b["uuid"] for b in phs_succeeded(batches)] == ["u-1", "u-2"]
 
 
 def test_log_uri_is_per_uuid_spark_job_history() -> None:

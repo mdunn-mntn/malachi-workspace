@@ -125,18 +125,6 @@ def _blocks(dag: str, rows: list, base: str, resolve: object = None) -> list[str
             ""]
 
 
-def _resolver(coverage: object) -> object:
-    """Job name -> DAG id. Falls back to exact-match so a coverage object without `resolve`
-    still cannot produce a dead link."""
-    if coverage is None:
-        return None
-    resolve = getattr(coverage, "resolve", None)
-    if callable(resolve):
-        return resolve
-    known = {d.dag_id for d in getattr(coverage, "dags", [])}
-    return lambda name: name if name in known else ""
-
-
 def render(delta: object, scanned: int, findings: int, high: int, date: str,
            coverage: object | None = None, backlog_path: str = "",
            base: str = AIRFLOW_UI) -> str:
@@ -147,7 +135,7 @@ def render(delta: object, scanned: int, findings: int, high: int, date: str,
     if coverage is not None:
         head += f" {coverage.unprofiled_line()}"
 
-    resolve = _resolver(coverage)
+    resolve = coverage.resolve if coverage is not None else None
     out = [head, ""]
     out += _section("Fix not working", getattr(delta, "fix_not_working", []), base, resolve)
     for dag, rows in by_dag(list(getattr(delta, "new", []))

@@ -177,6 +177,9 @@ def test_digest_does_not_link_a_dag_that_does_not_exist(tmp_path: Path) -> None:
         error = ""
         report_path = ""
 
+        def resolve(self, name: str) -> str:
+            return name if name == "site_network_hourly" else ""
+
         def unprofiled_line(self) -> str:
             return "0 active DAGs had no Spark task to profile."
 
@@ -286,3 +289,32 @@ def test_a_still_rolling_app_is_costed_not_ranked_free() -> None:
     blind = type("R", (), {"executors": [_E(0, None)], "app_end_ts": None,
                            "last_event_ts": None})()
     assert crawl.executor_hours(blind) == 0.0     # no clock at all: unknown, not free
+
+
+def test_digest_links_the_dag_and_names_the_job_when_they_differ(tmp_path: Path) -> None:
+    """The whole point of resolution: the link goes to the DAG, the job name stays readable.
+
+    A Spark app is named for the table it populates, so the DAG that runs it usually has a
+    different name and the reader needs both.
+    """
+    class _Cov:
+        dags = [type("D", (), {"dag_id": "feature_store_hourly"})()]
+        unprofiled: list = []
+        error = ""
+        report_path = ""
+
+        def resolve(self, name: str) -> str:
+            return "feature_store_hourly" if name == "aug_log_ip_hourly" else ""
+
+        def unprofiled_line(self) -> str:
+            return "0 active DAGs had no Spark task to profile."
+
+    entries = [ledger.Entry(date="2026-08-18", dag_id="aug_log_ip_hourly", app_id="app-1",
+                            key="shuffle_fetch_wait:2", impact="high",
+                            title="Stage 2 spends 64% of task time waiting on shuffle fetch",
+                            state="new")]
+    text = digest.render(ledger.delta(entries), scanned=1, findings=1, high=1,
+                         date="2026-08-18", coverage=_Cov(), base=UI)
+    assert "dags/feature_store_hourly|feature_store_hourly>" in text
+    assert "`aug_log_ip_hourly`" in text
+    assert "dags/aug_log_ip_hourly|" not in text

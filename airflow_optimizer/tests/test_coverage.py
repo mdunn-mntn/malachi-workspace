@@ -207,9 +207,9 @@ def test_task_owner_resolves_a_job_name_to_the_dag_that_runs_it() -> None:
         coverage.DagCoverage(dag_id="audience_intent", spark_tasks=["fangorn_score_monitor"]),
     ]
     idx = cov.task_owner
-    assert idx[coverage.normalise_job("aug_log_ip_hourly")] == "feature_store_hourly"
-    assert idx[coverage.normalise_job("fangorn_score_monitor")] == "audience_intent"
-    assert idx[coverage.normalise_job("audience_intent")] == "audience_intent"
+    assert idx["aug_log_ip_hourly"] == "feature_store_hourly"
+    assert idx["fangorn_score_monitor"] == "audience_intent"
+    assert idx["audience_intent"] == "audience_intent"
 
 
 def test_a_task_name_two_dags_share_is_dropped_not_guessed() -> None:
@@ -218,19 +218,23 @@ def test_a_task_name_two_dags_share_is_dropped_not_guessed() -> None:
     cov.dags = [coverage.DagCoverage(dag_id="dag_a", spark_tasks=["run"]),
                 coverage.DagCoverage(dag_id="dag_b", spark_tasks=["run"])]
     assert "run" not in cov.task_owner
-    assert cov.task_owner[coverage.normalise_job("dag_a")] == "dag_a"
+    assert cov.task_owner["dag_a"] == "dag_a"
 
 
-def test_normalise_job_strips_only_what_it_can_justify() -> None:
-    """A data-source or run index is a per-run stamp; anything else is part of the name."""
-    assert coverage.normalise_job("Populate site_network_hourly.SiteNetworkHourly") == "site_network_hourly"
-    assert coverage.normalise_job("feature_group_1_source.aug_log_ip_hourly") == "feature_group_1_source"
-    assert "aug_log_ip_hourly" in coverage.job_keys("feature_group_1_source.aug_log_ip_hourly")
-    assert "ipdsc_monitor" in coverage.job_keys("Populate ipdsc_14_monitor.IPDSC14Monitor")
-    assert coverage.normalise_job("ipdsc_ds_13") == "ipdsc_ds"
-    assert coverage.normalise_job("audience_intent_scoring_staging_ds46") == "audience_intent_scoring_staging"
-    assert coverage.normalise_job("materialize_mntn_select_16") == "materialize_mntn_select"
-    assert coverage.normalise_job("conv_log_derived_ip") == "conv_log_derived_ip"
+def test_job_keys_strips_only_what_it_can_justify() -> None:
+    """A data-source or run index is a per-run stamp; anything else is part of the name.
+
+    Both dotted segments are offered because a Spark app name and an Airflow task id put the
+    job in opposite halves of the dot.
+    """
+    keys = coverage.job_keys
+    assert "site_network_hourly" in keys("Populate site_network_hourly.SiteNetworkHourly")
+    assert "aug_log_ip_hourly" in keys("feature_group_1_source.aug_log_ip_hourly")
+    assert "ipdsc_monitor" in keys("Populate ipdsc_14_monitor.IPDSC14Monitor")
+    assert keys("ipdsc_ds_13") == ["ipdsc_ds"]
+    assert keys("audience_intent_scoring_staging_ds46") == ["audience_intent_scoring_staging"]
+    assert keys("materialize_mntn_select_16") == ["materialize_mntn_select"]
+    assert keys("conv_log_derived_ip") == ["conv_log_derived_ip"]
 
 
 def test_the_report_names_every_job_it_could_not_tie_to_a_dag() -> None:
@@ -258,7 +262,7 @@ def test_a_name_that_is_one_dags_task_and_another_dags_id_reads_as_ambiguous() -
         coverage.DagCoverage(dag_id="feature_store_hourly", spark_tasks=["grp.aug_log_ip_hourly"]),
         coverage.DagCoverage(dag_id="aug_log_ip_hourly", spark_tasks=["aug_log_ip_hourly"]),
     ]
-    assert coverage.normalise_job("aug_log_ip_hourly") not in cov.task_owner
+    assert "aug_log_ip_hourly" not in cov.task_owner
     assert dict(cov.unresolved({"aug_log_ip_hourly"}))["aug_log_ip_hourly"].startswith(
         "named by 2 DAGs")
 
@@ -287,11 +291,17 @@ def test_a_spark_app_name_resolves_to_the_dag_that_runs_it() -> None:
     assert cov.resolve("Populate never_heard_of_it.NeverHeardOfIt") == ""
 
 
-def test_resolve_prefers_the_candidate_that_names_exactly_one_dag() -> None:
-    """An ambiguous candidate must not shadow a later one that resolves cleanly."""
+def test_resolve_walks_past_an_ambiguous_candidate_to_one_that_is_not() -> None:
+    """The FIRST candidate here is ambiguous, so only the fallthrough can resolve the job.
+
+    `Populate src.aug_log_ip` offers `src` first, which two DAGs claim, then `aug_log_ip`,
+    which one does. Stopping at the first ambiguous candidate would leave the job unlinked.
+    """
     cov = coverage.Coverage(date="x", dag_ids_including_paused={"a", "b", "feature_store"})
     cov.dags = [coverage.DagCoverage(dag_id="a", spark_tasks=["src.shared"]),
-                coverage.DagCoverage(dag_id="b", spark_tasks=["src.shared"]),
+                coverage.DagCoverage(dag_id="b", spark_tasks=["src.other"]),
                 coverage.DagCoverage(dag_id="feature_store", spark_tasks=["src.aug_log_ip"])]
-    assert cov.resolve("Populate aug_log_ip.AugLogIp") == "feature_store"
-    assert cov.resolve("Populate shared.Shared") == ""
+    assert coverage.job_keys("Populate src.aug_log_ip")[0] == "src"
+    assert len(cov._owners()["src"]) == 3
+    assert cov.resolve("Populate src.aug_log_ip") == "feature_store"
+    assert cov.resolve("Populate src.Src") == ""
