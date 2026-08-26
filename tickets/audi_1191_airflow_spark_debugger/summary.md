@@ -638,3 +638,33 @@ carry the wrong verdict on a third of the volume.
 - **(c) `spark-events/` TTL** = age-30 + delete old logs — needs admin (`storage.buckets.update`); Ryan/admin applies (rule staged, preserves the 7 existing lifecycle rules).
 - **(d) Databricks event logging** — enable the setting → hit the GCS-write error → Cursor builds a **mountain-devops PR** for the GCS-write grant → Christina approves (no blocking DevOps ticket).
 - **(e) After prod logs flow** — run the crawler on prod `spark-events` → cross-job backlog; send the 242x `Update Vertical Categorization` skew finding → Sean/DDP. **ds67 `write_location()` bug already FIXED by owner** (main commit `a008b2e` "Fix DS 67 output structure", 2026-08-04) — the debugger named ds67 as ROOT and the owner fixed exactly that; dropped from the send list.
+
+## 7c. Answer-shaped replies + the gauntlet rounds (2026-08-26)
+
+The reply is now five sections: what failed / why / where / how it failed / fix. Every signature
+carries a `remedy` (the change to make, not a category). Eight `resolvers.py` entries settle the
+fork the signature leaves open by reading evidence: run history, the task's declared
+`execution_timeout`, the error window. Each answer is Now / Then / and the case where it differs.
+`root_cause_walk.py` follows an `upstream_failed` or external-task verdict to the task that raised,
+proving the edge from `downstream_task_ids`; with no DAG graph it makes no root-cause claim.
+
+Replay of 216 logs: 88 settled from evidence, 51 matched signature, 49 walked to a root, 28 say why
+they could not. 0 bare categories, 0 replies without a fix. Artifact:
+`claude.ai/code/artifact/ada3322c-046c-4a23-bd6b-dfea9bad2e8f`.
+
+**Four gauntlet rounds, ~20 confirmed blockers, and the pattern is the lesson.** Nearly every one
+was a *confidently wrong* answer rather than a crash: a resolver reading the whole 4 MB log and
+taking the first regex match (an INFO preamble named the wrong service account and permission); the
+walk calling the earliest failed task the root with no dependency edge; the time limit inferred from
+the longest past failure, which one stale row flipped to the opposite verdict; the fallback resolver
+reading the current task's log while using the walked root's signature; the log cap slicing from the
+front so the exception at the end was discarded. Each shipped green because the tests fed short
+hand-written strings. **The fixture is the defect**: every regression added since is built from a
+full log, and several fail if the guard is removed (verified by reverting the guard and re-running).
+
+**State at hand-off:** workspace `airflow_debugger/` is committed and pushed, 13 test modules green.
+The airflow-ti bundle is synced in a worktree on branch `audi-1191/bundle-verdict-sync` (20 files,
++2067/-102, 13 modules green, round 0 clean), NOT yet a PR. Round 5 of the gauntlet was running at
+hand-off. Sync is reproducible: `scratchpad/sync_bundle.py <bundle-dir>` asserts every edit lands
+(an earlier sed port failed silently and shipped a dead resolver subsystem).
+
