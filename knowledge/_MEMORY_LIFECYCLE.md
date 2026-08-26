@@ -183,7 +183,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_no_unsolicited_suggestions | feedback | 2026-08-20 | [doc](memory/feedback_no_unsolicited_suggestions.md) |
 | feedback_shared_worktree_commits | feedback | 2026-08-20 | [doc](memory/feedback_shared_worktree_commits.md) |
 | feedback_slack_channel_one_liners | feedback | 2026-08-20 | [doc](memory/feedback_slack_channel_one_liners.md) |
-| feedback_validated_is_not_correct | feedback | 2026-08-20 | [doc](memory/feedback_validated_is_not_correct.md) |
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
 | reference_airflow_log_puller | reference | 2026-08-20 | [doc](memory/reference_airflow_log_puller.md) |
@@ -228,5 +227,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_fangorn_inference_dataproc | reference | 2026-08-25 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_ghost_bid_lift_register | reference | 2026-08-25 | [doc](memory/reference_ghost_bid_lift_register.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-26 | [doc](memory/reference_airflow_ti.md) |
+| feedback_validated_is_not_correct | feedback | 2026-08-26 | [doc](memory/feedback_validated_is_not_correct.md) |
 | reference_databricks_system_schema_grants | reference | 2026-08-26 | [doc](memory/reference_databricks_system_schema_grants.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-26 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
