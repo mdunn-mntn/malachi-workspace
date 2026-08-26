@@ -83,7 +83,13 @@ Matt offered to make the model change and asked for implications. Assessment (ev
 4. **ghost_frac compliance gates need re-deriving, and burnin holdout share needs validation.** Gold results/rollup compliance flags are computed on observed ghost_frac; adding burnin campaigns changes every advertiser's mix. In the single-hour probe, single-bid-IP ghost share: Gruns prod prospecting 13.0%, a Gruns burnin campaign 11.9% (near design), but ThirdLove burnin prospecting only 2.3% (expected ~62 ghost IPs of 625, saw 15). One hour is thin evidence — run a proper multi-day IP-grain check on burnin campaigns before trusting their lift numbers.
 
 ## 5. Solution
-Not started. Matt to make the model change; validation checklist above.
+
+**Fix shipped by Matt as [SteelHouse/sqlmesh#1346](https://github.com/SteelHouse/sqlmesh/pull/1346) (2026-08-25, merging tonight).** Reviewed the diff: correct shape — both Beeswax siblings (`lift__ghost_bid_audiences`, `_test_campaigns`) widened to `env IN ('prod','burnin')`, disjointness enforced by the is_test semi-join polarity (not env), the 2026-08-14 "test traffic logs under burnin" reading explicitly retracted as a routing coincidence, forward-only consequence documented. MNTN legs untouched (env 100% 'prod' on bidder_bid_events).
+
+**Dev-table validation (`...lift_ghost_bid_audiences__1893325949__dev`, 2026-08-25):**
+- ThirdLove present: 27,645 rows (636 ghost / 27,009 submitted), zero is_test=TRUE rows anywhere (4.49B rows, 1,926 advertisers — up from ~1,498).
+- **Dev backfilled only 2026-08-23..24 for ThirdLove.** Raw `bid_price_log` still holds ~2026-08-15+, so a post-merge backfill from ~08-15 rescues a week of burnin history before TTL destroys it. Time-sensitive: each day of delay loses a day.
+- **ThirdLove ghost share reads 2.3%** (636/27,645; matches the 2.3% single-bid-IP hour probe) vs 10% design. Per Abbas (via Matt): the ONLY difference between deployments is IHP (in-house pacing, Swapnil's team). Open question: does the IHP bid path under-emit ghost bids? If burnin's ghost_frac sits at ~0.02, burnin-routed campaigns fail the 0.09-0.11 clean gate and their lift stays unreadable even with the model fixed.
 
 ## 6. Questions Answered
 None yet.
@@ -92,7 +98,8 @@ None yet.
 None yet.
 
 ## 8. Open Items / Follow-ups
-- Matt Brorby: SQLMesh fix (env IN prod+burnin, exclude is_test — see fix shape above); then re-run INCR-75 fold to re-gate "no data yet".
+- Post-merge: backfill from ~2026-08-15 (TTL floor) to rescue burnin history; then re-run INCR-75 fold to re-gate "no data yet".
+- Abbas/Swapnil: does the IHP (in-house pacing) bid path emit ghost bids at the designed 10%? ThirdLove burnin reads 2.3%.
 - rtb-bidder-squad: is PER-6332 (ThirdLove burnin routing, May 2026) still a live need?
 - Campaign-level coverage audit for PRESENT advertisers (burnin campaigns of covered advertisers are invisible too, e.g. Gruns 626276 as of 2026-08-24).
 - Did env labels CHANGE over time? CG 126905 was measurable June-July but reads burnin now.
