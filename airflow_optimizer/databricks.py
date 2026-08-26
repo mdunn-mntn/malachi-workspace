@@ -147,13 +147,22 @@ def _tag(sql: str) -> tuple[str, str]:
     return node, sql[m.end():].strip()
 
 
+# One node's every run would otherwise fill the list: 15 of the 15 slowest were 4 dbt tests.
 HEAVY_SQL = """
+WITH ranked AS (
+  SELECT statement_id, total_duration_ms, read_bytes, statement_text,
+         row_number() OVER (
+           PARTITION BY coalesce(nullif(regexp_extract(statement_text, '"node_id": "([^"]+)"', 1),
+                                        ''), statement_id)
+           ORDER BY total_duration_ms DESC) AS rn
+  FROM system.query.history
+  WHERE start_time > current_date() - INTERVAL {days} DAYS
+    AND statement_type = 'SELECT'
+    AND statement_text IS NOT NULL
+    AND total_duration_ms > {min_ms}
+)
 SELECT statement_id, total_duration_ms, read_bytes, statement_text
-FROM system.query.history
-WHERE start_time > current_date() - INTERVAL {days} DAYS
-  AND statement_type = 'SELECT'
-  AND statement_text IS NOT NULL
-  AND total_duration_ms > {min_ms}
+FROM ranked WHERE rn = 1
 ORDER BY total_duration_ms DESC
 LIMIT {limit}
 """

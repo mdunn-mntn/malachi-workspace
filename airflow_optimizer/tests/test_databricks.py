@@ -77,3 +77,12 @@ def test_job_cost_sql_dedupes_the_run_timeline_before_joining(monkeypatch: Any) 
     databricks.job_costs(7, 5, "wh")
     assert "GROUP BY run_id" in seen["sql"]
     assert databricks._RUN_UUID.pattern in seen["sql"]
+
+
+def test_heavy_queries_keeps_one_statement_per_node(monkeypatch: Any) -> None:
+    """Ranking raw runs by duration returned the same four dbt tests 15 times out of 15."""
+    seen = {}
+    monkeypatch.setattr(databricks, "query", lambda sql, wh="": seen.setdefault("sql", sql) and [])
+    databricks.heavy_queries(days=2, limit=15, warehouse="wh")
+    assert "row_number() OVER" in seen["sql"]
+    assert "WHERE rn = 1" in seen["sql"]
