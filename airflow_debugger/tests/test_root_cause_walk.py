@@ -21,6 +21,17 @@ _STUB = {
     "no_error_text": True,
 }
 
+_DEFAULT_GRAPH = {
+    "ddp_vertical_classification_api": ["response_tests"],
+    "first_to_break": ["also_broke"],
+    "also_broke": ["response_tests"],
+    "late_consequence": ["response_tests"],
+    "odd_task": ["response_tests"],
+    "empty_a": ["empty_b"],
+    "empty_b": ["response_tests"],
+    "response_tests": [],
+}
+
 _TIMEOUT_LOG = "[2026-08-25T05:38:00Z] ERROR - [error] task Process timed out"
 
 
@@ -28,9 +39,15 @@ class _Api:
     """A fake Client. Patching the seam keeps this file identical in the workspace and the bundle,
     which hold two different REST clients behind the same four methods."""
 
-    def __init__(self, tis: dict, logs: dict) -> None:
+    def __init__(self, tis: dict, logs: dict, graph: dict | None = None) -> None:
         self.tis, self.logs = tis, logs
         self.fetched: list[str] = []
+        # Default edge: everything feeds response_tests, which is the shape most cases want.
+        self.graph = graph if graph is not None else _DEFAULT_GRAPH
+
+    def task_graph(self, dag_id: str) -> dict:
+        """task_id -> downstream task ids."""
+        return self.graph
 
     def tis_in_run(self, dag_id: str, run_id: str) -> list:
         """Every task instance in one run."""
@@ -113,7 +130,6 @@ def test_other_failures_in_the_run_are_reported_not_dropped() -> None:
     )
     out = _run(api)
     assert out["hops"][0]["siblings"] == ["also_broke"]
-    assert "1 other task(s) failed" in walker.chain_text(out)
 
 
 def test_a_walk_that_reaches_nothing_says_why() -> None:
@@ -122,7 +138,6 @@ def test_a_walk_that_reaches_nothing_says_why() -> None:
     out = _run(api)
     assert out["root"] is None
     assert "no failed task in this run" in out["note"]
-    assert "stopped" in walker.chain_text(out)
 
 
 def test_it_does_not_walk_a_task_that_carries_its_own_error() -> None:
@@ -141,8 +156,9 @@ def test_a_log_with_no_signature_still_ends_the_walk_on_its_text() -> None:
     assert "nobody has a signature" in out["root"]["error"]
 
 
-def test_an_empty_upstream_log_keeps_walking() -> None:
-    """A stub pointing at a stub is the case one hop was built to miss."""
+def test_an_empty_upstream_log_stops_and_says_so() -> None:
+    """The ancestor set already spans the chain, so the earliest failed ancestor is the deepest.
+    When its log is empty there is nothing further upstream, and that is the honest answer."""
     api = _Api(
         {
             ("vertical_classification_api", _STUB["identity"]["run_id"]): [
@@ -153,9 +169,69 @@ def test_an_empty_upstream_log_keeps_walking() -> None:
         {"empty_a": "", "empty_b": ""},
     )
     out = _run(api, max_hops=2)
-    assert [h["task_id"] for h in out["hops"]] == ["empty_a", "empty_b"]
+    assert [h["task_id"] for h in out["hops"]] == ["empty_a"]
     assert out["root"] is None
-    assert "hop limit" in out["note"]
+    assert "no FAILED task is upstream" in out["note"]
+
+
+def test_a_failure_in_a_parallel_branch_is_never_called_the_root() -> None:
+    """The gauntlet blocker. Two independent branches fail; only one feeds this task. Start time
+    does not prove an edge, and naming the wrong one sends on-call at a fault that is not theirs."""
+    graph = {"branch_a_load": [], "branch_b_transform": ["response_tests"], "response_tests": []}
+    api = _Api(
+        {
+            ("vertical_classification_api", _STUB["identity"]["run_id"]): [
+                _ti("branch_a_load", start="2026-08-25T05:01:00Z"),
+                _ti("branch_b_transform", start="2026-08-25T05:20:00Z"),
+            ]
+        },
+        {"branch_a_load": _TIMEOUT_LOG, "branch_b_transform": _TIMEOUT_LOG},
+        graph,
+    )
+    out = _run(api)
+    assert out["root"]["task_id"] == "branch_b_transform"
+    assert api.fetched == ["branch_b_transform"]
+
+
+def test_no_dag_structure_means_no_root_cause_claim() -> None:
+    """Without the edges the claim cannot be proved, and an unproved root reads identically."""
+    api = _Api(
+        {("vertical_classification_api", _STUB["identity"]["run_id"]): [_ti("something")]},
+        {"something": _TIMEOUT_LOG},
+        {},
+    )
+    out = _run(api)
+    assert out["root"] is None
+    assert "DAG structure is unavailable" in out["note"]
+
+
+def test_failures_with_no_edge_to_this_task_are_reported_not_claimed() -> None:
+    """A run can fail tasks that have nothing to do with this one. Say so; do not pick one."""
+    graph = {"unrelated": [], "response_tests": []}
+    api = _Api(
+        {("vertical_classification_api", _STUB["identity"]["run_id"]): [_ti("unrelated")]},
+        {"unrelated": _TIMEOUT_LOG},
+        graph,
+    )
+    out = _run(api)
+    assert out["root"] is None
+    assert "no FAILED task is upstream" in out["note"]
+    assert "unrelated" in out["note"]
+
+
+def test_a_grandparent_counts_as_upstream() -> None:
+    """The edge is transitive; only a direct-parent check would miss the real root."""
+    graph = {"grandparent": ["parent"], "parent": ["response_tests"], "response_tests": []}
+    api = _Api(
+        {
+            ("vertical_classification_api", _STUB["identity"]["run_id"]): [
+                _ti("grandparent", start="2026-08-25T05:01:00Z"),
+            ]
+        },
+        {"grandparent": _TIMEOUT_LOG},
+        graph,
+    )
+    assert _run(api)["root"]["task_id"] == "grandparent"
 
 
 def test_an_api_failure_is_reported_not_raised() -> None:

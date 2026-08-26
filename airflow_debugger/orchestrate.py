@@ -8,9 +8,13 @@ signature) does it call the LLM synthesizer over the evidence bundle.
 
 from __future__ import annotations
 
+import logging
+
 from .incident_match import match as match_incidents
 from .parse import diagnose, parse_log_file
 from .report import build_report, build_troubleshooting
+
+logger = logging.getLogger(__name__)
 
 _LOG_TAIL_CHARS = 4000  # raw log tail given to the LLM when signatures found nothing
 
@@ -26,7 +30,8 @@ def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) 
         from .root_cause_walk import walk
 
         walked = walk(diag, on_date=parsed.log_date)
-    except Exception:  # a walk failure degrades to the one-hop verdict, never kills the diagnosis
+    except Exception:
+        logger.warning("upstream walk failed", exc_info=True)
         walked = None
     if walked:
         diag["upstream_walk"] = walked
@@ -53,7 +58,9 @@ def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) 
                     whole,
                     client,
                 )
-    except Exception:  # an unreachable resolver leaves the signature's own remedy standing
+    except Exception:
+        # Silence here hid a NameError that killed every resolver in production.
+        logger.warning("resolver failed", exc_info=True)
         res = None
     if res:
         diag["resolution"] = asdict(res)

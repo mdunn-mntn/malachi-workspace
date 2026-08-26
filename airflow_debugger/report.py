@@ -135,11 +135,17 @@ def build_report(diag: dict) -> str:
         lines.append(link)
     walked = walked_cause(diag)
     if walked:
-        lines += [walked[0], walked[1]]
+        lines.append(walked[0])
+        # Without an index the hard cut below lands on the remedy, the half the reader acts on.
+        if cause_idx is None:
+            cause_idx = len(lines) - 1
+        lines.append(walked[1])
     else:
         stated = stated_condition(diag)
         if stated:
             lines.append(stated)
+            if cause_idx is None:
+                cause_idx = len(lines) - 1
     mask = detect_mask(_verdict_text(diag))
     if mask:
         lines.append(mask_note(mask))
@@ -236,20 +242,10 @@ def stated_condition(diag: dict) -> str | None:
     return _pod_startup_note(diag)
 
 
-def walk_note(diag: dict) -> str | None:
-    """Why the upstream walk did not reach a root. Silence would read as "there was nothing"."""
-    walked = diag.get("upstream_walk") or {}
-    if walked.get("root") or not walked.get("note"):
-        return None
-    return f"Could not follow the chain: {walked['note']}."
-
-
 def stated_next_step(diag: dict) -> str:
     """Where to go next for a stated condition. The cause is rarely in this task's own log."""
-    note = walk_note(diag)
     if diag.get("ti_state") == "upstream_failed":
-        step = "Diagnose the upstream task named above; this one never started."
-        return f"{step} {note}" if note else step
+        return "Diagnose the upstream task named above; this one never started."
     if diag.get("pod_deleted"):
         return "Check node capacity and image-pull time for that pod, not the task's code."
     if diag.get("poke_target"):

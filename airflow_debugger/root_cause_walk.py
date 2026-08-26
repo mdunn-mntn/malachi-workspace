@@ -49,6 +49,10 @@ class Client:
         """One task instance's log, flattened."""
         return self.api.fetch_log(self.base, self.token, ti) or ""
 
+    def task_graph(self, dag_id: str) -> dict:
+        """task_id -> downstream task ids, for proving an edge rather than assuming one."""
+        return self.api.dag_task_graph(self.base, self.token, dag_id) or {}
+
     def task_history(self, dag_id: str, task_id: str, limit: int = 100) -> list:
         """Recent instances of one task, newest first, for a runtime trend."""
         rows = self.api.list_task_instances_for_task(self.base, self.token, dag_id, task_id, limit)
@@ -82,10 +86,32 @@ def _diagnose_text(text: str) -> tuple[dict | None, str | None]:
 _CLIENT = Client  # the bundle swaps this for one built on its own REST client
 
 
+def _ancestors(graph: dict, task_id: str) -> set:
+    """Every task that can reach `task_id`, from the DAG's own edges."""
+    upstream: dict = {}
+    for src, dests in graph.items():
+        for d in dests:
+            upstream.setdefault(d, set()).add(src)
+    seen, queue = set(), list(upstream.get(task_id, ()))
+    while queue:
+        cur = queue.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        queue += list(upstream.get(cur, ()))
+    return seen
+
+
 def _next_in_run(
     client: Client, dag_id: str, run_id: str, task_id: str
 ) -> tuple[list[dict], str | None]:
-    """The failed task instances in this run, excluding the one we came from."""
+    """The failed tasks in this run that are genuinely upstream of the one we came from.
+
+    Start time does not prove a dependency. A DAG with parallel branches fails two unrelated
+    tasks in one run, and the earlier one is not upstream of anything: naming it root cause sends
+    on-call at a fault that is not theirs, under a label that claims the answer was read off the
+    API. So the edge is read off the API too, and without it there is no root-cause claim.
+    """
     try:
         tis = client.tis_in_run(dag_id, run_id)
     except Exception as e:
@@ -93,8 +119,21 @@ def _next_in_run(
     failed = [t for t in tis if t.get("state") == "failed" and t.get("task_id") != task_id]
     if not failed:
         return [], "no failed task in this run, so the cause is outside it"
-    # Earliest start is the one that broke first; the rest are its consequences.
-    return sorted(failed, key=lambda t: str(t.get("start_date") or "")), None
+    try:
+        graph = client.task_graph(dag_id)
+    except Exception:
+        graph = {}
+    if not graph:
+        return (
+            [],
+            f"the DAG structure is unavailable, so none of {len(failed)} failed task(s) can be proved upstream",
+        )
+    ancestors = _ancestors(graph, task_id)
+    upstream_failed = [t for t in failed if t.get("task_id") in ancestors]
+    if not upstream_failed:
+        names = ", ".join(sorted(t["task_id"] for t in failed)[:3])
+        return [], f"no FAILED task is upstream of this one; the run also failed {names}"
+    return sorted(upstream_failed, key=lambda t: str(t.get("start_date") or "")), None
 
 
 def _external_target(diag: dict) -> tuple[str, str, str] | None:
@@ -192,23 +231,3 @@ def walk(diag: dict, on_date: str | None = None, max_hops: int = MAX_HOPS) -> di
         cur_dag, cur_run, cur_task = ti["dag_id"], ti.get("dag_run_id"), ti["task_id"]
 
     return {"hops": hops, "root": None, "note": f"stopped at the {max_hops}-hop limit"}
-
-
-def chain_text(walked: dict) -> str | None:
-    """One line naming the root and the path taken, or why the walk stopped."""
-    if not walked:
-        return None
-    hops = walked.get("hops") or []
-    root = walked.get("root")
-    if not root:
-        note = walked.get("note") or "the chain could not be followed"
-        seen = " -> ".join(h["task_id"] for h in hops)
-        return f"Upstream walk stopped: {note}." + (f" Reached {seen}." if seen else "")
-    path = " -> ".join(f"{h['task_id']}" for h in hops)
-    who = f"{root['dag_id']}.{root['task_id']}"
-    sig = (root.get("signature") or {}).get("key")
-    what = f"{who} ({sig})" if sig else who
-    tail = f" via {path}." if len(hops) > 1 else "."
-    siblings = hops[0].get("siblings") if hops else None
-    extra = f" {len(siblings)} other task(s) failed in the same run." if siblings else ""
-    return f"Root cause: {what}{tail}{extra}"

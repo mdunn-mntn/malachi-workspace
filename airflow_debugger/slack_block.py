@@ -171,6 +171,7 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
 
     walked_sig = ((diag.get("upstream_walk") or {}).get("root") or {}).get("signature") or {}
     klass = root.get("sig_class") or {
+        WHY_RESOLVED: walked_sig.get("sig_class") or "settled-upstream",
         WHY_WALKED: walked_sig.get("sig_class") or "upstream/root-cause-walked",
         WHY_STATED: "no-cause-in-log",
     }.get(source, "unclassified")

@@ -331,6 +331,19 @@ def list_task_instances_for_task(base, token, dag_id, task_id, limit=100):
     return [t for t in rows if t.get("task_id") == task_id]
 
 
+def dag_task_graph(base, token, dag_id):
+    """task_id -> its downstream task ids, so an upstream claim can be proved instead of guessed."""
+    dp = urllib.parse.quote(dag_id)
+    status, obj = _get_json(base, token, f"/dags/{dp}/tasks")
+    if status != 200:
+        return {}
+    return {
+        t["task_id"]: list(t.get("downstream_task_ids") or [])
+        for t in obj.get("tasks", [])
+        if t.get("task_id")
+    }
+
+
 def _ti_key(ti):
     """Identity of one task instance across queries (a mapped task needs map_index)."""
     return (ti.get("dag_id"), ti.get("dag_run_id"), ti.get("task_id"), ti.get("map_index", -1))
