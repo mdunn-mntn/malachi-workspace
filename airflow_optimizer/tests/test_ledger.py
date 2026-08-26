@@ -212,10 +212,10 @@ def test_ui_base_prefers_the_override_then_airflow_config(monkeypatch: object) -
     assert digest._ui_base() == ""
 
 
-def test_a_finding_carries_the_executor_hours_of_the_run_that_produced_it(tmp_path) -> None:
+def test_a_finding_carries_the_executor_hours_of_the_run_that_produced_it(tmp_path: Path) -> None:
     """Ranking by finding count puts a chatty cheap job above a quiet expensive one."""
     class _R:
-        def __init__(self, name, hours):
+        def __init__(self, name: str, hours: float) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
             self.findings = [OptFinding("shuffle_fetch_wait", "t", "high", "w", "f")]
 
@@ -229,7 +229,7 @@ def test_a_finding_carries_the_executor_hours_of_the_run_that_produced_it(tmp_pa
 def test_one_bad_dag_cannot_fill_the_whole_digest(tmp_path: Path) -> None:
     """The 2026-08-21 digest opened with eight consecutive fangorn_score_monitor lines."""
     class _R:
-        def __init__(self, name, n, hours):
+        def __init__(self, name: str, n: int, hours: float) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
             self.findings = [OptFinding(f"d{i}", f"stage {i} spills", "high", "w", f"fix {i}")
                              for i in range(n)]
