@@ -9,9 +9,10 @@ Two principals: `malachi@mountain.com` (a person, for analysis) and
 `07f36af7-614d-4d57-8143-2dbcd3cb58c2` (the `spark_optimizer` service principal, for the
 scheduled job). Both are needed; the SP is what runs unattended.
 
-## The statements
+## The statements — everything, one paste
 
 ```sql
+-- system schemas: cost, allocation, lineage, table size
 GRANT USE SCHEMA ON SCHEMA system.billing TO `malachi@mountain.com`;
 GRANT SELECT     ON SCHEMA system.billing TO `malachi@mountain.com`;
 GRANT USE SCHEMA ON SCHEMA system.billing TO `07f36af7-614d-4d57-8143-2dbcd3cb58c2`;
@@ -32,32 +33,53 @@ GRANT SELECT     ON SCHEMA system.storage TO `malachi@mountain.com`;
 GRANT USE SCHEMA ON SCHEMA system.storage TO `07f36af7-614d-4d57-8143-2dbcd3cb58c2`;
 GRANT SELECT     ON SCHEMA system.storage TO `07f36af7-614d-4d57-8143-2dbcd3cb58c2`;
 
+-- prod catalog, read only, for the service principal only.
+-- EXPLAIN COST plans a query against the real tables, so without this the scheduled
+-- job reads the SQL and then cannot plan it. Malachi already has this via producers_dev.
+GRANT USE CATALOG ON CATALOG prod TO `07f36af7-614d-4d57-8143-2dbcd3cb58c2`;
+GRANT SELECT      ON CATALOG prod TO `07f36af7-614d-4d57-8143-2dbcd3cb58c2`;
+
 SHOW GRANTS ON SCHEMA system.billing;
 SHOW GRANTS ON SCHEMA system.compute;
 SHOW GRANTS ON SCHEMA system.access;
 SHOW GRANTS ON SCHEMA system.storage;
+SHOW GRANTS ON CATALOG prod;
 ```
 
-The four `SHOW GRANTS` at the end are the point: a GRANT that does nothing still prints `OK`, and
-three of four lines landing silently is the failure we hit twice. Each schema should list both
-principals with `SELECT` and `USE SCHEMA`.
+The five `SHOW GRANTS` are the point: a GRANT that does nothing still prints `OK`, and three of
+four lines landing silently is the failure we hit twice.
 
-## Why each schema
+## Why each
 
-| Schema | Tables that matter | What the optimizer gets |
+| Object | Tables that matter | What the optimizer gets |
 |---|---|---|
-| `billing` | `usage`, `attributed_usage`, `list_prices`, `account_prices` | What a job actually cost, instead of executor-hours as a proxy |
-| `compute` | `node_timeline`, `clusters`, `warehouses`, `warehouse_events`, `node_types` | `node_timeline` is per-node CPU and memory over time - the utilization signal the Spark event log only implies |
-| `access` | `table_lineage`, `column_lineage` | What depends on an expensive table. Four dbt tests on one model burned 131 warehouse-hours in two days; lineage is how you tell whether that is load-bearing |
-| `storage` | `table_metrics_history`, `predictive_optimization_operations_history` | Table size and file-count history, which is what "missing table statistics" and small-file findings need to be actionable |
+| `system.billing` | `usage`, `attributed_usage`, `list_prices`, `account_prices` | What a job actually cost, instead of executor-hours as a proxy |
+| `system.compute` | `node_timeline`, `clusters`, `warehouses`, `warehouse_events`, `node_types` | Per-node CPU and memory over time - the utilization signal the Spark event log only implies |
+| `system.access` | `table_lineage`, `column_lineage` | What depends on an expensive table. Four dbt tests on one model burned 131 warehouse-hours in two days; lineage says whether that is load-bearing |
+| `system.storage` | `table_metrics_history`, `predictive_optimization_operations_history` | Table size and file-count history, which is what a missing-statistics finding needs to be actionable |
+| `CATALOG prod` | all | `EXPLAIN COST` plans against the real tables; the SP holds nothing on `prod` today, so the scheduled job would read the SQL and fail to plan it |
+
+## Who can run which
+
+| Object | Required role | Who has it |
+|---|---|---|
+| `system.*` schema grants | **account admin** | Alyson Lefkowitz |
+| `CATALOG prod` | `MANAGE` on prod = **`producers_prod`** | Alyson Lefkowitz, and the `prod_runner` service account |
+| `CATALOG dev` | `MANAGE` on dev = **`producers_dev`** | Malachi - self-serve, no ask needed |
+
+Ryan Kleck is not an account admin: he returned
+`PERMISSION_DENIED: User does not have MANAGE on Schema 'system.billing'`.
 
 ## Deliberately NOT asked for
-`ai_gateway` (LLM spend), `alert`, `mlflow`, `serving`, `tags`. None answers a question about
-Spark or warehouse efficiency, and a grant nobody uses is a grant nobody can justify.
+`system.ai_gateway` (LLM spend), `system.alert`, `system.mlflow`, `system.serving`, `system.tags` -
+none answers a question about Spark or warehouse efficiency. `CATALOG dev` and
+`CATALOG audience_acuity_mntn` are not requested for the SP: the sweep reads production history,
+and dev is self-serve if that ever changes.
 
 ## Already granted, do not re-ask
-`system.lakeflow` (2026-08-25) and `system.query` (2026-08-26), both principals, both verified by
-reading. `system.information_schema` needs no grant.
+`system.lakeflow` (2026-08-25), `system.query` (2026-08-26), both principals, both verified by
+reading. `system.information_schema` needs no grant. The SP already holds `CAN_USE` on warehouse
+`14b311ac86ee2ca2` and `USE_CATALOG` on `system`.
 
 ## Verifying afterwards
 Do NOT use `databricks grants get schema <s>` - it served stale data for over an hour after a live
