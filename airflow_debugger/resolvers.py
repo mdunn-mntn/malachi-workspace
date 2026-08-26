@@ -23,10 +23,16 @@ _MISSING_REL = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _PRINCIPAL = re.compile(r"([\w.+-]+@[\w-]+\.iam\.gserviceaccount\.com|[\w.+-]+@[\w.-]+\.\w+)")
+_EXPIRED = re.compile(
+    r"token.{0,20}expired|invalid[_ ]token|\b401\b[^\n]{0,24}unauthorized"
+    r"|unauthorized[^\n]{0,24}\b401\b",
+    re.IGNORECASE,
+)
 _DENY_DETAIL = re.compile(r'details\s*=\s*"([^"]{10,300})"')
-# The API host shares the service prefix, so `<service>.googleapis.com` must not read as a grant.
+# A grant is `service.resource.verb`; `<service>.googleapis.com` and a Java frame are neither.
 _PERMISSION = re.compile(
-    r"\b((?:storage|bigquery|dataproc|aiplatform|compute)\.(?!googleapis\b)[\w.]+)\b"
+    r"(?<![\w.])((?:storage|bigquery|dataproc|aiplatform|compute|serviceusage|secretmanager|logging|pubsub|monitoring|artifactregistry|cloudresourcemanager)\.(?!googleapis\b)"
+    r"[a-z][a-zA-Z]*\.[a-z][a-zA-Z]*)\b"
 )
 _QUOTA = re.compile(
     r"Insufficient '?(?P<metric>[A-Z_0-9]+)'? quota.{0,40}?Requested (?P<req>[\d.]+),"
@@ -42,7 +48,7 @@ _DB_USER = re.compile(
 # The path must sit next to the failure phrase: a log mentions config paths that always exist.
 _GS_PATH = re.compile(
     r"(?:PATH_NOT_FOUND|Path does not exist|path does not exist|Missing[^\n]{0,40}partition|"
-    r"does not exist|not found)[^\n]{0,120}?(gs://[\w.\-/=]+)",
+    r"does not exist|not found)[^\n]{0,120}?(gs://[\w.\-/=]*[\w=/-])",
     re.IGNORECASE,
 )
 _JDBC = re.compile(r"jdbc:(\w+)://([\w.\-]+(?::\d+)?(?:/[\w-]+)?)")
@@ -104,10 +110,11 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
 
     run_id = ident.get("run_id")
     this_run = next((t for t in bad if t.get("dag_run_id") == run_id), None)
-    third = max(len(ok) // 3, 3)
-    recent = statistics.median(ok[:third])
-    older = statistics.median(ok[-third:])
-    growth = (recent - older) / older if older else 0.0
+    third = len(ok) // 3
+    trended = third >= 2
+    recent = statistics.median(ok[:third]) if trended else ok[0]
+    older = statistics.median(ok[-third:]) if trended else recent
+    growth = (recent - older) / older if trended and older else 0.0
     span = max(len(ok) - third, 1)
 
     # Name a kill duration only for THIS run; another failure's duration reads as measured.
@@ -116,17 +123,19 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
         if this_run
         else f"hit its {budget / 60:.0f}m limit"
     )
-    ev = f"{hit}; the last {len(ok)} successful runs took {_trend(older, recent, growth)}"
+    ev = f"{hit}; {_trend(older, recent, growth, len(ok) if trended else 0)}"
     if recent >= 0.6 * budget:
         new_limit = max(budget * 1.5, recent * 1.5)
         headroom = _runs_until_breach(recent, growth, new_limit, span)
         raise_it = f"Now: raise execution_timeout from {budget / 60:.0f}m to {new_limit / 60:.0f}m."
-        if headroom and headroom <= _HORIZON_CAP:
-            raise_it += f" That holds for about {headroom} more runs at the current growth rate."
-        elif headroom:
+        if not trended:
+            raise_it += " Too few successful runs to say whether it will need raising again."
+        elif growth <= _FLAT:
+            raise_it += " Runtime is not growing, so it should not need raising again."
+        elif headroom is None or headroom > _HORIZON_CAP:
             raise_it += f" At the current {growth:+.0%} drift that holds for hundreds of runs."
         else:
-            raise_it += " Runtime is not growing, so it should not need raising again."
+            raise_it += f" That holds for about {max(headroom, 1)} more runs at the current rate."
         if growth > _FLAT:
             why = [
                 f"Then find out why it got slower: runtime rose {growth:+.0%} across these runs. "
@@ -166,13 +175,19 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
     )
 
 
-def _trend(older: float, recent: float, growth: float) -> str:
-    """The runtime history in words that match the sign of the change."""
+def _trend(older: float, recent: float, growth: float, runs: int) -> str:
+    """The runtime history in words that match the sign of the change, or no claim at all.
+
+    Fewer than six successes cannot be split into two disjoint windows, and comparing a slice
+    with itself reported a steady runtime for a task that had plainly doubled."""
+    if not runs:
+        return f"the last successful run took {recent / 60:.0f}m, too few to read a trend from"
+    head = f"the last {runs} successful runs took "
     if growth > _FLAT:
-        return f"{older / 60:.0f}m rising to {recent / 60:.0f}m ({growth:+.0%})"
+        return head + f"{older / 60:.0f}m rising to {recent / 60:.0f}m ({growth:+.0%})"
     if growth < -_FLAT:
-        return f"{older / 60:.0f}m falling to {recent / 60:.0f}m ({growth:+.0%})"
-    return f"a steady {recent / 60:.0f}m"
+        return head + f"{older / 60:.0f}m falling to {recent / 60:.0f}m ({growth:+.0%})"
+    return head + f"a steady {recent / 60:.0f}m"
 
 
 def _runs_until_breach(current: float, growth: float, limit: float, span: int) -> int | None:
@@ -182,8 +197,7 @@ def _runs_until_breach(current: float, growth: float, limit: float, span: int) -
     per_run = (1 + growth) ** (1 / span) - 1
     if per_run <= 0:
         return None
-    runs = int(math.log(limit / current) / math.log(1 + per_run))
-    return runs or None
+    return int(math.log(limit / current) / math.log(1 + per_run))
 
 
 def _dbt_runtime(diag: dict, text: str, client: object | None) -> Resolution | None:
@@ -238,7 +252,7 @@ def _auth(diag: dict, text: str, client: object | None) -> Resolution | None:
     principal = _PRINCIPAL.search(scope)
     perm = _PERMISSION.search(scope)
     detail = _DENY_DETAIL.search(text or "")
-    expired = re.search(r"token.{0,20}expired|invalid[_ ]token|401", text or "", re.IGNORECASE)
+    expired = _EXPIRED.search(text or "")
     if detail and not perm:
         # The service explained the denial in its own words; that beats a guessed permission name.
         return Resolution(
@@ -400,13 +414,7 @@ _WINDOW_AFTER = 20_000
 
 
 def error_window(log_text: str, anchor: str = "") -> str:
-    """The part of the log around the failure, never the whole file.
-
-    Every resolver takes the FIRST regex match, and an Airflow log opens with thousands of INFO
-    lines. Scanning the whole file lets a preamble mention of a service account or a config path
-    outrank the exception, and the wrong answer then ships under "settled from evidence" - which
-    is worse than no answer, because it sends someone to change the wrong thing in production.
-    """
+    """The part of the log around the failure, never the whole file."""
     if not log_text:
         return ""
     at = log_text.rfind(anchor) if anchor else -1

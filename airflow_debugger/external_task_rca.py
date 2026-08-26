@@ -107,7 +107,12 @@ _LATE_SIG = (
 _STALE_VERDICT = (
     "state {state} is from AFTER the sensor gave up (target ended {end}, sensor failed "
     "{failed}). At poke time the target had not succeeded, so this was a real wait, not a "
-    "sensor bug. Diagnose the target's own failure."
+    "sensor bug. {tail}"
+)
+_STALE_TAIL = "The target finished on its own, just after the sensor stopped waiting."
+_STALE_REMEDY = (
+    "Give the sensor a window that covers the target's real runtime, or move it later. The "
+    "target did finish, after the sensor gave up."
 )
 
 
@@ -238,9 +243,18 @@ def analyze_external_task(
     ev.error_text = f"{dag_id}.{who} is {ev.state}"
     ev.state_is_later = _moved_on_after(ev.target_end_date, failed_at)
     if ev.state_is_later:
-        cause = _STALE_VERDICT.format(state=ev.state, end=ev.target_end_date, failed=failed_at)
+        # Only the terminal outcome decides the action; the current state is the stale one.
+        ended_green = ev.state == "success"
+        cause = _STALE_VERDICT.format(
+            state=ev.state,
+            end=ev.target_end_date,
+            failed=failed_at,
+            tail=_STALE_TAIL if ended_green else "Diagnose the target's own failure.",
+        )
         key, sig_class, fix = _LATE_SIG
-        remedy = _LATE_REMEDY.get(ev.state, _LATE_REMEDY["running"])
+        remedy = (
+            _STALE_REMEDY if ended_green else _LATE_REMEDY.get(ev.state, _LATE_REMEDY["failed"])
+        )
     else:
         cause = _VERDICT[ev.state]
         key, sig_class, fix = _SIG_CLASS[ev.state]

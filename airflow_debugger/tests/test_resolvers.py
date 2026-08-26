@@ -94,6 +94,50 @@ def test_the_horizon_is_a_per_run_rate_not_the_whole_window() -> None:
     assert runs > 50, horizon
 
 
+def test_three_successes_are_too_few_to_claim_a_trend() -> None:
+    """`third = max(len(ok)//3, 3)` made both windows the SAME list, so growth was 0.0 by
+    construction and a task that had plainly doubled was reported as steady and called hung."""
+    res = resolvers.resolve(_TIMEOUT_DIAG, "", _History(ok=[3400, 1800, 600], bad=[3600]))
+    assert "steady" not in res.evidence, res.evidence
+    assert "too few to read a trend" in res.evidence, res.evidence
+    assert "outgrew" in res.verdict, res.verdict
+
+
+def test_a_reply_never_says_not_growing_next_to_a_growth_figure() -> None:
+    """Both sentences came from different gates, so one reply asserted a trend and denied it."""
+    for ok in ([3400] * 33 + [900] * 67, [2050, 2040, 2020, 2000, 1980, 1950, 1930, 1920]):
+        res = resolvers.resolve(_TIMEOUT_DIAG, "", _History(ok=ok, bad=[3600]))
+        joined = " ".join(res.solutions)
+        assert not ("not growing" in joined and "runtime rose +" in joined), joined
+
+
+_DENIED_OUTSIDE_THE_COMMON_SERVICES = (
+    "403 Forbidden GET https://storage.googleapis.com/b/o/fs%2Fpart-00401-c0de.parquet\n"
+    '{"error":{"message":"svc-etl@mntn-prj-prod-00.iam.gserviceaccount.com does not have '
+    'serviceusage.services.use access to the Google Cloud project."}}'
+)
+
+
+def test_an_incidental_401_is_not_read_as_an_expired_credential() -> None:
+    """`401` matched anywhere in a 24 KB window, so a filename ending part-00401 flipped a real
+    missing grant to "refresh the credential" — the opposite action, under an evidence label."""
+    res = resolvers.resolve(
+        {"root_signature": {"key": "auth_error"}}, _DENIED_OUTSIDE_THE_COMMON_SERVICES
+    )
+    assert "expired" not in res.verdict, res.verdict
+    assert "is missing" in res.verdict, res.verdict
+
+
+def test_a_grant_outside_the_common_services_is_still_named() -> None:
+    """serviceusage, secretmanager and pubsub denials are routine; naming none of them left the
+    verdict pointing at "the resource in the error"."""
+    res = resolvers.resolve(
+        {"root_signature": {"key": "auth_error"}}, _DENIED_OUTSIDE_THE_COMMON_SERVICES
+    )
+    assert "serviceusage.services.use" in res.verdict, res.verdict
+    assert "gserviceaccount.com`" not in res.verdict, res.verdict
+
+
 def test_no_internal_vocabulary_reaches_the_reader() -> None:
     """A solution the reader has to decode is not a solution. Ban the shorthand outright."""
     for client in (

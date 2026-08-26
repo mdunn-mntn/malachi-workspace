@@ -555,15 +555,44 @@ def test_a_pod_that_started_fine_produces_no_note() -> None:
     assert "did not reach Running" not in build_report(diag)
 
 
-def test_a_late_failed_target_is_not_told_to_widen_its_window() -> None:
-    """The stale-verdict path shares a key with "still running", whose remedy says widen the
-    window. For a target that FAILED that contradicts the cause printed two lines above it."""
-    from airflow_debugger.external_task_rca import _LATE_REMEDY
+def _stale_evidence(state: str) -> object:
+    """One sensor whose target reached `state` AFTER the sensor gave up, through the real path."""
+    from unittest import mock
 
-    assert "Diagnose the target's own failure" in _LATE_REMEDY["failed"]
-    assert "widening its window" in _LATE_REMEDY["failed"]
-    assert "do not backfill" in _LATE_REMEDY["skipped"].lower()
-    assert "still working" in _LATE_REMEDY["running"]
+    from airflow_debugger import external_task_rca as rca
+
+    hit = {"task_id": "build_features", "state": state, "end_date": "2026-08-25T06:10:00+00:00"}
+    api = mock.Mock(
+        resolve_bearer=lambda: "t",
+        list_task_instances_in_run=lambda *a, **k: [hit],
+    )
+    with (
+        mock.patch.object(rca, "_resolve_base", lambda: "http://x"),
+        mock.patch.object(rca, "_api", lambda: api),
+        mock.patch.object(rca, "_target_run", lambda *a, **k: {"dag_run_id": "r1"}),
+    ):
+        return rca.analyze_external_task(
+            "producer_dag", ["build_features"], "2026-08-25T05:00:00+00:00",
+            failed_at="2026-08-25T05:30:00+00:00",
+        )  # fmt: skip
+
+
+def test_a_stale_target_state_never_prescribes_the_remedy_it_just_ruled_out() -> None:
+    """The remedy was keyed on the target's CURRENT state, which this branch has just declared
+    stale. For a target that ended green that printed "the sensor looked at the wrong run"
+    under a cause saying the sensor was right."""
+    ev = _stale_evidence("success")
+    cause = " ".join(ev.notes)
+    remedy = ev.signature["remedy"]
+    assert "not a sensor bug" in cause, cause
+    assert "wrong run" not in remedy, remedy
+    assert "covers the target's real runtime" in remedy, remedy
+
+
+def test_a_stale_failed_target_still_routes_to_the_target() -> None:
+    """The other half of the same branch: a target that ended failed is the thing to diagnose."""
+    remedy = _stale_evidence("failed").signature["remedy"]
+    assert "Diagnose the target's own failure" in remedy, remedy
 
 
 if __name__ == "__main__":
