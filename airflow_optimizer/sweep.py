@@ -30,6 +30,17 @@ OUTDIR = os.environ.get("OPTIMIZER_OUTDIR", "optimizer_out")
 _GSUTIL = ["gsutil", "-o", "GSUtil:check_hashes=never"]
 
 
+def _databricks_report() -> str:
+    """The Databricks section, or "" when no warehouse is configured or the reads failed."""
+    try:
+        from .databricks import report
+
+        return report()
+    except Exception as e:  # the Spark half must ship even when Databricks is unreachable
+        print(f"[sweep] databricks skipped: {str(e)[:160]}")
+        return ""
+
+
 def _dag_ids(reports: list, known: set | None = None) -> set:
     """The normalised job names this sweep produced findings for."""
     return {ledger_mod._dag_id(r, known) for r in reports if not r.error and r.findings}
@@ -131,14 +142,23 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             fh.write(cov_mod.render(cov, _dag_ids(reports, known),
                                     {ledger_mod._dag_id(r) for r in scored}))
 
-    # The digest cites the other two files, so they are uploaded before it is written.
-    published = publish([backlog, coverage_path, ledger_path], gcs_prefix)
+    dbx_path = ""
+    dbx = _databricks_report()
+    if dbx:
+        dbx_path = os.path.join(outdir, f"optimizer_databricks_{date}.md")
+        with open(dbx_path, "w") as fh:
+            fh.write(dbx)
+
+    # The digest cites the other files, so they are uploaded before it is written.
+    published = publish([backlog, coverage_path, ledger_path, dbx_path], gcs_prefix)
     if cov is not None:
         cov.report_path = _published_ref(coverage_path, gcs_prefix, published)
 
     text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high, date=date,
                              coverage=cov,
                              backlog_path=_published_ref(backlog, gcs_prefix, published))
+    if dbx_path:
+        text += f"\nDatabricks cost: `{_published_ref(dbx_path, gcs_prefix, published)}`"
     if not complete:
         text += ("\n\n_Partial sweep: some event logs could not be downloaded, so nothing is "
                  "reported as resolved this run._")
@@ -152,7 +172,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
 
     return {
         "backlog": backlog, "digest": digest_path,
-        "coverage": coverage_path,
+        "coverage": coverage_path, "databricks": dbx_path,
         "scanned": len(scored), "findings": findings, "high": high,
         "ledger_entries": len(entries), "slack": text, "published": published,
         "complete": complete, "ledger_note": ledger_note,

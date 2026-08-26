@@ -325,3 +325,51 @@ def job_costs(days: int = 7, limit: int = 25, warehouse: str = "") -> list[Cost]
 def query_costs(days: int = 7, limit: int = 25, warehouse: str = "") -> list[Cost]:
     """Warehouse dollars apportioned to each dbt node by its share of the day's query time."""
     return _costs(QUERY_COST_SQL.format(days=int(days), limit=int(limit)), warehouse)
+
+
+def render_report(jobs: list[Cost], nodes: list[Cost], plans: list[tuple], days: int) -> str:
+    """The Databricks half of a sweep: what cost money, and what its plan says about why."""
+    lines = [f"# Databricks cost — last {days} days", "",
+             "Dollars are list price. A contract rate makes the real figure lower, and warehouse "
+             "dollars are apportioned to a statement by its share of the day's query time rather "
+             "than metered per statement.", ""]
+    if jobs:
+        lines += ["## Jobs and dbt submissions, by DBU", "",
+                  "| job | runs | DBU | $ |", "|---|---|---|---|"]
+        lines += [f"| `{c.name}` | {c.runs} | {c.dbu:,.0f} | {c.usd:,.2f} |" for c in jobs]
+        lines.append("")
+    if nodes:
+        lines += ["## Warehouse statements, by apportioned cost", "",
+                  "| dbt node | runs | warehouse-hours | $ |", "|---|---|---|---|"]
+        lines += [f"| `{c.name}` | {c.runs} | {c.hours:,.1f} | {c.usd:,.2f} |" for c in nodes]
+        lines.append("")
+    lines += ["## Plan findings", ""]
+    if not plans:
+        lines.append("No statement in the window produced a plan the detectors could read.")
+    for q, findings in plans:
+        lines.append(f"- `{q.node_id or q.statement_id}` ({q.duration_s:,.0f}s, "
+                     f"{q.read_gib:,.1f} GiB read)")
+        lines += [f"  - [{f.impact}] {f.title}" for f in findings] or ["  - clean"]
+    return "\n".join(lines) + "\n"
+
+
+def report(days: int = 7, limit: int = 15, warehouse: str = "") -> str:
+    """One Databricks sweep. Returns "" when no warehouse is configured or every read failed."""
+    if not (warehouse or WAREHOUSE):
+        return ""
+    jobs, nodes, plans = [], [], []
+    for name, fn in (("job_costs", job_costs), ("query_costs", query_costs)):
+        try:
+            rows = fn(days, limit, warehouse)
+        except (RuntimeError, ValueError) as e:
+            print(f"[databricks] {name} skipped: {str(e)[:160]}")
+            rows = []
+        (jobs if name == "job_costs" else nodes).extend(rows)
+    try:
+        plans = analyze_queries(heavy_queries(days=min(days, 2), limit=limit,
+                                              warehouse=warehouse), warehouse)
+    except (RuntimeError, ValueError) as e:
+        print(f"[databricks] plans skipped: {str(e)[:160]}")
+    if not (jobs or nodes or plans):
+        return ""
+    return render_report(jobs, nodes, plans, days)

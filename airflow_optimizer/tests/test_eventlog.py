@@ -318,3 +318,29 @@ def test_an_executor_with_no_added_event_still_costs_its_task_span() -> None:
     run.executors = list(seen.values())
     assert run.executors[0].added_ts == 1_000_000_000_000
     assert executor_hours(run) == pytest.approx(1.0)
+
+
+def test_slots_come_from_the_log_when_the_property_is_absent() -> None:
+    """Both committed fixtures set no spark.executor.cores; a cores=1 fallback inflates the cost."""
+    t0 = 1_000_000_000_000
+    execs = [ExecutorInfo(exec_id=str(i), cores=4, added_ts=t0, removed_ts=t0 + 2 * 3_600_000)
+             for i in range(40)]  # 80 executor-hours held
+    stage = StageMetrics(stage_id=1, num_tasks=8000, run_time_ms=8000 * 60_000,
+                         fetch_wait_ms=8000 * 45_000)
+    run = SparkRun(spark_props={}, stages=[stage], executors=execs,
+                   app_end_ts=t0 + 2 * 3_600_000)
+    wait = next(f for f in analyze_run(run) if f.key == "shuffle_fetch_wait")
+    assert wait.cost_h == pytest.approx(25.0)
+
+
+def test_a_large_stall_stays_high_on_a_job_too_big_for_its_share_to_show() -> None:
+    """300 idle executor-hours is worth an owner's time at any share of the run."""
+    t0 = 1_000_000_000_000
+    execs = [ExecutorInfo(exec_id=str(i), cores=4, added_ts=t0, removed_ts=t0 + 5 * 3_600_000)
+             for i in range(750)]  # 3,750 executor-hours held
+    stage = StageMetrics(stage_id=9, num_tasks=9000, run_time_ms=9000 * 400_000,
+                         fetch_wait_ms=300 * 3_600_000 * 4)
+    run = SparkRun(spark_props={"spark.executor.cores": "4"}, stages=[stage], executors=execs,
+                   app_end_ts=t0 + 5 * 3_600_000)
+    wait = next(f for f in analyze_run(run) if f.key == "shuffle_fetch_wait")
+    assert (wait.impact, round(wait.cost_h)) == ("high", 300)

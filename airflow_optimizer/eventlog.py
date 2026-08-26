@@ -70,6 +70,7 @@ class ExecutorInfo:
     """Per-executor rollup (failed tasks, GC, shuffle, removal reason)."""
 
     exec_id: str
+    cores: int = 0  # from ExecutorAdded; spark.executor.cores is absent from many logs
     added_ts: int | None = None
     removed_ts: int | None = None
     removed_reason: str | None = None
@@ -241,7 +242,9 @@ def parse_eventlog(path: str) -> SparkRun:
         elif ev == "SparkListenerEnvironmentUpdate":
             run.spark_props = e.get("Spark Properties", {}) or {}
         elif ev == "SparkListenerExecutorAdded":
-            execu(str(e.get("Executor ID"))).added_ts = e.get("Timestamp")
+            x = execu(str(e.get("Executor ID")))
+            x.added_ts = e.get("Timestamp")
+            x.cores = (e.get("Executor Info") or {}).get("Total Cores", 0) or 0
         elif ev == "SparkListenerExecutorRemoved":
             x = execu(str(e.get("Executor ID")))
             x.removed_ts = e.get("Timestamp")

@@ -194,6 +194,7 @@ def _gb(b: int) -> float:
 
 
 HIGH_MIN_SHARE = 0.10
+HIGH_MIN_HOURS = 10.0
 
 
 def _gated(tier: str, cost_h: float, run_h: float) -> str:
@@ -201,11 +202,19 @@ def _gated(tier: str, cost_h: float, run_h: float) -> str:
 
     `shuffle_fetch_wait` and `gc_pressure` divide by summed TASK time, so a stage doing almost
     no compute reports 90% on a denominator worth minutes. Ranked against a detector denominated
-    in executor-hours held, that sends an owner at 0.3% of a job and past the 86%.
+    in executor-hours held, that sends an owner at 0.3% of a job and past the 86%. An absolute
+    floor keeps a large stall high on a job so big that its share still rounds to nothing.
     """
     if tier != "high" or not run_h:
         return tier
-    return tier if cost_h / run_h >= HIGH_MIN_SHARE else "medium"
+    big = cost_h >= HIGH_MIN_HOURS or cost_h / run_h >= HIGH_MIN_SHARE
+    return tier if big else "medium"
+
+
+def _cores(run: object, props: dict) -> int:
+    """Slots per executor. The event log carries this even when the property does not."""
+    reported = max((getattr(e, "cores", 0) or 0) for e in run.executors) if run.executors else 0
+    return reported or int(props.get("spark.executor.cores", "1") or 1)
 
 
 def _share(cost_h: float, run_h: float) -> str:
@@ -224,8 +233,8 @@ def analyze_run(run: object) -> list[OptFinding]:
     out: list[OptFinding] = []
     props = getattr(run, "spark_props", {}) or {}
     parts = props.get("spark.sql.shuffle.partitions")
-    cores = int(props.get("spark.executor.cores", "1") or 1)
     execs = [e for e in run.executors if getattr(e, "added_ts", None) is not None]
+    cores = _cores(run, props)
     # A killed app writes no ApplicationEnd but still held its executors to the last event.
     ended = getattr(run, "app_end_ts", None)
     app_end = ended or getattr(run, "last_event_ts", None)
@@ -290,7 +299,7 @@ def analyze_run(run: object) -> list[OptFinding]:
         # FETCH-WAIT dominance - tasks stall waiting on shuffle fetch, not computing.
         if s.run_time_ms >= 300_000 and s.fetch_wait_ms / s.run_time_ms >= 0.3:
             ratio = s.fetch_wait_ms / s.run_time_ms
-            wait_h = s.fetch_wait_ms / cores / 3_600_000
+            wait_h = min(s.fetch_wait_ms / cores / 3_600_000, run_h or float('inf'))
             out.append(OptFinding(
                 "shuffle_fetch_wait",
                 f"Stage {s.stage_id} spends {100 * ratio:.0f}% of task time waiting on "
@@ -310,7 +319,7 @@ def analyze_run(run: object) -> list[OptFinding]:
     run_ms = sum(s.run_time_ms for s in run.stages)
     gc_ms = sum(s.gc_time_ms for s in run.stages)
     if run_ms and gc_ms / run_ms >= 0.1:
-        gc_h = gc_ms / cores / 3_600_000
+        gc_h = min(gc_ms / cores / 3_600_000, run_h or float('inf'))
         out.append(OptFinding(
             "gc_pressure", f"GC is {100 * gc_ms / run_ms:.0f}% of task time",
             _gated("high" if gc_ms / run_ms >= 0.2 else "medium", gc_h, run_h),
