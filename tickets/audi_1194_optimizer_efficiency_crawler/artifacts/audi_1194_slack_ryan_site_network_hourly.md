@@ -1,14 +1,17 @@
 # Slack DM draft, Ryan Kleck, re: site_network_hourly Stage 9
 
 Owner routing: `JobTeamConfig.TPA_EXPORT` -> `Team.TARGETING`, `#alerts-tpa-pipeline`.
-Verified 2026-08-20 against 4 real event logs (3 from 2026-08-17, 1 from 2026-08-20).
+Mechanism verified 2026-08-20 against 4 event logs; prevalence and cost verified 2026-08-26
+against every run in the archive (302 runs, 2026-08-04..08-26).
 Everything below the marker is the message; the evidence section is for follow-up questions.
 
 ## Message
 
 Hey Ryan, can you set `initialExecutors` to ~300 on `site_network_hourly` for one hour so I can profile that run?
 
-Stage 9 burns 44-73% of task time waiting on shuffle fetch, every run I've checked. Not compute, CPU is 2.6% of run time. Its map stage always starts with exactly 50 executors and lands 90% of its output on 48-105 of them. The job's later shuffles run with 400+ up, spread evenly, and wait about 0%.
+Stage 9 waits a median 56% of task time on shuffle fetch, on 252 of the last 302 runs. Not compute: CPU is 2.6%. Its map stage starts with 50 executors and lands 90% of output on 48-105. Later shuffles run with 400+ up and wait ~0%.
+
+Those 302 runs held 21,200 executor-hours, the fleet's highest.
 
 ## Evidence
 
@@ -26,6 +29,23 @@ Measured with `airflow_optimizer` (AUDI-1194) on four event logs from
 
 The crawl backlogs show the same stage at 44-73% on 8 of 8 runs sampled on 2026-08-17, and
 on every sweep since 2026-08-07. Zero fetch failures, zero spill, CPU 608s of 23,716s run time.
+
+### Prevalence over every run in the archive
+
+Every event log the archive holds was parsed on 2026-08-26 (2,954 logs, 2026-08-04..08-26).
+`site_network_hourly` ran 302 times in that window.
+
+| | |
+|---|---|
+| runs | 302 |
+| executor-hours held | **21,200** (the highest of any job in the fleet) |
+| per-run executor-hours | min 0.2, median 51.3, max 371.2 |
+| runs raising a fetch-wait finding | **254 of 302 (84%)** |
+| of those, on stage 9 | **252** (the rest: stage 29 x2, 35 x1, 15 x1) |
+| fetch wait | min 30%, **median 56%**, max 90% |
+| runs also holding idle executors | 236 |
+
+The four-log sample below is representative, not cherry-picked: it sits inside this distribution.
 
 ### What it is not
 
