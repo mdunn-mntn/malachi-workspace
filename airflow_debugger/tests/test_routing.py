@@ -62,7 +62,9 @@ def test_vertex_run_url_yields_a_handle_not_a_verdict() -> None:
     assert p.engine == "vertex"
     assert p.vertex_run_id == "fangorn-hhid-challenger-inference-pipeline-20260820215253"
     assert (p.vertex_project, p.vertex_location) == ("mntn-targeting-prj-prod", "us-central1")
-    assert p.airflow_signature is None, "the Airflow log carries no cause; it must stay unclassified"
+    assert p.airflow_signature is None, (
+        "the Airflow log carries no cause; it must stay unclassified"
+    )
 
 
 def test_the_green_run_prints_the_same_url_and_is_still_unclassified() -> None:
@@ -278,7 +280,7 @@ def test_the_report_refuses_to_present_a_mask_as_the_verdict() -> None:
 
 
 def test_an_empty_stub_names_the_task_that_actually_failed() -> None:
-    """"Diagnose the upstream task" is correct and useless; the reader wants to know which one."""
+    """ "Diagnose the upstream task" is correct and useless; the reader wants to know which one."""
     diag = {
         "identity": {"dag_id": "d", "task_id": "t"},
         "no_error_text": True,
@@ -551,6 +553,17 @@ def test_a_pod_that_started_fine_produces_no_note() -> None:
         "root_signature": {},
     }
     assert "did not reach Running" not in build_report(diag)
+
+
+def test_a_late_failed_target_is_not_told_to_widen_its_window() -> None:
+    """The stale-verdict path shares a key with "still running", whose remedy says widen the
+    window. For a target that FAILED that contradicts the cause printed two lines above it."""
+    from airflow_debugger.external_task_rca import _LATE_REMEDY
+
+    assert "Diagnose the target's own failure" in _LATE_REMEDY["failed"]
+    assert "widening its window" in _LATE_REMEDY["failed"]
+    assert "do not backfill" in _LATE_REMEDY["skipped"].lower()
+    assert "still working" in _LATE_REMEDY["running"]
 
 
 if __name__ == "__main__":

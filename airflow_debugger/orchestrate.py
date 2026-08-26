@@ -62,12 +62,17 @@ def investigate(
             # The walked root carries its own signature, and it is the one the reader acts on.
             root = (walked or {}).get("root") or {}
             if root.get("signature"):
+                # The ROOT's log, not this task's; the wrong file makes a preamble the verdict.
                 res = resolve(
                     {
-                        "identity": {"dag_id": root["dag_id"], "task_id": root["task_id"]},
+                        "identity": {
+                            "dag_id": root["dag_id"],
+                            "task_id": root["task_id"],
+                            "run_id": root.get("run_id"),
+                        },
                         "root_signature": root["signature"],
                     },
-                    whole,
+                    root.get("log") or "",
                     client,
                 )
     except Exception:

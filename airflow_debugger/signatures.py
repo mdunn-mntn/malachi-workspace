@@ -197,9 +197,7 @@ SIGNATURES: list[Signature] = [
         r"AnalysisException.{0,40}(PATH_NOT_FOUND|does not exist)|"
         r"Missing( required)?.{0,30}partition|Missing required.{0,40}at gs://",
         "late-data/missing-partition",
-        "A source partition the job reads (e.g. gs://.../dt=<run_date>) has not landed yet. "
-        "Usually the upstream producer runs late or FAILED (timing race or a broken producer); "
-        "verify the partition + _SUCCESS then re-run the consumer, else fix/re-run the producer.",
+        "A source partition the job reads (e.g. gs://.../dt=<run_date>) has not landed yet.",
         "no",
         remedy=(
             "Check the partition and its _SUCCESS marker. Present, re-run this task. Absent, fix "
@@ -211,9 +209,8 @@ SIGNATURES: list[Signature] = [
         r"pipeline parameter .{0,60}not found in the pipeline( job)? input definitions|"
         r"parameter .{0,40}is not found in the pipeline",
         "vertex/param-mismatch",
-        "The operator injects a param name the Vertex/KFP template does not declare "
-        "(e.g. reference_date vs run_date), so PipelineJob rejects it before submission. "
-        "Fix = rename the KFP pipeline param to match + recompile/redeploy the template.",
+        "The operator injects a param name the Vertex/KFP template does not declare (e.g. "
+        "reference_date vs run_date), so PipelineJob rejects it before submission.",
         "yes",
         remedy=(
             "Rename the KFP pipeline parameter to match what the operator sends, then recompile "
@@ -247,8 +244,7 @@ SIGNATURES: list[Signature] = [
         "vertex/model-alias-missing",
         "The inference job resolves its model by alias pattern (e.g. challenger-v*) and the "
         "registry has no version carrying it. Re-registering a model drops the aliases it "
-        "replaces, so this fires on every run until the owner re-applies the alias. "
-        "Check the registry before re-running: a retry cannot recreate an alias.",
+        "replaces, so this fires on every run until the owner re-applies the alias.",
         "no",
         remedy=(
             "Re-apply the alias to the intended model version in the registry. A retry cannot "
@@ -299,7 +295,7 @@ SIGNATURES: list[Signature] = [
         r"file storage quota",
         "vendor-quota/openai",
         "OpenAI project hit its 2.5TB file-storage quota, so the batch-input upload is rejected "
-        "(deterministic 400 - retries cannot fix it). Purge old OpenAI files / let expiry clear it.",
+        "(deterministic 400 - retries cannot fix it).",
         "no",
         remedy=(
             "Delete old files in the OpenAI project, or set an expiry on batch inputs. The "
@@ -359,11 +355,11 @@ SIGNATURES: list[Signature] = [
         "upstream-failure",
         "The sensor's external task is in a failed state - this task is a symptom, not the cause. "
         "ExternalTaskFailedError uses the SAME message for a SKIPPED external task (producer "
-        "short-circuited on missing source data = benign partner-data gap, INC-011) as for a truly "
-        "failed/upstream_failed one (real break, INC-006/007), so resolve the external task's ACTUAL "
-        "state first: skipped -> check the producer's source_available_<ds> log for 'No source "
-        "data', no-op the hour, do not backfill; failed/upstream_failed -> audit the upstream chain. "
-        "Never clear-to-retry a skip - the awaited partition will not land.",
+        "short-circuited on missing source data = benign partner-data gap, INC-011) as for a "
+        "truly failed/upstream_failed one (real break, INC-006/007), so resolve the external "
+        "task's ACTUAL state first: skipped -> check the producer's source_available_<ds> log for "
+        "'No source data', no-op the hour, do not backfill; failed/upstream_failed -> audit the "
+        "upstream chain.",
         "no",
         remedy=(
             "Resolve the external task's real state first. Skipped means no-op and do not "
@@ -375,9 +371,8 @@ SIGNATURES: list[Signature] = [
         r"Batch with given id already exists|Attaching to the job.{0,60}if it is still running",
         "dag_bug/batch-id-reattach",
         "The batch id is minted once by an upstream task and cached in XCom, so this retry "
-        "reattached to the ALREADY-FAILED batch and inherited its error. The error text here "
-        "is not a fresh fault. Check GCS for _SUCCESS before re-running; to genuinely re-run, "
-        "clear the id-minting task WITH downstream so a new id is minted.",
+        "reattached to the ALREADY-FAILED batch and inherited its error. The error text here is "
+        "not a fresh fault.",
         "yes",
         remedy=(
             "Clear the id-minting task WITH downstream so a new batch id is minted. Clearing this "
@@ -390,9 +385,8 @@ SIGNATURES: list[Signature] = [
         r"Getting metadata from plugin failed.{0,80}UNAVAILABLE",
         "transient-infra/iam-503",
         "GCP's credential-minting service returned 503 while impersonating the job service "
-        "account, so the task died BEFORE submitting anything. No batch exists, nothing to "
-        "clean up. Confirm the log never reaches a batch state, then check whether the DAG "
-        "self-heals or has retries before acting.",
+        "account, so the task died BEFORE submitting anything. No batch exists, nothing to clean "
+        "up.",
         "no",
         remedy=(
             "Re-run once; the credential service returned 503 and nothing was submitted. If it "
@@ -405,9 +399,8 @@ SIGNATURES: list[Signature] = [
         # callback of any DAG that posts to Slack, where it would steal the real cause.
         r"'exception': SlackApiError|SlackApiError\(.{0,160}(channel_not_found|not_in_channel)",
         "config/slack-channel",
-        "The Slack notification call failed: the bot is not in the target channel, or the "
-        "channel id is wrong or renamed. Fix the channel id in the DAG config or invite the "
-        "app to the channel.",
+        "The Slack notification call failed: the bot is not in the target channel, or the channel "
+        "id is wrong or renamed.",
         "yes",
         remedy=(
             "Invite the app to the channel, or correct the channel id in the DAG config. The "
@@ -447,7 +440,7 @@ SIGNATURES: list[Signature] = [
         "orchestration/dag-not-loaded",
         "The worker could not load the DAG when the task started, so the task died before running "
         "any of its own code. Usually a deploy or DAG-bundle race: the scheduler queued the task "
-        "against a bundle version the worker no longer has. Re-run once the bundle settles.",
+        "against a bundle version the worker no longer has.",
         "no",
         remedy=(
             "Re-run once the bundle version settles. Repeating across a deploy means the bundle "
@@ -459,8 +452,7 @@ SIGNATURES: list[Signature] = [
         r"Starting batch None(-\d+)?\b",
         "dag_bug/no-batch-id",
         "Airflow logged the batch id as literally 'None': the upstream id-minting task returned "
-        "nothing, so no batch was ever submitted. The missing id IS the fault. Fix the producer "
-        "of the id (usually a create_batch_id task whose XCom is empty), not the Spark job.",
+        "nothing, so no batch was ever submitted. The missing id IS the fault.",
         "yes",
         remedy=(
             "Fix the upstream task that returns the batch id, whose XCom came back empty. The "
@@ -473,7 +465,7 @@ SIGNATURES: list[Signature] = [
         "batch-cancelled",
         "The Dataproc batch was CANCELLED, not failed. Either it hit its TTL, or someone cleared "
         "the Airflow task while the batch was still running, which cancels it and can record the "
-        "next try as a green run with no output. Check the batch state history before re-running.",
+        "next try as a green run with no output.",
         "no",
         remedy=(
             "Check the batch state history. A TTL cancel is a timeout; a human clear means re-run "
@@ -502,8 +494,7 @@ SIGNATURES: list[Signature] = [
         r"ORA-01017|Login failed for user",
         "auth/database-credential",
         "The database rejected the credential itself, which is not the same as a missing grant: "
-        "the password is wrong, rotated, or the secret the job reads is stale. Check when the "
-        "secret last changed against the last green run before touching the job.",
+        "the password is wrong, rotated, or the secret the job reads is stale.",
         "no",
         remedy=(
             "Compare the secret's last rotation against the last green run, then repoint the job "
@@ -531,9 +522,7 @@ SIGNATURES: list[Signature] = [
         r"Dataproc Agent reports job failure|returned a failure\.\s*\\?n?remote_pod",
         "boilerplate/cause-one-layer-down",
         "The downstream job was submitted and failed, but this Airflow log carries only the "
-        "wrapper, no cause. Pull the job's own output: the Dataproc batch driver log (the "
-        "batch id is logged above) or the Kubernetes pod log. Do not read the wrapper text "
-        "as the root cause.",
+        "wrapper, no cause.",
         "no",
         remedy=(
             "Pull the downstream job's own log (Dataproc driver output, or the pod log) and "

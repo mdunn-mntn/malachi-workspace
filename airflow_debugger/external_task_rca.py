@@ -69,6 +69,32 @@ _REMEDY = {
         "the sensor looked at the wrong run."
     ),
 }
+_LATE_REMEDY = {
+    "failed": (
+        "Diagnose the target's own failure and fix it. The sensor waited correctly; widening its "
+        "window would only page later with the same break."
+    ),
+    "upstream_failed": (
+        "Diagnose whatever failed upstream of the target. Neither the target nor this sensor is "
+        "the fault, and re-running either changes nothing."
+    ),
+    "skipped": (
+        "Add the target's skip to the sensor's allowed states so a by-design skip stops paging. "
+        "Do not backfill: the awaited partition will not land."
+    ),
+    "running": (
+        "Give the sensor a window that covers the target's real runtime, or move it later. The "
+        "target was still working when the sensor gave up."
+    ),
+    "queued": (
+        "The target had not started when the sensor gave up. Move the sensor later, or make the "
+        "target's schedule the dependency instead of a poke."
+    ),
+    "success": (
+        "Correct the sensor's execution_delta or logical-date mapping: the target succeeded and "
+        "the sensor looked at the wrong run."
+    ),
+}
 _LATE_SIG = (
     "external_task_target_unfinished",
     "sensor/target-unfinished-at-poke",
@@ -214,9 +240,11 @@ def analyze_external_task(
     if ev.state_is_later:
         cause = _STALE_VERDICT.format(state=ev.state, end=ev.target_end_date, failed=failed_at)
         key, sig_class, fix = _LATE_SIG
+        remedy = _LATE_REMEDY.get(ev.state, _LATE_REMEDY["running"])
     else:
         cause = _VERDICT[ev.state]
         key, sig_class, fix = _SIG_CLASS[ev.state]
+        remedy = _REMEDY.get(key, "")
     ev.notes.append(cause)
     ev.signature = asdict(
         Match(
@@ -225,7 +253,7 @@ def analyze_external_task(
             likely_cause=f"{ev.error_text}. {cause}",
             programmatic_fix=fix,
             matched_on=f"Airflow API state of {dag_id}.{who}",
-            remedy=_REMEDY.get(key, ""),
+            remedy=remedy,
         )
     )
     return ev

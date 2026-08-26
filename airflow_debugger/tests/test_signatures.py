@@ -422,6 +422,35 @@ def test_a_remedy_is_an_instruction_not_a_category() -> None:
         assert "not a code fix" not in s.remedy.lower(), f"{s.key}: remedy is a category"
 
 
+def test_the_cause_does_not_repeat_the_remedy() -> None:
+    """The report prints cause and remedy as adjacent lines, so an imperative left at the end of
+    the cause says the same thing twice inside a budget the code is already fighting to fit."""
+    starts = (
+        "Fix ",
+        "Fix =",
+        "Check ",
+        "Re-run",
+        "Delete ",
+        "Route ",
+        "Purge ",
+        "Confirm ",
+        "Raise ",
+        "Verify ",
+        "Read ",
+        "Pull ",
+        "Do not ",
+        "Profile ",
+    )
+    bad = []
+    for sig in SIGNATURES:
+        if not sig.remedy:
+            continue
+        tail = sig.likely_cause.rstrip().rsplit(". ", 1)[-1]
+        if tail.startswith(starts):
+            bad.append(sig.key)
+    assert not bad, f"cause still ends on an instruction the remedy repeats: {bad}"
+
+
 if __name__ == "__main__":
     test_classifier_cases()
     test_empty_returns_none()

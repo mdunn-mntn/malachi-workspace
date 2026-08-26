@@ -21,6 +21,7 @@ from .external_task_rca import _api, _resolve_base, _run_holding
 from .parse import parse_log
 
 MAX_HOPS = 4
+_ROOT_LOG_KEEP = 200_000  # the root's own log, so a resolver never reads the wrong task's
 
 
 class Client:
@@ -235,8 +236,10 @@ def walk(diag: dict, on_date: str | None = None, max_hops: int = MAX_HOPS) -> di
                 "root": {
                     "dag_id": ti["dag_id"],
                     "task_id": ti["task_id"],
+                    "run_id": ti.get("dag_run_id"),
                     "signature": sig,
                     "error": err,
+                    "log": text[-_ROOT_LOG_KEEP:],
                 },
                 "note": None,
             }
