@@ -22,9 +22,14 @@ _TIMEOUT_DIAG = {
 class _History:
     """A fake client returning one task's run durations, in seconds."""
 
-    def __init__(self, ok: list, bad: list) -> None:
+    def __init__(self, ok: list, bad: list, timeout: float | None = 3600) -> None:
         self.rows = [{"state": "success", "duration": d} for d in ok]
-        self.rows += [{"state": "failed", "duration": d} for d in bad]
+        self.rows += [{"state": "failed", "duration": d, "dag_run_id": "r"} for d in bad]
+        self.timeout = timeout
+
+    def task_timeout(self, dag_id: str, task_id: str) -> float | None:
+        """The task's declared execution_timeout."""
+        return self.timeout
 
     def task_history(self, dag_id: str, task_id: str, limit: int = 100) -> list:
         """Recent instances of one task."""
@@ -54,7 +59,7 @@ def test_a_timeout_whose_green_runs_are_fast_is_called_a_hang() -> None:
 def test_the_new_limit_says_how_long_it_holds() -> None:
     """ "Raise it" without a horizon is the same paging again next month. The growth rate is
     known, so the answer carries how many runs the new limit survives."""
-    client = _History(ok=[2050, 2040, 2020, 2000, 1980, 1950, 1930, 1920], bad=[2700])
+    client = _History(ok=[2050, 2040, 2020, 2000, 1980, 1950, 1930, 1920], bad=[2700], timeout=2700)
     res = resolvers.resolve(_TIMEOUT_DIAG, "execution_timeout 2700 seconds", client)
     horizon = next(s for s in res.solutions if "holds for" in s)
     assert "more runs" in horizon
@@ -75,6 +80,21 @@ def test_no_internal_vocabulary_reaches_the_reader() -> None:
 def test_too_little_history_settles_nothing() -> None:
     """Two green runs cannot establish a trend, and a guessed trend is worse than none."""
     assert resolvers.resolve(_TIMEOUT_DIAG, "", _History(ok=[600, 620], bad=[3600])) is None
+
+
+def test_one_stale_failure_cannot_flip_the_verdict() -> None:
+    """The gauntlet blocker. The limit was inferred from the longest past failure, so a single
+    row from an older config read as today's budget and told on-call the opposite of the fix."""
+    client = _History(ok=[1700, 1650, 1600, 1750, 1680, 1620], bad=[7200, 2700], timeout=2700)
+    res = resolvers.resolve(_TIMEOUT_DIAG, "[error] task Process timed out", client)
+    assert "outgrew its time limit" in res.verdict, res.verdict
+    assert "45m" in res.evidence and "120m" not in res.evidence, res.evidence
+
+
+def test_no_declared_limit_settles_nothing() -> None:
+    """Without the real limit every number is a guess, and a guessed verdict reads as measured."""
+    client = _History(ok=[1700, 1650, 1600, 1750], bad=[7200], timeout=None)
+    assert resolvers.resolve(_TIMEOUT_DIAG, "[error] task Process timed out", client) is None
 
 
 def test_a_missing_table_is_named_in_full() -> None:

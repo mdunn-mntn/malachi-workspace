@@ -331,6 +331,15 @@ def list_task_instances_for_task(base, token, dag_id, task_id, limit=100):
     return [t for t in rows if t.get("task_id") == task_id]
 
 
+def dag_task_meta(base, token, dag_id):
+    """task_id -> its declared config, so a limit is read rather than inferred from history."""
+    dp = urllib.parse.quote(dag_id)
+    status, obj = _get_json(base, token, f"/dags/{dp}/tasks")
+    if status != 200:
+        return {}
+    return {t["task_id"]: t for t in obj.get("tasks", []) if t.get("task_id")}
+
+
 def dag_task_graph(base, token, dag_id):
     """task_id -> its downstream task ids, so an upstream claim can be proved instead of guessed."""
     dp = urllib.parse.quote(dag_id)

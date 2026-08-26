@@ -22,9 +22,21 @@ _LOG_TAIL_CHARS = 4000  # raw log tail given to the LLM when signatures found no
 _RESOLVER_MAX_CHARS = 4_000_000
 
 
-def investigate(log_path: str, use_llm: bool = True, profile_perf: bool = True) -> dict:
-    """Run the full chain on one failed-task log; return report + provenance."""
+def investigate(
+    log_path: str,
+    use_llm: bool = True,
+    profile_perf: bool = True,
+    run_id: str | None = None,
+) -> dict:
+    """Run the full chain on one failed-task log; return report + provenance.
+
+    The caller passes run_id when it has one. An upstream_failed stub carries no identity in its
+    body and the daily sweep writes logs to a flat directory, so without it the walk has nothing
+    to look up and the whole upstream half goes dark in production.
+    """
     parsed = parse_log_file(log_path)
+    if run_id and not parsed.run_id:
+        parsed.run_id = run_id
     diag = diagnose(parsed)
     try:
         from .root_cause_walk import walk

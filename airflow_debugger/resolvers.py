@@ -93,21 +93,36 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
     except Exception:
         return None
     ok = [t["duration"] for t in history if t.get("state") == "success" and t.get("duration")]
-    bad = [t["duration"] for t in history if t.get("state") == "failed" and t.get("duration")]
+    bad = [t for t in history if t.get("state") == "failed" and t.get("duration")]
     if len(ok) < 3 or not bad:
         return None
 
+    # The limit is declared on the task; inferring it from past failures reads a stale config.
+    budget = None
+    try:
+        budget = client.task_timeout(dag_id, task_id)
+    except Exception:
+        budget = None
+    budget = budget or _timeout_budget(text)
+    if not budget:
+        return None
+
+    run_id = ident.get("run_id")
+    this_run = next((t for t in bad if t.get("dag_run_id") == run_id), None)
     median = statistics.median(ok)
-    killed = max(bad)
-    budget = _timeout_budget(text) or killed
     recent = statistics.median(ok[: max(len(ok) // 3, 3)])
     older = statistics.median(ok[-max(len(ok) // 3, 3) :])
     growth = (recent - older) / older if older else 0.0
 
+    # Name a kill duration only for THIS run; another failure's duration reads as measured.
+    hit = (
+        f"killed at {this_run['duration'] / 60:.0f}m against a {budget / 60:.0f}m limit"
+        if this_run
+        else f"hit its {budget / 60:.0f}m limit"
+    )
     ev = (
-        f"killed at {killed / 60:.0f}m against a {budget / 60:.0f}m limit; the last "
-        f"{len(ok)} successful runs took {older / 60:.0f}m rising to {recent / 60:.0f}m "
-        f"({growth:+.0%})"
+        f"{hit}; the last {len(ok)} successful runs took {older / 60:.0f}m rising to "
+        f"{recent / 60:.0f}m ({growth:+.0%})"
     )
     if median >= 0.6 * budget:
         headroom = _runs_until_breach(recent, growth, budget)

@@ -247,6 +247,37 @@ def test_dataproc_error_text_reaches_incident_query() -> None:
     assert "OutOfMemoryError" in queries[0]
 
 
+def test_a_caller_supplied_run_id_reaches_the_walk() -> None:
+    """The daily sweep writes logs to a flat directory, so a stub carries neither a date nor a
+    run id. Without the caller's run id the upstream walk is unreachable in production."""
+    import tempfile
+
+    from airflow_debugger import orchestrate as orch
+
+    stub = "no identity here\n"
+    with tempfile.TemporaryDirectory() as d:
+        path = f"{d}/054012__vcapi__response_tests__try1__upstream_failed.log"
+        with open(path, "w") as f:
+            f.write(stub)
+        seen = {}
+
+        def _spy(diag: dict, on_date: str | None = None, **kw: object) -> None:
+            seen["run_id"] = (diag.get("identity") or {}).get("run_id")
+            return None
+
+        import airflow_debugger.resolvers as rsv
+        import airflow_debugger.root_cause_walk as rcw
+
+        real_walk, real_resolve = rcw.walk, rsv.resolve
+        real_client = rcw.Client
+        rcw.walk, rsv.resolve, rcw.Client = _spy, lambda *a, **k: None, lambda: None
+        try:
+            orch.investigate(path, use_llm=False, profile_perf=False, run_id="scheduled__x")
+        finally:
+            rcw.walk, rsv.resolve, rcw.Client = real_walk, real_resolve, real_client
+    assert seen.get("run_id") == "scheduled__x"
+
+
 if __name__ == "__main__":
     for fn in [
         test_api_error_returns_none_not_stub,

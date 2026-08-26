@@ -52,6 +52,15 @@ class Client:
         """task_id -> downstream task ids, for proving an edge rather than assuming one."""
         return self.api.dag_task_graph(self.base, self.token, dag_id) or {}
 
+    def task_timeout(self, dag_id: str, task_id: str) -> float | None:
+        """The task's declared execution_timeout in seconds, or None if it has none."""
+        meta = (self.api.dag_task_meta(self.base, self.token, dag_id) or {}).get(task_id) or {}
+        et = meta.get("execution_timeout") or {}
+        if not isinstance(et, dict):
+            return None
+        secs = (et.get("days") or 0) * 86400 + (et.get("seconds") or 0)
+        return float(secs) or None
+
     def task_history(self, dag_id: str, task_id: str, limit: int = 100) -> list:
         """Recent instances of one task, newest first, for a runtime trend."""
         rows = self.api.list_task_instances_for_task(self.base, self.token, dag_id, task_id, limit)

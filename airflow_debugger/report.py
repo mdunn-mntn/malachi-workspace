@@ -123,12 +123,10 @@ def build_report(diag: dict) -> str:
     lines = [f"RCA [{_confidence(diag)}]: {who} - {_short_cause(diag)}"]
     if diag.get("orchestration_only"):
         lines.append(f"Downstream {diag.get('engine')} job SUCCEEDED, orchestration-only failure.")
-    cause_idx = None
     resolved = resolved_cause(diag)
     likely = (resolved[0] if resolved else root.get("likely_cause") or "").strip()
     if likely:
         lines.append(likely if likely.endswith(".") else likely + ".")
-        cause_idx = len(lines) - 1
     fix = (resolved[1] if resolved and resolved[1] else None) or fix_line(root)
     if fix:
         lines.append(fix)
@@ -144,16 +142,11 @@ def build_report(diag: dict) -> str:
         )
     elif walked:
         lines.append(walked[0])
-        # Without an index the hard cut below lands on the remedy, the half the reader acts on.
-        if cause_idx is None:
-            cause_idx = len(lines) - 1
         lines.append(walked[1])
     else:
         stated = stated_condition(diag)
         if stated:
             lines.append(stated)
-            if cause_idx is None:
-                cause_idx = len(lines) - 1
     mask = detect_mask(_verdict_text(diag))
     if mask:
         lines.append(mask_note(mask))
