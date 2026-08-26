@@ -110,3 +110,50 @@ the GCS URL, because `run()` passes the local path through. Cosmetic but useless
 ### Not yet built
 Slack delivery (the digest already renders Slack markup; `compass-slack` in mntn-devops is the
 transport), the Databricks `EXPLAIN COST` bridge, and `USE SCHEMA` on `system.lakeflow` — **reopened as an internal ask 2026-08-24.** The 2026-08-21 note here ("unobtainable, Databricks-side only") misread the enable error; David Qiu (Databricks) confirmed lakeflow is enabled automatically and that error is expected. The real gate is **metastore admin**, which MNTN has never assigned, and it blocks every `system.*` schema. Workspace admin is not enough and neither is account admin on its own (`grants update` → `User is not an account admin`); Ryan Kleck's assumption that workspace admin would do it is wrong. See [[reference_databricks]].
+
+## 2026-08-26 — the sweep produces a ranked, linked, readable digest
+
+Four merges since the prod ship (airflow-ti #1216, #1218, #1221, plus #1213's CI fix), all
+gauntleted. What each one settled:
+
+**Coverage no longer blinds the sweep (#1216).** Airflow 3 forbids ORM access from task code, so the
+paused-DAG query raises `airflow session use is forbidden in this context`. That raise used to take the
+whole DAG enumeration with it, `known` came back empty, and `sweep` correctly declined to write ledger
+rows it could not key — so **change tracking sat frozen at 130 rows / 2026-08-21 for four days**. Only
+the paused exclusion needs the DB; the bundle parses off disk. Split, and a lost paused set now costs
+only the paused set. Verified: the 08-25 manual run wrote 136 new rows and enumerated 72 DAGs.
+
+**A Spark app name is an Airflow TASK id, never a dag_id (#1218).** `aug_log_ip_hourly` is the task
+`feature_group_1_source.aug_log_ip_hourly` inside DAG `feature_store_hourly`; `fangorn_score_monitor`
+is a task in `audience_intent`. Matching job names against dag_ids resolved **0 of 57** on the 08-25
+sweep, which is why every digest line since launch carried a bare name instead of a link. Coverage now
+builds a task-name → dag_id index (DAG ids indexed too, ambiguous names dropped rather than guessed).
+The coverage page also lists every unresolved job with its reason, so the gap is stated, not silent.
+Three genuinely-unfixable classes remain: Spark set no app name (`app-2026...`, `segment-updates-...-[11]`),
+the name is shared by two DAGs, or no DAG defines a task by that name.
+
+**Findings rank by cost, not count (#1221).** The parser had been computing each run's executor-hours
+and discarding it. `crawl` carries it as `exec_h`, the ledger records it, and the digest is now four
+fixed blocks per DAG — What / Where / Why / How — capped at three DAGs, ranked on impact then hours.
+`dcu_h` stays a separate, still-unpopulated field: measured DCU and executor-hours are different units
+and conflating them would be a lie in a published artifact. Two costing bugs found adversarially:
+a killed or still-rolling app writes no `ApplicationEnd` so the fleet's biggest runaway costed **0.0
+and sorted last** (now measured to the log's last event), and an executor whose `added_ts` was 0 was
+dropped by a falsy check.
+
+**Databricks enumeration is live.** `airflow_optimizer/databricks.py` reads
+`system.lakeflow.job_run_timeline` (1,531 SUBMIT_RUNs / 7 days). Ranked by hours:
+`prod-ml-ddp_vertical_classification_api` 251 runs / 85.0h / 24 failures,
+`prod-ml-verticals_pre_cache` 381 / 65.2h, `prod-tpa-guid_geos_raw` 188 / 24.5h.
+`prod-mntn_matched-mntn_matched_taxonomy_vector` fails 16 of 25 runs. Gotchas in
+[[reference_databricks]]. **The remaining gap is model → SQL**: enumeration says a model ran, not what
+it ran, so `EXPLAIN COST` still needs the model's source.
+
+**Still not built:** Slack delivery (blocked on the app — Robin Fox reviews scopes, see
+[[reference_pi5_server]]), GitHub line permalinks in the *Where* block, batching the 200-invocation
+`gsutil` download, and the `EXPLAIN COST` bridge.
+
+**Two prod defects found and NOT yet fixed:** the DAG cannot be manually triggered without an explicit
+`logical_date` (Airflow 3 gives such a run no data interval, so the task raises `KeyError('ds')` in
+seconds — the 9am schedule is unaffected), and the failure callback's Slack post returns
+`channel_not_found`, so a failed sweep notifies nobody.
