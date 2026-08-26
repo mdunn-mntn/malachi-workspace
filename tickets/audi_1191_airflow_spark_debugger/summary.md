@@ -431,6 +431,29 @@ intact in the manifest.
 deployment variables (IMP-065). Without them the sweep logs a skip and succeeds, so merging is
 safe either way.
 
+### SHIPPED AND VERIFIED — the five gaps closed in prod (2026-08-25, airflow-ti#1217)
+
+**Bundle `2026-08-25T23:15:06`, 44 seconds after the merge.** Verified on a real failure rather than
+asserted: `mntn_match_verticals_precache_v1_1/pre_cache_verticals`, whose log carries only
+`Task failed with exception`, now reports the pod that never started and points at node capacity.
+Run: 4 of 5 diagnosed, 2 deterministic, both artifacts published.
+
+**Ranked what-to-fix list added** (`outputs/audi_1191_failure_priority_2026_08_25.md`). The split is
+the finding: of 211 logs, **28% actionable, 25% weather, 45% no cause in the log**. Most on-call
+pages are capacity, which is the argument for AUDI-1217 over any amount of DAG debugging. Top
+actionable: `set_gaclid_enabled_flag` (6 failures on 6 days, all a broken Slack notifier rather than
+the task), `ga4` (5 × `auth_error`), `keyword_ddp_reporting` (5 × `analysis_exception`).
+
+**The gauntlet returned THRASH and it was right.** `_run_holding` scanned only the first 12
+candidate runs while its docstring promised that two candidates name neither, so a second holder
+past the cut left one hit that read as unambiguous. **An ambiguity guard over a truncated list is
+not a guard.** Now exhaustive over failed runs only, which is sound because an `upstream_failed`
+task cannot exist in a successful dag_run.
+
+**Its fixer deleted four of the five gap fixes plus `slack_block.py`** to satisfy style findings.
+Restored the tested state and re-applied only the confirmed defect. Lesson in
+[[feedback_gauntlet_findings_not_fixes]].
+
 ### INC-025 and the mask registry — the debugger's own "one hop short" failure mode (2026-08-24)
 
 **The first alert the shipped DAG was pointed at exposed a structural gap, not a missing signature.**

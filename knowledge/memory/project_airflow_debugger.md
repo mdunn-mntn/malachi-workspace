@@ -196,3 +196,38 @@ See [[reference_fangorn_inference_dataproc]], [[reference_gcs_iam_creator_vs_use
 
 **Still open:** seven stubs whose culprit does not resolve, and IMP-081 — acquisition pulls only the `tpa` and `Machine Learning` tags, so a control-plane outage that killed four tasks across three DAGs is visible as ONE log and the cross-log co-occurrence detector cannot be built.
 
+## Shipped and verified end to end (2026-08-25, airflow-ti#1217)
+
+**All five gap fixes are live in prod.** Bundle `2026-08-25T23:15:06` (44s after merge). Verified on
+a real failure, not asserted: `mntn_match_verticals_precache_v1_1/pre_cache_verticals`, whose log
+says only `Task failed with exception`, now reports *"The pod pre-cache-verticals-a79kvr7k did not
+reach Running inside its 120s budget... check node capacity and image-pull time for that pod, not
+the task's code."*
+
+**The gauntlet caught a real defect in the fix (THRASH, then a clean second pass).** `_run_holding`
+scanned only the first 12 candidate runs while claiming an ambiguity guard, so a second holder past
+the cut left one hit that looked unambiguous and named the wrong run's culprit as fact. **An
+ambiguity guard over a truncated list is not a guard.** The scan is exhaustive over FAILED runs
+only, which is sound because an `upstream_failed` task cannot exist in a successful dag_run, and
+that filter is what keeps it affordable.
+
+**Its fixer over-reached and had to be rejected.** It deleted four of the five gap fixes plus
+`slack_block.py` — working, tested code, not defects. **Take a gauntlet's findings; do not take its
+fixer's diff on faith.** The correct move was restoring the tested state and re-applying only the
+confirmed finding.
+
+## Slack delivery, written and gated (AUDI-1221, airflow-ti#1219)
+
+**`notify.py` is inert until a token exists**, and the gate is the TOKEN, not a boolean: a flag can
+be switched on by someone who has not decided which channel the bot may write to; a missing token
+cannot. Unset renders the body and returns it unsent, so the shape is reviewable in a log first.
+
+**Threading matches the RUN ID, and the first version did not — a blocker the gauntlet caught.**
+Matching an alert by `dag_id` + `task_id` attaches the reply to the wrong message, and the wrong
+matches are the COMMON ones: the daily sweep diagnoses a day that already closed, so a task failing
+again today has a NEWER alert carrying the same two names, and an engineer typing "looking at
+<dag>/<task> now" carries them too. The alert's own link contains `dag_run_id=<run_id>`
+(`include/job_config/message_utils.py` `dag_grid_task_url`), so the match is exact or absent. No run
+id in the diagnosis means no thread: a loose channel post reads worse and is never attached to
+someone else's incident.
+

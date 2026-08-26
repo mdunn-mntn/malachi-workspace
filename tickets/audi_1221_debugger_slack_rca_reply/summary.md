@@ -148,3 +148,22 @@ How       the bounded fix, or the next hop when the chain stopped on a mask
 ```
 
 Bound the payload: no full diffs. If the fix is large, point at the lines and say so.
+
+## 2b. Built and open for review (2026-08-25, airflow-ti#1219)
+
+`notify.py` renders the fixed block and posts it, **inert until a token exists**. The gate is the
+TOKEN, not a flag: a flag can be switched on by someone who has not decided which channel the bot
+may write to; a missing token cannot. Unset renders the body and returns it unsent, so the shape is
+reviewable in a log before anything reaches a channel. 151 tests.
+
+**Threading matches the run id, and the first version did not.** The gauntlet caught it as a
+blocker. Matching an alert on `dag_id` + `task_id` attaches the reply to the wrong message, and the
+wrong matches are the COMMON ones: the daily sweep diagnoses a day that already closed, so a task
+failing again today has a NEWER alert with the same two names, and an engineer typing "looking at
+<dag>/<task> now" has them too. The alert's own link carries `dag_run_id=<run_id>` (built by
+`dag_grid_task_url` in `include/job_config/message_utils.py`), so the match is exact or absent. No
+run id in the diagnosis means no thread at all.
+
+**Still blocked on:** the Slack app + token (Robin Fox reviews the scopes), the OpenAI key from
+Alyson Lefkowitz, and deciding which of the two alert channels to thread onto. Once those exist,
+turning delivery on is two deployment variables and no code change.
