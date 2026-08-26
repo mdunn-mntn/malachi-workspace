@@ -9,6 +9,7 @@ import statistics
 from dataclasses import dataclass, field
 
 _FLAT = 0.02  # runtime noise below this reads as flat, not a trend
+_HORIZON_CAP = 200  # past this the horizon is noise, so say the limit holds instead of a number
 
 _TRACEBACK_TAIL = re.compile(
     r"^(?P<exc>[A-Za-z_][\w.]*(?:Error|Exception|Failure|Timeout)):\s*(?P<msg>.+)$", re.MULTILINE
@@ -120,11 +121,12 @@ def _execution_timeout(diag: dict, text: str, client: object | None) -> Resoluti
         new_limit = max(budget * 1.5, recent * 1.5)
         headroom = _runs_until_breach(recent, growth, new_limit, span)
         raise_it = f"Now: raise execution_timeout from {budget / 60:.0f}m to {new_limit / 60:.0f}m."
-        raise_it += (
-            f" That holds for about {headroom} more runs at the current growth rate."
-            if headroom
-            else " Runtime is not growing, so it should not need raising again."
-        )
+        if headroom and headroom <= _HORIZON_CAP:
+            raise_it += f" That holds for about {headroom} more runs at the current growth rate."
+        elif headroom:
+            raise_it += f" At the current {growth:+.0%} drift that holds for hundreds of runs."
+        else:
+            raise_it += " Runtime is not growing, so it should not need raising again."
         if growth > _FLAT:
             why = [
                 f"Then find out why it got slower: runtime rose {growth:+.0%} across these runs. "
