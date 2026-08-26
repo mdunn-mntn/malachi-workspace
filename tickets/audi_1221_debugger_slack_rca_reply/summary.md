@@ -149,7 +149,7 @@ How       the bounded fix, or the next hop when the chain stopped on a mask
 
 Bound the payload: no full diffs. If the fix is large, point at the lines and say so.
 
-## 2b. Built and open for review (2026-08-25, airflow-ti#1219)
+## 2b. MERGED and live (airflow-ti#1219, merged 2026-08-26T03:42Z, running on bundle 2026-08-26T15:55:02)
 
 `notify.py` renders the fixed block and posts it, **inert until a token exists**. The gate is the
 TOKEN, not a flag: a flag can be switched on by someone who has not decided which channel the bot
@@ -163,6 +163,8 @@ failing again today has a NEWER alert with the same two names, and an engineer t
 <dag>/<task> now" has them too. The alert's own link carries `dag_run_id=<run_id>` (built by
 `dag_grid_task_url` in `include/job_config/message_utils.py`), so the match is exact or absent. No
 run id in the diagnosis means no thread at all.
+
+**Live but inert, by design** — no `SLACK_BOT_TOKEN` in the deployment, so it renders and returns unsent. There is no risk window between merging and getting the scopes approved.
 
 **Still blocked on:** the Slack app + token (Robin Fox reviews the scopes), the OpenAI key from
 Alyson Lefkowitz, and deciding which of the two alert channels to thread onto. Once those exist,

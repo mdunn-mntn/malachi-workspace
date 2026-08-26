@@ -216,7 +216,7 @@ that filter is what keeps it affordable.
 fixer's diff on faith.** The correct move was restoring the tested state and re-applying only the
 confirmed finding.
 
-## Slack delivery, written and gated (AUDI-1221, airflow-ti#1219)
+## Slack delivery, MERGED and inert (AUDI-1221, airflow-ti#1219, live 2026-08-26)
 
 **`notify.py` is inert until a token exists**, and the gate is the TOKEN, not a boolean: a flag can
 be switched on by someone who has not decided which channel the bot may write to; a missing token
