@@ -127,6 +127,35 @@ def test_a_pod_that_never_started_says_so_in_slack() -> None:
     assert "node capacity" in out
 
 
+def test_a_masking_error_outranks_an_empty_airflow_log() -> None:
+    """INC-025's shape. The Airflow log carries no error, the layer below carries a mask. Saying
+    "the worker died" here overwrites the real evidence with a confident wrong cause."""
+    diag = {
+        "identity": {"dag_id": "fangorn_inference_pipeline_run", "task_id": "challenger"},
+        "engine": "vertex",
+        "ti_state": "failed",
+        "no_error_text": True,
+        "spark": {
+            "error_text": (
+                "google.api_core.exceptions.NotFound: 404 Not found: Cluster "
+                "projects/p/regions/us-central1/clusters/fangorn-challenger-a483e22d"
+            )
+        },
+    }
+    out = slack_block.render(diag, repo_paths={})
+    assert "masking error" in out
+    assert "audit log" in out
+    assert "worker died" not in out
+
+
+def test_an_upstream_stub_still_speaks_even_with_downstream_text() -> None:
+    """A task that never ran cannot own a downstream error, so the guard must not swallow it."""
+    diag = dict(_STUB, spark={"error_text": "some batch error from a sibling"})
+    out = slack_block.render(diag, repo_paths={})
+    assert "(no cause in this log)" in out
+    assert "ddp_vertical_classification_api" in out
+
+
 def test_a_stated_condition_outranks_the_llm() -> None:
     """A condition read off the log is evidence; a model's guess about it is not."""
     text, source = slack_block.why(_STUB, llm_cause="probably a bad credential")

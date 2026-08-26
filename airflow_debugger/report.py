@@ -164,6 +164,16 @@ def build_report(diag: dict) -> str:
     return report
 
 
+def _downstream_text(diag: dict) -> str:
+    """Error text from a layer below Airflow, when the task's own log carries none."""
+    spark = diag.get("spark") or {}
+    return " ".join(
+        str(x)
+        for x in (diag.get("root_error"), spark.get("error_text"), spark.get("state_message"))
+        if x
+    ).strip()
+
+
 def walked_cause(diag: dict) -> tuple[str, str] | None:
     """(why, how) from the upstream walk's root, or None when the walk reached nothing.
 
@@ -199,6 +209,9 @@ def stated_condition(diag: dict) -> str | None:
     if diag.get("root_signature"):
         return None
     if diag.get("no_error_text"):
+        if diag.get("ti_state") != "upstream_failed" and _downstream_text(diag):
+            # The log is empty but the evidence is not; "the worker died" would overwrite it.
+            return None
         return _no_output_note(
             diag.get("ti_state"),
             diag.get("upstream_failed_tasks"),
