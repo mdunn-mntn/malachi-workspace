@@ -19,8 +19,20 @@ just bounces; `PR_GAUNTLET_SKIP=1` exists for emergencies on the user's explicit
 A PR ships only when it survives: two independent adversarial reviewers with opposite premises
 ("this PR is wrong" / "this PR is badly written") tear the diff apart, every finding must survive
 an independent refuter before any code changes, one fixer applies what survives, and the loop
-repeats with fresh agents until a whole round comes back empty. Round cap 4. This runs BEFORE
-`gh pr create` and before Codex review (global CLAUDE.md §10), so both find nothing.
+repeats with fresh agents until a whole round comes back empty. This runs BEFORE `gh pr create`
+and before Codex review (global CLAUDE.md §10), so both find nothing.
+
+**Tiers — pick one, `medium` is the default.** The first word of the args may name it.
+
+| Tier | Rounds | Reviewers | Refuters/round | Last round | Use it for |
+|---|---|---|---|---|---|
+| `fast` | 1 | skeptic only | 3 | fixes, no re-review | a small or mechanical diff, or a hotfix |
+| `medium` | 2 | skeptic + stylist | 4 | fixes, no re-review | the default for ordinary PRs |
+| `thorough` | 3 | skeptic + stylist | 6 | must converge clean | prod-facing, wide, or security-relevant |
+
+`fast` and `medium` end by APPLYING the last round's confirmed findings and returning
+`FIXED_UNVERIFIED`: the fixes are real but no fresh agent has re-read them. `thorough` refuses to
+end that way — it returns `FAIL_MAX_ROUNDS` with the findings open, and the call is the user's.
 
 The reviewer and refuter prompts are the agent definitions — the single source of truth:
 `.claude/agents/pr-gauntlet-skeptic.md`, `pr-gauntlet-stylist.md`, `pr-gauntlet-refuter.md`.
@@ -28,7 +40,8 @@ The loop is `.claude/workflows/pr_gauntlet.js`. Do not restate their content her
 
 ## Step 1 — Resolve the target
 
-In order: `/pr_gauntlet` with no args → cwd repo, current branch + working tree vs
+Strip a leading `fast` / `medium` / `thorough` from the args first — that is the tier, and the
+rest resolves as below. In order: `/pr_gauntlet` with no args → cwd repo, current branch + working tree vs
 `git merge-base origin/main HEAD` (or origin/master). `/pr_gauntlet <PR# | url>` → `gh pr view`
 for head branch + description; the branch must already be checked out locally — **never switch
 branches in the shared workspace worktree**; in another repo, `gh pr checkout` is fine.
@@ -62,7 +75,7 @@ Fix mechanical failures directly (they are deterministic), re-run to green, then
 
 ```
 Workflow({ scriptPath: '<workspace>/.claude/workflows/pr_gauntlet.js',
-           args: { repo, base, files, prNumber, description } })
+           args: { repo, base, files, tier, prNumber, description } })
 ```
 
 Dispatch by `scriptPath`, not by name: `Workflow({name})` snapshots the script at first
@@ -84,6 +97,10 @@ Do not poll; the completion notification arrives on its own. Stall is idle, not 
   `git diff --cached --name-only` must show nothing you didn't touch), push, then write the ship
   marker so the hook backstop goes quiet: `git rev-parse HEAD > <repo>/.git/pr_gauntlet_pass`.
   The PR may now be created/updated; lint the final description (`lint_comms.py --kind pr`) first.
+- **FIXED_UNVERIFIED** — the last round's findings were applied but not re-reviewed. Run the
+  mechanical gate and the test suite yourself, then ship as for PASS, and say in the report that
+  the final fixes went unreviewed and at which tier. Re-run at `thorough` if the diff is
+  prod-facing.
 - **FAIL_MAX_ROUNDS** — no ship. Commit any fixes that landed, report the open findings
   (file:line, claim, refuter evidence), and stop; the open findings are the user's decision.
 - **THRASH** — no ship. A fixed finding recurred confirmed: the fix and the finding disagree.

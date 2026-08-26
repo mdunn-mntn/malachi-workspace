@@ -1,15 +1,19 @@
-// pr_gauntlet.js — adversarial PR review loop: two blind reviewers -> default-refute verify ->
-// one fixer, fresh agents every round, until a full round confirms nothing (cap 2).
-// Invoked by /pr_gauntlet with args {repo, base, files, prNumber?, description?}.
-// Verdicts: PASS | FAIL_MAX_ROUNDS | THRASH | ERROR. Never commits; the main loop commits.
+// pr_gauntlet.js — adversarial PR review loop: blind reviewers -> default-refute verify ->
+// one fixer, fresh agents every round, until a full round confirms nothing.
+// Invoked by /pr_gauntlet with args {repo, base, files, tier?, prNumber?, description?}.
+// tier: fast (1 round, bugs only) | medium (2 rounds, default) | thorough (3 rounds, must converge).
+// Verdicts: PASS | FIXED_UNVERIFIED | FAIL_MAX_ROUNDS | THRASH | ERROR. Never commits.
 export const meta = {
   name: 'pr_gauntlet',
   description: 'Adversarial PR gauntlet: skeptic+stylist review, refute, fix, loop until an empty round',
   whenToUse: 'Dispatched by the /pr_gauntlet skill on a PR, branch, or diff before it ships',
 }
 
-const MAX_ROUNDS = 2
-const MAX_REFUTERS_PER_ROUND = 6
+const TIERS = {
+  fast: { rounds: 1, stylist: false, refuters: 3, effort: 'medium', fixLastRound: true },
+  medium: { rounds: 2, stylist: true, refuters: 4, effort: undefined, fixLastRound: true },
+  thorough: { rounds: 3, stylist: true, refuters: 6, effort: undefined, fixLastRound: false },
+}
 const LINE_BUCKET = 10
 
 const FINDINGS_SCHEMA = {
@@ -64,8 +68,12 @@ const FIX_SCHEMA = {
 
 const a = typeof args === 'string' ? JSON.parse(args) : args
 if (!a || !a.repo || !a.base || !Array.isArray(a.files) || a.files.length === 0) {
-  throw new Error('args must be {repo, base, files[], prNumber?, description?}')
+  throw new Error('args must be {repo, base, files[], tier?, prNumber?, description?}')
 }
+const tier = TIERS[(a.tier || 'medium').toLowerCase()]
+if (!tier) throw new Error(`tier must be one of ${Object.keys(TIERS).join(', ')}`)
+const MAX_ROUNDS = tier.rounds
+const MAX_REFUTERS_PER_ROUND = tier.refuters
 const fileList = a.files.join('\n  ')
 const desc = a.description ? `PR description under review:\n---\n${a.description}\n---` : 'No PR description exists yet.'
 
@@ -111,7 +119,7 @@ async function roleAgent(agentType, task, opts) {
 }
 
 async function dispatchReviewer(role, agentType, round) {
-  const opts = { schema: FINDINGS_SCHEMA, phase: `Round ${round} review`, label: `${agentType} r${round}` }
+  const opts = { schema: FINDINGS_SCHEMA, phase: `Round ${round} review`, label: `${agentType} r${round}`, effort: tier.effort }
   let r = await roleAgent(agentType, reviewTask(role), opts)
   if (r === null) r = await roleAgent(agentType, reviewTask(role), { ...opts, label: `${agentType} r${round} retry` })
   if (r === null) return null
@@ -119,10 +127,10 @@ async function dispatchReviewer(role, agentType, round) {
 }
 
 for (let round = 1; round <= MAX_ROUNDS; round++) {
-  log(`Round ${round}: dispatching fresh skeptic + stylist`)
+  log(`Round ${round}/${MAX_ROUNDS}: dispatching fresh skeptic${tier.stylist ? ' + stylist' : ''}`)
   const [skeptic, stylist] = await parallel([
     () => dispatchReviewer('bug', 'pr-gauntlet-skeptic', round),
-    () => dispatchReviewer('style', 'pr-gauntlet-stylist', round),
+    () => (tier.stylist ? dispatchReviewer('style', 'pr-gauntlet-stylist', round) : []),
   ])
   if (skeptic === null || stylist === null) {
     return { verdict: 'ERROR', detail: `round ${round}: a reviewer failed twice; convergence cannot be certified`, tallies }
@@ -155,7 +163,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
 
   const verdicts = await parallel(toRefute.map(f => async () => {
     try {
-      const v = await roleAgent('pr-gauntlet-refuter', refuteTask(f), { schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: 'medium' })
+      const v = await roleAgent('pr-gauntlet-refuter', refuteTask(f), { schema: VERDICT_SCHEMA, phase: `Round ${round} verify`, label: `refute ${f.file}:${f.line}`, effort: tier.effort || 'medium' })
       return { f, v }
     } catch (e) {
       return { f, v: null, err: String(e) }
@@ -193,7 +201,8 @@ New (just confirmed): ${JSON.stringify(row.f)}`,
     continue
   }
 
-  if (round === MAX_ROUNDS) {
+  const lastRound = round === MAX_ROUNDS
+  if (lastRound && !tier.fixLastRound) {
     return { verdict: 'FAIL_MAX_ROUNDS', open_findings: confirmed, tallies }
   }
 
@@ -217,6 +226,19 @@ ${JSON.stringify(confirmed, null, 2)}`,
   for (const k of fix.fixed) adjudicated.set(k, { status: 'fixed', finding: byKey.get(k) || { key: k } })
   for (const r of fix.rejected) adjudicated.set(r.key, { status: 'rejected', finding: byKey.get(r.key) || { key: r.key } })
   if (fix.new_files.length) log(`Round ${round}: fixer created ${fix.new_files.join(', ')}`)
+  if (lastRound) {
+    log(`Round ${round}: fixed ${t.fixed}, rejected ${t.rejected} — last round of the ${a.tier || 'medium'} tier, so the fixes are NOT re-reviewed`)
+    return {
+      verdict: 'FIXED_UNVERIFIED',
+      tier: a.tier || 'medium',
+      fixed: fix.fixed,
+      rejected: fix.rejected,
+      unreviewed: t.refuter_capped,
+      new_files: fix.new_files,
+      mechanical: fix.mechanical,
+      tallies,
+    }
+  }
   log(`Round ${round}: fixed ${t.fixed}, rejected ${t.rejected} — next round re-reviews the fixes with fresh agents`)
 }
 
