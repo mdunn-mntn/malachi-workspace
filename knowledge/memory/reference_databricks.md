@@ -159,3 +159,16 @@ Increasing executor count by reducing cores/memory per executor shrinks the gap 
 Vendor contact on the support thread: **David Qiu** (Databricks). Calibration: he was right about the enable-call red herring, and twice suggested workarounds that did not survive a test (SP inheritance via account `users`, and a relay view) — test his suggestions before relaying them onward.
 
 **§ Access level:** `malachi@mountain.com` is in **`admins`** as of 2026-08-20 (groups: `producers_dev`, `users`, `admins`, a users-clone). The on-call runbook's `producers/dev/users` line is stale. Workspace `admin` still does not grant Unity Catalog `system` schema access.
+
+**`system.query` is the next grant, and it is what unblocks the optimizer's four dead plan checks (2026-08-26).** `system.query.history` carries the SQL text of each executed
+statement, which `system.lakeflow.job_run_timeline` does not — that statement text is the missing
+input for `EXPLAIN COST`. Confirmed today: the schema is listed by
+`system.information_schema.schemata`, and a SELECT returns
+`INSUFFICIENT_PERMISSIONS: User does not have USE SCHEMA on Schema 'system.query'`. `USE CATALOG ON
+CATALOG system` is already held via the metastore-admin group, so only the two schema grants are
+missing, and only an ACCOUNT admin can run them (already proven for `system.lakeflow`,
+`system.billing`, `system.access` and `system.query` on 2026-08-24). Ask drafted at
+`tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_slack_alyson_query_schema.md`.
+Why it matters: Spark event logs carry plan TEXT but no `Statistics(sizeInBytes=...)` annotations,
+so `parse_plan_text` extracts 0 table nodes from 4.7 MB of plan text across a 300-run sample and
+four checks cannot fire at all. See [[project_airflow_optimizer]].

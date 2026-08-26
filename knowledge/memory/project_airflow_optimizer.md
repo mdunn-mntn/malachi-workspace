@@ -157,3 +157,90 @@ it ran, so `EXPLAIN COST` still needs the model's source.
 `logical_date` (Airflow 3 gives such a run no data interval, so the task raises `KeyError('ds')` in
 seconds — the 9am schedule is unaffected), and the failure callback's Slack post returns
 `channel_not_found`, so a failed sweep notifies nobody.
+
+## 2026-08-26 (later) — the full-corpus validation, and four defects only a full crawl could show
+
+Malachi's ask was "prove there are no gaps before we send this to anyone". Every `.zstd` in
+`gs://mntn-data-archive-prod/spark-events` written inside the last 30 days was downloaded and
+parsed: **3,022 objects / 25 GB → 2,954 event logs** (92 objects belong to 24 `eventlog_v2_*`
+rolling dirs), **all 2,954 parsed**, **80 distinct Spark jobs**, **3,620 findings**,
+**85,655 executor-hours**. Scripts: `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_validation_*.py`.
+Deliverable: `My Drive/Tickets/AUDI-1194 Airflow Spark Optimization Crawler/AUDI-1194 Spark Optimizer Validation.xlsx`.
+
+**The archive holds 23 days, not 30.** Span is 2026-08-04..2026-08-26, median 133 logs/day.
+Archiving to that prefix began 2026-08-04; the bucket also holds an unrelated 2025-10-07..11-12
+block. `gsutil lifecycle get` still shows **no rule matching `spark-events/`** (IMP-048 open), so
+nothing expires it and the window grows a day per day. Do not promise a 30-day lookback.
+
+**A Spark app name puts the job BEFORE the dot; an Airflow task id puts it AFTER.** This corrects
+the #1218 note above. `Populate site_network_hourly.SiteNetworkHourly` → the task is
+`site_network_hourly`; `feature_group_1_source.aug_log_ip_hourly` → the task is
+`aug_log_ip_hourly`. `normalise_job` took the segment after the dot for both, so it returned the
+CLASS name. One segment cannot serve both sides. `job_keys` now offers first segment, last
+segment, full name, and a digit-infix form (`ipdsc_14_monitor` → `ipdsc_monitor`, one datasource's
+run of the `ipdsc_monitor` DAG); `Coverage.resolve` takes the first candidate naming exactly one
+DAG. **Measured on the real fleet: the shipped digest linked 3 of 80 jobs, the fix links 77.**
+The coverage report's own `profiled this sweep` count went **2 → 13** — that was the visible
+symptom, and it read as "the fleet barely ran". `normalise_job`, `Coverage.task_owner` and
+`digest._resolver` all lost their last caller and were deleted.
+**Correction on the record:** the "0 of 62" figure in commit `b80d3047` describes the coverage
+INDEX, not the digest; a gauntlet refuter caught the overstatement. 3 → 77 of 80 is the evidenced
+number. Two names stay unresolvable: `guid_log_ip_advertiser_id` (its task is
+`feature_group_1_source.guid_log_ip_advertiser_id_rollup`, so the app drops a `_rollup` the task
+carries) and `ipdsc_third_party_audience_builder` (no task in the bundle defines it).
+
+**175 of 200 recent Dataproc batches write their event log where the sweep never looked.** Of 200
+listed batches: 13 set `spark.eventLog.dir = gs://mntn-data-archive-prod/spark-events`, 10 set an
+explicit temp path, and **175 set nothing at all** — and Dataproc still writes their log to
+`gs://<temp-bucket>/<uuid>/spark-job-history/`, history server attached or not. `phs_succeeded`
+filtered on `sparkHistoryServerConfig`, which Dataproc returns as an **empty dict** (falsy) for all
+but 10, so it kept 10 of 200. Sampled 12 of the 175 at random: **12 of 12 had a readable log
+there.** New rule keeps any SUCCEEDED batch not writing to the archive → **185 of 200**;
+`MAX_BATCHES` 60 → 150 (~585 MiB at the measured 3.9 MiB/batch). The temp bucket
+`dataproc-temp-us-central1-995798185124-svhwvc6j` **is readable as of 2026-08-26** (403 on
+2026-08-20; mntn-devops#4724 is out of draft with DevOps requested). `spark_optimizer_daily.py`
+already calls `phs.fetch_logs`, so no new wiring was needed — the selector was the whole gap.
+
+**16 of 30 Spark DAGs ran successfully in the window and produced no readable log.** Not "they did
+not run": task-instance states show `materialize_mntn_select.materialize` 24 successes,
+`fpa_site_visit_batch_serverless.dsid23_guid_log_processing` 24, `hashed_email_guid_log_signals.populate_hem_data_ds_23`
+24. Cause confirmed by `batches describe`. Proven end-to-end: fetched 14 temp-bucket batches,
+crawled 14/14 clean, and `materialize_mntn_select_16` — a DAG the sweep had never seen — resolved
+with a finding at 31.7 executor-hours.
+
+**A no-op run is a finding, and `ApplicationEnd` is the WRONG discriminator.** `crawl` skipped any
+log with no jobs and no stages as a truncated download. 39 such logs in the corpus were all real
+named apps that started and ended without submitting a job, costing **546 executor-hours** across
+15 discarded high-impact findings; the worst held **100 executors for 64.4 executor-hours with zero
+tasks run** — a finding `idle_reserved_executors` already knew how to raise and never got to.
+The first fix keyed on `ApplicationEnd`; a gauntlet refuter proved that throws away the killed apps
+the guard exists to catch (a TTL kill, cancel, or driver OOM writes no `ApplicationEnd` either, so
+a 64-hour run read as a failed download at 0.0 cost, contradicting `executor_hours`, which costs
+that exact case from `last_event_ts`). **Holding an executor is the discriminator**: skip only when
+there are no jobs, no stages AND no executors.
+
+**Detector status, measured on a random 300-log sample — 10 of 14 work.** Firing: `shuffle_fetch_wait`
+1,496 · `disk_spill` 884 · `idle_reserved_executors` 549 · `shuffle_partition_sizing` 324 ·
+`straggler` 242 · `skew` 125. Correctly quiet, with the input confirmed present: `gc_pressure`
+(GC time recorded on 295/300, max share **4.3%** vs a 10% threshold), `spot_preemption_cost`
+(removal reasons recorded, **no** `preempt`/`spot` string — serverless, no spot),
+`shuffle_fetch_instability` (**0** FetchFailed tasks). Unproven either way: `cache_ineffective`
+(`cached_rdd_bytes == 0` fleet-wide, nothing caches, so it has never had a case to judge).
+
+**The four plan detectors are dead on Spark event logs, now measured, and the unblock is named.**
+295 of 300 sampled runs DO carry SQL plan text — **4,734,637 chars** — and `parse_plan_text`
+extracts **0 leaf scan nodes** from all of it. OSS Spark writes `Relation [cols...] parquet`; the
+detectors need Databricks's `Scan parquet <table> ... Statistics(sizeInBytes=...)`. This widens
+IMP-033 from "the scan/stats regexes are Databricks-only" to "all five plan detectors are dead on
+OSS text". **`system.query.history` is the missing input** — it carries the statement text that
+`system.lakeflow.job_run_timeline` does not, which is the model→SQL gap noted above. It exists and
+is listed by `system.information_schema.schemata`, and returns
+`INSUFFICIENT_PERMISSIONS: User does not have USE SCHEMA on Schema 'system.query'`. Same account-admin
+ladder Alyson Lefkowitz ran for `system.lakeflow`; draft at
+`artifacts/audi_1194_slack_alyson_query_schema.md`. See [[reference_databricks]].
+
+**`site_network_hourly` is the fleet's #1 target, and now it is not a 4-log claim.** 302 runs in the
+window, **21,200 executor-hours** (top-10 jobs hold 79% of the fleet total), per-run median 51.3h /
+max 371.2h. A fetch-wait finding fires on **254 of 302 runs**, **252 of them on stage 9**, min 30% /
+median 56% / max 90% of task time; `idle_reserved_executors` fires on 236. The Ryan Kleck draft now
+rests on this rather than on the four profiled logs.

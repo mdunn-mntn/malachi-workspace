@@ -189,7 +189,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
 | reference_airflow_log_puller | reference | 2026-08-20 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
-| reference_dataproc_eventlog_profiling | reference | 2026-08-20 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-08-20 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_mm_vs_3p_scorecard | reference | 2026-08-20 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
 | reference_mntn_devops_permissions | reference | 2026-08-20 | [doc](memory/reference_mntn_devops_permissions.md) |
@@ -229,3 +228,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_bottom_up_keywords_pipeline | reference | 2026-08-25 | [doc](memory/reference_bottom_up_keywords_pipeline.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-08-25 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_ghost_bid_lift_register | reference | 2026-08-25 | [doc](memory/reference_ghost_bid_lift_register.md) |
+| reference_dataproc_eventlog_profiling | reference | 2026-08-26 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
