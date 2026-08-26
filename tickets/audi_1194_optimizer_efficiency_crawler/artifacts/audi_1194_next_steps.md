@@ -13,11 +13,17 @@
 `usage_metadata` struct with `job_id`, `job_run_id`, `run_name`, `job_name`, `warehouse_id`,
 `cluster_id`. Two joins turn the optimizer's rankings into money:
 
-- **dbt / job cost:** `usage_metadata.job_run_id` → `system.lakeflow.job_run_timeline.run_id`.
-  Gives DBUs per ephemeral dbt submission, which is the unit `databricks.by_model` already groups.
+- **dbt / job cost:** `usage_metadata.job_run_id` → `system.lakeflow.job_run_timeline.run_id`,
+  **deduped to one row per run_id first**. The timeline holds one row per hourly period, so a raw
+  join multiplied 7 days of `PREMIUM_JOBS_COMPUTE` from 16,460 DBU to 205,239. The ratio is not a
+  constant (10.4x to 12.5x across rolling windows) and is driven by a few long runs: 89.3% of
+  usage `run_id`s have exactly one timeline row.
 - **warehouse / query cost:** `usage_metadata.warehouse_id` → the warehouse a
-  `system.query.history` row ran on. Gives DBUs per statement, so the four dbt tests that burned
-  **131 warehouse-hours over 2 days** get a dollar figure instead of an hours figure.
+  `system.query.history` row ran on. Billing has no per-statement DBU, so this apportions the
+  warehouse's daily dollars by each statement's share of that day's query time. Built and
+  measured: the four `ddp_vertical_classification_api` tests are 98.6% of warehouse
+  `14b311ac86ee2ca2`, whose 7-day list cost is **$850**. Detail and the three figures the
+  verification pass corrected: `audi_1194_ddp_api_test_cost.md`.
 - **Dollars:** join `sku_name` + `usage_start_time` to `system.billing.list_prices`.
 
 **Carry the discount caveat.** A committed-use or contract rate means cut DBUs may not cut the

@@ -239,7 +239,7 @@ class Cost:
     runs: int
     dbu: float
     usd: float
-    hours: float = 0.0
+    hours: float = 0.0  # summed statement duration, which concurrency makes exceed wall time
 
 
 JOB_COST_SQL = """
@@ -332,7 +332,8 @@ def render_report(jobs: list[Cost], nodes: list[Cost], plans: list[tuple], days:
     lines = [f"# Databricks cost — last {days} days", "",
              "Dollars are list price. A contract rate makes the real figure lower, and warehouse "
              "dollars are apportioned to a statement by its share of the day's query time rather "
-             "than metered per statement.", ""]
+             "than metered per statement. Query-hours are summed per statement, so concurrent "
+             "statements double-count them and they exceed the warehouse's running hours.", ""]
     if jobs:
         lines += ["## Jobs and dbt submissions, by DBU", "",
                   "| job | runs | DBU | $ |", "|---|---|---|---|"]
@@ -340,7 +341,7 @@ def render_report(jobs: list[Cost], nodes: list[Cost], plans: list[tuple], days:
         lines.append("")
     if nodes:
         lines += ["## Warehouse statements, by apportioned cost", "",
-                  "| dbt node | runs | warehouse-hours | $ |", "|---|---|---|---|"]
+                  "| dbt node | runs | query-hours | $ |", "|---|---|---|---|"]
         lines += [f"| `{c.name}` | {c.runs} | {c.hours:,.1f} | {c.usd:,.2f} |" for c in nodes]
         lines.append("")
     lines += ["## Plan findings", ""]
