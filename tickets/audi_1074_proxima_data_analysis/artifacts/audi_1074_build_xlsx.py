@@ -45,18 +45,18 @@ wb.table("Answers to the 7 questions", score,
          kind="headline", toc="The verdict, one row per question")
 
 gaps = pd.DataFrame([
-    ["browser_ip column", "Missing entirely", "Dictionary and delivery email promise it; 0 of 57 promised columns beyond 44 delivered are present"],
-    ["Address columns (12)", "Missing entirely", "billing/shipping/default city, state, zipcode, country all absent"],
+    ["browser_ip column", "Missing; redelivery agreed", "Dictionary and delivery email promise it; vendor offered redelivery 2026-08-25"],
+    ["Address columns (12)", "Deliberately omitted", "Vendor understood zip-only was needed from a prior call; redelivery with zip offered 2026-08-25"],
     ["ip_mapping headers", "No column names", "Files arrive as unnamed _COL_0 / _COL_1"],
     ["Customer IP coverage", "45.4% of customers", "AUDI-935 scoping said 60-80% IP fill on transactions"],
-    ["Buyer-flag consistency", "5-10% impossible values", "6mo=true with 12mo=false: fashion 10.4%, health 8.7%, beauty 5.3%"],
+    ["Buyer-flag windows", "Disjoint bands; dictionary says cumulative", "Vendor 2026-08-25: 12mo flag = purchases 6-12 months ago, 36mo = 12-36. Dictionary wording contradicts the computation"],
     ["Item taxonomy", "24% unclassified", "product_taxonomy_level1 NULL on 23.6% of line items; levels 3-5 mostly NULL"],
     ["Item ID types", "VARCHAR, dictionary says BIGINT", "items order_id/line_item_id need a cast to join basket"],
     ["Monthly active brands", "Declined 19% over the year", "1,082 brands active Jul-2025 down to 878 Jul-2026"],
 ], columns=["Delivery item", "What we received", "Basis"])
 wb.table("Delivery gaps", gaps,
-         finding="The sample is clean at grain (0% duplicate orders) but 13 promised identity columns are missing",
-         method="Delivered files compared against the vendor data dictionary and the AUDI-935 scoping claims. Raised with Proxima.",
+         finding="The sample is clean at grain (0% duplicate orders); the 13 missing identity columns have an agreed redelivery path",
+         method="Delivered files vs the vendor dictionary and AUDI-935 scoping. All items raised with Proxima 2026-08-24; their answers folded in 2026-08-25.",
          toc="Where delivery fell short of the dictionary")
 
 cad = pd.read_csv(OUT / "q1_cadence_by_category.csv").sort_values("n_gaps", ascending=False).head(15)
@@ -126,6 +126,7 @@ ntb = pd.DataFrame([(m, p / 100) for m, p in q6["ntb_pct_by_month"].items()],
 wb.table("Q6 New-to-brand", ntb,
          finding="New-to-brand share settles at ~44-46% of orders after a 5-month burn-in; a 6-month lookback suffices",
          method="First observed order per customer x brand. Early months read high by construction (left censoring). 0% guest checkout. See Read me.",
+         
          formats={"Orders that are first-time at brand": FMT.PCT1},
          toc="Can first-time buyers be identified")
 
@@ -135,7 +136,9 @@ fresh = pd.DataFrame([
     ["Purchase-to-delivery lag", f"{q7['nominal_lag_days']} days"],
     ["Last date at full daily volume", str(q7["last_full_volume_date"])[:10]],
     ["Median daily orders (trailing)", f"{float(q7['trailing_median_daily_orders']):,.0f}"],
-    ["Refresh cadence", "Weekly standard per vendor; unmeasurable from one drop"],
+    ["Refresh cadence", "Monthly, sometimes weekly, in production (vendor 2026-08-25); eval is a one-time drop"],
+    ["Purchase age at actionability", "~17 days mean at monthly refresh (cadence midpoint + 2-day lag)"],
+    ["Refresh semantics", "Orders restated each delivery (full refresh, not append-only)"],
 ], columns=["Freshness measure", "Observed"])
 wb.table("Q7 Freshness", fresh,
          finding="Purchases reach the delivered file ~2 days after they happen; daily volume is full through 3 days before delivery",
@@ -148,7 +151,7 @@ wb.glossary("Read me", intro="Definitions for every term the tabs use.", rows=[
     ("Items", "Line-item file: 162.0M rows, Shopify product taxonomy, joins basket on order_id."),
     ("ip_mapping", "Customer-to-IP file: 33.5M rows, 14.8M customers, 24.7M distinct IPs (96% IPv4)."),
     ("Category (level 1)", "Top level of the Shopify product taxonomy, e.g. Health & Beauty. NULL on 24% of line items."),
-    ("Buyer flag", "Vendor-computed boolean: did this customer buy from a category in the past 6/12/36 months."),
+    ("Buyer flag", "Vendor-computed boolean over DISJOINT windows: 6mo = past 6 months, 12mo = 6-12 months ago, 36mo = 12-36 months ago. A past-12-months audience is 6mo OR 12mo."),
     ("MNTN terms", ""),
     ("Addressable gate", "The set of IPs MNTN can currently bid on: seen in its logs within the serving window. 201M IPs on the sample day."),
     ("Served IPs", "Distinct IPs that received at least one MNTN impression in the trailing 30 days: 49.7M."),
@@ -169,6 +172,7 @@ wb.notes("Method & caveats", blocks=[
     ("Censoring", "1-year window biases repurchase medians short (long cycles truncated) and inflates early-month new-to-brand shares (left censoring; first 5 months are burn-in)."),
     ("Exclusions", "Brand/GMV tab: USD orders only (99.65%), refunded and voided excluded (1.28%). Overlap tabs: IPv4 only; IPv6 is 3.9% of mapped IPs and outside MNTN's current feature pipeline."),
     ("Timezones", "order_created_at is timezone-naive; all dates read as UTC. Freshness lag carries a plus/minus 1 day sensitivity."),
+    ("Flag band semantics", "The 5-10% of rows reading 6mo=true, 12mo=false are legal under the vendor-confirmed band windows, and 36mo-flagged customers without in-file purchases are expected (12-36mo is pre-file). Both were first read as defects; reframed 2026-08-25."),
 ])
 
 wb.sql_dir("Queries", str(Q),
