@@ -37,17 +37,21 @@ SEV = {"high": "HIGH", "medium": "MED", "low": "LOW"}
 _RANK = {"high": 0, "medium": 1, "low": 2}
 
 
-def dag_link(dag_id: str, base: str = AIRFLOW_UI, known: set | None = None) -> str:
-    """Slack link to the DAG page, but only when the DAG is one coverage actually saw.
+def dag_link(name: str, base: str = AIRFLOW_UI, resolve: object = None) -> str:
+    """Slack link to the DAG page for a Spark job, plus the task name when they differ.
 
-    Spark app names are not always dag_ids, so linking unconditionally ships dead links.
+    A Spark app is named for the TABLE it populates, not for its DAG, so linking the app
+    name unconditionally ships dead links. `resolve` maps the job to the DAG coverage saw;
+    without one, or when nothing resolves, the name is rendered unlinked.
     """
-    if not base or (known is not None and dag_id not in known):
-        return f"`{dag_id}`"
-    return f"<{base.format(dag_id=dag_id)}|{dag_id}>"
+    dag = name if resolve is None else (resolve(name) or "")
+    if not base or not dag:
+        return f"`{name}`"
+    link = f"<{base.format(dag_id=dag)}|{dag}>"
+    return link if dag == name else f"{link} · `{name}`"
 
 
-def _line(entry: object, base: str, known: set | None = None) -> str:
+def _line(entry: object, base: str, resolve: object = None) -> str:
     sev = SEV.get(getattr(entry, "impact", ""), "LOW")
     dag = getattr(entry, "dag_id", "") or "unknown"
     title = getattr(entry, "title", "")
@@ -62,17 +66,17 @@ def _line(entry: object, base: str, known: set | None = None) -> str:
     if state in ("owner_notified", "wont_fix"):
         bits.append(state.replace("_", " "))
     tail = f"  _{', '.join(bits)}_" if bits else ""
-    return f"- *{sev}* {dag_link(dag, base, known)} — {title}{tail}"
+    return f"- *{sev}* {dag_link(dag, base, resolve)} — {title}{tail}"
 
 
-def _section(title: str, entries: list, base: str, known: set | None = None,
+def _section(title: str, entries: list, base: str, resolve: object = None,
              cap: int = 8) -> list[str]:
     if not entries:
         return []
     ordered = sorted(entries, key=lambda e: (
         _RANK.get(getattr(e, "impact", ""), 3),
                              -(getattr(e, "exec_h", None) or getattr(e, "dcu_h", None) or 0)))
-    lines = [f"*{title}*"] + [_line(e, base, known) for e in ordered[:cap]]
+    lines = [f"*{title}*"] + [_line(e, base, resolve) for e in ordered[:cap]]
     if len(ordered) > cap:
         lines.append(f"- _…{len(ordered) - cap} more in the full backlog_")
     return lines + [""]
@@ -97,7 +101,7 @@ def by_dag(entries: list, cap: int = 3) -> list:
     return [(dag, _worst_first(rows)) for dag, rows in ranked[:cap]]
 
 
-def _blocks(dag: str, rows: list, base: str, known: set | None) -> list[str]:
+def _blocks(dag: str, rows: list, base: str, resolve: object = None) -> list[str]:
     """One DAG as What / Where / Why / How, the same four blocks every day."""
     worst = rows[0]
     others = len(rows) - 1
@@ -115,10 +119,22 @@ def _blocks(dag: str, rows: list, base: str, known: set | None) -> list[str]:
     if streak > 1:
         why += f", firing {streak} sweeps running"
     return [f"  *What*  {what}",
-            f"  *Where* {dag_link(dag, base, known)} · `{getattr(worst, 'app_id', '')}`",
+            f"  *Where* {dag_link(dag, base, resolve)} · `{getattr(worst, 'app_id', '')}`",
             f"  *Why*   {why}",
             f"  *How*   {getattr(worst, 'fix', '') or 'See the backlog for the fix.'}",
             ""]
+
+
+def _resolver(coverage: object) -> object:
+    """Job name -> DAG id. Falls back to exact-match so a coverage object without `resolve`
+    still cannot produce a dead link."""
+    if coverage is None:
+        return None
+    resolve = getattr(coverage, "resolve", None)
+    if callable(resolve):
+        return resolve
+    known = {d.dag_id for d in getattr(coverage, "dags", [])}
+    return lambda name: name if name in known else ""
 
 
 def render(delta: object, scanned: int, findings: int, high: int, date: str,
@@ -131,13 +147,13 @@ def render(delta: object, scanned: int, findings: int, high: int, date: str,
     if coverage is not None:
         head += f" {coverage.unprofiled_line()}"
 
-    known = {d.dag_id for d in getattr(coverage, "dags", [])} or None if coverage else None
+    resolve = _resolver(coverage)
     out = [head, ""]
-    out += _section("Fix not working", getattr(delta, "fix_not_working", []), base, known)
+    out += _section("Fix not working", getattr(delta, "fix_not_working", []), base, resolve)
     for dag, rows in by_dag(list(getattr(delta, "new", []))
                             + list(getattr(delta, "chronic", []))):
-        out += _blocks(dag, rows, base, known)
-    out += _section("With the owner", getattr(delta, "notified", []), base, known)
+        out += _blocks(dag, rows, base, resolve)
+    out += _section("With the owner", getattr(delta, "notified", []), base, resolve)
     resolved = getattr(delta, "resolved", [])
     if resolved:
         names = ", ".join(sorted({getattr(e, "dag_id", "") for e in resolved}))

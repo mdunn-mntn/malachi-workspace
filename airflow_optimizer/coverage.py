@@ -51,15 +51,43 @@ OPAQUE_OPERATORS = {
 
 
 _TASK_SUFFIX = re.compile(r"_(?:ds\d+|\d{1,3})$")
+_TASK_INFIX = re.compile(r"_\d{1,3}_")
 # `app-20260825010524489-0368`: Spark fell back to the app id, so there is no name to match.
 _NO_APP_NAME = re.compile(r"^(?:app-\d|application_\d)")
 
 
+def _clean(part: str) -> str:
+    return _TASK_SUFFIX.sub("", part.strip().lower())
+
+
+def job_keys(name: str) -> list[str]:
+    """Every comparable form of a Spark app name or an Airflow task id, best candidate first.
+
+    A Spark app is named `Populate <table>.<Class>` and the Airflow task is the TABLE, the
+    segment BEFORE the dot. But a task id can itself be dotted
+    (`feature_group_1_source.aug_log_ip_hourly`) and there the task is the segment AFTER it.
+    One segment cannot serve both sides, which is why keying on either alone tied 0 of 62
+    prod job names to a DAG. Both are offered and the caller takes the first candidate that
+    names exactly one DAG.
+    """
+    name = (name or "").strip().removeprefix("Populate ").strip()
+    parts = [p for p in name.split(".") if p.strip()]
+    if not parts:
+        return []
+    out: list[str] = []
+    for cand in (parts[0], parts[-1], name):
+        base = _clean(cand)
+        # `ipdsc_14_monitor` is one datasource's run of the `ipdsc_monitor` DAG.
+        for form in (base, _TASK_INFIX.sub("_", base)):
+            if form and form not in out:
+                out.append(form)
+    return out
+
+
 def normalise_job(name: str) -> str:
-    """The comparable form of a Spark app name or an Airflow task id."""
-    name = (name or "").strip().removeprefix("Populate ")
-    name = name.split(".")[-1].strip().lower()
-    return _TASK_SUFFIX.sub("", name)
+    """The primary comparable form: `job_keys`'s best candidate."""
+    keys = job_keys(name)
+    return keys[0] if keys else ""
 
 
 @dataclass
@@ -100,14 +128,15 @@ class Coverage:
         """(job name, why) for every scanned job this pass could not tie to a DAG."""
         owners, out = self._owners(), []
         for name in sorted(job_names):
-            key = normalise_job(name)
-            dags = owners.get(key, set()) if key else set()
-            if len(dags) == 1:
+            keys = job_keys(name)
+            if self.resolve(name):
                 continue
-            if dags:
+            shared = [(k, owners[k]) for k in keys if len(owners.get(k, ())) > 1]
+            if shared:
+                k, dags = shared[0]
                 out.append((name, f"named by {len(dags)} DAGs: "
                                   f"{', '.join(sorted(dags)[:3])}"))
-            elif not key or _NO_APP_NAME.search(name):
+            elif not keys or _NO_APP_NAME.search(name):
                 out.append((name, "Spark set no app name, so there is nothing to match"))
             else:
                 caveat = ("; the DAG files that failed to import are not in this index"
@@ -115,14 +144,29 @@ class Coverage:
                 out.append((name, f"no DAG in the bundle defines a task with this name{caveat}"))
         return out
 
+    def resolve(self, name: str) -> str:
+        """The one DAG that runs this Spark job, or "" when no candidate names exactly one."""
+        owners = self._owners()
+        for key in job_keys(name):
+            dags = owners.get(key, set())
+            if len(dags) == 1:
+                return next(iter(dags))
+        return ""
+
     def _owners(self) -> dict:
-        """Normalised name -> every DAG that could own it, Spark task ids and DAG ids alike."""
+        """Comparable name -> every DAG that could own it, Spark task ids and DAG ids alike."""
+        cached = getattr(self, "_owner_index", None)
+        if cached is not None:
+            return cached
         seen: dict = {}
         for dag_id in self.dag_ids_including_paused:
-            seen.setdefault(normalise_job(dag_id), set()).add(dag_id)
+            for k in job_keys(dag_id):
+                seen.setdefault(k, set()).add(dag_id)
         for d in self.dags:
             for t in d.spark_tasks:
-                seen.setdefault(normalise_job(t), set()).add(d.dag_id)
+                for k in job_keys(t):
+                    seen.setdefault(k, set()).add(d.dag_id)
+        self._owner_index = seen
         return seen
 
     @property
@@ -349,8 +393,7 @@ def render(cov: Coverage, profiled_dags: set | None = None,
         lines.append("")
 
     spark = cov.profilable
-    owner = cov.task_owner
-    profiled = {owner.get(normalise_job(j), j) for j in (profiled_dags or set())}
+    profiled = {cov.resolve(j) or j for j in (profiled_dags or set())}
     seen = [d for d in spark if d.dag_id in profiled]
     missed = [d for d in spark if d.dag_id not in profiled]
     lines += [

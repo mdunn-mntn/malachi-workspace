@@ -223,8 +223,10 @@ def test_a_task_name_two_dags_share_is_dropped_not_guessed() -> None:
 
 def test_normalise_job_strips_only_what_it_can_justify() -> None:
     """A data-source or run index is a per-run stamp; anything else is part of the name."""
-    assert coverage.normalise_job("Populate site_network_hourly.SiteNetworkHourly") == "sitenetworkhourly"
-    assert coverage.normalise_job("feature_group_1_source.aug_log_ip_hourly") == "aug_log_ip_hourly"
+    assert coverage.normalise_job("Populate site_network_hourly.SiteNetworkHourly") == "site_network_hourly"
+    assert coverage.normalise_job("feature_group_1_source.aug_log_ip_hourly") == "feature_group_1_source"
+    assert "aug_log_ip_hourly" in coverage.job_keys("feature_group_1_source.aug_log_ip_hourly")
+    assert "ipdsc_monitor" in coverage.job_keys("Populate ipdsc_14_monitor.IPDSC14Monitor")
     assert coverage.normalise_job("ipdsc_ds_13") == "ipdsc_ds"
     assert coverage.normalise_job("audience_intent_scoring_staging_ds46") == "audience_intent_scoring_staging"
     assert coverage.normalise_job("materialize_mntn_select_16") == "materialize_mntn_select"
@@ -269,3 +271,27 @@ def test_a_profiled_job_is_counted_against_the_dag_that_runs_it() -> None:
     page = coverage.render(cov, {"aug_log_ip_hourly"}, set())
     assert "- profiled this sweep: 1" in page
     assert "produced no log" not in page
+
+
+def test_a_spark_app_name_resolves_to_the_dag_that_runs_it() -> None:
+    """`Populate <table>.<Class>` names the TABLE, so the segment before the dot is the task.
+
+    Keying on the segment after the dot tied 0 of 62 job names to a DAG in the 30-day corpus
+    crawled 2026-08-26, which is why the 2026-08-25 prod digest linked one DAG out of eight.
+    """
+    cov = coverage.Coverage(date="x", dag_ids_including_paused={"tpa_export", "ipdsc_monitor"})
+    cov.dags = [coverage.DagCoverage(dag_id="tpa_export", spark_tasks=["site_network_hourly"]),
+                coverage.DagCoverage(dag_id="ipdsc_monitor", spark_tasks=["ipdsc_monitor"])]
+    assert cov.resolve("Populate site_network_hourly.SiteNetworkHourly") == "tpa_export"
+    assert cov.resolve("Populate ipdsc_14_monitor.IPDSC14Monitor") == "ipdsc_monitor"
+    assert cov.resolve("Populate never_heard_of_it.NeverHeardOfIt") == ""
+
+
+def test_resolve_prefers_the_candidate_that_names_exactly_one_dag() -> None:
+    """An ambiguous candidate must not shadow a later one that resolves cleanly."""
+    cov = coverage.Coverage(date="x", dag_ids_including_paused={"a", "b", "feature_store"})
+    cov.dags = [coverage.DagCoverage(dag_id="a", spark_tasks=["src.shared"]),
+                coverage.DagCoverage(dag_id="b", spark_tasks=["src.shared"]),
+                coverage.DagCoverage(dag_id="feature_store", spark_tasks=["src.aug_log_ip"])]
+    assert cov.resolve("Populate aug_log_ip.AugLogIp") == "feature_store"
+    assert cov.resolve("Populate shared.Shared") == ""
