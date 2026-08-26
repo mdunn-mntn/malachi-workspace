@@ -175,6 +175,52 @@ def test_every_resolver_opens_with_an_action_and_offers_alternatives() -> None:
         assert res.solutions[1].startswith(("Then", "If")), f"{key}: no second step"
 
 
+_PREAMBLE = "\n".join(
+    f"2026-08-24T03:0{i}:00Z [info] airflow.task Impersonating service account "
+    "airflow-ti-prod@mntn-prj-prod-00.iam.gserviceaccount.com using bigquery.jobs.list to poll "
+    "gs://mntn-airflow-artifacts-prod/configs/feature_store/daily.yaml"
+    for i in range(9)
+)
+
+
+def test_the_preamble_never_outranks_the_exception() -> None:
+    """The gauntlet blocker. Resolvers take the FIRST regex match, and an Airflow log opens with
+    thousands of INFO lines. Scanning the whole file names the wrong service account, and someone
+    files a production IAM change against it."""
+    log = _PREAMBLE + (
+        "\n2026-08-24T03:10:00Z [error] google.api_core.exceptions.Forbidden: 403 Access Denied: "
+        "User does not have bigquery.tables.updateData permission for principal "
+        "ddp-exporter@mntn-prj-prod-00.iam.gserviceaccount.com"
+    )
+    res = resolvers.resolve({"root_signature": {"key": "auth_error"}}, log)
+    assert "ddp-exporter@" in res.verdict, res.verdict
+    assert "airflow-ti-prod@" not in res.verdict
+    assert "bigquery.tables.updateData" in res.verdict
+
+
+def test_a_config_path_in_the_preamble_is_not_the_missing_partition() -> None:
+    """Same shape for late data: the yaml always exists, so naming it sends on-call to re-run
+    a task that fails identically while the real partition is never mentioned."""
+    log = _PREAMBLE + (
+        "\n2026-08-24T03:10:00Z [error] Path does not exist: "
+        "gs://mntn-data-archive-prod/feature_store/dt=2026-08-24/_SUCCESS"
+    )
+    res = resolvers.resolve({"root_signature": {"key": "path_not_found_late_data"}}, log)
+    assert "feature_store/dt=2026-08-24" in res.verdict
+    assert "daily.yaml" not in res.verdict
+
+
+def test_the_window_is_anchored_on_what_the_signature_matched() -> None:
+    """With several error regions, the one the classifier fired on is the one that matters."""
+    log = "Traceback (most recent call last)\nAnalysisException: `old`.`x` cannot be found\n"
+    log += "filler\n" * 500
+    log += "[TABLE_OR_VIEW_NOT_FOUND] The table or view `real`.`y` cannot be found."
+    diag = {
+        "root_signature": {"key": "analysis_exception", "matched_on": "TABLE_OR_VIEW_NOT_FOUND"}
+    }
+    assert "real.y" in resolvers.resolve(diag, log).verdict
+
+
 def test_a_signature_with_no_resolver_settles_nothing() -> None:
     """Most signatures have no fork to settle; they must fall through to their own remedy."""
     assert (

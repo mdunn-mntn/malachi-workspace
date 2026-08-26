@@ -44,7 +44,12 @@ _DB_USER = re.compile(
     r"Access denied for user '([\w.-]+)'@",
     re.IGNORECASE,
 )
-_GS_PATH = re.compile(r"(gs://[\w.\-/=]+)")
+# The path must sit next to the failure phrase: a log mentions config paths that always exist.
+_GS_PATH = re.compile(
+    r"(?:PATH_NOT_FOUND|Path does not exist|path does not exist|Missing[^\n]{0,40}partition|"
+    r"does not exist|not found)[^\n]{0,120}?(gs://[\w.\-/=]+)",
+    re.IGNORECASE,
+)
 _JDBC = re.compile(r"jdbc:(\w+)://([\w.\-]+(?::\d+)?(?:/[\w-]+)?)")
 
 
@@ -198,8 +203,13 @@ def _analysis(diag: dict, text: str, client: object | None) -> Resolution | None
 
 def _auth(diag: dict, text: str, client: object | None) -> Resolution | None:
     """A grant problem and an expired token need opposite actions, and the error says which."""
-    principal = _PRINCIPAL.search(text or "")
-    perm = _PERMISSION.search(text or "")
+    # Read identity and permission out of the DENIAL; the INFO preamble names another account.
+    deny = re.search(
+        r"(AccessDenied|Access Denied|PERMISSION_DENIED|Forbidden|does not have)", text or "", re.I
+    )
+    scope = (text or "")[deny.start() :] if deny else (text or "")
+    principal = _PRINCIPAL.search(scope)
+    perm = _PERMISSION.search(scope)
     detail = _DENY_DETAIL.search(text or "")
     expired = re.search(r"token.{0,20}expired|invalid[_ ]token|401", text or "", re.IGNORECASE)
     if detail and not perm:
@@ -346,6 +356,38 @@ RESOLVERS = {
     "cluster_create_stockout": _stockout,
     "path_not_found_late_data": _late_data,
 }
+
+
+_ERROR_MARKERS = (
+    "Traceback (most recent call last)",
+    "PERMISSION_DENIED",
+    "AccessDenied",
+    "AnalysisException",
+    "[error]",
+    "ERROR - ",
+    "Exception:",
+    "Error:",
+)
+_WINDOW_BEFORE = 4000
+_WINDOW_AFTER = 20_000
+
+
+def error_window(log_text: str, anchor: str = "") -> str:
+    """The part of the log around the failure, never the whole file.
+
+    Every resolver takes the FIRST regex match, and an Airflow log opens with thousands of INFO
+    lines. Scanning the whole file lets a preamble mention of a service account or a config path
+    outrank the exception, and the wrong answer then ships under "settled from evidence" - which
+    is worse than no answer, because it sends someone to change the wrong thing in production.
+    """
+    if not log_text:
+        return ""
+    at = log_text.rfind(anchor) if anchor else -1
+    if at < 0:
+        at = max((log_text.rfind(m) for m in _ERROR_MARKERS), default=-1)
+    if at < 0:
+        return log_text[-_WINDOW_AFTER:]
+    return log_text[max(at - _WINDOW_BEFORE, 0) : at + _WINDOW_AFTER]
 
 
 def resolve(diag: dict, log_text: str = "", client: object | None = None) -> Resolution | None:

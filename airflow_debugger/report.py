@@ -28,6 +28,8 @@ _FILE_LINE = re.compile(r'File "([^"]+\.py)", line (\d+)')
 _FRAMEWORK_MARKERS = ("site-packages", "dist-packages", "/pyspark/", "/py4j/", "/lib/python")
 _KNOWN_FIX_MIN_SCORE = 0.5
 _MAX = 500
+_MIN_LINE = 80  # below this a trimmed line stops carrying its fact
+_MAX_ANSWERED = 1200  # a settled answer carries numbers and ranked options; 500 gutted them
 
 _FIX_ACTION = {
     "yes": "Code fix likely (PR candidate).",
@@ -134,7 +136,13 @@ def build_report(diag: dict) -> str:
     if link:
         lines.append(link)
     walked = walked_cause(diag)
-    if walked:
+    if walked and resolved:
+        # The resolver already answered; the walk only owes the reader whose failure it was.
+        root_ti = (diag.get("upstream_walk") or {}).get("root") or {}
+        lines.append(
+            f"The failure is {root_ti.get('dag_id')}.{root_ti.get('task_id')}, not this task."
+        )
+    elif walked:
         lines.append(walked[0])
         # Without an index the hard cut below lands on the remedy, the half the reader acts on.
         if cause_idx is None:
@@ -156,19 +164,24 @@ def build_report(diag: dict) -> str:
         if notes:
             lines.append(notes)
 
+    return _fit(lines, link, _MAX_ANSWERED if (resolved or walked) else _MAX)
+
+
+def _fit(lines: list[str], link: str | None, cap: int) -> str:
+    """Trim the longest line repeatedly rather than gutting one, so no line loses its meaning."""
     report = "\n".join(lines)
-    if len(report) > _MAX and cause_idx is not None:
-        # over budget: shrink the cause so the fix line and link survive whole
-        budget = _MAX - (len(report) - len(lines[cause_idx]))
-        lines[cause_idx] = lines[cause_idx][: max(budget, 16) - 1].rstrip() + "…"
+    while len(report) > cap:
+        idx = max(range(len(lines)), key=lambda i: len(lines[i]))
+        if len(lines[idx]) <= _MIN_LINE:
+            break
+        target = max(int(len(lines[idx]) * 0.8), _MIN_LINE)
+        lines[idx] = lines[idx][: target - 1].rstrip() + "…"
         report = "\n".join(lines)
-    if len(report) > _MAX and link:
-        # still over: drop the link whole rather than emit a corrupted URL
+    if len(report) > cap and link and link in lines:
+        # Still over: drop the link whole rather than emit a corrupted URL.
         lines.remove(link)
         report = "\n".join(lines)
-    if len(report) > _MAX:
-        report = report[: _MAX - 1].rstrip() + "…"
-    return report
+    return report if len(report) <= cap else report[: cap - 1].rstrip() + "…"
 
 
 def _downstream_text(diag: dict) -> str:

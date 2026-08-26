@@ -126,8 +126,10 @@ def mechanism(diag: dict, source: str) -> str:
     walked = diag.get("upstream_walk") or {}
     hops = walked.get("hops") or []
     if walked.get("root") and hops:
-        path = " -> ".join(h["task_id"] for h in hops)
-        bits.append(f"followed the chain {path}")
+        root_ti = walked["root"]
+        who = f"{root_ti['dag_id']}.{root_ti['task_id']}"
+        trail = " -> ".join(h["task_id"] for h in hops[:-1])
+        bits.append(f"the failure is {who}" + (f", reached via {trail}" if trail else ""))
         siblings = hops[0].get("siblings") or []
         if siblings:
             bits.append(f"{len(siblings)} other task(s) failed in the same run")

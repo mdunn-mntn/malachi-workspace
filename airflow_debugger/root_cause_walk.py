@@ -19,7 +19,6 @@ from __future__ import annotations
 
 from .external_task_rca import _api, _resolve_base, _run_holding
 from .parse import parse_log
-from .signatures import classify
 
 MAX_HOPS = 4
 
@@ -70,16 +69,6 @@ def _diagnose_text(text: str) -> tuple[dict | None, str | None]:
     parsed = parse_log(text)
     if parsed.airflow_signature:
         return parsed.airflow_signature, None
-    m = classify(text)
-    if m:
-        return {
-            "key": m.key,
-            "sig_class": m.sig_class,
-            "likely_cause": m.likely_cause,
-            "programmatic_fix": m.programmatic_fix,
-            "matched_on": m.matched_on,
-            "remedy": m.remedy,
-        }, None
     return None, text.strip()[-400:] or None
 
 
@@ -136,15 +125,29 @@ def _next_in_run(
     return sorted(upstream_failed, key=lambda t: str(t.get("start_date") or "")), None
 
 
+_TARGET_WORTH_WALKING = ("failed", "upstream_failed")
+
+
 def _external_target(diag: dict) -> tuple[str, str, str] | None:
-    """(dag_id, run_id, task_id) of an ExternalTaskSensor's target, when the diagnosis has one."""
+    """The sensor target worth walking to, or None when the target did not fail.
+
+    A sensor can trip on a target that SUCCEEDED or was SKIPPED by design, and those verdicts are
+    about the sensor, not the target. Walking anyway reads a green log, calls it the root cause,
+    and prints "Fix <task>" directly under the signature's own "do not backfill" - two sentences
+    that contradict each other, one of them false. With several poked tasks the one to follow is
+    the one holding the failure, not whichever came first in the list.
+    """
     spark = diag.get("spark") or {}
     if spark.get("engine") != "external_task":
         return None
-    tasks = spark.get("task_ids") or []
-    if not (spark.get("dag_id") and spark.get("run_id") and tasks):
+    if (spark.get("state") or "").lower() not in _TARGET_WORTH_WALKING:
         return None
-    return spark["dag_id"], spark["run_id"], tasks[0]
+    states = spark.get("states") or {}
+    failed = [t for t, st in states.items() if st in _TARGET_WORTH_WALKING]
+    task = failed[0] if failed else (spark.get("task_ids") or [None])[0]
+    if not (spark.get("dag_id") and spark.get("run_id") and task):
+        return None
+    return spark["dag_id"], spark["run_id"], task
 
 
 def walk(diag: dict, on_date: str | None = None, max_hops: int = MAX_HOPS) -> dict | None:

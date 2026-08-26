@@ -239,6 +239,30 @@ def test_report_long_cause_leaves_room_for_fix_line() -> None:
     assert "…" in r
 
 
+def test_a_settled_answer_keeps_its_numbers_and_its_options() -> None:
+    """The gauntlet blocker. A 500-char cap gutted the cause to 15 characters, so the shortfall the
+    resolver exists to compute never reached the reader. No line may lose its fact."""
+    diag = {
+        "identity": {"dag_id": "fangorn_inference_pipeline_run", "task_id": "challenger"},
+        "root_signature": _sig("quota_exhaustion"),
+        "resolution": {
+            "verdict": "The request needed 4672 N2_CPUS and 328 were free, short by 4344.",
+            "evidence": "N2_CPUS: requested 4672, available 328",
+            "solutions": [
+                "Now: list what is consuming N2_CPUS in this region. A single idle cluster holding "
+                "the headroom looks exactly like a ceiling that is too low, and deleting it is "
+                "faster than a quota request.",
+                "If nothing is holding it, the ceiling really is too low: raise N2_CPUS for the "
+                "region. That is the AUDI-1217 work.",
+                "To unblock this one run without waiting for either, shrink the request below 328.",
+            ],
+        },
+    }
+    r = build_report(diag)
+    assert "4672" in r and "328" in r and "4344" in r, r
+    assert "1. Now:" in r and "2." in r and "3." in r, r
+
+
 # Real no-signature shape (2026-08-05 tpa_ipdsc_export logs): dataproc engine,
 # no batch id, the parser's note is the only explanation available.
 def test_report_no_signature_surfaces_parser_notes() -> None:

@@ -234,6 +234,39 @@ def test_a_grandparent_counts_as_upstream() -> None:
     assert _run(api)["root"]["task_id"] == "grandparent"
 
 
+def _sensor(state: str, states: dict) -> dict:
+    return {
+        "identity": {"dag_id": "consumer", "task_id": "wait_for_producer"},
+        "spark": {
+            "engine": "external_task",
+            "dag_id": "producer",
+            "run_id": "scheduled__2026-08-25T05:00:00+00:00",
+            "task_ids": list(states),
+            "state": state,
+            "states": states,
+        },
+    }
+
+
+def test_a_sensor_whose_target_succeeded_is_not_walked() -> None:
+    """The gauntlet blocker. A green target means the SENSOR is wrong, not the target. Walking
+    anyway reads a green log and prints "Fix <task>" under the signature's own "do not backfill"."""
+    assert _run(_Api({}, {}), _sensor("success", {"a_ok": "success"})) is None
+
+
+def test_a_skipped_target_is_not_walked_either() -> None:
+    """A by-design skip has its own remedy, and it is the opposite of "fix that task"."""
+    assert _run(_Api({}, {}), _sensor("skipped", {"a_ok": "skipped"})) is None
+
+
+def test_the_failed_target_is_followed_not_the_first_one_poked() -> None:
+    """A sensor pokes several tasks. The one to follow is the one holding the failure."""
+    api = _Api({}, {"b_failed": _TIMEOUT_LOG, "a_ok": "Marking task as SUCCESS"})
+    out = _run(api, _sensor("failed", {"a_ok": "success", "b_failed": "failed"}))
+    assert out["root"]["task_id"] == "b_failed"
+    assert api.fetched == ["b_failed"]
+
+
 def test_an_api_failure_is_reported_not_raised() -> None:
     """A walk failure must never take the diagnosis that produced it down with it."""
 
