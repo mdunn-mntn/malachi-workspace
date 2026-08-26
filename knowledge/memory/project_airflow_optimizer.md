@@ -244,3 +244,51 @@ window, **21,200 executor-hours** (top-10 jobs hold 79% of the fleet total), per
 max 371.2h. A fetch-wait finding fires on **254 of 302 runs**, **252 of them on stage 9**, min 30% /
 median 56% / max 90% of task time; `idle_reserved_executors` fires on 236. The Ryan Kleck draft now
 rests on this rather than on the four profiled logs.
+
+
+## 2026-08-26 (evening) — merged, verified in prod, and the Databricks half fully granted
+
+**#1222 is live and the fix is real.** The 2026-08-26 prod sweep reports `profiled this sweep: 12`
+(was 2) and names only **7 of 217** scanned jobs as untied to a DAG. The digest's *Where* block now
+carries a working Astro link. **#1223 open** for the manual-trigger `KeyError('ds')`; gauntlet PASS
+in 2 rounds, the first clean verdict of the day.
+
+**Every Databricks grant is done**, verified by reading rows: `system.lakeflow`, `system.query`,
+`system.billing` (168,853 rows), `system.compute` (114,899), `system.access` (612,075),
+`system.storage`, for both `malachi@mountain.com` and the `spark_optimizer` SP; plus `SELECT` +
+`USE CATALOG` on `CATALOG prod` for the SP, which `EXPLAIN COST` needs because it plans against
+the real tables. Ladder, tiers and the stale-CLI trap: [[reference_databricks_system_schema_grants]].
+
+**Billing can now be joined to the optimizer's own rankings.** `system.billing.usage` carries
+`usage_quantity`/`usage_unit` and a `usage_metadata` struct with `job_id`, `job_run_id`,
+`run_name`, `job_name`, `warehouse_id`, `cluster_id`. `job_run_id` joins
+`system.lakeflow.job_run_timeline.run_id` (per-dbt-submission DBUs); `warehouse_id` joins the
+warehouse a `system.query.history` row ran on (per-statement DBUs); `sku_name` +
+`usage_start_time` join `system.billing.list_prices` for dollars. **Dataproc is NOT in
+`system.billing`** - the Spark half stays on `milliDcuSeconds`.
+
+**The EXPLAIN COST bridge works and has a structural limit worth knowing before relying on it.**
+`databricks.heavy_queries` reads `system.query.history` (statement text is populated on every row;
+2,820 SELECTs / 132.6 query-hours in 2 days) and `analyze_queries` plans each. But **0 of 20
+heaviest statements are plannable**: all reference `prod.ml.ddp_vertical_classification_api`, which
+is **dropped and recreated ~21x/day** (149 DROPs in 7 days). EXPLAIN COST replays historical SQL,
+so any query touching a transient table can never be planned after the fact. Run it on recent
+queries against durable tables, or capture the plan at run time.
+
+**A false positive I shipped and had to retract.** `EXPLAIN COST` SUCCEEDS as a statement and
+returns the planner's error as its RESULT TEXT, so catching an exception is not enough. That text
+parses: an unresolved plan carries no statistics, so `missing_statistics` fired, and
+`repeated_scan` fired on the two unresolved references. I reported both as real findings on
+`ddp_vertical_classification_api` before checking whether the table existed. `explain_cost` now
+rejects any plan containing a planner-error marker or `unresolvedalias`. **The lesson is the
+order:** confirm the object exists before believing a finding about it.
+
+**What survived that retraction, because it came from query history rather than a plan:** four dbt
+TESTS on `ddp_vertical_classification_api` consumed **131 of the top-12 nodes' 135 warehouse-hours
+over 2 days**, 57 runs each, **1,178 TiB read**; the models themselves are ~1 hour. Every test
+filters `WHERE load_ts = (SELECT max(load_ts) FROM <same table>)`.
+
+**Open disagreement to chase:** the prod digest renders `fangorn_score_monitor` and `ipdsc_ds_35`
+unlinked while the coverage report does NOT list them as unresolved. Same `Coverage` object feeds
+both, so suspect the `_owner_index` cache or the difference between what `unresolved()` is passed
+and what `resolve()` is passed. Ordered plan: `artifacts/audi_1194_next_steps.md`.
