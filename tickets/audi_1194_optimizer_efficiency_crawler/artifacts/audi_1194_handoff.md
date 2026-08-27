@@ -104,11 +104,12 @@ differ on the channel env var (`SLACK_ALERT_CHANNEL` vs `OPTIMIZER_SLACK_CHANNEL
 
 ## In-flight state for compaction, 2026-08-27 ~00:15 PT
 
-- **PR #1230** (`audi-1191/wire-slack-delivery`, wt at scratchpad/wt-wire, HEAD `2ce72e6`):
-  tools only — debugger wire + reply fixes, optimizer batching + savings log. Medium gauntlet
-  running: run `wf_395de174-27b`, task `w1osx2i0t`. On verdict: verify fixer diff, tests + ruff
-  from the worktree, commit path-limited, push, marker to git-dir/pr_gauntlet_pass, then
-  `gh pr edit 1230` with a fresh linted description (tools scope only).
+- **PR #1230 READY** (`audi-1191/wire-slack-delivery`, HEAD `c97562c`): tools only. Medium
+  gauntlet returned FIXED_UNVERIFIED with three verified fixes, all shipped and ported back to
+  the workspace tree: a partly failed Slack day withholds the report so the retry re-delivers;
+  ledger exec-hours sum per dag per sweep-day (multi-run dags and fully-cleaned jobs measure
+  right, a dag enters the savings total once); the sweep's savings log reads the run's ledger
+  path. 348 bundle tests green, ruff clean, description refreshed on the PR.
 - **PR #1231 OPEN** (`audi-1194-model-tuning`, HEAD `1843507`): fangorn shuffle partitions to
   2048 (decorator 512 ->, builder 256 ->; builder wins). The ds_35 speculation change was
   REVERTED by the fast gauntlet with verified evidence: every sibling GCS writer pins
