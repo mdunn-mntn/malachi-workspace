@@ -109,12 +109,12 @@ differ on the channel env var (`SLACK_ALERT_CHANNEL` vs `OPTIMIZER_SLACK_CHANNEL
   running: run `wf_395de174-27b`, task `w1osx2i0t`. On verdict: verify fixer diff, tests + ruff
   from the worktree, commit path-limited, push, marker to git-dir/pr_gauntlet_pass, then
   `gh pr edit 1230` with a fresh linted description (tools scope only).
-- **Branch `audi-1194-model-tuning`** (wt at scratchpad/wt-tuning, HEAD `f7cc7bd`): the two
-  evidence-backed config fixes (fangorn 256->2048 both sites; ds_35 speculation 0.9), split out
-  at the user's direction — DAG fixes never share a PR with tool changes (rule now in the
-  pr_gauntlet skill). Fast gauntlet running: run `wf_a20e9397-ee6`, task `wn5q23fa3`. On verdict:
-  same ship steps, then `gh pr create` from wt-tuning with a linted description; after merge,
-  `ledger applied` for both findings so the savings log starts measuring.
+- **PR #1231 OPEN** (`audi-1194-model-tuning`, HEAD `1843507`): fangorn shuffle partitions to
+  2048 (decorator 512 ->, builder 256 ->; builder wins). The ds_35 speculation change was
+  REVERTED by the fast gauntlet with verified evidence: every sibling GCS writer pins
+  `spark.speculation=false` (advertiser_join cites ManifestCommitter races) and
+  intent_score_map.py:54, the cited precedent, pins it false too. Queue item 4 is back to
+  OWNER-gated. After #1231 merges: `ledger applied` for the fangorn finding only.
 - Everything else from the night is committed/pushed and recorded in summary.md §4 night
   sections; the remaining human steps are review of both PRs, the two staged Slack asks, and
   IMP-088.
