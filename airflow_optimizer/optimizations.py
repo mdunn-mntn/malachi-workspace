@@ -211,7 +211,7 @@ def _cores(run: object, props: dict) -> int:
     return reported or int(props.get("spark.executor.cores", "0") or 0)
 
 
-def _share(cost_h: float, run_h: float) -> str:
+def _cost_note(cost_h: float, run_h: float) -> str:
     """The finding's absolute cost, against the run's own when that is known."""
     if not cost_h:
         return "executor-hours unknown (no per-executor core count in the log)"
@@ -303,7 +303,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                 "shuffle fetch",
                 _gated("high" if ratio >= 0.5 else "medium", wait_h, run_h),
                 f"{s.fetch_wait_ms / 1000:.0f}s of {s.run_time_ms / 1000:.0f}s task time is "
-                f"shuffle-fetch wait over {s.num_tasks} tasks, {_share(wait_h, run_h)} - the "
+                f"shuffle-fetch wait over {s.num_tasks} tasks, {_cost_note(wait_h, run_h)} - the "
                 "shuffle IO path is the bottleneck, not compute.",
                 "Check which executors hold the map output before changing partition counts. If "
                 "it is concentrated (the map stage ran while the fleet was still scaling up), "
@@ -320,7 +320,7 @@ def analyze_run(run: object) -> list[OptFinding]:
         out.append(OptFinding(
             "gc_pressure", f"GC is {100 * gc_ms / run_ms:.0f}% of task time",
             _gated("high" if gc_ms / run_ms >= 0.2 else "medium", gc_h, run_h),
-            f"{gc_ms / 1000:.0f}s GC of {run_ms / 1000:.0f}s task time, {_share(gc_h, run_h)} - "
+            f"{gc_ms / 1000:.0f}s GC of {run_ms / 1000:.0f}s task time, {_cost_note(gc_h, run_h)} - "
             "executors are memory-starved.",
             "Raise executor memory / use memory-optimized workers; secondarily cut per-task data via "
             "more partitions.", rec_type="infra", cost_h=gc_h))
@@ -342,24 +342,24 @@ def analyze_run(run: object) -> list[OptFinding]:
     # shuffleTracking exempts executors a live job's shuffle references, so a tail pins all.
     if execs and app_end and len(execs) >= 8:
         busy_ms = sum(e.run_time_ms for e in execs)
-        slots = cores or 1
-        util = busy_ms / (reg_ms * slots) if reg_ms else 1.0
-        idle_h = (reg_ms * slots - busy_ms) / 3_600_000 / slots
-        reg_h = run_h
+        # A task whose TaskEnd carried no metrics adds no run time, so counters decide.
+        ran = busy_ms or sum(e.completed_tasks + e.failed_tasks for e in execs)
         # Until the app ends, a still-writing first log part is indistinguishable from a no-op.
-        if busy_ms == 0 and not ended:
+        if not ran and not ended:
             return _ranked(out)
-        if busy_ms == 0 and reg_h >= 2:
+        if not ran and run_h >= 2:
             out.append(OptFinding(
                 "idle_reserved_executors",
-                f"{len(execs)} executors held {reg_h:.1f} executor-hours with ZERO tasks run",
+                f"{len(execs)} executors held {run_h:.1f} executor-hours with ZERO tasks run",
                 "high",
-                f"The app registered {len(execs)} executors for {reg_h:.1f} executor-hours and "
+                f"The app registered {len(execs)} executors for {run_h:.1f} executor-hours and "
                 "never ran a task - the whole allocation was billed for nothing.",
                 "Check why the driver allocated executors it never used (eager allocation before "
                 "a driver-side step, or a no-op run); lower minExecutors/initialExecutors.",
-                rec_type="infra", cost_h=reg_h))
-        elif reg_h >= 20 and util < 0.4:
+                rec_type="infra", cost_h=run_h))
+        elif cores and run_h >= 20 and busy_ms / (reg_ms * cores) < 0.4:
+            util = busy_ms / (reg_ms * cores)
+            idle_h = (reg_ms * cores - busy_ms) / 3_600_000 / cores
             removed = sum(1 for e in execs if e.removed_ts)
             tracking = props.get("spark.dynamicAllocation.shuffleTracking.enabled") == "true"
             hold = (" shuffleTracking pins executors whose shuffle blocks a live job still "
@@ -369,7 +369,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                 "idle_reserved_executors",
                 f"Executors {100 * util:.0f}% utilized: ~{idle_h:.0f} idle executor-hours held",
                 "high" if util < 0.25 else "medium",
-                f"{len(execs)} executors held {reg_h:.0f} executor-hours but task slots "
+                f"{len(execs)} executors held {run_h:.0f} executor-hours but task slots "
                 f"were busy only {100 * util:.0f}% of that; {removed} were released before app "
                 f"end.{hold}",
                 "Fix the tail that keeps the final job alive (speculation for stragglers, skew "

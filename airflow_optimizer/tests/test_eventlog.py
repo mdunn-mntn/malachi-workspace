@@ -344,3 +344,22 @@ def test_a_large_stall_stays_high_on_a_job_too_big_for_its_share_to_show() -> No
                    app_end_ts=t0 + 5 * 3_600_000)
     wait = next(f for f in analyze_run(run) if f.key == "shuffle_fetch_wait")
     assert (wait.impact, round(wait.cost_h)) == ("high", 300)
+
+
+def test_utilization_is_not_published_when_the_log_reports_no_core_count() -> None:
+    """A `cores or 1` fallback republished the exact fabricated slot count `_cores` removed."""
+    t0 = 1_000_000_000_000
+    execs = [ExecutorInfo(exec_id=str(i), added_ts=t0, removed_ts=t0 + 3 * 3_600_000,
+                          run_time_ms=3_600_000, completed_tasks=5) for i in range(10)]
+    run = SparkRun(spark_props={}, executors=execs, app_end_ts=t0 + 3 * 3_600_000)
+    assert [f.key for f in analyze_run(run)] == []
+
+
+def test_tasks_that_carried_no_metrics_are_not_reported_as_a_no_op_run() -> None:
+    """`busy_ms == 0` also means every TaskEnd arrived without Task Metrics."""
+    t0 = 1_000_000_000_000
+    execs = [ExecutorInfo(exec_id=str(i), cores=4, added_ts=t0, removed_ts=t0 + 3 * 3_600_000,
+                          completed_tasks=9) for i in range(10)]
+    run = SparkRun(spark_props={}, executors=execs, app_end_ts=t0 + 3 * 3_600_000)
+    titles = [f.title for f in analyze_run(run)]
+    assert not any("ZERO tasks run" in t for t in titles)
