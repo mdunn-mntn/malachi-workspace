@@ -104,7 +104,12 @@ differ on the channel env var (`SLACK_ALERT_CHANNEL` vs `OPTIMIZER_SLACK_CHANNEL
 
 ## In-flight state for compaction, 2026-08-27 ~00:15 PT
 
-- **PR #1230 READY** (`audi-1191/wire-slack-delivery`, HEAD `c97562c`): tools only. Medium
+- **PR #1230 MERGED 2026-08-27** (squash, at the user's direction) and **PR #1231 MERGED
+  2026-08-27**. Post-merge remainder: write the fangorn `applied` marker to the prod GCS
+  ledger (blocked on gcloud reauth) so the savings log starts measuring; the savings headline
+  (all-time, YTD, calendar-day run rate, annual estimate, dollars via
+  OPTIMIZER_USD_PER_EXEC_H) rides the next daily sweep.
+- Earlier state of #1230, for the record: tools only. Medium
   gauntlet returned FIXED_UNVERIFIED with three verified fixes, all shipped and ported back to
   the workspace tree: a partly failed Slack day withholds the report so the retry re-delivers;
   ledger exec-hours sum per dag per sweep-day (multi-run dags and fully-cleaned jobs measure
