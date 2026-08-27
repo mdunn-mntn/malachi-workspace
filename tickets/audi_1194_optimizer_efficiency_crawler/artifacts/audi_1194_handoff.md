@@ -81,3 +81,23 @@ makes the next sweep name any such job in the coverage report, which is the diag
 Same repo, same Slack app, same Astro deployment, same identity work. The debugger's `notify.py`
 threads under an alert; the optimizer's posts a fresh digest. Both read `SLACK_BOT_TOKEN`; they
 differ on the channel env var (`SLACK_ALERT_CHANNEL` vs `OPTIMIZER_SLACK_CHANNEL`).
+
+## Night addendum, 2026-08-26 ~21:00 PT
+
+- **#1229 MERGED** (squash `03706e8`): both AUDI-1194 branches + AUDI-1191 two-channels + the
+  comment tightening.
+- **Debugger delivery was UNWIRED** — `notify.deliver` had no caller; found by a manual run on
+  the post-merge bundle with the env vars live. Wire = **#1230**, CI green, gauntleted `fast`,
+  **awaiting review/merge (the one human step)**. Merged before 17:00 UTC, the scheduled run
+  posts ds-yesterday threaded replies by itself. Manual-run traps (interval snap 409,
+  clear-pins-old-bundle, `logical_date` key required): memory `project_airflow_debugger`.
+- **Branch `audi-1194-sweep-followups`**: gsutil batching (200 spawns -> one `-m cp -I` per dir).
+  Accumulate further fixes HERE, one gauntlet at the end (user rule, now in the skill).
+- **DCU bridge measured on INC-005**: 5.44 DCU-h/exec-h there, 7.3-9.9 on site_network_hourly —
+  shape-dependent, so `dcu_h` stays measured, never derived.
+- **Owner-ask drafts staged** for Malachi to send: `audi_1194_slack_ryan_idle_tail.md`,
+  `audi_1194_slack_ddp_test_cost.md`.
+- A verify sweep (`manual__2026-08-27T02:49`) was running at write time to test the optimizer's
+  threaded digest + produce the collect_local diagnostic. Code reading narrowed the disagreement
+  to DAG files that fail to IMPORT on the worker (their tasks vanish from the owner index; REST
+  reads task lists without importing). Confirm against the sweep's coverage report.
