@@ -339,3 +339,41 @@ def test_stopped_firing_links_its_dags_and_says_what_it_left_out() -> None:
     assert "dags/tpa_ipdsc_export|tpa_ipdsc_export>" in line
     assert "and 4 more" in line
     assert line.count("ipdsc_ds_") == digest.CAP
+
+
+def test_savings_counts_only_resolved_fixes_in_measured_units(tmp_path: Path) -> None:
+    """A working fix accrues before-minus-after per day observed; a broken one accrues nothing."""
+    p = str(tmp_path / "ledger.jsonl")
+    rows = []
+    for i, day in enumerate(("2026-08-20", "2026-08-21", "2026-08-22")):
+        rows.append(ledger.Entry(date=day, dag_id="good", app_id=f"a{i}", key="skew:1",
+                                 impact="high", title="Stage 1 skew", state="chronic",
+                                 exec_h=100.0))
+        rows.append(ledger.Entry(date=day, dag_id="bad", app_id=f"b{i}", key="spill:2",
+                                 impact="high", title="Stage 2 spill", state="chronic",
+                                 exec_h=80.0))
+    ledger.append(rows, p)
+    ledger.mark_applied("good", "skew:1", "https://x/pr/1", "2026-08-22", path=p)
+    ledger.mark_applied("bad", "spill:2", "https://x/pr/2", "2026-08-22", path=p)
+    after = []
+    for day in ("2026-08-23", "2026-08-24"):
+        after.append(ledger.Entry(date=day, dag_id="good", app_id="a9", key="skew:1",
+                                  impact="high", title="Stage 1 skew", state="resolved",
+                                  exec_h=40.0, fix_pr="https://x/pr/1",
+                                  applied_date="2026-08-22"))
+        after.append(ledger.Entry(date=day, dag_id="bad", app_id="b9", key="spill:2",
+                                  impact="high", title="Stage 2 spill", state="fix_not_working",
+                                  exec_h=80.0, fix_pr="https://x/pr/2",
+                                  applied_date="2026-08-22"))
+    ledger.append(after, p)
+
+    s = ledger.savings(p)
+    assert s["since"] == "2026-08-22"
+    good = next(r for r in s["rows"] if r["dag_id"] == "good")
+    assert good["days_observed"] == 2 and abs(good["exec_h_saved"] - 120.0) < 1e-6
+    bad = next(r for r in s["rows"] if r["dag_id"] == "bad")
+    assert bad["exec_h_saved"] is None
+    assert abs(s["total_exec_h_saved"] - 120.0) < 1e-6
+    text = ledger.render_savings(s)
+    assert "Saved since 2026-08-22: 120 executor-hours" in text
+    assert "fix_not_working" in text

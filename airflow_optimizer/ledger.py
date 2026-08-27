@@ -354,6 +354,61 @@ def latest(path: str = LEDGER) -> dict[tuple[str, str], dict]:
     return out
 
 
+def savings(path: str = LEDGER) -> dict:
+    """Cumulative measured savings since the first shipped fix.
+
+    Only fixes whose finding went quiet (`resolved`) count, and only in the units the ledger
+    actually measured: mean executor-hours per sweep-day before the applied date vs after,
+    times the days observed since. No unit is converted to dollars here; DCU deltas carry the
+    committed-use caveat and Databricks money lives in `databricks.job_costs`.
+    """
+    entries = read(path)
+    by_dag: dict[str, list] = {}
+    for e in entries:
+        if e.get("exec_h") is not None:
+            by_dag.setdefault(e.get("dag_id", ""), []).append(e)
+    rows, total_exec_h = [], 0.0
+    for r in shipped(path):
+        if r["outcome"] != "resolved":
+            rows.append({**r, "days_observed": 0, "exec_h_saved": None})
+            continue
+        series = by_dag.get(r["dag_id"], [])
+        before = [e["exec_h"] for e in series if e.get("date", "") < r["applied_date"]]
+        after = [e["exec_h"] for e in series if e.get("date", "") > r["applied_date"]]
+        after_days = sorted({e.get("date", "") for e in series
+                             if e.get("date", "") > r["applied_date"]})
+        if not before or not after:
+            rows.append({**r, "days_observed": len(after_days), "exec_h_saved": None})
+            continue
+        daily = sum(before) / len(before) - sum(after) / len(after)
+        saved = daily * len(after_days)
+        total_exec_h += max(saved, 0.0)
+        rows.append({**r, "days_observed": len(after_days), "exec_h_saved": saved})
+    since = min((r["applied_date"] for r in rows if r["applied_date"]), default="")
+    return {"since": since, "total_exec_h_saved": total_exec_h, "rows": rows}
+
+
+def render_savings(s: dict) -> str:
+    """The running savings log, one line of total first."""
+    if not s["rows"]:
+        return "No shipped optimization has a measured outcome yet.\n"
+    out = [
+        f"**Saved since {s['since']}: {s['total_exec_h_saved']:,.0f} executor-hours** "
+        "(measured per-DAG, before-rate minus after-rate times days observed; only fixes whose "
+        "finding stopped firing count).",
+        "",
+        "| Applied | DAG | Finding | PR | Outcome | Days observed | Executor-hours saved |",
+        "|---|---|---|---|---|---:|---:|",
+    ]
+    for r in s["rows"]:
+        pr = r["fix_pr"]
+        cell = f"[{pr.rsplit('/', 1)[-1]}]({pr})" if pr.startswith("http") else pr
+        saved = "-" if r["exec_h_saved"] is None else f"{r['exec_h_saved']:,.1f}"
+        out.append(f"| {r['applied_date']} | `{r['dag_id']}` | {r['title']} | {cell} | "
+                   f"{r['outcome']} | {r['days_observed']} | {saved} |")
+    return "\n".join(out) + "\n"
+
+
 @dataclass
 class Delta:
     """What changed between this sweep and the ledger before it."""
@@ -396,6 +451,9 @@ if __name__ == "__main__":
         raise SystemExit(0)
     if len(sys.argv) >= 2 and sys.argv[1] == "shipped":
         print(render_shipped(shipped()))
+        raise SystemExit(0)
+    if len(sys.argv) >= 2 and sys.argv[1] == "savings":
+        print(render_savings(savings()))
         raise SystemExit(0)
     rows = read()
     print(f"{len(rows)} ledger entries, {len({(r['dag_id'], r['key']) for r in rows})} distinct keys")

@@ -163,8 +163,14 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         with open(dbx_path, "w") as fh:
             fh.write(dbx)
 
+    savings_path = ""
+    if ledger_note == "":
+        savings_path = os.path.join(outdir, "optimizer_savings.md")
+        with open(savings_path, "w") as fh:
+            fh.write(ledger_mod.render_savings(ledger_mod.savings()))
+
     # The digest cites the other files, so they are uploaded before it is written.
-    published = publish([backlog, coverage_path, ledger_path, dbx_path], gcs_prefix)
+    published = publish([backlog, coverage_path, ledger_path, dbx_path, savings_path], gcs_prefix)
     if cov is not None:
         cov.report_path = _published_ref(coverage_path, gcs_prefix, published)
 
