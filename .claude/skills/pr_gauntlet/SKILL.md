@@ -91,6 +91,10 @@ git -C <repo> diff --numstat <base> -- <files> | awk '{a+=$1+$2} END {print a}'
 `< 200` → `fast` (1 round, skeptic only, 3 refuters) · `200-800` → `medium` · `> 800`, or a
 security/data-loss surface at any size → `thorough`. The user's explicit ask always wins.
 
+**All gauntlet agents run on haiku by default** (user rule, 2026-08-27: full-model gauntlets
+burn far more tokens than the marginal findings justify). Pass `model` in the workflow args
+only when the user explicitly asks for a heavier review.
+
 ```
 Workflow({ scriptPath: '<workspace>/.claude/workflows/pr_gauntlet.js',
            args: { repo, base, files, tier, prNumber, description } })

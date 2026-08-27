@@ -67,6 +67,8 @@ const FIX_SCHEMA = {
 }
 
 const a = typeof args === 'string' ? JSON.parse(args) : args
+// haiku by default: token cost, not review depth, is the binding constraint (user rule 2026-08-27)
+const MODEL = a.model || 'haiku'
 if (!a || !a.repo || !a.base || !Array.isArray(a.files) || a.files.length === 0) {
   throw new Error('args must be {repo, base, files[], tier?, prNumber?, description?}')
 }
@@ -110,11 +112,11 @@ Evidence given: ${f.evidence}`
 
 async function roleAgent(agentType, task, opts) {
   try {
-    return await agent(task, { ...opts, agentType })
+    return await agent(task, { model: MODEL, ...opts, agentType })
   } catch (e) {
     if (!String(e).includes('not found')) throw e
     const fallback = `Read ${a.repo}/.claude/agents/${agentType}.md and adopt it as your complete role instructions (this session's agent registry predates that file). Obey its tools line: Read and read-only Bash only — never edit, never commit.\n\n${task}`
-    return await agent(fallback, opts)
+    return await agent(fallback, { model: MODEL, ...opts })
   }
 }
 
@@ -179,7 +181,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
       const ruling = await agent(`Two review findings share the location bucket ${row.f.key}. The first was confirmed and a fixer claims it is fixed; the second was just confirmed by a fresh round. Read the current code at that location in ${a.repo} and rule: is the new finding the SAME defect (the fix failed or regressed), or a DIFFERENT defect that happens to sit nearby?
 Earlier (claimed fixed): ${JSON.stringify(prior.finding)}
 New (just confirmed): ${JSON.stringify(row.f)}`,
-        { schema: ARBITER_SCHEMA, phase: `Round ${round} verify`, label: `arbiter ${row.f.key}`, effort: 'high' })
+        { model: MODEL, schema: ARBITER_SCHEMA, phase: `Round ${round} verify`, label: `arbiter ${row.f.key}`, effort: 'high' })
       if (ruling && ruling.same) {
         return { verdict: 'THRASH', detail: `fixed finding recurred confirmed: ${row.f.key} — ${row.f.title}`, arbiter_evidence: ruling.evidence, oscillating: row.f, tallies }
       }
@@ -215,7 +217,7 @@ Review set:
   ${fileList}
 Findings (JSON):
 ${JSON.stringify(confirmed, null, 2)}`,
-    { schema: FIX_SCHEMA, phase: `Round ${round} fix`, label: `fixer r${round}` })
+    { model: MODEL, schema: FIX_SCHEMA, phase: `Round ${round} fix`, label: `fixer r${round}` })
 
   if (fix === null) {
     return { verdict: 'ERROR', detail: `round ${round}: fixer failed; findings stand unapplied`, open_findings: confirmed, tallies }
