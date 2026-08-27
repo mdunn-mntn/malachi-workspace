@@ -45,6 +45,7 @@ def fleet(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.delenv(notify.TOKEN_ENV, raising=False)
     monkeypatch.delenv(notify.CHANNEL_ENV, raising=False)
     monkeypatch.setattr(sweep, "crawl", lambda _p: [_report("a")])
+    monkeypatch.setattr(sweep.billing_mod, "blended_usd_per_exec_h", lambda: (None, "hermetic"))
     return tmp_path
 
 
