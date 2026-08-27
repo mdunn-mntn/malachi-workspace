@@ -132,13 +132,41 @@ def test_download_reports_failures_instead_of_hiding_them(tmp_path: Path,
                                                           monkeypatch: pytest.MonkeyPatch) -> None:
     """A partial download is not a small full one; the caller has to be able to tell."""
     class _R:
-        def __init__(self, rc: int) -> None:
-            self.returncode, self.stderr = rc, b"503"
+        returncode, stderr = 1, b"503"
 
-    monkeypatch.setattr(fetch.subprocess, "run",
-                        lambda cmd, **_k: _R(0 if "ok" in cmd[-2] else 1))
+    def bulk_cp(cmd: list, **kw: object) -> _R:
+        target = cmd[-1].rstrip("/")
+        for obj in kw["input"].decode().splitlines():
+            if "ok" in obj:
+                (Path(target) / Path(obj).name).write_bytes(b"x")
+        return _R()
+
+    monkeypatch.setattr(fetch.subprocess, "run", bulk_cp)
     landed, failed = fetch.download(["gs://b/ok.zstd", "gs://b/bad.zstd"], str(tmp_path))
     assert (landed, failed) == (1, 1)
+
+
+def test_download_is_one_invocation_per_destination_dir(tmp_path: Path,
+                                                        monkeypatch: pytest.MonkeyPatch) -> None:
+    """200 serial spawns dominated the prod sweep; the copy must batch, keeping dir structure."""
+    calls: list[tuple[str, list[str]]] = []
+
+    class _R:
+        returncode, stderr = 0, b""
+
+    def bulk_cp(cmd: list, **kw: object) -> _R:
+        objs = kw["input"].decode().splitlines()
+        calls.append((cmd[-1], objs))
+        for obj in objs:
+            (Path(cmd[-1].rstrip("/")) / Path(obj).name).write_bytes(b"x")
+        return _R()
+
+    monkeypatch.setattr(fetch.subprocess, "run", bulk_cp)
+    landed, failed = fetch.download(
+        ["gs://b/a.zstd", "gs://b/c.zstd", "gs://b/eventlog_v2_x/events_1_x.zstd"], str(tmp_path))
+    assert (landed, failed) == (3, 0)
+    assert len(calls) == 2, "one bulk cp per destination dir, not one per object"
+    assert (tmp_path / "eventlog_v2_x" / "events_1_x.zstd").exists()
 
 
 def test_newest_logs_raises_rather_than_returning_empty(monkeypatch: pytest.MonkeyPatch) -> None:

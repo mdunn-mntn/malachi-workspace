@@ -73,24 +73,31 @@ def _whole_logs(rows: list[tuple[str, str]], cap: int) -> list[str]:
 
 
 def download(objects: list[str], dest: str) -> tuple[int, int]:
-    """Copy each object under `dest`. Returns (landed, failed).
+    """Copy the objects under `dest`, one bulk `gsutil -m cp -I` per destination dir.
+
+    One invocation per OBJECT paid Python interpreter startup ~200 times per sweep and took the
+    prod run ~19 minutes on the default 0.25-CPU pod; process spawn dominated, not the copy.
 
     The failure count is returned rather than swallowed because a partial download is not a
     small version of a full one: the sweep would read the jobs that landed, see nothing from
-    the rest, and report them as having stopped firing.
+    the rest, and report them as having stopped firing. What landed is counted from the
+    filesystem, not the exit code: `-I` reports one rc for the whole batch.
     """
     landed = failed = 0
+    groups: dict[str, list[str]] = {}
     for obj in objects:
-        target = dest_for(dest, obj)
+        groups.setdefault(dest_for(dest, obj), []).append(obj)
+    for target, objs in groups.items():
         os.makedirs(target, exist_ok=True)
-        r = subprocess.run(["gsutil", *GSUTIL_OPTS, "cp", obj, target + "/"],
-                           capture_output=True, timeout=600)
-        if r.returncode == 0:
-            landed += 1
-        else:
-            failed += 1
-            if failed <= 3:                       # enough to diagnose, not a log flood
-                print(f"[fetch] failed {obj}: {(r.stderr or b'').decode()[:160]}")
+        r = subprocess.run(["gsutil", *GSUTIL_OPTS, "-m", "cp", "-I", target + "/"],
+                           input="\n".join(objs).encode(), capture_output=True, timeout=3600)
+        present = {os.path.basename(o) for o in objs} & set(os.listdir(target))
+        missed = [o for o in objs if os.path.basename(o) not in present]
+        landed += len(objs) - len(missed)
+        failed += len(missed)
+        if missed:
+            print(f"[fetch] {len(missed)} of {len(objs)} failed under {target}: "
+                  f"{(r.stderr or b'').decode()[-160:]}")
     return landed, failed
 
 
