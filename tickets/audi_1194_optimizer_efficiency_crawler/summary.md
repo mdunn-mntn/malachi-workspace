@@ -371,6 +371,26 @@ disagreement is in the bundle path or in ledger names recorded on an earlier swe
 `_rendered_dags` fix makes the next sweep name any such job in the coverage report.
 
 
+### 2026-08-26 late — one PR, and two defects in the renderer
+
+All three open branches were consolidated into **airflow-ti #1229** so reviewers get one ask:
+the two AUDI-1194 branches plus AUDI-1191's `audi-1191/two-channels`. Zero file overlap between
+them, so the merge needed no rebase and no conflict resolution; 336 tests pass on the union.
+
+The delivery gauntlet found two real defects in `digest.blocks()` before it shipped. The parent
+collected only `new` + `chronic`, so a DAG in the `fix_not_working` state never appeared in the
+Slack post at all even though the text digest has a section for it. And the partial-sweep and
+no-change-tracking caveats were appended to the TEXT digest only, so a Slack reader saw a
+confident ranked list with no indication the sweep was incomplete. Both now flow through a
+`notes` tuple that the Block Kit parent renders.
+
+One fix was **rejected**: the fixer deleted `notify._post` and imported the debugger's, inverting
+the existing one-way dependency (`airflow_debugger/perf_profile.py` already imports
+`spark_optimizer.optimize`) and dragging the debugger's module graph into the optimizer. Its own
+report listed that finding as rejected while the diff applied it, which is why a fixer's diff is
+read rather than trusted. The duplication is real and is the right thing to solve when the two
+projects merge.
+
 ## 5. Solution
 - **Cadence:** daily, full-day. `.claude/scripts/oncall_daily_optimizer.sh` (renamed from `oncall_weekly_optimizer.sh`), `CAP` 40 -> 200, launchd `com.mntn.daily-spark-optimizer` at 11:00 PT.
 - **Both log sources in one sweep:** the script now runs `phs.fetch_logs` into the same download root as the archive pull, so the archive fleet and the PHS-attached ipdsc/tpa batches rank in one backlog.

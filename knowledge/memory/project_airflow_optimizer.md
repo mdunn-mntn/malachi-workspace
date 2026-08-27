@@ -314,3 +314,12 @@ and what `resolve()` is passed. Ordered plan: `artifacts/audi_1194_next_steps.md
 - **Open:** prod's `collect_local` leaves `fangorn_score_monitor` and `ipdsc_ds_35` unlinked while
   the REST path resolves both (`audience_intent`, `tpa_ipdsc_export`). Astro needs
   `OPTIMIZER_SLACK_CHANNEL` set before the DAG posts.
+- **All work consolidated into airflow-ti #1229** on 2026-08-26 at the user's ask: the two
+  AUDI-1194 branches plus AUDI-1191's `audi-1191/two-channels` (another session's), merged into
+  `audi-1194-1191-combined`. Zero file overlap, no rebase, 336 tests. #1225/#1227/#1228 closed
+  pointing at it. The debugger files were left untouched, including three 2-line comment blocks
+  our `lint_comments.py` would fail but which airflow-ti does not lint.
+- **Two real defects the delivery gauntlet caught in the Block Kit renderer:** the parent
+  collected only `new` + `chronic`, so a `fix_not_working` DAG never reached Slack; and the
+  partial-sweep and no-change-tracking caveats reached only the text digest, so a Slack reader
+  saw a confident post with the warning missing. Both fixed.

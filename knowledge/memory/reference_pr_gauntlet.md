@@ -61,3 +61,20 @@ fixer, verdict REPORT — proven on merged airflow-ti#1215 (12 confirmed, 0 refu
 workspace config does not. A test helper I wrote passed every local check and the gauntlet's gate,
 then failed CI on four `ANN001`s. **Before pushing, run the target repo's own `ruff check` on every
 file in the diff, not just the ones the fixer edited.**
+
+**Pick the tier from the diff size, not by reflex (2026-08-26).** Three `medium` runs on a
+130-line AUDI-1194 diff cost over an hour and the third was still surfacing style nits; the same
+diff at `fast` took 10 minutes and 5 agents and caught the one real bug the others had missed
+(a run whose only signal is stage counters reported as "ZERO tasks run"). Rule now in the skill:
+`< 200` changed lines `fast` · `200-800` `medium` · `> 800` or security-relevant `thorough`.
+
+**The block hook parses `cd` only at the START of the command (2026-08-26).** Its regex is
+`(?:^|&&|;)\s*cd\s+(\S+)` without `re.M`, so a shell command whose first line is a variable
+assignment and whose `cd` sits on line 2 makes the hook fall back to `CLAUDE_PROJECT_DIR` and
+BLOCK a PR whose marker is correct. Put `cd <repo> && gh pr create ...` on one line, `cd` first.
+
+**A fixer will sometimes apply a finding its own report says it REJECTED (2026-08-26).** On the
+delivery PR it deleted `spark_optimizer/notify.py`'s `_post` and imported the debugger's instead,
+inverting a one-way package dependency, while its report listed that exact finding as rejected
+with the reason. **Read the full `git diff` before committing a fixer's work; the report is not
+the diff.** Two of its other fixes that round were real and load-bearing.

@@ -21,7 +21,13 @@ All committed and tested on `main` of the workspace repo (113 tests green):
 - `sweep._rendered_dags` — coverage now judges every name the digest can print.
 - `.claude/scripts/oncall_daily_optimizer.sh` — derives the digest's UI base from the API base.
 
-## Two PRs, both live
+## One PR
+**#1229** https://github.com/SteelHouse/airflow-ti/pull/1229 · branch `audi-1194-1191-combined`.
+Consolidates all three open branches at the user's ask, 14 files, 336 tests, mergeable. The other
+session was told; their `audi-1191/two-channels` branch is untouched and can be reopened
+separately, in which case drop its commits from #1229. Superseded and closed: #1225, #1227, #1228.
+
+## What went into it
 1. **#1227 — cost unit.** https://github.com/SteelHouse/airflow-ti/pull/1227 · branch
    `audi-1194-impact-hours`. `optimizations.py`, `eventlog.py`, `tests/test_eventlog.py`.
    Gauntleted at `fast` (5 agents, 10 min), 105 tests. Needs review.
