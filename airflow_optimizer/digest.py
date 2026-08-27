@@ -166,3 +166,134 @@ def render_plain(text: str) -> str:
     import re
 
     return re.sub(r"<([^|>]+)\|([^>]+)>", r"\2 (\1)", text).replace("*", "")
+
+
+DOT = {"high": ":red_circle:", "medium": ":large_orange_circle:", "low": ":white_circle:"}
+
+
+def _sec(text: str) -> dict:
+    return {"type": "section", "text": {"type": "mrkdwn", "text": text}}
+
+
+def _ctx(text: str) -> dict:
+    return {"type": "context", "elements": [{"type": "mrkdwn", "text": text}]}
+
+
+DIVIDER = {"type": "divider"}
+
+
+def _hours(entries: list) -> float:
+    """Executor-hours the worst run of each DAG held."""
+    return max((getattr(e, "exec_h", None) or 0 for e in entries), default=0)
+
+
+def _dag_blocks(dag: str, rows: list, base: str, resolve: Resolver = None) -> list[dict]:
+    """One DAG as its own threaded reply: who, what, the fix, the log it came from."""
+    worst = rows[0]
+    hours = _hours(rows)
+    meta = [getattr(worst, "owner", "") or "unowned"]
+    streak = getattr(worst, "streak", 0)
+    if streak > 1:
+        meta.append(f"{getattr(worst, 'state', 'chronic')}, {streak} sweeps running")
+    if len(rows) > 1:
+        meta.append(f"+{len(rows) - 1} more finding{'s' if len(rows) != 2 else ''}")
+    head = f"{DOT.get(getattr(worst, 'impact', ''), ':white_circle:')}  " \
+           f"*{dag_link(dag, base, resolve)}*"
+    if hours:
+        head += f"  ·  *{hours:,.0f}* executor-hours"
+    return [
+        _sec(head),
+        _ctx("  ·  ".join(meta)),
+        DIVIDER,
+        _sec(f"*What*\n{getattr(worst, 'title', '')}."),
+        _sec(f"*Fix*\n{getattr(worst, 'fix', '') or 'See the backlog.'}"),
+        _ctx(f"`{getattr(worst, 'app_id', '')}`"),
+        DIVIDER,
+    ]
+
+
+def _status(delta: object) -> tuple[str, str]:
+    """The parent's dot and word: what this sweep is asking of a reader."""
+    if getattr(delta, "fix_not_working", []) or getattr(delta, "new", []):
+        return ":red_circle:", "needs attention"
+    if getattr(delta, "chronic", []):
+        return ":large_orange_circle:", "nothing new"
+    return ":large_green_circle:", "all clear"
+
+
+def blocks(delta: object, scanned: int, findings: int, high: int, date: str,
+           coverage: object | None = None, backlog_path: str = "",
+           base: str = AIRFLOW_UI, cap: int = CAP) -> tuple[list, list]:
+    """(parent blocks, one reply's blocks per DAG).
+
+    The parent is the whole ranked list with the finding on each row, because a reader who
+    stops at the summary should still know which jobs cost what. The fix is the part that
+    needs room, so it goes in the reply.
+    """
+    resolve = coverage.resolve if coverage is not None else None
+    firing = list(getattr(delta, "new", [])) + list(getattr(delta, "chronic", []))
+    groups = by_dag(firing, cap=cap)
+    dot, word = _status(delta)
+    resolved = sorted({getattr(e, "dag_id", "") for e in getattr(delta, "resolved", [])})
+
+    stats = [f"`{scanned} jobs scanned`", f"`{findings} findings`", f"`{high} high`"]
+    if coverage is not None and coverage.unprofiled:
+        stats.append(f"`{len(coverage.unprofiled)} DAGs unprofiled`")
+
+    parent = [_sec(f"{dot}  *Spark optimizer*  ·  {word}"),
+              _ctx(f"*{date}*  ·  " + "  ·  ".join(stats)),
+              DIVIDER]
+    if groups:
+        total = sum(_hours(rows) for _, rows in groups)
+        shown = sum(len(rows) for _, rows in groups)
+        parent.append(_sec(
+            f"*{len(groups)} DAG{'s' if len(groups) != 1 else ''}* holding *{total:,.0f}* "
+            f"executor-hours across *{shown}* finding{'s' if shown != 1 else ''}."))
+        parent += [b for i, (dag, rows) in enumerate(groups, 1)
+                   for b in _rank_row(i, dag, rows, base, resolve)]
+    else:
+        parent.append(_sec("No job is firing a finding this sweep."))
+    if resolved:
+        shown = "  ·  ".join(dag_link(d, base, resolve) for d in resolved[:cap])
+        if len(resolved) > cap:
+            shown += f"  ·  _and {len(resolved) - cap} more_"
+        parent += [DIVIDER,
+                   _sec(f":white_check_mark:  *{len(resolved)} stopped firing*  ·  {shown}")]
+
+    footer = []
+    if backlog_path:
+        footer.append(_gcs_link(backlog_path, "Full backlog"))
+    if coverage is not None and coverage.unprofiled:
+        footer.append(_gcs_link(coverage.report_path, "Coverage report"))
+    if groups:
+        footer.append("the fix for each is in the thread")
+    if footer:
+        parent += [DIVIDER, _ctx("  ·  ".join(footer))]
+
+    return parent, [_dag_blocks(dag, rows, base, resolve) for dag, rows in groups]
+
+
+def _rank_row(rank: int, dag: str, rows: list, base: str, resolve: Resolver = None) -> list:
+    """One ranked line in the parent: what it costs, what is wrong, who owns it."""
+    worst = rows[0]
+    hours = _hours(rows)
+    head = f"*{rank}.*  {DOT.get(getattr(worst, 'impact', ''), ':white_circle:')}  " \
+           f"*{dag_link(dag, base, resolve)}*"
+    if hours:
+        head += f"  ·  *{hours:,.0f}* executor-hours"
+    meta = [getattr(worst, "owner", "") or "unowned",
+            f"{len(rows)} finding{'s' if len(rows) != 1 else ''}"]
+    streak = getattr(worst, "streak", 0)
+    if streak > 1:
+        meta.append(f"{streak} sweeps running")
+    return [_sec(f"{head}\n{getattr(worst, 'title', '')}"), _ctx("  ·  ".join(meta))]
+
+
+_GCS_CONSOLE = "https://console.cloud.google.com/storage/browser/_details/{path}"
+
+
+def _gcs_link(path: str, label: str) -> str:
+    """A gs:// path as a console link; anything else stays literal."""
+    if not path.startswith("gs://"):
+        return f"`{path}`"
+    return f"<{_GCS_CONSOLE.format(path=path[len('gs://'):])}|{label}>"

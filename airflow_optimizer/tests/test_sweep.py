@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -344,3 +346,45 @@ def test_coverage_judges_every_name_the_digest_can_print() -> None:
     names = sweep._rendered_dags(entries, delta, scored, None)
     assert {"ipdsc_ds_35", "fangorn_score_monitor", "other"} <= names
     assert "" not in names
+
+
+def _entry(dag: str, impact: str, title: str, hours: float,
+           owner: str = "team") -> Any:
+    from airflow_optimizer.ledger import Entry
+
+    return Entry(date="2026-08-26", dag_id=dag, app_id="app-1.zstd", key="k", impact=impact,
+                 title=title, fix="do the thing", owner=owner, exec_h=hours, streak=3)
+
+
+def test_the_parent_carries_the_whole_ranked_list_not_just_the_worst() -> None:
+    """A reader who stops at the summary still needs to know which jobs cost what."""
+    from types import SimpleNamespace
+
+    from airflow_optimizer import digest
+
+    delta = SimpleNamespace(
+        new=[], chronic=[_entry("a", "high", "spilled", 433), _entry("b", "medium", "waited", 276)],
+        notified=[], resolved=[_entry("c", "low", "", 0)], fix_not_working=[])
+    parent, replies = digest.blocks(delta, scanned=10, findings=2, high=1, date="2026-08-26",
+                                    base="https://x/dags/{dag_id}")
+    text = json.dumps(parent)
+    assert "spilled" in text and "waited" in text
+    assert "433" in text and "276" in text
+    assert len(replies) == 2
+    assert "do the thing" in json.dumps(replies)
+
+
+def test_an_unresolved_job_renders_as_a_name_never_a_broken_link() -> None:
+    """`ipdsc_ds_35` is a task id; linking it as a dag_id lands on an empty Airflow page."""
+    from types import SimpleNamespace
+
+    from airflow_optimizer import digest
+
+    delta = SimpleNamespace(new=[_entry("ipdsc_ds_35", "high", "straggler", 348)],
+                            chronic=[], notified=[], resolved=[], fix_not_working=[])
+    cov = SimpleNamespace(unprofiled=[], resolve=lambda n: "", report_path="")
+    parent, _ = digest.blocks(delta, scanned=1, findings=1, high=1, date="2026-08-26",
+                              coverage=cov, base="https://x/dags/{dag_id}")
+    text = json.dumps(parent)
+    assert "https://x/dags/ipdsc_ds_35" not in text
+    assert "`ipdsc_ds_35`" in text
