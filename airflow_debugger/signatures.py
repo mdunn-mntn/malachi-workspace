@@ -394,6 +394,20 @@ SIGNATURES: list[Signature] = [
         ),
     ),
     Signature(
+        "cassandra_invalid_request",
+        # The 'exception': payload is the task's OWN error; the log tail below it is usually
+        # the failure callback's Slack noise, which must not steal this verdict.
+        r"'exception': InvalidRequest\(|InvalidRequest\('Error from server: code=2200",
+        "query/cassandra-invalid",
+        "Cassandra rejected the statement (code=2200 Invalid query). 'Key may not be empty' "
+        "means a row reached the write with an empty partition key.",
+        "sometimes",
+        remedy=(
+            "Read the quoted message. For an empty key, filter or fix the upstream rows that "
+            "produce it; the query shape itself is unchanged."
+        ),
+    ),
+    Signature(
         "slack_notify_failed",
         # Must be the TASK's own exception. The notifier error also appears in the failure
         # callback of any DAG that posts to Slack, where it would steal the real cause.

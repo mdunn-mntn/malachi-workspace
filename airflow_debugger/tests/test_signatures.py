@@ -465,3 +465,20 @@ if __name__ == "__main__":
     test_grpc_deadline_not_ttl()
     test_gcp_capacity_signatures_reachable_from_databricks()
     print(f"OK — {len(CASES)} classifier cases + edge cases passed")
+
+
+def test_a_cassandra_invalid_request_outranks_the_callback_slack_noise() -> None:
+    """The 9 unclassified failures of the 30-day backfill: the real exception sits in the
+    'exception': payload while the log tail is the notifier's channel_not_found."""
+    log = (
+        "2026-08-11T00:07:19.905044Z [info] include.job_config.slack_messages "
+        "'templates_dict': None, 'exception': InvalidRequest('Error from server: code=2200 "
+        "[Invalid query] message=\"Key may not be empty\"')}\n"
+        "2026-08-11T00:07:20.067817Z [error] airflow.providers.slack.notifications.slack."
+        "SlackNotifier Failed to send notification (sync): The request to the Slack API failed. "
+        "(url: https://slack.com/api/chat.postMessage)\n"
+        "The server responded with: {'ok': False, 'error': 'channel_not_found'}\n"
+        "2026-08-11T00:07:20.067957Z [error] task Failed to run task callback"
+    )
+    m = classify(log)
+    assert m is not None and m.key == "cassandra_invalid_request"
