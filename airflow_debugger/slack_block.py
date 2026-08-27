@@ -51,6 +51,16 @@ SOURCE_LABEL = {
     WHY_GAP: "no cause found",
 }
 
+SEVERITY = {"infra": "🔴", "upstream": "🔴", "timeout": "🟡", "config": "🟡"}
+SEVERITY_DEFAULT, SEVERITY_UNKNOWN = "🟠", "⚪"
+
+
+def severity(klass: str) -> str:
+    """One glyph so the failure class reads at a glance in a busy channel."""
+    if klass in ("unclassified", "no-cause-in-log"):
+        return SEVERITY_UNKNOWN
+    return SEVERITY.get(klass.split("/")[0], SEVERITY_DEFAULT)
+
 
 def _astro_run_url(dag_id: str | None, run_id: str | None) -> str | None:
     """Deep link to the failing run, or None rather than a URL that 404s."""
@@ -186,9 +196,9 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
 
     fix_text = fix(diag, source)
     fix_block = f"*Fix*\n{fix_text}" if "\n" in fix_text else f"*Fix*  {fix_text}"
-    body = "\n".join(
+    body = "\n\n".join(
         [
-            f"*What failed*  *{who}* — {klass}",
+            f"{severity(klass)} *What failed*  *{who}* — {klass}",
             f"*Why*  ({SOURCE_LABEL[source]}) {cause_text}",
             f"*Where*  {' · '.join(where)}",
             f"*How it failed*  {mechanism(diag, source)}",
