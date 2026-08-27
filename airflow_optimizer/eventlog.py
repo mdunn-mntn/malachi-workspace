@@ -333,7 +333,6 @@ def _task_end(e: dict, stage: Callable, execu: Callable) -> None:
     ti = e.get("Task Info", {}) or {}
     reason = (e.get("Task End Reason", {}) or {}).get("Reason", "")
     x = execu(str(ti.get("Executor ID")))
-    # 186 of 497 executors in one prod log had no ExecutorAdded; unseeded they are billed as free.
     launch = ti.get("Launch Time") or 0
     if launch and (x.added_ts is None or launch < x.added_ts):
         x.added_ts = launch

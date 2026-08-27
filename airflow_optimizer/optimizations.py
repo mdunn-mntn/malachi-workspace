@@ -198,27 +198,23 @@ HIGH_MIN_HOURS = 10.0
 
 
 def _gated(tier: str, cost_h: float, run_h: float) -> str:
-    """Demote a ratio finding that is a true share of a denominator too small to matter.
-
-    `shuffle_fetch_wait` and `gc_pressure` divide by summed TASK time, so a stage doing almost
-    no compute reports 90% on a denominator worth minutes. Ranked against a detector denominated
-    in executor-hours held, that sends an owner at 0.3% of a job and past the 86%. An absolute
-    floor keeps a large stall high on a job so big that its share still rounds to nothing.
-    """
-    if tier != "high" or not run_h:
+    """Demote a high tier that clears neither floor; an underivable cost (0) never demotes."""
+    if tier != "high" or not run_h or not cost_h:
         return tier
     big = cost_h >= HIGH_MIN_HOURS or cost_h / run_h >= HIGH_MIN_SHARE
     return tier if big else "medium"
 
 
 def _cores(run: object, props: dict) -> int:
-    """Slots per executor. The event log carries this even when the property does not."""
+    """Slots per executor, 0 when neither the event log nor the property reports one."""
     reported = max((getattr(e, "cores", 0) or 0) for e in run.executors) if run.executors else 0
-    return reported or int(props.get("spark.executor.cores", "1") or 1)
+    return reported or int(props.get("spark.executor.cores", "0") or 0)
 
 
 def _share(cost_h: float, run_h: float) -> str:
     """The finding's absolute cost, against the run's own when that is known."""
+    if not cost_h:
+        return "executor-hours unknown (no per-executor core count in the log)"
     if run_h:
         return f"{cost_h:.1f} of the run's {run_h:.1f} executor-hours"
     return f"{cost_h:.1f} executor-hours"
@@ -299,7 +295,8 @@ def analyze_run(run: object) -> list[OptFinding]:
         # FETCH-WAIT dominance - tasks stall waiting on shuffle fetch, not computing.
         if s.run_time_ms >= 300_000 and s.fetch_wait_ms / s.run_time_ms >= 0.3:
             ratio = s.fetch_wait_ms / s.run_time_ms
-            wait_h = min(s.fetch_wait_ms / cores / 3_600_000, run_h or float('inf'))
+            wait_h = (min(s.fetch_wait_ms / cores / 3_600_000, run_h or float('inf'))
+                      if cores else 0.0)
             out.append(OptFinding(
                 "shuffle_fetch_wait",
                 f"Stage {s.stage_id} spends {100 * ratio:.0f}% of task time waiting on "
@@ -319,7 +316,7 @@ def analyze_run(run: object) -> list[OptFinding]:
     run_ms = sum(s.run_time_ms for s in run.stages)
     gc_ms = sum(s.gc_time_ms for s in run.stages)
     if run_ms and gc_ms / run_ms >= 0.1:
-        gc_h = min(gc_ms / cores / 3_600_000, run_h or float('inf'))
+        gc_h = min(gc_ms / cores / 3_600_000, run_h or float('inf')) if cores else 0.0
         out.append(OptFinding(
             "gc_pressure", f"GC is {100 * gc_ms / run_ms:.0f}% of task time",
             _gated("high" if gc_ms / run_ms >= 0.2 else "medium", gc_h, run_h),
@@ -345,8 +342,9 @@ def analyze_run(run: object) -> list[OptFinding]:
     # shuffleTracking exempts executors a live job's shuffle references, so a tail pins all.
     if execs and app_end and len(execs) >= 8:
         busy_ms = sum(e.run_time_ms for e in execs)
-        util = busy_ms / (reg_ms * cores) if reg_ms else 1.0
-        idle_h = (reg_ms * cores - busy_ms) / 3_600_000 / cores
+        slots = cores or 1
+        util = busy_ms / (reg_ms * slots) if reg_ms else 1.0
+        idle_h = (reg_ms * slots - busy_ms) / 3_600_000 / slots
         reg_h = run_h
         # Until the app ends, a still-writing first log part is indistinguishable from a no-op.
         if busy_ms == 0 and not ended:
