@@ -17,6 +17,13 @@ last_verified: 2026-08-26
 
 **Diagnosing the failure mode:** `channel_not_found` = the bot is NOT in the channel. `missing_scope` = the bot IS in the channel but lacks the scope. The error flipping from the first to the second is how you confirm an invite landed. Approval is not installation, and installation is not membership: all three are separate steps.
 
+**The optimizer digest reuses this same app.** No second Slack app was needed: `chat:write` already
+covers it. The digest posts to **`#spark-optimizer` (`C0BSTH6E84T`)**, a PRIVATE channel created
+2026-08-26 for it, so `groups:*` is again the load-bearing scope. Deliberately not
+`#alerts-tpa-pipeline`: a daily cost report next to `*FAILURE*` pages trains people to skip both.
+`airflow_optimizer/notify.py` reads `SLACK_BOT_TOKEN` + `OPTIMIZER_SLACK_CHANNEL` and posts Block
+Kit: the parent is the ranked DAG list, each DAG's fix is a threaded reply.
+
 **`notify.py` reads one `SLACK_ALERT_CHANNEL`.** Two channels needs a code change (open as of 2026-08-26). `#monitor-tpa` carries forwarded emails, not Airflow alerts; the real `*FAILURE*` posts are in `#alerts-tpa-pipeline`, and `vertical_classification_api` does not alert there at all.
 
 **Token storage:** an Astro deployment env var marked secret on airflow-ti, plus Vault. Locally it is `security find-generic-password -s slack_bot_token -w`, never a dotfile. See [[reference_pi5_server]] for why a local key is banned but a prod-held token is not, and [[reference_anthropic_api_key_keychain]] for the same pattern.

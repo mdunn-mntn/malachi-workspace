@@ -302,6 +302,15 @@ counting only tasks with both a launch and a finish time still overshoots becaus
 executor count negative. Mean concurrency is solid (task-hours / wall span ≈ **34 tasks** against
 2,160 slots held) but the mean does not size a ceiling. Settle peak before changing allocation.
 
+**SETTLED 2026-08-26, and this paragraph's conclusion was wrong.** Peak concurrency IS measurable.
+The overshoot is a sub-100ms slot handoff: at a peak instant four tasks finish and four launch
+inside a 1-3ms window. Shrinking each interval's end by 100ms collapses every one of the 497
+executors to a peak of exactly 4 and the fleet to exactly **1,988 = 497 x 4**. Time-weighted,
+only 0.12% of busy executor-time sits above concurrency 4. So the job SATURATES its ceiling at
+peak while averaging 43.9 concurrent tasks (2.2% of slots): lowering `maxExecutors` would
+lengthen the peak, and the lever is the tail that holds the fleet, not the ceiling. Full numbers
+and the corrections a verification pass forced: `artifacts/audi_1194_peak_concurrency.md`.
+
 **Two things this changes beyond one job.**
 - The Ryan draft is marked WITHDRAWN at the top of
   `artifacts/audi_1194_slack_ryan_site_network_hourly.md` rather than deleted, so the reasoning
@@ -309,6 +318,57 @@ executor count negative. Mean concurrency is solid (task-hours / wall span ≈ *
 - `shuffle_fetch_wait` needs an absolute-cost gate. A ratio on task time cannot rank against
   `idle_reserved_executors`, which is denominated in executor-hours held. Ranking the fleet
   backlog put a 0.3% finding above an 86% one on the same job. Logged as IMP-084.
+
+
+### 2026-08-26 — cost got a unit, Databricks got a price, and the digest got delivered
+
+**The cost figure was 29% short.** `SparkListenerExecutorAdded` is not a census. In
+`app-20260825065124173-0803` it appears for **359** executors while **497** ran tasks; 96
+`ExecutorRemoved` events cover only 48 distinct ids (each logged twice), so a running
+Added-minus-Removed counter bottoms out at **-46**. Executors with no `Added` event scored zero
+executor-hours. Seeding `added_ts` from the first task's launch moves the run **276.1 to 356.6
+executor-hours**. Independently reproduced.
+
+**IMP-084 closed.** `OptFinding.cost_h` carries the executor-hours at stake and `_gated` denies
+`high` to a ratio finding under **10 executor-hours AND 10% of the run**. Both floors are needed:
+share-only demoted a genuine 300-executor-hour stall on a 3,750-hour job. Two adversarial rounds
+also forced `_cores` to return **0, not 1**, when neither `spark.executor.cores` nor
+`ExecutorAdded.Total Cores` reports one — a cores=1 guess published "100 of the run's 80
+executor-hours" on both committed fixtures. An underivable cost never demotes.
+
+**Databricks now costs money, not hours.** `databricks.job_costs` and `query_costs` join
+`system.billing.usage` to `lakeflow.job_run_timeline` and `query.history`, priced from
+`list_prices`. Two traps: the timeline holds **one row per hourly period**, so the join must
+dedupe to one row per `run_id` first (naive join inflated 7 days of `PREMIUM_JOBS_COMPUTE` from
+16,460 to 205,239 DBU); and a warehouse bills by the hour, never per statement, so per-node
+dollars are apportioned by query-time share, not measured. Query-hours also double-count under
+concurrency.
+
+**The four `ddp_vertical_classification_api` dbt tests are the whole warehouse.** Each reads
+**5.13 TB / 2.15M files / 997 partitions with zero pruned** to produce **one row**, ~20x/day,
+1,902 s of execution and 0 s of queue. They are 98.6% of warehouse `14b311ac86ee2ca2`, whose full
+7-day list cost is **$850**. Detail in `artifacts/audi_1194_ddp_api_test_cost.md`.
+
+**`heavy_queries` was returning the same four statements 15 times.** Deduped to one statement per
+`node_id`; 4 of 8 distinct nodes then produce a readable `EXPLAIN COST`. The 4 that do not all
+reference a table dropped ~20x/day, which replay can never resolve.
+
+**Delivery shipped.** `notify.py` posts the digest to `#spark-optimizer` (`C0BSTH6E84T`, private)
+reusing the existing `airflow-debugger` app; the gate is the credential, not a flag.
+`digest.blocks()` renders Block Kit: the parent is the ranked list with each DAG's cost, owner,
+finding count and worst finding, and each DAG's fix is a threaded reply. Verified live.
+
+**Two keying bugs.** Coverage and the digest were keyed on different normalisations, so the digest
+could render a job the coverage report never evaluated; `_rendered_dags` now feeds coverage every
+name the digest can print. And a local sweep dropped every DAG link because nothing set
+`AIRFLOW__API__BASE_URL` outside Airflow — the daily script now derives the UI base from the API
+base.
+
+**Still open.** The prod sweep's `collect_local` left `fangorn_score_monitor` and `ipdsc_ds_35`
+unlinked while its own coverage report listed neither as unresolved. Against the live REST API
+both resolve correctly (`audience_intent`, `tpa_ipdsc_export`), so the resolver is sound and the
+disagreement is in the bundle path or in ledger names recorded on an earlier sweep. The
+`_rendered_dags` fix makes the next sweep name any such job in the coverage report.
 
 
 ## 5. Solution

@@ -1,6 +1,6 @@
 ---
 name: project_airflow_optimizer
-description: AUDI-1194 airflow_optimizer/ — key-free efficiency crawler over SUCCEEDED Spark jobs; SHIPPED TO PROD 2026-08-21 as the spark_optimizer_daily DAG in airflow-ti (215 jobs/290 findings on run 1); coverage pass is dead on Airflow 3 (ORM forbidden in tasks)
+description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer.
 metadata:
   node_type: memory
   type: project
@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-21
+last_verified: 2026-08-26
 ---
 **AUDI-1194 = the OPTIMIZER** (success-triggered efficiency sweep), **split from the AUDI-1191 debugger 2026-08-05** (both AUDI, type Task, Backlog). The two are separate workflows with distinct triggers/schedules/deliverables: the debugger fires only on a **failure**, the optimizer sweeps every DAG that **succeeds**. They can chain but are distinct. AUDI-1194: 5 story points, PMO rep Bryce Wagg, label q3_2026, folder `tickets/audi_1194_optimizer_efficiency_crawler/`, framing **LOCKED** (§0 in its summary). See [[project_airflow_debugger]] (the RCA half), [[reference_airflow_ti]], [[reference_oncall_runbook]].
 
@@ -292,3 +292,25 @@ filters `WHERE load_ts = (SELECT max(load_ts) FROM <same table>)`.
 unlinked while the coverage report does NOT list them as unresolved. Same `Coverage` object feeds
 both, so suspect the `_owner_index` cache or the difference between what `unresolved()` is passed
 and what `resolve()` is passed. Ordered plan: `artifacts/audi_1194_next_steps.md`.
+
+## 2026-08-26 — cost has a unit, Databricks has a price, Slack has the digest
+
+- **#1222 and #1223 merged.** Job-to-DAG resolution live in prod (`profiled this sweep` 2 -> 12,
+  7 of 217 jobs untied); manual trigger no longer needs an explicit `logical_date`.
+- **Cost was 29% short.** `ExecutorAdded` covered 359 of the 497 executors that ran tasks in one
+  prod log; the rest were billed at zero. Seeding `added_ts` from the first task's launch moves
+  that run 276.1 -> 356.6 executor-hours. [[reference_spark_eventlog_cost_units]]
+- **IMP-084 closed.** `cost_h` on every finding; `high` needs 10 executor-hours OR 10% of the run.
+  `_cores` returns 0 when unknown rather than guessing 1, and an underivable cost never demotes.
+- **Peak concurrency settled** and an earlier conclusion reversed: it IS measurable, with a 100ms
+  handoff tolerance. `site_network_hourly` saturates 1,988 slots at peak and averages 2.2%, so
+  `maxExecutors` is not the lever; the tail is.
+- **Databricks costed.** `job_costs` / `query_costs` price jobs and dbt nodes from
+  `system.billing`. [[reference_databricks_billing_cost]]
+- **Biggest single finding:** four `ddp_vertical_classification_api` dbt tests each scan 5.13 TB
+  / 2.15M files ~20x/day to return one row, and are 98.6% of a warehouse costing $850/week.
+- **Slack delivery live.** `notify.py` + `digest.blocks()` post Block Kit to `#spark-optimizer`
+  (`C0BSTH6E84T`), reusing the `airflow-debugger` app. [[reference_slack_debugger_app]]
+- **Open:** prod's `collect_local` leaves `fangorn_score_monitor` and `ipdsc_ds_35` unlinked while
+  the REST path resolves both (`audience_intent`, `tpa_ipdsc_export`). Astro needs
+  `OPTIMIZER_SLACK_CHANNEL` set before the DAG posts.
