@@ -1010,6 +1010,8 @@ The pre-2026-04-21 plan (compute campaign win rate, apply as sampling probabilit
 
 **Power constraint (Malachi's framing, 2026-04-20):** Our minimum detectable effect lands around ~15% while realistic CTV lift is 2-8%. This is the whole ballgame — why geo doesn't work at MNTN budget scale, why observational ML fails, and why ghost bidding (reusing existing 10% holdout instead of carving a new one) is structurally the only path. TI-884 quantifies this precisely per advertiser.
 
+**Geo-holdout power: client communication when budget is close to threshold (2026-08-27).** For a geo-holdout test with sound design (matched pairs, clean isolation, appropriate duration), power adequacy depends heavily on **baseline metric variance within matched markets**, not raw spend. When a client's budget runs 10–15% below the recommended power model — test design is still valid, but risk of null result increases. **Client-facing principle: flag this gap upfront** ("your planned $278k is close to, but not within our 90% confidence threshold for 5% detection") rather than hope for stat sig. Most clients will accept the risk or bump incrementally (+$10–20k); none want to discover underpowering *after* a null result. State it plainly, give a specific path forward (e.g. "bump Sep/Dec by $10k each"), and let them decide.
+
 **Advantages over ITT:**
 - Eliminates coverage dilution by comparing only IPs that would have been served
 - Answers: "Of people who received an impression, what is the incremental lift?"
