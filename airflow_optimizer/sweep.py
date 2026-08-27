@@ -168,16 +168,20 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     if cov is not None:
         cov.report_path = _published_ref(coverage_path, gcs_prefix, published)
 
+    notes = []
+    if not complete:
+        notes.append("Partial sweep: some event logs could not be downloaded, so nothing is "
+                     "reported as resolved this run.")
+    if ledger_note:
+        notes.append(f"No change tracking this run: {ledger_note}.")
+    if dbx_path:
+        notes.append(f"Databricks cost: `{_published_ref(dbx_path, gcs_prefix, published)}`")
+
     text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high, date=date,
                              coverage=cov,
                              backlog_path=_published_ref(backlog, gcs_prefix, published))
-    if dbx_path:
-        text += f"\nDatabricks cost: `{_published_ref(dbx_path, gcs_prefix, published)}`"
-    if not complete:
-        text += ("\n\n_Partial sweep: some event logs could not be downloaded, so nothing is "
-                 "reported as resolved this run._")
-    if ledger_note:
-        text += f"\n\n_No change tracking this run: {ledger_note}._"
+    for note in notes:
+        text += f"\n\n_{note}_"
     digest_path = os.path.join(outdir, f"optimizer_digest_{date}.md")
     with open(digest_path, "w") as fh:
         fh.write(digest_mod.render_plain(text))
@@ -185,7 +189,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     published += publish([digest_path], gcs_prefix)
     parent, replies = digest_mod.blocks(
         delta, scanned=len(scored), findings=findings, high=high, date=date, coverage=cov,
-        backlog_path=_published_ref(backlog, gcs_prefix, published))
+        backlog_path=_published_ref(backlog, gcs_prefix, published), notes=tuple(notes))
     delivery = notify_mod.deliver_thread(parent, replies)
     if delivery.get("error"):
         print(f"[sweep] slack post failed: {delivery['error']}")

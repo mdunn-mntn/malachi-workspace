@@ -212,18 +212,21 @@ def _dag_blocks(dag: str, rows: list, base: str, resolve: Resolver = None) -> li
     ]
 
 
-def _status(delta: object) -> tuple[str, str]:
+def _status(delta: object, findings: int) -> tuple[str, str]:
     """The parent's dot and word: what this sweep is asking of a reader."""
     if getattr(delta, "fix_not_working", []) or getattr(delta, "new", []):
         return ":red_circle:", "needs attention"
-    if getattr(delta, "chronic", []):
+    if getattr(delta, "chronic", []) or getattr(delta, "notified", []):
         return ":large_orange_circle:", "nothing new"
+    if findings:
+        return ":large_orange_circle:", "findings open, not change-tracked"
     return ":large_green_circle:", "all clear"
 
 
 def blocks(delta: object, scanned: int, findings: int, high: int, date: str,
            coverage: object | None = None, backlog_path: str = "",
-           base: str = AIRFLOW_UI, cap: int = CAP) -> tuple[list, list]:
+           base: str = AIRFLOW_UI, cap: int = CAP,
+           notes: tuple[str, ...] = ()) -> tuple[list, list]:
     """(parent blocks, one reply's blocks per DAG).
 
     The parent is the whole ranked list with the finding on each row, because a reader who
@@ -231,9 +234,10 @@ def blocks(delta: object, scanned: int, findings: int, high: int, date: str,
     needs room, so it goes in the reply.
     """
     resolve = coverage.resolve if coverage is not None else None
-    firing = list(getattr(delta, "new", [])) + list(getattr(delta, "chronic", []))
+    firing = [e for k in ("fix_not_working", "new", "chronic", "notified")
+              for e in getattr(delta, k, [])]
     groups = by_dag(firing, cap=cap)
-    dot, word = _status(delta)
+    dot, word = _status(delta, findings)
     resolved = sorted({getattr(e, "dag_id", "") for e in getattr(delta, "resolved", [])})
 
     stats = [f"`{scanned} jobs scanned`", f"`{findings} findings`", f"`{high} high`"]
@@ -241,8 +245,10 @@ def blocks(delta: object, scanned: int, findings: int, high: int, date: str,
         stats.append(f"`{len(coverage.unprofiled)} DAGs unprofiled`")
 
     parent = [_sec(f"{dot}  *Spark optimizer*  ·  {word}"),
-              _ctx(f"*{date}*  ·  " + "  ·  ".join(stats)),
-              DIVIDER]
+              _ctx(f"*{date}*  ·  " + "  ·  ".join(stats))]
+    if notes:
+        parent.append(_ctx("\n".join(f"_{n}_" for n in notes)))
+    parent.append(DIVIDER)
     if groups:
         total = sum(_hours(rows) for _, rows in groups)
         shown = sum(len(rows) for _, rows in groups)
@@ -251,6 +257,9 @@ def blocks(delta: object, scanned: int, findings: int, high: int, date: str,
             f"executor-hours across *{shown}* finding{'s' if shown != 1 else ''}."))
         parent += [b for i, (dag, rows) in enumerate(groups, 1)
                    for b in _rank_row(i, dag, rows, base, resolve)]
+    elif findings:
+        parent.append(_sec(f"*{findings} finding{'s' if findings != 1 else ''}* in the backlog, "
+                           "none ranked here."))
     else:
         parent.append(_sec("No job is firing a finding this sweep."))
     if resolved:
@@ -283,6 +292,9 @@ def _rank_row(rank: int, dag: str, rows: list, base: str, resolve: Resolver = No
         head += f"  ·  *{hours:,.0f}* executor-hours"
     meta = [getattr(worst, "owner", "") or "unowned",
             f"{len(rows)} finding{'s' if len(rows) != 1 else ''}"]
+    state = getattr(worst, "state", "")
+    if state in ("owner_notified", "wont_fix", "fix_not_working"):
+        meta.append(state.replace("_", " "))
     streak = getattr(worst, "streak", 0)
     if streak > 1:
         meta.append(f"{streak} sweeps running")

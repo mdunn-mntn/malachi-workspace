@@ -220,17 +220,6 @@ def _unplanned(text: str) -> bool:
     return any(m in head for m in _PLAN_FAILURE) or "unresolvedalias" in head
 
 
-if __name__ == "__main__":
-    import sys
-
-    days = int(sys.argv[1]) if len(sys.argv) > 1 else 7
-    subs = submissions(days)
-    print(f"{len(subs)} dbt submissions over {days} days\n")
-    print(f"{'model':<60}{'runs':>6}{'hours':>9}{'fail':>6}")
-    for model, n, total, bad in by_model(subs)[:25]:
-        print(f"{model:<60}{n:>6}{total / 3600:>9.1f}{bad:>6}")
-
-
 @dataclass
 class Cost:
     """What one job or dbt node consumed, in DBUs and list-price dollars."""
@@ -374,3 +363,14 @@ def report(days: int = 7, limit: int = 15, warehouse: str = "") -> str:
     if not (jobs or nodes or plans):
         return ""
     return render_report(jobs, nodes, plans, days)
+
+
+if __name__ == "__main__":
+    import sys
+
+    days = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+    subs = submissions(days)
+    print(f"{len(subs)} dbt submissions over {days} days\n")
+    print(f"{'model':<60}{'runs':>6}{'hours':>9}{'fail':>6}")
+    for model, n, total, bad in by_model(subs)[:25]:
+        print(f"{model:<60}{n:>6}{total / 3600:>9.1f}{bad:>6}")

@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 
 from airflow_optimizer import coverage as cov_mod
-from airflow_optimizer import fetch, ledger, sweep
+from airflow_optimizer import fetch, ledger, notify, sweep
 from airflow_optimizer.crawl import JobReport
 from airflow_optimizer.optimizations import OptFinding
 
@@ -40,8 +40,10 @@ def _run(tmp: Path, date: str, **kw) -> dict:
 
 @pytest.fixture
 def fleet(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A log dir plus a crawl that always finds the same one job."""
+    """A log dir, a crawl that always finds the same one job, and no Slack credential."""
     (tmp_path / "logs").mkdir()
+    monkeypatch.delenv(notify.TOKEN_ENV, raising=False)
+    monkeypatch.delenv(notify.CHANNEL_ENV, raising=False)
     monkeypatch.setattr(sweep, "crawl", lambda _p: [_report("a")])
     return tmp_path
 
@@ -314,24 +316,21 @@ def test_a_first_sweep_without_coverage_writes_no_ledger_rows(
 def test_a_sweep_without_a_slack_credential_renders_but_does_not_post(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """The gate is the credential, so a local run cannot post by accident."""
-    from airflow_optimizer import notify
-
     monkeypatch.delenv(notify.TOKEN_ENV, raising=False)
     monkeypatch.delenv(notify.CHANNEL_ENV, raising=False)
     assert not notify.enabled()
-    assert notify.deliver("a digest")["reason"].startswith("no ")
+    assert notify.deliver_thread([{"type": "section"}], [])["reason"].startswith("no ")
 
 
 def test_delivery_reports_the_slack_error_rather_than_raising(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """A bot that was never invited returns channel_not_found; the sweep must survive it."""
-    from airflow_optimizer import notify
-
     monkeypatch.setenv(notify.TOKEN_ENV, "x")
     monkeypatch.setenv(notify.CHANNEL_ENV, "C123")
     monkeypatch.setattr(notify, "_post",
                         lambda m, p: {"ok": False, "error": "channel_not_found"})
-    assert notify.deliver("a digest") == {"sent": False, "error": "channel_not_found"}
+    assert notify.deliver_thread([{"type": "section"}], []) == {
+        "sent": False, "error": "channel_not_found", "replies": 0}
 
 
 def test_coverage_judges_every_name_the_digest_can_print() -> None:
@@ -388,3 +387,60 @@ def test_an_unresolved_job_renders_as_a_name_never_a_broken_link() -> None:
     text = json.dumps(parent)
     assert "https://x/dags/ipdsc_ds_35" not in text
     assert "`ipdsc_ds_35`" in text
+
+
+def _states(dag: str, state: str) -> Any:
+    e = _entry(dag, "high", "shuffle spill, stage 7", 433)
+    e.state = state
+    return e
+
+
+def test_every_state_the_header_reacts_to_is_named_in_the_post() -> None:
+    """A red post whose body says nothing is firing tells the team a DAG name it never prints."""
+    from types import SimpleNamespace
+
+    from airflow_optimizer import digest
+
+    stuck = SimpleNamespace(new=[], chronic=[], notified=[], resolved=[],
+                            fix_not_working=[_states("site_network_hourly", "fix_not_working")])
+    parent, replies = digest.blocks(stuck, scanned=160, findings=1, high=1, date="2026-08-26")
+    text = json.dumps(parent)
+    assert "needs attention" in text and "site_network_hourly" in text
+    assert "No job is firing" not in text and len(replies) == 1
+
+    owned = SimpleNamespace(new=[], chronic=[], resolved=[], fix_not_working=[],
+                            notified=[_states("ipdsc", "owner_notified")])
+    text = json.dumps(digest.blocks(owned, scanned=160, findings=1, high=1, date="2026-08-26")[0])
+    assert "ipdsc" in text and "owner notified" in text and "all clear" not in text
+
+
+def _posted(monkeypatch: pytest.MonkeyPatch) -> list:
+    """The Block Kit payload the sweep hands to Slack, captured instead of sent."""
+    sent: list = []
+
+    def record(parent: list, replies: list) -> dict:
+        sent.append(parent)
+        return {"sent": True}
+
+    monkeypatch.setattr(sweep.notify_mod, "deliver_thread", record)
+    return sent
+
+
+def test_a_sweep_that_lost_change_tracking_does_not_post_all_clear(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An empty delta means the ledger did not run, never that the fleet is clean."""
+    monkeypatch.setattr(sweep.cov_mod, "collect_local", _blind)
+    sent = _posted(monkeypatch)
+    out = _run(fleet, "2026-08-12", airflow_base="local")
+    assert out["findings"] == 1 and out["ledger_entries"] == 0
+    assert "all clear" not in json.dumps(sent[0])
+    assert "No change tracking" in json.dumps(sent[0])
+
+
+def test_the_partial_sweep_caveat_reaches_the_channel_not_just_the_file(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A sweep that lost half the fleet must not post indistinguishably from a whole one."""
+    sent = _posted(monkeypatch)
+    out = _run(fleet, "2026-08-13", complete=False)
+    assert "Partial sweep" in out["slack"]
+    assert "Partial sweep" in json.dumps(sent[0])
