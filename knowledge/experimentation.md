@@ -107,7 +107,7 @@ One place for the checks otherwise scattered across CLAUDE.md, `data_knowledge.m
 - **Stage from `funnel_level`, not `objective_id`** (objective_id is unreliable for stage).
 - **Boundary-identity check** — assert every savings/attribution/cost model's degenerate cases against their known-exact answers (drop ALL → recovery = total; keep ALL → savings 0). See *"Adjudication patterns from AUDI-1089"* below.
 - **Cohort algebra** — "sole" cohorts don't sum; a degenerate 100% → an alternative or an em-dash, never the trivially-true 100% (see *"Adjudication patterns from AUDI-1089"*).
-- **Outlier advertiser?** WGU (AID 31357) ≈ 30% of MNTN spend — check whether one advertiser drives the result.
+- **Outlier advertiser?** WGU (AID 31357) is the **#1 advertiser by spend at 3.58x #2** — check whether one advertiser drives the result. (The long-standing "≈30% of MNTN spend" figure, Zach 2026-03-17, is **contradicted by measurement**: 8.75% of a full-universe 30d pull, 2026-08-27. Quote rank, not share, until settled — see `data_knowledge.md` § Notable Advertisers.)
 
 The point isn't to run all nine every time — it's that a shocking number should never ship without a deliberate scan of the list.
 
