@@ -73,6 +73,17 @@ Fix mechanical failures directly (they are deterministic), re-run to green, then
 
 ## Step 3 — Dispatch the loop
 
+**Pick the tier from the diff size first.** Three full `medium` runs on a 130-line diff
+(AUDI-1194, 2026-08-26) cost over an hour and the third was still finding style nits. Count the
+changed lines and pass the tier explicitly:
+
+```bash
+git -C <repo> diff --numstat <base> -- <files> | awk '{a+=$1+$2} END {print a}'
+```
+
+`< 200` → `fast` (1 round, skeptic only, 3 refuters) · `200-800` → `medium` · `> 800`, or a
+security/data-loss surface at any size → `thorough`. The user's explicit ask always wins.
+
 ```
 Workflow({ scriptPath: '<workspace>/.claude/workflows/pr_gauntlet.js',
            args: { repo, base, files, tier, prNumber, description } })
