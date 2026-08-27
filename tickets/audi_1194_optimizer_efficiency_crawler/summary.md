@@ -410,6 +410,20 @@ edits, while the run start resets the review files — so a resumed run reviews 
 and self-declares THRASH against its own ghost. The 19:0x THRASH verdict on the delivery branch
 was this artifact, not a real oscillation.
 
+### 2026-08-26 night — the DCU-to-executor-hour bridge, measured both ways
+
+The AUDI-1191 handoff's open item "the Dataproc analyzer's DCU claims are unvalidated against
+INC-005" closes with a number. INC-005's try-3 batch (`tpa-mntn-id-20260729-3`, CANCELLED at the
+3h TTL) is still describable: **8,651,421,650 milliDcuSeconds = 2,403.2 DCU-h**. Its event-log
+profile (`on-call/incidents/INC-005/try3_eventlog_profile.txt`) shows 150 executors held for the
+full 2.944h span with 0 removed: **441.6 executor-hours**, so **5.44 DCU-h per executor-hour**
+(1.36 per core-hour at 4 cores/executor). `site_network_hourly` on 2026-08-20 gives a second
+point: mean 510 DCU-h/run against 51-70 executor-hours/run is a ratio of **7.3-9.9**.
+
+The ratio is shape-dependent (driver DCUs, memory tier, allocation churn), not a constant, which
+confirms the standing rule: `dcu_h` stays a separate, measured field and is never derived from
+executor-hours. Any digest line pairing the two units states both as measured or omits the DCU.
+
 ## 5. Solution
 - **Cadence:** daily, full-day. `.claude/scripts/oncall_daily_optimizer.sh` (renamed from `oncall_weekly_optimizer.sh`), `CAP` 40 -> 200, launchd `com.mntn.daily-spark-optimizer` at 11:00 PT.
 - **Both log sources in one sweep:** the script now runs `phs.fetch_logs` into the same download root as the archive pull, so the archive fleet and the PHS-attached ipdsc/tpa batches rank in one backlog.
