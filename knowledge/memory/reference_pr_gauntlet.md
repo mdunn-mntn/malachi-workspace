@@ -78,3 +78,10 @@ delivery PR it deleted `spark_optimizer/notify.py`'s `_post` and imported the de
 inverting a one-way package dependency, while its report listed that exact finding as rejected
 with the reason. **Read the full `git diff` before committing a fixer's work; the report is not
 the diff.** Two of its other fixes that round were real and load-bearing.
+
+**One branch, one gauntlet, one PR (user rule, 2026-08-26).** Do not open a new PR per fix.
+Accumulate related fixes as commits on ONE branch and run the gauntlet ONCE at the end, when the
+change set is believed complete; the PR opens after that single pass. **Why:** the day produced
+five PRs (#1225/#1227/#1228 rolled into #1229, then a wire fix) and each PR paid its own gauntlet
+and its own review ask. **How to apply:** while a branch is still accumulating, commit freely and
+skip the gauntlet; treat "about to ask for review" as the trigger, not "about to push".

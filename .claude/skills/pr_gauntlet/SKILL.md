@@ -38,6 +38,11 @@ The reviewer and refuter prompts are the agent definitions — the single source
 `.claude/agents/pr-gauntlet-skeptic.md`, `pr-gauntlet-stylist.md`, `pr-gauntlet-refuter.md`.
 The loop is `.claude/workflows/pr_gauntlet.js`. Do not restate their content here or elsewhere.
 
+**One branch, one gauntlet, one PR (user rule, 2026-08-26).** Never a new PR per fix. Related
+fixes accumulate as commits on one branch; the gauntlet runs ONCE, when the change set is
+believed complete and a review is about to be asked for. Commits and pushes along the way need
+no gauntlet — "about to ask for review" is the trigger.
+
 ## Step 1 — Resolve the target
 
 Strip a leading `fast` / `medium` / `thorough` from the args first — that is the tier, and the
