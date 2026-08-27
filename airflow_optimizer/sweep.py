@@ -183,7 +183,10 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         fh.write(digest_mod.render_plain(text))
 
     published += publish([digest_path], gcs_prefix)
-    delivery = notify_mod.deliver(text)
+    parent, replies = digest_mod.blocks(
+        delta, scanned=len(scored), findings=findings, high=high, date=date, coverage=cov,
+        backlog_path=_published_ref(backlog, gcs_prefix, published))
+    delivery = notify_mod.deliver_thread(parent, replies)
     if delivery.get("error"):
         print(f"[sweep] slack post failed: {delivery['error']}")
 

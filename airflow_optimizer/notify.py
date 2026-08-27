@@ -57,3 +57,28 @@ def deliver(text: str, channel: str = "") -> dict:
                 {"channel": channel or os.environ[CHANNEL_ENV], "text": body,
                  "unfurl_links": False})
     return {"sent": bool(res.get("ok")), "error": None if res.get("ok") else res.get("error")}
+
+
+def deliver_thread(parent: list, replies: list, channel: str = "") -> dict:
+    """Post the summary, then each DAG as its own reply under it. Never raises."""
+    if not parent:
+        return {"sent": False, "reason": "nothing to post"}
+    if not (channel or enabled()):
+        return {"sent": False, "reason": f"no {TOKEN_ENV} or {CHANNEL_ENV}"}
+    target = channel or os.environ[CHANNEL_ENV]
+    res = _post("chat.postMessage",
+                {"channel": target, "blocks": parent, "text": "Spark optimizer digest",
+                 "unfurl_links": False})
+    if not res.get("ok"):
+        return {"sent": False, "error": res.get("error"), "replies": 0}
+    ts, posted, failed = res.get("ts"), 0, []
+    for blocks in replies:
+        r = _post("chat.postMessage",
+                  {"channel": target, "thread_ts": ts, "blocks": blocks,
+                   "text": "finding", "unfurl_links": False})
+        if r.get("ok"):
+            posted += 1
+        else:
+            failed.append(r.get("error"))
+    return {"sent": True, "ts": ts, "replies": posted,
+            "error": "; ".join(f for f in failed if f) or None}

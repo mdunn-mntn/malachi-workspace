@@ -1,0 +1,258 @@
+# Spark fleet optimizer backlog — 2026-08-26
+
+Source: gs://mntn-data-archive-prod/spark-events (newest 200 logs, cap 200) + 0 PHS batch log(s).
+
+Fleet optimization: 252 jobs scanned, 269 findings, 159 high-impact.
+
+- Populate fangorn_score_monitor.FangornScoreMonitor (app-20260825071531026-0250.zstd) [7 high, 7 total; code, infra] -> top: Stage 17 spilled 1138.4 GiB to disk (3980 GiB in-memory at spill time)
+- Populate intent_score_household_map.IntentScoreHouseholdMap (app-20260825071943948-0847.zstd) [7 high, 7 total; code, infra] -> top: Stage 10 wide shuffle (3660 GiB, ~3748 MiB/partition)
+- Populate conversion_log_advertiser_id_dsc_id.ConversionLogAdvertiserIdDscId (app-20260826010816144-0969.zstd) [7 high, 7 total; code, infra] -> top: Stage 5 wide shuffle (877 GiB, ~898 MiB/partition)
+- Populate fangorn_score_monitor.FangornScoreMonitor (app-20260826065457920-0098.zstd) [7 high, 7 total; code, infra] -> top: Stage 17 spilled 1138.2 GiB to disk (3934 GiB in-memory at spill time)
+- Populate guid_log_advertiser_id_dsc_id.GuidLogAdvertiserIdDscId (app-20260826010522605-0078.zstd) [6 high, 7 total; code, infra] -> top: Stage 5 wide shuffle (850 GiB, ~871 MiB/partition)
+- Populate site_visit_signal_advertiser_id_dsc_id.SiteVisitSignalAdvertiserIdDscId (app-20260826010824671-0442.zstd) [6 high, 7 total; code, infra] -> top: Stage 4 wide shuffle (848 GiB, ~869 MiB/partition)
+- Populate intent_score_household_map.IntentScoreHouseholdMap (app-20260826070843737-0623.zstd) [6 high, 6 total; code] -> top: Stage 10 wide shuffle (3702 GiB, ~3791 MiB/partition)
+- Populate ipdsc_ds_67.DS67 (app-20260826055355796-0415.zstd) [5 high, 6 total; code, infra] -> top: Stage 3 spilled 70.9 GiB to disk (191 GiB in-memory at spill time)
+- Populate ipdsc_ds_67.DS67 (app-20260825051628058-0387.zstd) [5 high, 5 total; code, infra] -> top: Stage 3 spilled 70.4 GiB to disk (190 GiB in-memory at spill time)
+- Populate intent_score_map.IntentScoreMap (eventlog_v2_batch-06dfd454-de04-4aaf-a5a4-1bb4deda235a) [5 high, 5 total; code] -> top: Stage 2 spilled 3384.7 GiB to disk (20953 GiB in-memory at spill time)
+- Populate ipdsc_ds_35.DS35 (app-20260826033629022-0370.zstd) [4 high, 4 total; code, infra] -> top: Stage 2 straggler: slowest task 118.8x the median on uniform data
+- Populate advertiser_mid.AdvertiserMid (app-20260826045238873-0661.zstd) [4 high, 4 total; code] -> top: Stage 8 spends 65% of task time waiting on shuffle fetch
+- Populate intent_score_map.IntentScoreMap (eventlog_v2_batch-cac4f267-d187-458e-b39e-35510309cd1a) [4 high, 4 total; code] -> top: Stage 2 spilled 849.6 GiB to disk (11376 GiB in-memory at spill time)
+- Populate ipdsc_42_monitor.IPDSC42Monitor (app-20260825050530606-0927.zstd) [3 high, 6 total; code] -> top: Stage 18 spends 75% of task time waiting on shuffle fetch
+- Populate ipdsc_42_monitor.IPDSC42Monitor (app-20260826034218369-0628.zstd) [3 high, 6 total; code] -> top: Stage 18 spends 64% of task time waiting on shuffle fetch
+- Populate ipdsc_ds_35.DS35 (app-20260825031903047-0168.zstd) [3 high, 4 total; code, infra] -> top: Stage 2 straggler: slowest task 69.2x the median on uniform data
+- Populate advertiser_mid.AdvertiserMid (app-20260825042141810-0650.zstd) [3 high, 4 total; code] -> top: Stage 8 spends 70% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825231646928-0003.zstd) [3 high, 4 total; code, infra] -> top: Stage 11 straggler: slowest task 22.8x the median on uniform data
+- Populate ipdsc_ds_2.DS2 (app-20260825043338354-0663.zstd) [3 high, 3 total; code] -> top: Stage 1 spilled 62.5 GiB to disk (2461 GiB in-memory at spill time)
+- Populate ipdsc_ds_2.DS2 (app-20260826023738997-0519.zstd) [3 high, 3 total; code] -> top: Stage 1 spilled 38.5 GiB to disk (1324 GiB in-memory at spill time)
+- Populate ipdsc_14_monitor.IPDSC14Monitor (app-20260826032614695-0523.zstd) [2 high, 4 total; code] -> top: Stage 14 spends 54% of task time waiting on shuffle fetch
+- Populate fangorn_prospecting_scoring.FangornProspectingScoring (app-20260826050509373-0553.zstd) [2 high, 4 total; code] -> top: Stage 13 spilled 4165.3 GiB to disk (10243 GiB in-memory at spill time)
+- audience_intent_scoring_staging_ds46 (app-20260826000057091-0058.zstd) [2 high, 3 total; code] -> top: Stage 20 spilled 2210.5 GiB to disk (13302 GiB in-memory at spill time)
+- Populate fangorn_prospecting_scoring.FangornProspectingScoring (app-20260825041619345-0571.zstd) [2 high, 2 total; code] -> top: Stage 13 spilled 4287.9 GiB to disk (10437 GiB in-memory at spill time)
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825065124173-0803.zstd) [2 high, 2 total; code, infra] -> top: Stage 9 spends 68% of task time waiting on shuffle fetch
+- Populate advertiser_score_distribution_monitor.AdvertiserScoreDistributionMonitor (app-20260825070825484-0774.zstd) [2 high, 2 total; code, infra] -> top: Stage 1 wide shuffle (188 GiB, ~1505 MiB/partition)
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825105118377-0369.zstd) [2 high, 2 total; code, infra] -> top: Stage 9 spends 53% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825125131986-0712.zstd) [2 high, 2 total; code, infra] -> top: Stage 9 spends 51% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825175133868-0813.zstd) [2 high, 2 total; code, infra] -> top: Stage 9 spends 53% of task time waiting on shuffle fetch
+- Populate fangorn_predictions_vertical.DataSetIceberg (app-20260826000055667-0768.zstd) [2 high, 2 total; code] -> top: Stage 2 spilled 283.4 GiB to disk (758 GiB in-memory at spill time)
+- audience_intent_scoring_staging_ds46 (app-20260826003036565-0444.zstd) [2 high, 2 total; code] -> top: Stage 8 spends 69% of task time waiting on shuffle fetch
+- Populate advertiser_score_distribution_monitor.AdvertiserScoreDistributionMonitor (app-20260826064753105-0408.zstd) [2 high, 2 total; code, infra] -> top: Stage 1 wide shuffle (194 GiB, ~1549 MiB/partition)
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826115136565-0434.zstd) [2 high, 2 total; code, infra] -> top: Stage 9 spends 55% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826145138736-0557.zstd) [2 high, 2 total; code, infra] -> top: Stage 9 spends 53% of task time waiting on shuffle fetch
+- Populate ipdsc_14_monitor.IPDSC14Monitor (app-20260825043407616-0550.zstd) [1 high, 5 total; code] -> top: Stage 14 spends 76% of task time waiting on shuffle fetch
+- Populate ipdsc_46_monitor.IPDSC46Monitor (app-20260826041631605-0881.zstd) [1 high, 4 total; code] -> top: Stage 14 spends 55% of task time waiting on shuffle fetch
+- Populate ipdsc_ds_47.DS47 (app-20260825040446892-0297.zstd) [1 high, 3 total; code, infra] -> top: Stage 5 spilled 38.4 GiB to disk (613 GiB in-memory at spill time)
+- Populate ipdsc_46_monitor.IPDSC46Monitor (app-20260825040554142-0311.zstd) [1 high, 3 total; code] -> top: Stage 14 spends 50% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825071621325-0743.zstd) [1 high, 3 total; code, infra] -> top: Executors 3% utilized: ~64 idle executor-hours held
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826165145023-0230.zstd) [1 high, 3 total; code, infra] -> top: Stage 5 straggler: slowest task 72.8x the median on uniform data
+- Populate identity_targeted_signal.IdentityTargetedSignal (app-20260825041857964-0297.zstd) [1 high, 2 total; infra] -> top: Stage 1 straggler: slowest task 10.8x the median on uniform data
+- Populate advertiser_join.AdvertiserJoin (app-20260825051825582-0893.zstd) [1 high, 2 total; code, infra] -> top: Stage 3 spilled 327.7 GiB to disk (4940 GiB in-memory at spill time)
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825075151070-0966.zstd) [1 high, 2 total; code, infra] -> top: Executors 5% utilized: ~48 idle executor-hours held
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825135120530-0639.zstd) [1 high, 2 total; code, infra] -> top: Executors 12% utilized: ~50 idle executor-hours held
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825155144164-0997.zstd) [1 high, 2 total; code, infra] -> top: Stage 9 spends 69% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825225142463-0552.zstd) [1 high, 2 total; code, infra] -> top: Executors 6% utilized: ~30 idle executor-hours held
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826025148791-0043.zstd) [1 high, 2 total; code, infra] -> top: Stage 9 spends 79% of task time waiting on shuffle fetch
+- Populate ipdsc_ds_47.DS47 (app-20260826034204809-0192.zstd) [1 high, 2 total; code, infra] -> top: Stage 5 spilled 43.8 GiB to disk (681 GiB in-memory at spill time)
+- Populate advertiser_join.AdvertiserJoin (app-20260826053251782-0232.zstd) [1 high, 2 total; code, infra] -> top: Stage 3 spilled 1285.7 GiB to disk (7770 GiB in-memory at spill time)
+- Populate tpa_export_enrich.TpaExportEnrich (app-20260826071015202-0099.zstd) [1 high, 2 total; code, infra] -> top: Stage 6 spends 72% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826135137686-0334.zstd) [1 high, 2 total; code, infra] -> top: Stage 29 spends 60% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826141738087-0100.zstd) [1 high, 2 total; code, infra] -> top: Executors 5% utilized: ~32 idle executor-hours held
+- materialize_mntn_select_16 (app-20260826174650370-0054.zstd) [1 high, 1 total; code] -> top: Stage 6 spends 62% of task time waiting on shuffle fetch
+- materialize_mntn_select_15 (app-20260826164713670-0895.zstd) [1 high, 1 total; code] -> top: Stage 6 spends 84% of task time waiting on shuffle fetch
+- Populate prospecting_join.ProspectingJoin (app-20260825055342813-0126.zstd) [1 high, 1 total; code] -> top: Stage 57 wide shuffle (10666 GiB, ~546 MiB/partition)
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260825071622504-0861.zstd) [1 high, 1 total; infra] -> top: Executors 7% utilized: ~29 idle executor-hours held
+- Populate tpa_export_enrich.TpaExportEnrich (app-20260825072034455-0948.zstd) [1 high, 1 total; code] -> top: Stage 6 spends 68% of task time waiting on shuffle fetch
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260825181655299-0154.zstd) [1 high, 1 total; infra] -> top: Executors 13% utilized: ~29 idle executor-hours held
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825215149772-0384.zstd) [1 high, 1 total; infra] -> top: Executors 8% utilized: ~80 idle executor-hours held
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260825231700552-0389.zstd) [1 high, 1 total; infra] -> top: Executors 12% utilized: ~33 idle executor-hours held
+- Populate guid_conv_log_pivot_ip_vertical_id.GuidConvLogPivotIpVerticalId (app-20260826013253579-0911.zstd) [1 high, 1 total; code] -> top: Stage 34 spilled 19.0 GiB to disk (862 GiB in-memory at spill time)
+- Populate guid_log_pivot_ip_vertical_id.GuidLogPivotIpVerticalId (app-20260826014549943-0459.zstd) [1 high, 1 total; code] -> top: Stage 33 spilled 19.0 GiB to disk (862 GiB in-memory at spill time)
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826015227576-0366.zstd) [1 high, 1 total; code] -> top: Stage 9 spends 67% of task time waiting on shuffle fetch
+- Populate ipdsc_ds_46.DS46 (app-20260826040949342-0431.zstd) [1 high, 1 total; code] -> top: Stage 3 spends 51% of task time waiting on shuffle fetch
+- Populate prospecting_join.ProspectingJoin (app-20260826053806315-0146.zstd) [1 high, 1 total; code] -> top: Stage 57 wide shuffle (10697 GiB, ~548 MiB/partition)
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826055140066-0928.zstd) [1 high, 1 total; infra] -> top: Executors 16% utilized: ~50 idle executor-hours held
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826065135754-0923.zstd) [1 high, 1 total; code] -> top: Stage 9 spends 58% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826125155031-0366.zstd) [1 high, 1 total; infra] -> top: Executors 14% utilized: ~37 idle executor-hours held
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260826141733597-0680.zstd) [1 high, 1 total; infra] -> top: Executors 6% utilized: ~31 idle executor-hours held
+- projects/mntn-prj-prod-00/locations/us-central1/batches/c95fbb07-5e4c-4983-927e-3a25ba3de3e8 (app-20260826172300864-0899.zstd) [1 high, 1 total; infra] -> top: Stage 1 straggler: slowest task 66.3x the median on uniform data
+- projects/mntn-prj-prod-00/locations/us-central1/batches/f43d8b75-33f7-402d-8f4a-f53a8b2fb28b (app-20260826170657762-0165.zstd) [1 high, 1 total; infra] -> top: Stage 1 straggler: slowest task 114.5x the median on uniform data
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825041831937-0716.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 38% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825131630585-0142.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 44% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825141622013-0734.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 49% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825171633720-0741.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 37% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825181633936-0815.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 45% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825191637182-0837.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 44% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825211654657-0339.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 43% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826001649124-0074.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 43% of task time waiting on shuffle fetch
+- Populate vertical_size_monitor.VerticalSizeMonitor (app-20260826010837114-0307.zstd) [0 high, 2 total; code] -> top: Stage 13 spilled 16.2 GiB to disk (136 GiB in-memory at spill time)
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826011632791-0785.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 45% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826021644594-0065.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 43% of task time waiting on shuffle fetch
+- Populate ipdsc_49_monitor.IPDSC49Monitor (app-20260826033206958-0613.zstd) [0 high, 2 total; code] -> top: Stage 10 spilled 5.6 GiB to disk (44 GiB in-memory at spill time)
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826061623143-0140.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 40% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826121656001-0705.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 38% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826151629902-0339.zstd) [0 high, 2 total; code] -> top: Stage 11 spends 36% of task time waiting on shuffle fetch
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260825041658499-0589.zstd) [0 high, 1 total; infra] -> top: Stage 10 straggler: slowest task 8.0x the median on uniform data
+- Populate ipdsc_ds_42.DS42 (app-20260825045328419-0685.zstd) [0 high, 1 total; infra] -> top: Stage 3 straggler: slowest task 6.9x the median on uniform data
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260825051641005-0830.zstd) [0 high, 1 total; infra] -> top: Stage 10 straggler: slowest task 9.7x the median on uniform data
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825051703567-0970.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 30% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825061654968-0844.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 37% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825081630082-0645.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 32% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825091631703-0975.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 35% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825101628117-0893.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 30% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825111621908-0158.zstd) [0 high, 1 total; code] -> top: Stage 35 spends 35% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825151624017-0370.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 30% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825161643902-0619.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 34% of task time waiting on shuffle fetch
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260825171653085-0432.zstd) [0 high, 1 total; infra] -> top: Stage 10 straggler: slowest task 6.0x the median on uniform data
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825201655041-0446.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 33% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260825205226229-0207.zstd) [0 high, 1 total; code] -> top: Stage 9 spends 41% of task time waiting on shuffle fetch
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260825211641861-0591.zstd) [0 high, 1 total; infra] -> top: Stage 2 straggler: slowest task 6.2x the median on uniform data
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260825221652305-0119.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 44% of task time waiting on shuffle fetch
+- Populate fangorn_household_predictions_vertical.DataSetIceberg (app-20260826003048756-0883.zstd) [0 high, 1 total; code] -> top: Stage 1 spilled 3.6 GiB to disk (8 GiB in-memory at spill time)
+- Populate conv_log_derived_ip.ConvLogDerivedIp (app-20260826014827258-0198.zstd) [0 high, 1 total; code] -> top: Stage 1 spilled 5.5 GiB to disk (43 GiB in-memory at spill time)
+- Populate ipdsc_ds_17.DS17 (app-20260826030005732-0166.zstd) [0 high, 1 total; code] -> top: Stage 4 spilled 33.1 GiB to disk (506 GiB in-memory at spill time)
+- Populate ipdsc_ds_13.DS13 (app-20260826030932043-0650.zstd) [0 high, 1 total; code] -> top: Stage 1 spilled 32.4 GiB to disk (215 GiB in-memory at spill time)
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826031642441-0516.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 31% of task time waiting on shuffle fetch
+- Populate ipdsc_ds_49.DS49 (app-20260826032339550-0511.zstd) [0 high, 1 total; code] -> top: Stage 1 spilled 16.7 GiB to disk (379 GiB in-memory at spill time)
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826041658085-0032.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 44% of task time waiting on shuffle fetch
+- Populate identity_targeted_signal.IdentityTargetedSignal (app-20260826043108622-0362.zstd) [0 high, 1 total; infra] -> top: Stage 3 straggler: slowest task 6.8x the median on uniform data
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826051625443-0002.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 38% of task time waiting on shuffle fetch
+- Populate tpa_mntn_id_export.TpaMntnIdExport (app-20260826061108811-0774.zstd) [0 high, 1 total; code] -> top: Stage 367 spends 34% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826071639982-0759.zstd) [0 high, 1 total; code] -> top: Stage 35 spends 33% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826081644107-0389.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 39% of task time waiting on shuffle fetch
+- Populate site_network_hourly.SiteNetworkHourly (app-20260826085216309-0263.zstd) [0 high, 1 total; code] -> top: Stage 9 spends 47% of task time waiting on shuffle fetch
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260826091655994-0738.zstd) [0 high, 1 total; infra] -> top: Stage 10 straggler: slowest task 6.9x the median on uniform data
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826091659387-0323.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 32% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826101712421-0222.zstd) [0 high, 1 total; code] -> top: Stage 35 spends 30% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826111624549-0130.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 38% of task time waiting on shuffle fetch
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826131646702-0997.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 44% of task time waiting on shuffle fetch
+- Populate aug_log_ip_hourly.AugLogIpHourly (app-20260826171639497-0618.zstd) [0 high, 1 total; infra] -> top: Stage 2 straggler: slowest task 5.9x the median on uniform data
+- Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly (app-20260826171658400-0141.zstd) [0 high, 1 total; code] -> top: Stage 11 spends 31% of task time waiting on shuffle fetch
+- app-20260826173254120-0024.zstd: clean
+- app-20260826170958690-0979.zstd: clean
+- app-20260826175128933-0438.zstd: clean
+- app-20260826172243366-0103.zstd: clean
+- app-20260826171646658-0687.zstd: clean
+- app-20260826170330288-0625.zstd: clean
+- app-20260826180348554-0956.zstd: clean
+- app-20260826172237662-0354.zstd: clean
+- app-20260826173246290-0257.zstd: clean
+- app-20260826170306228-0376.zstd: clean
+- app-20260826180321033-0563.zstd: clean
+- app-20260826170317221-0815.zstd: clean
+- app-20260826174137348-0947.zstd: clean
+- app-20260826175140477-0018.zstd: clean
+- app-20260826164842007-0300.zstd: clean
+- app-20260826173248548-0647.zstd: clean
+- app-20260826170348890-0689.zstd: clean
+- app-20260826171649303-0790.zstd: clean
+- app-20260826170324014-0539.zstd: clean
+- app-20260826164149292-0874.zstd: clean
+- app-20260826163402937-0804.zstd: clean
+- app-20260826163706979-0408.zstd: clean
+- app-20260826164731789-0947.zstd: clean
+- app-20260826165147004-0984.zstd: clean
+- app-20260826163404227-0046.zstd: clean
+- app-20260826175127234-0416.zstd: clean
+- app-20260826174738178-0177.zstd: clean
+- app-20260826180341283-0912.zstd: clean
+- app-20260826165116644-0295.zstd: clean
+- app-20260826173235480-0590.zstd: clean
+- app-20260826171749711-0996.zstd: clean
+- app-20260826170334030-0034.zstd: clean
+- app-20260826170338356-0219.zstd: clean
+- app-20260826170329341-0809.zstd: clean
+- app-20260826165222182-0972.zstd: clean
+- app-20260826170316292-0782.zstd: clean
+- app-20260826171651143-0199.zstd: clean
+- app-20260826170632215-0170.zstd: clean
+- app-20260825040943062-0830.zstd: clean
+- app-20260825042636603-0537.zstd: clean
+- app-20260825043041547-0982.zstd: clean
+- app-20260825045152668-0262.zstd: clean
+- app-20260825053133588-0597.zstd: clean
+- app-20260825061623395-0107.zstd: clean
+- app-20260825081635004-0435.zstd: clean
+- app-20260825091635482-0822.zstd: clean
+- app-20260825101627389-0382.zstd: clean
+- app-20260825111629271-0256.zstd: clean
+- app-20260825121628463-0028.zstd: clean
+- app-20260825121653135-0923.zstd: clean
+- app-20260825131633363-0650.zstd: clean
+- app-20260825141622625-0160.zstd: clean
+- app-20260825151637883-0032.zstd: clean
+- app-20260825161630744-0392.zstd: clean
+- app-20260825191644339-0197.zstd: clean
+- app-20260825201655504-0769.zstd: clean
+- app-20260825220225187-0747.zstd: clean
+- app-20260825221647397-0692.zstd: clean
+- app-20260826001706447-0121.zstd: clean
+- app-20260826010516827-0898.zstd: clean
+- app-20260826010520824-0826.zstd: clean
+- app-20260826010524782-0791.zstd: clean
+- app-20260826010530636-0138.zstd: clean
+- app-20260826010855850-0128.zstd: clean
+- app-20260826011025220-0182.zstd: clean
+- app-20260826011628583-0026.zstd: clean
+- app-20260826011641739-0926.zstd: clean
+- app-20260826011734793-0422.zstd: clean
+- app-20260826011841509-0738.zstd: clean
+- app-20260826012108988-0267.zstd: clean
+- app-20260826012347208-0027.zstd: clean
+- app-20260826012511980-0118.zstd: clean
+- app-20260826012656029-0211.zstd: clean
+- app-20260826012724145-0340.zstd: clean
+- app-20260826012946574-0927.zstd: clean
+- app-20260826013100803-0664.zstd: clean
+- app-20260826013401786-0174.zstd: clean
+- app-20260826013914846-0977.zstd: clean
+- app-20260826014023629-0710.zstd: clean
+- app-20260826014048817-0668.zstd: clean
+- app-20260826014317068-0122.zstd: clean
+- app-20260826014344164-0577.zstd: clean
+- app-20260826014527003-0754.zstd: clean
+- app-20260826014646577-0871.zstd: clean
+- app-20260826015010831-0188.zstd: clean
+- app-20260826015223159-0101.zstd: clean
+- app-20260826015648046-0129.zstd: clean
+- app-20260826021630224-0917.zstd: clean
+- app-20260826023802353-0992.zstd: clean
+- app-20260826025733235-0947.zstd: clean
+- app-20260826030344004-0946.zstd: clean
+- app-20260826031410246-0582.zstd: clean
+- app-20260826031638532-0899.zstd: clean
+- app-20260826031907457-0194.zstd: clean
+- app-20260826032535627-0109.zstd: clean
+- app-20260826033214184-0331.zstd: clean
+- app-20260826033241501-0451.zstd: clean
+- app-20260826033632818-0551.zstd: clean
+- app-20260826033658191-0166.zstd: clean
+- app-20260826033659009-0093.zstd: clean
+- app-20260826040451691-0118.zstd: clean
+- app-20260826041642047-0102.zstd: clean
+- app-20260826051643738-0346.zstd: clean
+- app-20260826052626177-0542.zstd: clean
+- app-20260826061649757-0503.zstd: clean
+- app-20260826071640787-0082.zstd: clean
+- app-20260826081635833-0203.zstd: clean
+- app-20260826101634535-0823.zstd: clean
+- app-20260826111623870-0483.zstd: clean
+- app-20260826121638131-0934.zstd: clean
+- app-20260826131633883-0159.zstd: clean
+- app-20260826151706933-0103.zstd: clean
+- app-20260826161644491-0462.zstd: clean
+- app-20260826161646470-0396.zstd: clean
+- app-20260826171646416-0268.zstd: clean
+- app-20260826171752517-0567.zstd: clean
+- app-20260826174711996-0052.zstd: clean
+- app-20260826174717616-0689.zstd: clean
+- app-20260826173828521-0607.zstd: clean
+- app-20260826164838974-0738.zstd: clean
+- app-20260826171722433-0535.zstd: clean
+- app-20260826164745532-0590.zstd: clean
+- app-20260826163807997-0632.zstd: clean
+- app-20260826171749102-0771.zstd: clean
+- app-20260826173608004-0263.zstd: clean
+- app-20260826174731392-0527.zstd: clean
+- app-20260826170307537-0249.zstd: clean
+- app-20260826171722448-0177.zstd: clean
+- app-20260826180305743-0974.zstd: clean
+- app-20260826170832487-0540.zstd: clean
