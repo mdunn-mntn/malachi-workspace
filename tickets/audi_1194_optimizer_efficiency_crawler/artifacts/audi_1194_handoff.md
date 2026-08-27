@@ -21,13 +21,20 @@ All committed and tested on `main` of the workspace repo (113 tests green):
 - `sweep._rendered_dags` — coverage now judges every name the digest can print.
 - `.claude/scripts/oncall_daily_optimizer.sh` — derives the digest's UI base from the API base.
 
-## Two PRs to open
-1. **Cost unit** — branch `audi-1194-impact-hours` is pushed, description drafted and linted, a
-   `fast`-tier gauntlet was running at handoff. Files: `optimizations.py`, `eventlog.py`,
-   `tests/test_eventlog.py`.
-2. **Databricks + delivery** — not branched yet. Port `notify.py`, `digest.py`, `sweep.py`,
-   `databricks.py` and their tests from the workspace, rewriting `airflow_optimizer` to
-   `include.spark_optimizer`.
+## Two PRs, both live
+1. **#1227 — cost unit.** https://github.com/SteelHouse/airflow-ti/pull/1227 · branch
+   `audi-1194-impact-hours`. `optimizations.py`, `eventlog.py`, `tests/test_eventlog.py`.
+   Gauntleted at `fast` (5 agents, 10 min), 105 tests. Needs review.
+2. **Databricks + delivery.** Branch `audi-1194-databricks-delivery` pushed, description drafted
+   and linted, `medium`-tier gauntlet running at handoff. `notify.py`, `digest.py`, `sweep.py`,
+   `databricks.py`, `__init__.py` and two test files, 649 changed lines. Open the PR once the
+   gauntlet returns and the mechanical gate is re-run.
+
+## The workspace and airflow-ti are two copies of the same package
+`workspace/airflow_optimizer/` is where work happens; `airflow-ti/include/spark_optimizer/` is
+what runs. They differ ONLY by the module path, so porting is
+`sed 's/airflow_optimizer/include.spark_optimizer/g'`. Diff them before starting anything: a file
+that differs by more than the import line means a port was left half-done.
 
 ## The one open defect
 The prod sweep's `collect_local` renders `fangorn_score_monitor` and `ipdsc_ds_35` unlinked while
@@ -44,6 +51,17 @@ makes the next sweep name any such job in the coverage report, which is the diag
   return one row, and are 98.6% of a warehouse costing **$850/week**. Owner unidentified; dbt
   profile `ml_squad`, SP `397d710b-4c85-4a96-b009-a07c1d373204`.
 - `Generate Graph & Metrics - PRODUCTION` is 10,498 DBU / **$1,575** over 7 days.
+
+## How to work on this
+- Commit and push after every piece; stage only your own paths, never `git add .` (the worktree
+  is shared with other Claude sessions and has been clobbered in both directions).
+- `/pr_gauntlet` auto-fires before any `gh pr create` and a hook hard-blocks without a pass
+  marker. **Pick the tier from the diff size**: <200 lines `fast`, 200-800 `medium`, >800 or
+  security-relevant `thorough`. Three `medium` runs on a 130-line diff cost over an hour.
+- The hook parses `cd <path>` from the START of the command. A variable assignment on a line
+  before it makes the hook resolve the wrong repo and block a PR that is genuinely marked.
+- Verify claims before they enter `summary.md`. A six-agent verification pass on 2026-08-26
+  refuted three figures that had already been written down.
 
 ## Shared with AUDI-1191
 Same repo, same Slack app, same Astro deployment, same identity work. The debugger's `notify.py`
