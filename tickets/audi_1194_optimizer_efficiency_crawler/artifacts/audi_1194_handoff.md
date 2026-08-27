@@ -128,3 +128,16 @@ differ on the channel env var (`SLACK_ALERT_CHANNEL` vs `OPTIMIZER_SLACK_CHANNEL
 - Everything else from the night is committed/pushed and recorded in summary.md §4 night
   sections; the remaining human steps are review of both PRs, the two staged Slack asks, and
   IMP-088.
+
+## State at compaction, 2026-08-27 ~15:10 PT — everything shipped, nothing in flight
+
+Merged today: airflow-ti #1230 #1231 #1232 #1233 #1234 #1236 #1238; mntn-devops #5121 (runner
+billing grant, Cristina's #5128 apiVersion fix on top) ; dbt #174 OPEN, saved for the hackathon.
+Verified live: debugger fresh-slate run 3/3 posted 1 threaded, new glyph format; optimizer digest
++ savings headline posting; billing module returns $0.278/exec-h from the real export (milli-unit
+1000x bug caught by live run, fixed in #1238); PAM bq-read works for malachi. 30-day debugger
+coverage 99.4% (170/171; the 171st is our own pre-guard manual-trigger artifact). Hackathon doc:
+17 PR-READY / 43 VERIFY-FIRST / 1 REFUTED / 6 queued, top-10 pre-verified with exact configs.
+Artifacts republished (debugger 2ad4a4b8, optimizer 28326201). Triage: AUDI-1227..1240 + 1245,
+Confluence TAR page 3769991216 v2. Next: check tomorrow's 09:00 UTC sweep logs the live rate and
+the first savings attribution; then the hackathon.
