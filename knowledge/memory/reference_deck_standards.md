@@ -48,6 +48,10 @@ table). The "title states the finding" playbook rule does NOT apply to these.
 - The RevealJS guide (`documentation/docs/revealjs_guide.md`) has layout rules, color meaning rules, size guidelines, and slide templates — read before building any deck
 - **Color meaning:** Red = hero numbers only, Navy = emphasis text, Gray = context. Red reads as "bad" to execs — never use it for status text or emphasis lines.
 
+## Hand-built HTML charts — two footguns that cost a review round each (2026-08-27)
+- **A bar fill must be `display: block`.** A `<span>` used as the fill inside a `<div>`/`<span>` track stays `display: inline` and **silently ignores `width` and `height`**, so JS-set widths do nothing and every bar renders empty while the numbers beside it look correct. The track itself usually escapes this because it is a grid/flex item and gets blockified. Set `display: block` on any element you size in JS.
+- **Do not `align-items: stretch` a two-card split to equalise heights.** The shorter card fills to the taller one and the gap moves inside its border, which reads worse than the original mismatch. Rebalance by moving content out (e.g. a stat row to full width below both), and let cards size to their content.
+
 ## from reference_html_sharing.md
 
 ## HTML Sharing Tools (Kale recommended, 2026-04-03)
