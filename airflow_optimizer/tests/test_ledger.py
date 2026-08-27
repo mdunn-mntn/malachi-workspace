@@ -465,10 +465,31 @@ def test_savings_reports_ytd_run_rate_and_annual_estimate(tmp_path: Path) -> Non
     assert s["ytd_year"] == "2026"
     assert abs(s["total_exec_h_saved"] - 240.0) < 1e-6
     assert abs(s["ytd_exec_h_saved"] - 120.0) < 1e-6
-    assert abs(s["run_rate_exec_h_per_day"] - 60.0) < 1e-6
-    assert abs(s["est_annual_exec_h"] - 21900.0) < 1e-6
+    # 240 saved over the 5 calendar days since the fix applied, not 60 per observed sweep-day
+    assert abs(s["run_rate_exec_h_per_day"] - 48.0) < 1e-6
+    assert abs(s["est_annual_exec_h"] - 17520.0) < 1e-6
     assert "$" not in ledger.savings_headline(s)
 
     head = ledger.savings_headline(ledger.savings(p, usd_per_exec_h=2.0))
-    assert "$480" in head and "$240" in head and "$43,800" in head and "$2.00" in head
-    assert "21,900" in head
+    assert "$480" in head and "$240" in head and "$35,040" in head and "$2.00" in head
+    assert "17,520" in head
+
+
+def test_annual_estimate_uses_calendar_days_not_observed_sweep_days(tmp_path: Path) -> None:
+    """A weekly DAG saves on run days only; projecting its per-run saving daily is a 7x lie."""
+    p = str(tmp_path / "l.jsonl")
+    ledger.append([ledger.Entry(date=d, dag_id="weekly", app_id="a", key="skew:1", impact="high",
+                                title="Stage 1 skew", state="chronic", exec_h=100.0)
+                   for d in ("2026-06-21", "2026-06-28")], p)
+    ledger.mark_applied("weekly", "skew:1", "https://x/pr/8", "2026-06-29", path=p)
+    ledger.append([ledger.Entry(date=d, dag_id="weekly", app_id="a", key="skew:1", impact="high",
+                                title="Stage 1 skew", state="resolved", exec_h=40.0,
+                                fix_pr="https://x/pr/8", applied_date="2026-06-29")
+                   for d in ("2026-07-05", "2026-07-12")], p)
+
+    s = ledger.savings(p, today="2026-07-12")
+    assert abs(s["run_rate_exec_h_per_day"] - 120.0 / 13) < 1e-6
+    assert s["est_annual_exec_h"] < 3400   # true ceiling ~3,120/yr; per-sweep-day said 21,900
+
+    stale = ledger.savings(p, today="2026-08-26")
+    assert stale["run_rate_exec_h_per_day"] < s["run_rate_exec_h_per_day"]

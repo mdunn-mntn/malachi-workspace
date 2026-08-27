@@ -469,6 +469,18 @@ def test_the_savings_log_reads_the_runs_ledger_not_the_default(fleet: Path) -> N
     assert "Saved since 2026-08-22" in savings
 
 
+def test_a_watching_only_ledger_does_not_headline_zero_savings(fleet: Path) -> None:
+    """Between a fix landing and its first resolution there is nothing to announce."""
+    p = str(fleet / "out" / "l.jsonl")
+    ledger.append([ledger.Entry(date="2026-08-24", dag_id="good", app_id="a", key="skew:1",
+                                impact="high", title="Stage 1 skew", state="chronic",
+                                exec_h=100.0)], p)
+    ledger.mark_applied("good", "skew:1", "https://x/pr/1", "2026-08-25", path=p)
+
+    out = _run(fleet, "2026-08-26")
+    assert "Saved since" not in out["slack"]
+
+
 def test_a_sweep_that_lost_change_tracking_does_not_post_all_clear(
         fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An empty delta means the ledger did not run, never that the fleet is clean."""

@@ -173,7 +173,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         savings_path = os.path.join(outdir, "optimizer_savings.md")
         with open(savings_path, "w") as fh:
             fh.write(ledger_mod.render_savings(s))
-        if s["rows"]:
+        if any(r["exec_h_saved"] is not None for r in s["rows"]):
             savings_note = ledger_mod.savings_headline(s)
 
     # The digest cites the other files, so they are uploaded before it is written.

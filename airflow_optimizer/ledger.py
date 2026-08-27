@@ -24,6 +24,7 @@ quiet is the win; the key still firing after the grace window is `fix_not_workin
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import re
@@ -376,7 +377,9 @@ def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = 
     enters the total once however many resolved findings its fix cleared - the reduction is
     job-level, not per finding. Alongside the all-time total: the year-to-date share (the year
     is `today`'s, defaulting to the newest sweep date so replays stay deterministic), the
-    current daily run rate, and that rate over 365 days as the estimated annual save. Dollars
+    current run rate (each dag's saving spread over the calendar days since its fix applied,
+    so a sparse schedule or an ended series does not project at full daily rate), and that
+    rate over 365 days as the estimated annual save. Dollars
     appear only when the caller supplies `usd_per_exec_h` and are estimates at that rate; DCU
     deltas carry the committed-use caveat and Databricks money lives in `databricks.job_costs`.
     """
@@ -408,7 +411,9 @@ def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = 
             total_exec_h += max(saved, 0.0)
             if year_floor:
                 ytd_exec_h += max(daily * len([d for d in after_days if d >= year_floor]), 0.0)
-            run_rate += max(daily, 0.0)
+            elapsed = max((datetime.date.fromisoformat(today)
+                           - datetime.date.fromisoformat(r["applied_date"])).days, 1)
+            run_rate += max(saved, 0.0) / elapsed
         rows.append({**r, "days_observed": len(after_days), "exec_h_saved": saved})
     since = min((r["applied_date"] for r in rows if r["applied_date"]), default="")
     return {"since": since, "ytd_year": today[:4], "total_exec_h_saved": total_exec_h,
