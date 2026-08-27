@@ -364,8 +364,9 @@ def _stockout(diag: dict, text: str, client: object | None) -> Resolution | None
             "quota rather than capacity and the real cause gets hidden.",
             f"Then re-run in 1-2 hours. Autozone usually lands outside {zones[0]} on the next "
             "attempt and the job goes green with no change.",
-            "If it keeps hitting the same zone, stop retrying: pin a different zone, or widen the "
-            "machine family so more instance types qualify.",
+            "Durable fix: configure backup compute clusters in another zone and machine family "
+            "so the pipeline fails over instead of retrying into the stockout "
+            "(targeting-infra-ml#95 is the pattern). Pinning one other zone only moves it.",
         ],
     )
 

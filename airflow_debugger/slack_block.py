@@ -157,7 +157,7 @@ def fix(diag: dict, source: str) -> str:
     res = diag.get("resolution") or {}
     steps = res.get("solutions") or []
     if len(steps) > 1:
-        return " ".join(f"{i}. {t}" for i, t in enumerate(steps, 1))
+        return "\n".join(f"{i}. {t}" for i, t in enumerate(steps, 1))
     if steps:
         return steps[0]
     return how(diag, source)
@@ -188,13 +188,15 @@ def render(diag: dict, llm_cause: str | None = None, repo_paths: dict | None = N
     for url, path in code_links(diag, repo_paths):
         where.append(f"<{url}|{path}>")
 
+    fix_text = fix(diag, source)
+    fix_block = f"*Fix*\n{fix_text}" if "\n" in fix_text else f"*Fix*  {fix_text}"
     body = "\n".join(
         [
             f"*What failed*  *{who}* — {klass}",
             f"*Why*  ({SOURCE_LABEL[source]}) {cause_text}",
             f"*Where*  {' · '.join(where)}",
             f"*How it failed*  {mechanism(diag, source)}",
-            f"*Fix*  {fix(diag, source)}",
+            fix_block,
         ]
     )
     return body if len(body) <= MAX_BLOCK else body[: MAX_BLOCK - 1].rstrip() + "…"
