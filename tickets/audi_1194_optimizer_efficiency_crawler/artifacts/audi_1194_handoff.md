@@ -116,6 +116,10 @@ differ on the channel env var (`SLACK_ALERT_CHANNEL` vs `OPTIMIZER_SLACK_CHANNEL
   `spark.speculation=false` (advertiser_join cites ManifestCommitter races) and
   intent_score_map.py:54, the cited precedent, pins it false too. Queue item 4 is back to
   OWNER-gated. After #1231 merges: `ledger applied` for the fangorn finding only.
+  CI: model-upload-dryryn needed the regenerated `dags/model_task_config.json` (committed,
+  `e59f385`); model-unit-test is red on ANY fresh checkout because #1209 made a model read the
+  git-ignored generated `utils_model/model_core/model_config.json` at import time — pre-existing,
+  noted on the PR, TI's to fix.
 - Everything else from the night is committed/pushed and recorded in summary.md §4 night
   sections; the remaining human steps are review of both PRs, the two staged Slack asks, and
   IMP-088.
