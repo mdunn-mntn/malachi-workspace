@@ -40,6 +40,7 @@ Every query runs through `.claude/scripts/bq_run.sh` (logs cost + `sql_tables` t
 | **pre/post · before-after a date · "did X change a KPI"** | `experimentation.md` § Standard Analysis Protocol (never naive pre/post — pair with CausalImpact); perf tables via `_ROUTING` **campaign daily rollup** / **long pre-period** → `summarydata.sum_by_campaign_by_day` (NOT `agg__daily_sum_by_campaign`, frozen to Sep 2025–Apr 2026) |
 | **a data-source `DSxx`** | `ds_catalog.md` |
 | **tune a slow/expensive query** | `bq/optimization_playbook.md`, `bq/query_cookbook.md`, the table's `## Observed cost`, and mine `bq_perf_log.jsonl` via `.claude/scripts/perf_digest.py` |
+| **optimize a slow/expensive Spark job (Databricks / Dataproc)** | `.claude/skills/pyspark-optimization-databricks-dataproc/SKILL.md` + `memory/reference_pyspark_optimization_skill.md` (MNTN fleet deltas — read BOTH) + `memory/reference_dataproc_eventlog_profiling.md` for eventlog diagnosis |
 | **verify how a reported number was produced** | `.claude/scripts/bq_verify.py <ticket \| label \| sql_sha256>` → the exact SQL fingerprint + `job_id` (recovers full SQL via `bq show -j`) + git commit + cost. Every `bq_run.sh` run is provenance-stamped. |
 | **an Airflow / pager / pipeline alert (on-call)** | `on-call/oncall_runbook.md` — §0 classify (alert vs ticket) → §2 catalog → §3 incidents — or run **`/oncall`**. Grep `_ROUTING.md` for the symptom (`sensor timeout`, `dataproc`, the DAG name). |
 | **prior work on a topic** | `tickets/INDEX.md` → the ticket's `summary.md` |

@@ -61,7 +61,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `verify.sh` | the AI Workflow Kit "doctor" |
 | `workflow_audit.sh` | deterministic signal aggregator for the weekly System-retro loop |
 
-## Skills (7)
+## Skills (8)
 
 | skill | description |
 |-------|-------------|
@@ -70,6 +70,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `/oncall` | Handle an on-call alert end-to-end AND enforce the write-back so the runbook gets smarter every time |
 | `/pr_gauntlet` | Run a PR, branch, or diff through the adversarial review gauntlet before it ships: two blind adversarial reviewers (Skeptic + Stylist) per round, a… |
 | `/present` | Build any deck, chart set, or *_presentation.md to the MNTN standard — resolving persuasion-vs-plain-facts by audience, applying the playbook and… |
+| `/pyspark-optimization-databricks-dataproc` | Operating instructions plus an expert reference for optimizing production PySpark on Databricks Runtime 17.3 LTS (Spark 4.0.0 + Photon) and GCP… |
 | `/transcribe` | Transcribe the newest unprocessed Zoom recording (or a named one) and file it correctly |
 | `/workflow-audit` | The System-retro loop — the workflow reviews itself |
 
