@@ -59,7 +59,10 @@ def severity(klass: str) -> str:
     """One glyph so the failure class reads at a glance in a busy channel."""
     if klass in ("unclassified", "no-cause-in-log"):
         return SEVERITY_UNKNOWN
-    return SEVERITY.get(klass.split("/")[0], SEVERITY_DEFAULT)
+    for word, glyph in SEVERITY.items():
+        if word in klass:
+            return glyph
+    return SEVERITY_DEFAULT
 
 
 def _astro_run_url(dag_id: str | None, run_id: str | None) -> str | None:
