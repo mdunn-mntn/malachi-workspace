@@ -1,14 +1,14 @@
 ---
 name: project_airflow_debugger
-description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode. Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
+description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode; Slack delivery wire (PR #1230) merged 2026-08-27. Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow debugger, AUDI-1191, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire]
+keywords: [airflow debugger, AUDI-1191, PR 1230 merged, slack delivery wire, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-26
+last_verified: 2026-08-27
 ---
 
 ## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
@@ -258,11 +258,12 @@ The Astro env vars landed (`SLACK_BOT_TOKEN` + `SLACK_ALERT_CHANNEL`) and a manu
 the post-#1229 bundle posted NOTHING: `notify.deliver` shipped complete and tested and no caller
 existed — `daily.run` published to GCS and returned. **The token gate masked the missing wire for
 two PRs: unwired and untokened are indistinguishable until a token exists.** Wire = airflow-ti
-**#1230** (CI green, gauntleted `fast`, awaiting review): per-diagnosis `notify.deliver`, outcomes
+**#1230** (**MERGED 2026-08-27**, squash-and-merge; also carries the optimizer's cumulative savings
+log, see [[project_airflow_optimizer]]): per-diagnosis `notify.deliver`, outcomes
 on each result row plus `slack_posted`/`slack_threaded`, `conversations.history` bounded to the
 sweep's day, and the gauntlet's addition — delivery runs after the sweep and is skipped when
 `rca_<ds>.json` already exists in GCS, so an Airflow retry or old-date re-run never re-posts.
-Once merged before 17:00 UTC, the scheduled run delivers ds-yesterday threaded replies with no
+Merged before 17:00 UTC, so the scheduled run delivers ds-yesterday threaded replies with no
 further action. IMP-087: the alert search reads one Slack page (100 messages).
 
 **Two Airflow-3 manual-run traps (cost ~30 min):** a manual run's data interval SNAPS onto the

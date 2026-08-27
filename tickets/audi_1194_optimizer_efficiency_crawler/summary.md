@@ -460,6 +460,43 @@ The ratio is shape-dependent (driver DCUs, memory tier, allocation churn), not a
 confirms the standing rule: `dcu_h` stays a separate, measured field and is never derived from
 executor-hours. Any digest line pairing the two units states both as measured or omits the DCU.
 
+### 2026-08-27 — #1230 and #1231 merged; the savings log ships; the gauntlet reverts my own change
+
+**Both PRs merged 2026-08-27** (airflow-ti squash-and-merge). **#1230** carries the debugger's
+Slack delivery wire plus this ticket's **cumulative optimizer savings log**; **#1231** is the
+`fangorn_score_monitor` fix: `spark.sql.shuffle.partitions` 512/256 → **2048 in the decorator AND
+the builder** (builder wins at `getOrCreate`, so both had to move).
+
+**Savings log design, as merged:**
+- Per-DAG once-only counting: saving = (before-rate minus after-rate) × days observed, resolved
+  fixes only.
+- Run rate spreads the saving over CALENDAR days since `applied_date`, not per observed sweep-day,
+  so a weekly job does not project 7x.
+- YTD year comes from the sweep date; est annual = rate × 365.
+- Dollars only when `OPTIMIZER_USD_PER_EXEC_H` is set, labeled estimates.
+- The headline posts into the Slack digest each sweep only when a measured saving exists.
+
+**The gauntlet correctly reverted my evidence-backed speculation change to
+`models/ipdsc/ipdsc_ds_35.py`.** airflow-ti pins `spark.speculation=false` on every GCS-writing
+model: `models/audience_intent/advertiser_join.py` comments "Disabled to prevent race conditions
+with ManifestCommitter", and `intent_score_map.py:54` also pins false. Speculation duplicates
+in-flight write-task attempts, which the ManifestCommitter GCS commit path does not tolerate, so
+speculation is not a safe straggler fix for those writers. Implementation-queue item 4
+(ipdsc_ds_35 straggler) is back to **owner-gated**. Contradiction recorded in memory
+`reference_dataproc_eventlog_profiling` (the 2026-08-07 "fix is speculation=true" rec stands as
+the general Spark mechanism, not as an airflow-ti prescription).
+
+**Found en route — airflow-ti CI job `model-unit-test` (`pr_model.yaml`) is broken repo-wide since
+PR #1209 merged 2026-08-26.** `tests/models/test_model_read_write_in_dev.py` rewrites the
+git-ignored generated `utils_model/model_core/model_config.json` with only its five pytest fixture
+models during collection, so #1209's own `tests/models/test_tpa_mntn_id_export_model.py`, which
+reads the real config at import, can never pass in the same run. Verified by local repro (compile
+then pytest → 41 `ValueError` model_id not found). Owner rkleck-mntn; diagnosis posted as a
+comment on #1231. The check is NOT required: `mergeStateStatus` UNSTABLE (red check, merge
+allowed), not BLOCKED. Also confirmed: any change to a model decorator's `runtime_properties`
+requires regenerating `dags/model_task_config.json` (`MNTN_SDLC_ENV=dev python model_upload.py
+--dryrun`, uv dependency group `models`, commit the JSON) or the `model-upload-dryrun` check fails.
+
 ## 5. Solution
 - **Cadence:** daily, full-day. `.claude/scripts/oncall_daily_optimizer.sh` (renamed from `oncall_weekly_optimizer.sh`), `CAP` 40 -> 200, launchd `com.mntn.daily-spark-optimizer` at 11:00 PT.
 - **Both log sources in one sweep:** the script now runs `phs.fetch_logs` into the same download root as the archive pull, so the archive fleet and the PHS-attached ipdsc/tpa batches rank in one backlog.
@@ -502,6 +539,12 @@ the platform behaves rather than what the data means.
   `feedback_sparse_code_comments` — working rules this ticket produced.
 
 ## 8. Open Items / Follow-ups
+
+- **PENDING (2026-08-27): write the fangorn applied marker into the prod GCS optimizer ledger** —
+  `python3 -m airflow_optimizer.ledger applied <dag> <key>
+  https://github.com/SteelHouse/airflow-ti/pull/1231 2026-08-27` against the prod ledger object.
+  Blocked on gcloud reauth ("Reauthentication required", non-interactive session). Until the
+  marker is written, the savings log will not measure the fangorn fix.
 
 **Status 2026-08-21: SHIPPED.** `spark_optimizer_daily` runs in prod airflow-ti. First run:
 215 jobs, 290 findings, 196 high, four artifacts in `gs://mntn-data-archive-prod/optimizer/`.

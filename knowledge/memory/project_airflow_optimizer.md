@@ -1,14 +1,14 @@
 ---
 name: project_airflow_optimizer
-description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer.
+description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer; 2026-08-27 PR #1230 (Slack wire + cumulative savings log) and PR #1231 (fangorn shuffle partitions 2048) both merged.
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs]
+keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs, savings log, optimizer_savings, OPTIMIZER_USD_PER_EXEC_H, PR 1230, PR 1231, fangorn_score_monitor shuffle partitions 2048, speculation revert ipdsc_ds_35, ledger applied marker, gcloud reauth blocked]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-26
+last_verified: 2026-08-27
 ---
 **AUDI-1194 = the OPTIMIZER** (success-triggered efficiency sweep), **split from the AUDI-1191 debugger 2026-08-05** (both AUDI, type Task, Backlog). The two are separate workflows with distinct triggers/schedules/deliverables: the debugger fires only on a **failure**, the optimizer sweeps every DAG that **succeeds**. They can chain but are distinct. AUDI-1194: 5 story points, PMO rep Bryce Wagg, label q3_2026, folder `tickets/audi_1194_optimizer_efficiency_crawler/`, framing **LOCKED** (§0 in its summary). See [[project_airflow_debugger]] (the RCA half), [[reference_airflow_ti]], [[reference_oncall_runbook]].
 
@@ -328,3 +328,38 @@ and what `resolve()` is passed. Ordered plan: `artifacts/audi_1194_next_steps.md
   collected only `new` + `chronic`, so a `fix_not_working` DAG never reached Slack; and the
   partial-sweep and no-change-tracking caveats reached only the text digest, so a Slack reader
   saw a confident post with the warning missing. Both fixed.
+
+## 2026-08-27 — #1230 and #1231 MERGED; the savings log is the leadership number
+
+**Both PRs merged 2026-08-27** (airflow-ti squash-and-merge): **#1230** = the Slack delivery wire
+(debugger side, see [[project_airflow_debugger]]) + the **optimizer savings log**; **#1231** =
+`fangorn_score_monitor` `spark.sql.shuffle.partitions` 512/256 → **2048 in the decorator AND the
+builder** (builder wins at `getOrCreate`, so both must move).
+
+**Savings log design (`ledger.savings()` / `render_savings()`), the parts that are easy to get wrong:**
+- **Per-DAG once-only counting.** Saving = (before-rate minus after-rate) × days observed, resolved
+  fixes only.
+- **Run rate spreads the saving over CALENDAR days since `applied_date`**, not per observed
+  sweep-day — otherwise a weekly job projects 7x.
+- **YTD year comes from the sweep date**; est annual = rate × 365.
+- **Dollars appear ONLY when `OPTIMIZER_USD_PER_EXEC_H` is set**, and are labeled estimates.
+- The savings **headline posts into the Slack digest each sweep only when a measured saving exists**.
+
+**The gauntlet reverted my own evidence-backed speculation change** to `models/ipdsc/ipdsc_ds_35.py`:
+airflow-ti pins `spark.speculation=false` on every GCS-writing model (ManifestCommitter race —
+`advertiser_join.py` comment, `intent_score_map.py:54`). Queue item 4 (ipdsc_ds_35 straggler) is
+**back to owner-gated**. Contradiction record: [[reference_dataproc_eventlog_profiling]];
+repo facts: [[reference_airflow_ti]].
+
+**Found en route: airflow-ti CI job `model-unit-test` is broken repo-wide since #1209 merged
+2026-08-26** (a fixture test rewrites the generated `model_config.json` during collection). Not a
+required check — `mergeStateStatus` UNSTABLE, not BLOCKED. Owner rkleck-mntn, diagnosis posted on
+#1231. Detail: [[reference_airflow_ti]]. Changing decorator `runtime_properties` also requires
+regenerating `dags/model_task_config.json` (`MNTN_SDLC_ENV=dev python model_upload.py --dryrun`,
+uv group `models`) or `model-upload-dryrun` fails.
+
+**PENDING (blocks measurement of the fangorn fix):** write the applied marker into the prod GCS
+optimizer ledger — `python3 -m airflow_optimizer.ledger applied <dag> <key>
+https://github.com/SteelHouse/airflow-ti/pull/1231 2026-08-27` against the prod ledger object —
+blocked on gcloud reauth (non-interactive session). Until written, the savings log will not
+measure the fangorn fix.

@@ -673,9 +673,11 @@ hand-off. Sync is reproducible: `scratchpad/sync_bundle.py <bundle-dir>` asserts
 **Merged: airflow-ti #1224.** The bundle now carries `resolvers.py`, `root_cause_walk.py`, the
 five-section `slack_block.render`, and a `remedy` on all 37 signatures. 215 tests.
 
-**Open: airflow-ti #1225** (two commits, folded from a separate #1226 at Malachi's request so the
-bundle takes one review): delivery searches every configured channel and threads under the one
-holding the alert; the sweep skips a run a person started by hand. 218 tests.
+**~~Open: airflow-ti #1225~~ (superseded: #1225 was closed into the combined #1229, merged
+2026-08-26; the delivery wire itself shipped as #1230, merged 2026-08-27 — see §7e)** (two
+commits, folded from a separate #1226 at Malachi's request so the bundle takes one review):
+delivery searches every configured channel and threads under the one holding the alert; the sweep
+skips a run a person started by hand. 218 tests.
 
 **Six more confident-wrong answers, found by six gauntlet rounds across three runs.** Every one
 passed the full suite before it was caught, and every one is the same shape — a statistic or guard
@@ -736,12 +738,32 @@ run cost 40+ minutes, and the last round threw its own confirmed findings away i
 them. `fast` is 13 minutes and caught a blocker in each of three runs. Detail: memory
 `feedback_gauntlet_findings_not_fixes`.
 
+## 7e. 2026-08-27 — the delivery wire merged (#1230)
+
+**airflow-ti #1230 MERGED 2026-08-27** (squash-and-merge, the repo's standard): `daily.run` now
+calls `notify.deliver` per diagnosis, outcomes land on each result row
+(`slack_posted`/`slack_threaded`), `conversations.history` is bounded to the sweep's day, and
+delivery is skipped when `rca_<ds>.json` already exists in GCS so a retry or old-date re-run never
+re-posts. Merged before 17:00 UTC, so the scheduled run delivers ds-yesterday threaded replies
+with no further action. The PR also carries the optimizer's cumulative savings log (AUDI-1194
+summary §4). Companion merge same day: #1231 (fangorn_score_monitor shuffle partitions 2048, an
+optimizer finding).
+
+Context worth keeping: the repo-wide `model-unit-test` CI break (#1209's fixture rewrite of the
+generated `model_config.json`) makes that check red on every PR; it is not required
+(`mergeStateStatus` UNSTABLE, not BLOCKED). Diagnosis posted on #1231; owner rkleck-mntn. Detail:
+memory `reference_airflow_ti`.
+
 **Slack is live.** App "Airflow Failure Debugger" (`@airflow-debugger`, `U0BTU0FA8N4`), approved by
 Robin Fox, in `#alerts-tpa-pipeline` (`C08CURMGNMQ`) and `#monitor-tpa` (`C067ZM2EC5S`). Both are
 PRIVATE, so `groups:history` + `groups:read` are required on top of the `channels:*` pair; only
 `groups:history` is load-bearing for threading. Detail: memory `reference_slack_debugger_app`.
 
-**Still open:** deploy `SLACK_BOT_TOKEN` and `SLACK_ALERT_CHANNEL` as Astro deployment env vars
-(secret), then post a real reply in-thread. Phase 3 in-DAG auto-fire is no longer blocked by the
-no-bot policy. INC-009 and its memory still claim Databricks is programmatically unreachable, which
-is false. The Dataproc analyzer's DCU claims are still unvalidated against INC-005.
+**Still open (updated 2026-08-27):** ~~deploy `SLACK_BOT_TOKEN` and `SLACK_ALERT_CHANNEL` as Astro
+deployment env vars (secret), then post a real reply in-thread~~ — DONE: env vars landed
+2026-08-26 and a real threaded reply posted in `#alerts-tpa-pipeline`; the missing `daily.run` →
+`notify.deliver` wire merged as #1230 on 2026-08-27 (§7e). Phase 3 in-DAG auto-fire is no longer
+blocked by the no-bot policy. INC-009 and its memory still claim Databricks is programmatically
+unreachable, which is false. ~~The Dataproc analyzer's DCU claims are still unvalidated against
+INC-005~~ — CLOSED 2026-08-26: 5.44 DCU-h per executor-hour on INC-005's try-3 batch (AUDI-1194
+summary §4, DCU bridge).
