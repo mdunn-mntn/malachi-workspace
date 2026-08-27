@@ -251,3 +251,22 @@ expired, refresh it". A stale sensor state prescribed the remedy its own cause h
 **Slack is live** (app, scopes, private-channel trap): [[reference_slack_debugger_app]]. Delivery and the
 human-run filter are PR #1225. Deploy still needs `SLACK_BOT_TOKEN` + `SLACK_ALERT_CHANNEL` as Astro
 deployment env vars. Run-origin gotcha: [[reference_airflow_run_origin]].
+
+## 2026-08-26 night — the delivery was never wired, found live, shipped as #1230
+
+The Astro env vars landed (`SLACK_BOT_TOKEN` + `SLACK_ALERT_CHANNEL`) and a manual verify run on
+the post-#1229 bundle posted NOTHING: `notify.deliver` shipped complete and tested and no caller
+existed — `daily.run` published to GCS and returned. **The token gate masked the missing wire for
+two PRs: unwired and untokened are indistinguishable until a token exists.** Wire = airflow-ti
+**#1230** (CI green, gauntleted `fast`, awaiting review): per-diagnosis `notify.deliver`, outcomes
+on each result row plus `slack_posted`/`slack_threaded`, `conversations.history` bounded to the
+sweep's day, and the gauntlet's addition — delivery runs after the sweep and is skipped when
+`rca_<ds>.json` already exists in GCS, so an Airflow retry or old-date re-run never re-posts.
+Once merged before 17:00 UTC, the scheduled run delivers ds-yesterday threaded replies with no
+further action. IMP-087: the alert search reads one Slack page (100 messages).
+
+**Two Airflow-3 manual-run traps (cost ~30 min):** a manual run's data interval SNAPS onto the
+schedule slot, so a second trigger inside the same interval 409s on the unique constraint — and a
+CLEARED run re-executes pinned to its ORIGINAL `bundle_version`, so verifying new code needs
+DELETE + fresh trigger, never clear. `POST /dagRuns` requires the `logical_date` KEY even when
+null (null = "now", works only when the DAG tolerates a missing data interval, #1223-style).
