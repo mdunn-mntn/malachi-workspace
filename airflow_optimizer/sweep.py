@@ -20,6 +20,7 @@ import argparse
 import os
 import subprocess
 
+from . import billing as billing_mod
 from . import coverage as cov_mod
 from . import digest as digest_mod
 from . import ledger as ledger_mod
@@ -165,10 +166,15 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
 
     savings_path, savings_note = "", ""
     if ledger_note == "":
-        try:
-            usd_rate = float(os.environ.get("OPTIMIZER_USD_PER_EXEC_H", ""))
-        except ValueError:
-            usd_rate = None
+        usd_rate, rate_note = billing_mod.blended_usd_per_exec_h()
+        if usd_rate is None:
+            print(f"[sweep] live rate unavailable ({rate_note}); using the configured rate")
+            try:
+                usd_rate = float(os.environ.get("OPTIMIZER_USD_PER_EXEC_H", ""))
+            except ValueError:
+                usd_rate = None
+        else:
+            print(f"[sweep] usd/exec-h {usd_rate} ({rate_note})")
         s = ledger_mod.savings(ledger_path, today=date, usd_per_exec_h=usd_rate)
         savings_path = os.path.join(outdir, "optimizer_savings.md")
         with open(savings_path, "w") as fh:

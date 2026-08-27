@@ -517,3 +517,27 @@ def test_the_digest_carries_the_savings_headline_with_dollars_when_a_rate_is_set
     text = (fleet / "out" / "optimizer_digest_2026-08-24.md").read_text()
     assert "Saved since 2026-08-22" in text and "$120" in text
     assert "est." in text
+
+
+def test_the_live_billing_rate_wins_and_its_absence_falls_back_to_the_env(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No billing access must not break a sweep or silently zero the dollars."""
+    rows = [ledger.Entry(date=d, dag_id="good", app_id="a", key="skew:1", impact="high",
+                         title="Stage 1 skew", state="chronic", exec_h=100.0)
+            for d in ("2026-08-20", "2026-08-21")]
+    rows.append(ledger.Entry(date="2026-08-23", dag_id="good", app_id="a", key="skew:1",
+                             impact="high", title="Stage 1 skew", state="resolved", exec_h=40.0,
+                             fix_pr="https://x/pr/1", applied_date="2026-08-22"))
+    ledger.append(rows, str(fleet / "out" / "l.jsonl"))
+
+    monkeypatch.setattr(sweep.billing_mod, "blended_usd_per_exec_h", lambda: (2.0, "live"))
+    monkeypatch.setenv("OPTIMIZER_USD_PER_EXEC_H", "9.9")
+    _run(fleet, "2026-08-24")
+    text = (fleet / "out" / "optimizer_savings.md").read_text()
+    assert "$2.00 per executor-hour" in text
+
+    monkeypatch.setattr(sweep.billing_mod, "blended_usd_per_exec_h",
+                        lambda: (None, "no access"))
+    _run(fleet, "2026-08-25")
+    text = (fleet / "out" / "optimizer_savings.md").read_text()
+    assert "$9.90 per executor-hour" in text
