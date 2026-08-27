@@ -26,17 +26,17 @@ Traps that bind every fix here:
 | 1 | `site_network_hourly` | idle_reserved_executors | 239 runs, 22,230 idle exec-h summed (avg ~93/run) | see implementation queue | QUEUE #1 (merged airflow-ti#1232, measuring from next sweep) |
 | 2 | `aug_log_ip_hourly` | idle_reserved_executors | 126 runs, 4,086 idle exec-h summed (avg ~32/run) | see implementation queue | QUEUE #7 (apply the #1 idle-tail mechanism once it proves out) |
 | 3 | `aug_log_ip_vertical_id_hourly` | idle_reserved_executors | 114 runs, 3,847 idle exec-h summed (avg ~34/run) | see implementation queue | QUEUE #7 (apply the #1 idle-tail mechanism once it proves out) |
-| 4 | `aug_log_ip_vertical_id_hourly` | shuffle_fetch_wait | 306 runs, stage 11 spends 35% median (51% max) of task time on shuffle-fetch wait | raise spark.dynamicAllocation.initialExecutors so the map stage spreads its output; raising shuffle partitions makes it worse | VERIFY-FIRST: check whether stage 11's map output sits on few executors (map ran during scale-up) |
-| 5 | `site_network_hourly` | shuffle_fetch_wait | 53 runs, stage 9 spends 52% median (79% max) of task time on shuffle-fetch wait | raise spark.dynamicAllocation.initialExecutors so the map stage spreads its output; raising shuffle partitions makes it worse | VERIFY-FIRST: check whether stage 9's map output sits on few executors (map ran during scale-up) |
-| 6 | `aug_log_ip_hourly` | straggler | 34 runs, stage 2 slowest task 8x median (max 26x) on uniform data | spark.speculation=true with spark.speculation.quantile=0.9 | VERIFY-FIRST: confirm stage 2 is compute, not a GCS write (speculation races the ManifestCommitter on GCS writers; must stay false there) |
-| 7 | `intent_score_map` | disk_spill | 24 runs, stage 2 spills 2,448 GiB median / 3,385 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 2's current partition count and whether the spill is shuffle-side, then size the value |
-| 8 | `ipdsc_ds_49` | disk_spill | 24 runs, stage 1 spills 16 GiB median / 18 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 1's current partition count and whether the spill is shuffle-side, then size the value |
+| 4 | `aug_log_ip_vertical_id_hourly` | shuffle_fetch_wait | 306 runs, stage 11 spends 35% median (51% max) of task time on shuffle-fetch wait | spark.dynamicAllocation.initialExecutors 100 -> 200 (decorator, line 72) | PR-READY (pre-verified below) |
+| 5 | `site_network_hourly` | shuffle_fetch_wait | 53 runs, stage 9 spends 52% median (79% max) of task time on shuffle-fetch wait | spark.dynamicAllocation.initialExecutors 50 -> 200 (decorator, line 31) | PR-READY (pre-verified below) |
+| 6 | `aug_log_ip_hourly` | straggler | 34 runs, stage 2 slowest task 8x median (max 26x) on uniform data | none safe: speculation is app-wide and stages 7/15 write parquet to GCS | REFUTED (pre-verified below; route to owner with QUEUE #4) |
+| 7 | `intent_score_map` | disk_spill | 24 runs, stage 2 spills 2,448 GiB median / 3,385 GiB max to disk | spark.sql.shuffle.partitions 4915 -> 40960 (BOTH builder line 89 and decorator line 50) | PR-READY (pre-verified below) |
+| 8 | `ipdsc_ds_49` | disk_spill | 24 runs, stage 1 spills 16 GiB median / 18 GiB max to disk | spark.sql.files.maxPartitionBytes=67108864 in the builder (shuffle.partitions refuted: spill is map-side) | PR-READY (pre-verified below) |
 | 9 | `ipdsc_ds_35` | straggler | 23 runs, stage 2 slowest task 76x median (max 186x) on uniform data | see implementation queue | QUEUE #4 OWNER: speculation reverted by gauntlet; ask what straggler fix is safe for GCS overwrite writes |
-| 10 | `guid_log_pivot_ip_vertical_id` | disk_spill | 23 runs, stage 33 spills 19 GiB median / 145 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 33's current partition count and whether the spill is shuffle-side, then size the value |
-| 11 | `guid_conv_log_pivot_ip_vertical_id` | disk_spill | 23 runs, stage 34 spills 19 GiB median / 132 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 34's current partition count and whether the spill is shuffle-side, then size the value |
-| 12 | `conv_log_derived_ip` | disk_spill | 23 runs, stage 1 spills 6 GiB median / 10 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 1's current partition count and whether the spill is shuffle-side, then size the value |
-| 13 | `ipdsc_ds_67` | disk_spill | 22 runs, stage 3 spills 81 GiB median / 84 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 3's current partition count and whether the spill is shuffle-side, then size the value |
-| 14 | `ipdsc_ds_2` | disk_spill | 22 runs, stage 1 spills 56 GiB median / 92 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 1's current partition count and whether the spill is shuffle-side, then size the value |
+| 10 | `guid_log_pivot_ip_vertical_id` | disk_spill | 23 runs, stage 33 spills 19 GiB median / 145 GiB max to disk | spark.sql.adaptive.advisoryPartitionSizeInBytes=16m in the builder (raising shuffle.partitions is a no-op: AQE coalesces 8000 -> 800) | PR-READY (pre-verified below) |
+| 11 | `guid_conv_log_pivot_ip_vertical_id` | disk_spill | 23 runs, stage 34 spills 19 GiB median / 132 GiB max to disk | spark.sql.adaptive.advisoryPartitionSizeInBytes=16m in the builder (raising shuffle.partitions is a no-op: AQE coalesces 8000 -> 800) | PR-READY (pre-verified below) |
+| 12 | `conv_log_derived_ip` | disk_spill | 23 runs, stage 1 spills 6 GiB median / 10 GiB max to disk | spark.sql.files.maxPartitionBytes 268435456 -> 134217728 in the builder (shuffle.partitions refuted: spill is map-side) | PR-READY (pre-verified below) |
+| 13 | `ipdsc_ds_67` | disk_spill | 22 runs, stage 3 spills 81 GiB median / 84 GiB max to disk | spark.sql.files.maxPartitionBytes=33554432 in the builder (shuffle.partitions refuted: spill is map-side) | PR-READY (pre-verified below) |
+| 14 | `ipdsc_ds_2` | disk_spill | 22 runs, stage 1 spills 56 GiB median / 92 GiB max to disk | spark.sql.shuffle.partitions 2048 -> 8192 (decorator, line 12) | PR-READY (pre-verified below) |
 | 15 | `fangorn_prospecting_scoring` | disk_spill | 22 runs, stage 13 spills 4,288 GiB median / 4,394 GiB max to disk | raise spark.sql.shuffle.partitions for the spilling stage (target ~256 MiB in-memory per task); executor memory only if spill persists | VERIFY-FIRST: read the event log for stage 13's current partition count and whether the spill is shuffle-side, then size the value |
 | 16 | `advertiser_mid` | shuffle_fetch_wait | 22 runs, stage 24 spends 70% median (82% max) of task time on shuffle-fetch wait | raise spark.dynamicAllocation.initialExecutors so the map stage spreads its output; raising shuffle partitions makes it worse | VERIFY-FIRST: check whether stage 24's map output sits on few executors (map ran during scale-up) |
 | 17 | `advertiser_score_distribution_monitor` | shuffle_partition_sizing | 22 runs, stage 1 shuffle 208 GiB median at ~1,660 MiB/partition | set spark.sql.shuffle.partitions ~916 (~256 MiB per partition) | PR-READY |
@@ -100,3 +100,65 @@ This sweep's coverage pass could not enumerate the DAG bundle (`No module named 
 - 35 DAGs have no Spark task at all (Python/@task, BigQuery, GKE, sensor, or export operators); nothing to profile.
 
 Full lists: `tickets/audi_1194_optimizer_efficiency_crawler/outputs/optimizer_coverage_2026-08-26.md`.
+
+## Pre-verified (2026-08-27)
+
+Method: for each of rows 4-8 and 10-14, two real event logs per DAG were re-parsed from the cached corpus (`fullsweep/logs/`), extracting per-stage shuffle read/write, spill, fetch-wait share, per-executor map-output distribution, and the executor-add timeline versus stage submission. Config surfaces were read from each model file in airflow-ti (read-only). "Decorator" = the `runtime_properties` dict on the compute decorator; any decorator change requires regenerating `dags/model_task_config.json` (`MNTN_SDLC_ENV=dev python model_upload.py --dryrun`). "Builder" = the `SparkSession.builder` config block, which silently wins over the decorator, so a key set in both must change in both.
+
+### Row 4 - aug_log_ip_vertical_id_hourly / shuffle_fetch_wait (stage 11) - PR-READY
+- Evidence (app-20260805001620807-0397, app-20260804231623606-0572): stage 11 reads 11.9-12.2 GiB from map stage 7 (8,914-9,008 tasks); fetch-wait 30.8-34.0% of task time. Map output is evenly spread (top-3 executor share 4-7%), so concentration on a few executors is NOT the cause; the server COUNT is. Natural experiment in run 0572: stage 11's map ran on 100 executors -> 34% wait; the structurally identical second pass (map stage 31 on all 200 executors, reducer stage 35) -> 1.0% wait. Same data volume, only the number of executors serving map output differed.
+- Verdict: mechanism confirmed - the first pass's map runs before scale-up finishes, halving the shuffle-server count.
+- Change: `spark.dynamicAllocation.initialExecutors` 100 -> 200 (equals maxExecutors) in the decorator (line 72). Builder does not set dynamicAllocation keys. Regenerate `dags/model_task_config.json`.
+- File: `models/feature_store/feature_group_1_source/aug_log_ip_vertical_id_hourly.py`
+
+### Row 5 - site_network_hourly / shuffle_fetch_wait (stage 9) - PR-READY
+- Evidence (app-20260804225137739-0366, app-20260804235121669-0172): stage 9 fetch-wait 56.3% / 72.7%, reading 2.0-3.6 GiB from map stage 5. Stage 5's output IS concentrated: top-3 executors hold 47% / 63% of the 6.8-10 GiB map output, because stage 5 launched ~3 min into a ~6-min ramp from initialExecutors=50 toward the 372-420 executors the run eventually held (minExecutors is 2).
+- Verdict: mechanism confirmed exactly as the row hypothesized - map ran during scale-up, output sits on the earliest executors.
+- Change: `spark.dynamicAllocation.initialExecutors` 50 -> 200 in the decorator (line 31; maxExecutors is 500). Builder does not set dynamicAllocation keys. Regenerate `dags/model_task_config.json`.
+- File: `models/bidstream_hourly/site_network_hourly.py`
+
+### Row 6 - aug_log_ip_hourly / straggler (stage 2) - REFUTED
+- Evidence (app-20260806111634729-0153, app-20260806171643616-0076): stage 2 itself is compute (input 653-724 GiB, shuffle write 41-47 GiB, output bytes 0; max task 48.6-90.5s vs median 8.4-9.4s - straggler confirmed). BUT `spark.speculation` is application-wide, and the same app's stages 7 and 15 write parquet to GCS (0.6-0.9 GiB output each) through the ManifestCommitter.
+- Verdict: refuted as a config change. The check asked whether stage 2 is a GCS write - it is not, but that is insufficient: speculation cannot be scoped to one stage, so enabling it races the committer on stages 7/15. Identical to the `ipdsc_ds_35` change the gauntlet reverted on 2026-08-27. Fold into the QUEUE #4 owner question (what straggler fix is safe for GCS writers).
+- File (for the owner conversation): `models/feature_store/feature_group_1_source/aug_log_ip_hourly.py`
+
+### Row 7 - intent_score_map / disk_spill (stage 2) - PR-READY
+- Evidence (eventlog_v2_batch-17b1b9a9, eventlog_v2_batch-06dfd454): stage 2's own spill is map-side (shuffle read 0; input 167-3,540 GiB over 14,000-40,000 input-driven tasks), so shuffle.partitions cannot size stage 2. The run's dominant spill is shuffle-side: reducer stage 6 reads 10,479 GiB across exactly 4,915 tasks (= current shuffle.partitions) - 2.13 GiB compressed (~9 GiB in-memory; 44,640 GiB memory-bytes spilled) per task, 4,452 GiB disk spill in one run.
+- Verdict: shuffle-side spill confirmed on the reduce side; the partition count is the lever.
+- Change: `spark.sql.shuffle.partitions` 4915 -> 40960 (10,479 GiB / 256 MiB ~= 41,900) in BOTH the builder (line 89) and the decorator (line 50) - builder wins, both must move. AQE coalescing shrinks small runs back down, so the higher cap is safe. Regenerate `dags/model_task_config.json`.
+- File: `models/audience_intent/intent_score_map.py`
+
+### Row 8 - ipdsc_ds_49 / disk_spill (stage 1) - PR-READY (corrected fix)
+- Evidence (app-20260805041408174-0229, app-20260806041813727-0821): stage 1 is the only spilling stage and it is map-side (shuffle read 0; input 46.5-47.2 GiB over 574-583 tasks ~82 MiB each, shuffle write 70-71 GiB, 406 GiB memory-bytes / ~18 GiB disk spilled -> ~700 MiB in-memory per task on 9600m/4-core executors, ~1.4 GiB execution memory per task slot).
+- Verdict: the row's named fix is refuted (raising shuffle.partitions, currently 1700, cannot touch a map-side sort spill); mechanism settled as per-task input too large after decompression.
+- Change: add `.config("spark.sql.files.maxPartitionBytes", "67108864")` to the builder (halves per-task input to ~41 MiB, ~350 MiB in-memory). Escalate to executor memory only if spill persists.
+- File: `models/ipdsc/ipdsc_ds_49.py`
+
+### Row 10 - guid_log_pivot_ip_vertical_id / disk_spill (stage 33) - PR-READY (corrected fix)
+- Evidence (app-20260805013922595-0658, app-20260806013626123-0378): spill is shuffle-side (stage 33 reads 48.9 GiB shuffle) but the stage runs 800 tasks, not the configured 8000 - AQE coalesces to its 64 MiB advisory size (48.9 GiB / 800 = 61 MiB compressed). In-memory expansion is ~18x: 862.5 GiB memory-bytes spilled / 800 tasks ~= 1.1 GiB in-memory per task.
+- Verdict: mechanism confirmed; raising `spark.sql.shuffle.partitions` (decorator line 26) is a no-op because AQE re-coalesces on compressed bytes, blind to the expansion.
+- Change: add `.config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "16m")` to the builder -> ~3,100 tasks, ~280 MiB in-memory each.
+- File: `models/feature_store/feature_group_3_pivoted/guid_log_pivot_ip_vertical_id.py`
+
+### Row 11 - guid_conv_log_pivot_ip_vertical_id / disk_spill (stage 34) - PR-READY (corrected fix)
+- Evidence (app-20260805014206164-0176, app-20260806013618285-0913): numerically identical to row 10 (same feature-group pipeline shape): stage 34 reads 48.9 GiB shuffle over 800 AQE-coalesced tasks (config says 8000), 862.5 GiB memory-bytes spilled -> ~1.1 GiB in-memory per 61 MiB-compressed task.
+- Verdict / change / caveat: same as row 10 - `spark.sql.adaptive.advisoryPartitionSizeInBytes=16m` in the builder.
+- File: `models/feature_store/feature_group_3_pivoted/guid_conv_log_pivot_ip_vertical_id.py`
+
+### Row 12 - conv_log_derived_ip / disk_spill (stage 1) - PR-READY (corrected fix)
+- Evidence (app-20260805012514130-0370, app-20260806012306304-0847): stage 1 spill is map-side (shuffle read 0; input 14.5 GiB over 91 tasks = ~160 MiB each, driven by the builder's own `spark.sql.files.maxPartitionBytes=268435456` override; 58-66 GiB memory-bytes spilled -> ~700 MiB in-memory per task on 9600m/4-core executors).
+- Verdict: named fix refuted (shuffle.partitions, currently 1000, is irrelevant to a map-side spill); the model's own 256 MiB input-split override is the cause.
+- Change: builder line 58 `spark.sql.files.maxPartitionBytes` 268435456 -> 134217728 (per-task input ~80 MiB, in-memory ~350 MiB).
+- File: `models/feature_store/feature_group_2_derived/conv_log_derived_ip.py`
+
+### Row 13 - ipdsc_ds_67 / disk_spill (stage 3) - PR-READY (corrected fix)
+- Evidence (app-20260805053727558-0431, app-20260806045914626-0006): stages 3 and 5 (twin passes) spill map-side (shuffle read 0; input 10.6 GiB over 160 tasks ~66 MiB each, but the map EXPANDS it 7.7x to 81.6 GiB shuffle write - ~510 MiB written and ~500 MiB disk-spilled per task on 9600m/4-core executors).
+- Verdict: named fix refuted (shuffle.partitions, currently the platform-default 1000 - the model file sets none - cannot touch a map-side spill); mechanism is row expansion inside the map task.
+- Change: add `.config("spark.sql.files.maxPartitionBytes", "33554432")` to the (currently bare) builder -> ~320 tasks at ~33 MiB input / ~260 MiB shuffle write each.
+- File: `models/ipdsc/ipdsc_ds_67.py`
+
+### Row 14 - ipdsc_ds_2 / disk_spill (stage 1) - PR-READY
+- Evidence (app-20260805025135316-0430, app-20260806035856621-0310): stage 1's spill is map-side and modest (57-76 GiB disk), but the shuffle it feeds confirms shuffle-side sizing is the lever: reducer stage 3 reads 741-743 GiB across exactly 2,048 tasks (= current shuffle.partitions) - 363 MiB compressed / ~1.1 GiB in-memory per task (2,305 GiB memory-bytes spilled), 211-214 GiB disk spill, and 69-72% fetch-wait.
+- Verdict: shuffle-side spill confirmed (stage 3); partition count is the lever.
+- Change: `spark.sql.shuffle.partitions` 2048 -> 8192 in the decorator (line 12; builder sets none) -> ~91 MiB compressed / ~290 MiB in-memory per task. Block-count caveat checked: blocks are currently ~54 KiB (6,668 maps x 2,048 reducers), ~13 KiB after - well above the ~1.7 KiB tiny-block regime that made fetch-wait worse elsewhere. Regenerate `dags/model_task_config.json`.
+- File: `models/ipdsc/ipdsc_ds_2.py`
