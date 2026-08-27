@@ -53,6 +53,12 @@ PY
     echo "## Optimizer — coverage_${DS}.md not in GCS"
   fi
   echo
+  if [[ -f "$TMP/rca_${DS}.json" ]]; then
+    echo "## Triage tickets (auto-filed, Bug under AUDI-1054, playbook row appended)"
+    export JIRA_API_TOKEN="${JIRA_API_TOKEN:-$(zsh -c 'source ~/.zshrc >/dev/null 2>&1; echo $JIRA_API_TOKEN')}"
+    python3 -m airflow_debugger.triage "$TMP/rca_${DS}.json" 2>&1 || echo "- triage filing failed; run by hand"
+    echo
+  fi
   echo "## Review checklist (a session works this, not a script)"
   echo "- Any LOW CONFIDENCE row: read its log, decide signature vs resolver vs mask."
   echo "- Any POSTED LOOSE row: was the alert past the 100-message page (IMP-087)?"
