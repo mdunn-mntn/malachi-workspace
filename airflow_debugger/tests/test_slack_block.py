@@ -188,15 +188,15 @@ def test_a_missing_deployment_url_drops_the_link_rather_than_emitting_a_404() ->
         slack_block._ASTRO_UI = saved
 
 
-if __name__ == "__main__":
-    for name, fn in sorted(dict(globals()).items()):
-        if name.startswith("test_") and callable(fn):
-            fn()
-    print("OK - slack block shape tests passed")
-
-
 def test_the_post_leads_with_a_severity_glyph_and_breathing_room() -> None:
     """A busy channel is scanned, not read: class shows as a glyph, sections get blank lines."""
     out = slack_block.render(_QUOTA, repo_paths={})
     assert out[0] in ("🔴", "🟡", "🟠", "⚪")
     assert "\n\n*Why*" in out and "\n\n*Fix*" in out
+
+
+if __name__ == "__main__":
+    for name, fn in sorted(dict(globals()).items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
+    print("OK - slack block shape tests passed")
