@@ -363,3 +363,24 @@ def test_tasks_that_carried_no_metrics_are_not_reported_as_a_no_op_run() -> None
     run = SparkRun(spark_props={}, executors=execs, app_end_ts=t0 + 3 * 3_600_000)
     titles = [f.title for f in analyze_run(run)]
     assert not any("ZERO tasks run" in t for t in titles)
+
+
+def test_metrics_less_tasks_do_not_publish_a_zero_percent_utilization() -> None:
+    """No run time means utilization is unknown, not 0% - the other half of the same fabrication."""
+    t0, t1 = 1_000_000_000_000, 1_000_000_000_000 + 3 * 3_600_000
+    execs = [ExecutorInfo(exec_id=str(i), cores=4, added_ts=t0, removed_ts=t1, failed_tasks=50)
+             for i in range(12)]
+    run = SparkRun(spark_props={"spark.executor.cores": "4"}, executors=execs, app_end_ts=t1)
+    assert [f.key for f in analyze_run(run)] == []
+
+
+def test_fetch_failed_tasks_count_as_tasks_run() -> None:
+    """FetchFailed bumps no executor counter, so the fleet is not a no-op allocation."""
+    t0, t1 = 1_000_000_000_000, 1_000_000_000_000 + 3 * 3_600_000
+    execs = [ExecutorInfo(exec_id=str(i), cores=4, added_ts=t0, removed_ts=t1) for i in range(12)]
+    run = SparkRun(spark_props={"spark.executor.cores": "4"},
+                   stages=[StageMetrics(stage_id=1, num_tasks=240, fetch_failed=240)],
+                   executors=execs, app_end_ts=t1)
+    titles = [f.title for f in analyze_run(run)]
+    assert not any("ZERO tasks run" in t for t in titles)
+    assert any("FetchFailed" in t for t in titles)

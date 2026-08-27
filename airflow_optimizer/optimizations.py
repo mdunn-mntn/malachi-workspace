@@ -342,8 +342,9 @@ def analyze_run(run: object) -> list[OptFinding]:
     # shuffleTracking exempts executors a live job's shuffle references, so a tail pins all.
     if execs and app_end and len(execs) >= 8:
         busy_ms = sum(e.run_time_ms for e in execs)
-        # A task whose TaskEnd carried no metrics adds no run time, so counters decide.
-        ran = busy_ms or sum(e.completed_tasks + e.failed_tasks for e in execs)
+        # A metrics-less TaskEnd adds no run time, and a FetchFailed one bumps no executor counter.
+        ran = (busy_ms or sum(s.succeeded + s.failed + s.fetch_failed for s in run.stages)
+               or sum(e.completed_tasks + e.failed_tasks for e in execs))
         # Until the app ends, a still-writing first log part is indistinguishable from a no-op.
         if not ran and not ended:
             return _ranked(out)
@@ -357,7 +358,7 @@ def analyze_run(run: object) -> list[OptFinding]:
                 "Check why the driver allocated executors it never used (eager allocation before "
                 "a driver-side step, or a no-op run); lower minExecutors/initialExecutors.",
                 rec_type="infra", cost_h=run_h))
-        elif cores and run_h >= 20 and busy_ms / (reg_ms * cores) < 0.4:
+        elif busy_ms and cores and run_h >= 20 and busy_ms / (reg_ms * cores) < 0.4:
             util = busy_ms / (reg_ms * cores)
             idle_h = (reg_ms * cores - busy_ms) / 3_600_000 / cores
             removed = sum(1 for e in execs if e.removed_ts)
