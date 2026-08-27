@@ -22,7 +22,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | Stop | — | `comms_cap_reminder.sh` | soft nudge to keep outward-facing writing terse | no |
 | Stop | — | `oncall_triage_reminder.sh` | advisory on-call-triage reminder | no |
 
-## Scripts (33)
+## Scripts (34)
 
 | script | what it does |
 |--------|--------------|
@@ -34,6 +34,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `bq_verify.py` | the provenance / trust card: "how did you get this number? |
 | `build_index.sh` | Regenerate every knowledge/ticket index from each doc's YAML front-matter |
 | `build_kit_manifest.sh` | generate the AI Workflow Kit component inventory FROM the actual files |
+| `daily_gap_check.sh` | daily_gap_check.sh [YYYY-MM-DD] — pull yesterday's debugger + optimizer prod artifacts and write one gap report skeleton to… |
 | `databricks_smoke.py` | TI-837 Databricks Connect smoke test |
 | `engine_protected_paths.sh` | engine_protected_paths.sh <commit-msg-file> — commit-msg guard for the engine's floors |
 | `health_scorecard.py` | read-only workspace-health signals for the SessionStart print |
