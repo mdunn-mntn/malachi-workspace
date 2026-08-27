@@ -37,7 +37,7 @@ def blended_usd_per_exec_h(timeout_s: int = 120) -> tuple[float | None, str]:
     except (OSError, subprocess.TimeoutExpired) as e:
         return None, f"billing query did not run: {str(e)[:80]}"
     if r.returncode != 0:
-        return None, f"billing export unreadable: {r.stderr.decode()[:120]}"
+        return None, f"billing export unreadable: {r.stderr.decode(errors='replace')[:120]}"
     try:
         rows = json.loads(r.stdout.decode() or "[]")
         usd_per_dcu = float(rows[0]["usd_per_dcu_h"])
