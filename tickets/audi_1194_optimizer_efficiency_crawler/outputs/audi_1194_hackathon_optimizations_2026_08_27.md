@@ -2,7 +2,7 @@
 
 Source: the optimizer's 2026-08-27 sweep (2,954 Spark runs scanned, 1,620 with findings, 1,334 clean). One line per run in the sweep backlog, so each pair below is built from the run's TOP finding only; a run's lower-ranked findings are not counted, which makes every per-pair total a floor.
 
-**Totals: 67 distinct (job, mechanism) pairs. 30,163 executor-hours at stake** (executor-hours are directly measured only for the idle-executor mechanism; spill, shuffle, straggler, and skew pairs are quantified in GiB and task-time ratios below). **Gates: 8 PR-READY, 53 VERIFY-FIRST, 6 already triaged in the implementation queue** (`tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_implementation_queue.md`, referenced as QUEUE #N, not duplicated).
+**Totals: 67 distinct (job, mechanism) pairs. 30,163 executor-hours at stake** (executor-hours are directly measured only for the idle-executor mechanism; spill, shuffle, straggler, and skew pairs are quantified in GiB and task-time ratios below). **Gates after the 2026-08-27 pre-verification pass: 17 PR-READY, 43 VERIFY-FIRST, 1 REFUTED, 6 already triaged in the implementation queue** (`tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_implementation_queue.md`, referenced as QUEUE #N, not duplicated).
 
 Mechanism key (from the detector taxonomy in `airflow_optimizer/optimizations.py`):
 - `idle_reserved_executors`: executors held but mostly idle; the billed allocation dwarfs the work done.
