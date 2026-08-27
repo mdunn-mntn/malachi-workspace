@@ -319,6 +319,11 @@ and what `resolve()` is passed. Ordered plan: `artifacts/audi_1194_next_steps.md
   `audi-1194-1191-combined`. Zero file overlap, no rebase, 336 tests. #1225/#1227/#1228 closed
   pointing at it. The debugger files were left untouched, including three 2-line comment blocks
   our `lint_comments.py` would fail but which airflow-ti does not lint.
+- **#1229 MERGED same evening** (squash `03706e8`); the three comment blocks were tightened to
+  one line before the squash (`f48fea9`). The delivery slice shipped with one completed
+  adversarial pass (4 confirmed/fixed); a second-round certification was attempted twice and
+  died both times (usage limit, then IMP-086: gauntlet resume replays a cached fixer's report
+  but not its edits and self-declares THRASH), and a third run was cancelled at merge.
 - **Two real defects the delivery gauntlet caught in the Block Kit renderer:** the parent
   collected only `new` + `chronic`, so a `fix_not_working` DAG never reached Slack; and the
   partial-sweep and no-change-tracking caveats reached only the text digest, so a Slack reader

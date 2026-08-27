@@ -391,6 +391,25 @@ report listed that finding as rejected while the diff applied it, which is why a
 read rather than trusted. The duplication is real and is the right thing to solve when the two
 projects merge.
 
+### 2026-08-26 close — #1229 MERGED (squash `03706e8`)
+
+Rode in the squash: the three debugger comment blocks tightened to one line (`f48fea9`, flagged
+by Malachi as failing the workspace comment lint). The spark delivery slice merged with only ONE
+completed adversarial pass (run-1 round-1: 4 confirmed, 4 fixed, the notify import rejected by
+hand). Two later attempts to certify a second round died without adjudicating: the first on the
+session usage limit, the second on the resume defect below; a third run was cancelled at merge.
+
+Two workspace/branch sync gaps found and closed by diffing, not by memory: the impact-hours
+branch's final gauntlet commit (`244cac6`, the no-op-guard refinement) had never been ported back
+to `airflow_optimizer/` (workspace commit `9c384d58`, tests 113 -> 115), and the workspace-side
+`deliver_thread` port was sitting uncommitted (`f40aad70`). Diff the two trees before starting
+anything; the handoff rule held.
+
+**IMP-086:** `pr_gauntlet.js` resume replays a cached fixer's report without re-applying its
+edits, while the run start resets the review files — so a resumed run reviews the pre-fix tree
+and self-declares THRASH against its own ghost. The 19:0x THRASH verdict on the delivery branch
+was this artifact, not a real oscillation.
+
 ## 5. Solution
 - **Cadence:** daily, full-day. `.claude/scripts/oncall_daily_optimizer.sh` (renamed from `oncall_weekly_optimizer.sh`), `CAP` 40 -> 200, launchd `com.mntn.daily-spark-optimizer` at 11:00 PT.
 - **Both log sources in one sweep:** the script now runs `phs.fetch_logs` into the same download root as the archive pull, so the archive fleet and the PHS-attached ipdsc/tpa batches rank in one backlog.
