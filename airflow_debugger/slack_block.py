@@ -114,11 +114,7 @@ def how(diag: dict, source: str) -> str:
 
 
 def mechanism(diag: dict, source: str) -> str:
-    """How the failure actually happened, and the evidence behind the verdict.
-
-    A verdict the reader cannot check is a verdict they have to trust. This line is what makes the
-    difference between an answer and an assertion.
-    """
+    """How the failure actually happened, and the evidence behind the verdict."""
     bits = []
     res = diag.get("resolution") or {}
     if res.get("evidence"):

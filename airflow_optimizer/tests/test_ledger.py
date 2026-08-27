@@ -215,8 +215,9 @@ def test_ui_base_prefers_the_override_then_airflow_config(monkeypatch: object) -
     assert digest._ui_base() == ""
 
 
-def test_a_finding_carries_the_executor_hours_of_the_run_that_produced_it(tmp_path: Path) -> None:
-    """Ranking by finding count puts a chatty cheap job above a quiet expensive one."""
+def test_a_finding_carries_its_dags_executor_hours_for_the_sweep_day(tmp_path: Path) -> None:
+    """Ranking by finding count puts a chatty cheap job above a quiet expensive one, and a
+    multi-run dag costs the sum of its runs, not whichever run happened to hold the finding."""
     class _R:
         def __init__(self, name: str, hours: float) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
@@ -227,6 +228,8 @@ def test_a_finding_carries_the_executor_hours_of_the_run_that_produced_it(tmp_pa
     got = {e.dag_id: e.exec_h for e in rows}
     assert got == {"cheap": 0.4, "expensive": 812.5}
     assert all(e.dcu_h is None for e in rows)          # measured DCU is a separate, unset field
+    rows = ledger.record([_R("hourly", 10.0), _R("hourly", 2.0)], "2026-08-26", path=path)
+    assert [(e.dag_id, e.exec_h) for e in rows] == [("hourly", 12.0)]
 
 
 def test_one_bad_dag_cannot_fill_the_whole_digest(tmp_path: Path) -> None:
@@ -377,3 +380,70 @@ def test_savings_counts_only_resolved_fixes_in_measured_units(tmp_path: Path) ->
     text = ledger.render_savings(s)
     assert "Saved since 2026-08-22: 120 executor-hours" in text
     assert "fix_not_working" in text
+
+
+def test_a_fix_that_fully_cleans_a_job_still_measures_savings(tmp_path: Path) -> None:
+    """The best outcome is a job with no findings left; its savings must not read as zero."""
+    class _R:
+        def __init__(self, name: str, hours: float, *findings: OptFinding) -> None:
+            self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
+            self.findings = list(findings)
+
+    p = str(tmp_path / "l.jsonl")
+    for day in ("2026-08-01", "2026-08-02", "2026-08-03"):
+        ledger.record([_R("solo", 100.0, FETCH), _R("noisy", 10.0, IDLE)], day, path=p)
+    ledger.mark_applied("solo", "shuffle_fetch_wait:9", "https://x/pr/7", "2026-08-03", path=p)
+    for day in ("2026-08-04", "2026-08-05", "2026-08-06"):
+        ledger.record([_R("solo", 40.0), _R("noisy", 10.0, IDLE)], day, path=p)
+
+    s = ledger.savings(p)
+    row = next(r for r in s["rows"] if r["dag_id"] == "solo")
+    assert row["outcome"] == "resolved"
+    assert row["days_observed"] == 1
+    assert abs(row["exec_h_saved"] - 60.0) < 1e-6
+    assert abs(s["total_exec_h_saved"] - 60.0) < 1e-6
+
+
+def test_savings_measures_the_dag_not_whichever_run_iterated_last(tmp_path: Path) -> None:
+    """A no-op fix on a multi-run dag must measure zero, not the gap between two of its runs."""
+    class _R:
+        def __init__(self, name: str, hours: float, *findings: OptFinding) -> None:
+            self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
+            self.findings = list(findings)
+
+    p = str(tmp_path / "l.jsonl")
+    for day in ("2026-08-01", "2026-08-02", "2026-08-03"):
+        ledger.record([_R("hourly", 10.0, FETCH), _R("hourly", 2.0), _R("noisy", 1.0, IDLE)],
+                      day, path=p)
+    ledger.mark_applied("hourly", "shuffle_fetch_wait:9", "https://x/pr/5", "2026-08-03", path=p)
+    for day in ("2026-08-04", "2026-08-05", "2026-08-06"):
+        ledger.record([_R("hourly", 10.0), _R("hourly", 2.0), _R("noisy", 1.0, IDLE)], day, path=p)
+
+    s = ledger.savings(p)
+    row = next(r for r in s["rows"] if r["dag_id"] == "hourly")
+    assert row["outcome"] == "resolved"
+    assert abs(row["exec_h_saved"]) < 1e-6
+    assert abs(s["total_exec_h_saved"]) < 1e-6
+
+
+def test_savings_counts_a_dag_once_across_its_resolved_findings(tmp_path: Path) -> None:
+    """One PR often clears several findings on one job; the job's saving must not multiply."""
+    p = str(tmp_path / "l.jsonl")
+    rows = []
+    for day in ("2026-08-01", "2026-08-02"):
+        for key, title in (("skew:1", "Stage 1 skew"), ("spill:2", "Stage 2 spill")):
+            rows.append(ledger.Entry(date=day, dag_id="jobx", app_id="a", key=key,
+                                     impact="high", title=title, state="recurring",
+                                     exec_h=100.0))
+    ledger.append(rows, p)
+    for key in ("skew:1", "spill:2"):
+        ledger.mark_applied("jobx", key, "https://x/pr/3", "2026-08-03", path=p)
+    ledger.append([ledger.Entry(date="2026-08-04", dag_id="jobx", app_id="a", key=key,
+                                impact="high", title="t", state="resolved", exec_h=40.0,
+                                fix_pr="https://x/pr/3", applied_date="2026-08-03")
+                   for key in ("skew:1", "spill:2")], p)
+
+    s = ledger.savings(p)
+    assert [r["exec_h_saved"] for r in s["rows"]] == [60.0, 60.0]
+    assert abs(s["total_exec_h_saved"] - 60.0) < 1e-6
+    assert "60 executor-hours" in ledger.render_savings(s)

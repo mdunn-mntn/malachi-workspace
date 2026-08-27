@@ -454,6 +454,21 @@ def _posted(monkeypatch: pytest.MonkeyPatch) -> list:
     return sent
 
 
+def test_the_savings_log_reads_the_runs_ledger_not_the_default(fleet: Path) -> None:
+    """A run given its own ledger must not compute savings from the CWD-relative default."""
+    rows = [ledger.Entry(date=d, dag_id="good", app_id="a", key="skew:1", impact="high",
+                         title="Stage 1 skew", state="chronic", exec_h=100.0)
+            for d in ("2026-08-20", "2026-08-21")]
+    rows.append(ledger.Entry(date="2026-08-23", dag_id="good", app_id="a", key="skew:1",
+                             impact="high", title="Stage 1 skew", state="resolved", exec_h=40.0,
+                             fix_pr="https://x/pr/1", applied_date="2026-08-22"))
+    ledger.append(rows, str(fleet / "out" / "l.jsonl"))
+
+    _run(fleet, "2026-08-24")
+    savings = (fleet / "out" / "optimizer_savings.md").read_text()
+    assert "Saved since 2026-08-22" in savings
+
+
 def test_a_sweep_that_lost_change_tracking_does_not_post_all_clear(
         fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An empty delta means the ledger did not run, never that the fleet is clean."""

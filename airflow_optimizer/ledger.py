@@ -97,7 +97,8 @@ def _history(entries: list[dict]) -> dict[tuple[str, str], list[dict]]:
     return hist
 
 
-def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = True) -> list[Entry]:
+def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = True,
+             exec_h_by_dag: dict | None = None) -> list[Entry]:
     """Set state and streak on this sweep's findings from what the ledger already holds.
 
     `complete=False` means this sweep did not see the whole fleet, so absence proves nothing
@@ -131,12 +132,13 @@ def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = Tr
         else:
             entry.state = "recurring"
     if complete:
-        _mark_resolved(new, hist, seen_dates, date)
+        _mark_resolved(new, hist, seen_dates, date, exec_h_by_dag or {})
     return new
 
 
-def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: str) -> None:
-    """Append a resolved entry for any key absent from the last RESOLVE_SWEEPS sweeps."""
+def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: str,
+                   exec_h_by_dag: dict | None = None) -> None:
+    """Append a resolved entry, with the sweep's observed exec-hours, for each quiet key."""
     live = {(e.dag_id, e.key) for e in new}
     recent = set(seen_dates[-(RESOLVE_SWEEPS - 1):]) if seen_dates else set()
     for (dag_id, key), past in hist.items():
@@ -154,6 +156,7 @@ def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: st
         new.append(Entry(
             date=date, dag_id=dag_id, app_id="", key=key, impact=last.get("impact", ""),
             title=last.get("title", ""), owner=last.get("owner", ""),
+            exec_h=(exec_h_by_dag or {}).get(dag_id),
             state="resolved", streak=0, note=note,
             fix_pr=pr, applied_date=last.get("applied_date", ""),
         ))
@@ -186,11 +189,21 @@ def record(reports: list, date: str, owners: dict | None = None, dcu: dict | Non
 
     `complete` says whether this sweep saw the whole fleet. A partial sweep still records what
     it found, but may not resolve anything.
+
+    Every entry's `exec_h` is its dag's total for the sweep-day, summed across the dag's runs,
+    so the savings before/after series compare the same measure.
     """
     owners, dcu = owners or {}, dcu or {}
+    reports = [r for r in reports if not getattr(r, "error", None)]
+    exec_h_by_dag: dict[str, float] = {}
+    for r in reports:
+        hours = round(getattr(r, "exec_h", 0.0), 1)
+        if hours:
+            dag = _dag_id(r, known)
+            exec_h_by_dag[dag] = round(exec_h_by_dag.get(dag, 0.0) + hours, 1)
     entries = []
     for r in reports:
-        if getattr(r, "error", None) or not getattr(r, "findings", None):
+        if not getattr(r, "findings", None):
             continue
         dag_id = _dag_id(r, known)
         for f in r.findings:
@@ -200,10 +213,10 @@ def record(reports: list, date: str, owners: dict | None = None, dcu: dict | Non
                 title=getattr(f, "title", ""), fix=getattr(f, "fix", ""),
                 owner=owners.get(dag_id, ""),
                 dcu_h=dcu.get(dag_id),
-                exec_h=round(getattr(r, "exec_h", 0.0), 1) or None,
+                exec_h=exec_h_by_dag.get(dag_id),
             ))
     entries = _dedup(entries)
-    classify(entries, read(path), date, complete=complete)
+    classify(entries, read(path), date, complete=complete, exec_h_by_dag=exec_h_by_dag)
     append(entries, path)
     return entries
 
@@ -359,30 +372,32 @@ def savings(path: str = LEDGER) -> dict:
 
     Only fixes whose finding went quiet (`resolved`) count, and only in the units the ledger
     actually measured: mean executor-hours per sweep-day before the applied date vs after,
-    times the days observed since. No unit is converted to dollars here; DCU deltas carry the
+    times the days observed since. The series is one value per dag per sweep-day, and a dag
+    enters the total once however many resolved findings its fix cleared - the reduction is
+    job-level, not per finding. No unit is converted to dollars here; DCU deltas carry the
     committed-use caveat and Databricks money lives in `databricks.job_costs`.
     """
-    entries = read(path)
-    by_dag: dict[str, list] = {}
-    for e in entries:
+    daily_h: dict[str, dict[str, float]] = {}
+    for e in read(path):
         if e.get("exec_h") is not None:
-            by_dag.setdefault(e.get("dag_id", ""), []).append(e)
-    rows, total_exec_h = [], 0.0
+            daily_h.setdefault(e.get("dag_id", ""), {})[e.get("date", "")] = e["exec_h"]
+    rows, total_exec_h, counted = [], 0.0, set()
     for r in shipped(path):
         if r["outcome"] != "resolved":
             rows.append({**r, "days_observed": 0, "exec_h_saved": None})
             continue
-        series = by_dag.get(r["dag_id"], [])
-        before = [e["exec_h"] for e in series if e.get("date", "") < r["applied_date"]]
-        after = [e["exec_h"] for e in series if e.get("date", "") > r["applied_date"]]
-        after_days = sorted({e.get("date", "") for e in series
-                             if e.get("date", "") > r["applied_date"]})
-        if not before or not after:
+        series = daily_h.get(r["dag_id"], {})
+        before = [h for d, h in series.items() if d < r["applied_date"]]
+        after_days = sorted(d for d in series if d > r["applied_date"])
+        if not before or not after_days:
             rows.append({**r, "days_observed": len(after_days), "exec_h_saved": None})
             continue
+        after = [series[d] for d in after_days]
         daily = sum(before) / len(before) - sum(after) / len(after)
         saved = daily * len(after_days)
-        total_exec_h += max(saved, 0.0)
+        if r["dag_id"] not in counted:
+            counted.add(r["dag_id"])
+            total_exec_h += max(saved, 0.0)
         rows.append({**r, "days_observed": len(after_days), "exec_h_saved": saved})
     since = min((r["applied_date"] for r in rows if r["applied_date"]), default="")
     return {"since": since, "total_exec_h_saved": total_exec_h, "rows": rows}
@@ -395,7 +410,7 @@ def render_savings(s: dict) -> str:
     out = [
         f"**Saved since {s['since']}: {s['total_exec_h_saved']:,.0f} executor-hours** "
         "(measured per-DAG, before-rate minus after-rate times days observed; only fixes whose "
-        "finding stopped firing count).",
+        "finding stopped firing count, and each DAG enters the total once).",
         "",
         "| Applied | DAG | Finding | PR | Outcome | Days observed | Executor-hours saved |",
         "|---|---|---|---|---|---:|---:|",
