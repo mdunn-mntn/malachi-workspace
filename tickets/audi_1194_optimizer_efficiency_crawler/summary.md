@@ -540,11 +540,15 @@ the platform behaves rather than what the data means.
 
 ## 8. Open Items / Follow-ups
 
-- **PENDING (2026-08-27): write the fangorn applied marker into the prod GCS optimizer ledger** —
-  `python3 -m airflow_optimizer.ledger applied <dag> <key>
-  https://github.com/SteelHouse/airflow-ti/pull/1231 2026-08-27` against the prod ledger object.
-  Blocked on gcloud reauth ("Reauthentication required", non-interactive session). Until the
-  marker is written, the savings log will not measure the fangorn fix.
+- **DONE 2026-08-27: fangorn applied marker written to the prod GCS optimizer ledger.** After
+  the user reauthed gcloud: downloaded `gs://mntn-data-archive-prod/optimizer/optimization_ledger.jsonl`,
+  marked `fangorn_score_monitor` applied for `shuffle_partition_sizing:17`, `:19`, `disk_spill:17`,
+  `:19` (fix_pr #1231, applied_date 2026-08-27, note "shuffle partitions 256 to 2048 in decorator
+  and builder"), uploaded, verified 4 applied rows land. Stage-17/19 keys only: the fix's evidence
+  is per-partition MiB in those two stages; stragglers and idle executors are NOT claimed, and if
+  stages 23/26 spill also clears, resolution attributes via the same dag-level exec_h series.
+  Next sweep (09:00 UTC) fetches this ledger; savings attribution to #1231 starts when the keys
+  go quiet.
 
 **Status 2026-08-21: SHIPPED.** `spark_optimizer_daily` runs in prod airflow-ti. First run:
 215 jobs, 290 findings, 196 high, four artifacts in `gs://mntn-data-archive-prod/optimizer/`.
