@@ -25,10 +25,18 @@ All committed and tested on `main` of the workspace repo (113 tests green):
 1. **#1227 — cost unit.** https://github.com/SteelHouse/airflow-ti/pull/1227 · branch
    `audi-1194-impact-hours`. `optimizations.py`, `eventlog.py`, `tests/test_eventlog.py`.
    Gauntleted at `fast` (5 agents, 10 min), 105 tests. Needs review.
-2. **Databricks + delivery.** Branch `audi-1194-databricks-delivery` pushed, description drafted
-   and linted, `medium`-tier gauntlet running at handoff. `notify.py`, `digest.py`, `sweep.py`,
-   `databricks.py`, `__init__.py` and two test files, 649 changed lines. Open the PR once the
-   gauntlet returns and the mechanical gate is re-run.
+2. **#1228 — Databricks + delivery.** https://github.com/SteelHouse/airflow-ti/pull/1228 ·
+   branch `audi-1194-databricks-delivery`. `notify.py`, `digest.py`, `sweep.py`, `databricks.py`,
+   `__init__.py` and two test files. 109 tests. Needs review.
+
+   Its `medium` gauntlet returned ERROR when round 2 hit the account's session limit, so round
+   1's fixes were accepted by hand. Two were real and worth knowing: the Block Kit parent
+   collected only `new` + `chronic`, so a `fix_not_working` DAG never appeared in Slack; and the
+   partial-sweep and no-change-tracking caveats reached only the text digest, so a Slack reader
+   saw a confident post with the warning missing. **One fix was rejected**: the fixer imported
+   `_post` from `include/airflow_debugger/notify.py`, which inverts the existing one-way
+   dependency and drags the debugger's module graph into the optimizer. The duplication is real
+   and is the right thing to solve when the two projects merge, but not by that import.
 
 ## The workspace and airflow-ti are two copies of the same package
 `workspace/airflow_optimizer/` is where work happens; `airflow-ti/include/spark_optimizer/` is
