@@ -101,3 +101,20 @@ differ on the channel env var (`SLACK_ALERT_CHANNEL` vs `OPTIMIZER_SLACK_CHANNEL
   threaded digest + produce the collect_local diagnostic. Code reading narrowed the disagreement
   to DAG files that fail to IMPORT on the worker (their tasks vanish from the owner index; REST
   reads task lists without importing). Confirm against the sweep's coverage report.
+
+## In-flight state for compaction, 2026-08-27 ~00:15 PT
+
+- **PR #1230** (`audi-1191/wire-slack-delivery`, wt at scratchpad/wt-wire, HEAD `2ce72e6`):
+  tools only — debugger wire + reply fixes, optimizer batching + savings log. Medium gauntlet
+  running: run `wf_395de174-27b`, task `w1osx2i0t`. On verdict: verify fixer diff, tests + ruff
+  from the worktree, commit path-limited, push, marker to git-dir/pr_gauntlet_pass, then
+  `gh pr edit 1230` with a fresh linted description (tools scope only).
+- **Branch `audi-1194-model-tuning`** (wt at scratchpad/wt-tuning, HEAD `f7cc7bd`): the two
+  evidence-backed config fixes (fangorn 256->2048 both sites; ds_35 speculation 0.9), split out
+  at the user's direction — DAG fixes never share a PR with tool changes (rule now in the
+  pr_gauntlet skill). Fast gauntlet running: run `wf_a20e9397-ee6`, task `wn5q23fa3`. On verdict:
+  same ship steps, then `gh pr create` from wt-tuning with a linted description; after merge,
+  `ledger applied` for both findings so the savings log starts measuring.
+- Everything else from the night is committed/pushed and recorded in summary.md §4 night
+  sections; the remaining human steps are review of both PRs, the two staged Slack asks, and
+  IMP-088.
