@@ -41,7 +41,9 @@ The loop is `.claude/workflows/pr_gauntlet.js`. Do not restate their content her
 **One branch, one gauntlet, one PR (user rule, 2026-08-26).** Never a new PR per fix. Related
 fixes accumulate as commits on one branch; the gauntlet runs ONCE, when the change set is
 believed complete and a review is about to be asked for. Commits and pushes along the way need
-no gauntlet — "about to ask for review" is the trigger.
+no gauntlet — "about to ask for review" is the trigger. Tool/pipeline changes and
+prod-DAG tuning never share a PR: a config change to someone's job is its own review ask
+(user rule, 2026-08-27).
 
 ## Step 1 — Resolve the target
 
