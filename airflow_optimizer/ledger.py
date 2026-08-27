@@ -367,21 +367,29 @@ def latest(path: str = LEDGER) -> dict[tuple[str, str], dict]:
     return out
 
 
-def savings(path: str = LEDGER) -> dict:
+def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = None) -> dict:
     """Cumulative measured savings since the first shipped fix.
 
     Only fixes whose finding went quiet (`resolved`) count, and only in the units the ledger
     actually measured: mean executor-hours per sweep-day before the applied date vs after,
     times the days observed since. The series is one value per dag per sweep-day, and a dag
     enters the total once however many resolved findings its fix cleared - the reduction is
-    job-level, not per finding. No unit is converted to dollars here; DCU deltas carry the
-    committed-use caveat and Databricks money lives in `databricks.job_costs`.
+    job-level, not per finding. Alongside the all-time total: the year-to-date share (the year
+    is `today`'s, defaulting to the newest sweep date so replays stay deterministic), the
+    current daily run rate, and that rate over 365 days as the estimated annual save. Dollars
+    appear only when the caller supplies `usd_per_exec_h` and are estimates at that rate; DCU
+    deltas carry the committed-use caveat and Databricks money lives in `databricks.job_costs`.
     """
+    entries = read(path)
     daily_h: dict[str, dict[str, float]] = {}
-    for e in read(path):
+    for e in entries:
         if e.get("exec_h") is not None:
             daily_h.setdefault(e.get("dag_id", ""), {})[e.get("date", "")] = e["exec_h"]
-    rows, total_exec_h, counted = [], 0.0, set()
+    if not today:
+        today = max((e.get("date", "") for e in entries), default="")
+    year_floor = f"{today[:4]}-01-01" if today else ""
+    rows, counted = [], set()
+    total_exec_h = ytd_exec_h = run_rate = 0.0
     for r in shipped(path):
         if r["outcome"] != "resolved":
             rows.append({**r, "days_observed": 0, "exec_h_saved": None})
@@ -398,9 +406,29 @@ def savings(path: str = LEDGER) -> dict:
         if r["dag_id"] not in counted:
             counted.add(r["dag_id"])
             total_exec_h += max(saved, 0.0)
+            if year_floor:
+                ytd_exec_h += max(daily * len([d for d in after_days if d >= year_floor]), 0.0)
+            run_rate += max(daily, 0.0)
         rows.append({**r, "days_observed": len(after_days), "exec_h_saved": saved})
     since = min((r["applied_date"] for r in rows if r["applied_date"]), default="")
-    return {"since": since, "total_exec_h_saved": total_exec_h, "rows": rows}
+    return {"since": since, "ytd_year": today[:4], "total_exec_h_saved": total_exec_h,
+            "ytd_exec_h_saved": ytd_exec_h, "run_rate_exec_h_per_day": run_rate,
+            "est_annual_exec_h": run_rate * 365, "usd_per_exec_h": usd_per_exec_h,
+            "rows": rows}
+
+
+def savings_headline(s: dict) -> str:
+    """One line for the digest: all-time, year to date, and the estimated annual save."""
+    head = (f"Saved since {s['since']}: {s['total_exec_h_saved']:,.0f} executor-hours all-time, "
+            f"{s['ytd_exec_h_saved']:,.0f} in {s['ytd_year']}; current rate "
+            f"{s['run_rate_exec_h_per_day']:,.1f}/day, est. {s['est_annual_exec_h']:,.0f}/yr")
+    rate = s.get("usd_per_exec_h")
+    if rate:
+        head += (f" (~${s['total_exec_h_saved'] * rate:,.0f} all-time, "
+                 f"${s['ytd_exec_h_saved'] * rate:,.0f} in {s['ytd_year']}, "
+                 f"est. ${s['est_annual_exec_h'] * rate:,.0f}/yr, estimated at "
+                 f"${rate:,.2f} per executor-hour)")
+    return head
 
 
 def render_savings(s: dict) -> str:
@@ -408,7 +436,7 @@ def render_savings(s: dict) -> str:
     if not s["rows"]:
         return "No shipped optimization has a measured outcome yet.\n"
     out = [
-        f"**Saved since {s['since']}: {s['total_exec_h_saved']:,.0f} executor-hours** "
+        f"**{savings_headline(s)}** "
         "(measured per-DAG, before-rate minus after-rate times days observed; only fixes whose "
         "finding stopped firing count, and each DAG enters the total once).",
         "",

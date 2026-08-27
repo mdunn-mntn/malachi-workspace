@@ -163,11 +163,18 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         with open(dbx_path, "w") as fh:
             fh.write(dbx)
 
-    savings_path = ""
+    savings_path, savings_note = "", ""
     if ledger_note == "":
+        try:
+            usd_rate = float(os.environ.get("OPTIMIZER_USD_PER_EXEC_H", ""))
+        except ValueError:
+            usd_rate = None
+        s = ledger_mod.savings(ledger_path, today=date, usd_per_exec_h=usd_rate)
         savings_path = os.path.join(outdir, "optimizer_savings.md")
         with open(savings_path, "w") as fh:
-            fh.write(ledger_mod.render_savings(ledger_mod.savings(ledger_path)))
+            fh.write(ledger_mod.render_savings(s))
+        if s["rows"]:
+            savings_note = ledger_mod.savings_headline(s)
 
     # The digest cites the other files, so they are uploaded before it is written.
     published = publish([backlog, coverage_path, ledger_path, dbx_path, savings_path], gcs_prefix)
@@ -182,6 +189,9 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         notes.append(f"No change tracking this run: {ledger_note}.")
     if dbx_path:
         notes.append(f"Databricks cost: `{_published_ref(dbx_path, gcs_prefix, published)}`")
+    if savings_note:
+        notes.append(f"{savings_note}. Log: "
+                     f"`{_published_ref(savings_path, gcs_prefix, published)}`")
 
     text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high, date=date,
                              coverage=cov,

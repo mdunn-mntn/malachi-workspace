@@ -487,3 +487,21 @@ def test_the_partial_sweep_caveat_reaches_the_channel_not_just_the_file(
     out = _run(fleet, "2026-08-13", complete=False)
     assert "Partial sweep" in out["slack"]
     assert "Partial sweep" in json.dumps(sent[0])
+
+
+def test_the_digest_carries_the_savings_headline_with_dollars_when_a_rate_is_set(
+        fleet: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The saved-to-date line leadership reads must reach Slack, not only a GCS file."""
+    monkeypatch.setenv("OPTIMIZER_USD_PER_EXEC_H", "2.0")
+    rows = [ledger.Entry(date=d, dag_id="good", app_id="a", key="skew:1", impact="high",
+                         title="Stage 1 skew", state="chronic", exec_h=100.0)
+            for d in ("2026-08-20", "2026-08-21")]
+    rows.append(ledger.Entry(date="2026-08-23", dag_id="good", app_id="a", key="skew:1",
+                             impact="high", title="Stage 1 skew", state="resolved", exec_h=40.0,
+                             fix_pr="https://x/pr/1", applied_date="2026-08-22"))
+    ledger.append(rows, str(fleet / "out" / "l.jsonl"))
+
+    _run(fleet, "2026-08-24")
+    text = (fleet / "out" / "optimizer_digest_2026-08-24.md").read_text()
+    assert "Saved since 2026-08-22" in text and "$120" in text
+    assert "est." in text

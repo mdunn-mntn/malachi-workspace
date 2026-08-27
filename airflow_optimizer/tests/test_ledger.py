@@ -447,3 +447,28 @@ def test_savings_counts_a_dag_once_across_its_resolved_findings(tmp_path: Path) 
     assert [r["exec_h_saved"] for r in s["rows"]] == [60.0, 60.0]
     assert abs(s["total_exec_h_saved"] - 60.0) < 1e-6
     assert "60 executor-hours" in ledger.render_savings(s)
+
+
+def test_savings_reports_ytd_run_rate_and_annual_estimate(tmp_path: Path) -> None:
+    """The leadership view: all-time vs this year vs where the run rate lands in a year."""
+    p = str(tmp_path / "l.jsonl")
+    ledger.append([ledger.Entry(date=d, dag_id="jobx", app_id="a", key="skew:1", impact="high",
+                                title="Stage 1 skew", state="chronic", exec_h=100.0)
+                   for d in ("2025-12-27", "2025-12-28")], p)
+    ledger.mark_applied("jobx", "skew:1", "https://x/pr/9", "2025-12-29", path=p)
+    ledger.append([ledger.Entry(date=d, dag_id="jobx", app_id="a", key="skew:1", impact="high",
+                                title="Stage 1 skew", state="resolved", exec_h=40.0,
+                                fix_pr="https://x/pr/9", applied_date="2025-12-29")
+                   for d in ("2025-12-30", "2025-12-31", "2026-01-02", "2026-01-03")], p)
+
+    s = ledger.savings(p)
+    assert s["ytd_year"] == "2026"
+    assert abs(s["total_exec_h_saved"] - 240.0) < 1e-6
+    assert abs(s["ytd_exec_h_saved"] - 120.0) < 1e-6
+    assert abs(s["run_rate_exec_h_per_day"] - 60.0) < 1e-6
+    assert abs(s["est_annual_exec_h"] - 21900.0) < 1e-6
+    assert "$" not in ledger.savings_headline(s)
+
+    head = ledger.savings_headline(ledger.savings(p, usd_per_exec_h=2.0))
+    assert "$480" in head and "$240" in head and "$43,800" in head and "$2.00" in head
+    assert "21,900" in head
