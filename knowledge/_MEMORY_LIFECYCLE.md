@@ -227,10 +227,10 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_airflow_run_origin | reference | 2026-08-26 | [doc](memory/reference_airflow_run_origin.md) |
 | reference_databricks_billing_cost | reference | 2026-08-26 | [doc](memory/reference_databricks_billing_cost.md) |
 | reference_databricks_system_schema_grants | reference | 2026-08-26 | [doc](memory/reference_databricks_system_schema_grants.md) |
-| reference_pr_gauntlet | reference | 2026-08-26 | [doc](memory/reference_pr_gauntlet.md) |
-| reference_slack_debugger_app | reference | 2026-08-26 | [doc](memory/reference_slack_debugger_app.md) |
 | reference_spark_eventlog_cost_units | reference | 2026-08-26 | [doc](memory/reference_spark_eventlog_cost_units.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-27 | [doc](memory/reference_airflow_ti.md) |
 | project_airflow_debugger | project | 2026-08-27 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-08-27 | [doc](memory/project_airflow_optimizer.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-27 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
+| reference_pr_gauntlet | reference | 2026-08-27 | [doc](memory/reference_pr_gauntlet.md) |
+| reference_slack_debugger_app | reference | 2026-08-27 | [doc](memory/reference_slack_debugger_app.md) |

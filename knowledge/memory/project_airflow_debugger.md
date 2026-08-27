@@ -1,11 +1,11 @@
 ---
 name: project_airflow_debugger
-description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode; Slack delivery wire (PR #1230) merged 2026-08-27. Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
+description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode; Slack delivery wire (PR #1230) merged and verified live 2026-08-27 (3 posted, threaded); 30-day backfill validated 2026-08-27 (173 failures, 94.7% root-caused), cassandra_invalid_request signature on PR #1233, 14 triage tickets AUDI-1227..1240, Confluence on-call reference 3769991216. Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow debugger, AUDI-1191, PR 1230 merged, slack delivery wire, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire]
+keywords: [airflow debugger, AUDI-1191, PR 1230 merged, slack delivery wire, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire, 30-day backfill, cassandra_invalid_request, InvalidRequest code 2200, PR 1233, debugger_triage, AUDI-1227, triage tickets, TPA Pipeline On-Call Reference, confluence 3769991216, SLACK_ALERT_CHANNEL]
 domain: [infra, repos, workflow]
 lifecycle: active
 last_verified: 2026-08-27
@@ -248,9 +248,9 @@ time limit". A bare `401` anywhere in a 24 KB log window turned a missing IAM gr
 expired, refresh it". A stale sensor state prescribed the remedy its own cause had just ruled out. See
 [[feedback_validated_is_not_correct]] — short hand-written fixtures are what hide this class.
 
-**Slack is live** (app, scopes, private-channel trap): [[reference_slack_debugger_app]]. Delivery and the
-human-run filter are PR #1225. Deploy still needs `SLACK_BOT_TOKEN` + `SLACK_ALERT_CHANNEL` as Astro
-deployment env vars. Run-origin gotcha: [[reference_airflow_run_origin]].
+**Slack is live** (app, scopes, private-channel trap): [[reference_slack_debugger_app]]. Delivery
+shipped as #1230 (the #1225 wire was folded into #1229); the Astro env vars are deployed and prod
+delivery is verified (2026-08-27, see below). Run-origin gotcha: [[reference_airflow_run_origin]].
 
 ## 2026-08-26 night — the delivery was never wired, found live, shipped as #1230
 
@@ -271,3 +271,19 @@ schedule slot, so a second trigger inside the same interval 409s on the unique c
 CLEARED run re-executes pinned to its ORIGINAL `bundle_version`, so verifying new code needs
 DELETE + fresh trigger, never clear. `POST /dagRuns` requires the `logical_date` KEY even when
 null (null = "now", works only when the DAG tolerates a missing data interval, #1223-style).
+
+## 2026-08-27 — 30-day backfill validated; delivery verified live; triage tickets
+
+**30-day backfill: 173 failures, 100% logs available, 94.7% deterministically root-caused**
+(`tickets/audi_1191_.../outputs/audi_1191_backfill_30d_2026_08_27.md`). The 9-failure gap = a
+Cassandra `InvalidRequest` code=2200 masked by `channel_not_found` Slack-callback noise; new
+**`cassandra_invalid_request` signature placed BEFORE `slack_notify_failed`** (order-integrity
+matters) ships on **airflow-ti PR #1233** with the severity glyph + section spacing.
+
+**Prod Slack delivery verified end-to-end 2026-08-27: 3 diagnoses posted, threaded.** The blocker
+was the missing `SLACK_ALERT_CHANNEL` Astro env var; `OPTIMIZER_SLACK_CHANNEL` is the optimizer's
+separate var — do not confuse the two.
+
+**14 triage tickets AUDI-1227..AUDI-1240** from the backfill's root causes, label `debugger_triage`
+(7 closed Done, 7 open). **Confluence "TPA Pipeline On-Call Reference"** (space TAR, page id
+`3769991216`) remote-linked from AUDI-1191 and AUDI-1194.

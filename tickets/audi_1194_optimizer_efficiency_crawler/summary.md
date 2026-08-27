@@ -4,7 +4,7 @@ title: "AUDI-1194: Airflow/Spark optimization crawler"
 status: in_progress
 date: 2026-08-05
 summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
-result: "in progress — sweep now daily and full-fleet (214 jobs/278 findings vs 37/59 weekly), PHS half proven end-to-end, site_network_hourly Stage 9 verified and drafted for Ryan, Databricks EXPLAIN COST validated live"
+result: "in progress — prod DAG live with Slack delivery; full-corpus sweep (3,085 logs) distilled to 67 (job, mechanism) pairs / 30,163+ exec-h floor (outputs/audi_1194_hackathon_optimizations_2026_08_27.md); AUDI-1241 filed under epic AUDI-1054 for the burn-down; site_network_hourly + DDP dbt tests now ours to fix (merged #1232, dbt#174 in review)"
 question: "Can a scheduled key-free crawler read every succeeded Spark job (Dataproc event logs + Databricks plans/metrics) and emit a ranked, actionable optimization backlog with no manual step?"
 framing_state: locked
 ---
@@ -591,8 +591,9 @@ this one:
 
 ### Carried forward, unchanged
 
-- **Send the `site_network_hourly` draft to Ryan** (`artifacts/audi_1194_slack_ryan_site_network_hourly.md`)
-  and re-profile the experiment run. Deliberately deferred: get the optimizer working first.
+- ~~**Send the `site_network_hourly` draft to Ryan**~~ — SUPERSEDED 2026-08-27: `site_network_hourly`
+  is now the user's team's to fix directly (ownership shift, see the 2026-08-27 section below); the
+  fix merged as airflow-ti #1232, no owner hand-off needed.
 - **IMP-024 handoff:** owner is Ryan/targeting (not DDP); DAG is manual-only.
 - **Plan-shuffle detectors (IMP-033, widened):** three of five plan detectors read a Spark-UI
   shuffle rendering neither Dataproc nor Photon `EXPLAIN COST` emits.
@@ -610,3 +611,19 @@ this one:
 The vendored `include/spark_optimizer/` package ships multi-line rationale comments throughout,
 which violates the rule this session made explicit and enforced (`lint_comments.py` in the commit
 gate). Its own linter would fail it today. Own PR, before anything else lands on the package.
+
+## 2026-08-27 — hackathon optimization list, AUDI-1241, and the ownership shift
+
+**Full-corpus sweep: 3,085 logs** distilled to
+`outputs/audi_1194_hackathon_optimizations_2026_08_27.md` — **67 distinct (job, mechanism) pairs,
+30,163+ executor-hours at stake (a floor)**. Triage: **8 PR-READY, 53 VERIFY-FIRST, 6 already
+queued**. **AUDI-1241** created under the Q3 tech-debt epic **AUDI-1054** to run the optimization
+burn-down.
+
+**Ownership shift 2026-08-27:** `site_network_hourly` (previously Ryan Kleck's) and the DDP dbt
+tests (Sean Yang's team, which the user is on) are now the user's team's to fix directly. Queue
+items 1, 2, 7 flipped from OWNER to OURS; fixes **merged (airflow-ti #1232)** or **in review
+(dbt#174)**.
+
+Confluence "TPA Pipeline On-Call Reference" (space TAR, page id `3769991216`) is remote-linked from
+this ticket and AUDI-1191.

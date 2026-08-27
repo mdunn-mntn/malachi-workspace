@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Datab
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress (PR #1214 MERGED 2026-08-24; awaiting the Astro bundle refresh) — RCA debugger (Dataproc+Databricks) validated on INC-005/009 + live prod (INC-010); eventLog PR #1169 MERGED to prod 2026-08-04 (merge cef446a3: batch-operator path + local runner + BaseModel observe; workflow-op deferred, ipdsc reverted/PHS kept). Optimizer split out to AUDI-1194 (own ticket + airflow_optimizer/ package, 2026-08-05). Remaining: follow-up PRs (workflow-op eventLog, Databricks GCS-write, spark-events TTL) + Phase 3 auto-fire"
+result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 100% logs available, 94.7% deterministically root-caused); cassandra_invalid_request signature closes the 9-failure gap (PR airflow-ti#1233); 14 triage tickets AUDI-1227..1240 filed; Confluence on-call reference published. Remaining: #1233 merge, 7 open triage tickets, Phase 3 auto-fire"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -767,3 +767,25 @@ blocked by the no-bot policy. INC-009 and its memory still claim Databricks is p
 unreachable, which is false. ~~The Dataproc analyzer's DCU claims are still unvalidated against
 INC-005~~ — CLOSED 2026-08-26: 5.44 DCU-h per executor-hour on INC-005's try-3 batch (AUDI-1194
 summary §4, DCU bridge).
+
+## 7f. 2026-08-27 — 30-day backfill validated, the taxonomy gap closed, triage tickets filed
+
+**30-day backfill validated** (`outputs/audi_1191_backfill_30d_2026_08_27.md`): 173 failures,
+**100% logs available, 94.7% deterministically root-caused**. The 9-failure gap is one defect: a
+**Cassandra `InvalidRequest` code=2200 masked by `channel_not_found` Slack-callback noise** — the
+slack_notify_failed signature matched the callback's own error and buried the real cause. Fix: new
+**`cassandra_invalid_request` signature placed BEFORE `slack_notify_failed`** in the taxonomy, ships
+on **airflow-ti PR #1233** together with the severity glyph and section spacing in the reply. The
+evidence discipline mattered: the agent's verbatim-log pull showed the Cassandra error, preventing a
+mislabeling "fix" to the Slack signature.
+
+**Slack delivery verified end-to-end in prod 2026-08-27**: 3 diagnoses posted, each threaded under
+its alert. The last blocker was the missing **`SLACK_ALERT_CHANNEL`** Astro env var — note
+**`OPTIMIZER_SLACK_CHANNEL` is the optimizer's separate var**, do not confuse the two
+([[reference_slack_debugger_app]]).
+
+**14 triage tickets AUDI-1227..AUDI-1240** filed from the backfill's root causes, label
+`debugger_triage`: 7 closed with resolution Done, 7 open.
+
+**Confluence page published: "TPA Pipeline On-Call Reference"**, space TAR, page id `3769991216`,
+remote-linked from AUDI-1191 and AUDI-1194.

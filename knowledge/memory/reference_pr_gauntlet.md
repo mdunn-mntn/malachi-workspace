@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [pr_gauntlet, PR gauntlet, gauntlet tiers, fast medium thorough, FIXED_UNVERIFIED, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072]
+keywords: [pr_gauntlet, PR gauntlet, gauntlet tiers, fast medium thorough, FIXED_UNVERIFIED, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072, haiku default, gauntlet model]
 domain: [workflow, repos]
 lifecycle: active
-last_verified: 2026-08-26
+last_verified: 2026-08-27
 ---
 **`/pr_gauntlet` is the adversarial PR review gate and it fires AUTOMATICALLY** — the user's explicit
 mandate (2026-08-24): never wait to be prompted at PR time. Two enforcement layers: the session
@@ -85,3 +85,7 @@ change set is believed complete; the PR opens after that single pass. **Why:** t
 five PRs (#1225/#1227/#1228 rolled into #1229, then a wire fix) and each PR paid its own gauntlet
 and its own review ask. **How to apply:** while a branch is still accumulating, commit freely and
 skip the gauntlet; treat "about to ask for review" as the trigger, not "about to push".
+
+**Gauntlet agents default to haiku (user rule, 2026-08-27).** The model default lives in the
+workflow script `.claude/workflows/pr_gauntlet.js`; do not dispatch reviewers/refuters at a larger
+model unless the user asks.
