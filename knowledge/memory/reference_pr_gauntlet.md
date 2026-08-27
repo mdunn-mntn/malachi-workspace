@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [pr_gauntlet, PR gauntlet, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072]
+keywords: [pr_gauntlet, PR gauntlet, gauntlet tiers, fast medium thorough, FIXED_UNVERIFIED, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072]
 domain: [workflow, repos]
 lifecycle: active
-last_verified: 2026-08-24
+last_verified: 2026-08-26
 ---
 **`/pr_gauntlet` is the adversarial PR review gate and it fires AUTOMATICALLY** — the user's explicit
 mandate (2026-08-24): never wait to be prompted at PR time. Two enforcement layers: the session
@@ -25,8 +25,7 @@ find nothing.
 `.claude/agents/pr-gauntlet-*.md` files; loop is `.claude/workflows/pr_gauntlet.js`. Dispatch with
 `Workflow({scriptPath: '<ws>/.claude/workflows/pr_gauntlet.js', args:{repo, base, files, description}})`
 — by scriptPath, never `{name}` (session-cached, see [[feedback_adversarial_workflow_authoring]]).
-Verdicts: PASS (write the marker, ship) · FAIL_MAX_ROUNDS / THRASH (no ship, report open findings) ·
-ERROR (infra; re-dispatch is safe). First live target (commit f02f9a52) took 3 runs / 40 findings /
+Pass `tier` in args: `fast` (1 round, skeptic only, ~13 min) · `medium` (2 rounds, both reviewers, the default) · `thorough` (3 rounds, must converge). Verdicts: PASS (write the marker, ship) · **FIXED_UNVERIFIED** (fast/medium applied the last round's fixes without re-reviewing them — run the tests and the mechanical gate yourself, then ship) · FAIL_MAX_ROUNDS / THRASH (no ship, report open findings) · ERROR (infra; re-dispatch is safe). First live target (commit f02f9a52) took 3 runs / 40 findings /
 27 confirmed, ended FAIL_MAX_ROUNDS with the good fixes committed and the rest logged as IMP-072.
 **Cost calibration (2026-08-25/26, five AUDI-1194 runs).** At the original `MAX_ROUNDS = 4` a run took
 **~85-95 minutes and 44-62 agents** (~2.4-3.2M subagent tokens). Malachi called that extreme, and the
@@ -56,3 +55,9 @@ already in the working tree, so commit them, then re-dispatch fresh rather than 
 
 `args.report_only: true` = archaeology mode for merged/foreign PRs: one review+refute round, no
 fixer, verdict REPORT — proven on merged airflow-ti#1215 (12 confirmed, 0 refuted, → IMP-073).
+
+**The mechanical gate lints only the files the FIXER touched, so a file YOU added slips through
+(2026-08-26).** airflow-ti CI runs `ruff` with `ANN` (mandatory type annotations) enabled; the
+workspace config does not. A test helper I wrote passed every local check and the gauntlet's gate,
+then failed CI on four `ANN001`s. **Before pushing, run the target repo's own `ruff check` on every
+file in the diff, not just the ones the fixer edited.**

@@ -668,3 +668,80 @@ The airflow-ti bundle is synced in a worktree on branch `audi-1191/bundle-verdic
 hand-off. Sync is reproducible: `scratchpad/sync_bundle.py <bundle-dir>` asserts every edit lands
 (an earlier sed port failed silently and shipped a dead resolver subsystem).
 
+## 7d. Shipping the answer-shaped reply, and what the gauntlet cost (2026-08-26/27)
+
+**Merged: airflow-ti #1224.** The bundle now carries `resolvers.py`, `root_cause_walk.py`, the
+five-section `slack_block.render`, and a `remedy` on all 37 signatures. 215 tests.
+
+**Open: airflow-ti #1225** (two commits, folded from a separate #1226 at Malachi's request so the
+bundle takes one review): delivery searches every configured channel and threads under the one
+holding the alert; the sweep skips a run a person started by hand. 218 tests.
+
+**Six more confident-wrong answers, found by six gauntlet rounds across three runs.** Every one
+passed the full suite before it was caught, and every one is the same shape — a statistic or guard
+that holds for the fixture and not for the fleet:
+
+1. `_execution_timeout` trend windows. `third = max(len(ok) // 3, 3)` means that at the minimum
+   supported history (3 successes) `ok[:third]` and `ok[-third:]` are the **same list**, so
+   `growth` is 0.0 by construction. Repro `ok=[3400, 1800, 600]`, budget 3600: evidence read "the
+   last 3 successful runs took a steady 30m" (no run took 30m) and the verdict was "The task hung
+   ... Do not raise the time limit", when the newest green run had used 57m of the 60m limit.
+   Fixed: windows must be disjoint (`third = len(ok) // 3`, trend claimed only at `third >= 2`);
+   below that the evidence says "the last successful run took Nm, too few to read a trend from"
+   and the branch keys on the most recent run rather than a median that hides it.
+2. Branch decided on `statistics.median(ok)` over the whole 100-run history, so a task whose
+   runtime stepped up recently kept a low all-time median and was called hung. Now keyed on the
+   recent third.
+3. `_auth` matched a bare `401` anywhere in the composed text (root error + full spark JSON + a
+   24 KB log window). A GCS object path ending `part-00401-c0de.parquet` flipped a real missing
+   grant into "The credential for X expired ... refresh the credential and re-run". Now `401` must
+   sit next to `unauthorized`. The same finding exposed a second half: `_PERMISSION` allowlisted
+   five services, so `serviceusage.services.use` (and secretmanager, pubsub, logging, monitoring,
+   artifactregistry, cloudresourcemanager) fell through to a placeholder phrase.
+4. `external_task_rca` stale-state branch looked its remedy up by the target's CURRENT state, which
+   that branch has just declared stale. For a target that ended green it printed "the sensor looked
+   at the wrong run" directly under a cause saying the sensor was right. Now only the terminal
+   outcome chooses the action.
+5. `_runs_until_breach` returned `runs or None`, so a horizon flooring to 0 was indistinguishable
+   from no growth and one reply carried both "Runtime is not growing" and "runtime rose +278%".
+   It also compounded a whole-window growth ratio once per run, shrinking a ~114-run horizon to
+   "about 2 more runs"; now it spreads the drift over the window's span, and a horizon past 200
+   reads as "holds for hundreds of runs" instead of a number nobody can act on.
+6. `report._fit` picked the longest line to trim and the deep link was a candidate, so the
+   "drop the link whole rather than emit a corrupted URL" guard could never fire. Now the link is
+   excluded from the trim set.
+
+Plus two the last round caught in code I had just written: a kill duration well under the declared
+limit proves nothing (the limit was raised after that run), and `pull.task_instances_in_run`
+fetched one page and swallowed non-200, so a 403 read as the positive claim "no failed task in
+this run, so the cause is outside it".
+
+**The `manual__` trap.** Malachi asked for manual-run failures to be excluded. The naive filter
+(drop run ids starting `manual__`) is wrong: `TriggerDagRunOperator` produces the same prefix, and
+`tpa_mntn_id_export` has `schedule=None` and is triggered only that way, so the filter silently
+dropped a whole paging DAG. `dag_run.triggered_by` is the real discriminator (`ui`/`cli`/`rest_api`
+are people, `operator` is a DAG) and the REST value is `rest_api`, not `rest`. Detail:
+memory `reference_airflow_run_origin`.
+
+**Replay refreshed against the fixed code** (`outputs/audi_1191_every_failure_2026_08_27.md`):
+216 logs -> 67 distinct failures, 47 root-caused / 20 named, 20 settled from evidence, 30 matched
+a signature, 15 state that no cause is in the log, 2 walked upstream. 0 bare categories, 0 replies
+without a fix. The walk fires only 12 times because the replay harness calls `investigate` without
+a run id while the prod DAG passes one from the API; fed the real run id, the stub cases resolve to
+runs whose tasks all recovered, so "no failed task in this run" is the correct answer, not a dark
+walk. Artifact: `ada3322c-046c-4a23-bd6b-dfea9bad2e8f`.
+
+**Gauntlet tiers** (`fast`/`medium`/`thorough`) came out of this ticket: at the old fixed setting a
+run cost 40+ minutes, and the last round threw its own confirmed findings away instead of applying
+them. `fast` is 13 minutes and caught a blocker in each of three runs. Detail: memory
+`feedback_gauntlet_findings_not_fixes`.
+
+**Slack is live.** App "Airflow Failure Debugger" (`@airflow-debugger`, `U0BTU0FA8N4`), approved by
+Robin Fox, in `#alerts-tpa-pipeline` (`C08CURMGNMQ`) and `#monitor-tpa` (`C067ZM2EC5S`). Both are
+PRIVATE, so `groups:history` + `groups:read` are required on top of the `channels:*` pair; only
+`groups:history` is load-bearing for threading. Detail: memory `reference_slack_debugger_app`.
+
+**Still open:** deploy `SLACK_BOT_TOKEN` and `SLACK_ALERT_CHANNEL` as Astro deployment env vars
+(secret), then post a real reply in-thread. Phase 3 in-DAG auto-fire is no longer blocked by the
+no-bot policy. INC-009 and its memory still claim Databricks is programmatically unreachable, which
+is false. The Dataproc analyzer's DCU claims are still unvalidated against INC-005.

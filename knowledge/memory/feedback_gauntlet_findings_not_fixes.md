@@ -22,6 +22,10 @@ last_verified: 2026-08-25
 
 **Both had a docstring asserting the safety property the code did not have.** A confident docstring over an unverified guard is the tell.
 
-**Cost tuning (2026-08-25).** First runs took 41 min / 30 agents / 1.6M tokens. Round 1 confirmed 10 findings; round 2 confirmed 0. Retuned `.claude/workflows/pr_gauntlet.js` to `MAX_ROUNDS = 2`, `MAX_REFUTERS_PER_ROUND = 6`, and refuter effort `high` only for blocker/major (`medium` for minor) — next run was 23 min / 17 agents and still caught a blocker. **Keep 2 rounds, not 1: THRASH detection needs a second round to see a finding recur, and that is what caught the first defect.**
+**Cost tuning (superseded 2026-08-26 by tiers, kept for the reasoning).** First runs took 41 min / 30 agents / 1.6M tokens. Round 1 confirmed 10 findings; round 2 confirmed 0. Retuning to `MAX_ROUNDS = 2` cut a run to 23 min / 17 agents and still caught a blocker.
+
+**Tiers replaced the single global setting (2026-08-26).** `fast` = 1 round, skeptic only, 3 refuters, effort `medium` (~13 min / 5 agents). `medium` = 2 rounds, both reviewers, 4 refuters (the old default). `thorough` = 3 rounds, 6 refuters, must converge clean. The tier is the first word of the `/pr_gauntlet` args and rides in `args.tier`.
+
+**The bug the tiers fixed is the one worth remembering: the last round used to throw its own work away.** At the round cap the loop returned `FAIL_MAX_ROUNDS` with the round's confirmed findings UNFIXED, so a run that found anything in its final round always ended with open work and a wasted review. `fast` and `medium` now apply those fixes and return the new verdict **`FIXED_UNVERIFIED`** — the fixes are real, but no fresh agent has re-read them, so run the tests and the mechanical gate yourself before shipping. `thorough` still refuses to end that way. **Do not read `FAIL_MAX_ROUNDS` in an old transcript as "the code is bad"** — until 2026-08-26 it also meant "the loop hit its cap".
 
 Related: [[project_airflow_debugger]], [[feedback_validated_is_not_correct]], [[feedback_hold_evidenced_verdict]].

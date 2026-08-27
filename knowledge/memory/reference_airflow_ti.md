@@ -87,6 +87,12 @@ Three-layer feature store on GCP Dataproc Serverless via Airflow (Astronomer):
 - **Copy dev→prod with gsutil** — `gsutil -m cp -r` from dev to prod bucket (Ryan confirmed approach)
 
 ## CI Pipeline
+
+**`ruff` here enforces `ANN` (mandatory type annotations); the workspace config does not.** Code written
+and linted in `~/Developer/work/mntn/workspace` passes locally and then fails `pr_airflow_debugger.yaml`
+on `ANN001 Missing type annotation for function argument` — including inner helper functions defined
+inside a test. Run `ruff check` from THIS repo on every file in the diff before pushing (2026-08-26).
+
 - **model_task_config.json must be regenerated** after any model config change — run `uv run python model_upload.py --dryrun` and commit
 - **GitHub Actions runs model-upload-dryrun** — validates compilation and checks config freshness
 - **Runtime read-split (non-obvious, INC-005 2026-07-29):** at task exec the operator reads the model **`.py` LIVE from `gs://mntn-data-archive-prod/ti_resources_v2/main/models/...`** (synced by the prod deploy on merge, ~1 min after), BUT the batch **`ttl` + spark `runtime_properties`** come from **`model_task_config.json` baked into the Astronomer DAG bundle**, which only refreshes on an `astro deploy` (the "Deploy to Prod" Action, `on: push` to main). So a **`.py` logic change applies on the next re-run right after merge**, but a **decorator-only change (ttl, `spark.sql.shuffle.partitions`) does NOT take effect until the bundle redeploys** past the merge — true for scheduled runs too. Verify a config change landed by checking the `Compute batch:` log line's `ttl`/properties on the next run, not just that the PR merged.
