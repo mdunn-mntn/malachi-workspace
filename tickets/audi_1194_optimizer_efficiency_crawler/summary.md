@@ -410,6 +410,42 @@ edits, while the run start resets the review files — so a resumed run reviews 
 and self-declares THRASH against its own ghost. The 19:0x THRASH verdict on the delivery branch
 was this artifact, not a real oscillation.
 
+### 2026-08-26 night — both deliveries verified LIVE, and the tool grew its reporting spine
+
+**The debugger replied in a real thread.** With the Astro env vars live, a manual run on the
+post-merge bundle posted NOTHING: `notify.deliver` was never called from `daily.run` (the token
+gate had masked the missing wire across two PRs). The wire is airflow-ti **#1230** (CI green,
+fast gauntlet, fixer added a GCS-existence re-post guard; awaiting review). The delivery itself
+was then verified WITHOUT the merge by running the bundle's own chain locally with the keychain
+token: `fangorn_inference_pipeline_run scheduled__2026-08-24T18:00` diagnosed
+`cluster_create_stockout` high, posted `sent:true threaded:true` into the alert's live thread in
+`#alerts-tpa-pipeline`, where the engineers' own fix PR (targeting-infra-ml#95) matches the
+bot's remedy.
+
+**The optimizer's threaded digest is live too.** Manual `spark_optimizer_daily` run
+(`manual__2026-08-27T02:49`, bundle 02:33): **346 jobs / 274 findings / 132 high, complete**,
+digest parent + 8 threaded fixes in `#spark-optimizer`. The widened PHS selector roughly
+doubled coverage (217 -> 346). **The collect_local disagreement is CLOSED by observation**:
+the digest now links `fangorn_score_monitor` -> `audience_intent` and `ipdsc_ds_35` ->
+`tpa_ipdsc_export`; 21 unresolved names each carry a reason in the coverage report.
+
+**New spine, all committed and ported to `audi-1194-sweep-followups`:**
+- `ledger.savings()` + `render_savings()`: cumulative saved-since-X in measured units only
+  (before-rate minus after-rate x days observed, resolved fixes only), published every sweep as
+  `optimizer_savings.md`. 120 tests.
+- `fetch.download` batched: one `gsutil -m cp -I` per destination dir (was 200 serial spawns).
+- Daily gap-check loop: `.claude/scripts/daily_gap_check.sh` + launchd
+  `com.mntn.daily-gap-check` (12:00 PT) writes `on-call/gap_checks/gaps_<date>.md` from the day's
+  prod artifacts; a session works its checklist and folds real gaps into the open branch.
+
+**Debugger corpus re-swept at 2,924 logs**: 123/150 classified + 19 routable = 95%;
+gaps IMP-089 (watchdog logs quote other DAGs' failures; green-fire check needs an exclusion)
+and IMP-090 (`databricks_guid_geos` 8-log unclassified cluster). Explainer artifacts published:
+debugger `2ad4a4b8-0486-494b-903e-76f1c30683fc`, optimizer `28326201-9358-491e-83b4-9cfc1fe2e705`.
+Implementation queue for the optimization PRs: `artifacts/audi_1194_implementation_queue.md`
+(7 items, 2 blocked on staged owner asks). OpenAI-in-prod ask parked as IMP-088 (security
+policy conflict; needs a sanctioned credential path).
+
 ### 2026-08-26 night — the DCU-to-executor-hour bridge, measured both ways
 
 The AUDI-1191 handoff's open item "the Dataproc analyzer's DCU claims are unvalidated against
