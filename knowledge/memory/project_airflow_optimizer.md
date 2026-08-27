@@ -374,3 +374,9 @@ queued. **AUDI-1241** filed under the Q3 tech-debt epic AUDI-1054 for the burn-d
 team, which the user is on) are now the user's team's to fix directly. Queue items 1, 2, 7 flipped
 OWNER → OURS; fixes merged (airflow-ti **#1232**) or in review (**dbt#174**). Confluence "TPA
 Pipeline On-Call Reference" (`3769991216`) remote-linked from AUDI-1194.
+
+**Tuning reference installed 2026-08-27 (commit e7973a9b):** the compiled DBR 17.3 / Dataproc 2.3
+reference is the skill `.claude/skills/pyspark-optimization-databricks-dataproc/SKILL.md`;
+[[reference_pyspark_optimization_skill]] is the MNTN annex that wins on conflict (serverless
+Spark 4.0 fleet, speculation/fetch-wait/EXPLAIN COST overrides). Read both before acting on any
+optimizer or debugger finding. Fix text stays canonical in `optimizations.py` (drift: IMP-093).
