@@ -394,6 +394,19 @@ SIGNATURES: list[Signature] = [
         ),
     ),
     Signature(
+        "max_distinct_paths_guard",
+        r"exceeded max_distinct_paths=\d+.{0,60}refusing to load",
+        "app/guard-refusal",
+        "The job's own guard refused an advertiser whose distinct URL paths exceed the "
+        "configured ceiling, rather than load them into worker memory.",
+        "sometimes",
+        remedy=(
+            "Read the named advertiser id. Either the ceiling is right and that advertiser "
+            "needs filtering upstream, or raise max_distinct_paths with a memory check; the "
+            "guard firing daily for the same advertiser is a decision, not a retry."
+        ),
+    ),
+    Signature(
         "cassandra_invalid_request",
         # The 'exception': payload is the task's OWN error; the log tail below it is usually
         # the failure callback's Slack noise, which must not steal this verdict.

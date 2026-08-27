@@ -482,3 +482,15 @@ def test_a_cassandra_invalid_request_outranks_the_callback_slack_noise() -> None
     )
     m = classify(log)
     assert m is not None and m.key == "cassandra_invalid_request"
+
+
+def test_the_max_distinct_paths_guard_is_a_verdict_not_slack_noise() -> None:
+    """7 of the 30-day backfill's unclassified failures: the app's own memory guard, with the
+    Slack channel_not_found callback noise below it."""
+    log = (
+        "'exception': RuntimeError('Advertiser 44054 exceeded max_distinct_paths=250000; "
+        "refusing to load into worker memory')}\n"
+        "The server responded with: {'ok': False, 'error': 'channel_not_found'}"
+    )
+    m = classify(log)
+    assert m is not None and m.key == "max_distinct_paths_guard"
