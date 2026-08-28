@@ -179,3 +179,10 @@ board uncluttered while making sure a good idea (a durable fix, a tooling gap, a
 
 - ENGINE-PROPOSE `c-2026-08-27-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
 - IMP-094 | optimizer | Profile the 39 non-Spark DAGs (coverage report 2026-08-27): per-operator cost surfaces — BQ tasks via INFORMATION_SCHEMA slot usage, Databricks jobs via system tables already granted, K8s pods via requested-vs-used resources. Extends the optimizer beyond Spark event logs; sized a few days, good hackathon item. | Status: idea | Ref: spark-optimizer digest 2026-08-27
+- IMP-095 | debugger | Rapid debugger misses alerts whose failure end_date falls outside the 45-min lookback when cycles pause (deploy rollouts, env-var restarts); fangorn_household_14day_lookback 2026-08-28 went terminal with no thread reply. Fix idea: persist a last-successful-cycle watermark and look back to it. | Status: idea | Ref: live validation 2026-08-28
+
+- ENGINE-PROPOSE `c-2026-08-28-001` (knowledge_edit/costly_query): query shape run 2x billing 5366.8 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-28-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-28-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)

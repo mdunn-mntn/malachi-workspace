@@ -184,7 +184,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_slack_channel_one_liners | feedback | 2026-08-20 | [doc](memory/feedback_slack_channel_one_liners.md) |
 | project_deidentify_personal_credentials | project | 2026-08-20 | [doc](memory/project_deidentify_personal_credentials.md) |
 | reference_airflow_deferrable_broken_3_1 | reference | 2026-08-20 | [doc](memory/reference_airflow_deferrable_broken_3_1.md) |
-| reference_airflow_log_puller | reference | 2026-08-20 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_databricks_stockout_flexible_nodes | reference | 2026-08-20 | [doc](memory/reference_databricks_stockout_flexible_nodes.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-08-20 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_mm_vs_3p_scorecard | reference | 2026-08-20 | [doc](memory/reference_mm_vs_3p_scorecard.md) |
@@ -239,6 +238,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | jira-conventions | reference | 2026-08-28 | [doc](memory/reference_jira_conventions.md) |
 | project_airflow_debugger | project | 2026-08-28 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-08-28 | [doc](memory/project_airflow_optimizer.md) |
+| reference_airflow_log_puller | reference | 2026-08-28 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
 | reference_mode_api | reference | 2026-08-28 | [doc](memory/reference_mode_api.md) |
 | reference_slack_debugger_app | reference | 2026-08-28 | [doc](memory/reference_slack_debugger_app.md) |

@@ -706,3 +706,34 @@ steps committed at `artifacts/audi_1194_astro_metrics_exporter_setup.md`.
 
 **Open:** verify tomorrow's sweep writes the optimizer_bq/dbx sections and ledger rows carrying
 `surface` fields.
+
+## 2026-08-28 (evening) — live multi-surface validation: identity bug found and fixed same night
+
+**Triggered the sweep post-#1246; the digest still said 39 unprofiled.** Pulled the task logs via
+the astro CLI token (Bearer against the Airflow REST API) and found the bigquery surface skipped
+(`jobs.create` denied) and billing unreadable. Root cause: **the sweep runs as
+`spark-optimizer@mntn-prj-prod-00`** (the DAG's `SERVICE_ACCOUNT` impersonation), but the #5121
+billing grant went to `airflow-ti-prod@` and `JOBS_BY_USER` under `spark-optimizer@` sees none of
+the fleet's jobs — so the live billing rate has always fallen back to
+`OPTIMIZER_USD_PER_EXEC_H=0.278` and the BQ profiler returned an empty day.
+
+**Two PRs opened:** airflow-ti**#1247** (`JOBS_BY_PROJECT` filtered to `OPTIMIZER_BQ_SAS`, default
+`airflow-ti-prod` + `airflow-camperbid-prod`; also made the sweep tests hermetic — they were
+silently querying real BigQuery from a credentialed laptop via the unstubbed `bq` pass) and
+mntn-devops**#5160** (`bigquery.jobUser` + `resourceViewer` on `dw-main-bronze` for
+`spark-optimizer@`; the `iam/spark-optimizer/` dir already existed there). BQ surface blocked
+until both merge.
+
+**DEV-8821 filed** (DEV board, DevOps Request / Infrastructure Improvement, linked Relates To
+AUDI-1241) for the pod-metrics relay: Astro's Universal Metrics Exporter only does remote-write
+with static auth, GMP requires OAuth, so an OTel collector on Cloud Run
+(`monitoring.metricWriter`) relays. `artifacts/audi_1194_astro_metrics_exporter_setup.md`
+rewritten accordingly.
+
+**monitor-tpa added to `SLACK_ALERT_CHANNEL`** (`"C08CURMGNMQ,C067ZM2EC5S"`) via
+`astro deployment variable update`.
+
+**Pending debugger live test:** `fangorn_household` driver death (workers connection-refused to
+the driver; cleared + retried by Malachi). It exposed the rapid debugger's lookback gap — a
+failure whose end_date falls outside the 45-min window during a cycle pause gets no thread reply
+(IMP-095).

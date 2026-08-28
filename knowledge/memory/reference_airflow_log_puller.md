@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: 4a87e9ee-a383-4bc8-a05e-73f7db64eef1
 doc_type: memory
-keywords: [airflow_pull, airflow_api.py, astronomer task logs, airflow rest api, /api/v2, taskInstances list, astro login bearer, completion sensor, on-call log download, airflow 3.1.5, day-dump manifest, watch tag, astro token expiry, bearer token 401, astro deployment list refresh, gcloud sso expiry, airflow api path prefix, airflow_api_url no scheme, dev deployment id, deployment API token, astro deployment token create, clean-output, unattended runner auth, astro owns service accounts]
+keywords: [airflow_pull, airflow_api.py, astronomer task logs, airflow rest api, /api/v2, taskInstances list, astro login bearer, completion sensor, on-call log download, airflow 3.1.5, day-dump manifest, watch tag, astro token expiry, bearer token 401, astro deployment list refresh, gcloud sso expiry, airflow api path prefix, airflow_api_url no scheme, dev deployment id, deployment API token, astro deployment token create, clean-output, unattended runner auth, astro owns service accounts, full_content task logs, deployment token create 403, deployment inspect metadata.status, DEPLOYING vs HEALTHY, astro deployment variable update, SLACK_ALERT_CHANNEL comma list]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-08-20
+last_verified: 2026-08-28
 ---
 **`.claude/scripts/airflow_pull.sh`** (+ stdlib client `airflow_api.py`) automates on-call log collection: it downloads **every** Astronomer (Airflow 3) task-instance log for a day, renames each `<HHMMSS-start>__<dag>__<task>[__mapN]__try<N>__<state>.log`, and writes a `_manifest.jsonl` pass/fail grid to `on-call/airflow_logs/<date>/` (gitignored — bulk dumps are triage scratch; durable evidence is filed to `on-call/incidents/INC-NNN/`). Replaces the screenshot + manual UI download in `/oncall` (INC-008's documented failure mode was inferring cause from a grid screenshot). Built for the on-call runbook — see [[reference_oncall_runbook]], [[reference_airflow_ti]].
 
@@ -36,3 +36,10 @@ astro deployment token create --deployment-id cmd6bd10c0gl901rfuokgryiq \
 `--expiration` is 1-3650 days; omitting the flag means **no expiry**, so always set it. `--clean-output` exists precisely for scripts and keeps the token out of scrollback. **Still no built-in read-only role** — `--role` takes `DEPLOYMENT_ADMIN` or a custom role name, so a genuinely read-only token needs a custom role defined first; ask Victor/TI whether one exists before settling for admin on a job that only calls `GET /dags`.
 
 **Ownership (Dustin Niehoff, #devops, 2026-08-20): "astro owns them."** The deployment service accounts / API tokens are managed inside the Astro platform, not by MNTN devops. There is no devops ticket to file — the gate is Astro org access. See [[project_deidentify_personal_credentials]].
+
+**2026-08-28 (AUDI-1241 live validation) — direct-curl recipes verified:**
+- The astro CLI token in `~/.astro/config.yaml` (`contexts.astronomer_io.token`) works as a Bearer directly against the deployment's Airflow REST API: list dagRuns; task logs via `GET /api/v2/dags/<dag>/dagRuns/<run_id>/taskInstances/<task>/logs/<attempt>?full_content=true` with `Accept: application/json`.
+- **Malachi's role CANNOT mint deployment API tokens** — `astro deployment token create` returns 403.
+- `astro deployment inspect --deployment-name prod --key metadata.status` gates on `DEPLOYING` vs `HEALTHY` — check before triggering post-merge runs.
+- `astro deployment variable update` edits env vars; `SLACK_ALERT_CHANNEL` is now `"C08CURMGNMQ,C067ZM2EC5S"` (monitor-tpa added).
+- Prod deployment id `cmd6bd10c0gl901rfuokgryiq`, API base `https://cmd6bd10c0gl901rfuokgryiq.iq.astronomer.run/dokgryiq/api/v2`.
