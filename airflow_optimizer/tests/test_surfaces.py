@@ -80,3 +80,20 @@ def test_headline_without_a_rate_stays_unitful_but_unpriced(tmp_path: Path) -> N
     text = ledger.savings_headline(ledger.savings(p, today="2026-08-25"))
     assert "slot-hours" in text
     assert "bq" in text and "(~$" not in text
+
+
+def test_usd_per_dbu_blends_job_spend(monkeypatch) -> None:
+    """The dbx rate is total dollars over total DBU, not a per-job average."""
+    monkeypatch.setattr(databricks, "job_costs", lambda *a, **k: [
+        Cost(name="a", runs=1, dbu=900.0, usd=450.0),
+        Cost(name="b", runs=1, dbu=100.0, usd=150.0),
+    ])
+    rate, note = databricks.usd_per_dbu()
+    assert rate == 0.6
+    assert "blended" in note
+
+
+def test_usd_per_dbu_with_no_usage_is_none(monkeypatch) -> None:
+    """No usage: say so rather than divide by zero."""
+    monkeypatch.setattr(databricks, "job_costs", lambda *a, **k: [])
+    assert databricks.usd_per_dbu()[0] is None

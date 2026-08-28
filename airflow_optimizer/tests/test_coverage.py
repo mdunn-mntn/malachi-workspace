@@ -310,3 +310,27 @@ def test_a_numbered_job_family_resolves_to_the_dag_that_defines_each_name() -> N
     assert cov.resolve("populate_hem_data_ds_21") == "hem_conversion_log"
     assert cov.resolve("populate_hem_data_ds_23") == "hem_guid_log"
     assert cov.unresolved({"populate_hem_data_ds_22"}) == []
+
+
+def test_cost_covered_dags_leave_the_invisible_count() -> None:
+    """A BigQuery-profiled DAG is no longer a blind spot, and the report says which surface."""
+    cov = coverage.Coverage(date="2026-08-28", dags=[
+        coverage.DagCoverage(dag_id="sparky", spark_tasks=["run"]),
+        coverage.DagCoverage(dag_id="bq_only", other_tasks=[("load", "BigQueryInsertJobOperator")]),
+        coverage.DagCoverage(dag_id="dark", other_tasks=[("ping", "PythonOperator")]),
+    ])
+    assert len(cov.invisible) == 2
+    cov.cost_covered = {"bq_only": "bq"}
+    assert [d.dag_id for d in cov.invisible] == ["dark"]
+    line = cov.unprofiled_line()
+    assert "1 non-Spark DAG cost-profiled" in line and "1 DAG had no Spark task" in line
+    text = coverage.render(cov)
+    assert "cost-profiled (bq)" in text
+
+
+def test_uncovered_line_without_cost_surfaces_is_unchanged() -> None:
+    """No cost pass ran: the headline reads exactly as before."""
+    cov = coverage.Coverage(date="2026-08-28", dags=[
+        coverage.DagCoverage(dag_id="dark", other_tasks=[("ping", "PythonOperator")]),
+    ])
+    assert cov.unprofiled_line() == "1 DAG had no Spark task to profile."

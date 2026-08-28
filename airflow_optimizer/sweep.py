@@ -57,27 +57,42 @@ def _databricks_report() -> str:
         return ""
 
 
-def _bq_report(date: str, ledger_path: str) -> str:
-    """The BigQuery section, recorded to the ledger under its own surface, or "" on failure."""
+def _bq_report(date: str, ledger_path: str) -> tuple[str, set]:
+    """The BigQuery section and the dag ids it measured, or ("", set()) on failure."""
     try:
         costs = bq_mod.profile(date)
         ledger_mod.record(bq_mod.reports(costs), date, path=ledger_path, surface="bq")
-        return bq_mod.render(costs, date)
+        return bq_mod.render(costs, date), {c.dag for c in costs if c.dag}
     except Exception as e:  # the Spark half must ship even when the BQ read fails
         print(f"[sweep] bigquery skipped: {str(e)[:160]}")
-        return ""
+        return "", set()
 
 
-def _dbx_ledger(date: str, ledger_path: str) -> None:
-    """Record Databricks findings under their own surface. Never sinks the sweep."""
+def _dbx_ledger(date: str, ledger_path: str, known: set | None = None) -> set:
+    """Record Databricks findings under their own surface; returns the DAG IDs measured."""
     from .databricks import WAREHOUSE, findings_reports
 
     if not WAREHOUSE:
-        return
+        return set()
     try:
-        ledger_mod.record(findings_reports(), date, path=ledger_path, surface="dbx")
+        reports = findings_reports()
+        ledger_mod.record(reports, date, path=ledger_path, surface="dbx")
+        return {ledger_mod._dag_id(r, known) for r in reports}
     except Exception as e:
         print(f"[sweep] databricks ledger skipped: {str(e)[:160]}")
+        return set()
+
+
+def _dbx_rate() -> tuple[float | None, str]:
+    """The blended $/DBU, or (None, why) when no warehouse is configured or the read failed."""
+    from .databricks import WAREHOUSE, usd_per_dbu
+
+    if not WAREHOUSE:
+        return None, "no warehouse configured"
+    try:
+        return usd_per_dbu()
+    except Exception as e:
+        return None, str(e)[:160]
 
 
 def _dag_ids(reports: list, known: set | None = None) -> set:
@@ -188,16 +203,6 @@ def run(
             ledger_note = f"ledger step failed: {str(e)[:160]}"
             print(f"[sweep] {ledger_note}")
 
-    coverage_path = ""
-    if cov is not None:
-        coverage_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
-        with open(coverage_path, "w") as fh:
-            fh.write(
-                cov_mod.render(
-                    cov, _dag_ids(reports, known), _rendered_dags(entries, delta, scored, known)
-                )
-            )
-
     dbx_path = ""
     dbx = _databricks_report()
     if dbx:
@@ -206,17 +211,35 @@ def run(
             fh.write(dbx)
 
     bq_path = ""
+    bq_dags, dbx_names = set(), set()
     if ledger_note == "":
-        bq_md = _bq_report(date, ledger_path)
+        bq_md, bq_dags = _bq_report(date, ledger_path)
         if bq_md:
             bq_path = os.path.join(outdir, f"optimizer_bq_{date}.md")
             with open(bq_path, "w") as fh:
                 fh.write(bq_md)
-        _dbx_ledger(date, ledger_path)
+        dbx_names = _dbx_ledger(date, ledger_path, known)
+
+    coverage_path = ""
+    if cov is not None:
+        # Runs after the cost passes so a non-Spark DAG they measured is not called invisible.
+        active = {d.dag_id for d in cov.dags}
+        cov.cost_covered = {
+            **dict.fromkeys(dbx_names & active, "dbx"),
+            **dict.fromkeys(bq_dags & active, "bq"),
+        }
+        coverage_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
+        with open(coverage_path, "w") as fh:
+            fh.write(
+                cov_mod.render(
+                    cov, _dag_ids(reports, known), _rendered_dags(entries, delta, scored, known)
+                )
+            )
 
     savings_path, savings_note = "", ""
     if ledger_note == "":
         rates = billing_mod.surface_rates()
+        rates["dbx"] = _dbx_rate()
         usd_rate, rate_note = rates["spark"]
         if usd_rate is None:
             print(f"[sweep] live rate unavailable ({rate_note}); using the configured rate")
@@ -226,8 +249,12 @@ def run(
                 usd_rate = None
         else:
             print(f"[sweep] usd/exec-h {usd_rate} ({rate_note})")
-        s = ledger_mod.savings(ledger_path, today=date, usd_per_exec_h=usd_rate,
-                               usd_rates={k: v[0] for k, v in rates.items()})
+        s = ledger_mod.savings(
+            ledger_path,
+            today=date,
+            usd_per_exec_h=usd_rate,
+            usd_rates={k: v[0] for k, v in rates.items()},
+        )
         savings_path = os.path.join(outdir, "optimizer_savings.md")
         with open(savings_path, "w") as fh:
             fh.write(ledger_mod.render_savings(s))

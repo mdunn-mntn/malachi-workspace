@@ -112,6 +112,7 @@ class Coverage:
     warning: str = ""
     unparsed_files: list = field(default_factory=list)
     report_path: str = ""
+    cost_covered: dict = field(default_factory=dict)  # dag_id -> surface that measured its cost
 
     @property
     def profilable(self) -> list:
@@ -168,12 +169,21 @@ class Coverage:
         """Active DAGs the optimizer is structurally blind to."""
         return [d for d in self.dags if not d.profilable]
 
+    @property
+    def invisible(self) -> list:
+        """DAGs with no Spark task AND no cost surface measuring them: the real blind spot."""
+        return [d for d in self.unprofiled if d.dag_id not in self.cost_covered]
+
     def unprofiled_line(self) -> str:
         """One clause for the digest headline."""
         if self.error:
             return f"DAG coverage unknown ({self.error})."
-        n = len(self.unprofiled)
+        n = len(self.invisible)
+        covered = len(self.unprofiled) - n
         line = f"{n} DAG{'s' if n != 1 else ''} had no Spark task to profile."
+        if covered:
+            line = (f"{covered} non-Spark DAG{'s' if covered != 1 else ''} cost-profiled via "
+                    f"BigQuery/Databricks; {line}")
         if self.warning:
             line += " Paused DAGs are counted as active this run."
         bad = len(self.unparsed_files)
@@ -380,10 +390,13 @@ def render(cov: Coverage, profiled_dags: set | None = None,
     missed = [d for d in spark if d.dag_id not in profiled]
     lines += [
         f"{len(cov.dags)} active DAGs. {len(spark)} have a Spark task; "
-        f"{len(cov.unprofiled)} do not and are invisible to this tool.", "",
+        f"{len(cov.unprofiled)} do not, of which "
+        f"{len(cov.unprofiled) - len(cov.invisible)} are cost-profiled via BigQuery or "
+        f"Databricks and {len(cov.invisible)} are invisible to this tool.", "",
         f"- profiled this sweep: {len(seen)}",
         f"- Spark DAGs with no log this sweep: {len(missed)}",
-        f"- no Spark task at all: {len(cov.unprofiled)}", "",
+        f"- no Spark task, cost-profiled: {len(cov.unprofiled) - len(cov.invisible)}",
+        f"- no Spark task, invisible: {len(cov.invisible)}", "",
     ]
 
     if missed:
@@ -403,11 +416,14 @@ def render(cov: Coverage, profiled_dags: set | None = None,
 
     if cov.unprofiled:
         lines += ["## No Spark task", "",
-                  "Nothing to profile. Listed so the backlog is not mistaken for the fleet.", ""]
+                  "No event log to read. A cost tag names the surface that measures the DAG "
+                  "instead; untagged rows are the remaining blind spot.", ""]
         for d in sorted(cov.unprofiled, key=lambda d: d.dag_id):
             ops = sorted({op for (_, op) in d.other_tasks})[:3]
             empty = "Spark we cannot read" if d.opaque_tasks else "no tasks"
-            lines.append(f"- `{d.dag_id}` — {', '.join(ops) or empty}")
+            tag = cov.cost_covered.get(d.dag_id)
+            suffix = f" — cost-profiled ({tag})" if tag else ""
+            lines.append(f"- `{d.dag_id}` — {', '.join(ops) or empty}{suffix}")
         lines.append("")
     return "\n".join(lines)
 

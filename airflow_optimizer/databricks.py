@@ -392,6 +392,16 @@ def findings_reports(days: int = 7, warehouse: str = "") -> list:
     return list(by_name.values())
 
 
+def usd_per_dbu(days: int = 30, warehouse: str = "") -> tuple[float | None, str]:
+    """Blended list-price dollars per DBU over the window, from the jobs actually run."""
+    costs = job_costs(days, limit=1000, warehouse=warehouse)
+    dbu = sum(c.dbu for c in costs)
+    usd = sum(c.usd for c in costs)
+    if not dbu:
+        return None, "no DBU usage in the window"
+    return round(usd / dbu, 4), f"blended list price over {days}d of job usage"
+
+
 def render_report(jobs: list[Cost], nodes: list[Cost], plans: list[tuple], days: int) -> str:
     """The Databricks half of a sweep: what cost money, and what its plan says about why."""
     lines = [
