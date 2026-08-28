@@ -11,7 +11,7 @@ lifecycle: active
 last_verified: 2026-08-28
 ---
 
-**Design Decision (2026-08-28 meeting: Alice Wu, Alex Knorr, Matt Brorby, Alyson Lefkowitz):** Score unscored IPs identified ONLY by 3P interest segments at mid-intent (HHST 3333-6665) as a baseline, instead of leaving them in max-reach.
+**Design Decision (2026-08-28 meeting: Alice Wu, Alex Knorr, Matt Brorby, Alyson Lefkowitz):** Assign mid-intent score (HHST 3333-6665) to currently-unscored IPs identified ONLY by 3P interest segments, instead of leaving them unscored (household_score=-1).
 
 **Why:** When campaigns use MM + 3P segments joined by OR (additive, not narrowing), IPs matching only 3P segments (no MM keywords/Fanghorn) stay unscored/max-reach. When HHST is set to mid-intent or lower, these IPs are unreachable because max-reach IPs are filtered. The customer problem: can't target 3P segment IPs when spending is constrained to mid-intent or below.
 

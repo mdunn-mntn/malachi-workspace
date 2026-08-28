@@ -2236,7 +2236,7 @@ Matched (DS19 keyword) IPs get scored; **3P-only IPs (those matching a bought se
 
 ### Proposed: Scoring unscored 3P-only IPs at mid-intent (TI-999, 2026-08-28)
 
-**Problem:** When campaigns have MM + 3P segments joined by OR (additive), and set HHST to mid-intent or lower, unscored 3P-only IPs are unreachable (HHST gate filters them out). Customer complaint: can't target 3P segment IPs within mid-intent spend constraint. **Solution approach (design decision, not yet implemented):** assign unscored 3P-only IPs a **baseline mid-intent score** (3333-6665 band) instead of leaving them unscored, unlocking targeting at mid-intent thresholds.
+**Problem:** When campaigns have MM + 3P segments joined by OR (additive), and set HHST to mid-intent or lower, unscored 3P-only IPs are unreachable (household_score=-1 fails any HHST gate > 0). Customer complaint: can't target 3P segment IPs within mid-intent spend constraint. **Solution approach (design decision, not yet implemented):** **create** a mid-intent score (3333-6665 band) for currently-unscored 3P-only IPs, unlocking targeting at mid-intent thresholds.
 
 **Key constraints:**
 - **3P quality scores are segment-level, not IP-level** — Alex Knorr's `segment_quality_utils` framework ranks which segments are good/bad, NOT individual IPs; cannot directly score per-IP quality (future iteration possibility if high-quality segments are identified).
