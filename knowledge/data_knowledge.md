@@ -2234,6 +2234,24 @@ Matched (DS19 keyword) IPs get scored; **3P-only IPs (those matching a bought se
 - **Query delivered scores:** `cost_impression_log` (filter `time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL N DAY)`
   to prune; it's a 90-day rolling SQLMesh view). Has `campaign_id, ip, household_score, advertiser_household_score, model_params` + geo cols.
 
+### Proposed: Scoring unscored 3P-only IPs at mid-intent (TI-999, 2026-08-28)
+
+**Problem:** When campaigns have MM + 3P segments joined by OR (additive), and set HHST to mid-intent or lower, unscored 3P-only IPs are unreachable (HHST gate filters them out). Customer complaint: can't target 3P segment IPs within mid-intent spend constraint. **Solution approach (design decision, not yet implemented):** assign unscored 3P-only IPs a **baseline mid-intent score** (3333-6665 band) instead of leaving them unscored, unlocking targeting at mid-intent thresholds.
+
+**Key constraints:**
+- **3P quality scores are segment-level, not IP-level** — Alex Knorr's `segment_quality_utils` framework ranks which segments are good/bad, NOT individual IPs; cannot directly score per-IP quality (future iteration possibility if high-quality segments are identified).
+- **Applies only to unscored IPs matched by 3P but NOT by MM keywords** — if an IP matches DS19 keywords OR DS13 verticals, it's already scored by MM batch pipeline and this approach does not apply.
+- **1P MM outperforms 3P (2.1x CVR advantage, TI-999)** — 3P-only IPs should not exceed peak-performance tier; mid-intent baseline is intentionally conservative.
+- **HHST context is risky** — when HHST=0 (max-reach goal is volume), segment quality/confidence is low; segment membership alone is a weak signal. This is a business trade-off.
+- **Interest segment NOT conditions already handled** — NOT clauses exclude IPs at evaluation time; bidder drops them regardless of assigned score.
+
+**Implementation options:**
+1. **Flat mid-intent** — all 3P-only unscored IPs → household_score in 3333-6665 band. Simplest.
+2. **Tiered within range** — distribute within 3333-6665 based on # of matched segments (more segments = higher within band). Same engineering lift.
+3. **High-intent for high-quality segments (future)** — identify high-quality 3P segments via performance analysis, elevate their IPs to HI. Requires segment quality validation; deferred pending TI-956 build-out.
+
+**Open questions:** % of campaigns affected (impacts experiment gate); exact score range to use; coordination timing with product ops / data monitoring teams. See [[design-ti-999-3p-scoring-at-hhst]].
+
 ### The bidder uses the SEGMENT expression, not the user's audience expression (TI-1026, Alex Knorr 2026-06-12)
 
 `audience.audiences.expression` = the **user's selections** (keywords DS19, interests DS35, geo). The bidder actually
