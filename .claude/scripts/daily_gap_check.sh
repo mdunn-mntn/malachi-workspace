@@ -59,6 +59,9 @@ PY
     python3 -m airflow_debugger.triage "$TMP/rca_${DS}.json" 2>&1 || echo "- triage filing failed; run by hand"
     echo
   fi
+  echo "## Optimizer fix log (playbook section synced from the ledger)"
+  python3 -m airflow_optimizer.fixlog 2>&1 || echo "- fix-log sync failed; run by hand"
+  echo
   echo "## Review checklist (a session works this, not a script)"
   echo "- Any LOW CONFIDENCE row: read its log, decide signature vs resolver vs mask."
   echo "- Any POSTED LOOSE row: was the alert past the 100-message page (IMP-087)?"
