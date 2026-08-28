@@ -675,3 +675,34 @@ $160.02/day, est $58.4k/yr at $0.278/exec-h.** Ledger: 446 rows with `exec_h`, 2
 **`airflow_optimizer/fixlog.py` NEW** — syncs the "Optimizer fix log" section (markers
 `optimizer-fixlog-start`/`optimizer-fixlog-end`) from the ledger into playbook `2908061697`; runs
 in `daily_gap_check.sh`'s noon job.
+
+## 2026-08-28 (later) — #1245 merged: the optimizer covers spark, bq, and dbx surfaces
+
+**airflow-ti #1245 MERGED 2026-08-28** — all three surfaces shipped in ONE PR at the user's
+request (142 tests, gauntleted):
+- `bq_profile.py` profiles BigQuery per dag/task from `INFORMATION_SCHEMA.JOBS_BY_USER` via REST
+  with a gcloud token; the fleet SA reads its own job history, so no new grant.
+- Ledger `Entry` gained `surface` (`spark` | `bq` | `dbx`); resolution and savings are scoped per
+  surface so slot-hours, DBUs, and executor-hours never mix.
+- `billing.surface_rates()` prices bq slot-h from the billing export (service
+  `'BigQuery Reservation API'`, sku `LIKE '%Slot%'`), env fallback `OPTIMIZER_USD_PER_SLOT_H`.
+- `databricks.findings_reports()` detectors: `dbx_heavy_job` (>$50/day list),
+  `dbx_failing_model` (3+ fails/7d).
+- `sweep` writes `optimizer_bq_<date>.md` and records Databricks findings under `surface="dbx"`.
+
+**BQ attribution, verified empirically** (memory `reference_bq_job_attribution`):
+`BigQueryInsertJobOperator` stamps `airflow-dag`/`airflow-task` labels on every job (direct
+inserts also carry `job_id` `airflow_<dag>_<task>_<ts>`); python-client jobs inside tasks carry NO
+labels; airflow-ti/camperbid jobs bill in `dw-main-bronze`; `JOBS_BY_USER` needs no extra grant
+for a SA reading its own jobs; `JOBS_BY_ORGANIZATION` and `mntn-prj-prod-00` `JOBS_BY_PROJECT`
+are access-denied to `malachi@mountain.com`.
+
+**Mode dashboard per-surface:** external table `optimizer.optimization_ledger` schema re-pinned
+with `surface STRING` (`ignoreUnknownValues`); headline dollars query is now spark-only; new
+"Savings by surface" query (token `513a4a7a4a71`); layout gained a Savings-by-surface table.
+
+**Pod profiler BLOCKED** on the Astro Universal Metrics Exporter → GCP Managed Prometheus; setup
+steps committed at `artifacts/audi_1194_astro_metrics_exporter_setup.md`.
+
+**Open:** verify tomorrow's sweep writes the optimizer_bq/dbx sections and ledger rows carrying
+`surface` fields.

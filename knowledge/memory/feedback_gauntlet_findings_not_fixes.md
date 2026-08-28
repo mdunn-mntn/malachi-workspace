@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [pr_gauntlet, gauntlet fixer over-reach, THRASH verdict, FAIL_MAX_ROUNDS, adversarial review, deleted working features, ambiguity guard truncated list, MAX_REFUTERS_PER_ROUND, MAX_ROUNDS, gauntlet cost tuning, review findings vs fixes]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-08-25
+last_verified: 2026-08-28
 ---
 **Take the gauntlet's FINDINGS. Do not take its fixer's diff on faith.** On airflow-ti#1217 (2026-08-25) the fixer deleted four of the five features the PR existed to ship, plus a whole module and its tests — working, tested code, removed to satisfy style findings about unused surface. The correct response was `git checkout <commit> -- <paths>` to restore the tested state, then re-applying ONLY the confirmed defect. Read the fixer's diff the way you would read a stranger's PR, because that is what it is.
 
@@ -27,5 +27,11 @@ last_verified: 2026-08-25
 **Tiers replaced the single global setting (2026-08-26).** `fast` = 1 round, skeptic only, 3 refuters, effort `medium` (~13 min / 5 agents). `medium` = 2 rounds, both reviewers, 4 refuters (the old default). `thorough` = 3 rounds, 6 refuters, must converge clean. The tier is the first word of the `/pr_gauntlet` args and rides in `args.tier`.
 
 **The bug the tiers fixed is the one worth remembering: the last round used to throw its own work away.** At the round cap the loop returned `FAIL_MAX_ROUNDS` with the round's confirmed findings UNFIXED, so a run that found anything in its final round always ended with open work and a wasted review. `fast` and `medium` now apply those fixes and return the new verdict **`FIXED_UNVERIFIED`** — the fixes are real, but no fresh agent has re-read them, so run the tests and the mechanical gate yourself before shipping. `thorough` still refuses to end that way. **Do not read `FAIL_MAX_ROUNDS` in an old transcript as "the code is bad"** — until 2026-08-26 it also meant "the loop hit its cap".
+
+**Recurred 2026-08-28 (medium tier, airflow-ti #1245):** the fixer ran `ruff format` across ENTIRE
+files, including files outside the review set (`test_ledger.py`, `test_sweep.py`), and replaced a
+rich module docstring with one line. Both times the diff-review-like-a-stranger rule caught it;
+the docstring was restored and only the behavioral fixes kept. Formatting sweeps and docstring
+truncation are fixer over-reach shapes to expect alongside deletion.
 
 Related: [[project_airflow_debugger]], [[feedback_validated_is_not_correct]], [[feedback_hold_evidenced_verdict]].

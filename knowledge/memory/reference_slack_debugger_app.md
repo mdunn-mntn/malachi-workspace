@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [slack, airflow-debugger, SLACK_BOT_TOKEN, SLACK_ALERT_CHANNEL, OPTIMIZER_SLACK_CHANNEL, groups:history, alerts-tpa-pipeline, monitor-tpa, C08CURMGNMQ, AUDI-1191, robin fox]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-08-27
+last_verified: 2026-08-28
 ---
 
 **App "Airflow Failure Debugger", bot `@airflow-debugger` (`U0BTU0FA8N4`), created 2026-08-26, approved by Robin Fox.** Bot token scopes: `chat:write`, `channels:history`, `channels:read`, `groups:history`, `groups:read`. No user token scopes.
@@ -24,7 +24,7 @@ covers it. The digest posts to **`#spark-optimizer` (`C0BSTH6E84T`)**, a PRIVATE
 `airflow_optimizer/notify.py` reads `SLACK_BOT_TOKEN` + `OPTIMIZER_SLACK_CHANNEL` and posts Block
 Kit: the parent is the ranked DAG list, each DAG's fix is a threaded reply.
 
-**`notify.py` reads one `SLACK_ALERT_CHANNEL`.** Two channels needs a code change (open as of 2026-08-26). `#monitor-tpa` carries forwarded emails, not Airflow alerts; the real `*FAILURE*` posts are in `#alerts-tpa-pipeline`, and `vertical_classification_api` does not alert there at all.
+**`SLACK_ALERT_CHANNEL` takes a comma-separated list** (code shipped in the #1244-era `notify.py`); on Astro prod it is `"C08CURMGNMQ,C067ZM2EC5S"` as of 2026-08-28, so the debugger searches and threads in `#monitor-tpa` too. `#monitor-tpa` carries forwarded emails, not Airflow alerts; the real `*FAILURE*` posts are in `#alerts-tpa-pipeline`, and `vertical_classification_api` does not alert there at all.
 
 **Env var trap (found live 2026-08-27):** the DEBUGGER reads `SLACK_ALERT_CHANNEL`, the OPTIMIZER reads `OPTIMIZER_SLACK_CHANNEL` — separate vars, do not confuse. `SLACK_ALERT_CHANNEL` was missing from the Astro deployment and debugger delivery silently did not post; after it was added, end-to-end delivery verified in prod 2026-08-27 (3 diagnoses posted, threaded).
 
