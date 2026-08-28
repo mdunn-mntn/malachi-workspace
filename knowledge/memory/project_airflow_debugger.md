@@ -1,14 +1,14 @@
 ---
 name: project_airflow_debugger
-description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode; Slack delivery wire (PR #1230) merged and verified live 2026-08-27 (3 posted, threaded); 30-day backfill validated 2026-08-27 (173 failures, 94.7% root-caused), cassandra_invalid_request signature on PR #1233, 14 triage tickets AUDI-1227..1240, Confluence on-call reference 3769991216. Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
+description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode; Slack delivery wire (PR #1230) merged and verified live 2026-08-27 (3 posted, threaded); 30-day backfill validated 2026-08-27 (173 failures, 94.7% root-caused), cassandra_invalid_request signature on PR #1233, 14 triage tickets AUDI-1227..1240; rapid 15-min replies (PR #1239) + in-DAG Jira triage filer (PR #1240) merged 2026-08-27/28; Confluence content now on TI On Call Playbook 2908061697 (3769991216 is a redirect stub). Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow debugger, AUDI-1191, PR 1230 merged, slack delivery wire, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire, 30-day backfill, cassandra_invalid_request, InvalidRequest code 2200, PR 1233, debugger_triage, AUDI-1227, triage tickets, TPA Pipeline On-Call Reference, confluence 3769991216, SLACK_ALERT_CHANNEL]
+keywords: [airflow debugger, AUDI-1191, PR 1230 merged, slack delivery wire, spark failure rca, dataproc rca, databricks rca, cloud logging dataproc, dbx run_id correlation, operator engine map, oncall automation, ttl_exceeded, orchestration-only, signatures taxonomy, bluf star report, adversarial code review, order-integrity test, full-corpus sweep, code review findings archive, INC-013 live-fire, pihole dns block, logging.googleapis.com blocked, curl resolve pin, cloud logging dns blocked mac, IMP-030, troubleshooting pack, fix_pr, fix_files, code_links, --troubleshoot, build_troubleshooting, basename collision, duplicated basenames, framework frame filter, known-fix identity gate, vertex code 9 unclassified, vertex_pipeline_task_failed, INC-014 live-fire, corpus sweep tool, airflow_debugger sweep, 991 logs, batch_id_attach_trap, impersonation_unavailable, slack_notify_failed, task_execution_timeout, dbt_model_runtime_error, downstream_job_no_local_cause, None-1 batch id, test_perf_profile no main block, pinned curl verified, LAN sinkhole rejected, IMP-051, IMP-052, IMP-053, phase 3 held, include-recovered, ti_state, empty log worker death, batch_cancelled, batch_id_missing, dag_not_found_at_startup, task_externally_terminated, never open a PR, read-only github, 14-tab workbook, INC-024 live fire, 30-day backfill, cassandra_invalid_request, InvalidRequest code 2200, PR 1233, debugger_triage, AUDI-1227, triage tickets, TPA Pipeline On-Call Reference, confluence 3769991216, SLACK_ALERT_CHANNEL, PR 1239, PR 1240, airflow_debugger_rapid, rapid replies 15 min, exactly-once gcs markers, debugger delivered markers, debugger unclassified, triage.py, in-dag jira filer, JIRA_API_TOKEN astro var, AUDI-1054 tech debt epic, TI On Call Playbook 2908061697, nextPageToken paging, api 2 search removed 410, bug two put conversion, TRIAGE summary dedup, ReauthUnattendedError]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-27
+last_verified: 2026-08-28
 ---
 
 ## SHIPPED AS A DAG 2026-08-21 — airflow-ti PR #1214, off the laptop cron
@@ -286,4 +286,31 @@ separate var — do not confuse the two.
 
 **14 triage tickets AUDI-1227..AUDI-1240** from the backfill's root causes, label `debugger_triage`
 (7 closed Done, 7 open). **Confluence "TPA Pipeline On-Call Reference"** (space TAR, page id
-`3769991216`) remote-linked from AUDI-1191 and AUDI-1194.
+`3769991216`) remote-linked from AUDI-1191 and AUDI-1194. **SUPERSEDED 2026-08-28: its content was
+merged into the team's existing "TI On Call Playbook" page `2908061697`; `3769991216` is now a
+redirect stub. `triage.py` appends known-issues rows to `2908061697`.**
+
+## 2026-08-28 — rapid replies (#1239) and the in-DAG triage filer (#1240), both MERGED
+
+**airflow-ti #1239 (merged 2026-08-27) — `airflow_debugger_rapid`**, every 15 min, answers
+terminal failures within minutes instead of next-day. Exactly-once via GCS markers under
+`gs://mntn-data-archive-prod/debugger/delivered/` — the marker is written only AFTER a successful
+Slack post, so a crash between diagnose and post retries rather than drops. The daily sweep skips
+marker-answered rows but still publishes its artifacts. Unmatched failures publish raw logs to
+`debugger/unclassified/<ds>/` for later signature mining.
+
+**airflow-ti #1240 (merged 2026-08-28) — the daily sweep files its own Jira Bugs**
+(`include/airflow_debugger/triage.py`): one AUDI Bug per NEW `dag/task` pair, gated on
+`JIRA_API_TOKEN` + `JIRA_USER_EMAIL` Astro env vars (user's personal token for now; IT service
+account requested via Robin Fox — the SA needs AUDI Browse/Create/Link Issues/Add Comments + TAR
+Confluence view/edit). Ticket spec from Bryce Wagg (2026-08-27) and the two-PUT Bug conversion:
+[[reference_jira_conventions]]. Dedup is by the `[TRIAGE] dag/task - class` summary prefix, so the
+laptop backstop filer (`workspace/airflow_debugger/triage.py`, run by `daily_gap_check.sh`'s noon
+launchd job) cannot double-file.
+
+**Jira REST paging trap (2026-08-28):** `/rest/api/2/search` is REMOVED (HTTP 410); use
+`/rest/api/3/search/jql`, which pages ONLY by `nextPageToken` and SILENTLY IGNORES `startAt` — a
+gauntlet fixer introduced startAt paging, which would infinite-loop past 100 tickets; reverted.
+
+**gcloud/gsutil on this Mac hit `ReauthUnattendedError` 2026-08-28** — blocks savings-log
+verification until the user runs `gcloud auth login`.

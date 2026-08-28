@@ -373,7 +373,8 @@ queued. **AUDI-1241** filed under the Q3 tech-debt epic AUDI-1054 for the burn-d
 **Ownership shift:** `site_network_hourly` (was Ryan Kleck's) and the DDP dbt tests (Sean Yang's
 team, which the user is on) are now the user's team's to fix directly. Queue items 1, 2, 7 flipped
 OWNER → OURS; fixes merged (airflow-ti **#1232**) or in review (**dbt#174**). Confluence "TPA
-Pipeline On-Call Reference" (`3769991216`) remote-linked from AUDI-1194.
+Pipeline On-Call Reference" (`3769991216`) remote-linked from AUDI-1194 — content merged into the
+"TI On Call Playbook" page `2908061697` on 2026-08-28; `3769991216` is now a redirect stub.
 
 **Tuning reference installed 2026-08-27 (commit e7973a9b):** the compiled DBR 17.3 / Dataproc 2.3
 reference is the skill `.claude/skills/pyspark-optimization-databricks-dataproc/SKILL.md`;

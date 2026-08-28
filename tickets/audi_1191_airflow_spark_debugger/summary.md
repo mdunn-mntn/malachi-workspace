@@ -789,3 +789,39 @@ its alert. The last blocker was the missing **`SLACK_ALERT_CHANNEL`** Astro env 
 
 **Confluence page published: "TPA Pipeline On-Call Reference"**, space TAR, page id `3769991216`,
 remote-linked from AUDI-1191 and AUDI-1194.
+
+**SUPERSEDED 2026-08-28:** the "TPA Pipeline On-Call Reference" content was merged into the team's
+existing **"TI On Call Playbook"** Confluence page (`2908061697`); `3769991216` is now a redirect
+stub. The triage filer appends known-issues rows to `2908061697`.
+
+## 7g. 2026-08-28 — rapid replies (#1239), the in-DAG triage filer (#1240), triage-Bug conversion
+
+**airflow-ti #1239 MERGED 2026-08-27 — `airflow_debugger_rapid`**, a 15-minute DAG that answers
+terminal failures within minutes instead of next-day. Exactly-once delivery via GCS markers under
+`gs://mntn-data-archive-prod/debugger/delivered/`; the marker is written only AFTER a successful
+Slack post, so a crash between diagnose and post retries rather than drops. The daily sweep skips
+marker-answered rows and still publishes its artifacts. Unmatched failures publish their raw logs
+to `debugger/unclassified/<ds>/` for signature mining.
+
+**airflow-ti #1240 MERGED 2026-08-28 — the daily sweep files its own Jira Bugs**
+(`include/airflow_debugger/triage.py`): one AUDI Bug per NEW `dag/task` pair, gated on
+`JIRA_API_TOKEN` + `JIRA_USER_EMAIL` Astro env vars. Personal token for now; an IT service account
+is requested via Robin Fox (SA needs AUDI Browse/Create/Link Issues/Add Comments + TAR Confluence
+view/edit). The laptop filer (`airflow_debugger/triage.py`, run as a backstop from
+`daily_gap_check.sh`'s noon launchd job) dedups on the same `[TRIAGE] dag/task - class` summary
+prefix, so double-filing is impossible.
+
+**Bryce Wagg's ticket spec (2026-08-27), implemented:** type Bug, parent = Q3 tech-debt epic
+AUDI-1054, Bug Environment Details = Prod (single value), Bug Origin = [Automated Testing /
+Monitors] (an ARRAY; 400s as a single value), priority mapped infra/upstream = P1 - Critical,
+unclassified = P3 - Minor, else P2 - Normal. Existing AUDI-1227..1240 + AUDI-1245 converted
+Task -> Bug: issuetype + parent in a FIRST PUT, the Bug-only screen fields in a SECOND PUT (they
+are not on the Task edit screen until the type changes). Payloads: memory
+`reference_jira_conventions`.
+
+**Jira REST paging trap:** `/rest/api/2/search` is removed (HTTP 410); `/rest/api/3/search/jql`
+pages ONLY by `nextPageToken` and silently ignores `startAt` — a gauntlet fixer introduced startAt
+paging, which would infinite-loop past 100 tickets; reverted.
+
+**gcloud/gsutil on this Mac hit `ReauthUnattendedError` 2026-08-28**, blocking savings-log
+verification until the user runs `gcloud auth login`.

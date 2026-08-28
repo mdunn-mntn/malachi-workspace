@@ -627,3 +627,16 @@ items 1, 2, 7 flipped from OWNER to OURS; fixes **merged (airflow-ti #1232)** or
 
 Confluence "TPA Pipeline On-Call Reference" (space TAR, page id `3769991216`) is remote-linked from
 this ticket and AUDI-1191.
+
+**SUPERSEDED 2026-08-28:** the Confluence content moved to the team's "TI On Call Playbook" page
+(`2908061697`); `3769991216` is a redirect stub.
+
+## 2026-08-28 — digest semantics, IMP-094, gcloud reauth
+
+- **Digest wording pinned:** "N sweeps running" means the finding has persisted N CONSECUTIVE
+  sweeps, not N total occurrences. "39 DAGs unprofiled" means those DAGs have NO Spark task at all,
+  so the event-log optimizer cannot see them by design.
+- **IMP-094 logged** (`improvements_backlog.md`): profile the 39 non-Spark DAGs via per-operator
+  cost surfaces (BQ INFORMATION_SCHEMA slots, Databricks system tables, K8s requested-vs-used).
+- **gcloud/gsutil hit `ReauthUnattendedError` 2026-08-28** on this Mac, blocking verification of
+  the cumulative savings log until the user runs `gcloud auth login`.

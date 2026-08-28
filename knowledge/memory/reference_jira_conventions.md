@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed]
 domain: [jira-process]
 lifecycle: active
-last_verified: 2026-08-24
+last_verified: 2026-08-28
 ---
 ## from feedback_jira_formatting.md
 
@@ -128,6 +128,10 @@ Creating a `{"issuetype": {"name": "Bug"}}` ticket in the TI Jira project requir
 - Bug Origin: `15161` Automated Testing / Monitors — fits when caught by Airflow/scheduler/PagerDuty/CI failures (most TI bugs).
 - Bug Environment Details: `15083` Prod — most TI bugs are prod-discovered.
 
+**Debugger triage-Bug spec (Bryce Wagg, 2026-08-27; implemented in airflow-ti `include/airflow_debugger/triage.py`, PR #1240):** type Bug, parent = Q3 tech-debt epic **AUDI-1054**, `customfield_16001` Bug Environment Details = `{"value": "Prod"}` (single value), `customfield_16028` Bug Origin = `[{"value": "Automated Testing / Monitors"}]` — it is an ARRAY and 400s if sent as a single object. Priority mapping: infra/upstream signature class = `P1 - Critical`, unclassified = `P3 - Minor`, else `P2 - Normal`.
+
+**Converting an existing Task to Bug takes TWO PUTs** (verified converting AUDI-1227..1240 + AUDI-1245, 2026-08-28): FIRST PUT sets `issuetype` + `parent`; SECOND PUT sets the Bug-only screen fields (`customfield_16001`, `customfield_16028`) — they are not on the Task edit screen until the type has changed, so a single combined PUT 400s.
+
 **Discovery tool** (if these allowed values change):
 ```bash
 curl -s -u "$EMAIL:$JIRA_API_TOKEN" \
@@ -234,7 +238,7 @@ curl -s -u "malachi@mountain.com:${JIRA_API_TOKEN}" \
 
 ## from reference_jira_search_api_v3.md
 
-Atlassian **removed** the old `GET /rest/api/2/search` (and `/rest/api/3/search`) endpoint — a curl search now returns `"The requested API has been removed. Please migrate to the /rest/api/3/search/jql API."`
+Atlassian **removed** the old `GET /rest/api/2/search` (and `/rest/api/3/search`) endpoint — a curl search now returns `"The requested API has been removed. Please migrate to the /rest/api/3/search/jql API."` (Now an HTTP **410**, verified 2026-08-28.) **`/rest/api/3/search/jql` pages ONLY by `nextPageToken` and SILENTLY IGNORES `startAt`** — startAt-based paging returns page 1 forever (a gauntlet fixer introduced it on PR #1240; would infinite-loop past 100 results; reverted).
 
 Use instead:
 

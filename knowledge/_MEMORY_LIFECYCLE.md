@@ -205,7 +205,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_no_label_colon_titles | feedback | 2026-08-24 | [doc](memory/feedback_no_label_colon_titles.md) |
 | feedback_review_own_pr_before_asking | feedback | 2026-08-24 | [doc](memory/feedback_review_own_pr_before_asking.md) |
 | incrementality-experiment-ber-2250 | project | 2026-08-24 | [doc](memory/project_incrementality_experiment.md) |
-| jira-conventions | reference | 2026-08-24 | [doc](memory/reference_jira_conventions.md) |
 | project_audi_1142_shopper_graph_spike | project | 2026-08-24 | [doc](memory/project_audi_1142_shopper_graph_spike.md) |
 | project_audi_1175_ds14_scoring_cost | project | 2026-08-24 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | project_backlog_gate_pings | project | 2026-08-24 | [doc](memory/project_backlog_gate_pings.md) |
@@ -229,7 +228,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_spark_eventlog_cost_units | reference | 2026-08-26 | [doc](memory/reference_spark_eventlog_cost_units.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-27 | [doc](memory/reference_airflow_ti.md) |
 | feedback_pasted_reference_means_install | feedback | 2026-08-27 | [doc](memory/feedback_pasted_reference_means_install.md) |
-| project_airflow_debugger | project | 2026-08-27 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-08-27 | [doc](memory/project_airflow_optimizer.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-27 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_frequency_capping | reference | 2026-08-27 | [doc](memory/reference_frequency_capping.md) |
@@ -239,3 +237,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_pr_gauntlet | reference | 2026-08-27 | [doc](memory/reference_pr_gauntlet.md) |
 | reference_pyspark_optimization_skill | reference | 2026-08-27 | [doc](memory/reference_pyspark_optimization_skill.md) |
 | reference_slack_debugger_app | reference | 2026-08-27 | [doc](memory/reference_slack_debugger_app.md) |
+| jira-conventions | reference | 2026-08-28 | [doc](memory/reference_jira_conventions.md) |
+| project_airflow_debugger | project | 2026-08-28 | [doc](memory/project_airflow_debugger.md) |
