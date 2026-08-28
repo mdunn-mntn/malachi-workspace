@@ -5,10 +5,12 @@ job metadata is already attributed: BigQueryInsertJobOperator stamps `airflow-da
 `airflow-task` labels on every job it submits. Jobs from a plain python-client call inside a
 task carry no labels and land in one `unattributed` bucket rather than being guessed at.
 
-Reads go through JOBS_BY_USER, not JOBS_BY_PROJECT: the sweep runs as the same service
-account that runs the fleet's tasks, so its own job history is visible with no new grant.
-The query itself runs over the REST API with a gcloud access token, like the GCS uploads -
-neither bq nor gsutil is authenticated inside the task pod.
+Reads go through JOBS_BY_PROJECT, filtered to the fleet's service accounts: the sweep runs as
+its OWN service account (`spark-optimizer@`), which submits none of the fleet's jobs, so
+JOBS_BY_USER shows it an empty day (proven on the first prod run, 2026-08-28). This needs
+`bigquery.jobs.create` plus `bigquery.jobs.listAll` on each profiled project. The query runs
+over the REST API with a gcloud access token, like the GCS uploads - neither bq nor gsutil is
+authenticated inside the task pod.
 
 Dollars are deliberately absent here: slot-hours are the measured unit, and the per-surface
 rate lives with the billing module.
@@ -23,6 +25,11 @@ from dataclasses import dataclass, field
 
 PROJECTS = os.environ.get("OPTIMIZER_BQ_PROJECTS", "dw-main-bronze")
 REGION = os.environ.get("OPTIMIZER_BQ_REGION", "us-central1")
+SAS = os.environ.get(
+    "OPTIMIZER_BQ_SAS",
+    "airflow-ti-prod@mntn-prj-prod-00.iam.gserviceaccount.com,"
+    "airflow-camperbid-prod@mntn-prj-prod-00.iam.gserviceaccount.com",
+)
 HEAVY_SLOT_H = float(os.environ.get("OPTIMIZER_BQ_HEAVY_SLOT_H", "50"))
 _TIMEOUT = 120
 
@@ -33,9 +40,10 @@ SELECT
   COUNT(*) AS jobs,
   SUM(total_slot_ms) / 3600000 AS slot_h,
   SUM(total_bytes_billed) / POW(1024, 4) AS tib_billed
-FROM `{project}`.`region-{region}`.INFORMATION_SCHEMA.JOBS_BY_USER
+FROM `{project}`.`region-{region}`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
 WHERE creation_time >= TIMESTAMP('{date} 00:00:00')
   AND creation_time < TIMESTAMP_ADD(TIMESTAMP('{date} 00:00:00'), INTERVAL 1 DAY)
+  AND user_email IN ({sas})
 GROUP BY 1, 2
 ORDER BY slot_h DESC
 """
@@ -115,8 +123,12 @@ def query(project: str, sql: str) -> list[dict]:
 def profile(date: str, projects: str = "") -> list[TaskCost]:
     """Every (dag, task)'s consumption on `date`, across the configured billing projects."""
     out = []
+    sas = ", ".join(f"'{s.strip()}'" for s in SAS.split(",") if s.strip())
+    if not sas:
+        return []
     for project in [p.strip() for p in (projects or PROJECTS).split(",") if p.strip()]:
-        for r in query(project, PROFILE_SQL.format(project=project, region=REGION, date=date)):
+        sql = PROFILE_SQL.format(project=project, region=REGION, date=date, sas=sas)
+        for r in query(project, sql):
             out.append(
                 TaskCost(
                     project=project,
@@ -187,6 +199,6 @@ if __name__ == "__main__":
 
     day = sys.argv[1] if len(sys.argv) > 1 else ""
     if not day:
-        raise SystemExit("usage: python -m airflow_optimizer.bq_profile YYYY-MM-DD")
+        raise SystemExit("usage: python -m spark_optimizer.bq_profile YYYY-MM-DD")
     rows = profile(day)
     print(render(rows, day))

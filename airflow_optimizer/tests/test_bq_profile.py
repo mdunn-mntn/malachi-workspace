@@ -134,3 +134,18 @@ def test_savings_keep_surfaces_in_separate_units(tmp_path: Path) -> None:
     s = ledger.savings(p, today="2026-08-25")
     assert s["by_surface"]["bq"]["total"] > 0
     assert s["total_exec_h_saved"] == s["by_surface"].get("spark", {}).get("total", 0.0)
+
+
+def test_profile_queries_jobs_by_project_filtered_to_the_fleet(monkeypatch) -> None:
+    """The sweep's own SA runs no fleet jobs, so JOBS_BY_USER would see an empty day."""
+    captured = {}
+
+    def fake_query(project, sql):
+        captured["sql"] = sql
+        return []
+
+    monkeypatch.setattr(bq_profile, "query", fake_query)
+    bq_profile.profile("2026-08-28", projects="p1")
+    assert "JOBS_BY_PROJECT" in captured["sql"]
+    assert "airflow-ti-prod@mntn-prj-prod-00.iam.gserviceaccount.com" in captured["sql"]
+    assert "JOBS_BY_USER" not in captured["sql"]

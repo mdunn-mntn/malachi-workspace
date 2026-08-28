@@ -57,6 +57,8 @@ def fleet(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.delenv(notify.CHANNEL_ENV, raising=False)
     monkeypatch.setattr(sweep, "crawl", lambda _p: [_report("a")])
     monkeypatch.setattr(sweep.billing_mod, "blended_usd_per_exec_h", lambda: (None, "hermetic"))
+    # A laptop with real BQ credentials would otherwise pull the fleet's actual job history.
+    monkeypatch.setattr(sweep.bq_mod, "profile", lambda _d, projects="": [])
     return tmp_path
 
 
