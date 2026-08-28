@@ -30,8 +30,9 @@ import os
 import re
 from dataclasses import asdict, dataclass, field
 
-LEDGER = os.environ.get("OPTIMIZER_LEDGER",
-                        os.path.join("optimizer_out", "optimization_ledger.jsonl"))
+LEDGER = os.environ.get(
+    "OPTIMIZER_LEDGER", os.path.join("optimizer_out", "optimization_ledger.jsonl")
+)
 RESOLVE_SWEEPS = 3  # consecutive sweeps without a key before it counts as resolved
 STICKY = ("owner_notified", "wont_fix")
 HUMAN = (*STICKY, "applied")  # states a person sets by hand
@@ -99,8 +100,14 @@ def _history(entries: list[dict]) -> dict[tuple[str, str], list[dict]]:
     return hist
 
 
-def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = True,
-             exec_h_by_dag: dict | None = None, surface: str = "spark") -> list[Entry]:
+def classify(
+    new: list[Entry],
+    prior: list[dict],
+    date: str,
+    complete: bool = True,
+    exec_h_by_dag: dict | None = None,
+    surface: str = "spark",
+) -> list[Entry]:
     """Set state and streak on this sweep's findings from what the ledger already holds.
 
     `complete=False` means this sweep did not see the whole fleet, so absence proves nothing
@@ -122,7 +129,9 @@ def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = Tr
             entry.fix_pr = fix.get("fix_pr", "")
             entry.applied_date = fix.get("applied_date", "")
         sticky = next((e["state"] for e in reversed(past) if e.get("state") in STICKY), None)
-        after_fix = [e for e in past if entry.applied_date and e.get("date", "") > entry.applied_date]
+        after_fix = [
+            e for e in past if entry.applied_date and e.get("date", "") > entry.applied_date
+        ]
         if sticky:
             entry.state, entry.note = sticky, last.get("note", "")
         elif entry.applied_date and len(after_fix) + 1 >= RESOLVE_SWEEPS:
@@ -138,8 +147,14 @@ def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = Tr
     return new
 
 
-def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: str,
-                   exec_h_by_dag: dict | None = None, surface: str = "spark") -> None:
+def _mark_resolved(
+    new: list[Entry],
+    hist: dict,
+    seen_dates: list[str],
+    date: str,
+    exec_h_by_dag: dict | None = None,
+    surface: str = "spark",
+) -> None:
     """Append a resolved entry, with the sweep's observed exec-hours, for each quiet key.
 
     Scoped to the sweep's own surface: a BigQuery pass never saw the Spark fleet, so a Spark
@@ -161,13 +176,24 @@ def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: st
         note = f"stopped firing after {last.get('date', 'an earlier sweep')}"
         if pr:
             note = f"cleared by {pr}; {note}"
-        new.append(Entry(
-            date=date, dag_id=dag_id, app_id="", key=key, impact=last.get("impact", ""),
-            title=last.get("title", ""), owner=last.get("owner", ""),
-            exec_h=(exec_h_by_dag or {}).get(dag_id),
-            state="resolved", streak=0, note=note,
-            fix_pr=pr, applied_date=last.get("applied_date", ""), surface=surface,
-        ))
+        new.append(
+            Entry(
+                date=date,
+                dag_id=dag_id,
+                app_id="",
+                key=key,
+                impact=last.get("impact", ""),
+                title=last.get("title", ""),
+                owner=last.get("owner", ""),
+                exec_h=(exec_h_by_dag or {}).get(dag_id),
+                state="resolved",
+                streak=0,
+                note=note,
+                fix_pr=pr,
+                applied_date=last.get("applied_date", ""),
+                surface=surface,
+            )
+        )
 
 
 def append(entries: list[Entry], path: str = LEDGER) -> None:
@@ -178,8 +204,9 @@ def append(entries: list[Entry], path: str = LEDGER) -> None:
     "how long has this been true" - the one number the ledger exists to answer.
     """
     same_day = {(e.date, e.dag_id, e.key) for e in entries}
-    prior = [r for r in read(path)
-             if (r.get("date"), r.get("dag_id"), r.get("key")) not in same_day]
+    prior = [
+        r for r in read(path) if (r.get("date"), r.get("dag_id"), r.get("key")) not in same_day
+    ]
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w") as fh:
         for r in prior:
@@ -188,9 +215,16 @@ def append(entries: list[Entry], path: str = LEDGER) -> None:
             fh.write(json.dumps(asdict(e)) + "\n")
 
 
-def record(reports: list, date: str, owners: dict | None = None, dcu: dict | None = None,
-           path: str = LEDGER, known: set | None = None, complete: bool = True,
-           surface: str = "spark") -> list[Entry]:
+def record(
+    reports: list,
+    date: str,
+    owners: dict | None = None,
+    dcu: dict | None = None,
+    path: str = LEDGER,
+    known: set | None = None,
+    complete: bool = True,
+    surface: str = "spark",
+) -> list[Entry]:
     """Turn a crawl's JobReports into classified ledger entries and append them.
 
     `known` is the active-DAG set from the coverage pass; it disambiguates a trailing
@@ -216,18 +250,25 @@ def record(reports: list, date: str, owners: dict | None = None, dcu: dict | Non
             continue
         dag_id = _dag_id(r, known)
         for f in r.findings:
-            entries.append(Entry(
-                date=date, dag_id=dag_id, app_id=getattr(r, "source", ""),
-                key=finding_key(f), impact=getattr(f, "impact", ""),
-                title=getattr(f, "title", ""), fix=getattr(f, "fix", ""),
-                owner=owners.get(dag_id, ""),
-                dcu_h=dcu.get(dag_id),
-                exec_h=exec_h_by_dag.get(dag_id),
-                surface=surface,
-            ))
+            entries.append(
+                Entry(
+                    date=date,
+                    dag_id=dag_id,
+                    app_id=getattr(r, "source", ""),
+                    key=finding_key(f),
+                    impact=getattr(f, "impact", ""),
+                    title=getattr(f, "title", ""),
+                    fix=getattr(f, "fix", ""),
+                    owner=owners.get(dag_id, ""),
+                    dcu_h=dcu.get(dag_id),
+                    exec_h=exec_h_by_dag.get(dag_id),
+                    surface=surface,
+                )
+            )
     entries = _dedup(entries)
-    classify(entries, read(path), date, complete=complete, exec_h_by_dag=exec_h_by_dag,
-             surface=surface)
+    classify(
+        entries, read(path), date, complete=complete, exec_h_by_dag=exec_h_by_dag, surface=surface
+    )
     append(entries, path)
     return entries
 
@@ -246,9 +287,9 @@ def _dedup(entries: list[Entry]) -> list[Entry]:
 # Per-run decorations Spark bakes into spark.app.name; left in, nothing is ever chronic.
 _RUN_STAMP = re.compile(
     r"(?:"
-    r"[-_]\d{4}-\d{2}-\d{2}(?:-\d+)*"    # -2026-08-20, -2026-08-20-1787259024
-    r"|[-_]\d{8}-\d{6}(?:-\d+)*"          # -20260820-171500-1
-    r"|[-_]?\s*\[\d+\]"                   # [19]
+    r"[-_]\d{4}-\d{2}-\d{2}(?:-\d+)*"  # -2026-08-20, -2026-08-20-1787259024
+    r"|[-_]\d{8}-\d{6}(?:-\d+)*"  # -20260820-171500-1
+    r"|[-_]?\s*\[\d+\]"  # [19]
     r"|[-_]+$"
     r")+$"
 )
@@ -276,25 +317,34 @@ def _dag_id(report: object, known: set | None = None) -> str:
     return name
 
 
-def set_state(dag_id: str, key: str, state: str, note: str = "",
-              date: str = "", path: str = LEDGER) -> Entry:
+def set_state(
+    dag_id: str, key: str, state: str, note: str = "", date: str = "", path: str = LEDGER
+) -> Entry:
     """Record a human decision (owner_notified / wont_fix). Sticky across later sweeps."""
     if state not in STICKY:
         raise ValueError(f"set_state is for human decisions {STICKY}, not {state!r}")
     past = [e for e in read(path) if e.get("dag_id") == dag_id and e.get("key") == key]
     last = past[-1] if past else {}
     entry = Entry(
-        date=date or last.get("date", ""), dag_id=dag_id, app_id=last.get("app_id", ""),
-        key=key, impact=last.get("impact", ""), title=last.get("title", ""),
-        owner=last.get("owner", ""), state=state, streak=int(last.get("streak", 1)), note=note,
+        date=date or last.get("date", ""),
+        dag_id=dag_id,
+        app_id=last.get("app_id", ""),
+        key=key,
+        impact=last.get("impact", ""),
+        title=last.get("title", ""),
+        owner=last.get("owner", ""),
+        state=state,
+        streak=int(last.get("streak", 1)),
+        note=note,
         surface=last.get("surface", "spark"),
     )
     append([entry], path)
     return entry
 
 
-def mark_applied(dag_id: str, key: str, fix_pr: str, date: str, note: str = "",
-                 path: str = LEDGER) -> Entry:
+def mark_applied(
+    dag_id: str, key: str, fix_pr: str, date: str, note: str = "", path: str = LEDGER
+) -> Entry:
     """Record that a fix SHIPPED for this finding. The ledger then watches whether it worked."""
     if not fix_pr:
         raise ValueError("mark_applied needs the PR or commit that shipped the fix")
@@ -303,12 +353,21 @@ def mark_applied(dag_id: str, key: str, fix_pr: str, date: str, note: str = "",
         raise ValueError(f"no ledger history for {dag_id}/{key}; nothing to mark applied")
     last = past[-1]
     entry = Entry(
-        date=date, dag_id=dag_id, app_id=last.get("app_id", ""), key=key,
-        impact=last.get("impact", ""), title=last.get("title", ""),
-        owner=last.get("owner", ""), dcu_h=last.get("dcu_h"),
+        date=date,
+        dag_id=dag_id,
+        app_id=last.get("app_id", ""),
+        key=key,
+        impact=last.get("impact", ""),
+        title=last.get("title", ""),
+        owner=last.get("owner", ""),
+        dcu_h=last.get("dcu_h"),
         exec_h=last.get("exec_h"),
-        state="applied", streak=int(last.get("streak", 1)), note=note,
-        fix_pr=fix_pr, applied_date=date, surface=last.get("surface", "spark"),
+        state="applied",
+        streak=int(last.get("streak", 1)),
+        note=note,
+        fix_pr=fix_pr,
+        applied_date=date,
+        surface=last.get("surface", "spark"),
     )
     append([entry], path)
     return entry
@@ -326,13 +385,22 @@ def shipped(path: str = LEDGER) -> list[dict]:
         if not e.get("fix_pr"):
             continue
         k = (e.get("dag_id", ""), e.get("key", ""))
-        row = rows.setdefault(k, {
-            "dag_id": k[0], "key": k[1], "title": e.get("title", ""),
-            "impact": e.get("impact", ""), "owner": e.get("owner", ""),
-            "fix_pr": e.get("fix_pr", ""), "applied_date": e.get("applied_date", ""),
-            "surface": e.get("surface", "spark"),
-            "dcu_h_before": None, "dcu_h_after": None, "outcome": "watching",
-        })
+        row = rows.setdefault(
+            k,
+            {
+                "dag_id": k[0],
+                "key": k[1],
+                "title": e.get("title", ""),
+                "impact": e.get("impact", ""),
+                "owner": e.get("owner", ""),
+                "fix_pr": e.get("fix_pr", ""),
+                "applied_date": e.get("applied_date", ""),
+                "surface": e.get("surface", "spark"),
+                "dcu_h_before": None,
+                "dcu_h_after": None,
+                "outcome": "watching",
+            },
+        )
         row["fix_pr"] = e.get("fix_pr") or row["fix_pr"]
         row["applied_date"] = e.get("applied_date") or row["applied_date"]
         if e.get("state") in ("resolved", "fix_not_working"):
@@ -427,29 +495,48 @@ def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = 
             tot["total"] += max(saved, 0.0)
             if year_floor:
                 tot["ytd"] += max(daily * len([d for d in after_days if d >= year_floor]), 0.0)
-            elapsed = max((datetime.date.fromisoformat(today)
-                           - datetime.date.fromisoformat(r["applied_date"])).days, 1)
+            elapsed = max(
+                (
+                    datetime.date.fromisoformat(today)
+                    - datetime.date.fromisoformat(r["applied_date"])
+                ).days,
+                1,
+            )
             tot["rate"] += max(saved, 0.0) / elapsed
         rows.append({**r, "days_observed": len(after_days), "exec_h_saved": saved})
     since = min((r["applied_date"] for r in rows if r["applied_date"]), default="")
-    spark = by_surface.get("spark", {"total": 0.0, "ytd": 0.0, "rate": 0.0})
-    return {"since": since, "ytd_year": today[:4], "total_exec_h_saved": spark["total"],
-            "ytd_exec_h_saved": spark["ytd"], "run_rate_exec_h_per_day": spark["rate"],
-            "est_annual_exec_h": spark["rate"] * 365, "usd_per_exec_h": usd_per_exec_h,
-            "by_surface": by_surface, "rows": rows}
+    spark_only = by_surface.get("spark", {})
+    total_saved = spark_only.get("total", 0.0)
+    ytd_saved = spark_only.get("ytd", 0.0)
+    rate_saved = spark_only.get("rate", 0.0)
+    return {
+        "since": since,
+        "ytd_year": today[:4],
+        "total_exec_h_saved": total_saved,
+        "ytd_exec_h_saved": ytd_saved,
+        "run_rate_exec_h_per_day": rate_saved,
+        "est_annual_exec_h": rate_saved * 365,
+        "usd_per_exec_h": usd_per_exec_h,
+        "by_surface": by_surface,
+        "rows": rows,
+    }
 
 
 def savings_headline(s: dict) -> str:
     """One line for the digest: all-time, year to date, and the estimated annual save."""
-    head = (f"Saved since {s['since']}: {s['total_exec_h_saved']:,.0f} executor-hours all-time, "
-            f"{s['ytd_exec_h_saved']:,.0f} in {s['ytd_year']}; current rate "
-            f"{s['run_rate_exec_h_per_day']:,.1f}/day, est. {s['est_annual_exec_h']:,.0f}/yr")
+    head = (
+        f"Saved since {s['since']}: {s['total_exec_h_saved']:,.0f} hours all-time, "
+        f"{s['ytd_exec_h_saved']:,.0f} in {s['ytd_year']}; current rate "
+        f"{s['run_rate_exec_h_per_day']:,.1f}/day, est. {s['est_annual_exec_h']:,.0f}/yr"
+    )
     rate = s.get("usd_per_exec_h")
     if rate:
-        head += (f" (~${s['total_exec_h_saved'] * rate:,.0f} all-time, "
-                 f"${s['ytd_exec_h_saved'] * rate:,.0f} in {s['ytd_year']}, "
-                 f"est. ${s['est_annual_exec_h'] * rate:,.0f}/yr, estimated at "
-                 f"${rate:,.2f} per executor-hour)")
+        head += (
+            f" (~${s['total_exec_h_saved'] * rate:,.0f} all-time, "
+            f"${s['ytd_exec_h_saved'] * rate:,.0f} in {s['ytd_year']}, "
+            f"est. ${s['est_annual_exec_h'] * rate:,.0f}/yr, estimated at "
+            f"${rate:,.2f} per hour)"
+        )
     return head
 
 
@@ -469,9 +556,11 @@ def render_savings(s: dict) -> str:
         pr = r["fix_pr"]
         cell = f"[{pr.rsplit('/', 1)[-1]}]({pr})" if pr.startswith("http") else pr
         saved = "-" if r["exec_h_saved"] is None else f"{r['exec_h_saved']:,.1f}"
-        out.append(f"| {r['applied_date']} | `{r['dag_id']}` | {r.get('surface', 'spark')} | "
-                   f"{r['title']} | {cell} | "
-                   f"{r['outcome']} | {r['days_observed']} | {saved} |")
+        out.append(
+            f"| {r['applied_date']} | `{r['dag_id']}` | {r.get('surface', 'spark')} | "
+            f"{r['title']} | {cell} | "
+            f"{r['outcome']} | {r['days_observed']} | {saved} |"
+        )
     return "\n".join(out) + "\n"
 
 
@@ -522,6 +611,8 @@ if __name__ == "__main__":
         print(render_savings(savings()))
         raise SystemExit(0)
     rows = read()
-    print(f"{len(rows)} ledger entries, {len({(r['dag_id'], r['key']) for r in rows})} distinct keys")
+    print(
+        f"{len(rows)} ledger entries, {len({(r['dag_id'], r['key']) for r in rows})} distinct keys"
+    )
     for (dag, key), e in sorted(latest().items()):
         print(f"  {e.get('state', ''):<15} {e.get('streak', 0):>3}x  {dag}  {key}")

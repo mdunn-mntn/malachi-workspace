@@ -111,9 +111,16 @@ def publish(files: list[str], gcs_prefix: str) -> list[str]:
     return landed
 
 
-def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
-        outdir: str = OUTDIR, ledger_path: str = ledger_mod.LEDGER,
-        gcs_prefix: str = "", complete: bool = True) -> dict:
+def run(
+    paths: list[str],
+    date: str,
+    source: str = "",
+    airflow_base: str = "",
+    outdir: str = OUTDIR,
+    ledger_path: str = ledger_mod.LEDGER,
+    gcs_prefix: str = "",
+    complete: bool = True,
+) -> dict:
     """Crawl, record, report. Returns the paths written and the headline counts.
 
     `complete=False` says the acquisition step did not deliver the whole fleet (some downloads
@@ -137,8 +144,11 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     cov, known = None, None
     if airflow_base:
         try:
-            cov = (cov_mod.collect_local(date) if airflow_base == "local"
-                   else cov_mod.collect(airflow_base, date))
+            cov = (
+                cov_mod.collect_local(date)
+                if airflow_base == "local"
+                else cov_mod.collect(airflow_base, date)
+            )
             known = cov.dag_ids_including_paused or None
         except Exception as e:
             print(f"[sweep] coverage skipped: {str(e)[:160]}")
@@ -147,16 +157,20 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     entries, delta = [], ledger_mod.Delta()
     ledger_note = ""
     if airflow_base and known is None:
-        ledger_note = ("coverage unavailable, so without the DAG-id set the same job keys "
-                       "differently and would read as new")
+        ledger_note = (
+            "coverage unavailable, so without the DAG-id set the same job keys "
+            "differently and would read as new"
+        )
         print(f"[sweep] ledger skipped: {ledger_note}")
     else:
         # Ids the ledger already keyed hold a job steady whenever coverage's set is short.
-        known = (known or set()) | {e["dag_id"] for e in ledger_mod.read(ledger_path)
-                                    if e.get("dag_id")}
+        known = (known or set()) | {
+            e["dag_id"] for e in ledger_mod.read(ledger_path) if e.get("dag_id")
+        }
         try:
-            entries = ledger_mod.record(reports, date, path=ledger_path, known=known,
-                                        complete=complete)
+            entries = ledger_mod.record(
+                reports, date, path=ledger_path, known=known, complete=complete
+            )
             delta = ledger_mod.delta(entries)
         except Exception as e:  # a ledger fault must not lose the backlog
             ledger_note = f"ledger step failed: {str(e)[:160]}"
@@ -166,8 +180,11 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     if cov is not None:
         coverage_path = os.path.join(outdir, f"optimizer_coverage_{date}.md")
         with open(coverage_path, "w") as fh:
-            fh.write(cov_mod.render(cov, _dag_ids(reports, known),
-                                    _rendered_dags(entries, delta, scored, known)))
+            fh.write(
+                cov_mod.render(
+                    cov, _dag_ids(reports, known), _rendered_dags(entries, delta, scored, known)
+                )
+            )
 
     dbx_path = ""
     dbx = _databricks_report()
@@ -203,15 +220,18 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             savings_note = ledger_mod.savings_headline(s)
 
     # The digest cites the other files, so they are uploaded before it is written.
-    published = publish([backlog, coverage_path, ledger_path, dbx_path, bq_path, savings_path],
-                        gcs_prefix)
+    published = publish(
+        [backlog, coverage_path, ledger_path, dbx_path, bq_path, savings_path], gcs_prefix
+    )
     if cov is not None:
         cov.report_path = _published_ref(coverage_path, gcs_prefix, published)
 
     notes = []
     if not complete:
-        notes.append("Partial sweep: some event logs could not be downloaded, so nothing is "
-                     "reported as resolved this run.")
+        notes.append(
+            "Partial sweep: some event logs could not be downloaded, so nothing is "
+            "reported as resolved this run."
+        )
     if ledger_note:
         notes.append(f"No change tracking this run: {ledger_note}.")
     if dbx_path:
@@ -219,12 +239,19 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
     if bq_path:
         notes.append(f"BigQuery cost: `{_published_ref(bq_path, gcs_prefix, published)}`")
     if savings_note:
-        notes.append(f"{savings_note}. Log: "
-                     f"`{_published_ref(savings_path, gcs_prefix, published)}`")
+        notes.append(
+            f"{savings_note}. Log: `{_published_ref(savings_path, gcs_prefix, published)}`"
+        )
 
-    text = digest_mod.render(delta, scanned=len(scored), findings=findings, high=high, date=date,
-                             coverage=cov,
-                             backlog_path=_published_ref(backlog, gcs_prefix, published))
+    text = digest_mod.render(
+        delta,
+        scanned=len(scored),
+        findings=findings,
+        high=high,
+        date=date,
+        coverage=cov,
+        backlog_path=_published_ref(backlog, gcs_prefix, published),
+    )
     for note in notes:
         text += f"\n\n_{note}_"
     digest_path = os.path.join(outdir, f"optimizer_digest_{date}.md")
@@ -233,18 +260,34 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
 
     published += publish([digest_path], gcs_prefix)
     parent, replies = digest_mod.blocks(
-        delta, scanned=len(scored), findings=findings, high=high, date=date, coverage=cov,
-        backlog_path=_published_ref(backlog, gcs_prefix, published), notes=tuple(notes))
+        delta,
+        scanned=len(scored),
+        findings=findings,
+        high=high,
+        date=date,
+        coverage=cov,
+        backlog_path=_published_ref(backlog, gcs_prefix, published),
+        notes=tuple(notes),
+    )
     delivery = notify_mod.deliver_thread(parent, replies)
     if delivery.get("error"):
         print(f"[sweep] slack post failed: {delivery['error']}")
 
     return {
-        "backlog": backlog, "digest": digest_path,
-        "coverage": coverage_path, "databricks": dbx_path, "bigquery": bq_path,
-        "scanned": len(scored), "findings": findings, "high": high,
-        "ledger_entries": len(entries), "slack": text, "published": published,
-        "complete": complete, "ledger_note": ledger_note, "delivery": delivery,
+        "backlog": backlog,
+        "digest": digest_path,
+        "coverage": coverage_path,
+        "databricks": dbx_path,
+        "bigquery": bq_path,
+        "scanned": len(scored),
+        "findings": findings,
+        "high": high,
+        "ledger_entries": len(entries),
+        "slack": text,
+        "published": published,
+        "complete": complete,
+        "ledger_note": ledger_note,
+        "delivery": delivery,
     }
 
 
@@ -254,21 +297,40 @@ def main() -> None:
     ap.add_argument("paths", nargs="+", help="event-log dirs or globs")
     ap.add_argument("--date", required=True)
     ap.add_argument("--source", default="", help="provenance line for the backlog header")
-    ap.add_argument("--airflow-base", default="",
-                    help='Airflow API base ending in /api/v2, or "local" to parse the DAG '
-                         "bundle in-process; omit to skip coverage")
+    ap.add_argument(
+        "--airflow-base",
+        default="",
+        help='Airflow API base ending in /api/v2, or "local" to parse the DAG '
+        "bundle in-process; omit to skip coverage",
+    )
     ap.add_argument("--outdir", default=OUTDIR)
     ap.add_argument("--ledger", default=ledger_mod.LEDGER)
-    ap.add_argument("--partial", action="store_true",
-                    help="acquisition was incomplete; record findings but resolve nothing")
-    ap.add_argument("--gcs-prefix", default=os.environ.get("OPTIMIZER_GCS_PREFIX", ""),
-                    help="gs://... to publish the artifacts to; omit to keep them local only")
+    ap.add_argument(
+        "--partial",
+        action="store_true",
+        help="acquisition was incomplete; record findings but resolve nothing",
+    )
+    ap.add_argument(
+        "--gcs-prefix",
+        default=os.environ.get("OPTIMIZER_GCS_PREFIX", ""),
+        help="gs://... to publish the artifacts to; omit to keep them local only",
+    )
     args = ap.parse_args()
 
-    out = run(args.paths, args.date, args.source, args.airflow_base, args.outdir,
-              args.ledger, args.gcs_prefix, complete=not args.partial)
-    print(f"Fleet optimization: {out['scanned']} jobs scanned, {out['findings']} findings, "
-          f"{out['high']} high-impact.")
+    out = run(
+        args.paths,
+        args.date,
+        args.source,
+        args.airflow_base,
+        args.outdir,
+        args.ledger,
+        args.gcs_prefix,
+        complete=not args.partial,
+    )
+    print(
+        f"Fleet optimization: {out['scanned']} jobs scanned, {out['findings']} findings, "
+        f"{out['high']} high-impact."
+    )
     print(f"[sweep] backlog  {out['backlog']}")
     print(f"[sweep] digest   {out['digest']}  ({out['ledger_entries']} ledger entries)")
     if out["coverage"]:

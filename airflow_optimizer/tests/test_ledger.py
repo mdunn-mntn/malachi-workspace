@@ -11,15 +11,30 @@ from airflow_optimizer.optimizations import OptFinding
 # The real base is resolved from the deployment's own env, so tests pass one explicitly.
 UI = "https://airflow.example.com/dags/{dag_id}"
 
-FETCH = OptFinding("shuffle_fetch_wait", "Stage 9 spends 73% of task time waiting on shuffle fetch",
-                   "high", "why", "fix", rec_type="code")
-IDLE = OptFinding("idle_reserved_executors", "Executors 16% utilized: ~31 idle executor-hours held",
-                  "high", "why", "fix", rec_type="infra")
+FETCH = OptFinding(
+    "shuffle_fetch_wait",
+    "Stage 9 spends 73% of task time waiting on shuffle fetch",
+    "high",
+    "why",
+    "fix",
+    rec_type="code",
+)
+IDLE = OptFinding(
+    "idle_reserved_executors",
+    "Executors 16% utilized: ~31 idle executor-hours held",
+    "high",
+    "why",
+    "fix",
+    rec_type="infra",
+)
 
 
 def _report(app: str, *findings: OptFinding) -> JobReport:
-    return JobReport(source=f"{app}.zstd", findings=list(findings),
-                     app_name="Populate site_network_hourly.SiteNetworkHourly")
+    return JobReport(
+        source=f"{app}.zstd",
+        findings=list(findings),
+        app_name="Populate site_network_hourly.SiteNetworkHourly",
+    )
 
 
 def test_key_uses_the_stage_not_every_number() -> None:
@@ -33,7 +48,9 @@ def test_states_walk_new_recurring_chronic(tmp_path: Path) -> None:
     """Three sweeps of the same finding is a standing defect, not three incidents."""
     p = str(tmp_path / "l.jsonl")
     assert [e.state for e in ledger.record([_report("a", FETCH)], "2026-08-18", path=p)] == ["new"]
-    assert [e.state for e in ledger.record([_report("b", FETCH)], "2026-08-19", path=p)] == ["recurring"]
+    assert [e.state for e in ledger.record([_report("b", FETCH)], "2026-08-19", path=p)] == [
+        "recurring"
+    ]
     third = ledger.record([_report("c", FETCH)], "2026-08-20", path=p)
     assert (third[0].state, third[0].streak) == ("chronic", 3)
 
@@ -42,8 +59,13 @@ def test_shipped_fix_that_works_is_attributed_and_costed(tmp_path: Path) -> None
     """A shipped fix carries its PR forward and the register shows what the DAG cost after."""
     p = str(tmp_path / "l.jsonl")
     ledger.record([_report("a", FETCH)], "2026-08-01", dcu={"site_network_hourly": 100.0}, path=p)
-    ledger.mark_applied("site_network_hourly", "shuffle_fetch_wait:9",
-                        "https://github.com/x/y/pull/9", "2026-08-03", path=p)
+    ledger.mark_applied(
+        "site_network_hourly",
+        "shuffle_fetch_wait:9",
+        "https://github.com/x/y/pull/9",
+        "2026-08-03",
+        path=p,
+    )
     for date in ("2026-08-04", "2026-08-05", "2026-08-06"):  # finding gone, DAG cheaper
         ledger.record([_report("b", IDLE)], date, dcu={"site_network_hourly": 40.0}, path=p)
     row = ledger.shipped(p)[0]
@@ -56,8 +78,13 @@ def test_shipped_fix_that_does_not_work_says_so(tmp_path: Path) -> None:
     """A merged fix is not a verified fix: if the finding keeps firing the register says so."""
     p = str(tmp_path / "l.jsonl")
     ledger.record([_report("a", FETCH)], "2026-08-01", path=p)
-    ledger.mark_applied("site_network_hourly", "shuffle_fetch_wait:9",
-                        "https://github.com/x/y/pull/11", "2026-08-02", path=p)
+    ledger.mark_applied(
+        "site_network_hourly",
+        "shuffle_fetch_wait:9",
+        "https://github.com/x/y/pull/11",
+        "2026-08-02",
+        path=p,
+    )
     for date in ("2026-08-03", "2026-08-04", "2026-08-05"):
         entries = ledger.record([_report("b", FETCH)], date, path=p)
     assert entries[0].state == "fix_not_working", entries[0]
@@ -69,8 +96,10 @@ def test_mark_applied_needs_history_and_a_pr(tmp_path: Path) -> None:
     """The register records real work, so it refuses an unattributed or unknown entry."""
     p = str(tmp_path / "l.jsonl")
     ledger.record([_report("a", FETCH)], "2026-08-01", path=p)
-    for args in (("site_network_hourly", "shuffle_fetch_wait:9", "", "2026-08-02"),
-                 ("no_such_dag", "shuffle_fetch_wait:9", "pr", "2026-08-02")):
+    for args in (
+        ("site_network_hourly", "shuffle_fetch_wait:9", "", "2026-08-02"),
+        ("no_such_dag", "shuffle_fetch_wait:9", "pr", "2026-08-02"),
+    ):
         try:
             ledger.mark_applied(*args, path=p)
         except ValueError:
@@ -82,7 +111,8 @@ def test_one_entry_per_key_per_sweep(tmp_path: Path) -> None:
     """An hourly job contributes ~24 logs a day; the ledger must not count each as a finding."""
     p = str(tmp_path / "l.jsonl")
     entries = ledger.record(
-        [_report("a", FETCH), _report("b", FETCH), _report("c", FETCH, IDLE)], "2026-08-18", path=p)
+        [_report("a", FETCH), _report("b", FETCH), _report("c", FETCH, IDLE)], "2026-08-18", path=p
+    )
     assert sorted(e.key for e in entries) == ["idle_reserved_executors", "shuffle_fetch_wait:9"]
 
 
@@ -90,8 +120,14 @@ def test_owner_notified_is_sticky(tmp_path: Path) -> None:
     """A human decision must not be overwritten by the next replay."""
     p = str(tmp_path / "l.jsonl")
     ledger.record([_report("a", FETCH)], "2026-08-18", path=p)
-    ledger.set_state("site_network_hourly", "shuffle_fetch_wait:9", "owner_notified",
-                     note="asked Ryan", date="2026-08-18", path=p)
+    ledger.set_state(
+        "site_network_hourly",
+        "shuffle_fetch_wait:9",
+        "owner_notified",
+        note="asked Ryan",
+        date="2026-08-18",
+        path=p,
+    )
     again = ledger.record([_report("b", FETCH)], "2026-08-19", path=p)
     assert again[0].state == "owner_notified"
     assert again[0].note == "asked Ryan"
@@ -112,10 +148,16 @@ def test_resolved_only_after_the_grace_window(tmp_path: Path) -> None:
     p = str(tmp_path / "l.jsonl")
     ledger.record([_report("a", FETCH, IDLE)], "2026-08-18", path=p)
     # fetch-wait gone, but still inside the window
-    assert not [e for e in ledger.record([_report("b", IDLE)], "2026-08-19", path=p)
-                if e.state == "resolved"]
-    assert not [e for e in ledger.record([_report("c", IDLE)], "2026-08-20", path=p)
-                if e.state == "resolved"]
+    assert not [
+        e
+        for e in ledger.record([_report("b", IDLE)], "2026-08-19", path=p)
+        if e.state == "resolved"
+    ]
+    assert not [
+        e
+        for e in ledger.record([_report("c", IDLE)], "2026-08-20", path=p)
+        if e.state == "resolved"
+    ]
     out = ledger.record([_report("d", IDLE)], "2026-08-21", path=p)
     assert [e.key for e in out if e.state == "resolved"] == ["shuffle_fetch_wait:9"]
 
@@ -132,10 +174,18 @@ def test_a_torn_line_does_not_sink_the_sweep(tmp_path: Path) -> None:
 def test_digest_leads_with_the_delta_and_links_the_dag(tmp_path: Path) -> None:
     """The digest is read for what changed, so a no-change sweep must say so plainly."""
     p = str(tmp_path / "l.jsonl")
-    entries = ledger.record([_report("a", FETCH)], "2026-08-18",
-                            dcu={"site_network_hourly": 8663}, path=p)
-    text = digest.render(ledger.delta(entries), scanned=214, findings=278, high=197,
-                         date="2026-08-18", backlog_path="outputs/b.md", base=UI)
+    entries = ledger.record(
+        [_report("a", FETCH)], "2026-08-18", dcu={"site_network_hourly": 8663}, path=p
+    )
+    text = digest.render(
+        ledger.delta(entries),
+        scanned=214,
+        findings=278,
+        high=197,
+        date="2026-08-18",
+        backlog_path="outputs/b.md",
+        base=UI,
+    )
     assert "214 Spark jobs scanned, 278 findings, 197 high." in text
     for block in ("*What*", "*Where*", "*Why*", "*How*"):
         assert block in text
@@ -171,6 +221,7 @@ def test_run_stamps_are_stripped_but_data_source_ids_are_not() -> None:
 
 def test_digest_does_not_link_a_dag_that_does_not_exist(tmp_path: Path) -> None:
     """A Spark app name is not always a dag_id; a dead link costs the reader trust."""
+
     class _Cov:
         dags = [type("D", (), {"dag_id": "site_network_hourly"})()]
         unprofiled: list = []
@@ -185,14 +236,28 @@ def test_digest_does_not_link_a_dag_that_does_not_exist(tmp_path: Path) -> None:
 
     p = str(tmp_path / "l.jsonl")
     entries = ledger.record([_report("a", FETCH)], "2026-08-18", path=p)
-    entries.append(ledger.Entry(date="2026-08-18", dag_id="segment-updates-to-parquet",
-                                app_id="b", key="shuffle_fetch_wait:2", impact="high",
-                                title="Stage 2 spends 64% of task time waiting on shuffle fetch",
-                                state="new"))
-    text = digest.render(ledger.delta(entries), scanned=2, findings=2, high=2,
-                         date="2026-08-18", coverage=_Cov(), base=UI)
-    assert "|site_network_hourly>" in text          # known -> linked
-    assert "`segment-updates-to-parquet`" in text   # unknown -> plain
+    entries.append(
+        ledger.Entry(
+            date="2026-08-18",
+            dag_id="segment-updates-to-parquet",
+            app_id="b",
+            key="shuffle_fetch_wait:2",
+            impact="high",
+            title="Stage 2 spends 64% of task time waiting on shuffle fetch",
+            state="new",
+        )
+    )
+    text = digest.render(
+        ledger.delta(entries),
+        scanned=2,
+        findings=2,
+        high=2,
+        date="2026-08-18",
+        coverage=_Cov(),
+        base=UI,
+    )
+    assert "|site_network_hourly>" in text  # known -> linked
+    assert "`segment-updates-to-parquet`" in text  # unknown -> plain
     assert "dags/segment-updates-to-parquet|" not in text
 
 
@@ -218,6 +283,7 @@ def test_ui_base_prefers_the_override_then_airflow_config(monkeypatch: object) -
 def test_a_finding_carries_its_dags_executor_hours_for_the_sweep_day(tmp_path: Path) -> None:
     """Ranking by finding count puts a chatty cheap job above a quiet expensive one, and a
     multi-run dag costs the sum of its runs, not whichever run happened to hold the finding."""
+
     class _R:
         def __init__(self, name: str, hours: float) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
@@ -227,32 +293,38 @@ def test_a_finding_carries_its_dags_executor_hours_for_the_sweep_day(tmp_path: P
     rows = ledger.record([_R("cheap", 0.4), _R("expensive", 812.5)], "2026-08-25", path=path)
     got = {e.dag_id: e.exec_h for e in rows}
     assert got == {"cheap": 0.4, "expensive": 812.5}
-    assert all(e.dcu_h is None for e in rows)          # measured DCU is a separate, unset field
+    assert all(e.dcu_h is None for e in rows)  # measured DCU is a separate, unset field
     rows = ledger.record([_R("hourly", 10.0), _R("hourly", 2.0)], "2026-08-26", path=path)
     assert [(e.dag_id, e.exec_h) for e in rows] == [("hourly", 12.0)]
 
 
 def test_one_bad_dag_cannot_fill_the_whole_digest(tmp_path: Path) -> None:
     """The 2026-08-21 digest opened with eight consecutive fangorn_score_monitor lines."""
+
     class _R:
         def __init__(self, name: str, n: int, hours: float) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
-            self.findings = [OptFinding(f"d{i}", f"stage {i} spills", "high", "w", f"fix {i}")
-                             for i in range(n)]
+            self.findings = [
+                OptFinding(f"d{i}", f"stage {i} spills", "high", "w", f"fix {i}") for i in range(n)
+            ]
 
-    entries = ledger.record([_R("noisy_cheap", 8, 2.0), _R("quiet_expensive", 1, 900.0)],
-                            "2026-08-25", path=str(tmp_path / "l.jsonl"))
+    entries = ledger.record(
+        [_R("noisy_cheap", 8, 2.0), _R("quiet_expensive", 1, 900.0)],
+        "2026-08-25",
+        path=str(tmp_path / "l.jsonl"),
+    )
     text = digest.render(ledger.delta(entries), scanned=2, findings=9, high=9, date="2026-08-25")
 
-    assert text.index("quiet_expensive") < text.index("noisy_cheap")   # cost outranks count
-    assert text.count("*What*") == 2                                   # one block per DAG
+    assert text.index("quiet_expensive") < text.index("noisy_cheap")  # cost outranks count
+    assert text.count("*What*") == 2  # one block per DAG
     assert "+7 more findings on this DAG" in text
     assert "900 executor-hours" in text
-    assert text.count("executor-hours") == 2   # per run, never summed across its findings
+    assert text.count("executor-hours") == 2  # per run, never summed across its findings
 
 
 def test_a_failed_fix_keeps_its_slot_and_its_label(tmp_path: Path) -> None:
     """A shipped fix that did not work is the one thing louder DAGs must not crowd out."""
+
     class _R:
         def __init__(self, name: str, hours: float) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
@@ -260,11 +332,17 @@ def test_a_failed_fix_keeps_its_slot_and_its_label(tmp_path: Path) -> None:
 
     p = str(tmp_path / "l.jsonl")
     ledger.record([_R("payments_etl", 9.0)], "2026-08-02", path=p)
-    ledger.mark_applied("payments_etl", "shuffle_fetch_wait:9",
-                        "https://github.com/x/y/pull/42", "2026-08-02", path=p)
+    ledger.mark_applied(
+        "payments_etl",
+        "shuffle_fetch_wait:9",
+        "https://github.com/x/y/pull/42",
+        "2026-08-02",
+        path=p,
+    )
     for date in ("2026-08-03", "2026-08-04", "2026-08-05"):
-        entries = ledger.record([_R("payments_etl", 9.0)]
-                                + [_R(f"noise_{i}", 10.0 + i) for i in range(4)], date, path=p)
+        entries = ledger.record(
+            [_R("payments_etl", 9.0)] + [_R(f"noise_{i}", 10.0 + i) for i in range(4)], date, path=p
+        )
 
     text = digest.render(ledger.delta(entries), scanned=5, findings=5, high=5, date="2026-08-05")
     assert "*Fix not working*" in text
@@ -276,26 +354,41 @@ def test_a_still_rolling_app_is_costed_not_ranked_free() -> None:
 
     Costing it 0.0 sorts the fleet's biggest runaway last, which is the opposite of the truth.
     """
+
     class _E:
         def __init__(self, added: int, removed: int | None) -> None:
             self.added_ts, self.removed_ts, self.run_time_ms = added, removed, 0
 
     hour = 3_600_000
-    held = type("R", (), {"executors": [_E(0, None) for _ in range(40)],
-                          "app_end_ts": None, "last_event_ts": 20 * hour})()
+    held = type(
+        "R",
+        (),
+        {
+            "executors": [_E(0, None) for _ in range(40)],
+            "app_end_ts": None,
+            "last_event_ts": 20 * hour,
+        },
+    )()
     assert crawl.executor_hours(held) == 800.0
 
-    ended = type("R", (), {"executors": [_E(0, 20 * hour) for _ in range(40)],
-                           "app_end_ts": None, "last_event_ts": 20 * hour})()
+    ended = type(
+        "R",
+        (),
+        {
+            "executors": [_E(0, 20 * hour) for _ in range(40)],
+            "app_end_ts": None,
+            "last_event_ts": 20 * hour,
+        },
+    )()
     assert crawl.executor_hours(ended) == 800.0
 
-    blind = type("R", (), {"executors": [_E(0, None)], "app_end_ts": None,
-                           "last_event_ts": None})()
-    assert crawl.executor_hours(blind) == 0.0     # no clock at all: unknown, not free
+    blind = type("R", (), {"executors": [_E(0, None)], "app_end_ts": None, "last_event_ts": None})()
+    assert crawl.executor_hours(blind) == 0.0  # no clock at all: unknown, not free
 
 
 def test_digest_links_the_dag_and_names_the_job_when_they_differ(tmp_path: Path) -> None:
     """The link goes to the DAG; the job name stays beside it because they differ."""
+
     class _Cov:
         dags = [type("D", (), {"dag_id": "feature_store_hourly"})()]
         unprofiled: list = []
@@ -308,12 +401,26 @@ def test_digest_links_the_dag_and_names_the_job_when_they_differ(tmp_path: Path)
         def unprofiled_line(self) -> str:
             return "0 active DAGs had no Spark task to profile."
 
-    entries = [ledger.Entry(date="2026-08-18", dag_id="aug_log_ip_hourly", app_id="app-1",
-                            key="shuffle_fetch_wait:2", impact="high",
-                            title="Stage 2 spends 64% of task time waiting on shuffle fetch",
-                            state="new")]
-    text = digest.render(ledger.delta(entries), scanned=1, findings=1, high=1,
-                         date="2026-08-18", coverage=_Cov(), base=UI)
+    entries = [
+        ledger.Entry(
+            date="2026-08-18",
+            dag_id="aug_log_ip_hourly",
+            app_id="app-1",
+            key="shuffle_fetch_wait:2",
+            impact="high",
+            title="Stage 2 spends 64% of task time waiting on shuffle fetch",
+            state="new",
+        )
+    ]
+    text = digest.render(
+        ledger.delta(entries),
+        scanned=1,
+        findings=1,
+        high=1,
+        date="2026-08-18",
+        coverage=_Cov(),
+        base=UI,
+    )
     assert "dags/feature_store_hourly|feature_store_hourly>" in text
     assert "`aug_log_ip_hourly`" in text
     assert "dags/aug_log_ip_hourly|" not in text
@@ -321,6 +428,7 @@ def test_digest_links_the_dag_and_names_the_job_when_they_differ(tmp_path: Path)
 
 def test_stopped_firing_links_its_dags_and_says_what_it_left_out() -> None:
     """The one section that used to print raw job names while every other line resolved them."""
+
     class _Cov:
         dags = [type("D", (), {"dag_id": "tpa_ipdsc_export"})()]
         unprofiled: list = []
@@ -333,11 +441,27 @@ def test_stopped_firing_links_its_dags_and_says_what_it_left_out() -> None:
         def unprofiled_line(self) -> str:
             return "0 active DAGs had no Spark task to profile."
 
-    entries = [ledger.Entry(date="2026-08-18", dag_id=f"ipdsc_ds_{i}", app_id=f"app-{i}",
-                            key="disk_spill:1", impact="high", title="Stage 1 spilled",
-                            state="resolved") for i in range(12)]
-    text = digest.render(ledger.delta(entries), scanned=12, findings=0, high=0,
-                         date="2026-08-18", coverage=_Cov(), base=UI)
+    entries = [
+        ledger.Entry(
+            date="2026-08-18",
+            dag_id=f"ipdsc_ds_{i}",
+            app_id=f"app-{i}",
+            key="disk_spill:1",
+            impact="high",
+            title="Stage 1 spilled",
+            state="resolved",
+        )
+        for i in range(12)
+    ]
+    text = digest.render(
+        ledger.delta(entries),
+        scanned=12,
+        findings=0,
+        high=0,
+        date="2026-08-18",
+        coverage=_Cov(),
+        base=UI,
+    )
     line = next(x for x in text.splitlines() if x.startswith("*Stopped firing*"))
     assert "dags/tpa_ipdsc_export|tpa_ipdsc_export>" in line
     assert "and 4 more" in line
@@ -349,25 +473,63 @@ def test_savings_counts_only_resolved_fixes_in_measured_units(tmp_path: Path) ->
     p = str(tmp_path / "ledger.jsonl")
     rows = []
     for i, day in enumerate(("2026-08-20", "2026-08-21", "2026-08-22")):
-        rows.append(ledger.Entry(date=day, dag_id="good", app_id=f"a{i}", key="skew:1",
-                                 impact="high", title="Stage 1 skew", state="chronic",
-                                 exec_h=100.0))
-        rows.append(ledger.Entry(date=day, dag_id="bad", app_id=f"b{i}", key="spill:2",
-                                 impact="high", title="Stage 2 spill", state="chronic",
-                                 exec_h=80.0))
+        rows.append(
+            ledger.Entry(
+                date=day,
+                dag_id="good",
+                app_id=f"a{i}",
+                key="skew:1",
+                impact="high",
+                title="Stage 1 skew",
+                state="chronic",
+                exec_h=100.0,
+            )
+        )
+        rows.append(
+            ledger.Entry(
+                date=day,
+                dag_id="bad",
+                app_id=f"b{i}",
+                key="spill:2",
+                impact="high",
+                title="Stage 2 spill",
+                state="chronic",
+                exec_h=80.0,
+            )
+        )
     ledger.append(rows, p)
     ledger.mark_applied("good", "skew:1", "https://x/pr/1", "2026-08-22", path=p)
     ledger.mark_applied("bad", "spill:2", "https://x/pr/2", "2026-08-22", path=p)
     after = []
     for day in ("2026-08-23", "2026-08-24"):
-        after.append(ledger.Entry(date=day, dag_id="good", app_id="a9", key="skew:1",
-                                  impact="high", title="Stage 1 skew", state="resolved",
-                                  exec_h=40.0, fix_pr="https://x/pr/1",
-                                  applied_date="2026-08-22"))
-        after.append(ledger.Entry(date=day, dag_id="bad", app_id="b9", key="spill:2",
-                                  impact="high", title="Stage 2 spill", state="fix_not_working",
-                                  exec_h=80.0, fix_pr="https://x/pr/2",
-                                  applied_date="2026-08-22"))
+        after.append(
+            ledger.Entry(
+                date=day,
+                dag_id="good",
+                app_id="a9",
+                key="skew:1",
+                impact="high",
+                title="Stage 1 skew",
+                state="resolved",
+                exec_h=40.0,
+                fix_pr="https://x/pr/1",
+                applied_date="2026-08-22",
+            )
+        )
+        after.append(
+            ledger.Entry(
+                date=day,
+                dag_id="bad",
+                app_id="b9",
+                key="spill:2",
+                impact="high",
+                title="Stage 2 spill",
+                state="fix_not_working",
+                exec_h=80.0,
+                fix_pr="https://x/pr/2",
+                applied_date="2026-08-22",
+            )
+        )
     ledger.append(after, p)
 
     s = ledger.savings(p)
@@ -378,12 +540,13 @@ def test_savings_counts_only_resolved_fixes_in_measured_units(tmp_path: Path) ->
     assert bad["exec_h_saved"] is None
     assert abs(s["total_exec_h_saved"] - 120.0) < 1e-6
     text = ledger.render_savings(s)
-    assert "Saved since 2026-08-22: 120 executor-hours" in text
+    assert "Saved since 2026-08-22: 120 hours" in text
     assert "fix_not_working" in text
 
 
 def test_a_fix_that_fully_cleans_a_job_still_measures_savings(tmp_path: Path) -> None:
     """The best outcome is a job with no findings left; its savings must not read as zero."""
+
     class _R:
         def __init__(self, name: str, hours: float, *findings: OptFinding) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
@@ -406,6 +569,7 @@ def test_a_fix_that_fully_cleans_a_job_still_measures_savings(tmp_path: Path) ->
 
 def test_savings_measures_the_dag_not_whichever_run_iterated_last(tmp_path: Path) -> None:
     """A no-op fix on a multi-run dag must measure zero, not the gap between two of its runs."""
+
     class _R:
         def __init__(self, name: str, hours: float, *findings: OptFinding) -> None:
             self.source, self.app_name, self.exec_h, self.error = f"{name}.zstd", name, hours, None
@@ -413,8 +577,9 @@ def test_savings_measures_the_dag_not_whichever_run_iterated_last(tmp_path: Path
 
     p = str(tmp_path / "l.jsonl")
     for day in ("2026-08-01", "2026-08-02", "2026-08-03"):
-        ledger.record([_R("hourly", 10.0, FETCH), _R("hourly", 2.0), _R("noisy", 1.0, IDLE)],
-                      day, path=p)
+        ledger.record(
+            [_R("hourly", 10.0, FETCH), _R("hourly", 2.0), _R("noisy", 1.0, IDLE)], day, path=p
+        )
     ledger.mark_applied("hourly", "shuffle_fetch_wait:9", "https://x/pr/5", "2026-08-03", path=p)
     for day in ("2026-08-04", "2026-08-05", "2026-08-06"):
         ledger.record([_R("hourly", 10.0), _R("hourly", 2.0), _R("noisy", 1.0, IDLE)], day, path=p)
@@ -432,34 +597,84 @@ def test_savings_counts_a_dag_once_across_its_resolved_findings(tmp_path: Path) 
     rows = []
     for day in ("2026-08-01", "2026-08-02"):
         for key, title in (("skew:1", "Stage 1 skew"), ("spill:2", "Stage 2 spill")):
-            rows.append(ledger.Entry(date=day, dag_id="jobx", app_id="a", key=key,
-                                     impact="high", title=title, state="recurring",
-                                     exec_h=100.0))
+            rows.append(
+                ledger.Entry(
+                    date=day,
+                    dag_id="jobx",
+                    app_id="a",
+                    key=key,
+                    impact="high",
+                    title=title,
+                    state="recurring",
+                    exec_h=100.0,
+                )
+            )
     ledger.append(rows, p)
     for key in ("skew:1", "spill:2"):
         ledger.mark_applied("jobx", key, "https://x/pr/3", "2026-08-03", path=p)
-    ledger.append([ledger.Entry(date="2026-08-04", dag_id="jobx", app_id="a", key=key,
-                                impact="high", title="t", state="resolved", exec_h=40.0,
-                                fix_pr="https://x/pr/3", applied_date="2026-08-03")
-                   for key in ("skew:1", "spill:2")], p)
+    ledger.append(
+        [
+            ledger.Entry(
+                date="2026-08-04",
+                dag_id="jobx",
+                app_id="a",
+                key=key,
+                impact="high",
+                title="t",
+                state="resolved",
+                exec_h=40.0,
+                fix_pr="https://x/pr/3",
+                applied_date="2026-08-03",
+            )
+            for key in ("skew:1", "spill:2")
+        ],
+        p,
+    )
 
     s = ledger.savings(p)
     assert [r["exec_h_saved"] for r in s["rows"]] == [60.0, 60.0]
     assert abs(s["total_exec_h_saved"] - 60.0) < 1e-6
-    assert "60 executor-hours" in ledger.render_savings(s)
+    assert "60 hours" in ledger.render_savings(s)
 
 
 def test_savings_reports_ytd_run_rate_and_annual_estimate(tmp_path: Path) -> None:
     """The leadership view: all-time vs this year vs where the run rate lands in a year."""
     p = str(tmp_path / "l.jsonl")
-    ledger.append([ledger.Entry(date=d, dag_id="jobx", app_id="a", key="skew:1", impact="high",
-                                title="Stage 1 skew", state="chronic", exec_h=100.0)
-                   for d in ("2025-12-27", "2025-12-28")], p)
+    ledger.append(
+        [
+            ledger.Entry(
+                date=d,
+                dag_id="jobx",
+                app_id="a",
+                key="skew:1",
+                impact="high",
+                title="Stage 1 skew",
+                state="chronic",
+                exec_h=100.0,
+            )
+            for d in ("2025-12-27", "2025-12-28")
+        ],
+        p,
+    )
     ledger.mark_applied("jobx", "skew:1", "https://x/pr/9", "2025-12-29", path=p)
-    ledger.append([ledger.Entry(date=d, dag_id="jobx", app_id="a", key="skew:1", impact="high",
-                                title="Stage 1 skew", state="resolved", exec_h=40.0,
-                                fix_pr="https://x/pr/9", applied_date="2025-12-29")
-                   for d in ("2025-12-30", "2025-12-31", "2026-01-02", "2026-01-03")], p)
+    ledger.append(
+        [
+            ledger.Entry(
+                date=d,
+                dag_id="jobx",
+                app_id="a",
+                key="skew:1",
+                impact="high",
+                title="Stage 1 skew",
+                state="resolved",
+                exec_h=40.0,
+                fix_pr="https://x/pr/9",
+                applied_date="2025-12-29",
+            )
+            for d in ("2025-12-30", "2025-12-31", "2026-01-02", "2026-01-03")
+        ],
+        p,
+    )
 
     s = ledger.savings(p)
     assert s["ytd_year"] == "2026"
@@ -478,18 +693,45 @@ def test_savings_reports_ytd_run_rate_and_annual_estimate(tmp_path: Path) -> Non
 def test_annual_estimate_uses_calendar_days_not_observed_sweep_days(tmp_path: Path) -> None:
     """A weekly DAG saves on run days only; projecting its per-run saving daily is a 7x lie."""
     p = str(tmp_path / "l.jsonl")
-    ledger.append([ledger.Entry(date=d, dag_id="weekly", app_id="a", key="skew:1", impact="high",
-                                title="Stage 1 skew", state="chronic", exec_h=100.0)
-                   for d in ("2026-06-21", "2026-06-28")], p)
+    ledger.append(
+        [
+            ledger.Entry(
+                date=d,
+                dag_id="weekly",
+                app_id="a",
+                key="skew:1",
+                impact="high",
+                title="Stage 1 skew",
+                state="chronic",
+                exec_h=100.0,
+            )
+            for d in ("2026-06-21", "2026-06-28")
+        ],
+        p,
+    )
     ledger.mark_applied("weekly", "skew:1", "https://x/pr/8", "2026-06-29", path=p)
-    ledger.append([ledger.Entry(date=d, dag_id="weekly", app_id="a", key="skew:1", impact="high",
-                                title="Stage 1 skew", state="resolved", exec_h=40.0,
-                                fix_pr="https://x/pr/8", applied_date="2026-06-29")
-                   for d in ("2026-07-05", "2026-07-12")], p)
+    ledger.append(
+        [
+            ledger.Entry(
+                date=d,
+                dag_id="weekly",
+                app_id="a",
+                key="skew:1",
+                impact="high",
+                title="Stage 1 skew",
+                state="resolved",
+                exec_h=40.0,
+                fix_pr="https://x/pr/8",
+                applied_date="2026-06-29",
+            )
+            for d in ("2026-07-05", "2026-07-12")
+        ],
+        p,
+    )
 
     s = ledger.savings(p, today="2026-07-12")
     assert abs(s["run_rate_exec_h_per_day"] - 120.0 / 13) < 1e-6
-    assert s["est_annual_exec_h"] < 3400   # true ceiling ~3,120/yr; per-sweep-day said 21,900
+    assert s["est_annual_exec_h"] < 3400  # true ceiling ~3,120/yr; per-sweep-day said 21,900
 
     stale = ledger.savings(p, today="2026-08-26")
     assert stale["run_rate_exec_h_per_day"] < s["run_rate_exec_h_per_day"]

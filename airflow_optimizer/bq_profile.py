@@ -80,8 +80,9 @@ class Report:
 
 
 def _token() -> str:
-    r = subprocess.run(["gcloud", "auth", "print-access-token"],
-                       capture_output=True, text=True, timeout=_TIMEOUT)
+    r = subprocess.run(
+        ["gcloud", "auth", "print-access-token"], capture_output=True, text=True, timeout=_TIMEOUT
+    )
     if r.returncode != 0:
         raise RuntimeError(f"no access token: {(r.stderr or '').strip()[-200:]}")
     return r.stdout.strip()
@@ -89,8 +90,9 @@ def _token() -> str:
 
 def query(project: str, sql: str) -> list[dict]:
     """Run one query in `project` and return its rows as dicts. Raises on any failure."""
-    body = json.dumps({"query": sql, "useLegacySql": False,
-                       "timeoutMs": 100_000, "maxResults": 10_000})
+    body = json.dumps(
+        {"query": sql, "useLegacySql": False, "timeoutMs": 100_000, "maxResults": 10_000}
+    )
     url = f"https://bigquery.googleapis.com/bigquery/v2/projects/{project}/queries"
     r = subprocess.run(
         ["curl", "-sS", "--fail-with-body", "-X", "POST", url,
@@ -104,8 +106,10 @@ def query(project: str, sql: str) -> list[dict]:
     if not res.get("jobComplete", False):
         raise RuntimeError("bq query did not complete inside the timeout")
     names = [f["name"] for f in res.get("schema", {}).get("fields", [])]
-    return [dict(zip(names, [c.get("v") for c in row.get("f", [])], strict=False))
-            for row in res.get("rows", [])]
+    return [
+        dict(zip(names, [c.get("v") for c in row.get("f", [])], strict=False))
+        for row in res.get("rows", [])
+    ]
 
 
 def profile(date: str, projects: str = "") -> list[TaskCost]:
@@ -113,11 +117,16 @@ def profile(date: str, projects: str = "") -> list[TaskCost]:
     out = []
     for project in [p.strip() for p in (projects or PROJECTS).split(",") if p.strip()]:
         for r in query(project, PROFILE_SQL.format(project=project, region=REGION, date=date)):
-            out.append(TaskCost(
-                project=project, dag=r.get("dag") or "", task=r.get("task") or "",
-                jobs=int(r.get("jobs") or 0), slot_h=float(r.get("slot_h") or 0),
-                tib_billed=float(r.get("tib_billed") or 0),
-            ))
+            out.append(
+                TaskCost(
+                    project=project,
+                    dag=r.get("dag") or "",
+                    task=r.get("task") or "",
+                    jobs=int(r.get("jobs") or 0),
+                    slot_h=float(r.get("slot_h") or 0),
+                    tib_billed=float(r.get("tib_billed") or 0),
+                )
+            )
     return out
 
 
@@ -133,33 +142,43 @@ def reports(costs: list[TaskCost]) -> list[Report]:
     out = []
     for dag, rows in by_dag.items():
         slot_h = round(sum(r.slot_h for r in rows), 1)
-        rep = Report(source=f"bq:{dag or 'unattributed'}", app_name=dag or "unattributed",
-                     exec_h=slot_h)
+        rep = Report(
+            source=f"bq:{dag or 'unattributed'}", app_name=dag or "unattributed", exec_h=slot_h
+        )
         if dag:
             for c in sorted(rows, key=lambda r: r.slot_h, reverse=True):
                 if c.slot_h >= HEAVY_SLOT_H:
-                    rep.findings.append(Finding(
-                        key="bq_heavy_task", impact="high",
-                        title=f"task {c.task or '(unlabeled)'} used {c.slot_h:,.0f} slot-hours "
-                              f"in one day ({c.jobs} jobs, {c.tib_billed:,.1f} TiB billed)",
-                        fix="Read the query's execution plan for shuffle-heavy stages, missing "
+                    rep.findings.append(
+                        Finding(
+                            key=f"bq_heavy_task:{c.task or 'unlabeled'}",
+                            impact="high",
+                            title=f"task {c.task or '(unlabeled)'} used {c.slot_h:,.0f} slot-hours "
+                            f"in one day ({c.jobs} jobs, {c.tib_billed:,.1f} TiB billed)",
+                            fix="Read the query's execution plan for shuffle-heavy stages, missing "
                             "partition filters, or repeated identical runs.",
-                    ))
+                        )
+                    )
         out.append(rep)
     return out
 
 
 def render(costs: list[TaskCost], date: str) -> str:
     """The BigQuery section of a sweep, heaviest dag first."""
-    lines = [f"# BigQuery cost — {date}", "",
-             "Slot-hours per dag and task, from the job history of the fleet's own service "
-             "account. Jobs submitted without airflow labels appear as `unattributed`.", ""]
+    lines = [
+        f"# BigQuery cost — {date}",
+        "",
+        "Slot-hours per dag and task, from the job history of the fleet's own service "
+        "account. Jobs submitted without airflow labels appear as `unattributed`.",
+        "",
+    ]
     if not costs:
         return "\n".join(lines + ["No BigQuery jobs found for this day.", ""])
     lines += ["| DAG | task | jobs | slot-hours | TiB billed |", "|---|---|---:|---:|---:|"]
     for c in sorted(costs, key=lambda r: r.slot_h, reverse=True):
-        lines.append(f"| `{c.dag or 'unattributed'}` | `{c.task or '-'}` | {c.jobs} | "
-                     f"{c.slot_h:,.1f} | {c.tib_billed:,.2f} |")
+        lines.append(
+            f"| `{c.dag or 'unattributed'}` | `{c.task or '-'}` | {c.jobs} | "
+            f"{c.slot_h:,.1f} | {c.tib_billed:,.2f} |"
+        )
     return "\n".join(lines) + "\n"
 
 
