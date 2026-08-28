@@ -56,6 +56,7 @@ class Entry:
     note: str = ""
     fix_pr: str = ""  # set when a fix ships; carried forward so the outcome is attributable
     applied_date: str = ""
+    surface: str = "spark"  # what exec_h measures: spark executor-h, bq slot-h, ...
 
 
 def finding_key(finding: object) -> str:
@@ -99,7 +100,7 @@ def _history(entries: list[dict]) -> dict[tuple[str, str], list[dict]]:
 
 
 def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = True,
-             exec_h_by_dag: dict | None = None) -> list[Entry]:
+             exec_h_by_dag: dict | None = None, surface: str = "spark") -> list[Entry]:
     """Set state and streak on this sweep's findings from what the ledger already holds.
 
     `complete=False` means this sweep did not see the whole fleet, so absence proves nothing
@@ -133,19 +134,25 @@ def classify(new: list[Entry], prior: list[dict], date: str, complete: bool = Tr
         else:
             entry.state = "recurring"
     if complete:
-        _mark_resolved(new, hist, seen_dates, date, exec_h_by_dag or {})
+        _mark_resolved(new, hist, seen_dates, date, exec_h_by_dag or {}, surface)
     return new
 
 
 def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: str,
-                   exec_h_by_dag: dict | None = None) -> None:
-    """Append a resolved entry, with the sweep's observed exec-hours, for each quiet key."""
+                   exec_h_by_dag: dict | None = None, surface: str = "spark") -> None:
+    """Append a resolved entry, with the sweep's observed exec-hours, for each quiet key.
+
+    Scoped to the sweep's own surface: a BigQuery pass never saw the Spark fleet, so a Spark
+    key absent from it proves nothing and must not be resolved by it, and vice versa.
+    """
     live = {(e.dag_id, e.key) for e in new}
     recent = set(seen_dates[-(RESOLVE_SWEEPS - 1):]) if seen_dates else set()
     for (dag_id, key), past in hist.items():
         if (dag_id, key) in live or not past:
             continue
         last = past[-1]
+        if last.get("surface", "spark") != surface:
+            continue
         if last.get("state") in ("resolved", "wont_fix"):
             continue
         if any(e.get("date") in recent for e in past):
@@ -159,7 +166,7 @@ def _mark_resolved(new: list[Entry], hist: dict, seen_dates: list[str], date: st
             title=last.get("title", ""), owner=last.get("owner", ""),
             exec_h=(exec_h_by_dag or {}).get(dag_id),
             state="resolved", streak=0, note=note,
-            fix_pr=pr, applied_date=last.get("applied_date", ""),
+            fix_pr=pr, applied_date=last.get("applied_date", ""), surface=surface,
         ))
 
 
@@ -182,7 +189,8 @@ def append(entries: list[Entry], path: str = LEDGER) -> None:
 
 
 def record(reports: list, date: str, owners: dict | None = None, dcu: dict | None = None,
-           path: str = LEDGER, known: set | None = None, complete: bool = True) -> list[Entry]:
+           path: str = LEDGER, known: set | None = None, complete: bool = True,
+           surface: str = "spark") -> list[Entry]:
     """Turn a crawl's JobReports into classified ledger entries and append them.
 
     `known` is the active-DAG set from the coverage pass; it disambiguates a trailing
@@ -215,9 +223,11 @@ def record(reports: list, date: str, owners: dict | None = None, dcu: dict | Non
                 owner=owners.get(dag_id, ""),
                 dcu_h=dcu.get(dag_id),
                 exec_h=exec_h_by_dag.get(dag_id),
+                surface=surface,
             ))
     entries = _dedup(entries)
-    classify(entries, read(path), date, complete=complete, exec_h_by_dag=exec_h_by_dag)
+    classify(entries, read(path), date, complete=complete, exec_h_by_dag=exec_h_by_dag,
+             surface=surface)
     append(entries, path)
     return entries
 
@@ -277,6 +287,7 @@ def set_state(dag_id: str, key: str, state: str, note: str = "",
         date=date or last.get("date", ""), dag_id=dag_id, app_id=last.get("app_id", ""),
         key=key, impact=last.get("impact", ""), title=last.get("title", ""),
         owner=last.get("owner", ""), state=state, streak=int(last.get("streak", 1)), note=note,
+        surface=last.get("surface", "spark"),
     )
     append([entry], path)
     return entry
@@ -297,7 +308,7 @@ def mark_applied(dag_id: str, key: str, fix_pr: str, date: str, note: str = "",
         owner=last.get("owner", ""), dcu_h=last.get("dcu_h"),
         exec_h=last.get("exec_h"),
         state="applied", streak=int(last.get("streak", 1)), note=note,
-        fix_pr=fix_pr, applied_date=date,
+        fix_pr=fix_pr, applied_date=date, surface=last.get("surface", "spark"),
     )
     append([entry], path)
     return entry
@@ -319,6 +330,7 @@ def shipped(path: str = LEDGER) -> list[dict]:
             "dag_id": k[0], "key": k[1], "title": e.get("title", ""),
             "impact": e.get("impact", ""), "owner": e.get("owner", ""),
             "fix_pr": e.get("fix_pr", ""), "applied_date": e.get("applied_date", ""),
+            "surface": e.get("surface", "spark"),
             "dcu_h_before": None, "dcu_h_after": None, "outcome": "watching",
         })
         row["fix_pr"] = e.get("fix_pr") or row["fix_pr"]
@@ -384,20 +396,23 @@ def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = 
     deltas carry the committed-use caveat and Databricks money lives in `databricks.job_costs`.
     """
     entries = read(path)
-    daily_h: dict[str, dict[str, float]] = {}
+    # Keyed by (dag, surface): the same dag can spend on two surfaces in different units.
+    daily_h: dict[tuple[str, str], dict[str, float]] = {}
     for e in entries:
         if e.get("exec_h") is not None:
-            daily_h.setdefault(e.get("dag_id", ""), {})[e.get("date", "")] = e["exec_h"]
+            k = (e.get("dag_id", ""), e.get("surface", "spark"))
+            daily_h.setdefault(k, {})[e.get("date", "")] = e["exec_h"]
     if not today:
         today = max((e.get("date", "") for e in entries), default="")
     year_floor = f"{today[:4]}-01-01" if today else ""
     rows, counted = [], set()
-    total_exec_h = ytd_exec_h = run_rate = 0.0
+    # Totals per surface: slot-hours and executor-hours are different units and never sum.
+    by_surface: dict[str, dict[str, float]] = {}
     for r in shipped(path):
         if r["outcome"] != "resolved":
             rows.append({**r, "days_observed": 0, "exec_h_saved": None})
             continue
-        series = daily_h.get(r["dag_id"], {})
+        series = daily_h.get((r["dag_id"], r["surface"]), {})
         before = [h for d, h in series.items() if d < r["applied_date"]]
         after_days = sorted(d for d in series if d > r["applied_date"])
         if not before or not after_days:
@@ -406,20 +421,22 @@ def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = 
         after = [series[d] for d in after_days]
         daily = sum(before) / len(before) - sum(after) / len(after)
         saved = daily * len(after_days)
-        if r["dag_id"] not in counted:
-            counted.add(r["dag_id"])
-            total_exec_h += max(saved, 0.0)
+        if (r["dag_id"], r["surface"]) not in counted:
+            counted.add((r["dag_id"], r["surface"]))
+            tot = by_surface.setdefault(r["surface"], {"total": 0.0, "ytd": 0.0, "rate": 0.0})
+            tot["total"] += max(saved, 0.0)
             if year_floor:
-                ytd_exec_h += max(daily * len([d for d in after_days if d >= year_floor]), 0.0)
+                tot["ytd"] += max(daily * len([d for d in after_days if d >= year_floor]), 0.0)
             elapsed = max((datetime.date.fromisoformat(today)
                            - datetime.date.fromisoformat(r["applied_date"])).days, 1)
-            run_rate += max(saved, 0.0) / elapsed
+            tot["rate"] += max(saved, 0.0) / elapsed
         rows.append({**r, "days_observed": len(after_days), "exec_h_saved": saved})
     since = min((r["applied_date"] for r in rows if r["applied_date"]), default="")
-    return {"since": since, "ytd_year": today[:4], "total_exec_h_saved": total_exec_h,
-            "ytd_exec_h_saved": ytd_exec_h, "run_rate_exec_h_per_day": run_rate,
-            "est_annual_exec_h": run_rate * 365, "usd_per_exec_h": usd_per_exec_h,
-            "rows": rows}
+    spark = by_surface.get("spark", {"total": 0.0, "ytd": 0.0, "rate": 0.0})
+    return {"since": since, "ytd_year": today[:4], "total_exec_h_saved": spark["total"],
+            "ytd_exec_h_saved": spark["ytd"], "run_rate_exec_h_per_day": spark["rate"],
+            "est_annual_exec_h": spark["rate"] * 365, "usd_per_exec_h": usd_per_exec_h,
+            "by_surface": by_surface, "rows": rows}
 
 
 def savings_headline(s: dict) -> str:
@@ -445,14 +462,15 @@ def render_savings(s: dict) -> str:
         "(measured per-DAG, before-rate minus after-rate times days observed; only fixes whose "
         "finding stopped firing count, and each DAG enters the total once).",
         "",
-        "| Applied | DAG | Finding | PR | Outcome | Days observed | Executor-hours saved |",
-        "|---|---|---|---|---|---:|---:|",
+        "| Applied | DAG | Surface | Finding | PR | Outcome | Days observed | Hours saved |",
+        "|---|---|---|---|---|---|---:|---:|",
     ]
     for r in s["rows"]:
         pr = r["fix_pr"]
         cell = f"[{pr.rsplit('/', 1)[-1]}]({pr})" if pr.startswith("http") else pr
         saved = "-" if r["exec_h_saved"] is None else f"{r['exec_h_saved']:,.1f}"
-        out.append(f"| {r['applied_date']} | `{r['dag_id']}` | {r['title']} | {cell} | "
+        out.append(f"| {r['applied_date']} | `{r['dag_id']}` | {r.get('surface', 'spark')} | "
+                   f"{r['title']} | {cell} | "
                    f"{r['outcome']} | {r['days_observed']} | {saved} |")
     return "\n".join(out) + "\n"
 

@@ -21,6 +21,7 @@ import os
 import subprocess
 
 from . import billing as billing_mod
+from . import bq_profile as bq_mod
 from . import coverage as cov_mod
 from . import digest as digest_mod
 from . import ledger as ledger_mod
@@ -53,6 +54,17 @@ def _databricks_report() -> str:
         return report()
     except Exception as e:  # the Spark half must ship even when Databricks is unreachable
         print(f"[sweep] databricks skipped: {str(e)[:160]}")
+        return ""
+
+
+def _bq_report(date: str, ledger_path: str) -> str:
+    """The BigQuery section, recorded to the ledger under its own surface, or "" on failure."""
+    try:
+        costs = bq_mod.profile(date)
+        ledger_mod.record(bq_mod.reports(costs), date, path=ledger_path, surface="bq")
+        return bq_mod.render(costs, date)
+    except Exception as e:  # the Spark half must ship even when the BQ read fails
+        print(f"[sweep] bigquery skipped: {str(e)[:160]}")
         return ""
 
 
@@ -164,6 +176,14 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         with open(dbx_path, "w") as fh:
             fh.write(dbx)
 
+    bq_path = ""
+    if ledger_note == "":
+        bq_md = _bq_report(date, ledger_path)
+        if bq_md:
+            bq_path = os.path.join(outdir, f"optimizer_bq_{date}.md")
+            with open(bq_path, "w") as fh:
+                fh.write(bq_md)
+
     savings_path, savings_note = "", ""
     if ledger_note == "":
         usd_rate, rate_note = billing_mod.blended_usd_per_exec_h()
@@ -183,7 +203,8 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
             savings_note = ledger_mod.savings_headline(s)
 
     # The digest cites the other files, so they are uploaded before it is written.
-    published = publish([backlog, coverage_path, ledger_path, dbx_path, savings_path], gcs_prefix)
+    published = publish([backlog, coverage_path, ledger_path, dbx_path, bq_path, savings_path],
+                        gcs_prefix)
     if cov is not None:
         cov.report_path = _published_ref(coverage_path, gcs_prefix, published)
 
@@ -195,6 +216,8 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
         notes.append(f"No change tracking this run: {ledger_note}.")
     if dbx_path:
         notes.append(f"Databricks cost: `{_published_ref(dbx_path, gcs_prefix, published)}`")
+    if bq_path:
+        notes.append(f"BigQuery cost: `{_published_ref(bq_path, gcs_prefix, published)}`")
     if savings_note:
         notes.append(f"{savings_note}. Log: "
                      f"`{_published_ref(savings_path, gcs_prefix, published)}`")
@@ -218,7 +241,7 @@ def run(paths: list[str], date: str, source: str = "", airflow_base: str = "",
 
     return {
         "backlog": backlog, "digest": digest_path,
-        "coverage": coverage_path, "databricks": dbx_path,
+        "coverage": coverage_path, "databricks": dbx_path, "bigquery": bq_path,
         "scanned": len(scored), "findings": findings, "high": high,
         "ledger_entries": len(entries), "slack": text, "published": published,
         "complete": complete, "ledger_note": ledger_note, "delivery": delivery,
