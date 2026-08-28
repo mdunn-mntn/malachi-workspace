@@ -178,3 +178,4 @@ board uncluttered while making sure a good idea (a durable fix, a tooling gap, a
 - ENGINE-PROPOSE `c-2026-08-27-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
 
 - ENGINE-PROPOSE `c-2026-08-27-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+- IMP-094 | optimizer | Profile the 39 non-Spark DAGs (coverage report 2026-08-27): per-operator cost surfaces — BQ tasks via INFORMATION_SCHEMA slot usage, Databricks jobs via system tables already granted, K8s pods via requested-vs-used resources. Extends the optimizer beyond Spark event logs; sized a few days, good hackathon item. | Status: idea | Ref: spark-optimizer digest 2026-08-27
