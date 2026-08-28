@@ -46,6 +46,13 @@ def _call(method: str, url: str, body: dict | None = None) -> tuple[int, dict]:
         return int(code or 0), {}
 
 
+_PRIORITY_WHY = {
+    "P1 - Critical": "infra or upstream failure: blocks the pipeline and pages on-call",
+    "P2 - Normal": "application-level failure: one task degraded, pipeline continues",
+    "P3 - Minor": "no signature matched yet: impact unknown until classified",
+}
+
+
 def priority(sig_class: str | None) -> str:
     if sig_class and sig_class.startswith(("infra", "upstream")):
         return "P1 - Critical"
@@ -78,6 +85,8 @@ def file_bug(row: dict, dry: bool) -> str:
     klass = row.get("sig_class") or "unclassified"
     desc = (
         f"Filed automatically by the airflow debugger (AUDI-1191).\n\n"
+        f"Priority: {priority(row.get('sig_class'))} - {_PRIORITY_WHY[priority(row.get('sig_class'))]}. "
+        f"Rubric: {WIKI}/spaces/TAR/pages/{PLAYBOOK_ID}\n"
         f"Failure class: {klass}\nSignature: {row.get('signature') or 'none matched'}\n"
         f"Run: {row.get('run_id')} try {row.get('try_number')}\n\n"
         f"{{noformat}}{(row.get('report') or '')[:1500]}{{noformat}}\n\n"
