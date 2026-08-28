@@ -640,3 +640,38 @@ this ticket and AUDI-1191.
   cost surfaces (BQ INFORMATION_SCHEMA slots, Databricks system tables, K8s requested-vs-used).
 - **gcloud/gsutil hit `ReauthUnattendedError` 2026-08-28** on this Mac, blocking verification of
   the cumulative savings log until the user runs `gcloud auth login`.
+
+## 2026-08-28 — #1241 merged (last Spark gap), BQ ledger table, Mode dashboard, fixlog sync
+
+**airflow-ti #1241 MERGED** — the `adv_score` monitor writes Spark event logs via decorator
+`runtime_properties`, closing the last readable-Spark coverage gap.
+
+**Correction to the 2026-08-26/28 coverage note:** the coverage report ALREADY names the 39
+non-Spark DAGs — a "No Spark task" section listing each DAG's operators. The earlier claim that it
+only counted them came from reading a truncated report. IMP-094 (profile them via per-operator cost
+surfaces) stands; the non-Spark profiling checklist is a comment on AUDI-1241 and the full phase
+plan is `artifacts/audi_1194_nonspark_phase_plan.md`.
+
+**BQ savings source built:**
+- Dataset `mntn-prj-prod-00:optimizer` created via PAM breakglass-editor (auto-approved,
+  roles/writer; `gcloud pam entitlements search` lists entitlements).
+- External table `optimizer.optimization_ledger` over
+  `gs://mntn-data-archive-prod/optimizer/optimization_ledger.jsonl`, schema PINNED — autodetect
+  typed `applied_date` DATE and `""` rows then failed at scan; pinned STRING.
+- Mode SA `mode-analytics@dw-main-bronze` granted dataset READER via `bq update` ACL.
+- `bq_run.sh` gotcha: backticked identifiers need `--use_legacy_sql=false` (bq CLI defaults legacy).
+
+**Mode dashboard shipped:** report `e81786de8403` "Spark Optimizer Savings" in the Audience
+Intelligence space, custom HTML layout (KPI cards, SVG line chart, DAG bar list, fixes table).
+Report creation is `POST /api/mntn/reports` with `space_token`; layout PATCH-editable HTML; chart
+specs via PATCH `view_vegas`; schedules set in the UI (API rejects documented payloads). Full API
+mechanics: memory `reference_mode_api`.
+
+**Savings semantics confirmed:** per-DAG per-CALENDAR-DAY exec-h (all runs of the day summed, run
+frequency inherent). Before window = all ledger days pre-merge (fixed); after window grows daily,
+recomputed every sweep indefinitely. **First real saving: fangorn #1231 = 575.6 exec-h/day =
+$160.02/day, est $58.4k/yr at $0.278/exec-h.** Ledger: 446 rows with `exec_h`, 266 findings-only.
+
+**`airflow_optimizer/fixlog.py` NEW** — syncs the "Optimizer fix log" section (markers
+`optimizer-fixlog-start`/`optimizer-fixlog-end`) from the ledger into playbook `2908061697`; runs
+in `daily_gap_check.sh`'s noon job.

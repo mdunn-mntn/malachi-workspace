@@ -1,14 +1,14 @@
 ---
 name: project_airflow_optimizer
-description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer; 2026-08-27 PR #1230 (Slack wire + cumulative savings log) and PR #1231 (fangorn shuffle partitions 2048) both merged, fangorn applied marker written to the prod ledger; full-corpus hackathon sweep (3,085 logs -> 67 pairs, 30,163+ exec-h) filed as AUDI-1241 under epic AUDI-1054; site_network_hourly + DDP dbt tests now ours (merged #1232, dbt#174 in review).
+description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer; 2026-08-27 PR #1230 (Slack wire + cumulative savings log) and PR #1231 (fangorn shuffle partitions 2048) both merged, fangorn applied marker written to the prod ledger; full-corpus hackathon sweep (3,085 logs -> 67 pairs, 30,163+ exec-h) filed as AUDI-1241 under epic AUDI-1054; site_network_hourly + DDP dbt tests now ours (merged #1232, dbt#174 in review); 2026-08-28 PRs #1241-#1243 merged (#1244 open), BQ external table optimizer.optimization_ledger + Mode dashboard e81786de8403 live, first measured saving fangorn #1231 575.6 exec-h/day (~$58.4k/yr est).
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs, savings log, optimizer_savings, OPTIMIZER_USD_PER_EXEC_H, PR 1230, PR 1231, fangorn_score_monitor shuffle partitions 2048, speculation revert ipdsc_ds_35, ledger applied marker, hackathon optimizations, AUDI-1241, AUDI-1054 tech debt epic, full-corpus sweep 3085, PR 1232, dbt 174, ddp dbt tests ownership, site_network_hourly ours]
+keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs, savings log, optimizer_savings, OPTIMIZER_USD_PER_EXEC_H, PR 1230, PR 1231, fangorn_score_monitor shuffle partitions 2048, speculation revert ipdsc_ds_35, ledger applied marker, hackathon optimizations, AUDI-1241, AUDI-1054 tech debt epic, full-corpus sweep 3085, PR 1232, dbt 174, ddp dbt tests ownership, site_network_hourly ours, PR 1241, PR 1242, PR 1243, PR 1244, adv_score event logs, SLACK_FALLBACK_CHANNEL, gsutil unauthenticated astro pods, gcs json api markers, rapid dag pause race, AIRFLOW_BEARER PATCH is_paused, mntn-prj-prod-00 optimizer dataset, optimization_ledger external table, pam breakglass-editor, pinned schema autodetect applied_date, use_legacy_sql false backticks, mode dashboard savings, e81786de8403, fixlog.py, optimizer fix log playbook, savings semantics calendar day, fangorn savings 575.6, AUDI-1249, priority rubric playbook, nonspark phase plan]
 domain: [infra, repos, workflow]
 lifecycle: active
-last_verified: 2026-08-27
+last_verified: 2026-08-28
 ---
 **AUDI-1194 = the OPTIMIZER** (success-triggered efficiency sweep), **split from the AUDI-1191 debugger 2026-08-05** (both AUDI, type Task, Backlog). The two are separate workflows with distinct triggers/schedules/deliverables: the debugger fires only on a **failure**, the optimizer sweeps every DAG that **succeeds**. They can chain but are distinct. AUDI-1194: 5 story points, PMO rep Bryce Wagg, label q3_2026, folder `tickets/audi_1194_optimizer_efficiency_crawler/`, framing **LOCKED** (§0 in its summary). See [[project_airflow_debugger]] (the RCA half), [[reference_airflow_ti]], [[reference_oncall_runbook]].
 
@@ -381,3 +381,49 @@ reference is the skill `.claude/skills/pyspark-optimization-databricks-dataproc/
 [[reference_pyspark_optimization_skill]] is the MNTN annex that wins on conflict (serverless
 Spark 4.0 fleet, speculation/fetch-wait/EXPLAIN COST overrides). Read both before acting on any
 optimizer or debugger finding. Fix text stays canonical in `optimizations.py` (drift: IMP-093).
+
+## 2026-08-28 — #1241/#1242/#1243 merged, #1244 open; BQ ledger table; Mode dashboard; fixlog sync
+
+**Merged today (airflow-ti):**
+- **#1241** — the `adv_score` monitor writes Spark event logs via decorator `runtime_properties`;
+  closes the LAST readable-Spark coverage gap.
+- **#1242** — unmatched diagnoses post to `SLACK_FALLBACK_CHANNEL=C0BT9TKRMKM` (#airflow-debugger);
+  alert channels are threaded-only.
+- **#1243** — exactly-once markers now use a gcloud token + the GCS JSON API. **`gsutil` is
+  UNAUTHENTICATED inside Astro task pods**, which made the rapid sweep's marker writes silently
+  fail and spam duplicates; two purges of `C08CURMGNMQ` were run.
+**#1244 OPEN** (priority rationale line in each filed ticket + IMP-087 alert-search cursor
+pagination, 3 pages); Ryan to merge.
+
+**Rapid DAG live and verified.** Unpause/pause via `PATCH is_paused` with `AIRFLOW_BEARER`.
+**Deploy-rollout race repeats:** unpaused too early twice — wait ~10 min after merge before
+unpausing.
+
+**BQ ledger table (queryable savings source):**
+- Dataset `mntn-prj-prod-00:optimizer` created via **PAM breakglass-editor** (auto-approved,
+  roles/writer; list entitlements with `gcloud pam entitlements search`).
+- External table `optimizer.optimization_ledger` over
+  `gs://mntn-data-archive-prod/optimizer/optimization_ledger.jsonl` with a **PINNED schema** —
+  autodetect typed `applied_date` DATE, then `""` rows fail at scan time; pin it STRING.
+- Mode SA (`mode-analytics@dw-main-bronze`) granted dataset READER via `bq update` ACL.
+- **`bq_run.sh` gotcha: backticked identifiers need `--use_legacy_sql=false`** — the bq CLI
+  defaults to legacy SQL.
+
+**Mode dashboard shipped:** report `e81786de8403` "Spark Optimizer Savings", Audience Intelligence
+space, custom HTML layout. API mechanics: [[reference_mode_api]].
+
+**Savings semantics CONFIRMED:** the unit is per-DAG per-CALENDAR-DAY exec-h (all runs of the day
+summed, so run frequency is inherent). Before window = all ledger days pre-merge (fixed); after
+window grows daily and is recomputed every sweep indefinitely. **First real saving: fangorn #1231 =
+575.6 exec-h/day = $160.02/day, est $58.4k/yr at $0.278/exec-h.** Ledger: 446 rows with `exec_h`,
+266 findings-only.
+
+**Coverage-report correction:** the coverage report ALREADY names the 39 non-Spark DAGs (a
+"No Spark task" section listing operators) — the earlier claim that it only counted them was wrong
+(report truncation, not a report gap).
+
+**`airflow_optimizer/fixlog.py` NEW:** syncs an "Optimizer fix log" section (markers
+`optimizer-fixlog-start`/`optimizer-fixlog-end`) from the ledger into Confluence playbook
+`2908061697`; runs in `daily_gap_check.sh`'s noon job. AUDI-1241 carries the non-Spark profiling
+checklist comment; full phase plan:
+`tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_nonspark_phase_plan.md`.

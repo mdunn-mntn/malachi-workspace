@@ -825,3 +825,25 @@ paging, which would infinite-loop past 100 tickets; reverted.
 
 **gcloud/gsutil on this Mac hit `ReauthUnattendedError` 2026-08-28**, blocking savings-log
 verification until the user runs `gcloud auth login`.
+
+## 7h. 2026-08-28 — #1242/#1243 merged, #1244 open, rapid DAG verified, AUDI-1249
+
+**airflow-ti #1242 MERGED** — unmatched diagnoses post to `SLACK_FALLBACK_CHANNEL=C0BT9TKRMKM`
+(#airflow-debugger); alert channels remain threaded-only.
+
+**airflow-ti #1243 MERGED** — exactly-once markers rewritten to use a gcloud token + the GCS JSON
+API. Root cause: **`gsutil` is UNAUTHENTICATED inside Astro task pods**, so marker writes silently
+failed and the rapid sweep re-posted the same diagnoses; two purges of `C08CURMGNMQ` were run.
+
+**airflow-ti #1244 OPEN** — per-ticket priority rationale line plus IMP-087 (alert-search cursor
+pagination, 3 pages). Ryan to merge.
+
+**Rapid DAG (`airflow_debugger_rapid`) live and verified.** Unpause/pause via `PATCH is_paused`
+with `AIRFLOW_BEARER`. The deploy-rollout race repeats: unpaused too early twice — wait ~10 min
+after merge before unpausing.
+
+**Bryce's priority ask implemented:** rubric in playbook `2908061697` (v6+): P1 infra/upstream,
+P2 classified app, P3 unclassified, plus a per-ticket reason line (in #1244). **AUDI-1249
+auto-filed in prod** — the filer works on Astro with the user's token. Jira SA request sent to IT
+(Robin Fox): AUDI Browse/Create/Link Issues/Add Comments + TAR Confluence view/edit; swap Astro
+`JIRA_USER_EMAIL`/`JIRA_API_TOKEN` when it lands.
