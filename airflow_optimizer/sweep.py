@@ -68,6 +68,18 @@ def _bq_report(date: str, ledger_path: str) -> str:
         return ""
 
 
+def _dbx_ledger(date: str, ledger_path: str) -> None:
+    """Record Databricks findings under their own surface. Never sinks the sweep."""
+    from .databricks import WAREHOUSE, findings_reports
+
+    if not WAREHOUSE:
+        return
+    try:
+        ledger_mod.record(findings_reports(), date, path=ledger_path, surface="dbx")
+    except Exception as e:
+        print(f"[sweep] databricks ledger skipped: {str(e)[:160]}")
+
+
 def _dag_ids(reports: list, known: set | None = None) -> set:
     """The normalised job names this sweep produced findings for."""
     return {ledger_mod._dag_id(r, known) for r in reports if not r.error and r.findings}
@@ -200,10 +212,12 @@ def run(
             bq_path = os.path.join(outdir, f"optimizer_bq_{date}.md")
             with open(bq_path, "w") as fh:
                 fh.write(bq_md)
+        _dbx_ledger(date, ledger_path)
 
     savings_path, savings_note = "", ""
     if ledger_note == "":
-        usd_rate, rate_note = billing_mod.blended_usd_per_exec_h()
+        rates = billing_mod.surface_rates()
+        usd_rate, rate_note = rates["spark"]
         if usd_rate is None:
             print(f"[sweep] live rate unavailable ({rate_note}); using the configured rate")
             try:
@@ -212,7 +226,8 @@ def run(
                 usd_rate = None
         else:
             print(f"[sweep] usd/exec-h {usd_rate} ({rate_note})")
-        s = ledger_mod.savings(ledger_path, today=date, usd_per_exec_h=usd_rate)
+        s = ledger_mod.savings(ledger_path, today=date, usd_per_exec_h=usd_rate,
+                               usd_rates={k: v[0] for k, v in rates.items()})
         savings_path = os.path.join(outdir, "optimizer_savings.md")
         with open(savings_path, "w") as fh:
             fh.write(ledger_mod.render_savings(s))

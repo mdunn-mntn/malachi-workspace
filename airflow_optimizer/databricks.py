@@ -64,8 +64,11 @@ def query(sql: str, warehouse: str = "", poll_s: int = 3, tries: int = 20) -> li
     target = warehouse or WAREHOUSE
     if not target:
         raise RuntimeError("no warehouse: pass one or set DATABRICKS_WAREHOUSE")
-    res = _api("post", "/api/2.0/sql/statements",
-               {"warehouse_id": target, "statement": sql, "wait_timeout": "50s"})
+    res = _api(
+        "post",
+        "/api/2.0/sql/statements",
+        {"warehouse_id": target, "statement": sql, "wait_timeout": "50s"},
+    )
     sid = res.get("statement_id")
     for _ in range(tries):
         state = res.get("status", {}).get("state")
@@ -75,7 +78,9 @@ def query(sql: str, warehouse: str = "", poll_s: int = 3, tries: int = 20) -> li
         res = _api("get", f"/api/2.0/sql/statements/{sid}")
     status = res.get("status", {})
     if status.get("state") != "SUCCEEDED":
-        raise RuntimeError((status.get("error") or {}).get("message", "statement did not finish")[:300])
+        raise RuntimeError(
+            (status.get("error") or {}).get("message", "statement did not finish")[:300]
+        )
     return (res.get("result") or {}).get("data_array", []) or []
 
 
@@ -97,9 +102,15 @@ def submissions(days: int = 7, limit: int = 5000, warehouse: str = "") -> list[S
     out = []
     for r in rows:
         name, run_id, state, dur, started = (list(r) + [""] * 5)[:5]
-        out.append(Submission(model=model_name(name), run_id=str(run_id),
-                              result_state=state or "", duration_s=float(dur or 0),
-                              started=started or ""))
+        out.append(
+            Submission(
+                model=model_name(name),
+                run_id=str(run_id),
+                result_state=state or "",
+                duration_s=float(dur or 0),
+                started=started or "",
+            )
+        )
     return out
 
 
@@ -144,7 +155,7 @@ def _tag(sql: str) -> tuple[str, str]:
         node = json.loads(m.group(1)).get("node_id", "")
     except json.JSONDecodeError:
         node = ""
-    return node, sql[m.end():].strip()
+    return node, sql[m.end() :].strip()
 
 
 # One node's every run would otherwise fill the list: 15 of the 15 slowest were 4 dbt tests.
@@ -168,18 +179,25 @@ LIMIT {limit}
 """
 
 
-def heavy_queries(days: int = 2, limit: int = 25, min_ms: int = 60_000,
-                  warehouse: str = "") -> list[Query]:
+def heavy_queries(
+    days: int = 2, limit: int = 25, min_ms: int = 60_000, warehouse: str = ""
+) -> list[Query]:
     """The slowest statements in the window, newest history first, longest first."""
-    rows = query(HEAVY_SQL.format(days=int(days), limit=int(limit), min_ms=int(min_ms)),
-                 warehouse)
+    rows = query(HEAVY_SQL.format(days=int(days), limit=int(limit), min_ms=int(min_ms)), warehouse)
     out = []
     for r in rows:
         sid, ms, rb, text = (list(r) + [""] * 4)[:4]
         node, sql = _tag(text or "")
         if sql:
-            out.append(Query(statement_id=str(sid), node_id=node, sql=sql,
-                             duration_s=float(ms or 0) / 1000, read_bytes=int(rb or 0)))
+            out.append(
+                Query(
+                    statement_id=str(sid),
+                    node_id=node,
+                    sql=sql,
+                    duration_s=float(ms or 0) / 1000,
+                    read_bytes=int(rb or 0),
+                )
+            )
     return out
 
 
@@ -210,8 +228,13 @@ def explain_cost(sql: str, warehouse: str = "") -> str:
     return "" if _unplanned(text) else text
 
 
-_PLAN_FAILURE = ("Error occurred during query planning", "TABLE_OR_VIEW_NOT_FOUND",
-                 "UNRESOLVED_COLUMN", "AnalysisException", "PARSE_SYNTAX_ERROR")
+_PLAN_FAILURE = (
+    "Error occurred during query planning",
+    "TABLE_OR_VIEW_NOT_FOUND",
+    "UNRESOLVED_COLUMN",
+    "AnalysisException",
+    "PARSE_SYNTAX_ERROR",
+)
 
 
 def _unplanned(text: str) -> bool:
@@ -300,15 +323,23 @@ def _costs(sql: str, warehouse: str) -> list[Cost]:
     out = []
     for r in query(sql, warehouse):
         name, runs, dbu, usd, *rest = (list(r) + [None] * 5)[:5]
-        out.append(Cost(name=str(name or ""), runs=int(runs or 0), dbu=float(dbu or 0),
-                        usd=float(usd or 0), hours=float(rest[0] or 0) if rest else 0.0))
+        out.append(
+            Cost(
+                name=str(name or ""),
+                runs=int(runs or 0),
+                dbu=float(dbu or 0),
+                usd=float(usd or 0),
+                hours=float(rest[0] or 0) if rest else 0.0,
+            )
+        )
     return out
 
 
 def job_costs(days: int = 7, limit: int = 25, warehouse: str = "") -> list[Cost]:
     """DBUs and list-price dollars per Databricks job, dbt submissions named by model."""
-    return _costs(JOB_COST_SQL.format(days=int(days), limit=int(limit),
-                                      uuid=_RUN_UUID.pattern), warehouse)
+    return _costs(
+        JOB_COST_SQL.format(days=int(days), limit=int(limit), uuid=_RUN_UUID.pattern), warehouse
+    )
 
 
 def query_costs(days: int = 7, limit: int = 25, warehouse: str = "") -> list[Cost]:
@@ -316,29 +347,87 @@ def query_costs(days: int = 7, limit: int = 25, warehouse: str = "") -> list[Cos
     return _costs(QUERY_COST_SQL.format(days=int(days), limit=int(limit)), warehouse)
 
 
+try:
+    HEAVY_JOB_USD = float(os.environ.get("OPTIMIZER_DBX_HEAVY_USD", "50"))
+except ValueError:
+    HEAVY_JOB_USD = 50.0
+try:
+    FAILING_RUNS = int(os.environ.get("OPTIMIZER_DBX_FAILING_RUNS", "3"))
+except ValueError:
+    FAILING_RUNS = 3
+
+
+def findings_reports(days: int = 7, warehouse: str = "") -> list:
+    """One ledger-ready report per job, DBU-per-day as the series, findings attached."""
+    from .bq_profile import Finding, Report
+
+    by_name: dict[str, Report] = {}
+    for c in job_costs(days, limit=200, warehouse=warehouse):
+        rep = Report(source=f"dbx:{c.name}", app_name=c.name, exec_h=round(c.dbu / days, 1))
+        if c.usd / days >= HEAVY_JOB_USD:
+            rep.findings.append(
+                Finding(
+                    key="dbx_heavy_job",
+                    impact="high",
+                    title=f"job spends ${c.usd / days:,.0f}/day list price "
+                    f"({c.dbu / days:,.0f} DBU/day over {c.runs} runs)",
+                    fix="Check the cluster size against its utilization and the run cadence "
+                    "against how fresh the output needs to be.",
+                )
+            )
+        by_name[c.name] = rep
+    for model, runs, _total_s, failed in by_model(submissions(days, warehouse=warehouse)):
+        if failed < FAILING_RUNS:
+            continue
+        rep = by_name.setdefault(model, Report(source=f"dbx:{model}", app_name=model, exec_h=0.0))
+        rep.findings.append(
+            Finding(
+                key="dbx_failing_model",
+                impact="medium",
+                title=f"{failed} of {runs} runs failed in {days} days; every failed run's "
+                "compute is spent for nothing",
+                fix="Read the newest failed run's output and fix or pause the model.",
+            )
+        )
+    return list(by_name.values())
+
+
 def render_report(jobs: list[Cost], nodes: list[Cost], plans: list[tuple], days: int) -> str:
     """The Databricks half of a sweep: what cost money, and what its plan says about why."""
-    lines = [f"# Databricks cost — last {days} days", "",
-             "Dollars are list price. A contract rate makes the real figure lower, and warehouse "
-             "dollars are apportioned to a statement by its share of the day's query time rather "
-             "than metered per statement. Query-hours are summed per statement, so concurrent "
-             "statements double-count them and they exceed the warehouse's running hours.", ""]
+    lines = [
+        f"# Databricks cost — last {days} days",
+        "",
+        "Dollars are list price. A contract rate makes the real figure lower, and warehouse "
+        "dollars are apportioned to a statement by its share of the day's query time rather "
+        "than metered per statement. Query-hours are summed per statement, so concurrent "
+        "statements double-count them and they exceed the warehouse's running hours.",
+        "",
+    ]
     if jobs:
-        lines += ["## Jobs and dbt submissions, by DBU", "",
-                  "| job | runs | DBU | $ |", "|---|---|---|---|"]
+        lines += [
+            "## Jobs and dbt submissions, by DBU",
+            "",
+            "| job | runs | DBU | $ |",
+            "|---|---|---|---|",
+        ]
         lines += [f"| `{c.name}` | {c.runs} | {c.dbu:,.0f} | {c.usd:,.2f} |" for c in jobs]
         lines.append("")
     if nodes:
-        lines += ["## Warehouse statements, by apportioned cost", "",
-                  "| dbt node | runs | query-hours | $ |", "|---|---|---|---|"]
+        lines += [
+            "## Warehouse statements, by apportioned cost",
+            "",
+            "| dbt node | runs | query-hours | $ |",
+            "|---|---|---|---|",
+        ]
         lines += [f"| `{c.name}` | {c.runs} | {c.hours:,.1f} | {c.usd:,.2f} |" for c in nodes]
         lines.append("")
     lines += ["## Plan findings", ""]
     if not plans:
         lines.append("No statement in the window produced a plan the detectors could read.")
     for q, findings in plans:
-        lines.append(f"- `{q.node_id or q.statement_id}` ({q.duration_s:,.0f}s, "
-                     f"{q.read_gib:,.1f} GiB read)")
+        lines.append(
+            f"- `{q.node_id or q.statement_id}` ({q.duration_s:,.0f}s, {q.read_gib:,.1f} GiB read)"
+        )
         lines += [f"  - [{f.impact}] {f.title}" for f in findings] or ["  - clean"]
     return "\n".join(lines) + "\n"
 
@@ -356,8 +445,9 @@ def report(days: int = 7, limit: int = 15, warehouse: str = "") -> str:
             rows = []
         (jobs if name == "job_costs" else nodes).extend(rows)
     try:
-        plans = analyze_queries(heavy_queries(days=min(days, 2), limit=limit,
-                                              warehouse=warehouse), warehouse)
+        plans = analyze_queries(
+            heavy_queries(days=min(days, 2), limit=limit, warehouse=warehouse), warehouse
+        )
     except (RuntimeError, ValueError) as e:
         print(f"[databricks] plans skipped: {str(e)[:160]}")
     if not (jobs or nodes or plans):

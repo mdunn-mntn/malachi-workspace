@@ -161,7 +161,7 @@ def _mark_resolved(
     key absent from it proves nothing and must not be resolved by it, and vice versa.
     """
     live = {(e.dag_id, e.key) for e in new}
-    recent = set(seen_dates[-(RESOLVE_SWEEPS - 1):]) if seen_dates else set()
+    recent = set(seen_dates[-(RESOLVE_SWEEPS - 1) :]) if seen_dates else set()
     for (dag_id, key), past in hist.items():
         if (dag_id, key) in live or not past:
             continue
@@ -448,7 +448,15 @@ def latest(path: str = LEDGER) -> dict[tuple[str, str], dict]:
     return out
 
 
-def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = None) -> dict:
+UNITS = {"spark": "executor-hours", "bq": "slot-hours", "dbx": "DBU"}
+
+
+def savings(
+    path: str = LEDGER,
+    today: str = "",
+    usd_per_exec_h: float | None = None,
+    usd_rates: dict | None = None,
+) -> dict:
     """Cumulative measured savings since the first shipped fix.
 
     Only fixes whose finding went quiet (`resolved`) count, and only in the units the ledger
@@ -517,6 +525,10 @@ def savings(path: str = LEDGER, today: str = "", usd_per_exec_h: float | None = 
         "run_rate_exec_h_per_day": rate_saved,
         "est_annual_exec_h": rate_saved * 365,
         "usd_per_exec_h": usd_per_exec_h,
+        "usd_rates": {
+            **({"spark": usd_per_exec_h} if usd_per_exec_h else {}),
+            **{k: v for k, v in (usd_rates or {}).items() if v is not None},
+        },
         "by_surface": by_surface,
         "rows": rows,
     }
@@ -537,6 +549,18 @@ def savings_headline(s: dict) -> str:
             f"est. ${s['est_annual_exec_h'] * rate:,.0f}/yr, estimated at "
             f"${rate:,.2f} per hour)"
         )
+    for surf, tot in sorted(s.get("by_surface", {}).items()):
+        if surf == "spark" or not tot.get("total"):
+            continue  # the spark surface is the line above; empty surfaces say nothing
+        unit = UNITS.get(surf, "units")
+        line = f"; {surf}: {tot['total']:,.0f} {unit} all-time at {tot['rate']:,.1f}/day"
+        surf_rate = (s.get("usd_rates") or {}).get(surf)
+        if surf_rate:
+            line += (
+                f" (~${tot['total'] * surf_rate:,.0f} all-time, "
+                f"est. ${tot['rate'] * 365 * surf_rate:,.0f}/yr)"
+            )
+        head += line
     return head
 
 
