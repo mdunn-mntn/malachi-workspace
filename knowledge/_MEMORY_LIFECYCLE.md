@@ -240,5 +240,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_optimizer | project | 2026-08-28 | [doc](memory/project_airflow_optimizer.md) |
 | reference_airflow_log_puller | reference | 2026-08-28 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
-| reference_mode_api | reference | 2026-08-28 | [doc](memory/reference_mode_api.md) |
 | reference_slack_debugger_app | reference | 2026-08-28 | [doc](memory/reference_slack_debugger_app.md) |
+| reference_mode_api | reference | 2026-08-29 | [doc](memory/reference_mode_api.md) |

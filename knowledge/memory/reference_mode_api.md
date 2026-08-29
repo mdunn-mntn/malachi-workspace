@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [mode api, mode analytics api, mode_api_token, mode_api_secret, mode workspace mntn, mode report creation, space_token, mode report layout, PATCH layout, window.datasets, mode-chart, view_vegas, mode chart spec, mode schedules api, mode data source 48787, mode-analytics service account, spark optimizer savings dashboard, e81786de8403, audience intelligence space]
 domain: [infra, tools]
 lifecycle: active
-last_verified: 2026-08-28
+last_verified: 2026-08-29
 ---
 # Mode Analytics API (workspace `mntn`)
 
@@ -20,6 +20,8 @@ All confirmed empirically 2026-08-28 while building the Spark Optimizer Savings 
 - **Report LAYOUT is editable HTML via `PATCH`** — custom CSS/JS allowed, query results reachable through the `window.datasets` global, charts embedded with `mode-chart` elements.
 - **Chart specs are editable via `PATCH` on `view_vegas`.**
 - **Schedules API rejects its documented payloads** — set schedules in the UI.
+- **Refresh a report on demand:** `POST /api/mntn/reports/<token>/runs` (verified 2026-08-29 on `e81786de8403`, run `48140b50e8dc` succeeded).
+- **Credential location — two records, both observed:** this doc recorded keychain items `mode_api_token`/`mode_api_secret` (2026-08-28); the 2026-08-29 refresh used `MODE_API_TOKEN`/`MODE_API_SECRET` from `~/.zshrc`. Hypothesis: same pair stored in both places. Settles by checking `security find-generic-password -s mode_api_token` vs `grep MODE_API ~/.zshrc`.
 - Live artifact: report `e81786de8403` "Spark Optimizer Savings", Audience Intelligence space, custom layout (KPI cards, hand-drawn SVG line chart, DAG bar list, fixes table). Reads `mntn-prj-prod-00:optimizer.optimization_ledger` (see [[project_airflow_optimizer]]).
 
 Dashboard-porting and TI-1037 history: [[reference_mode_dashboard_porting]], [[project_audi_1037_mode_dashboard]].

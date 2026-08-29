@@ -722,7 +722,8 @@ the fleet's jobs — so the live billing rate has always fallen back to
 silently querying real BigQuery from a credentialed laptop via the unstubbed `bq` pass) and
 mntn-devops**#5160** (`bigquery.jobUser` + `resourceViewer` on `dw-main-bronze` for
 `spark-optimizer@`; the `iam/spark-optimizer/` dir already existed there). BQ surface blocked
-until both merge.
+until both merge. **UPDATE 2026-08-29: both merged, BQ surface live-verified — see the next
+section.**
 
 **DEV-8821 filed** (DEV board, DevOps Request / Infrastructure Improvement, linked Relates To
 AUDI-1241) for the pod-metrics relay: Astro's Universal Metrics Exporter only does remote-write
@@ -737,3 +738,28 @@ rewritten accordingly.
 the driver; cleared + retried by Malachi). It exposed the rapid debugger's lookback gap — a
 failure whose end_date falls outside the 45-min window during a cycle pause gets no thread reply
 (IMP-095).
+
+## 2026-08-28/29 (night) — live BQ surface verified, billing rate live
+
+**Both fix PRs MERGED (mntn-devops#5160, airflow-ti#1247).** After the Astro deploy went HEALTHY,
+triggered `spark_optimizer_daily` (`manual__2026-08-29T01:23:07`, success). Live verification:
+- **BQ surface live:** `optimizer_bq_2026-08-29.md` published; top entry
+  `bos__spend campaign_summary_hourly-create` at 69 slot-h. Ledger now carries `surface=bq` rows
+  (`bos__spend` 123.7 slot-h, `intent_score_threshold_v4` 54.1).
+- **Billing rate LIVE, no more env fallback:** sweep log reads
+  `[sweep] usd/exec-h 0.278 (blended from 30d of actual spend: $0.0511/DCU-h x 5.44 DCU-h per
+  executor-hour)`. The live blended rate happens to equal the old `OPTIMIZER_USD_PER_EXEC_H=0.278`
+  fallback value; prior savings dollars stand.
+- **Coverage "0 cost-profiled of 39" is NOT a bug:** today's labeled BQ jobs all came from Spark
+  DAGs; no-Spark `BigQueryInsertJobOperator` DAGs (category_taxonomy etc.) tag only on days they
+  run; most of the 39 are pod/sensor DAGs blocked on DEV-8821 (pod-metrics relay).
+- **No dbx ledger rows 2026-08-29:** nothing crossed the $50/day or 3-failure thresholds — clean
+  day, not a defect.
+- `fangorn_household_14day_lookback` succeeded on the second manual retry.
+
+**Operational facts learned:**
+- Mode report `e81786de8403` refreshes via API: `POST /api/mntn/reports/e81786de8403/runs` with
+  `MODE_API_TOKEN`/`MODE_API_SECRET` from `~/.zshrc` (run `48140b50e8dc` succeeded).
+- Airflow REST log pulls: `Accept: text/plain` is rejected ("Only application/json or
+  application/x-ndjson"); logs paginate via `continuation_token`.
+- Jira service-account request is **ITS-6496** (Pending External, Robin Fox).

@@ -25,6 +25,7 @@ integrationprod.ui_advertiser_premier_attributes
 integrationprod.ui_audience_uploads
 integrationprod.ui_incrementality_experiment_membership_history
 integrationprod.ui_incrementality_experiments
+optimizer.optimization_ledger
 reporting.__TABLES__
 reporting.ddp_crm_graph_cpm
 reporting.ddp_mm_winners_imp_*
