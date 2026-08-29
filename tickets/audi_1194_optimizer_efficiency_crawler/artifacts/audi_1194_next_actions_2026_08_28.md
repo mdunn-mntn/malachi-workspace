@@ -20,8 +20,9 @@
    JIRA_USER_EMAIL / JIRA_API_TOKEN on deployment prod.
 
 ## Event-driven
-6. fangorn_household_14day_lookback retry outcome (driver died; cleared+retried). If it fails
-   again the same way: raise driver memory in models/machine_learning/fangorn_household_14day_lookback.py, own PR.
+6. DONE 2026-08-28: fangorn_household_14day_lookback succeeded on the second manual retry
+   (two driver deaths first). If the driver dies again: raise driver memory in
+   models/machine_learning/fangorn_household_14day_lookback.py, own PR.
 7. Debugger lookback gap (IMP-095): rapid sweep misses alerts when cycles pause across deploys;
    fix = last-successful-cycle watermark. Small PR, any session.
 8. Hackathon: merge the 17 fixes in outputs/audi_1194_hackathon_optimizations_2026_08_27.md,
