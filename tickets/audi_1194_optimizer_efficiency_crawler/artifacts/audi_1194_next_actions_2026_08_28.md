@@ -15,7 +15,9 @@
 4. DEV-8821 relay (devops): https://mntn.atlassian.net/browse/DEV-8821 — after it deploys,
    Astro UI: Deployment prod -> Metrics Exports -> point at the relay. Then I build
    pod_profile.py as its own PR.
-5. Jira SA from IT: swap Astro vars JIRA_USER_EMAIL / JIRA_API_TOKEN.
+5. Jira SA from IT (ITS-6496, Pending External, Robin Fox):
+   https://mntn.atlassian.net/browse/ITS-6496 — when fulfilled, swap Astro vars
+   JIRA_USER_EMAIL / JIRA_API_TOKEN on deployment prod.
 
 ## Event-driven
 6. fangorn_household_14day_lookback retry outcome (driver died; cleared+retried). If it fails
