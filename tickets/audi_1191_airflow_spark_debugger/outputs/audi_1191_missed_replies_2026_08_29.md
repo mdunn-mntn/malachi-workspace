@@ -99,3 +99,6 @@ Session died overnight (orchestrator killed with it). State at 15:00 UTC:
 - Pod stdout ([base] lines) is not captured in the transition/fetch task logs, so per-batch
   statuses never reach Airflow. Debugger improvement: have the batch runner print each batch's
   status + error on transition (shopper_graph change, owner's repo).
+- Probe result 15:30 UTC: the resubmitted 08-27 batches are 0/1067 in_progress-or-completed 7h
+  after submit (validation takes minutes, so they are failing, not queued). Resubmission is
+  confirmed dead too. Blocker is entirely OpenAI-side; awaiting the key holder's status read.
