@@ -847,3 +847,41 @@ P2 classified app, P3 unclassified, plus a per-ticket reason line (in #1244). **
 auto-filed in prod** — the filer works on Astro with the user's token. Jira SA request sent to IT
 (Robin Fox): AUDI Browse/Create/Link Issues/Add Comments + TAR Confluence view/edit; swap Astro
 `JIRA_USER_EMAIL`/`JIRA_API_TOKEN` when it lands.
+
+## 7i. 2026-08-29 — incrementals dead-cohort triage + recovery, paging-tag gap PR #1248
+
+**Incident (evening):** Matt/Sean's incrementals chain still red. Root cause of the 08-28
+`batch_submit` failures: try 1 was killed by k8s mid-prep (pod deleted while writing input files),
+leaving 1102 orphan files in `openai_batch_input_formatted/dt=2026-08-27`; every retry then hit the
+`get_files_without_batch` "Inconsistent state" guard (`Expected 1035 == 1035 + 1102`) in <3 min —
+a double-submission guard doing its job, not flakiness.
+
+**Dead-cohort evidence path (no dashboard access exists — platform.openai.com/batches shows nothing
+for malachi or Matt Brorby):** the submissions parquet flags are the only visibility.
+`batch_transitioner` sets `was_submitted=True` only when the API reports in_progress/completed;
+`batch_fetcher` downloads only status=completed. 08-26 baseline 1113/1113 flagged + downloaded;
+08-27 cohort **0/1098 across two transition passes = conclusive dead cohort**.
+
+**Recovery executed (Matt Brorby approved in #alerts-tpa-pipeline):** delete
+`openai_batch_submissions/dt=2026-08-27/` (receipts only; formatted inputs survive) → clear submit
+logical 08-27 from `batch_cleanup_1` with downstream → wait ≤24h → clear fetch logical 08-28 from
+`batch_transition` → clear `keyword_ddp` `wait_for_product_categorization`. Chain state at capture:
+orchestrator driving the submit-08-27 resubmission; fetch/keyword_ddp steps automated. Procedure
+routed to memory `reference_mntn_matched_batch_pipeline`.
+
+**Debugger gap closed (PR [airflow-ti#1248](https://github.com/SteelHouse/airflow-ti/pull/1248),
+gauntlet PASS clean 1 round):** PAGING_TAGS `["tpa","Machine Learning"]` missed `fetch_common_crawl`
+(tags common_crawl_content/vertical_categorization) and
+`audience_intent_scoring_household_14day_lookback` (tags include `ml` not `Machine Learning`) —
+full record in `outputs/audi_1191_missed_replies_2026_08_29.md`. #1248 also raises
+`vertical_classification_api` response_tests execution_timeout 45m → 68m (chronic: failed 6x/day at
+the 45m limit; successes 39-42m; the debugger's own recommended fix shipped). Note: `dags/` is not
+covered by airflow-ti CI ruff (only `include/`); pre-existing I001 in
+`ddp_vertical_classification_api.py` left untouched.
+
+**Tooling facts (routed to memory `reference_airflow_ti`):** Airflow 3 REST mark-success /
+clearTaskInstances recipes + run_id URL-encoding (`+` → `%2B`); astro JWT ~1h refresh; `gsutil -m rm`
+hung on ~1100 objects (LibreSSL) while `gcloud storage rm -r` took ~2 min.
+
+**Backlog:** IMP-095 (lookback watermark, pre-existing) + IMP-096 (cross-DAG root-cause walk — the
+10:31 reply stopped at the sensor instead of walking to the missing GCS path two DAGs up).

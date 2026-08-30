@@ -127,7 +127,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_state_query_provenance | feedback | 2026-07-31 | [doc](memory/feedback_state_query_provenance.md) |
 | reference_aud22_geo_reporting_sync | reference | 2026-07-31 | [doc](memory/reference_aud22_geo_reporting_sync.md) |
 | reference_data_eng_mcp | reference | 2026-07-31 | [doc](memory/reference_data_eng_mcp.md) |
-| reference_mntn_matched_batch_pipeline | reference | 2026-07-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_ruff_code_standards | reference | 2026-07-31 | [doc](memory/reference_ruff_code_standards.md) |
 | project-bae-4923-ddp-claim-validation | project | 2026-08-05 | [doc](memory/project_bae_4923_ddp_claim_validation.md) |
 | reference-ddp-billing-logic | reference | 2026-08-05 | [doc](memory/reference_ddp_billing_logic.md) |
@@ -224,7 +223,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_databricks_billing_cost | reference | 2026-08-26 | [doc](memory/reference_databricks_billing_cost.md) |
 | reference_databricks_system_schema_grants | reference | 2026-08-26 | [doc](memory/reference_databricks_system_schema_grants.md) |
 | reference_spark_eventlog_cost_units | reference | 2026-08-26 | [doc](memory/reference_spark_eventlog_cost_units.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-08-27 | [doc](memory/reference_airflow_ti.md) |
 | feedback_pasted_reference_means_install | feedback | 2026-08-27 | [doc](memory/feedback_pasted_reference_means_install.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-27 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_frequency_capping | reference | 2026-08-27 | [doc](memory/reference_frequency_capping.md) |
@@ -241,4 +239,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_airflow_log_puller | reference | 2026-08-28 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
 | reference_slack_debugger_app | reference | 2026-08-28 | [doc](memory/reference_slack_debugger_app.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-08-29 | [doc](memory/reference_airflow_ti.md) |
+| reference_mntn_matched_batch_pipeline | reference | 2026-08-29 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_mode_api | reference | 2026-08-29 | [doc](memory/reference_mode_api.md) |

@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017]
+keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017]
 domain: [repos, infra]
 lifecycle: active
-last_verified: 2026-07-31
+last_verified: 2026-08-29
 ---
 **The two DAGs that run the MNTN Matched (DS19 keyword) OpenAI batch pipeline** (`SteelHouse/airflow-ti`,
 `dags/machine_learning/`). Both schedule **`0 9 * * *`, `catchup=False`**. Deploy/image routing lives in
@@ -31,6 +31,34 @@ the two DAGs — the handoff is entirely the `openai_batch_submissions/dt=` obje
 - **Backfill order:** run **submit-D first, then fetch-(D+1)**.
 - **Diagnostic:** fetch `batch_transition` `FileNotFoundError` on `dt=D` ⇒ **submit-D never produced the file**
   (submit failed), not a fetch bug (this was the INC-007 fetch-side corroboration).
+
+## Submissions-parquet flags = the only visibility into batch health (2026-08-29)
+No one checked (malachi, Matt Brorby) has platform.openai.com/batches dashboard access — it shows
+nothing for either account. The API-flag evidence path in the `openai_batch_submissions/dt=` parquet
+is therefore the ONLY visibility:
+- **`batch_transitioner` sets `was_submitted=True` only when the OpenAI API reports the batch
+  `in_progress`/`completed`.** `batch_fetcher` downloads only `status=completed` batches and skips
+  others.
+- **Diagnostic: "0/N rows flagged across two transition passes" is CONCLUSIVE evidence of a dead
+  cohort** — no dashboard needed. Baseline 2026-08-26: 1113/1113 flagged + downloaded; the 08-27
+  cohort: 0/1098.
+- **The submit pod's `run_date` env = the LOGICAL date;** the wall-clock day is logical+1.
+
+## Dead-cohort recovery procedure (executed 2026-08-29, Matt Brorby approved in #alerts-tpa-pipeline)
+1. Delete `gs://mntn-data-archive-prod/shopper_graph/openai_batch_submissions/dt=<D>/` — receipts
+   only; the inputs in `openai_batch_input_formatted/dt=<D>` survive.
+2. Clear submit run logical `<D>` from `batch_cleanup_1` WITH downstream.
+3. Wait up to 24h for the new batches to complete.
+4. Clear fetch logical `<D+1>` from `batch_transition`.
+5. Clear `keyword_ddp` `wait_for_product_categorization`.
+
+## `get_files_without_batch` "Inconsistent state" = a double-submission guard, not flakiness
+`ValueError: Inconsistent state between openai_batch_submissions and openai_batch_input_formatted`
+guards against double-submitting after a PARTIAL/killed try. A later try that fails in <3 min hit the
+GUARD, not the work. 2026-08-28 case: try 1 was killed by k8s MID-PREP (pod deleted while writing
+input files), leaving 1102 orphan formatted files; every retry then saw submissions ≠ formatted and
+refused to resubmit. Recovery = the dead-cohort procedure above (clear from `batch_cleanup_1`, never
+from `batch_submit`).
 
 ## `batch_cleanup_1` and `batch_cleanup_2` are IDENTICAL bookend tasks
 Same `openai_batch_runner` image, same `delete_all_storage_files.py`, same env — a pre-run cleanup (frees
