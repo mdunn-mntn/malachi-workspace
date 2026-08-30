@@ -53,9 +53,11 @@ Then fetch from batch_transition, then clear keyword_ddp_reporting
 
 ## After-action plan (user directive 2026-08-29, run once the recovery chain completes)
 
-1. Ticket per issue: debugger improvements (AUDI, covers items below); flag the OpenAI batch
-   pipeline hardening (dead-cohort detection, resubmit runbook) for Matt's team rather than
-   filing on their board uninvited.
+1. Ticket per issue, filed per Bryce Wagg's conventions (one spike per multi-item
+   investigation, feedback_one_spike_multi_item): debugger improvements (AUDI, covers items
+   below); flag the OpenAI batch pipeline hardening (dead-cohort detection, resubmit runbook)
+   for Matt's team rather than filing on their board uninvited. Write the incident + fixes up
+   in Confluence, and prep talking points: the team discusses these issues Monday 2026-08-31.
 2. Debugger PR round 2: new signatures for the openai inconsistent-state guard and the
    dead-cohort PATH_NOT_FOUND; cross-DAG root-cause walk (IMP-096, the 10:31 reply stopped one
    layer short); signatures for the two unclassified (ipdsc_monitor, fangorn_hhid challenger);
