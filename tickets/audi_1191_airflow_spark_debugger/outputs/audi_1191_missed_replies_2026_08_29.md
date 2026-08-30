@@ -79,3 +79,23 @@ Weak spots seen today, all fixable in the signature texts / slack_block.py rende
    the owner when known (model -> owner map), else say where to find them.
 4. Unclassified white-circle replies say "Open the task log" without linking the log line-range
    it already fetched. It has the log; attach the tail.
+
+## 2026-08-30 update: the OpenAI failure is systemic, not one dead cohort
+
+Session died overnight (orchestrator killed with it). State at 15:00 UTC:
+- submit-08-27 resubmission succeeded (1067 batches, submitted 06:59-08:16 UTC 08-30).
+- Today's scheduled fetch-08-29 ALSO failed on missing `openai_batch_results/dt=2026-08-28`.
+- Tracking flags: dt=2026-08-28 0/1102 submitted after its transition ran 22h post-submit
+  (same dead pattern as 08-27); dt=2026-08-29 0/971 (submitted 10:45-11:54 UTC today, too
+  early to judge); dt=2026-08-27 resubmission 0/1067 (transition-only probe launched to check).
+- 08-26 was the last healthy cohort. Every cohort submitted since 08-28 morning UTC dies at
+  OpenAI after creation: batches get ids (creation succeeds, so this is NOT the INC-007 file
+  storage quota), then never reach in_progress/completed. Org-level cause at OpenAI (billing /
+  enqueued-token limit / project limits) is the leading hypothesis; only the API key holder can
+  read the batch error field. Resubmitting more cohorts is pointless and costs money until that
+  is read. No further resubmits.
+- Sample ids for the owner to retrieve: dt=08-27 `batch_6a93d4e7cedc819089960bc1e6e172fa`,
+  dt=08-28 `batch_6a92b590d1c8819088c7b793924afb2e`, dt=08-29 `batch_6a9409b205408190b3224cd5c9d115ab`.
+- Pod stdout ([base] lines) is not captured in the transition/fetch task logs, so per-batch
+  statuses never reach Airflow. Debugger improvement: have the batch runner print each batch's
+  status + error on transition (shopper_graph change, owner's repo).
