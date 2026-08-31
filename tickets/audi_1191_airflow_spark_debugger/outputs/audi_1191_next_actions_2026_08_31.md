@@ -41,10 +41,14 @@
     Cloud Run astro-metrics-relay (project mntn-prj-prod-00), remote-write URL
     https://astro-metrics-relay-r64eabgqfq-uc.a.run.app/api/v1/write, basic auth user
     astro-metrics (password in Malachi's Keychain: astro_metrics_relay). Astro prod
-    Metrics Exports configured by Malachi ~19:45 UTC. VERIFYING: GMP PromQL
-    (monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus)
-    shows no container_* series yet; watcher polling; Cristina asked to check relay logs
-    (Malachi has no log access to that project). When flowing: build pod_profile.py
-    (ledger surface "pod").
+    Metrics Exports configured by Malachi ~19:45 UTC. BLOCKED 20:06 UTC: external POST to
+    /api/v1/write gets the Google Front End generic 404 (valid and invalid auth alike) and
+    the service has zero request-log entries ever — ingress is internal-only, and Astro's
+    cluster is outside MNTN's VPC. Asked Cristina to set ingress to all traffic (service is
+    Terraform-provisioned, created 18:18 UTC). Note: Malachi CAN read the relay logs now
+    (earlier serviceusage denial is gone). After the flip: re-run the GMP check
+    (count(last_over_time(container_cpu_usage_seconds_total[10m])) at
+    monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus),
+    then build pod_profile.py (ledger surface "pod").
 11. Monday package (spike draft, Confluence skeleton, talking points):
     audi_1191_monday_package_2026_08_31.md
