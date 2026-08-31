@@ -40,3 +40,13 @@
     pod_profile.py PR. https://mntn.atlassian.net/browse/DEV-8821
 11. Monday package (spike draft, Confluence skeleton, talking points):
     audi_1191_monday_package_2026_08_31.md
+
+## 2026-08-31 evening additions
+12. PR 1251 (digest: one parent per sweep, unmatched RCAs threaded, repeated failures
+    collapse to a counted line): https://github.com/SteelHouse/airflow-ti/pull/1251
+13. PR 1250 (optimizer Databricks surface via SP oauth REST, CI green):
+    https://github.com/SteelHouse/airflow-ti/pull/1250. After merge set DATABRICKS_HOST +
+    DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod; dbt PR 174 baseline captured.
+14. Links branch audi-1194-digest-links in gauntlet (gs:// console links + name-override
+    resolver); PR next. Round-2 watermark not yet observed in GCS; prober watching the
+    newest rapid run log.
