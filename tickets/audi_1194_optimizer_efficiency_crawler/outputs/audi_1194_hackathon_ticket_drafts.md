@@ -91,3 +91,9 @@ initialExecutors verify-first (10, 2SP) · AUDI-1273 maxPartitionBytes (3, 1SP) 
 AQE advisory 16m (2, 1SP) · AUDI-1275 straggler decision (13, 2SP) · AUDI-1276 skew (4, 1SP)
 · AUDI-1277 BQ heavy queries (2SP) · AUDI-1278 BQ labels (1SP) · AUDI-1279 OpenAI
 observability (2SP) · AUDI-1280 tag-coverage CI (1SP) · AUDI-1281 perf-regression POC (2SP)
+
+## 2026-08-31 update: descriptions rewritten in laymen BLUF
+
+All 13 filed tickets (AUDI-1269..1281) got fuller plain-English descriptions: BLUF line
+(what + payoff), Why in plain terms defining every Spark/BQ knob at point of use, Task with
+the exact identifiers kept, Done-when unchanged. The terse originals above stay as the spec.
