@@ -136,3 +136,13 @@ dbx surface records and the post-merge drop measures. Candidate 1-2 SP hackathon
 Filed 2026-08-31: AUDI-1302 (2SP, Malachi, epic AUDI-1290, sprint 8649) wires the ml_squad
 Databricks workspace into the dbx surface so team efficiency PRs (dbt PR 174 first) are
 captured on the cost dashboard. Malachi's hackathon total is now 18 SP.
+
+Correction 2 (2026-08-31, live-verified): the ml_squad "workspace" IS the main workspace
+(1262887251702944.4.gcp.databricks.com, dbt ml_squad/profiles.yml). The dbx surface runs
+fine from a laptop profile. Baseline captured 7d ending 2026-08-31 from warehouse query
+history: prod-ml-ddp_vertical_classification_api is the TOP warehouse consumer, 306,352s
+query time / 244 runs / 3 failed (next: verticals_pre_cache 233,880s/378). This is dbt
+PR 174's target; the post-merge drop measures against this baseline. Prod dormancy cause
+refined: the Astro image has NO databricks CLI (only gcloud) and no host/client-id/
+warehouse vars; the fix is REST-via-curl with the existing oauth secret, not an image
+change. AUDI-1302 tracks it; work started same day.
