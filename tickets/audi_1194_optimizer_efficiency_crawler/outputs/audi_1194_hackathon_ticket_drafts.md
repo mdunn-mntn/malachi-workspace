@@ -132,3 +132,7 @@ ml_squad warehouse is not in the workspace the optimizer's profile reaches
 only DATABRICKS_GCP_CLIENT_SECRET (no host/client-id/profile). Capturing dbt PR 174 needs
 the ml_squad workspace wired in: host + service-principal auth + warehouse id, then the
 dbx surface records and the post-merge drop measures. Candidate 1-2 SP hackathon ticket.
+
+Filed 2026-08-31: AUDI-1302 (2SP, Malachi, epic AUDI-1290, sprint 8649) wires the ml_squad
+Databricks workspace into the dbx surface so team efficiency PRs (dbt PR 174 first) are
+captured on the cost dashboard. Malachi's hackathon total is now 18 SP.
