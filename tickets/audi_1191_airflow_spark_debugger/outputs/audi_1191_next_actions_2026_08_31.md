@@ -1,6 +1,8 @@
 # Current state (2026-08-31 ~12:45 PT)
 
 ## PRs awaiting review (all CI green, all gauntleted)
+**HOLD (Malachi, 2026-08-31): do not merge until Cristina opens the relay ingress; then a
+full end-to-end run/test first, changes are likely.**
 1. https://github.com/SteelHouse/airflow-ti/pull/1250 - AUDI-1194: optimizer Databricks
    surface via SP oauth REST (no CLI in pod). After merge: set DATABRICKS_HOST +
    DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod, verify dbx ledger rows next
