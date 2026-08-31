@@ -82,3 +82,12 @@ PR provenance needs one command per merged fix:
 `python -m airflow_optimizer.ledger applied <dag> <finding-key> <PR#> <merge-date>`.
 During the hackathon I reconcile merged airflow-ti PRs against ledger findings daily and
 run it for every fix, ours or not, so the Mode dashboard credits all of them.
+
+## Filed 2026-08-31 (sprint 8649, 09/07-09/21)
+
+AUDI-1269 shuffle.partitions pre-verified (10 DAGs, 2SP) · AUDI-1270 shuffle.partitions
+verify-first (15, 2SP) · AUDI-1271 initialExecutors pre-verified (2, 1SP) · AUDI-1272
+initialExecutors verify-first (10, 2SP) · AUDI-1273 maxPartitionBytes (3, 1SP) · AUDI-1274
+AQE advisory 16m (2, 1SP) · AUDI-1275 straggler decision (13, 2SP) · AUDI-1276 skew (4, 1SP)
+· AUDI-1277 BQ heavy queries (2SP) · AUDI-1278 BQ labels (1SP) · AUDI-1279 OpenAI
+observability (2SP) · AUDI-1280 tag-coverage CI (1SP) · AUDI-1281 perf-regression POC (2SP)
