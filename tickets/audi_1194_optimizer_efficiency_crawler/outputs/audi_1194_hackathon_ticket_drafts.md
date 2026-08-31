@@ -125,3 +125,10 @@ auto-measures -> stamp provenance (ledger applied <job> dbx_heavy_job 174 <merge
 Until then the fix's saving lives only in the PR body's numbers; documented here so it is
 not lost. Also: report()'s silent "" on missing config deserves a one-line
 "[sweep] databricks skipped: no warehouse configured" print (small PR).
+
+Correction (same day, verified): setting DATABRICKS_WAREHOUSE alone is NOT enough. The
+ml_squad warehouse is not in the workspace the optimizer's profile reaches
+(1262887251702944.4.gcp has only Serverless Starter + sql_warehouse_2xs), and prod carries
+only DATABRICKS_GCP_CLIENT_SECRET (no host/client-id/profile). Capturing dbt PR 174 needs
+the ml_squad workspace wired in: host + service-principal auth + warehouse id, then the
+dbx surface records and the post-merge drop measures. Candidate 1-2 SP hackathon ticket.
