@@ -152,3 +152,8 @@ REST auth, gauntlet passed + 2 hardening fixes, 153 tests). After merge: set
 DATABRICKS_HOST + DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod (candidate id:
 prod_runner 397d710b-4c85-4a96-b009-a07c1d373204, pairing with the existing secret verified
 only by the next sweep's log line; spark_optimizer SP 07f36af7 exists but has no known secret).
+
+PR 1252 opened (gauntlet PASS clean): https://github.com/SteelHouse/airflow-ti/pull/1252
+gs:// digest refs become console links; OPTIMIZER_NAME_OVERRIDES env map lets unmapped app
+names (ETL Audience Intent - *, segment-updates-to-parquet) resolve to their DAG. Populate
+the override values with the owning team before setting the var.
