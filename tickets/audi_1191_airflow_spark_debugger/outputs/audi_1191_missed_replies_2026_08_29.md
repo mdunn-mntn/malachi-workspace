@@ -102,3 +102,5 @@ Session died overnight (orchestrator killed with it). State at 15:00 UTC:
 - Probe result 15:30 UTC: the resubmitted 08-27 batches are 0/1067 in_progress-or-completed 7h
   after submit (validation takes minutes, so they are failing, not queued). Resubmission is
   confirmed dead too. Blocker is entirely OpenAI-side; awaiting the key holder's status read.
+- 2026-08-31 16:10 UTC check: four dead cohorts now (08-27 through 08-30, 0 transitioned of
+  1067/1102/971/906). Outage ongoing; with the OpenAI reps via Alyson since 08-30. No resubmits.
