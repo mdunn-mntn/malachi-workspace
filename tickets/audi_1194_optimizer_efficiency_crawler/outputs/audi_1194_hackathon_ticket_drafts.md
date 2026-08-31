@@ -146,3 +146,9 @@ PR 174's target; the post-merge drop measures against this baseline. Prod dorman
 refined: the Astro image has NO databricks CLI (only gcloud) and no host/client-id/
 warehouse vars; the fix is REST-via-curl with the existing oauth secret, not an image
 change. AUDI-1302 tracks it; work started same day.
+
+AUDI-1302 PR opened same day: https://github.com/SteelHouse/airflow-ti/pull/1250 (SP oauth
+REST auth, gauntlet passed + 2 hardening fixes, 153 tests). After merge: set
+DATABRICKS_HOST + DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod (candidate id:
+prod_runner 397d710b-4c85-4a96-b009-a07c1d373204, pairing with the existing secret verified
+only by the next sweep's log line; spark_optimizer SP 07f36af7 exists but has no known secret).
