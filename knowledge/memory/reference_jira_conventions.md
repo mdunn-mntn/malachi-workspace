@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821, sprint 8649 hackathon, future sprint issue move, assignee put endpoint, sprint ids 8303 8649 8650, board 1814 sprint list]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821, sprint 8649 hackathon, future sprint issue move, assignee put endpoint, sprint ids 8303 8649 8650, board 1814 sprint list, ticket description standard, laymen BLUF description, file links in tickets, github line anchor, verify link target on main, epic create fields, epic name 10528, epic re-parent agile api, AUDI-1290]
 domain: [jira-process]
 lifecycle: active
 last_verified: 2026-08-31
@@ -266,3 +266,24 @@ Single-issue reads (`/rest/api/2/issue/KEY`), comment/create writes (REST v2, se
 - **AUDI scrum board = 1814.** Sprint ids AS OF 2026-08-31: **8303** (active, ends 09/07) · **8649** (the fall tech-debt hackathon sprint, 09/07-09/21) · **8650** (the one after). List them: `GET /rest/agile/1.0/board/1814/sprint?state=active,future`.
 - **Assignee:** `PUT /rest/api/2/issue/{key}/assignee -d '{"accountId":"..."}'` (204).
 - **Story points stay `customfield_10012`** — settable in the create payload or a later PUT.
+
+## Ticket description standard (user rule 2026-08-31, verified AUDI-1269..1281 + epic AUDI-1290)
+
+Every ticket description, every time:
+- Shape: BLUF first line (what + payoff, plain English a non-owner can read), then `*Why:*`
+  explaining the problem and defining every internal term at point of use ({{config key}},
+  tier label, mechanism), then `*Task:*` as a bulleted list, then `*Done-when:*` measurable.
+- Wiki markup, written via curl REST v2: `*bold*` labels, `* ` bullets, `{{monospace}}` for
+  config keys, `[text|url]` links.
+- Link everything named: each DAG/model file links its GitHub blob on main
+  (`[name|https://github.com/SteelHouse/<repo>/blob/main/<path>#Lnn]`, line anchor when the
+  change targets a known line); dashboards (Mode), PRs, and runbook files get links too.
+- Verify each link target exists on origin/main first (`git ls-tree -r origin/main` /
+  `git cat-file -e origin/main:<path>`). This catches dead findings: intent_score_household_map
+  was deleted on main 2026-08-26 (PR 1209), so it was dropped from two tickets, not linked.
+- The 400-char description cap yields to this standard (user call 2026-08-31): a linked,
+  laymen-readable description may run long; the BLUF line still has to carry the ticket alone.
+- Initiative/hackathon batches: parent all tickets to one Epic (Epic create needs
+  customfield_10528 Epic Name + customfield_16455/16456 Feature-Audit/Monitor Required
+  Yes/No options; re-parent via POST /rest/agile/1.0/epic/<KEY>/issue) and put the shared
+  label on epic and children both.
