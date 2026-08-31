@@ -109,3 +109,19 @@ the exact identifiers kept, Done-when unchanged. The terse originals above stay 
 - intent_score_household_map dropped from AUDI-1269 (now 9 DAGs) and from the AUDI-1275
   straggler list: its model and DAG were deleted on airflow-ti main 2026-08-26 (PR 1209,
   ID-431). Both sweep findings for it are moot.
+
+## 2026-08-31 update 3: dbx surface silently off in prod; dbt PR 174 capture plan
+
+dbt PR 174 (SteelHouse/dbt, AUDI-1194: DDP api tests prune to latest load_ts partition,
+~98.6% of ml_squad warehouse query time, warehouse lists at $850/week) will NOT be captured
+by the Mode dashboard as things stand: the live ledger has zero surface="dbx" rows because
+databricks.report() returns "" silently when DATABRICKS_WAREHOUSE is unset, and the prod
+deployment does not configure it (no "[sweep] databricks" line in the 08-30 sweep log at
+all). The dbx code (#1246, merged 08-28) is deployed but dormant.
+
+Capture plan: set DATABRICKS_WAREHOUSE + databricks CLI auth on the prod deployment ->
+dbx surface records DBU/day per job with dbx_heavy_job findings -> the post-merge drop
+auto-measures -> stamp provenance (ledger applied <job> dbx_heavy_job 174 <merge-date>).
+Until then the fix's saving lives only in the PR body's numbers; documented here so it is
+not lost. Also: report()'s silent "" on missing config deserves a one-line
+"[sweep] databricks skipped: no warehouse configured" print (small PR).
