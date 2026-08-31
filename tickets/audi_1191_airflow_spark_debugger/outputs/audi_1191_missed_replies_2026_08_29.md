@@ -136,3 +136,26 @@ Discriminating asks for the OpenAI reps / key holder:
 3. If scoping is the cause: fix = re-issue one key whose default project both stores
    files and runs batches; then we resubmit all dead cohorts (08-27..30) per the
    documented recovery.
+
+## 2026-08-31 18:20 UTC: dashboard access confirms OpenAI-side fault
+
+Malachi now has org access (Okta enterprise SSO; the Google-auth path fails with "Could not
+access the organization"). Verified in the UI, org MNTN / Default project:
+- File batch_requests_2026-08-31_9wvi6hey.jsonl (file-GxCYLt544LNshMxVX1es4c) EXISTS,
+  status Ready, created 08-31 06:04, expires 09-30.
+- The batch created 06:04:41 referencing that exact id failed 06:05:42 with "Cannot find
+  file file-GxCYLt544LNshMxVX1es4c, or organization org-ldKlX0Pr81MhoY05W9t6oB1V does not
+  have access to it."
+- File visible and Ready in the same org+project the batch runs in, yet validation denies
+  access: the fault is inside OpenAI's batch validation, not our upload scoping. The org
+  hypothesis narrows: not a key/org mismatch on our side.
+- That 06:04 batch is a MANUAL test (name batch_requests_*, not our part-*-tid-* naming),
+  so a second producer hits the identical failure: org-wide.
+- Our pipeline's failed batches sit in the same Default project (part-* files visible in
+  Storage alongside it).
+
+Escalation line for the OpenAI reps: file exists and is Ready in org
+org-ldKlX0Pr81MhoY05W9t6oB1V / Default project, batch created 40s later in the same
+project fails claiming the org cannot access it; every batch since 08-28 06:00 PT fails
+identically. Request: audit-log check for the org at that onset + fix; nothing to change
+on our side.
