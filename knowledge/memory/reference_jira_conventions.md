@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821, sprint 8649 hackathon, future sprint issue move, assignee put endpoint, sprint ids 8303 8649 8650, board 1814 sprint list]
 domain: [jira-process]
 lifecycle: active
-last_verified: 2026-08-28
+last_verified: 2026-08-31
 ---
 ## from feedback_jira_formatting.md
 
@@ -259,3 +259,10 @@ Single-issue reads (`/rest/api/2/issue/KEY`), comment/create writes (REST v2, se
 - **DEV board (re-verified 2026-08-28, DEV-8821):** issueLink REST v2 type name is `"Relates To"` (`"Relates"` 404s). DEV uses the DevOps Request form requiring **Request Type** (Infrastructure Improvement for new infra), **Due Date**, **Environment**, **Squad**.
 - **No DELETE permission (403)** on the AUDI project ("You do not have permission to delete issues"). To neutralize a mis-created ticket: transition to Backlog, rename `[VOID - duplicate of AUDI-XXXX]`, move out of the sprint, link Duplicate (`POST /rest/api/2/issueLink -d '{"type":{"name":"Duplicate"},"outwardIssue":{"key":"<void>"},"inwardIssue":{"key":"<keep>"}}'`), comment, and flag a human to delete.
 - **A ticket represents the STAKEHOLDER DELIVERABLE (the ask), not the internal work done in service of it.** Logged AUDI-1177 "xlsx format-system uplift" for a session that was really about giving Kirsa the Select lift numbers — Malachi corrected it; the deliverable = AUDI-1172 (the numbers). Tooling/format improvements made along the way are not their own ticket unless separately requested. See [[feedback_ticket_writing_rule]].
+
+## Sprint fan-out + assignee via the agile API (verified 2026-08-31, hackathon filing AUDI-1269..1281)
+
+- **Move issues into a sprint (batch):** `POST /rest/agile/1.0/sprint/{sprintId}/issue -d '{"issues":["AUDI-1269","AUDI-1270"]}'` (204). Works on a FUTURE sprint — no need to wait for it to start.
+- **AUDI scrum board = 1814.** Sprint ids AS OF 2026-08-31: **8303** (active, ends 09/07) · **8649** (the fall tech-debt hackathon sprint, 09/07-09/21) · **8650** (the one after). List them: `GET /rest/agile/1.0/board/1814/sprint?state=active,future`.
+- **Assignee:** `PUT /rest/api/2/issue/{key}/assignee -d '{"accountId":"..."}'` (204).
+- **Story points stay `customfield_10012`** — settable in the create payload or a later PUT.

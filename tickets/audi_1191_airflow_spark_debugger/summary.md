@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Datab
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 94.7% deterministically root-caused); rapid 15-min DAG live; round-2 PR airflow-ti#1249 open 2026-08-31 (gauntlet PASS, 254 tests: 4 new signatures, fast-fail sensor RCA, rapid lookback watermark = IMP-095 closes on merge). Remaining: #1233/#1249 merges, open triage tickets, Phase 3 auto-fire"
+result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 94.7% deterministically root-caused); rapid 15-min DAG live; round-2 PR airflow-ti#1249 open 2026-08-31 (gauntlet PASS, 254 tests: 4 new signatures, fast-fail sensor RCA, rapid lookback watermark = IMP-095 closes on merge). Remaining: #1233/#1249 merges, open triage tickets, Phase 3 auto-fire; hackathon alerting tickets AUDI-1279/1280 filed into sprint 8649 (2026-08-31)"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -856,8 +856,9 @@ leaving 1102 orphan files in `openai_batch_input_formatted/dt=2026-08-27`; every
 `get_files_without_batch` "Inconsistent state" guard (`Expected 1035 == 1035 + 1102`) in <3 min —
 a double-submission guard doing its job, not flakiness.
 
-**Dead-cohort evidence path (no dashboard access exists — platform.openai.com/batches shows nothing
-for malachi or Matt Brorby):** the submissions parquet flags are the only visibility.
+**Dead-cohort evidence path (2026-08-29 check: platform.openai.com/batches shows nothing for
+malachi or Matt Brorby; UPDATE 2026-08-31 — Alyson HAS dashboard access, see §7k):** the
+submissions parquet flags are the only automated visibility.
 `batch_transitioner` sets `was_submitted=True` only when the API reports in_progress/completed;
 `batch_fetcher` downloads only status=completed. 08-26 baseline 1113/1113 flagged + downloaded;
 08-27 cohort **0/1098 across two transition passes = conclusive dead cohort**.
@@ -923,3 +924,24 @@ pulled logs): `ipdsc_monitor/monitor_ipdsc_42` = dataproc await died with no pay
 the `per-file-ignores` `"tests/*.py"` glob only resolves when ruff runs from inside the package
 dir with a newer local ruff, so lint like CI or cd into the package; CI does NOT run
 `ruff format`. zsh does not word-split an unquoted `$VAR` (use arrays).
+
+## 7k. 2026-08-31 — hackathon alerting tickets filed, OpenAI outage narrowed to one error message
+
+**Hackathon sprint 8649 (09/07-09/21):** the debugger's alerting-audit items are now sprint
+tickets, filed in AUDI-1194's refinement batch — **AUDI-1279** (OpenAI batch observability:
+dead-cohort alarm paging on 0/N transitioned + per-batch status/error logging in shopper_graph,
+2 SP) and **AUDI-1280** (fleet-wide PAGING_TAGS coverage audit + CI check, the PR #1248 gap
+class, 1 SP), both assigned to Malachi. Specs:
+`tickets/audi_1194_optimizer_efficiency_crawler/outputs/audi_1194_hackathon_ticket_drafts.md`.
+
+**OpenAI outage (dead cohorts 08-27..30) — the §7i "no dashboard access exists" claim is
+corrected, not overwritten:** that check covered malachi and Matt Brorby only. **Alyson HAS
+platform.openai.com dashboard access** and reports ALL failed batches show ONE identical error
+message; the text is not yet relayed (her pasted screenshots kept exceeding the image size cap —
+ask for the text or the saved file). That one line picks the fix; no resubmits until it lands.
+Separately, **Ryan Kleck has an MNTN OpenAI org in his account switcher that needs
+reauthentication** — a second potential dashboard path. Correction appended to memory
+`reference_mntn_matched_batch_pipeline`.
+
+**Handoff:** `outputs/audi_1191_next_actions_2026_08_31.md` is the current next-actions board
+(waiting-on-humans list, hackathon items, Monday package pointer).

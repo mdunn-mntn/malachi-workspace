@@ -4,7 +4,7 @@ title: "AUDI-1194: Airflow/Spark optimization crawler"
 status: in_progress
 date: 2026-08-05
 summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
-result: "in progress — prod DAG live with Slack delivery; full-corpus sweep (3,085 logs) distilled to 67 (job, mechanism) pairs / 30,163+ exec-h floor (outputs/audi_1194_hackathon_optimizations_2026_08_27.md); AUDI-1241 filed under epic AUDI-1054 for the burn-down; site_network_hourly + DDP dbt tests now ours to fix (merged #1232, dbt#174 in review)"
+result: "in progress — prod DAG live with Slack delivery; full-corpus sweep (3,085 logs) distilled to 67 (job, mechanism) pairs / 30,163+ exec-h floor (outputs/audi_1194_hackathon_optimizations_2026_08_27.md); AUDI-1241 filed under epic AUDI-1054 for the burn-down; site_network_hourly + DDP dbt tests now ours to fix (merged #1232, dbt#174 in review); 2026-08-31 hackathon refinement: 13 Tasks AUDI-1269..1281 filed into sprint 8649 (09/07-09/21), grouped by change type, 16 SP Malachi / 4 SP others"
 question: "Can a scheduled key-free crawler read every succeeded Spark job (Dataproc event logs + Databricks plans/metrics) and emit a ranked, actionable optimization backlog with no manual step?"
 framing_state: locked
 ---
@@ -763,3 +763,43 @@ triggered `spark_optimizer_daily` (`manual__2026-08-29T01:23:07`, success). Live
 - Airflow REST log pulls: `Accept: text/plain` is rejected ("Only application/json or
   application/x-ndjson"); logs paginate via `continuation_token`.
 - Jira service-account request is **ITS-6496** (Pending External, Robin Fox).
+
+## 2026-08-31 — hackathon refinement: 13 tickets filed into sprint 8649
+
+**Bryce's hackathon structure (refinement 2026-08-31):** a fall tech-debt hackathon sprint with
+three tracks — alerting audit, pipeline testing framework, pipeline optimization audit.
+Refinement format: 30 min writing tickets + 30 min group review. A dedicated hackathon epic is
+pending Bryce's Capex check; tickets filed without a parent for now.
+
+**13 AUDI Tasks filed into hackathon sprint 8649 (09/07-09/21, board 1814): AUDI-1269..1281**,
+drafted in `outputs/audi_1194_hackathon_ticket_drafts.md` (fix values pre-verified in the 08-27
+corpus sweep `outputs/audi_1194_hackathon_optimizations_2026_08_27.md`).
+**Grouping rule (user's): tickets group by CHANGE TYPE, not by DAG** — the same change across many
+DAGs is ONE ticket; a different change on the same DAG is a DIFFERENT ticket; 1-2 SP each.
+- AUDI-1269 shuffle.partitions pre-verified (10 DAGs, 2SP) · 1270 shuffle.partitions verify-first
+  (15, 2SP) · 1271 initialExecutors pre-verified (2, 1SP) · 1272 initialExecutors verify-first
+  (10, 2SP) · 1273 maxPartitionBytes (3, 1SP) · 1274 AQE advisory 16m (2, 1SP) · 1275 straggler
+  decision (13, 2SP) · 1276 skew (4, 1SP) · 1277 BQ heavy queries (2SP) · 1278 BQ labels (1SP) ·
+  1279 OpenAI observability (2SP) · 1280 tag-coverage CI (1SP) · 1281 perf-regression POC (2SP).
+- **SP split:** 16 SP assigned to Malachi (1270, 1271, 1272, 1275, 1276, 1277, 1278, 1279, 1280,
+  1281); 4 SP left deliberately simple for others (1269, 1273, 1274).
+
+**No optimizer rescan was needed:** the 08-27 corpus sweep is still authoritative (fleet configs
+unchanged since; the two merged fixes #1231/#1232 already measure in the ledger). New since
+08-27 and folded into the drafts: live BQ-surface findings — `bos__spend` 1,275 + 977 slot-h/day,
+`intent_score_threshold_v4` 1,075 slot-h, unattributed (unlabeled) jobs 1,185 slot-h/day →
+AUDI-1277/1278.
+
+**Cost-savings provenance during the hackathon:** the ledger auto-measures savings regardless of
+who authors the fix (a finding that stops firing resolves and its savings accrue). Provenance is
+stamped per merged fix with `python -m airflow_optimizer.ledger applied <dag> <key> <pr> <date>`;
+plan = daily reconcile of merged airflow-ti PRs vs ledger findings during the sprint. Recorded in
+memory `project_airflow_optimizer`.
+
+**Jira mechanics verified in the filing** (routed to memory `reference_jira_conventions`): sprint
+move = `POST /rest/agile/1.0/sprint/{id}/issue {"issues":[keys]}`; AUDI scrum board 1814; sprints
+as of 2026-08-31: 8303 (active, ends 09/07), 8649 (hackathon, 09/07-09/21), 8650 (next); story
+points = `customfield_10012`; assignee = `PUT /rest/api/2/issue/{key}/assignee {"accountId"}`.
+
+**Handoff pointer:** cross-ticket next actions live in
+`tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_actions_2026_08_31.md`.

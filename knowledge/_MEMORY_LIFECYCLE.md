@@ -233,12 +233,12 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_pyspark_optimization_skill | reference | 2026-08-27 | [doc](memory/reference_pyspark_optimization_skill.md) |
 | design-ti-999-3p-scoring-at-hhst | project | 2026-08-28 | [doc](memory/design_ti_999_3p_scoring_at_hhst.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-08-28 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
-| jira-conventions | reference | 2026-08-28 | [doc](memory/reference_jira_conventions.md) |
-| project_airflow_optimizer | project | 2026-08-28 | [doc](memory/project_airflow_optimizer.md) |
 | reference_airflow_log_puller | reference | 2026-08-28 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
 | reference_slack_debugger_app | reference | 2026-08-28 | [doc](memory/reference_slack_debugger_app.md) |
-| reference_mntn_matched_batch_pipeline | reference | 2026-08-29 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_mode_api | reference | 2026-08-29 | [doc](memory/reference_mode_api.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-31 | [doc](memory/reference_airflow_ti.md) |
+| jira-conventions | reference | 2026-08-31 | [doc](memory/reference_jira_conventions.md) |
 | project_airflow_debugger | project | 2026-08-31 | [doc](memory/project_airflow_debugger.md) |
+| project_airflow_optimizer | project | 2026-08-31 | [doc](memory/project_airflow_optimizer.md) |
+| reference_mntn_matched_batch_pipeline | reference | 2026-08-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
