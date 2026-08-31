@@ -104,3 +104,35 @@ Session died overnight (orchestrator killed with it). State at 15:00 UTC:
   confirmed dead too. Blocker is entirely OpenAI-side; awaiting the key holder's status read.
 - 2026-08-31 16:10 UTC check: four dead cohorts now (08-27 through 08-30, 0 transitioned of
   1067/1102/971/906). Outage ongoing; with the OpenAI reps via Alyson since 08-30. No resubmits.
+
+## 2026-08-31 17:50 UTC: the error text arrived (screenshot readable at last)
+
+Every failed batch shows one error, e.g. batch_6a9569157a248190a9cd78bba9e2813b (created
+08-31 07:44 PT, failed 07:45, 0 total requests):
+
+    Cannot find file file-25XZLo4rMGap7MD1aeXCcu, or organization
+    org-ldKlX0Pr81MhoY05W9t6oB1V does not have access to it.
+
+Code-side facts (shopper_graph, read 2026-08-31): batch_base builds ONE client,
+OpenAI(api_key=os.getenv("OPENAI_API_KEY")), no organization/project set anywhere.
+create_batch does files.create then batches.create back-to-back on that client, so the
+file exists under the key's own scope seconds before the batch references it. delete_file
+removes only the LOCAL temp file (os.remove), never the OpenAI file. Submitter last
+changed 2025-12-17, base 2025-10-01: our code did not change when the outage started
+(08-28 06:00 PT).
+
+Diagnosis: OpenAI-side org/project scoping break. The same key uploads the file and
+creates the batch, yet async validation ~50s later says org-ldKlX0Pr81MhoY05W9t6oB1V
+cannot see the file. Either the key was rotated ~08-27/28 to one with mismatched
+org/project bindings, or OpenAI changed the org/project mapping (Ryan Kleck's MNTN org
+needing reauthentication is consistent with an org-level event).
+
+Discriminating asks for the OpenAI reps / key holder:
+1. Under org-ldKlX0Pr81MhoY05W9t6oB1V, retrieve file-25XZLo4rMGap7MD1aeXCcu (GET /v1/files).
+   Found -> validation bug on their side. Not found -> the upload landed in a different
+   org/project: ask which org/project the key sk-...(pod OPENAI_API_KEY) belongs to.
+2. Was the key or the org/project structure changed on 08-27/28? Anything in their audit
+   log at 08-28 06:00 PT onset?
+3. If scoping is the cause: fix = re-issue one key whose default project both stores
+   files and runs batches; then we resubmit all dead cohorts (08-27..30) per the
+   documented recovery.
