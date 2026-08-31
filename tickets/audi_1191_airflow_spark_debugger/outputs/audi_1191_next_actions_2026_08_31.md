@@ -1,52 +1,43 @@
-# Next actions (updated 2026-08-31 evening)
+# Current state (2026-08-31 ~12:45 PT)
 
-## OpenAI outage (4 dead cohorts 08-27..30) - blocked on org access
-1. Root cause proven org-side: input file exists + Ready in the same org/project
-   (org-ldKlX0Pr81MhoY05W9t6oB1V, tier 5), yet every batch since 08-28 06:00 PT fails
-   validation with "Cannot find file / org does not have access". Manual test batch fails
-   identically. Full evidence: audi_1191_missed_replies_2026_08_29.md.
-2. Waiting: Alyson (org owner) checks/enables the audit log (Org settings > Data controls >
-   Data retention > Audit logging) or grants Malachi api.admin + organization.write +
-   spend_limits.read; then audit 08-28 06:00 PT onset, else escalate repro to OpenAI reps.
-3. After fix: per-day recovery (reference_mntn_matched_batch_pipeline) for 08-27..30+.
-   NO resubmits before then. Ryan cautioned on wiping openai_batch_submissions: only dead
-   cohorts' receipts were deleted (nothing fetchable lost), inputs untouched.
+## PRs awaiting review (all CI green, all gauntleted)
+1. https://github.com/SteelHouse/airflow-ti/pull/1250 - AUDI-1194: optimizer Databricks
+   surface via SP oauth REST (no CLI in pod). After merge: set DATABRICKS_HOST +
+   DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod, verify dbx ledger rows next
+   sweep, stamp dbt PR 174 provenance (baseline: prod-ml-ddp_vertical_classification_api,
+   306,352 query-s / 244 runs / 7d).
+2. https://github.com/SteelHouse/airflow-ti/pull/1251 - AUDI-1191: debugger channel digest
+   (one parent per sweep, threaded replies, repeated failures collapse with a count).
+   Grouped demo live in #airflow-debugger.
+3. https://github.com/SteelHouse/airflow-ti/pull/1252 - AUDI-1194: digest gs:// refs become
+   console links; OPTIMIZER_NAME_OVERRIDES map for unmapped app names (populate values with
+   owning team before setting the var).
+4. Related merged today: #1248 (tags + 55m timeout), #1249 (round-2 signatures, watermark).
+   Open verify: round-2 watermark write in prod not yet observed; seeded manually 19:08 UTC,
+   watching whether cycles rewrite it. If not: add logging to write_watermark and probe.
 
-## Debugger
-4. PR 1249 (round 2: openai signatures, fast-fail sensor RCA, watermark, clarity) MERGED
-   2026-08-31. Verifying deploy: GCS watcher polling for debugger/cycle_watermark.json
-   (absent as of 18:15 UTC; astro CLI auth dead so deploy status unreadable, watermark is
-   the proof). https://github.com/SteelHouse/airflow-ti/pull/1249
-5. PR 1248 (PAGING_TAGS widen + vertical_classification_api timeout) OPEN, review
-   required. Sean's 60-min concern addressed (68m -> 55m), thread resolved, CI green.
-   Waiting on approval. https://github.com/SteelHouse/airflow-ti/pull/1248
-6. After both live: verify a missed-tag failure gets a reply; watermark covers
-   deploy-window gaps (IMP-095).
+## OpenAI outage (4 dead cohorts 08-27..30)
+5. Proven org-side (file exists + Ready, validation denies access; tier 5; org id matches).
+   Waiting: OpenAI reps via Alyson; audit logging was never enabled so root cause is theirs.
+   Alyson asked to grant admin perms / group (api.admin, organization.write,
+   spend_limits.read for Brian, Sean, Ryan, Malachi). AUDI-1301 (backlog) tracks the
+   dedicated-project + logging + group work: https://mntn.atlassian.net/browse/AUDI-1301
+6. After their fix: per-day recovery for 08-27..30+ (reference_mntn_matched_batch_pipeline).
+   NO resubmits until then.
 
-## Optimizer / hackathon (sprint 8649, 09/07-09/21)
-7. Epic AUDI-1290 "Pipeline Optimization Hackathon" holds all 13 tickets (20 SP; 16 SP
-   Malachi: 1270-1272, 1275-1281; simple 4 SP open: 1269, 1273, 1274). Descriptions are
-   laymen BLUF with GitHub file links. Board:
+## Hackathon sprint 8649 (09/07-09/21)
+7. Epic https://mntn.atlassian.net/browse/AUDI-1290 - 13 tickets, 16 SP Malachi
+   (1270-1272, 1275-1281), 4 SP simple left open (1269, 1273, 1274). AUDI-1302 closed
+   Won't Do (PR-only per user). Board:
    https://mntn.atlassian.net/jira/software/c/projects/AUDI/boards/1814/backlog
-   Epic: https://mntn.atlassian.net/browse/AUDI-1290
-8. During hackathon: daily reconcile merged airflow-ti PRs vs ledger; stamp provenance
-   per fix: python -m airflow_optimizer.ledger applied <dag> <key> <PR#> <date>.
+8. During hackathon: daily PR-vs-ledger reconcile; stamp provenance per merged fix:
+   python -m airflow_optimizer.ledger applied <dag> <key> <PR#> <date>.
    Dashboard: https://app.mode.com/mntn/reports/e81786de8403
 
 ## Other waits
-9. ITS-6496 Jira SA (Robin Fox, Pending External): swap Astro vars on arrival.
+9. ITS-6496 Jira SA (Robin Fox): swap Astro JIRA vars on arrival.
    https://mntn.atlassian.net/browse/ITS-6496
-10. DEV-8821 metrics relay (Cristina, In Progress): repoint Metrics Exports, then
-    pod_profile.py PR. https://mntn.atlassian.net/browse/DEV-8821
+10. DEV-8821 metrics relay (Cristina): repoint Metrics Exports then pod_profile.py PR.
+    https://mntn.atlassian.net/browse/DEV-8821
 11. Monday package (spike draft, Confluence skeleton, talking points):
     audi_1191_monday_package_2026_08_31.md
-
-## 2026-08-31 evening additions
-12. PR 1251 (digest: one parent per sweep, unmatched RCAs threaded, repeated failures
-    collapse to a counted line): https://github.com/SteelHouse/airflow-ti/pull/1251
-13. PR 1250 (optimizer Databricks surface via SP oauth REST, CI green):
-    https://github.com/SteelHouse/airflow-ti/pull/1250. After merge set DATABRICKS_HOST +
-    DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod; dbt PR 174 baseline captured.
-14. Links branch audi-1194-digest-links in gauntlet (gs:// console links + name-override
-    resolver); PR next. Round-2 watermark not yet observed in GCS; prober watching the
-    newest rapid run log.
