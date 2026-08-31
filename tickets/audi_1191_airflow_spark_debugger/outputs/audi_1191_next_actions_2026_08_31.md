@@ -51,7 +51,9 @@ full end-to-end run/test first, changes are likely.**
     /api/v1/write gets the Google Front End generic 404 (valid and invalid auth alike) and
     the service has zero request-log entries ever — ingress is internal-only, and Astro's
     cluster is outside MNTN's VPC. Asked Cristina to set ingress to all traffic (service is
-    Terraform-provisioned, created 18:18 UTC). Note: Malachi CAN read the relay logs now
+    Terraform-provisioned, created 18:18 UTC). Fix in flight: mntn-devops PR 5193
+    (Cristina, 2:36 PM PT), retest after merge + self-deploy.
+    Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check
     (count(last_over_time(container_cpu_usage_seconds_total[10m])) at
     monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus),
