@@ -37,7 +37,14 @@
 ## Other waits
 9. ITS-6496 Jira SA (Robin Fox): swap Astro JIRA vars on arrival.
    https://mntn.atlassian.net/browse/ITS-6496
-10. DEV-8821 metrics relay (Cristina): repoint Metrics Exports then pod_profile.py PR.
-    https://mntn.atlassian.net/browse/DEV-8821
+10. DEV-8821 metrics relay LIVE (https://mntn.atlassian.net/browse/DEV-8821):
+    Cloud Run astro-metrics-relay (project mntn-prj-prod-00), remote-write URL
+    https://astro-metrics-relay-r64eabgqfq-uc.a.run.app/api/v1/write, basic auth user
+    astro-metrics (password in Malachi's Keychain: astro_metrics_relay). Astro prod
+    Metrics Exports configured by Malachi ~19:45 UTC. VERIFYING: GMP PromQL
+    (monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus)
+    shows no container_* series yet; watcher polling; Cristina asked to check relay logs
+    (Malachi has no log access to that project). When flowing: build pod_profile.py
+    (ledger surface "pod").
 11. Monday package (spike draft, Confluence skeleton, talking points):
     audi_1191_monday_package_2026_08_31.md
