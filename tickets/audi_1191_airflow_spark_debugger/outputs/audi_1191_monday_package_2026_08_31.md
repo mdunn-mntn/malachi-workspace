@@ -12,7 +12,7 @@ Description (lint target: 400ch/60w/4 bullets):
 
 Outcome checklist (per item, in ticket body):
 - [ ] PR 1248 merged (tag coverage + vertical_classification_api 68m timeout)
-- [ ] Round-2 PR merged (openai signatures, fast-fail sensor RCA, watermark, clarity)
+- [ ] PR 1249 merged (openai signatures, fast-fail sensor RCA, watermark, clarity): https://github.com/SteelHouse/airflow-ti/pull/1249
 - [ ] OpenAI outage: account-side answer from reps (Alyson), affected days resubmitted
 - [ ] Confluence incident page published, linked from runbook
 - [ ] Handoffs: batch-runner status logging + dead-cohort alarm (shopper_graph, Matt/Sean)
@@ -45,6 +45,6 @@ Title: OpenAI batch outage and debugger coverage gaps, Aug 28-30
 1. The keyword pipeline outage is OpenAI-account-side; evidence is deterministic, reps are
    engaged via Alyson, recovery is one documented sequence once they answer.
 2. The debugger missed two alerts on tag filtering and answered one sensor a layer short;
-   both fixed in two PRs (one merged-pending-review, one in gauntlet now).
+   both fixed in two PRs (PRs 1248 and 1249, both open).
 3. Ask: merge reviews for the two airflow-ti PRs; shopper_graph owners take the two
    hardening items (status logging, dead-cohort alarm).
