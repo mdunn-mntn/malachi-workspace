@@ -13,8 +13,8 @@
    console links; OPTIMIZER_NAME_OVERRIDES map for unmapped app names (populate values with
    owning team before setting the var).
 4. Related merged today: #1248 (tags + 55m timeout), #1249 (round-2 signatures, watermark).
-   Open verify: round-2 watermark write in prod not yet observed; seeded manually 19:08 UTC,
-   watching whether cycles rewrite it. If not: add logging to write_watermark and probe.
+   VERIFIED 19:30 UTC: prod rewrote cycle_watermark.json (new generation), so the round-2
+   code is live and the watermark loop works end to end. Deploy verification complete.
 
 ## OpenAI outage (4 dead cohorts 08-27..30)
 5. Proven org-side (file exists + Ready, validation denies access; tier 5; org id matches).
