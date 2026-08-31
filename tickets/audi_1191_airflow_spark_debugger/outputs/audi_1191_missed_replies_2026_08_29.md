@@ -159,3 +159,13 @@ org-ldKlX0Pr81MhoY05W9t6oB1V / Default project, batch created 40s later in the s
 project fails claiming the org cannot access it; every batch since 08-28 06:00 PT fails
 identically. Request: audit-log check for the org at that onset + fix; nothing to change
 on our side.
+
+## 2026-08-31 18:40 UTC: org-side facts from Malachi's read-only access
+
+Org settings verified: id org-ldKlX0Pr81MhoY05W9t6oB1V (matches the error), Verified
+status, usage tier 5 (highest, so not a credit/tier downgrade). Malachi's role is
+read-only: spend limits, rate limits, and audit log pages all need admin permissions
+(api.organization.spend_limits.read etc.), so the audit-log check around the 08-28 06:00 PT
+onset falls to an org owner (Ryan/Alyson) or the OpenAI reps. Access path that works:
+enterprise SSO via Okta after typing the email; the Google-auth path lands in the wrong
+account and errors.
