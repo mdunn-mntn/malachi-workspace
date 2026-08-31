@@ -193,3 +193,16 @@ board uncluttered while making sure a good idea (a durable fix, a tooling gap, a
 - ENGINE-PROPOSE `c-2026-08-29-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
 
 - ENGINE-PROPOSE `c-2026-08-29-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-30-001` (knowledge_edit/costly_query): query shape run 2x billing 5366.8 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-30-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-30-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-31-001` (knowledge_edit/costly_query): query shape run 2x billing 5366.8 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-31-002` (knowledge_edit/costly_query): query shape run 1x billing 620.7 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+
+- ENGINE-PROPOSE `c-2026-08-31-003` (knowledge_edit/costly_query): query shape run 1x billing 586.2 GB total — document a cheaper path or a materialized source [metric: usd_per_query] — AWAITING APPROVAL (rung above current auto tier)
+| 2026-08-31 | idea | Move OpenAI batch pipeline out of Default project into a dedicated project with audit logging enabled (Alyson enables on move); new project-scoped key + Astro secret swap | AUDI-1191 outage: no audit log existed to diagnose the 08-28 org-side failure |
