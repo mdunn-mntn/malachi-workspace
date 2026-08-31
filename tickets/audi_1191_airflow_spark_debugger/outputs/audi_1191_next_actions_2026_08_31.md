@@ -14,7 +14,11 @@ full end-to-end run/test first, changes are likely.**
 3. https://github.com/SteelHouse/airflow-ti/pull/1252 - AUDI-1194: digest gs:// refs become
    console links; OPTIMIZER_NAME_OVERRIDES map for unmapped app names (populate values with
    owning team before setting the var).
-4. Related merged today: #1248 (tags + 55m timeout), #1249 (round-2 signatures, watermark).
+4. https://github.com/SteelHouse/airflow-ti/pull/1253 - AUDI-1194: digest dots scale by
+   executor-hours (>=100 red, >=25 orange, else white), chronic rows show hour deltas vs
+   last sweep (ledger Entry.prev_exec_h), 6 fix texts reworded action-first. Gauntlet
+   clean round 1. Same merge HOLD as the rest.
+5. Related merged today: #1248 (tags + 55m timeout), #1249 (round-2 signatures, watermark).
    VERIFIED 19:30 UTC: prod rewrote cycle_watermark.json (new generation), so the round-2
    code is live and the watermark loop works end to end. Deploy verification complete.
 
