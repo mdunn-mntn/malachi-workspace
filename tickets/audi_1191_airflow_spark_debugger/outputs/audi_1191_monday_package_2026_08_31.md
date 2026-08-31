@@ -48,3 +48,15 @@ Title: OpenAI batch outage and debugger coverage gaps, Aug 28-30
    both fixed in two PRs (PRs 1248 and 1249, both open).
 3. Ask: merge reviews for the two airflow-ti PRs; shopper_graph owners take the two
    hardening items (status logging, dead-cohort alarm).
+
+## Open-items board (refreshed 2026-08-31)
+
+1. OpenAI outage: OPEN, widened to four dead cohorts (08-27..30); with the OpenAI reps via
+   Alyson; recovery sequence documented, no resubmits until they answer.
+2. vertical_classification_api 45m timeout: fix in PR 1248 (open, Ryan).
+3. Debugger gaps (tags, fast-fail sensor RCA, watermark, clarity): PRs 1248 + 1249 (open, Ryan).
+4. Pod losses + fangorn_household: closed.
+5. Jira SA for the debugger's auto-tickets: ITS-6496 Pending External (Robin Fox); on arrival
+   swap Astro vars JIRA_USER_EMAIL / JIRA_API_TOKEN.
+6. Metrics-relay access for the pod profiler: DEV-8821 In Progress (Cristina Szumilo); after
+   deploy, Astro UI Metrics Exports -> relay, then pod_profile.py PR (AUDI-1194).
