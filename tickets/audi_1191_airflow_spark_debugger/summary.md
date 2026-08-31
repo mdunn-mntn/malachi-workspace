@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Datab
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 100% logs available, 94.7% deterministically root-caused); cassandra_invalid_request signature closes the 9-failure gap (PR airflow-ti#1233); 14 triage tickets AUDI-1227..1240 filed; Confluence on-call reference published. Remaining: #1233 merge, 7 open triage tickets, Phase 3 auto-fire"
+result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 94.7% deterministically root-caused); rapid 15-min DAG live; round-2 PR airflow-ti#1249 open 2026-08-31 (gauntlet PASS, 254 tests: 4 new signatures, fast-fail sensor RCA, rapid lookback watermark = IMP-095 closes on merge). Remaining: #1233/#1249 merges, open triage tickets, Phase 3 auto-fire"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -885,3 +885,41 @@ hung on ~1100 objects (LibreSSL) while `gcloud storage rm -r` took ~2 min.
 
 **Backlog:** IMP-095 (lookback watermark, pre-existing) + IMP-096 (cross-DAG root-cause walk — the
 10:31 reply stopped at the sensor instead of walking to the missing GCS path two DAGs up).
+
+## 7j. 2026-08-31 — round-2 debugger PR #1249 (open, gauntlet PASS, 254 tests)
+
+**PR [airflow-ti#1249](https://github.com/SteelHouse/airflow-ti/pull/1249)** (branch
+`audi-1191-debugger-round2`) packages the round-2 fixes from the 08-29 missed-replies and
+incrementals work (§7i):
+
+- **Four new signatures:**
+  - `openai_results_cohort_missing` — ordered BEFORE generic `path_not_found` for
+    `openai_batch_results/dt=` paths (the dead-cohort shape from §7i).
+  - `openai_batch_state_guard` — the `get_files_without_batch` "Inconsistent state"
+    double-submission guard (§7i's <3-min retry failures).
+  - `dataproc_await_died_no_payload` + `vertex_await_died_no_payload` — each pairs an
+    await/Run-URL line with "Task failed with exception" within 300 chars; **failure-only, so
+    green runs never match** (the §"one new signature" lesson from 2026-08-25: a distinguishing
+    line that also appears on successful runs repeats the defect).
+- **Fast-fail ExternalTaskSensor RCA (IMP-096 partially addressed):** `parse` extracts the target
+  dag/tasks from the `ExternalTaskFailedError` message when no poke line exists;
+  `external_task_rca.analyze_external_task` gains an `on_date` fallback using a `_run_holding`
+  day-scan. Fast-fail sensors now reach the API-state verdict and the upstream walk; the full
+  producer-chain walk (to the artifact two DAGs up) remains open.
+- **Rapid-sweep lookback watermark (IMP-095 CLOSED once merged):**
+  `markers.read_watermark`/`write_watermark` at the debugger GCS prefix `cycle_watermark.json`;
+  rapid extends its lookback to the last completed cycle, capped at 6h, so paused cycles
+  (deploy rollouts, env-var restarts) no longer drop alerts.
+- **Reply clarity:** matched-on raw strings replaced with "recognized a known failure pattern
+  (<key>)"; the `external_task_failed` cause no longer carries INC ids; unclassified replies
+  include the log's own error tail.
+
+**The two 08-29 white-circle unclassified failures are now classified** (verified against the real
+pulled logs): `ipdsc_monitor/monitor_ipdsc_42` = dataproc await died with no payload;
+`fangorn_hhid` `challenger_inference` = vertex await died with no payload.
+
+**Tooling gotchas (routed to memory `reference_airflow_ti`):** airflow-ti CI lints
+`include/airflow_debugger` with ruff pinned `>=0.16,<0.17` via `--config` from the repo root;
+the `per-file-ignores` `"tests/*.py"` glob only resolves when ruff runs from inside the package
+dir with a newer local ruff, so lint like CI or cd into the package; CI does NOT run
+`ruff format`. zsh does not word-split an unquoted `$VAR` (use arrays).
