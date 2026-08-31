@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication]
+keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5]
 domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-08-31
@@ -46,8 +46,8 @@ is therefore the ONLY visibility:
 - **UPDATE 2026-08-31 (corrects the reach of the claim above, appended not overwritten): Alyson
   HAS platform.openai.com dashboard access** — the 2026-08-29 check covered only malachi and
   Matt Brorby. On the 08-27..30 dead cohorts she reports ALL failed batches show ONE identical
-  error message; the text is not yet relayed (pasted screenshots kept exceeding the image size
-  cap — ask for the text or the saved file). **Ryan Kleck has an MNTN OpenAI org in his account
+  error message; the text landed 2026-08-31: `Cannot find file <id>, or organization ... does
+  not have access to it` (org-side proof section below). **Ryan Kleck has an MNTN OpenAI org in his account
   switcher needing reauthentication** — a second potential dashboard path. The parquet flags
   remain the only AUTOMATED, key-free visibility; human confirmation now exists via Alyson.
 
@@ -119,3 +119,20 @@ code a task ran, compare its **pod start time** to the deploy time, not just "la
 **`DbtImageName.SHOPPER_GRAPH`** (`mntn_matched_data_pipeline`). Never the middleware `shopper-graph` image.
 So an `openai/` source change (e.g. `batch_fetcher.py` #296, `delete_all_storage_files.py` #298) ships ONLY
 via `deploy_openai_dockerhub_gcp.yml`.
+
+## 2026-08-31 (evening) — the 08-28+ outage is ORG-SIDE, proven from the dashboard
+- **Org:** `org-ldKlX0Pr81MhoY05W9t6oB1V` ("MNTN", usage tier 5, Verified). Malachi now has org
+  access via an emailed invite. **Sign-in gotcha:** the Google-auth path FAILS ("Could not access
+  the organization"); the working path is typing the email, then Okta enterprise SSO.
+- **The proof:** the batch input file EXISTS with status Ready in the SAME org/project, yet every
+  batch since **2026-08-28 06:00 PT** fails validation ~60s after creation with
+  `Cannot find file <id>, or organization org-ldKlX0Pr81MhoY05W9t6oB1V does not have access to it`.
+  A MANUAL test batch (input under the `batch_requests_*` naming, a different producer) fails
+  IDENTICALLY ⇒ org-wide across producers, not our pipeline's code.
+- **Audit logging was NEVER enabled on the org** (needs `api.admin`; only org OWNERS — e.g.
+  Alyson — can enable it), so no org-side trail exists for the outage window.
+- **Durable fix = AUDI-1301 (backlog):** dedicated OpenAI project for the pipeline + audit
+  logging + a perms group (`api.admin`, `organization.write`, `spend_limits.read`) for
+  Brian/Sean/Ryan/Malachi.
+- **Ryan Kleck's caution:** wiping `openai_batch_submissions` wholesale loses fetch tracking. The
+  08-29/31 deletes were dead-cohort receipts only (the documented recovery scope).

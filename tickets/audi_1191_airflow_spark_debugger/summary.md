@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Datab
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 94.7% deterministically root-caused); rapid 15-min DAG live; round-2 PR airflow-ti#1249 open 2026-08-31 (gauntlet PASS, 254 tests: 4 new signatures, fast-fail sensor RCA, rapid lookback watermark = IMP-095 closes on merge). Remaining: #1233/#1249 merges, open triage tickets, Phase 3 auto-fire; hackathon alerting tickets AUDI-1279/1280 filed into sprint 8649 (2026-08-31)"
+result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 94.7% deterministically root-caused); rapid 15-min DAG live; round-2 PRs airflow-ti#1248+#1249 MERGED and deploy-verified 2026-08-31 (watermark live in prod, IMP-095 closed); digest PR #1251 open; OpenAI outage proven ORG-SIDE, durable fix = AUDI-1301 (backlog). Remaining: #1233/#1251 merges, open triage tickets, Phase 3 auto-fire; hackathon alerting tickets AUDI-1279/1280 in sprint 8649"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -887,7 +887,7 @@ hung on ~1100 objects (LibreSSL) while `gcloud storage rm -r` took ~2 min.
 **Backlog:** IMP-095 (lookback watermark, pre-existing) + IMP-096 (cross-DAG root-cause walk — the
 10:31 reply stopped at the sensor instead of walking to the missing GCS path two DAGs up).
 
-## 7j. 2026-08-31 — round-2 debugger PR #1249 (open, gauntlet PASS, 254 tests)
+## 7j. 2026-08-31 — round-2 debugger PR #1249 (gauntlet PASS, 254 tests; MERGED 2026-08-31 — §7l)
 
 **PR [airflow-ti#1249](https://github.com/SteelHouse/airflow-ti/pull/1249)** (branch
 `audi-1191-debugger-round2`) packages the round-2 fixes from the 08-29 missed-replies and
@@ -937,11 +937,50 @@ class, 1 SP), both assigned to Malachi. Specs:
 **OpenAI outage (dead cohorts 08-27..30) — the §7i "no dashboard access exists" claim is
 corrected, not overwritten:** that check covered malachi and Matt Brorby only. **Alyson HAS
 platform.openai.com dashboard access** and reports ALL failed batches show ONE identical error
-message; the text is not yet relayed (her pasted screenshots kept exceeding the image size cap —
-ask for the text or the saved file). That one line picks the fix; no resubmits until it lands.
+message; the text landed the same evening — `Cannot find file <id>, or organization ... does
+not have access to it` — and it picked the verdict: ORG-SIDE (§7l).
 Separately, **Ryan Kleck has an MNTN OpenAI org in his account switcher that needs
 reauthentication** — a second potential dashboard path. Correction appended to memory
 `reference_mntn_matched_batch_pipeline`.
 
 **Handoff:** `outputs/audi_1191_next_actions_2026_08_31.md` is the current next-actions board
 (waiting-on-humans list, hackathon items, Monday package pointer).
+
+## 7l. 2026-08-31 (evening) — outage proven ORG-SIDE; #1248/#1249 merged + verified; digest PR #1251
+
+**OpenAI outage = ORG-SIDE, proven with dashboard evidence.** With org access (below): the batch
+input file EXISTS with status Ready in the same org/project (`org-ldKlX0Pr81MhoY05W9t6oB1V`,
+"MNTN", usage tier 5, Verified), yet EVERY batch since 08-28 06:00 PT fails validation ~60s after
+creation with `Cannot find file <id>, or organization org-ldKlX0Pr81MhoY05W9t6oB1V does not have
+access to it` — Alyson's "one identical error message" (§7k) is this line. A manual test batch
+(input under the `batch_requests_*` naming, a different producer) failed IDENTICALLY, so the
+failure is org-wide across producers, not our pipeline's code. **Audit logging was NEVER enabled
+on the org** (needs `api.admin`; only org owners — e.g. Alyson — can enable it), so no org-side
+trail exists for the window.
+
+**Org access path (for the record):** Malachi got in via an emailed invite; the Google-auth
+sign-in FAILS ("Could not access the organization"); the working path is typing the email, then
+Okta enterprise SSO.
+
+**Durable fix filed = AUDI-1301 (backlog):** move the pipeline to a dedicated OpenAI project +
+enable audit logging + a perms group (`api.admin`, `organization.write`, `spend_limits.read`) for
+Brian/Sean/Ryan/Malachi.
+
+**Ryan Kleck's caution, honored:** wiping `openai_batch_submissions` wholesale loses fetch
+tracking (the fetch DAG's only pointer to what to download). Our deletes were dead-cohort
+receipts only — exactly the recovery procedure's scope.
+
+**Debugger: #1248 + #1249 MERGED, deploy verified end-to-end.** `deploy_prod` CI runs 17:37 and
+18:22 UTC; `cycle_watermark.json` seeded manually 19:08 UTC and REWRITTEN BY PROD at 19:30 UTC —
+the rapid lookback watermark loop is live (IMP-095 closed).
+
+**PR #1251 OPEN — fallback-channel digest** (user feedback: per-event posts were too
+spammy/cluttered; digest + threads + collapse is the confirmed shape): one digest parent per
+sweep; unmatched RCAs are threaded replies; `(dag, task, signature)` duplicates collapse to a
+counted line + a single reply; exactly-once markers are written only AFTER the group reply lands.
+Code shape: `notify.deliver` gained `defer_fallback`; `notify.post_digest` does the grouping.
+Demo live in `#airflow-debugger` (`C0BT9TKRMKM` = `SLACK_FALLBACK_CHANNEL`).
+**`SLACK_ALERT_CHANNEL` on prod is now `C08CURMGNMQ` only** (monitor-tpa removed; memory
+`reference_slack_debugger_app` corrected).
+
+**Ops note:** the rapid DAG's task id is `reply`, not `rapid` — use `reply` for log fetches.

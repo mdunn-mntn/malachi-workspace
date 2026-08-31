@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [pr_gauntlet, PR gauntlet, gauntlet tiers, fast medium thorough, FIXED_UNVERIFIED, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072, haiku default, gauntlet model]
+keywords: [pr_gauntlet, PR gauntlet, gauntlet tiers, fast medium thorough, FIXED_UNVERIFIED, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072, haiku default, gauntlet model, linked worktree marker, git rev-parse git-dir, worktrees pr_gauntlet_pass, marker before gh pr create separate command]
 domain: [workflow, repos]
 lifecycle: active
-last_verified: 2026-08-27
+last_verified: 2026-08-31
 ---
 **`/pr_gauntlet` is the adversarial PR review gate and it fires AUTOMATICALLY** — the user's explicit
 mandate (2026-08-24): never wait to be prompted at PR time. Two enforcement layers: the session
@@ -89,3 +89,8 @@ skip the gauntlet; treat "about to ask for review" as the trigger, not "about to
 **Gauntlet agents default to haiku (user rule, 2026-08-27).** The model default lives in the
 workflow script `.claude/workflows/pr_gauntlet.js`; do not dispatch reviewers/refuters at a larger
 model unless the user asks.
+
+**The hook resolves the marker at `$(git rev-parse --git-dir)/pr_gauntlet_pass` (2026-08-31).** In a
+LINKED WORKTREE that is `.git/worktrees/<name>/pr_gauntlet_pass` under the MAIN repo, not the
+worktree's own dir. And the marker must exist BEFORE the `gh pr create` tool call — write it in a
+separate, earlier command; writing it inside the same compound command as the create still blocks.

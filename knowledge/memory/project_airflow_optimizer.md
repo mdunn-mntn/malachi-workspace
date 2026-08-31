@@ -1,11 +1,11 @@
 ---
 name: project_airflow_optimizer
-description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer; 2026-08-27 PR #1230 (Slack wire + cumulative savings log) and PR #1231 (fangorn shuffle partitions 2048) both merged, fangorn applied marker written to the prod ledger; full-corpus hackathon sweep (3,085 logs -> 67 pairs, 30,163+ exec-h) filed as AUDI-1241 under epic AUDI-1054; site_network_hourly + DDP dbt tests now ours (merged #1232, dbt#174 in review); 2026-08-28 PRs #1241-#1243 merged (#1244 open), BQ external table optimizer.optimization_ledger + Mode dashboard e81786de8403 live, first measured saving fangorn #1231 575.6 exec-h/day (~$58.4k/yr est); 2026-08-28 (later) #1245 merged — BQ profiler (bq_profile.py via JOBS_BY_USER), per-surface ledger (surface spark|bq|dbx), Databricks findings, billing surface_rates; pod profiler blocked on Astro metrics exporter; 2026-08-28 evening first live multi-surface sweep found the identity bug (sweep runs as spark-optimizer@ but billing+BQ grants target airflow-ti-prod@), fix PRs airflow-ti#1247 + mntn-devops#5160 open, pod-metrics relay filed as DEV-8821; 2026-08-29 both fix PRs MERGED, live BQ surface verified (optimizer_bq report + surface=bq ledger rows) and billing rate live-blended from 30d actual spend ($0.278/exec-h, no env fallback), Jira SA request ITS-6496 pending; 2026-08-31 hackathon refinement — 13 sprint tickets AUDI-1269..1281 filed into sprint 8649 grouped by change type (16 SP Malachi, 4 SP others), savings provenance = ledger applied stamps + daily PR-vs-ledger reconcile.
+description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer; 2026-08-27 PR #1230 (Slack wire + cumulative savings log) and PR #1231 (fangorn shuffle partitions 2048) both merged, fangorn applied marker written to the prod ledger; full-corpus hackathon sweep (3,085 logs -> 67 pairs, 30,163+ exec-h) filed as AUDI-1241 under epic AUDI-1054; site_network_hourly + DDP dbt tests now ours (merged #1232, dbt#174 in review); 2026-08-28 PRs #1241-#1243 merged (#1244 open), BQ external table optimizer.optimization_ledger + Mode dashboard e81786de8403 live, first measured saving fangorn #1231 575.6 exec-h/day (~$58.4k/yr est); 2026-08-28 (later) #1245 merged — BQ profiler (bq_profile.py via JOBS_BY_USER), per-surface ledger (surface spark|bq|dbx), Databricks findings, billing surface_rates; pod profiler blocked on Astro metrics exporter; 2026-08-28 evening first live multi-surface sweep found the identity bug (sweep runs as spark-optimizer@ but billing+BQ grants target airflow-ti-prod@), fix PRs airflow-ti#1247 + mntn-devops#5160 open, pod-metrics relay filed as DEV-8821; 2026-08-29 both fix PRs MERGED, live BQ surface verified (optimizer_bq report + surface=bq ledger rows) and billing rate live-blended from 30d actual spend ($0.278/exec-h, no env fallback), Jira SA request ITS-6496 pending; 2026-08-31 hackathon refinement — 13 sprint tickets AUDI-1269..1281 filed into sprint 8649 grouped by change type (16 SP Malachi, 4 SP others), savings provenance = ledger applied stamps + daily PR-vs-ledger reconcile; 2026-08-31 evening — epic AUDI-1290 parents the 13, PR 1250 open (Databricks surface via SP OAuth REST; dormancy root cause = report() silently empty without DATABRICKS_WAREHOUSE on prod), PR 1252 open (gcs console links + OPTIMIZER_NAME_OVERRIDES), DEV-8821 relay LIVE (GMP verification pending, then pod_profile.py).
 metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs, savings log, optimizer_savings, OPTIMIZER_USD_PER_EXEC_H, PR 1230, PR 1231, fangorn_score_monitor shuffle partitions 2048, speculation revert ipdsc_ds_35, ledger applied marker, hackathon optimizations, AUDI-1241, AUDI-1054 tech debt epic, full-corpus sweep 3085, PR 1232, dbt 174, ddp dbt tests ownership, site_network_hourly ours, PR 1241, PR 1242, PR 1243, PR 1244, adv_score event logs, SLACK_FALLBACK_CHANNEL, gsutil unauthenticated astro pods, gcs json api markers, rapid dag pause race, AIRFLOW_BEARER PATCH is_paused, mntn-prj-prod-00 optimizer dataset, optimization_ledger external table, pam breakglass-editor, pinned schema autodetect applied_date, use_legacy_sql false backticks, mode dashboard savings, e81786de8403, fixlog.py, optimizer fix log playbook, savings semantics calendar day, fangorn savings 575.6, AUDI-1249, priority rubric playbook, nonspark phase plan, PR 1245, bq_profile.py, JOBS_BY_USER, ledger surface field, surface spark bq dbx, surface_rates, OPTIMIZER_USD_PER_SLOT_H, dbx_heavy_job, dbx_failing_model, optimizer_bq report, astro universal metrics exporter, gcp managed prometheus, pod profiler blocked, savings by surface, ignoreUnknownValues, PR 1247, mntn-devops 5160, billing grant wrong identity, OPTIMIZER_BQ_SAS, hermetic sweep tests, DEV-8821 pod metrics relay, otel collector cloud run, ITS-6496 jira service account, blended billing rate, DCU-h, optimizer_bq_2026-08-29, airflow rest logs continuation_token, mode report runs refresh, hackathon sprint 8649, AUDI-1269 1281 sprint tickets, change type grouping one ticket per change, ledger applied provenance, daily pr ledger reconcile, bos__spend slot hours, intent_score_threshold_v4 slot hours, unattributed bq jobs]
+keywords: [airflow optimizer, AUDI-1194, spark_optimizer_daily, airflow-ti 1212, spark-optimizer service account, serviceAccountTokenCreator, CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT, airflow session use is forbidden, spark optimization crawler, efficiency sweep, eventlog parser, 7-surface spark, optimization detectors, skew spill shuffle, fleet crawl backlog, daily optimizer cron, oncall_daily_optimizer, com.mntn.daily-spark-optimizer, phs event logs, phs.fetch_logs, dataproc-debug pam, audi-storage-object-view, 242x skew, dataproc databricks optimization, straggler detector, idle_reserved_executors, shuffle_fetch_wait, map-side concentration, site_network_hourly stage 9, optimization ledger, optimizer coverage gap, optimizer digest, sweep.py, ledger.py, coverage.py, digest.py, workload identity runner, EXPLAIN COST statement execution api, jobs get-run-output empty, IMP-029 rolling dirs, savings log, optimizer_savings, OPTIMIZER_USD_PER_EXEC_H, PR 1230, PR 1231, fangorn_score_monitor shuffle partitions 2048, speculation revert ipdsc_ds_35, ledger applied marker, hackathon optimizations, AUDI-1241, AUDI-1054 tech debt epic, full-corpus sweep 3085, PR 1232, dbt 174, ddp dbt tests ownership, site_network_hourly ours, PR 1241, PR 1242, PR 1243, PR 1244, adv_score event logs, SLACK_FALLBACK_CHANNEL, gsutil unauthenticated astro pods, gcs json api markers, rapid dag pause race, AIRFLOW_BEARER PATCH is_paused, mntn-prj-prod-00 optimizer dataset, optimization_ledger external table, pam breakglass-editor, pinned schema autodetect applied_date, use_legacy_sql false backticks, mode dashboard savings, e81786de8403, fixlog.py, optimizer fix log playbook, savings semantics calendar day, fangorn savings 575.6, AUDI-1249, priority rubric playbook, nonspark phase plan, PR 1245, bq_profile.py, JOBS_BY_USER, ledger surface field, surface spark bq dbx, surface_rates, OPTIMIZER_USD_PER_SLOT_H, dbx_heavy_job, dbx_failing_model, optimizer_bq report, astro universal metrics exporter, gcp managed prometheus, pod profiler blocked, savings by surface, ignoreUnknownValues, PR 1247, mntn-devops 5160, billing grant wrong identity, OPTIMIZER_BQ_SAS, hermetic sweep tests, DEV-8821 pod metrics relay, otel collector cloud run, ITS-6496 jira service account, blended billing rate, DCU-h, optimizer_bq_2026-08-29, airflow rest logs continuation_token, mode report runs refresh, hackathon sprint 8649, AUDI-1269 1281 sprint tickets, change type grouping one ticket per change, ledger applied provenance, daily pr ledger reconcile, bos__spend slot hours, intent_score_threshold_v4 slot hours, unattributed bq jobs, PR 1250, PR 1252, DATABRICKS_WAREHOUSE, DATABRICKS_GCP_CLIENT_ID, dbx dormancy silent empty report, ml_squad warehouse main workspace, prod_runner 397d710b, OPTIMIZER_NAME_OVERRIDES, astro-metrics-relay live, pod surface, dbt 174 baseline 306352 query-s, AUDI-1290 hackathon epic, AUDI-1302 wont do]
 domain: [infra, repos, workflow]
 lifecycle: active
 last_verified: 2026-08-31
@@ -444,6 +444,8 @@ checklist comment; full phase plan:
 
 **Pod profiler BLOCKED** on the Astro Universal Metrics Exporter → GCP Managed Prometheus; setup
 steps at `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`.
+(**Superseded 2026-08-31:** the DEV-8821 relay is LIVE — [[reference_astro_metrics_relay]] and the
+2026-08-31 evening section.)
 
 **Mode dashboard follows the surfaces:** external table `optimizer.optimization_ledger` schema
 re-pinned with `surface STRING` (`ignoreUnknownValues`); the headline dollars query is now
@@ -496,7 +498,8 @@ manual `spark_optimizer_daily` run (`manual__2026-08-29T01:23:07`) succeeded and
 
 **Bryce's fall tech-debt hackathon** — sprint **8649** (09/07-09/21, board 1814); three tracks:
 alerting audit / pipeline testing framework / pipeline optimization audit; refinement format =
-30 min ticket writing + 30 min group review; a hackathon epic is pending Bryce's Capex check.
+30 min ticket writing + 30 min group review; epic **AUDI-1290 "Pipeline Optimization
+Hackathon"** created 2026-08-31 (parents all 13; labels `hackathon`+`q3_2026` on epic and children).
 **13 AUDI Tasks filed, grouped by CHANGE TYPE not by DAG** (user's rule: the same change across
 many DAGs = ONE ticket; a different change on the same DAG = a DIFFERENT ticket; 1-2 SP each):
 AUDI-1269..1281. **16 SP to Malachi** (1270, 1271, 1272, 1275-1281), **4 SP left deliberately
@@ -513,3 +516,35 @@ savings regardless of fix author — a finding that stops firing resolves and it
 Stamp provenance per merged fix:
 `python -m airflow_optimizer.ledger applied <dag> <key> <pr> <date>`.
 Plan: daily reconcile of merged airflow-ti PRs vs ledger findings for the sprint duration.
+
+## 2026-08-31 (evening) — PR #1250 dbx surface, PR #1252, DEV-8821 relay LIVE
+
+**PR #1250 OPEN — Databricks surface via SP OAuth REST.** `databricks._api` routes through curl +
+a cached OIDC client-credentials token when `DATABRICKS_HOST` / `DATABRICKS_GCP_CLIENT_ID` /
+`DATABRICKS_GCP_CLIENT_SECRET` env are set; CLI fallback stays for laptops; the sweep prints a
+skip line when no warehouse is configured.
+
+**Root cause of dbx dormancy:** `databricks.report()` returns `""` SILENTLY without
+`DATABRICKS_WAREHOUSE`; prod's image has no databricks CLI and only the `CLIENT_SECRET` var is
+set — so the surface never errored, it just produced nothing.
+
+**The "ml_squad warehouse" is the MAIN workspace** `1262887251702944.4.gcp` (dbt
+`ml_squad/profiles.yml` targets it): warehouses `Serverless Starter` `14b311ac86ee2ca2` +
+`sql_warehouse_2xs` `fa27430dfc609e6d`. Workspace SPs: `dev_runner` `81b867bc`,
+`spark_optimizer` `07f36af7`, `prod_runner` `397d710b` (candidate client id for the prod vars;
+whether it pairs with the EXISTING secret is verifiable only via the sweep log). Detail:
+[[reference_databricks]].
+
+**dbt PR 174 (SteelHouse/dbt) baseline captured:** `prod-ml-ddp_vertical_classification_api` is
+the top warehouse consumer — **306,352 query-s / 244 runs / 7 days**. After #1250 merges: set
+`DATABRICKS_HOST` + `DATABRICKS_GCP_CLIENT_ID` + `DATABRICKS_WAREHOUSE` on prod, verify dbx
+ledger rows, stamp PR-174 provenance against this baseline.
+
+**PR #1252 OPEN:** sweep-note `gs://` refs render as console URLs via `digest._gcs_link`;
+`coverage.resolve` consults `OPTIMIZER_NAME_OVERRIDES` env JSON (app name → dag id) for names the
+bundle crawl cannot tie (`ETL Audience Intent - *`, `segment-updates-to-parquet`) — populate the
+values with the owning team before setting the var.
+
+**DEV-8821 relay LIVE** (endpoint/auth/PromQL gotchas: [[reference_astro_metrics_relay]]): Astro
+prod Metrics Exports configured ~19:45 UTC 2026-08-31; verification pending (no `container_*`
+series yet, Cristina checking relay logs). Then `pod_profile.py` — ledger surface `"pod"`.

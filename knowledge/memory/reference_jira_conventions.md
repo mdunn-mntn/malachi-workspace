@@ -6,7 +6,7 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821, sprint 8649 hackathon, future sprint issue move, assignee put endpoint, sprint ids 8303 8649 8650, board 1814 sprint list, ticket description standard, laymen BLUF description, file links in tickets, github line anchor, verify link target on main, epic create fields, epic name 10528, epic re-parent agile api, AUDI-1290]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821, sprint 8649 hackathon, future sprint issue move, assignee put endpoint, sprint ids 8303 8649 8650, board 1814 sprint list, ticket description standard, laymen BLUF description, file links in tickets, github line anchor, verify link target on main, epic create fields, epic name 10528, epic re-parent agile api, AUDI-1290, AUDI-1302 wont do same day, backlog issue sprint removal, hackathon q3_2026 labels, pipeline optimization hackathon epic]
 domain: [jira-process]
 lifecycle: active
 last_verified: 2026-08-31
@@ -287,3 +287,11 @@ Every ticket description, every time:
   customfield_10528 Epic Name + customfield_16455/16456 Feature-Audit/Monitor Required
   Yes/No options; re-parent via POST /rest/agile/1.0/epic/<KEY>/issue) and put the shared
   label on epic and children both.
+
+- **Epic AUDI-1290 "Pipeline Optimization Hackathon" (created 2026-08-31)** parents the 13
+  hackathon tickets AUDI-1269..1281; labels `hackathon` + `q3_2026` on the epic AND every child;
+  all 13 descriptions rewritten to this standard.
+- **Mis-filed ticket, same-day close (AUDI-1302, 2026-08-31):** DELETE still 403s without admin;
+  the accepted path is transition to Won't Do (resolution `10100`) the same day + pull it from
+  the sprint via `POST /rest/agile/1.0/backlog/issue`. Do not file a ticket for PR-only follow-on
+  work the user is already driving — flag first ([[feedback_auto_capture_and_ticket_flag]]).

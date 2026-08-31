@@ -4,10 +4,10 @@ description: Databricks: push >4h-risk queries there (memory-optimized); more sm
 metadata:
   type: reference
 doc_type: memory
-keywords: [databricks, EXPLAIN COST, statement execution api, sql statements api, jobs list-runs, get-run-output empty, notebook_output, system.lakeflow denied, databricks admins, databricks PAT removed, photon plan, spark shuffle, executor cores, node sizing, augmentor_log, prospecting_intent, gcs parquet archive, bq 6-hour wall, memory-optimized cluster, victor benchmark, databricks cli, u2m oauth, jobs get-run, get-run-output, oncall databricks access, system.lakeflow, sql_warehouse]
+keywords: [databricks, EXPLAIN COST, statement execution api, sql statements api, jobs list-runs, get-run-output empty, notebook_output, system.lakeflow denied, databricks admins, databricks PAT removed, photon plan, spark shuffle, executor cores, node sizing, augmentor_log, prospecting_intent, gcs parquet archive, bq 6-hour wall, memory-optimized cluster, victor benchmark, databricks cli, u2m oauth, jobs get-run, get-run-output, oncall databricks access, system.lakeflow, sql_warehouse, ml_squad warehouse, main workspace 1262887251702944, prod_runner 397d710b, dev_runner 81b867bc, spark_optimizer 07f36af7, DATABRICKS_GCP_CLIENT_ID]
 domain: [bigquery, infra]
 lifecycle: active
-last_verified: 2026-08-21
+last_verified: 2026-08-31
 ---
 
 ## On-call RCA CLI access (verified 2026-08-03)
@@ -179,3 +179,12 @@ authoritative check; do not trust the CLI/REST `grants get` to confirm a fresh g
 Why it matters: Spark event logs carry plan TEXT but no `Statistics(sizeInBytes=...)` annotations,
 so `parse_plan_text` extracts 0 table nodes from 4.7 MB of plan text across a 300-run sample and
 four checks cannot fire at all. See [[project_airflow_optimizer]].
+
+## The "ml_squad warehouse" is the MAIN workspace (2026-08-31, AUDI-1194)
+When someone says "the ml_squad warehouse" they mean the MAIN workspace
+`1262887251702944.4.gcp` — dbt `ml_squad/profiles.yml` targets it. Its warehouses:
+`Serverless Starter Warehouse` `14b311ac86ee2ca2` + `sql_warehouse_2xs` `fa27430dfc609e6d`.
+Workspace service principals: `dev_runner` `81b867bc`, `spark_optimizer` `07f36af7`,
+`prod_runner` `397d710b`. `prod_runner` is the candidate client id for the prod
+`DATABRICKS_GCP_CLIENT_ID` var (airflow-ti PR #1250); whether it pairs with the EXISTING
+`CLIENT_SECRET` on prod is verifiable only via the sweep log after deploy.

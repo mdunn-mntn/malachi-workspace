@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: feedback
 doc_type: memory
-keywords: [auto-capture, auto capture, auto-create ticket, flag new work, always-on §13 §14, new task ticket, spike vs task, scaffold local confirm jira, hooks cannot invoke skill, capture reminder backstop]
+keywords: [auto-capture, auto capture, auto-create ticket, flag new work, always-on §13 §14, new task ticket, spike vs task, scaffold local confirm jira, hooks cannot invoke skill, capture reminder backstop, AUDI-1302, follow-on work flag first, pr-only work no ticket]
 domain: [workflow, jira-process]
 lifecycle: active
-last_verified: 2026-07-31
+last_verified: 2026-08-31
 ---
 Two new always-on behaviors, added at Malachi's request 2026-07-31. Canonical text = global `~/.claude/CLAUDE.md` §13/§14; mechanics pointers in project `.claude/CLAUDE.md`, README, and `.claude/skills/capture/SKILL.md`. This memory holds the **design rationale** CLAUDE.md doesn't (why behavioral not a hook, and which fork the user picked).
 
@@ -21,3 +21,7 @@ Two new always-on behaviors, added at Malachi's request 2026-07-31. Canonical te
 - Both are **behavioral (I run them), not hooks** — hooks are shell and cannot invoke a skill (that's why `/capture` was only ever *nudged* before). `capture_reminder.sh` (Stop hook) is only the backstop if I miss an auto-capture. §14 has no shell-detectable signal, so it's purely behavioral, no hook.
 - They knowingly bend the kit's "nothing is silently authored by an unattended model" principle. The user's fork choices kept the guardrails: auto-capture = full sweep (accepted its unattended memory prune because it's in-context + git-reversible, NOT the headless-timer-loop anti-goal in [[project_super_structure_adoption]]); tickets = flag-then-open + scaffold-local-first so nothing hits the Jira board without a yes (honors the board-clutter norm — a declined flag falls back to a backlog row).
 - Watch for capture-commit noise; if it fires too often, narrow §13's trigger list.
+- **2026-08-31 sharpening (AUDI-1302):** §14 applies even to seemingly-ticketable FOLLOW-ON work
+  ALREADY UNDERWAY that the user is driving. I filed AUDI-1302 (optimizer PR tracking) without
+  asking; he had it closed Won't Do the same day — PR-only work he is driving needs no ticket.
+  Flag first, every time.

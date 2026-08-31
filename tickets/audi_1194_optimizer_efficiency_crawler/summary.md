@@ -4,7 +4,7 @@ title: "AUDI-1194: Airflow/Spark optimization crawler"
 status: in_progress
 date: 2026-08-05
 summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
-result: "in progress — prod DAG live with Slack delivery; full-corpus sweep (3,085 logs) distilled to 67 (job, mechanism) pairs / 30,163+ exec-h floor (outputs/audi_1194_hackathon_optimizations_2026_08_27.md); AUDI-1241 filed under epic AUDI-1054 for the burn-down; site_network_hourly + DDP dbt tests now ours to fix (merged #1232, dbt#174 in review); 2026-08-31 hackathon refinement: 13 Tasks AUDI-1269..1281 filed into sprint 8649 (09/07-09/21), grouped by change type, 16 SP Malachi / 4 SP others"
+result: "in progress — prod DAG live with Slack delivery; full-corpus sweep (3,085 logs) distilled to 67 (job, mechanism) pairs / 30,163+ exec-h floor (outputs/audi_1194_hackathon_optimizations_2026_08_27.md); AUDI-1241 filed under epic AUDI-1054 for the burn-down; site_network_hourly + DDP dbt tests now ours to fix (merged #1232, dbt#174 in review); 2026-08-31 hackathon refinement: 13 Tasks AUDI-1269..1281 filed into sprint 8649 (09/07-09/21), grouped by change type, 16 SP Malachi / 4 SP others; 2026-08-31 evening: PR #1250 (Databricks surface, dormancy root-caused: prod lacks DATABRICKS_WAREHOUSE) + PR #1252 open, DEV-8821 relay LIVE (GMP verification pending), epic AUDI-1290 parents the 13"
 question: "Can a scheduled key-free crawler read every succeeded Spark job (Dataproc event logs + Databricks plans/metrics) and emit a ranked, actionable optimization backlog with no manual step?"
 framing_state: locked
 ---
@@ -702,7 +702,8 @@ with `surface STRING` (`ignoreUnknownValues`); headline dollars query is now spa
 "Savings by surface" query (token `513a4a7a4a71`); layout gained a Savings-by-surface table.
 
 **Pod profiler BLOCKED** on the Astro Universal Metrics Exporter → GCP Managed Prometheus; setup
-steps committed at `artifacts/audi_1194_astro_metrics_exporter_setup.md`.
+steps committed at `artifacts/audi_1194_astro_metrics_exporter_setup.md`. (**Superseded
+2026-08-31:** the DEV-8821 relay is LIVE — see the 2026-08-31 evening section.)
 
 **Open:** verify tomorrow's sweep writes the optimizer_bq/dbx sections and ledger rows carrying
 `surface` fields.
@@ -768,8 +769,9 @@ triggered `spark_optimizer_daily` (`manual__2026-08-29T01:23:07`, success). Live
 
 **Bryce's hackathon structure (refinement 2026-08-31):** a fall tech-debt hackathon sprint with
 three tracks — alerting audit, pipeline testing framework, pipeline optimization audit.
-Refinement format: 30 min writing tickets + 30 min group review. A dedicated hackathon epic is
-pending Bryce's Capex check; tickets filed without a parent for now.
+Refinement format: 30 min writing tickets + 30 min group review. Epic **AUDI-1290 "Pipeline
+Optimization Hackathon"** was created 2026-08-31 and parents all 13; labels `hackathon` +
+`q3_2026` on epic and children; descriptions rewritten to the laymen-BLUF+links standard.
 
 **13 AUDI Tasks filed into hackathon sprint 8649 (09/07-09/21, board 1814): AUDI-1269..1281**,
 drafted in `outputs/audi_1194_hackathon_ticket_drafts.md` (fix values pre-verified in the 08-27
@@ -803,3 +805,46 @@ points = `customfield_10012`; assignee = `PUT /rest/api/2/issue/{key}/assignee {
 
 **Handoff pointer:** cross-ticket next actions live in
 `tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_actions_2026_08_31.md`.
+
+## 2026-08-31 (evening) — dbx surface PR #1250, PR #1252, DEV-8821 relay LIVE
+
+**PR #1250 OPEN — Databricks surface via SP OAuth REST.** `databricks._api` routes through curl +
+a cached OIDC client-credentials token when `DATABRICKS_HOST` / `DATABRICKS_GCP_CLIENT_ID` /
+`DATABRICKS_GCP_CLIENT_SECRET` env are set; the CLI fallback stays for laptops; the sweep prints
+a skip line when no warehouse is configured.
+
+**Root cause of dbx dormancy:** `databricks.report()` returns `""` SILENTLY without
+`DATABRICKS_WAREHOUSE`; prod's image has no databricks CLI and only the `CLIENT_SECRET` var is
+set — the surface never errored, it just produced nothing.
+
+**The "ml_squad warehouse" is the MAIN workspace** `1262887251702944.4.gcp` (dbt
+`ml_squad/profiles.yml`): warehouses `Serverless Starter` `14b311ac86ee2ca2` +
+`sql_warehouse_2xs` `fa27430dfc609e6d`. Workspace SPs: `dev_runner` `81b867bc`,
+`spark_optimizer` `07f36af7`, `prod_runner` `397d710b` (candidate client id for the prod vars;
+whether it pairs with the EXISTING secret is verifiable only via the sweep log).
+
+**dbt PR 174 (SteelHouse/dbt) baseline captured:** `prod-ml-ddp_vertical_classification_api` is
+the top warehouse consumer — 306,352 query-s / 244 runs over 7 days. After #1250 merges: set
+`DATABRICKS_HOST` + `DATABRICKS_GCP_CLIENT_ID` + `DATABRICKS_WAREHOUSE` on prod, verify dbx
+ledger rows, stamp PR-174 provenance against this baseline.
+
+**PR #1252 OPEN:** sweep-note `gs://` refs render as console URLs via `digest._gcs_link`;
+`coverage.resolve` consults `OPTIMIZER_NAME_OVERRIDES` env JSON (app name → dag id) for names the
+bundle crawl cannot tie (`ETL Audience Intent - *`, `segment-updates-to-parquet`) — populate the
+values with the owning team before setting the var.
+
+**DEV-8821 relay LIVE:** Cloud Run `astro-metrics-relay` in `mntn-prj-prod-00`, remote-write
+`https://astro-metrics-relay-r64eabgqfq-uc.a.run.app/api/v1/write` (basic user `astro-metrics`,
+password in Keychain service `astro_metrics_relay`); Astro prod Metrics Exports configured
+~19:45 UTC 2026-08-31. GMP PromQL endpoint
+`https://monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus/api/v1/*`
+— gotchas: `__name__` regex matcher unsupported; `label/__name__/values` returns ~18k built-in
+Google names (filter `:` and `/` out to see prometheus-ingested); Malachi lacks `serviceusage` on
+`mntn-prj-prod-00` (no relay log reads; the monitoring query API works). **Verification pending:**
+no `container_*` series yet; Cristina checking relay logs. Then `pod_profile.py` (ledger surface
+`"pod"`). Memory: `reference_astro_metrics_relay`.
+
+**AUDI-1302 filed then closed Won't Do the same day per the user** — PR-only work he is driving
+needed no ticket. Jira DELETE returns 403 without admin; sprint removal =
+`POST /rest/agile/1.0/backlog/issue`. Lesson routed to memory
+`feedback_auto_capture_and_ticket_flag` (§14: flag first, even for underway follow-on work).

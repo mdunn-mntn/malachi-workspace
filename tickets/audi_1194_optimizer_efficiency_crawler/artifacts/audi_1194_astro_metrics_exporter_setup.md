@@ -13,6 +13,14 @@ The working design is a **relay: an OTel collector on Cloud Run** (service accou
 **Devops owns the relay: ticket DEV-8821** (DEV board, DevOps Request form, Request Type
 Infrastructure Improvement), linked "Relates To" AUDI-1241.
 
+## LIVE 2026-08-31: the relay is deployed and Astro is exporting
+
+Steps 1-2 below are DONE: Cloud Run `astro-metrics-relay` (mntn-prj-prod-00) accepts remote-write
+at `https://astro-metrics-relay-r64eabgqfq-uc.a.run.app/api/v1/write` (basic user `astro-metrics`,
+password in Keychain service `astro_metrics_relay`); Astro prod Metrics Exports configured
+~19:45 UTC 2026-08-31. Verification (step 3) pending — no `container_*` series in GMP yet;
+Cristina checking relay logs. GMP query endpoint + gotchas: memory `reference_astro_metrics_relay`.
+
 ## Steps (post-relay)
 
 1. Devops stands up the OTel collector on Cloud Run per DEV-8821 (metricWriter SA, remote-write
