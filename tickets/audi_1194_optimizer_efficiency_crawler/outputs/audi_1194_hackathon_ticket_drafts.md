@@ -133,9 +133,9 @@ only DATABRICKS_GCP_CLIENT_SECRET (no host/client-id/profile). Capturing dbt PR 
 the ml_squad workspace wired in: host + service-principal auth + warehouse id, then the
 dbx surface records and the post-merge drop measures. Candidate 1-2 SP hackathon ticket.
 
-Filed 2026-08-31: AUDI-1302 (2SP, Malachi, epic AUDI-1290, sprint 8649) wires the ml_squad
+AUDI-1302 was filed then DELETED same day (user call: PR-only, no ticket). The work wires the ml_squad
 Databricks workspace into the dbx surface so team efficiency PRs (dbt PR 174 first) are
-captured on the cost dashboard. Malachi's hackathon total is now 18 SP.
+captured on the cost dashboard. Malachi's hackathon total stays 16 SP (AUDI-1302 deleted).
 
 Correction 2 (2026-08-31, live-verified): the ml_squad "workspace" IS the main workspace
 (1262887251702944.4.gcp.databricks.com, dbt ml_squad/profiles.yml). The dbx surface runs
@@ -145,9 +145,9 @@ query time / 244 runs / 3 failed (next: verticals_pre_cache 233,880s/378). This 
 PR 174's target; the post-merge drop measures against this baseline. Prod dormancy cause
 refined: the Astro image has NO databricks CLI (only gcloud) and no host/client-id/
 warehouse vars; the fix is REST-via-curl with the existing oauth secret, not an image
-change. AUDI-1302 tracks it; work started same day.
+change. Tracked by PR only (AUDI-1302 deleted 2026-08-31 on user call: no ticket needed).
 
-AUDI-1302 PR opened same day: https://github.com/SteelHouse/airflow-ti/pull/1250 (SP oauth
+PR opened same day: https://github.com/SteelHouse/airflow-ti/pull/1250 (SP oauth
 REST auth, gauntlet passed + 2 hardening fixes, 153 tests). After merge: set
 DATABRICKS_HOST + DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod (candidate id:
 prod_runner 397d710b-4c85-4a96-b009-a07c1d373204, pairing with the existing secret verified
