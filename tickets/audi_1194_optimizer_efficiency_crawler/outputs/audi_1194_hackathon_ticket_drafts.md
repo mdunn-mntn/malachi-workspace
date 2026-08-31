@@ -97,3 +97,15 @@ observability (2SP) · AUDI-1280 tag-coverage CI (1SP) · AUDI-1281 perf-regress
 All 13 filed tickets (AUDI-1269..1281) got fuller plain-English descriptions: BLUF line
 (what + payoff), Why in plain terms defining every Spark/BQ knob at point of use, Task with
 the exact identifiers kept, Done-when unchanged. The terse originals above stay as the spec.
+
+## 2026-08-31 update 2: epic, links, one dropped DAG
+
+- Epic AUDI-1290 "Pipeline Optimization Hackathon" created per Bryce; all 13 tickets parented
+  under it, labels hackathon + q3_2026 on every ticket and the epic.
+- Descriptions rewritten again in Jira wiki markup: every DAG in every ticket now links its
+  model file on GitHub main (line anchors where the sweep pinned them), AUDI-1277/1278 link
+  the Mode dashboard, AUDI-1279 links the shopper_graph wrapper files, AUDI-1280 links
+  PAGING_TAGS + PR 1248.
+- intent_score_household_map dropped from AUDI-1269 (now 9 DAGs) and from the AUDI-1275
+  straggler list: its model and DAG were deleted on airflow-ti main 2026-08-26 (PR 1209,
+  ID-431). Both sweep findings for it are moot.
