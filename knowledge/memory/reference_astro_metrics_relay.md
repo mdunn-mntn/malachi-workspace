@@ -34,6 +34,15 @@ last_verified: 2026-08-31
   2026-08-31) — fix is Cristina/mountain-devops setting ingress to all (basic auth already
   gates the app). `container_*`/`kube_*` metric descriptors DO exist in the project with zero
   samples in 30d: consistent with an internal-side collector start, not with Astro delivery.
+- **2026-09-01: ingress FIXED (mntn-devops PR 5193, Alloy v0.2.0), Astro POSTs arriving.**
+  The Sunday Metrics Export had vanished - re-created 16:33 UTC and traffic landed in
+  minutes. Remaining blocker verified on real traffic: the Telemetry API (OTLP,
+  telemetry.googleapis.com) REQUIRES resource attribute `gcp.project_id`; config.alloy
+  never sets it, so Alloy drops every batch (InvalidArgument, "Exporting failed. Dropping
+  data."). `otelcol.auth.google{project=...}` only authenticates, it does not stamp the
+  attribute. GMP-side smoke test: a hand-rolled PRW v1 protobuf (pure-python snappy: varint
+  len + 0xf0 literal block) POSTs fine; the receiver also requires `job` and `instance`
+  labels or it 500s.
 - Once series land, `airflow_optimizer/pod_profile.py` reads requested-vs-used per task pod,
   ledger surface `"pod"`. See [[project_airflow_optimizer]]; setup history in
   `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`.

@@ -54,8 +54,14 @@ full end-to-end run/test first, changes are likely.**
     Terraform-provisioned, created 18:18 UTC). FIXED: mntn-devops PR 5193 (ingress ALL +
     Alloy for remote-write v1) merged + deployed 2026-09-01; relay probe now 400 with the
     right password (payload parsed, junk rejected) and 401 with a wrong one, so ingress and
-    auth both work. NEXT: after gcloud reauth, confirm container_* series in GMP, then
-    build pod_profile.py.
+    auth both work. 2026-09-01 16:35 UTC: Astro Metrics Export re-created by Malachi (the
+    Sunday one no longer existed) and Astro POSTs now land (204, otel-collector UA). LAST
+    BLOCKER, verified on real traffic: Alloy drops every batch at the GMP hop with
+    InvalidArgument 'Resource is missing required attribute "gcp.project_id"' - config.alloy
+    never stamps that resource attribute (otelcol.auth.google only authenticates). Fix:
+    transform processor setting resource attribute gcp.project_id=GCP_PROJECT_ID between
+    batch and the otlphttp exporter + image rebuild (mntn-devops). Then confirm container_*
+    series in GMP and build pod_profile.py.
     Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check
     (count(last_over_time(container_cpu_usage_seconds_total[10m])) at
