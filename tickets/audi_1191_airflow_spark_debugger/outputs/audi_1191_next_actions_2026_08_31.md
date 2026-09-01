@@ -92,9 +92,12 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
     1-point gauge sent through the fixed pipeline was accepted (204) then explicitly
     dropped (drop log names malachi_e2e_check) on the same INTERNAL 500; drop rate steady
     ~25/min. Our side is fully verified: ingress, auth, labels, transform all work; the
-    last hop fails only at Google's door. Auto-reverify watcher armed (polls the incident
-    feed, re-checks GMP 5 min after close). Escalate to Cristina as a code problem ONLY if
-    drops persist after the incident ends. Then confirm container_* series in GMP and build
+    last hop fails only at Google's door. Incident CLOSED ~19:20 UTC 2026-09-01;
+    drops changed to HTTP 400 'write for resource failed: Unrecognized region or location'
+    - the Telemetry API also requires a location resource attribute. Fix branch
+    audi-1194-relay-region on mntn-devops (transform adds cloud.region=us-central1,
+    v0.2.2), in gauntlet; PR to Cristina next. gcp.project_id fix CONFIRMED effective
+    (error moved past it). Then confirm container_* series in GMP and build
     pod_profile.py.
     Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check

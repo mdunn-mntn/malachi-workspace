@@ -46,6 +46,12 @@ last_verified: 2026-08-31
   instance-only=500). Astro's exporter sends neither, so 200/200 real batches bounced;
   the fix is adding job + instance under LABELS in the Astro Metrics Export UI, which
   stamps them on every exported series.
+- **Telemetry API (telemetry.googleapis.com) required resource attributes, learned one
+  400 at a time:** `gcp.project_id` (fixed in mntn-devops PR 5210, v0.2.1) AND a location -
+  missing location fails with 'write for resource failed: Unrecognized region or location'
+  (fix: `cloud.region=us-central1`, v0.2.2). The receiver separately requires BOTH `job`
+  and `instance` labels on every series (stamped via LABELS in the Astro Metrics Export
+  UI, applied 2026-09-01).
 - Once series land, `airflow_optimizer/pod_profile.py` reads requested-vs-used per task pod,
   ledger surface `"pod"`. See [[project_airflow_optimizer]]; setup history in
   `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`.
