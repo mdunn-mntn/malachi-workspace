@@ -1,12 +1,13 @@
 ---
 doc_type: ticket
 title: "TI-1313: incrementality attributes"
-status: backlog
+status: in_progress
 date: 2026-09-01
 summary: "incrementality attributes"
 result: "not started"
 question: ""
-framing_state: draft
+framing_state: locked
+question: "Which campaign attributes correlate with strong incrementality performance?"
 ---
 
 # TI-1313: incrementality attributes

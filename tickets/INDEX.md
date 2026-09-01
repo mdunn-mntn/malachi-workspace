@@ -5,7 +5,7 @@ Prior work, newest first. `result` = the blessed one-line answer (skip re-readin
 
 | date | ticket | summary | status | result | doc |
 |------|--------|---------|--------|--------|-----|
-| 2026-09-01 | TI-1313: incrementality attributes | incrementality attributes | backlog | not started | [doc](ti_1313_incrementality_attributes/summary.md) |
+| 2026-09-01 | TI-1313: incrementality attributes | incrementality attributes | in_progress | not started | [doc](ti_1313_incrementality_attributes/summary.md) |
 | 2026-08-25 | AUDI-1222: vv trace tables | vv trace tables | backlog | not started | [doc](audi_1222_vv_trace_tables/summary.md) |
 | 2026-08-25 | AUDI-1223: ghost-bid lift data missing 142 actively-prospecting advertisers | Why does the ghost-bid measurement pipeline skip 142 eligible advertisers that run standard prospecting? | backlog | not started | [doc](audi_1223_ghost_bid_coverage_gap/summary.md) |
 | 2026-08-25 | AUDI-1016: Stop supplying duplicate empty-segment writes to MembershipDB (~92% of ~400k tps) | Upstream fix for duplicate empty-segment records: ~92% of segment writes into the membership consumer are empty dupes; spike on pure-Kafka streaming vs delta delivery | done | CLOSED Done 2026-08-25, no AUDI build: empties resolve via MemDB dedup work + MNTN-ID migration, score delivery via AP waterfall migration (bidder stops reading AUDI's advertiser/campaign scores). Meeting 04 cancelled, resolved in-thread same day | [doc](ti_1016_memdb_bidder_cache_optimization/summary.md) |
