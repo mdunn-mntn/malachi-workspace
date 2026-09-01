@@ -1,7 +1,14 @@
 # Current state (2026-08-31 ~12:45 PT)
 
 ## PRs: ALL FOUR MERGED 2026-09-01 (squash) - #1250 #1251 #1252 #1253
-Prod deploy SUCCEEDED (60da380, ~17:55 UTC). Verification in flight 18:06 UTC: manual
+CAUTION: deploy_prod.yaml only copies spark/model files to GCS; Astro deploys come from
+Astro's OWN git integration on main, and 50 min after the include/-only merges the prod
+image is STILL yesterday's (current_tag deploy-2026-08-31T18-22-40), so both verification
+sweeps ran OLD code (old digest link shape proves it; dbx CLI-skip verdict void). Watcher
+polls current_tag and re-verifies on the new image; if none appears, the integration may
+not build include/-only pushes (yesterday's builds all had dags/ changes). astro CLI
+gotcha: `astro deployment inspect` needs --deployment-name FLAG; positional name returns
+empty. Verification in flight 18:06 UTC: manual
 spark_optimizer_daily run manual__2026-09-01T18:06:11 (checks dbx ledger rows via the
 pre-staged vars + new digest rendering) and the 18:00 rapid debugger cycle (digest
 threading live). Airflow REST base:
