@@ -51,8 +51,11 @@ full end-to-end run/test first, changes are likely.**
     /api/v1/write gets the Google Front End generic 404 (valid and invalid auth alike) and
     the service has zero request-log entries ever — ingress is internal-only, and Astro's
     cluster is outside MNTN's VPC. Asked Cristina to set ingress to all traffic (service is
-    Terraform-provisioned, created 18:18 UTC). Fix in flight: mntn-devops PR 5193
-    (Cristina, 2:36 PM PT), retest after merge + self-deploy.
+    Terraform-provisioned, created 18:18 UTC). FIXED: mntn-devops PR 5193 (ingress ALL +
+    Alloy for remote-write v1) merged + deployed 2026-09-01; relay probe now 400 with the
+    right password (payload parsed, junk rejected) and 401 with a wrong one, so ingress and
+    auth both work. NEXT: after gcloud reauth, confirm container_* series in GMP, then
+    build pod_profile.py.
     Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check
     (count(last_over_time(container_cpu_usage_seconds_total[10m])) at
