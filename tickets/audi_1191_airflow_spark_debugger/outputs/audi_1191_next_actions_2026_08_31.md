@@ -7,9 +7,11 @@ copies spark/model files to GCS; Astro deploys come from Astro's own git integra
 Verification sweep 19:17 UTC on the new image: dbx REST path ENGAGED (oauth mints, the
 Astro secret pairs with prod_runner 397d710b) but Databricks returns
 INSUFFICIENT_PERMISSIONS on job_costs/query_costs/plans (system.lakeflow +
-system.query reads + warehouse use needed). Pairing test in flight: client id swapped to
-the spark_optimizer SP 07f36af7-614d-4d57-8143-2dbcd3cb58c2; if oauth fails, revert to
-397d710b and ask for grants instead. Also '[sweep] databricks skipped: no warehouse
+system.query reads + warehouse use needed). Pairing test DONE 19:35 UTC: spark_optimizer SP
+07f36af7 gets oauth 401 (secret does NOT pair); REVERTED to prod_runner 397d710b (pairs,
+oauth works). Durable fix = grants for prod_runner: SELECT on system.lakeflow +
+system.query and warehouse CAN_USE on fa27430dfc609e6d (MAIN workspace) - ask the
+Databricks admin (ml_squad/Brian or devops). Also '[sweep] databricks skipped: no warehouse
 configured' printed despite DATABRICKS_WAREHOUSE set - check sweep.py message routing.
 astro CLI gotchas: `deployment inspect` needs the --deployment-name FLAG (positional =
 empty output); `astro deploy` needs the gitignored .astro/ dir and an API token under
