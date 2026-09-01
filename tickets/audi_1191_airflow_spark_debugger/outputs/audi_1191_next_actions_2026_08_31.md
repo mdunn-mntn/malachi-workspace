@@ -1,22 +1,19 @@
 # Current state (2026-08-31 ~12:45 PT)
 
 ## PRs: ALL FOUR MERGED 2026-09-01 (squash) - #1250 #1251 #1252 #1253
-CAUTION: deploy_prod.yaml only copies spark/model files to GCS; Astro deploys come from
-Astro's OWN git integration on main, and 50 min after the include/-only merges the prod
-image is STILL yesterday's (current_tag deploy-2026-08-31T18-22-40), so both verification
-sweeps ran OLD code (old digest link shape proves it; dbx CLI-skip verdict void). Astro's git integration attempted builds
-    for the merges at 18:01/18:02 UTC and BOTH FAILED (26s in, no error exposed; Google
-    incident window). Manual deploy is BLOCKED: CI/CD enforcement rejects user tokens
-    ("Please use API Tokens instead") and Malachi cannot mint deployment API tokens.
-    UNBLOCK: Malachi retriggers the git-integration deploy from the Astro UI (redeploy the
-    failed deploy, or a trivial reviewed PR to main). Tag watcher then auto-runs the
-    verification sweep. astro CLI gotchas: `deployment inspect` needs --deployment-name
-    FLAG (positional = empty output); `astro deploy` needs the gitignored .astro/ dir
-    (worktrees lack it) and prints help on error with the cause line above the usage
-    block. Verification in flight 18:06 UTC: manual
-spark_optimizer_daily run manual__2026-09-01T18:06:11 (checks dbx ledger rows via the
-pre-staged vars + new digest rendering) and the 18:00 rapid debugger cycle (digest
-threading live). Airflow REST base:
+Image deploy-2026-09-01T19-06-22 LIVE via PR 1254 retrigger: the 4 fast merges made
+Astro cancel each superseded build and never build the final SHA (deploy_prod.yaml only
+copies spark/model files to GCS; Astro deploys come from Astro's own git integration).
+Verification sweep 19:17 UTC on the new image: dbx REST path ENGAGED (oauth mints, the
+Astro secret pairs with prod_runner 397d710b) but Databricks returns
+INSUFFICIENT_PERMISSIONS on job_costs/query_costs/plans (system.lakeflow +
+system.query reads + warehouse use needed). Pairing test in flight: client id swapped to
+the spark_optimizer SP 07f36af7-614d-4d57-8143-2dbcd3cb58c2; if oauth fails, revert to
+397d710b and ask for grants instead. Also '[sweep] databricks skipped: no warehouse
+configured' printed despite DATABRICKS_WAREHOUSE set - check sweep.py message routing.
+astro CLI gotchas: `deployment inspect` needs the --deployment-name FLAG (positional =
+empty output); `astro deploy` needs the gitignored .astro/ dir and an API token under
+CI/CD enforcement (user tokens rejected). Airflow REST base:
 https://cmd6bd10c0gl901rfuokgryiq.iq.astronomer.run/dokgryiq/api/v2 (astro CLI token).
 Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confirm.
 1. https://github.com/SteelHouse/airflow-ti/pull/1250 - AUDI-1194: optimizer Databricks
