@@ -149,8 +149,15 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
     Merge note: back-to-back merges with 1255 hit the Astro superseded-build gap; space
     them or retrigger. After deploy: fail a canary task, expect a reply in <2 min.
     CPU descriptor: stale /counter DELETED via PAM breakglass-editor (grant e1dc39b3);
-    cpu data confirmed under /unknown variant (memory also lives there and queries fine),
-    PromQL mapping refresh pending.
+    cpu data confirmed under /unknown variant. PromQL STILL empty 20+ min later even
+    though memory (also /unknown) queries fine, suspicion: _total-name mapping; moot for
+    us, pod_profile reads the v3 API. malachi_e2e_check descriptor also deleted.
+15b. pod surface BUILT (branch audi-1194-pod-surface): pod_profile.py (v3 timeSeries,
+    components from pod names, core-hours/day exec_h, cpu-overprovisioned + memory-pressure
+    findings), sweep wiring (optimizer_pod_<date>.md + digest link + surface="pod" rows),
+    warehouse-message fix. 159 tests. Gauntlet medium RUNNING. Prod needs: mntn-devops
+    branch audi-1194-pod-metrics-viewer (monitoring.viewer for spark-optimizer@, gauntlet
+    fast running, PR next) + OPTIMIZER_POD_PROJECT=mntn-prj-prod-00 env var on deployment.
 15. Resilience/AI layer: parsers are structure-bound; a log-format change in any upstream
     system breaks extraction silently. Options: (a) schema-drift canary (alert when parse
     rate drops), (b) LLM fallback for unparsed logs + recommendation synthesis. LLM on Astro
