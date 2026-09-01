@@ -1,18 +1,18 @@
 ---
 name: reference_astro_metrics_relay
-description: DEV-8821 pod-metrics pipeline (Astro → Cloud Run relay → Grafana Alloy → Google Telemetry API/GMP) — FULLY LIVE 2026-09-01; the four-fix ladder, the receiver's label requirements, and the probe/diagnosis gotchas.
+description: DEV-8821 pod-metrics pipeline (Astro → Cloud Run relay → Grafana Alloy → Google Telemetry API/GMP) — FULLY LIVE 2026-09-01; the four-fix ladder, the receiver's label requirements, the probe/diagnosis gotchas, and the counter-read rule (relayed counters land under the /unknown descriptor variant and are invisible to PromQL — read them via the Monitoring v3 API).
 metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [astro metrics relay, astro-metrics-relay, DEV-8821, prometheus remote-write, remote-write v1, grafana alloy, GMP, google managed prometheus, promql endpoint, container_ metrics, pod_profile, metrics exports, otel collector cloud run, monitoring.googleapis.com prometheus, serviceusage mntn-prj-prod-00, astro_metrics_relay keychain, name regex matcher unsupported, builtin metric names filter, gcp.project_id, cloud.region, 200 points batch cap, dropped_items, job instance labels, GFE 404 ingress internal-only, telemetry.googleapis.com, mntn-devops 5193, mntn-devops 5210, mntn-devops 5218, mntn-devops 5220, google incident feed, snappy protobuf probe, kube_pod_status_phase]
+keywords: [astro metrics relay, astro-metrics-relay, DEV-8821, prometheus remote-write, remote-write v1, grafana alloy, GMP, google managed prometheus, promql endpoint, container_ metrics, pod_profile, metrics exports, otel collector cloud run, monitoring.googleapis.com prometheus, serviceusage mntn-prj-prod-00, astro_metrics_relay keychain, name regex matcher unsupported, builtin metric names filter, gcp.project_id, cloud.region, 200 points batch cap, dropped_items, job instance labels, GFE 404 ingress internal-only, telemetry.googleapis.com, mntn-devops 5193, mntn-devops 5210, mntn-devops 5218, mntn-devops 5220, google incident feed, snappy protobuf probe, kube_pod_status_phase, metric descriptor unknown variant, no metric-type metadata, counter not promql queryable, container_cpu_usage_seconds_total, timeSeries.list v3 api, metricDescriptors.delete, breakglass-editor descriptor delete, staleness NaN NumberDataPoint, target_info duplicate timeseries, pod surface PR 1257]
 domain: [infra]
 lifecycle: active
 last_verified: 2026-09-01
 ---
 **The DEV-8821 pipeline is FULLY LIVE (verified 2026-09-01 20:10 UTC): zero drops,
 `kube_pod_status_phase` 162 series, `container_memory_working_set_bytes` 35 series,
-`container_cpu*` filling.** It delivers the pod-metrics push previously recorded as impossible
+`container_cpu*` filling (counters readable ONLY via the v3 API — see the counter-read rule below).** It delivers the pod-metrics push previously recorded as impossible
 (Astro's exporter can't OAuth to GMP directly; the relay is the OAuth hop).
 
 - **Relay:** Cloud Run **`astro-metrics-relay`** in `mntn-prj-prod-00`. Remote-write URL
@@ -38,6 +38,21 @@ last_verified: 2026-09-01
 =500, neither=500). Stamped via the LABELS rows in the Astro Metrics Export UI, which applies
 them to every exported series.
 
+## Metric types: read relayed counters via the Monitoring v3 API, never PromQL (2026-09-01)
+Astro's remote-write carries NO metric-type metadata, so every relayed metric lands under the
+GMP descriptor variant `<name>/unknown`. Gauges under `/unknown` ARE PromQL-queryable
+(`container_memory_working_set_bytes` proves it). A `_total`-suffixed counter under `/unknown`
+is NOT: `container_cpu_usage_seconds_total` samples are visible via the v3 `timeSeries.list`
+API while PromQL returns empty — and stayed empty 20+ minutes after the colliding empty
+`/counter` descriptor was removed, so the collision was not the cause. **Rule: read relayed
+counters via the Cloud Monitoring v3 API; PromQL only for gauges.**
+- The stale empty `/counter` descriptor for cpu was DELETED 2026-09-01 via PAM
+  `breakglass-editor` on `mntn-prj-prod-00` (`roles/writer` covers
+  `monitoring.metricDescriptors.delete`); the `malachi_e2e_check` test descriptor was deleted in
+  the same grant. Entitlement detail: memory `feedback_bq_workflow`.
+- Benign relay noise, do not chase: staleness-NaN points rejected as "NumberDataPoint had an
+  unrecognized or unset value" on pod churn, and `target_info` "Duplicate TimeSeries" warnings.
+
 ## Diagnosis gotchas (keep)
 - **GFE generic 404 with ZERO Cloud Run request-log entries = ingress internal-only signature.**
   Auth-independent (valid and invalid credentials get the same 404); a 403 would mean invoker
@@ -59,7 +74,9 @@ them to every exported series.
 - **GMP PromQL read endpoint:**
   `https://monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus/api/v1/*`.
 
-Next: `airflow_optimizer/pod_profile.py` reads requested-vs-used per task pod, ledger surface
-`"pod"`. See [[project_airflow_optimizer]]; setup history in
+`airflow_optimizer/pod_profile.py` (requested-vs-used per task pod, ledger surface `"pod"`)
+shipped on airflow-ti PR 1257 (open 2026-09-01), blocked on mntn-devops PR 5224
+(`roles/monitoring.viewer`) + the `OPTIMIZER_POD_PROJECT` env var. See
+[[project_airflow_optimizer]]; setup history in
 `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`;
 deploy mechanics in [[reference_astro_deploy_mechanics]].

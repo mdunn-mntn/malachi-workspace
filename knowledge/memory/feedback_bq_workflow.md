@@ -6,10 +6,10 @@ metadata:
   type: feedback
   originSessionId: cc00f377-b575-43ed-84cf-3e31ce190e7a
 doc_type: memory
-keywords: [bq_run.sh, dw-main-gold access, PAM bq-read gold, gold access denied, project_id required, mntn-coredw-prod access denied, bigquery.jobs.create permission, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook]
+keywords: [bq_run.sh, dw-main-gold access, PAM bq-read gold, gold access denied, project_id required, mntn-coredw-prod access denied, bigquery.jobs.create permission, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook, pam entitlements mntn-prj-prod-00, breakglass-editor prod-00, roles/writer, metricDescriptors delete, bq-job-history-read, dataproc-submit entitlement]
 domain: [bigquery, workflow]
 lifecycle: active
-last_verified: 2026-08-20
+last_verified: 2026-09-01
 ---
 ## from feedback_bq_perf_tracking.md
 
@@ -48,6 +48,13 @@ Jack Barbey on AUDI-694 and was wrong). Note the failure modes look different: m
 `mntn-coredw-prod` (above). The gold entitlement list also carries `bq-write`, `bq-admin`,
 `breakglass-editor`, `vm-ssh`, `kms-decrypt`. The 8h window is what stranded sqlmesh PR #1147, whose
 plan runs >24h (see [[reference_aud22_geo_reporting_sync]]).
+
+**PAM entitlements on `mntn-prj-prod-00` (2026-09-01).** `breakglass-editor` on
+`mntn-prj-prod-00` grants `roles/writer` — enough for `monitoring.metricDescriptors.delete`
+(used to remove the colliding empty `/counter` descriptor, see
+[[reference_astro_metrics_relay]]). Grants need DevOps approval; the 2026-09-01 request was
+approved in minutes. Other requestable entitlements on that project: `bq-job-history-read`,
+`dataproc-submit`, `dataproc-debug`, `vm-ssh`, `kms-decrypt`, `audi-storage-object-view`.
 
 Schema inspection and dry runs can still use plain `bq` (no perf logging needed for those).
 

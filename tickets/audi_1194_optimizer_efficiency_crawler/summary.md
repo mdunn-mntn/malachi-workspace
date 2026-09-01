@@ -867,8 +867,41 @@ Full detail: `tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_ac
 - **`OPTIMIZER_NAME_OVERRIDES` draft** in `outputs/audi_1194_hackathon_ticket_drafts.md`:
   `segment-updates-to-parquet` → `materialize_mntn_first_party` confirmed; the `ETL Audience
   Intent - *` prod launcher is unconfirmed (apps in `spark/audience_intent/*.py`; owning team
-  confirms before the var is set). IMP-097 filed: per-DAG owner mapping idea.
+  confirms before the var is set). RESOLVED later the same day: the var was SET with the ETL
+  entries excluded — see the next section. IMP-097 filed: per-DAG owner mapping idea.
 - **DEV-8821 relay FULLY LIVE** (zero drops; `kube_pod_status_phase` 162 series; `container_*`
   filling) after mntn-devops PRs 5193/5210/5218/5220 — memory `reference_astro_metrics_relay`.
   The 08-31 "Malachi lacks serviceusage / no relay log reads" note above is stale: the denial is
   gone. Next: `pod_profile.py`, ledger surface `"pod"`.
+
+## 2026-09-01 (later) — "39 unprofiled" decomposed (PR #1255), overrides live, pod surface PR #1257, Mode BQ table
+
+**The digest complaint "39 DAGs unprofiled" decomposed into three causes, none a profiler bug:**
+1. **7 paused DAGs counted as active** — the ORM paused-set read is FORBIDDEN inside Astro tasks
+   (`airflow session use is forbidden`); **PR #1255 OPEN** adds a REST fallback via
+   `AIRFLOW_BEARER`.
+2. **Only 1 DAG genuinely cost-covered** — the dbx surface is still blocked on the `prod_runner`
+   grants.
+3. **Blunt chip wording** — reworded to "N DAGs without cost data", computed from
+   `Coverage.invisible`.
+
+**`OPTIMIZER_NAME_OVERRIDES` SET on Astro prod: 14 source-verified entries** — all 12 unmatched
+app names plus the hashed-email apps (`ds=22`/`ds=29`). The `ETL Audience Intent - *` entries
+stay EXCLUDED pending owner confirmation.
+
+**Pod surface PR #1257 OPEN** — `pod_profile.py`, ledger `surface="pod"`, unit core-hours/day,
+findings `cpu-overprovisioned` + `memory-pressure`, reading requested-vs-used from the DEV-8821
+relay metrics. Relayed counters land under the GMP `/unknown` descriptor variant and are
+invisible to PromQL — read via the Cloud Monitoring v3 API (memory
+`reference_astro_metrics_relay`). **Blocked on mntn-devops PR #5224**
+(`roles/monitoring.viewer`) **+ the `OPTIMIZER_POD_PROJECT` env var.** #5224's gauntlet fixer
+swapped in `roles/monitoring.metricReader`, which does not exist in GCP (IAM API 404), and the
+refuter confirmed it anyway — caught pre-ship; rule routed to memory
+`feedback_gauntlet_findings_not_fixes`.
+
+**Mode dashboard: BQ cost table added end-to-end via the API** —
+`POST /api/mntn/reports/e81786de8403/queries` created "BigQuery cost by task" (query token
+`3ead7301daa8`), a layout PATCH added section `opt-bq`, and run `d2d0b89e9cef` succeeded.
+Pattern routed to memory `reference_mode_api`.
+
+**Review queue at close:** airflow-ti #1255/#1256/#1257 + mntn-devops #5224.

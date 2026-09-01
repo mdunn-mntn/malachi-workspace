@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: feedback
 doc_type: memory
-keywords: [pr_gauntlet, gauntlet fixer over-reach, THRASH verdict, FAIL_MAX_ROUNDS, adversarial review, deleted working features, ambiguity guard truncated list, MAX_REFUTERS_PER_ROUND, MAX_ROUNDS, gauntlet cost tuning, review findings vs fixes]
+keywords: [pr_gauntlet, gauntlet fixer over-reach, THRASH verdict, FAIL_MAX_ROUNDS, adversarial review, deleted working features, ambiguity guard truncated list, MAX_REFUTERS_PER_ROUND, MAX_ROUNDS, gauntlet cost tuning, review findings vs fixes, monitoring.metricReader nonexistent, bogus iam role, external identifier verification, refuter confirmed wrong finding, mntn-devops 5224]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-08-28
+last_verified: 2026-09-01
 ---
 **Take the gauntlet's FINDINGS. Do not take its fixer's diff on faith.** On airflow-ti#1217 (2026-08-25) the fixer deleted four of the five features the PR existed to ship, plus a whole module and its tests — working, tested code, removed to satisfy style findings about unused surface. The correct response was `git checkout <commit> -- <paths>` to restore the tested state, then re-applying ONLY the confirmed defect. Read the fixer's diff the way you would read a stranger's PR, because that is what it is.
 
@@ -33,5 +33,14 @@ files, including files outside the review set (`test_ledger.py`, `test_sweep.py`
 rich module docstring with one line. Both times the diff-review-like-a-stranger rule caught it;
 the docstring was restored and only the behavioral fixes kept. Formatting sweeps and docstring
 truncation are fixer over-reach shapes to expect alongside deletion.
+
+**A fixer edit that names an EXTERNAL identifier must be verified against the owning system
+before shipping (2026-09-01, mntn-devops PR 5224).** The fixer swapped `roles/monitoring.viewer`
+for `roles/monitoring.metricReader` — a role that does not exist in GCP (the IAM API 404s on
+it) — and the refuter CONFIRMED the finding instead of refuting it. Reviewers and refuters argue
+from the diff and each other; none of them queries the system the identifier lives in. IAM
+roles, API field names, env var names: check them against the real system (an API call, the
+docs, the console) before shipping, the same way you would a stranger's PR that claims a new
+permission exists.
 
 Related: [[project_airflow_debugger]], [[feedback_validated_is_not_correct]], [[feedback_hold_evidenced_verdict]].

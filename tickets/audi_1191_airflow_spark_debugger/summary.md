@@ -1008,3 +1008,39 @@ Full detail and waiting-on lists: `outputs/audi_1191_next_actions_2026_08_31.md`
   (`spark_optimizer` `07f36af7` gets oauth 401, proven by swap-and-revert); Databricks
   `INSUFFICIENT_PERMISSIONS` on job_costs/query_costs/plans; grants ask drafted to
   ml_squad/Brian. Memory `reference_databricks`.
+
+## 7n. 2026-09-01 (later) — relay closed out (counter-read rule + descriptor delete); trigger PR #1256
+
+**GMP metric-type gotcha, settled empirically (routed to memory `reference_astro_metrics_relay`):**
+Astro remote-write carries NO metric-type metadata, so every relayed metric lands under the GMP
+descriptor variant `<name>/unknown`. Gauges under `/unknown` ARE PromQL-queryable
+(`container_memory_working_set_bytes` proves it); a `_total`-suffixed counter under `/unknown` is
+NOT — `container_cpu_usage_seconds_total` samples show via the v3 `timeSeries.list` API while
+PromQL stays empty, including 20+ min AFTER the colliding empty `/counter` descriptor was
+removed (so the collision was not the cause). Rule: read relayed counters via the Cloud
+Monitoring v3 API, never PromQL.
+
+**Descriptor delete executed via PAM `breakglass-editor` on `mntn-prj-prod-00`** (grants
+`roles/writer`, which covers `monitoring.metricDescriptors.delete`; DevOps approved the grant in
+minutes): removed the stale empty `/counter` descriptor for cpu AND the `malachi_e2e_check` test
+descriptor. Other requestable entitlements on the project: `bq-job-history-read`,
+`dataproc-submit`, `dataproc-debug`, `vm-ssh`, `kms-decrypt`, `audi-storage-object-view`
+(routed to memory `feedback_bq_workflow`).
+
+**Benign relay noise (do not chase):** staleness-NaN points rejected as "NumberDataPoint had an
+unrecognized or unset value" on pod churn; `target_info` "Duplicate TimeSeries" warnings.
+
+**PR #1256 OPEN — failure-triggered rapid sweep:** `include/airflow_debugger/trigger.py` +
+`plugins/airflow_debugger_trigger_plugin.py`, an `on_task_instance_failed` listener that fires
+the rapid sweep on failure instead of waiting for the 15-min poll. Airflow 3 listener facts
+(verified locally; airflow-ti = Astro Runtime 3.1-9 / Airflow 3.0.3): the hookspec fires in the
+TASK-RUNNER process for both FAILED and UP_FOR_RETRY; Airflow wraps listeners in try/except so
+they cannot fail the observed task; `plugins/` ships with the deployed image (not in
+`.dockerignore`); `AIRFLOW_BEARER` + `AIRFLOW_API_BASE` are deployment env vars available to
+listeners. Routed to memory `project_airflow_debugger`.
+
+**Cross-repo review queue at close:** airflow-ti #1255/#1256/#1257 + mntn-devops #5224. The
+#5224 gauntlet fixer swapped `roles/monitoring.viewer` for `roles/monitoring.metricReader`,
+which does not exist in GCP (IAM API 404), and the refuter CONFIRMED it instead of refuting —
+caught pre-ship; rule (verify any external identifier a fixer names against the owning system)
+routed to memory `feedback_gauntlet_findings_not_fixes`.

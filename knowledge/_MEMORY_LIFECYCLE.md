@@ -172,7 +172,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_graph_vendor_crediting | reference | 2026-08-19 | [doc](memory/reference_graph_vendor_crediting.md) |
 | reference_mntn_public_mcp | reference | 2026-08-19 | [doc](memory/reference_mntn_public_mcp.md) |
 | reference_ntb_definitions | reference | 2026-08-19 | [doc](memory/reference_ntb_definitions.md) |
-| bq-workflow | feedback | 2026-08-20 | [doc](memory/feedback_bq_workflow.md) |
 | compass-mntn-infra-investigator-atlas-code-mcp | reference | 2026-08-20 | [doc](memory/reference_compass.md) |
 | feedback-slack-drafts-in-chat | feedback | 2026-08-20 | [doc](memory/feedback_slack_drafts_in_chat.md) |
 | feedback_explicit_descriptive_slots | feedback | 2026-08-20 | [doc](memory/feedback_explicit_descriptive_slots.md) |
@@ -229,10 +228,8 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mm_wgu_suitability_argument | reference | 2026-08-27 | [doc](memory/reference_mm_wgu_suitability_argument.md) |
 | reference_pyspark_optimization_skill | reference | 2026-08-27 | [doc](memory/reference_pyspark_optimization_skill.md) |
 | design-ti-999-3p-scoring-at-hhst | project | 2026-08-28 | [doc](memory/design_ti_999_3p_scoring_at_hhst.md) |
-| feedback_gauntlet_findings_not_fixes | feedback | 2026-08-28 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
 | reference_airflow_log_puller | reference | 2026-08-28 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
-| reference_mode_api | reference | 2026-08-29 | [doc](memory/reference_mode_api.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-31 | [doc](memory/reference_airflow_ti.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-08-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
 | feedback_slack_digest_not_per_event | feedback | 2026-08-31 | [doc](memory/feedback_slack_digest_not_per_event.md) |
@@ -240,8 +237,11 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mntn_matched_batch_pipeline | reference | 2026-08-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
 | reference_slack_debugger_app | reference | 2026-08-31 | [doc](memory/reference_slack_debugger_app.md) |
+| bq-workflow | feedback | 2026-09-01 | [doc](memory/feedback_bq_workflow.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
+| feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
 | project_airflow_debugger | project | 2026-09-01 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-01 | [doc](memory/project_airflow_optimizer.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-01 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
+| reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |
