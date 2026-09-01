@@ -1,9 +1,12 @@
 # Current state (2026-08-31 ~12:45 PT)
 
 ## PRs: ALL FOUR MERGED 2026-09-01 (squash) - #1250 #1251 #1252 #1253
-Prod deploy in flight (deploy_prod.yaml on 60da380). Post-deploy: verify next optimizer
-sweep writes dbx ledger rows (vars pre-staged), stamp dbt 174 provenance, confirm rapid
-debugger digest shape live, populate OPTIMIZER_NAME_OVERRIDES after owning-team confirm.
+Prod deploy SUCCEEDED (60da380, ~17:55 UTC). Verification in flight 18:06 UTC: manual
+spark_optimizer_daily run manual__2026-09-01T18:06:11 (checks dbx ledger rows via the
+pre-staged vars + new digest rendering) and the 18:00 rapid debugger cycle (digest
+threading live). Airflow REST base:
+https://cmd6bd10c0gl901rfuokgryiq.iq.astronomer.run/dokgryiq/api/v2 (astro CLI token).
+Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confirm.
 1. https://github.com/SteelHouse/airflow-ti/pull/1250 - AUDI-1194: optimizer Databricks
    surface via SP oauth REST (no CLI in pod). After merge: set DATABRICKS_HOST +
    DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod, verify dbx ledger rows next
