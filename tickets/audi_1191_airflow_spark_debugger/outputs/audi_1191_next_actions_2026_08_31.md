@@ -142,10 +142,15 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
 12. 30-day diagnosis run on BOTH systems (debugger + optimizer) once current pendings close.
 13. Keep exercising #airflow-debugger and #spark-optimizer digests until output quality is
     accepted; iterate recommendations (some rewording still wanted beyond PR 1253's six).
-14. Event-driven debugger: replace/augment the 15-min schedule with an immediate trigger on
-    task failure. Design: Airflow listener plugin (on_task_instance_failed) cluster-wide, no
-    per-DAG edits; alternative is default_args on_failure_callback (per-DAG, invasive).
-    Keep the sweep as backstop for missed events. Needs airflow-ti plugin PR.
+14. DONE, in review: https://github.com/SteelHouse/airflow-ti/pull/1256 - listener plugin
+    (plugins/airflow_debugger_trigger_plugin.py + include/airflow_debugger/trigger.py)
+    POSTs one rapid run on any task failure. Guards: self-DAGs, up_for_retry, missing
+    creds, sweep already active. Gauntlet clean (skeptic finding refuted), 269 tests.
+    Merge note: back-to-back merges with 1255 hit the Astro superseded-build gap; space
+    them or retrigger. After deploy: fail a canary task, expect a reply in <2 min.
+    CPU descriptor: stale /counter DELETED via PAM breakglass-editor (grant e1dc39b3);
+    cpu data confirmed under /unknown variant (memory also lives there and queries fine),
+    PromQL mapping refresh pending.
 15. Resilience/AI layer: parsers are structure-bound; a log-format change in any upstream
     system breaks extraction silently. Options: (a) schema-drift canary (alert when parse
     rate drops), (b) LLM fallback for unparsed logs + recommendation synthesis. LLM on Astro
