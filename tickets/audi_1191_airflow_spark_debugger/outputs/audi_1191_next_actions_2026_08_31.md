@@ -155,9 +155,11 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
 15b. pod surface BUILT (branch audi-1194-pod-surface): pod_profile.py (v3 timeSeries,
     components from pod names, core-hours/day exec_h, cpu-overprovisioned + memory-pressure
     findings), sweep wiring (optimizer_pod_<date>.md + digest link + surface="pod" rows),
-    warehouse-message fix. 159 tests. Gauntlet medium RUNNING. Prod needs: mntn-devops
-    branch audi-1194-pod-metrics-viewer (monitoring.viewer for spark-optimizer@, gauntlet
-    fast running, PR next) + OPTIMIZER_POD_PROJECT=mntn-prj-prod-00 env var on deployment.
+    warehouse-message fix. 159 tests. Gauntlet medium RUNNING. Prod needs: mntn-devops PR
+    https://github.com/SteelHouse/mntn-devops/pull/5224 OPEN (monitoring.viewer for
+    spark-optimizer@; gauntlet fixer swapped in roles/monitoring.metricReader which does
+    NOT exist in GCP, caught by IAM API describe and reverted - check fixer edits that
+    name external identifiers against the system that owns them) + OPTIMIZER_POD_PROJECT=mntn-prj-prod-00 env var on deployment.
 15. Resilience/AI layer: parsers are structure-bound; a log-format change in any upstream
     system breaks extraction silently. Options: (a) schema-drift canary (alert when parse
     rate drops), (b) LLM fallback for unparsed logs + recommendation synthesis. LLM on Astro
