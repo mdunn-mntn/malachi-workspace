@@ -93,9 +93,13 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
     ~25/min. Our side is fully verified: ingress, auth, labels, transform all work; the
     last hop fails only at Google's door. Incident CLOSED ~19:20 UTC 2026-09-01;
     drops changed to HTTP 400 'write for resource failed: Unrecognized region or location'
-    - the Telemetry API also requires a location resource attribute. Fix PR
-    https://github.com/SteelHouse/mntn-devops/pull/5218 (transform stamps cloud.region
-    from GCP_LOCATION, already in the env; v0.2.2). Cristina reviews + builds the image. gcp.project_id fix CONFIRMED effective
+    - the Telemetry API also requires a location resource attribute. PR 5218
+    (cloud.region) MERGED + v0.2.2 deployed 19:35 UTC: FIRST SERIES LIVE in GMP
+    (kube_pod_status_phase, 70 series) - end-to-end path proven. Final fix:
+    https://github.com/SteelHouse/mntn-devops/pull/5220 caps Alloy batches at the
+    telemetry API's 200-point request limit (oversized container_* batches still drop,
+    dropped_items=368 at 19:42Z); v0.2.3, Cristina reviews + builds. After deploy:
+    confirm container_* series + zero drops, then build pod_profile.py. gcp.project_id fix CONFIRMED effective
     (error moved past it). Then confirm container_* series in GMP and build
     pod_profile.py.
     Note: Malachi CAN read the relay logs now
