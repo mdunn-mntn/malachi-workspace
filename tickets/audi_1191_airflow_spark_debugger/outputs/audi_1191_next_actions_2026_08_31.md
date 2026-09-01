@@ -109,3 +109,18 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
     then build pod_profile.py (ledger surface "pod").
 11. Monday package (spike draft, Confluence skeleton, talking points):
     audi_1191_monday_package_2026_08_31.md
+
+## Queued 2026-09-01 (user, post-relay): quality + architecture pass
+12. 30-day diagnosis run on BOTH systems (debugger + optimizer) once current pendings close.
+13. Keep exercising #airflow-debugger and #spark-optimizer digests until output quality is
+    accepted; iterate recommendations (some rewording still wanted beyond PR 1253's six).
+14. Event-driven debugger: replace/augment the 15-min schedule with an immediate trigger on
+    task failure. Design: Airflow listener plugin (on_task_instance_failed) cluster-wide, no
+    per-DAG edits; alternative is default_args on_failure_callback (per-DAG, invasive).
+    Keep the sweep as backstop for missed events. Needs airflow-ti plugin PR.
+15. Resilience/AI layer: parsers are structure-bound; a log-format change in any upstream
+    system breaks extraction silently. Options: (a) schema-drift canary (alert when parse
+    rate drops), (b) LLM fallback for unparsed logs + recommendation synthesis. LLM on Astro
+    needs an API key on a server - MNTN policy question (Vault-managed exception?), raise
+    with security before building. (b) without (a) is not acceptable; (a) alone may suffice.
+16. Then: pod_profile.py, dbx grants follow-through, OPTIMIZER_NAME_OVERRIDES (items above).
