@@ -157,3 +157,17 @@ PR 1252 opened (gauntlet PASS clean): https://github.com/SteelHouse/airflow-ti/p
 gs:// digest refs become console links; OPTIMIZER_NAME_OVERRIDES env map lets unmapped app
 names (ETL Audience Intent - *, segment-updates-to-parquet) resolve to their DAG. Populate
 the override values with the owning team before setting the var.
+
+## OPTIMIZER_NAME_OVERRIDES draft (2026-09-01, set AFTER PR 1252 merges, confirm dag ids with owning team first)
+
+```json
+{"segment-updates-to-parquet": "materialize_mntn_first_party",
+ "ETL Audience Intent - Prospecting Keywords": "CONFIRM (spark/audience_intent/prospecting_keywords.py; staging dag audience_intent_scoring_staging, prod launcher unconfirmed)",
+ "ETL Audience Intent - Prospecting Mid": "CONFIRM (prospecting_mid.py)",
+ "ETL Audience Intent - Vertical Mid": "CONFIRM (vertical_mid.py)"}
+```
+
+App names verified in source (SparkSession appName). The app-name date/hour suffix on
+segment-updates-to-parquet-* is stripped by the ledger's run-stamp rule. Databricks env vars
+(HOST / GCP_CLIENT_ID / WAREHOUSE) pre-staged on Astro prod 2026-09-01, live once PR 1250
+merges + deploys.
