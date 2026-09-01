@@ -72,8 +72,13 @@ full end-to-end run/test first, changes are likely.**
     Cloud Run + VPC): (a) telemetry.googleapis.com returns INTERNAL 500 "please retry" on
     forwards, Alloy treats as permanent and drops; (b) new instances crashloop on startup
     (probe fails on /-/ready, exit(1), no app logs - Vault over VPC connector suspected),
-    started with the 17:30 rollout window. Re-verify GMP after the incident closes before
-    escalating to Cristina as a code problem. Then confirm container_* series in GMP and build
+    started with the 17:30 rollout window. E2E probe result 17:38 UTC: a trivial
+    1-point gauge sent through the fixed pipeline was accepted (204) then explicitly
+    dropped (drop log names malachi_e2e_check) on the same INTERNAL 500; drop rate steady
+    ~25/min. Our side is fully verified: ingress, auth, labels, transform all work; the
+    last hop fails only at Google's door. Auto-reverify watcher armed (polls the incident
+    feed, re-checks GMP 5 min after close). Escalate to Cristina as a code problem ONLY if
+    drops persist after the incident ends. Then confirm container_* series in GMP and build
     pod_profile.py.
     Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check
