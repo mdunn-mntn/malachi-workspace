@@ -1,8 +1,9 @@
 # Current state (2026-08-31 ~12:45 PT)
 
-## PRs awaiting review (all CI green, all gauntleted)
-**HOLD (Malachi, 2026-08-31): do not merge until Cristina opens the relay ingress; then a
-full end-to-end run/test first, changes are likely.**
+## PRs: ALL FOUR MERGED 2026-09-01 (squash) - #1250 #1251 #1252 #1253
+Prod deploy in flight (deploy_prod.yaml on 60da380). Post-deploy: verify next optimizer
+sweep writes dbx ledger rows (vars pre-staged), stamp dbt 174 provenance, confirm rapid
+debugger digest shape live, populate OPTIMIZER_NAME_OVERRIDES after owning-team confirm.
 1. https://github.com/SteelHouse/airflow-ti/pull/1250 - AUDI-1194: optimizer Databricks
    surface via SP oauth REST (no CLI in pod). After merge: set DATABRICKS_HOST +
    DATABRICKS_GCP_CLIENT_ID + DATABRICKS_WAREHOUSE on prod, verify dbx ledger rows next
