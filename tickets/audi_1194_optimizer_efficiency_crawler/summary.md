@@ -848,3 +848,27 @@ no `container_*` series yet; Cristina checking relay logs. Then `pod_profile.py`
 needed no ticket. Jira DELETE returns 403 without admin; sprint removal =
 `POST /rest/agile/1.0/backlog/issue`. Lesson routed to memory
 `feedback_auto_capture_and_ticket_flag` (§14: flag first, even for underway follow-on work).
+
+## 2026-09-01 — #1250/#1252/#1253 live in prod; dbx engaged with a grants blocker; relay end to end
+
+Full detail: `tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_actions_2026_08_31.md`
+(kept current).
+
+- **All four airflow-ti PRs merged and LIVE** on image `deploy-2026-09-01T19-06-22` via
+  retrigger PR #1254 — Astro cancels superseded builds on back-to-back merges and never built
+  the final SHA (memory `reference_astro_deploy_mechanics`). Env vars `DATABRICKS_HOST` /
+  `DATABRICKS_GCP_CLIENT_ID` / `DATABRICKS_WAREHOUSE` staged on Astro prod.
+- **dbx REST ENGAGED:** oauth works; the secret pairs `prod_runner` `397d710b`
+  (`spark_optimizer` `07f36af7` does not — 401, swap-and-revert test). **Blocker:** `prod_runner`
+  needs `SELECT` on `system.lakeflow` + `system.query` and `CAN USE` on warehouse
+  `fa27430dfc609e6d`; grants ask drafted to ml_squad/Brian. The sweep's `[sweep] databricks
+  skipped: no warehouse configured (DATABRICKS_WAREHOUSE)` prints despite the var being set —
+  check `sweep.py` message routing.
+- **`OPTIMIZER_NAME_OVERRIDES` draft** in `outputs/audi_1194_hackathon_ticket_drafts.md`:
+  `segment-updates-to-parquet` → `materialize_mntn_first_party` confirmed; the `ETL Audience
+  Intent - *` prod launcher is unconfirmed (apps in `spark/audience_intent/*.py`; owning team
+  confirms before the var is set). IMP-097 filed: per-DAG owner mapping idea.
+- **DEV-8821 relay FULLY LIVE** (zero drops; `kube_pod_status_phase` 162 series; `container_*`
+  filling) after mntn-devops PRs 5193/5210/5218/5220 — memory `reference_astro_metrics_relay`.
+  The 08-31 "Malachi lacks serviceusage / no relay log reads" note above is stale: the denial is
+  gone. Next: `pod_profile.py`, ledger surface `"pod"`.

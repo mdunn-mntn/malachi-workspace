@@ -4,10 +4,10 @@ description: Databricks: push >4h-risk queries there (memory-optimized); more sm
 metadata:
   type: reference
 doc_type: memory
-keywords: [databricks, EXPLAIN COST, statement execution api, sql statements api, jobs list-runs, get-run-output empty, notebook_output, system.lakeflow denied, databricks admins, databricks PAT removed, photon plan, spark shuffle, executor cores, node sizing, augmentor_log, prospecting_intent, gcs parquet archive, bq 6-hour wall, memory-optimized cluster, victor benchmark, databricks cli, u2m oauth, jobs get-run, get-run-output, oncall databricks access, system.lakeflow, sql_warehouse, ml_squad warehouse, main workspace 1262887251702944, prod_runner 397d710b, dev_runner 81b867bc, spark_optimizer 07f36af7, DATABRICKS_GCP_CLIENT_ID]
+keywords: [databricks, EXPLAIN COST, statement execution api, sql statements api, jobs list-runs, get-run-output empty, notebook_output, system.lakeflow denied, databricks admins, databricks PAT removed, photon plan, spark shuffle, executor cores, node sizing, augmentor_log, prospecting_intent, gcs parquet archive, bq 6-hour wall, memory-optimized cluster, victor benchmark, databricks cli, u2m oauth, jobs get-run, get-run-output, oncall databricks access, system.lakeflow, sql_warehouse, ml_squad warehouse, main workspace 1262887251702944, prod_runner 397d710b, dev_runner 81b867bc, spark_optimizer 07f36af7, DATABRICKS_GCP_CLIENT_ID, oauth pairing test, insufficient permissions job_costs, warehouse CAN USE fa27430dfc609e6d, sweep databricks skipped no warehouse]
 domain: [bigquery, infra]
 lifecycle: active
-last_verified: 2026-08-31
+last_verified: 2026-09-01
 ---
 
 ## On-call RCA CLI access (verified 2026-08-03)
@@ -186,5 +186,16 @@ When someone says "the ml_squad warehouse" they mean the MAIN workspace
 `Serverless Starter Warehouse` `14b311ac86ee2ca2` + `sql_warehouse_2xs` `fa27430dfc609e6d`.
 Workspace service principals: `dev_runner` `81b867bc`, `spark_optimizer` `07f36af7`,
 `prod_runner` `397d710b`. `prod_runner` is the candidate client id for the prod
-`DATABRICKS_GCP_CLIENT_ID` var (airflow-ti PR #1250); whether it pairs with the EXISTING
-`CLIENT_SECRET` on prod is verifiable only via the sweep log after deploy.
+`DATABRICKS_GCP_CLIENT_ID` var (airflow-ti PR #1250). PROVEN PAIRED 2026-09-01: the EXISTING
+prod `CLIENT_SECRET` pairs with `prod_runner` (section below).
+
+## dbx REST surface ENGAGED in prod (2026-09-01, image deploy-2026-09-01T19-06-22)
+OAuth works from the prod pod: the existing `DATABRICKS_GCP_CLIENT_SECRET` pairs with
+**`prod_runner` `397d710b-4c85-4a96-b009-a07c1d373204`**. `spark_optimizer` `07f36af7` gets
+oauth 401 — it does NOT pair (tested by swapping the client id in and reverting).
+**Blocker:** Databricks returns `INSUFFICIENT_PERMISSIONS` on job_costs / query_costs / plans —
+`prod_runner` needs `SELECT` on `system.lakeflow` + `system.query` and `CAN USE` on warehouse
+`fa27430dfc609e6d`; grants ask drafted to ml_squad/Brian.
+**Oddity to check:** the sweep prints `[sweep] databricks skipped: no warehouse configured
+(DATABRICKS_WAREHOUSE)` even though the var IS set on prod — likely a mislabeled empty-report
+message in `sweep.py`, not a real config miss. See [[project_airflow_optimizer]].

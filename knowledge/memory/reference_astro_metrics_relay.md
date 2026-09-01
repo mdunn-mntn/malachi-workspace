@@ -1,57 +1,65 @@
 ---
 name: reference_astro_metrics_relay
-description: DEV-8821 pod-metrics path — the Cloud Run astro-metrics-relay endpoint/auth, the Astro Metrics Exports config, and the GMP PromQL query-endpoint gotchas.
+description: DEV-8821 pod-metrics pipeline (Astro → Cloud Run relay → Grafana Alloy → Google Telemetry API/GMP) — FULLY LIVE 2026-09-01; the four-fix ladder, the receiver's label requirements, and the probe/diagnosis gotchas.
 metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [astro metrics relay, astro-metrics-relay, DEV-8821, prometheus remote-write, GMP, google managed prometheus, promql endpoint, container_ metrics, pod_profile, metrics exports, otel collector cloud run, monitoring.googleapis.com prometheus, serviceusage mntn-prj-prod-00, astro_metrics_relay keychain, name regex matcher unsupported, builtin metric names filter]
+keywords: [astro metrics relay, astro-metrics-relay, DEV-8821, prometheus remote-write, remote-write v1, grafana alloy, GMP, google managed prometheus, promql endpoint, container_ metrics, pod_profile, metrics exports, otel collector cloud run, monitoring.googleapis.com prometheus, serviceusage mntn-prj-prod-00, astro_metrics_relay keychain, name regex matcher unsupported, builtin metric names filter, gcp.project_id, cloud.region, 200 points batch cap, dropped_items, job instance labels, GFE 404 ingress internal-only, telemetry.googleapis.com, mntn-devops 5193, mntn-devops 5210, mntn-devops 5218, mntn-devops 5220, google incident feed, snappy protobuf probe, kube_pod_status_phase]
 domain: [infra]
 lifecycle: active
-last_verified: 2026-08-31
+last_verified: 2026-09-01
 ---
-**The DEV-8821 relay is LIVE (2026-08-31)** — it DELIVERS the pod-metrics push previously recorded as impossible (Astro's exporter can't OAuth to GMP directly; the relay is the OAuth hop).
+**The DEV-8821 pipeline is FULLY LIVE (verified 2026-09-01 20:10 UTC): zero drops,
+`kube_pod_status_phase` 162 series, `container_memory_working_set_bytes` 35 series,
+`container_cpu*` filling.** It delivers the pod-metrics push previously recorded as impossible
+(Astro's exporter can't OAuth to GMP directly; the relay is the OAuth hop).
 
 - **Relay:** Cloud Run **`astro-metrics-relay`** in `mntn-prj-prod-00`. Remote-write URL
   `https://astro-metrics-relay-r64eabgqfq-uc.a.run.app/api/v1/write`, basic-auth user
   `astro-metrics`, password in Malachi's login Keychain under service **`astro_metrics_relay`**.
-- **Astro side:** prod deployment Metrics Exports configured ~19:45 UTC 2026-08-31.
+- **Astro side:** prod deployment Metrics Export with LABELS rows `job=astro-prod` /
+  `instance=prod`. The Sunday (08-31) export had silently VANISHED — re-created 2026-09-01
+  16:33 UTC. If samples stop, confirm the export still exists before debugging the relay.
+
+## The four-fix ladder (each found from a live error after the previous fix deployed)
+1. **mntn-devops PR 5193** — ingress INTERNAL_ONLY→ALL, plus engine swap OTel→**Grafana Alloy**:
+   Astro sends Prometheus remote-write **v1** and the pinned OTel receiver was v2-only.
+2. **PR 5210 (v0.2.1)** — stamps resource attribute **`gcp.project_id`** (the Telemetry API,
+   telemetry.googleapis.com, requires it; `otelcol.auth.google` only authenticates, never
+   stamps attributes).
+3. **PR 5218 (v0.2.2)** — stamps **`cloud.region`** from the `GCP_LOCATION` env; missing it
+   fails with "write for resource failed: Unrecognized region or location".
+4. **PR 5220 (v0.2.3)** — caps Alloy batches at **200 points** ("A maximum of 200 points can be
+   written in a single request", `dropped_items=368`); capping splits requests, loses nothing.
+
+**Receiver label requirement:** BOTH `job` and `instance` labels on EVERY series, else 500
+"job or instance cannot be found from labels" (probe matrix 2026-09-01: both=204, either alone
+=500, neither=500). Stamped via the LABELS rows in the Astro Metrics Export UI, which applies
+them to every exported series.
+
+## Diagnosis gotchas (keep)
+- **GFE generic 404 with ZERO Cloud Run request-log entries = ingress internal-only signature.**
+  Auth-independent (valid and invalid credentials get the same 404); a 403 would mean invoker
+  IAM, an app-level 404 would log a request.
+- **`label/__name__/values` enumerates metric DESCRIPTORS and ignores start/end bounds** — a
+  name listed there is NEVER proof of recent samples; confirm with `query_range` or the v3
+  `timeSeries` API. Also: a `__name__` REGEX matcher is unsupported, and the endpoint returns
+  ~18k built-in Google metric names (filter out names containing `:` or `/` to see the
+  prometheus-ingested ones).
+- **Hand-rolled PRW v1 probe:** minimal protobuf + pure-python snappy framing
+  (`varint(len) + 0xf0 + len-1 + data`), header `Content-Encoding: snappy`, and `job` +
+  `instance` labels or it 500s.
+- **Relay logs ARE readable by Malachi's account** — the earlier `serviceusage` denial on
+  `mntn-prj-prod-00` is gone (the old "no relay log reads" line was stale and is corrected here).
+- **Google incident feed diagnosis pattern:** `https://status.cloud.google.com/incidents.json`.
+  An open us-central1-b incident (2026-09-01) explained BOTH the transient INTERNAL 500s on
+  forwards and the Cloud Run instance crashloops; check the feed before chasing our-side causes
+  for transient drops.
 - **GMP PromQL read endpoint:**
   `https://monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus/api/v1/*`.
-  Gotchas: a `__name__` REGEX matcher is unsupported; `label/__name__/values` returns ~18k
-  built-in Google metric names — filter out names containing `:` or `/` to see the
-  prometheus-ingested ones; `label/__name__/values` enumerates metric DESCRIPTORS and ignores
-  start/end bounds, so a name listed there does NOT prove recent samples — confirm with
-  `query_range` or the v3 `timeSeries` API. (Superseded 2026-08-31 20:04 UTC: the earlier
-  serviceusage denial on `mntn-prj-prod-00` no longer blocks `gcloud logging read` — relay log
-  reads work from Malachi's account now.)
-- **BLOCKED 2026-08-31 20:06 UTC — relay unreachable from outside the VPC.** External POST to
-  `/api/v1/write` returns the Google Front End's generic 404 with valid AND invalid basic auth,
-  and the service has ZERO Cloud Run request-log entries ever: the signature of ingress set to
-  internal-only (a 403 would mean invoker IAM; an app-level 404 would log a request). Astro's
-  dedicated cluster runs outside MNTN's VPC, so its exporter gets the same 404 and no samples
-  land. Service is Terraform-provisioned (`goog-terraform-provisioned`, created 18:18 UTC
-  2026-08-31) — fix is Cristina/mountain-devops setting ingress to all (basic auth already
-  gates the app). `container_*`/`kube_*` metric descriptors DO exist in the project with zero
-  samples in 30d: consistent with an internal-side collector start, not with Astro delivery.
-- **2026-09-01: ingress FIXED (mntn-devops PR 5193, Alloy v0.2.0), Astro POSTs arriving.**
-  The Sunday Metrics Export had vanished - re-created 16:33 UTC and traffic landed in
-  minutes. Remaining blocker verified on real traffic: the Telemetry API (OTLP,
-  telemetry.googleapis.com) REQUIRES resource attribute `gcp.project_id`; config.alloy
-  never sets it, so Alloy drops every batch (InvalidArgument, "Exporting failed. Dropping
-  data."). `otelcol.auth.google{project=...}` only authenticates, it does not stamp the
-  attribute. GMP-side smoke test: a hand-rolled PRW v1 protobuf (pure-python snappy: varint
-  len + 0xf0 literal block) POSTs fine; the receiver also requires `job` and `instance`
-  labels or it 500s — BOTH are required (probe matrix 2026-09-01: both=204, job-only=500,
-  instance-only=500). Astro's exporter sends neither, so 200/200 real batches bounced;
-  the fix is adding job + instance under LABELS in the Astro Metrics Export UI, which
-  stamps them on every exported series.
-- **Telemetry API (telemetry.googleapis.com) required resource attributes, learned one
-  400 at a time:** `gcp.project_id` (fixed in mntn-devops PR 5210, v0.2.1) AND a location -
-  missing location fails with 'write for resource failed: Unrecognized region or location'
-  (fix: `cloud.region=us-central1`, v0.2.2). The receiver separately requires BOTH `job`
-  and `instance` labels on every series (stamped via LABELS in the Astro Metrics Export
-  UI, applied 2026-09-01).
-- Once series land, `airflow_optimizer/pod_profile.py` reads requested-vs-used per task pod,
-  ledger surface `"pod"`. See [[project_airflow_optimizer]]; setup history in
-  `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`.
+
+Next: `airflow_optimizer/pod_profile.py` reads requested-vs-used per task pod, ledger surface
+`"pod"`. See [[project_airflow_optimizer]]; setup history in
+`tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`;
+deploy mechanics in [[reference_astro_deploy_mechanics]].

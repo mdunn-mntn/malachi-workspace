@@ -984,3 +984,27 @@ Demo live in `#airflow-debugger` (`C0BT9TKRMKM` = `SLACK_FALLBACK_CHANNEL`).
 `reference_slack_debugger_app` corrected).
 
 **Ops note:** the rapid DAG's task id is `reply`, not `rapid` — use `reply` for log fetches.
+
+## 7m. 2026-09-01 — four PRs live in prod after a deploy-gap chase; DEV-8821 relay fully live
+
+Full detail and waiting-on lists: `outputs/audi_1191_next_actions_2026_08_31.md` (kept current).
+
+- **PRs #1250/#1251/#1252/#1253 MERGED and LIVE** on image `deploy-2026-09-01T19-06-22`. The
+  fast merge train hit the Astro superseded-build gap: each push cancels the in-flight build,
+  the final SHA never built, and two verification sweeps ran the OLD image (verdicts VOID).
+  Fixed with retrigger PR #1254; check `current_tag` against the merge before trusting any prod
+  verification run. Mechanics: memory `reference_astro_deploy_mechanics`. Post-deploy rapid
+  debugger cycle ran clean on the new code.
+- **DEV-8821 metrics relay FULLY LIVE**, verified 20:10 UTC: zero drops, `kube_pod_status_phase`
+  162 series, `container_memory_working_set_bytes` 35, `container_cpu*` filling. Four-fix
+  ladder, each found from a live error after the previous fix deployed: mntn-devops PR 5193
+  (ingress ALL + OTel→Grafana Alloy for remote-write v1), PR 5210 (`gcp.project_id`), PR 5218
+  (`cloud.region` from `GCP_LOCATION`), PR 5220 (200-point batch cap, `dropped_items=368`).
+  Receiver needs `job`+`instance` on every series (Astro Export UI LABELS rows); the Sunday
+  export had silently vanished, re-created 16:33 UTC. The 08-31 "no relay log reads" note is
+  stale: the serviceusage denial is gone, relay logs readable. Full ladder + gotchas: memory
+  `reference_astro_metrics_relay`.
+- **dbx REST surface engaged; grants blocker:** the prod secret pairs `prod_runner` `397d710b`
+  (`spark_optimizer` `07f36af7` gets oauth 401, proven by swap-and-revert); Databricks
+  `INSUFFICIENT_PERMISSIONS` on job_costs/query_costs/plans; grants ask drafted to
+  ml_squad/Brian. Memory `reference_databricks`.
