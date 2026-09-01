@@ -66,9 +66,14 @@ full end-to-end run/test first, changes are likely.**
     both=204, job-only=500, instance-only=500, neither=500). Fastest fix: add job +
     instance under LABELS in the Astro Metrics Export UI (applied to all exported series).
     DONE 17:2x UTC: labels job=astro-prod / instance=prod added, 60/60 batches accepted,
-    zero 500s. Remaining: https://github.com/SteelHouse/mntn-devops/pull/5210 (gauntleted,
-    transform processor + v0.2.1 bump; Cristina reviews, rebuilds the image v0.2.1 per the
-    app README, Argo deploys). Then confirm container_* series in GMP and build
+    zero 500s. PR 5210 MERGED + v0.2.1 DEPLOYED 17:32 UTC: transform verified working
+    (Google's error echo shows gcp.project_id stamped). Two residual issues, both plausibly
+    the OPEN Google incident (us-central1-b network degradation since 14:44 UTC, affects
+    Cloud Run + VPC): (a) telemetry.googleapis.com returns INTERNAL 500 "please retry" on
+    forwards, Alloy treats as permanent and drops; (b) new instances crashloop on startup
+    (probe fails on /-/ready, exit(1), no app logs - Vault over VPC connector suspected),
+    started with the 17:30 rollout window. Re-verify GMP after the incident closes before
+    escalating to Cristina as a code problem. Then confirm container_* series in GMP and build
     pod_profile.py.
     Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check
