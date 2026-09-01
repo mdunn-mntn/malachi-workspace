@@ -110,6 +110,19 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
 11. Monday package (spike draft, Confluence skeleton, talking points):
     audi_1191_monday_package_2026_08_31.md
 
+## In flight 2026-09-01 PM
+- "39 DAGs unprofiled" fix: branch audi-1194-coverage-paused in airflow-ti. Root causes:
+  (a) paused-state read is ORM, forbidden on Astro tasks, so 7 paused DAGs counted active;
+  (b) digest chip printed raw unprofiled count (39) instead of invisible count (38, only 1
+  DAG cost-profiled while dbx grants are blocked); (c) cost surfaces thin. Fix: REST
+  fallback via AIRFLOW_BEARER + AIRFLOW_API_BASE (both on prod), chip now "N DAGs without
+  cost data". 156 tests green, gauntlet running.
+- Mode dashboard e81786de8403: new query "BigQuery cost by task" (3ead7301daa8, ledger
+  surface=bq rows, latest sweep, slot-h + $ at 0.04) + layout section "BigQuery cost,
+  latest sweep". Run d2d0b89e9cef succeeded. Addresses "GCS markdown nobody opens".
+- 12 scanned jobs unmatched to DAGs (coverage report 2026-09-01): Explore agent mapping
+  app names to DAGs for OPTIMIZER_NAME_OVERRIDES draft.
+
 ## Queued 2026-09-01 (user, post-relay): quality + architecture pass
 12. 30-day diagnosis run on BOTH systems (debugger + optimizer) once current pendings close.
 13. Keep exercising #airflow-debugger and #spark-optimizer digests until output quality is
