@@ -111,7 +111,9 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
     audi_1191_monday_package_2026_08_31.md
 
 ## In flight 2026-09-01 PM
-- "39 DAGs unprofiled" fix: branch audi-1194-coverage-paused in airflow-ti. Root causes:
+- "39 DAGs unprofiled" fix: PR https://github.com/SteelHouse/airflow-ti/pull/1255 OPEN
+  (gauntlet fast FIXED_UNVERIFIED, 1 finding fixed = REST-error-wins warning; 156 tests +
+  ruff re-verified by hand). Awaiting review/merge. Root causes:
   (a) paused-state read is ORM, forbidden on Astro tasks, so 7 paused DAGs counted active;
   (b) digest chip printed raw unprofiled count (39) instead of invisible count (38, only 1
   DAG cost-profiled while dbx grants are blocked); (c) cost surfaces thin. Fix: REST
@@ -120,8 +122,9 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
 - Mode dashboard e81786de8403: new query "BigQuery cost by task" (3ead7301daa8, ledger
   surface=bq rows, latest sweep, slot-h + $ at 0.04) + layout section "BigQuery cost,
   latest sweep". Run d2d0b89e9cef succeeded. Addresses "GCS markdown nobody opens".
-- 12 scanned jobs unmatched to DAGs (coverage report 2026-09-01): Explore agent mapping
-  app names to DAGs for OPTIMIZER_NAME_OVERRIDES draft.
+- OPTIMIZER_NAME_OVERRIDES SET on prod 2026-09-01: 14 source-verified app-name -> dag_id
+  entries (all 12 unmatched jobs + ds=22/29 siblings). ETL Audience Intent still excluded
+  (prod launcher unconfirmed). Next sweep 09:00 UTC shows linked digests.
 
 ## Queued 2026-09-01 (user, post-relay): quality + architecture pass
 12. 30-day diagnosis run on BOTH systems (debugger + optimizer) once current pendings close.
