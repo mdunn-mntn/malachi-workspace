@@ -57,21 +57,111 @@ What exactly is broken, unclear, or needed? Include:
 
 ## 4. Investigation & Findings
 
-**Query execution:** 2026-09-01, job perf_20260901_135602_56206 (34s slot, 4409 rows returned)
+### 4a. Schema resolution (2026-09-01)
 
-**Data schema confirmed:**
-- Lift metrics: `dw-main-gold.sqlmesh__reporting.reporting__lift__ghost_bid_rollup__4089669024` ✅
-- Campaign attributes: campaign_groups, advertisers, advertiser_verticals ✅
-- Impression aggregation: cost_impression_log join returned NULLs (group_id mismatch TBD)
+Three join defects were found and fixed during the first build. All three are durable schema facts:
 
-**Current blockers:**
-1. Output format: BQ table formatting truncated at column width; export to CSV needed for .xlsx build
-2. Impression join: cost_impression_log.group_id→campaign_groups.campaign_group_id join not returning rows (schema mismatch or partition filter issue)
-3. Data filtering: Query returned 4409 rows but expected ~950 (n_holdout >= 100); filter logic needs review
+1. **`cost_impression_log.group_id` is NOT `campaign_group_id`.** CIL `group_id` values sit in the ~1.1-1.2M
+   range; `campaign_group_id` values are ~24K-131K. Joining them returns zero rows, silently, as a LEFT JOIN
+   producing all-NULL attribute columns. The correct bridge is
+   `cost_impression_log.campaign_id -> public.campaigns.campaign_id -> campaigns.campaign_group_id`.
+   Verified: CIL campaign_id 643620 -> CG 130485, 397337 -> 85144, 147574 -> 24081.
+2. **`fpa.advertiser_verticals` has multiple rows per advertiser** (type 0 parent, type 1 sub). A naive
+   `SELECT DISTINCT advertiser_id, vertical_name` join Cartesian-multiplies the output: 2,224 campaign groups
+   became 4,409 rows, with WGU appearing under both "Education" and "Colleges & Universities". Fixed with
+   `QUALIFY ROW_NUMBER() OVER (PARTITION BY advertiser_id ORDER BY vertical_id) = 1`. NOTE: this picks the
+   lowest vertical_id arbitrarily and may mix parent and sub verticals in one column. Still open.
+3. **`cost_impression_log.sh_device` is unusable for partner_id = 8 (Beeswax).** It is NULL on ~72% of
+   impressions and never takes the values 'CTV'/'Display'/'Mobile'; the real domain is
+   'COMPUTER'/'MOBILE'/'TABLET'. Every `pct_ctv`/`pct_display`/`pct_mobile` column read 0.0000. Channel must
+   come from `public.campaigns.channel_id` (8 = CTV, 1 = Display) instead. Consistent with the documented
+   Beeswax CIL enrichment gap in `data_catalog.md`.
 
-**Sample data:** 52 unique campaigns extracted from truncated table output; shows lift metrics and campaign names present
+Tooling note: `.claude/scripts/bq_run.sh` passes through to `bq query`, which defaults to **legacy SQL**.
+Every CTE query fails with `Encountered "WITH" ... Was expecting: <EOF>` until `--nouse_legacy_sql` is passed.
+The SQL must also be the final positional argument; piping it on stdin does not work.
+
+### 4b. Pre-delivery audit (2026-09-01) — v1 workbook REJECTED
+
+A 17-agent adversarial audit (4 independent lenses, every high-severity finding put to a refutation agent)
+was run against the first workbook before it reached Kirsa. **11 findings confirmed, 1 refuted.** Three are
+critical and invalidate the v1 deliverable. It was not sent.
+
+**CRITICAL 1 — the population was gated on the wrong column.** The build filtered `n_holdout >= 100`, which is
+holdout **IPs**. The locked framing in section 0 specifies 100+ holdout **visits** (`vis_holdout`), and that is
+what the reference number in the ask meant. Shipped 2,215 campaign groups of which **1,441 (65%) had under 100
+holdout visits**; median shipped row had 42, and 129 rows had exactly zero. Consequence: 130 rows shipped with a
+blank lift and blank CI, 94 of them displaying `Significant = TRUE`, contradicting the workbook's own glossary.
+Fixed-effect inverse-variance weighting largely protected the *pooled* column (CTV 13.5% vs 13.0% correctly
+gated), but the *unweighted* columns moved hard: Food & Beverage median lift 20.8% -> 5.8%, Healthcare
+22.3% -> 10.1%. The top-ranked vertical on the headline sheet, Professional Services at 29.05%, rested on 48
+campaigns of which **only 4** were powered; correctly gated it falls below the 5-campaign floor and vanishes.
+
+**CRITICAL 2 — delivery attributes mixed all funnel stages into a prospecting-only outcome.** The impression
+aggregate grouped CIL by `campaign_group_id` with no objective or funnel filter, so the attributes describe
+Prospecting + Multi-Touch S2/S3 + Ego, while the lift outcome is 100% prospecting by construction. Non-prospecting
+is 21.2% of impressions and 3.8% of media spend in the audited week. Critically, `channel_id = 1` (Display) occurs
+**only** at objective_id 5 and 6 in this cohort, so `pct_display_chan` was never a channel choice: the "By channel"
+sheet's Display bucket (183 groups, +16.6% pooled, ranked ABOVE CTV) actually meant "groups whose multi-touch
+display retargeting out-delivered their prospecting CTV". The headline channel finding was a confounded artifact.
+`data_knowledge.md` already documents this: grouping delivery by campaign_group_id conflates stages; always split
+by objective_id.
+
+**CRITICAL 3 — intent-band percentages divided by a denominator that is mostly unscored.** The four `pct_*_intent`
+columns divided by `COUNT(*)`, which includes the `household_score = -1` unscored sentinel (69.3% of impressions
+platform-wide; 57.5% impression-weighted in this population). No `pct_unscored` column was emitted despite the
+scope doc specifying one. 456 campaign groups had all four bands at exactly 0.0000; the build script's
+`idxmax` tie-break then silently resolved all of them into **"High Intent"**, so the shipped High Intent stratum
+(1,718 campaigns, $16.8M spend) was 26.4% campaigns with zero scored impressions. The band cutpoints themselves
+(>=8001 High, 6666-8000 PP, 3333-6665 Mid, 1-3332 MaxReach) were verified correct.
+
+**MAJOR findings also confirmed:** fixed-effect pooling reports CIs on I-squared = 93% heterogeneity, which is
+false precision (random-effects DerSimonian-Laird required); `% significant` and `Pooled lift` were computed over
+different campaign sets within the same table row; the period label "Lift: all-time" is false, the ghost-bid data
+floor is 2026-06-22 with no backfill.
+
+**Refuted (1):** a claim that CPIV divides a 2-month spend by an all-time visit count was investigated and rejected.
+
+### 4c. The correct population, and a better source table
+
+The expected count is confirmed and reconciled. Against `dw-main-gold.reporting.lift__ghost_bid_results` at
+`stratum_type = 'overall'`:
+
+| Gate | Campaign groups |
+|---|---|
+| All rows | 4,048 |
+| `se > 0` | 3,532 |
+| Full clean gate | 3,242 |
+| Full clean gate AND `vis_holdout >= 100` | **930** |
+
+930 is the ask's "950+". The v1 workbook's 2,215 was the artifact of gating on holdout IPs with a partial gate.
+Full clean gate = `se > 0 AND has_valid_holdout AND meets_min_n AND meets_min_compliance AND NOT ghost_frac_inflated
+AND NOT arm_imbalance_suspect`.
+
+**`lift__ghost_bid_results` is the better base table than `lift__ghost_bid_rollup`** for this ticket, because it
+carries per-campaign STRATA that answer the ask directly instead of by proxy:
+
+- `stratum_type = 'score_band'`, `stratum_value` in {High, PP, Mid, MaxReach, no_score} — the sanctioned intent-band
+  decomposition, per campaign, with its own lift, SE and significance. This replaces the hand-banded CIL
+  `household_score` percentages entirely and removes CRITICAL 3 at the root. `data_catalog.md` explicitly warns
+  against hand-banding (`eff_score` matches the documented cutpoints on only 51% of cells).
+- `stratum_type = 'bid_count'`, `stratum_value` in {1, 2-3, 4-10, 11+} — lift by bid frequency, per campaign. This
+  is the direct answer to the "average frequency" attribute in the ask, which v1 did not measure at all.
+- `stratum_type` also carries `score_band_ivw` and `score_band_mh` pre-combined rows (3,037 campaigns each).
+- Native `p_value`, `ip_compliance`, `holdout_won_rate`, `incremental_roas`, `ntb_*` (new-to-brand) columns.
+
+**Caveat found while checking:** `treatment_spend` is populated on only **18 of 4,048** rows, so spend and any
+cost-per-incremental metric still have to come from `cost_impression_log`, filtered to `objective_id = 1 AND
+funnel_level = 1` to match the outcome. The window mismatch (lift from 2026-06-22, CIL attributes Jul-Aug 2026)
+therefore remains and must be disclosed, not hidden.
+
+**Also pending from `data_catalog.md`:** pooling relative lift as `IVW(abs_itt) / IVW(base_rate)` is documented as
+unsound for low-baseline strata and reverses the band gradient. Pool on the **log risk ratio** instead, variance
+`(1-p_t)/(p_t*n_t) + (1-p_h)/(p_h*n_h)`. Helper exists at
+`tickets/incr_75_eligible_advertisers/artifacts/incr_75_lift_stats.py`.
 
 ## 5. Solution
+
 What was done to resolve the issue:
 - Code changes (PRs, commits)
 - Configuration changes
