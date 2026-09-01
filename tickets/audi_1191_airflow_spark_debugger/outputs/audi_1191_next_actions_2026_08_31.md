@@ -4,11 +4,16 @@
 CAUTION: deploy_prod.yaml only copies spark/model files to GCS; Astro deploys come from
 Astro's OWN git integration on main, and 50 min after the include/-only merges the prod
 image is STILL yesterday's (current_tag deploy-2026-08-31T18-22-40), so both verification
-sweeps ran OLD code (old digest link shape proves it; dbx CLI-skip verdict void). Watcher
-polls current_tag and re-verifies on the new image; if none appears, the integration may
-not build include/-only pushes (yesterday's builds all had dags/ changes). astro CLI
-gotcha: `astro deployment inspect` needs --deployment-name FLAG; positional name returns
-empty. Verification in flight 18:06 UTC: manual
+sweeps ran OLD code (old digest link shape proves it; dbx CLI-skip verdict void). Astro's git integration attempted builds
+    for the merges at 18:01/18:02 UTC and BOTH FAILED (26s in, no error exposed; Google
+    incident window). Manual deploy is BLOCKED: CI/CD enforcement rejects user tokens
+    ("Please use API Tokens instead") and Malachi cannot mint deployment API tokens.
+    UNBLOCK: Malachi retriggers the git-integration deploy from the Astro UI (redeploy the
+    failed deploy, or a trivial reviewed PR to main). Tag watcher then auto-runs the
+    verification sweep. astro CLI gotchas: `deployment inspect` needs --deployment-name
+    FLAG (positional = empty output); `astro deploy` needs the gitignored .astro/ dir
+    (worktrees lack it) and prints help on error with the cause line above the usage
+    block. Verification in flight 18:06 UTC: manual
 spark_optimizer_daily run manual__2026-09-01T18:06:11 (checks dbx ledger rows via the
 pre-staged vars + new digest rendering) and the 18:00 rapid debugger cycle (digest
 threading live). Airflow REST base:
