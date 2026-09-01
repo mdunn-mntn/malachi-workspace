@@ -152,7 +152,13 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
     cpu data confirmed under /unknown variant. PromQL STILL empty 20+ min later even
     though memory (also /unknown) queries fine, suspicion: _total-name mapping; moot for
     us, pod_profile reads the v3 API. malachi_e2e_check descriptor also deleted.
-15b. pod surface BUILT (branch audi-1194-pod-surface): pod_profile.py (v3 timeSeries,
+15b. pod surface PR https://github.com/SteelHouse/airflow-ti/pull/1257 OPEN (gauntlet
+    medium, 4 findings fixed incl. per-pod limit summing; 159 tests re-verified).
+    REVIEW QUEUE (merge with gaps, Astro superseded-build gap): airflow-ti 1255 coverage,
+    1256 failure trigger, 1257 pod surface; mntn-devops 5224 monitoring.viewer.
+    After merges: set OPTIMIZER_POD_PROJECT=mntn-prj-prod-00 on prod, canary-fail a task
+    (trigger check), confirm optimizer_pod_<date>.md + pod ledger rows next sweep.
+    Was built as (branch audi-1194-pod-surface): pod_profile.py (v3 timeSeries,
     components from pod names, core-hours/day exec_h, cpu-overprovisioned + memory-pressure
     findings), sweep wiring (optimizer_pod_<date>.md + digest link + surface="pod" rows),
     warehouse-message fix. 159 tests. Gauntlet medium RUNNING. Prod needs: mntn-devops PR
