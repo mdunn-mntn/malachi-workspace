@@ -65,7 +65,11 @@ full end-to-end run/test first, changes are likely.**
     be found from labels" - the receiver needs BOTH labels on every series (probe matrix:
     both=204, job-only=500, instance-only=500, neither=500). Fastest fix: add job +
     instance under LABELS in the Astro Metrics Export UI (applied to all exported series).
-    Then confirm 204s + container_* series in GMP and build pod_profile.py.
+    DONE 17:2x UTC: labels job=astro-prod / instance=prod added, 60/60 batches accepted,
+    zero 500s. Remaining: the gcp.project_id fix, PR'd as mntn-devops branch
+    audi-1194-relay-gcp-project-id (transform processor + v0.2.1 bump; Cristina reviews,
+    rebuilds the image, Argo deploys). Then confirm container_* series in GMP and build
+    pod_profile.py.
     Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check
     (count(last_over_time(container_cpu_usage_seconds_total[10m])) at
