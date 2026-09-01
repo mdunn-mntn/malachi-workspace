@@ -154,7 +154,12 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
     us, pod_profile reads the v3 API. malachi_e2e_check descriptor also deleted.
 15b. pod surface PR https://github.com/SteelHouse/airflow-ti/pull/1257 OPEN (gauntlet
     medium, 4 findings fixed incl. per-pod limit summing; 159 tests re-verified).
-    REVIEW QUEUE: airflow-ti COMBINED PR https://github.com/SteelHouse/airflow-ti/pull/1258
+    MERGED + LIVE 2026-09-01 22:xx UTC: PR 1258 (image deploy-2026-09-01T22-22-40 HEALTHY)
+    and devops 5224 (monitoring.viewer synced to IAM). Verified: plugin
+    airflow_debugger_trigger REGISTERED with its listener (GET /plugins). Set
+    OPTIMIZER_POD_PROJECT=mntn-prj-prod-00 post-deploy. Verification sweep trigger armed
+    (waits healthy after var restart). Next natural task failure proves the instant
+    trigger end to end. Was: airflow-ti COMBINED PR https://github.com/SteelHouse/airflow-ti/pull/1258
     (1255+1256+1257 closed as superseded, branches kept; octopus merge, 430 tests green);
     mntn-devops 5224 monitoring.viewer. One airflow-ti merge = one Astro deploy, no
     superseded-build risk.
