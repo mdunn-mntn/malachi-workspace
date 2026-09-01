@@ -126,6 +126,18 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
   entries (all 12 unmatched jobs + ds=22/29 siblings). ETL Audience Intent still excluded
   (prod launcher unconfirmed). Next sweep 09:00 UTC shows linked digests.
 
+## DEV-8821 residual: container_cpu invisible to PromQL (descriptor type collision)
+Points ARRIVE but land under descriptor variant container_cpu_usage_seconds_total/unknown
+(14 series last hour, v3 API); a stale EMPTY /counter variant (0 series over 26h) shadows
+the PromQL name, so queries return 0. Gauges (memory 52, kube_pod 192) fine: gauge+unknown
+variants coexist queryable. Cause: Astro remote-write carries no metric-type metadata, so
+Alloy's prom receiver marks all series unknown; the /counter descriptor is a leftover.
+Fix: delete the empty /counter descriptor (monitoring.metricDescriptors.delete) - DENIED
+for Malachi, ask Cristina/devops. Workaround live: pod_profile.py can read the /unknown
+variant via v3 timeSeries API regardless. Minor noise: staleness-NaN points from
+kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset value"
+(2-10/batch, pod churn only) and target_info duplicate warnings - both benign.
+
 ## Queued 2026-09-01 (user, post-relay): quality + architecture pass
 12. 30-day diagnosis run on BOTH systems (debugger + optimizer) once current pendings close.
 13. Keep exercising #airflow-debugger and #spark-optimizer digests until output quality is
