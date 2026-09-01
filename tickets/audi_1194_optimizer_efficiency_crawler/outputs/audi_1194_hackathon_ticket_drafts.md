@@ -158,7 +158,20 @@ gs:// digest refs become console links; OPTIMIZER_NAME_OVERRIDES env map lets un
 names (ETL Audience Intent - *, segment-updates-to-parquet) resolve to their DAG. Populate
 the override values with the owning team before setting the var.
 
-## OPTIMIZER_NAME_OVERRIDES draft (2026-09-01, set AFTER PR 1252 merges, confirm dag ids with owning team first)
+## OPTIMIZER_NAME_OVERRIDES — SET on prod 2026-09-01 (14 entries, all source-verified)
+Every mapping below was traced in airflow-ti source (spark file appName -> DAG operator
+reference), so no owner confirmation was needed. Live via astro deployment variable update.
+fpa_site_visit_batch_serverless owns: 33AcrossDataProcessing, 5x5DataProcessing,
+AugmentorLogDsid30Processing, CybbaDataProcessing, GuidLogDataProcessing,
+SharethisPredactivDataProcessing. Hashed email signal for ds=21/22/23/26/29 ->
+hashed_email_{conversion_log_signals, experian_signals, guid_log_signals, ds_26_signals,
+deepsync_signals_ds29}. conversion-signal-backfill-dataproc ->
+conversion_signal_backfill_workflow. fpa-ingestion-dataproc ->
+pixel_page_view_signal_backfill_workflow. segment-updates-to-parquet ->
+materialize_mntn_first_party.
+STILL EXCLUDED (prod launcher unconfirmed, ask owning team):
+
+## Prior draft (2026-09-01, superseded above)
 
 ```json
 {"segment-updates-to-parquet": "materialize_mntn_first_party",
