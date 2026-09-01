@@ -42,7 +42,10 @@ last_verified: 2026-08-31
   data."). `otelcol.auth.google{project=...}` only authenticates, it does not stamp the
   attribute. GMP-side smoke test: a hand-rolled PRW v1 protobuf (pure-python snappy: varint
   len + 0xf0 literal block) POSTs fine; the receiver also requires `job` and `instance`
-  labels or it 500s.
+  labels or it 500s — BOTH are required (probe matrix 2026-09-01: both=204, job-only=500,
+  instance-only=500). Astro's exporter sends neither, so 200/200 real batches bounced;
+  the fix is adding job + instance under LABELS in the Astro Metrics Export UI, which
+  stamps them on every exported series.
 - Once series land, `airflow_optimizer/pod_profile.py` reads requested-vs-used per task pod,
   ledger surface `"pod"`. See [[project_airflow_optimizer]]; setup history in
   `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`.

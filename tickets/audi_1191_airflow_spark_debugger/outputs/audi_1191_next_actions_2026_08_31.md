@@ -60,8 +60,12 @@ full end-to-end run/test first, changes are likely.**
     InvalidArgument 'Resource is missing required attribute "gcp.project_id"' - config.alloy
     never stamps that resource attribute (otelcol.auth.google only authenticates). Fix:
     transform processor setting resource attribute gcp.project_id=GCP_PROJECT_ID between
-    batch and the otlphttp exporter + image rebuild (mntn-devops). Then confirm container_*
-    series in GMP and build pod_profile.py.
+    batch and the otlphttp exporter + image rebuild (mntn-devops). SECOND blocker found
+    16:40 UTC: 200/200 Astro POSTs since export creation return 500 "job or instance cannot
+    be found from labels" - the receiver needs BOTH labels on every series (probe matrix:
+    both=204, job-only=500, instance-only=500, neither=500). Fastest fix: add job +
+    instance under LABELS in the Astro Metrics Export UI (applied to all exported series).
+    Then confirm 204s + container_* series in GMP and build pod_profile.py.
     Note: Malachi CAN read the relay logs now
     (earlier serviceusage denial is gone). After the flip: re-run the GMP check
     (count(last_over_time(container_cpu_usage_seconds_total[10m])) at
