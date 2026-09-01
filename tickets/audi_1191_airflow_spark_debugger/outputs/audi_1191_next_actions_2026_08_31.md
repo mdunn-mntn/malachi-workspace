@@ -154,8 +154,10 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
     us, pod_profile reads the v3 API. malachi_e2e_check descriptor also deleted.
 15b. pod surface PR https://github.com/SteelHouse/airflow-ti/pull/1257 OPEN (gauntlet
     medium, 4 findings fixed incl. per-pod limit summing; 159 tests re-verified).
-    REVIEW QUEUE (merge with gaps, Astro superseded-build gap): airflow-ti 1255 coverage,
-    1256 failure trigger, 1257 pod surface; mntn-devops 5224 monitoring.viewer.
+    REVIEW QUEUE: airflow-ti COMBINED PR https://github.com/SteelHouse/airflow-ti/pull/1258
+    (1255+1256+1257 closed as superseded, branches kept; octopus merge, 430 tests green);
+    mntn-devops 5224 monitoring.viewer. One airflow-ti merge = one Astro deploy, no
+    superseded-build risk.
     After merges: set OPTIMIZER_POD_PROJECT=mntn-prj-prod-00 on prod, canary-fail a task
     (trigger check), confirm optimizer_pod_<date>.md + pod ledger rows next sweep.
     Was built as (branch audi-1194-pod-surface): pod_profile.py (v3 timeSeries,
