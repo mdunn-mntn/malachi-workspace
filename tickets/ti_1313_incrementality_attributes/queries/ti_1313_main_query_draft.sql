@@ -96,18 +96,21 @@ advertiser_attrs AS (
 ),
 
 vertical_attrs AS (
-  -- Vertical lookup
+  -- Vertical lookup: take first (primary) vertical per advertiser
+  -- (advertiser_verticals can have multiple rows per advertiser; avoid Cartesian product)
   SELECT DISTINCT
     advertiser_id,
-    vertical_name,
-    vertical_id
+    FIRST_VALUE(vertical_name) OVER (PARTITION BY advertiser_id ORDER BY vertical_id) AS vertical_name,
+    FIRST_VALUE(vertical_id) OVER (PARTITION BY advertiser_id ORDER BY vertical_id) AS vertical_id
   FROM
     `dw-main-silver.fpa.advertiser_verticals`
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY advertiser_id ORDER BY vertical_id) = 1
 ),
 
 impression_attrs AS (
   -- Aggregated campaign attributes from cost_impression_log
   -- Uses all-time data for consistency with lift__ghost_bid_rollup (all-time only)
+  -- NOTE: group_id=-3 is unresolved-campaign sentinel; blanks group_id with campaign_id
   SELECT
     group_id,
     COUNT(*) AS impression_count,
@@ -125,6 +128,7 @@ impression_attrs AS (
     `dw-main-silver.logdata.cost_impression_log`
   WHERE
     group_id IS NOT NULL
+    AND group_id > 0  -- Exclude -3 sentinel and other negatives
   GROUP BY
     group_id
 )
