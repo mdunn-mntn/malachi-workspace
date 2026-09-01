@@ -56,10 +56,20 @@ What exactly is broken, unclear, or needed? Include:
 - **Household scores**: NULL before 2025-06-01 in CIL (recoverable from model_params back to 2025-05-06)
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+**Query execution:** 2026-09-01, job perf_20260901_135602_56206 (34s slot, 4409 rows returned)
+
+**Data schema confirmed:**
+- Lift metrics: `dw-main-gold.sqlmesh__reporting.reporting__lift__ghost_bid_rollup__4089669024` ✅
+- Campaign attributes: campaign_groups, advertisers, advertiser_verticals ✅
+- Impression aggregation: cost_impression_log join returned NULLs (group_id mismatch TBD)
+
+**Current blockers:**
+1. Output format: BQ table formatting truncated at column width; export to CSV needed for .xlsx build
+2. Impression join: cost_impression_log.group_id→campaign_groups.campaign_group_id join not returning rows (schema mismatch or partition filter issue)
+3. Data filtering: Query returned 4409 rows but expected ~950 (n_holdout >= 100); filter logic needs review
+
+**Sample data:** 52 unique campaigns extracted from truncated table output; shows lift metrics and campaign names present
 
 ## 5. Solution
 What was done to resolve the issue:

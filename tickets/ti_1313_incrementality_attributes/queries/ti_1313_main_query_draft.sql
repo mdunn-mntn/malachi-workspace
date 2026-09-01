@@ -105,29 +105,29 @@ vertical_attrs AS (
     `dw-main-silver.fpa.advertiser_verticals`
 ),
 
--- TODO: Aggregate attributes from bid logs
--- impression_attrs AS (
---   SELECT
---     group_id,
---     COUNT(*) AS impression_count,
---     SUM(media_spend) AS total_spend,
---     AVG(household_score) AS avg_household_score,
---     APPROX_QUANTILES(household_score, 100)[OFFSET(50)] AS median_household_score,
---     COUNTIF(household_score >= 8001) / COUNT(*) AS pct_high_intent,
---     COUNTIF(household_score BETWEEN 6666 AND 8000) / COUNT(*) AS pct_peak_intent,
---     COUNTIF(household_score BETWEEN 3333 AND 6665) / COUNT(*) AS pct_mid_intent,
---     COUNTIF(household_score BETWEEN 1 AND 3332) / COUNT(*) AS pct_max_reach_intent,
---     COUNTIF(household_score IN (-1, 0) OR household_score IS NULL) / COUNT(*) AS pct_unscored,
---     COUNTIF(sh_device = 'CTV') / COUNT(*) AS pct_ctv,
---     COUNTIF(sh_device = 'Display') / COUNT(*) AS pct_display,
---     COUNTIF(sh_device = 'Mobile') / COUNT(*) AS pct_mobile,
---   FROM
---     `dw-main-silver.logdata.cost_impression_log`
---   WHERE
---     DATE(time) >= DATE_SUB(CURRENT_DATE('America/New_York'), INTERVAL 30 DAY)
---   GROUP BY
---     group_id
--- )
+impression_attrs AS (
+  -- Aggregated campaign attributes from cost_impression_log
+  -- Uses all-time data for consistency with lift__ghost_bid_rollup (all-time only)
+  SELECT
+    group_id,
+    COUNT(*) AS impression_count,
+    COALESCE(SUM(media_spend), 0) AS total_spend,
+    COALESCE(AVG(household_score), 0) AS avg_household_score,
+    SAFE_DIVIDE(COUNTIF(household_score >= 8001), COUNT(*)) AS pct_high_intent,
+    SAFE_DIVIDE(COUNTIF(household_score BETWEEN 6666 AND 8000), COUNT(*)) AS pct_peak_intent,
+    SAFE_DIVIDE(COUNTIF(household_score BETWEEN 3333 AND 6665), COUNT(*)) AS pct_mid_intent,
+    SAFE_DIVIDE(COUNTIF(household_score >= 1 AND household_score < 3333), COUNT(*)) AS pct_max_reach,
+    SAFE_DIVIDE(COUNTIF(household_score < 1 OR household_score IS NULL), COUNT(*)) AS pct_unscored,
+    SAFE_DIVIDE(COUNTIF(sh_device = 'CTV'), COUNT(*)) AS pct_ctv,
+    SAFE_DIVIDE(COUNTIF(sh_device = 'Display'), COUNT(*)) AS pct_display,
+    SAFE_DIVIDE(COUNTIF(sh_device = 'Mobile'), COUNT(*)) AS pct_mobile
+  FROM
+    `dw-main-silver.logdata.cost_impression_log`
+  WHERE
+    group_id IS NOT NULL
+  GROUP BY
+    group_id
+)
 
 SELECT
   ld.campaign_group_id,
@@ -178,6 +178,25 @@ SELECT
   aa.company_size,
   aa.industry,
 
+  -- Impression-derived attributes
+  ia.impression_count,
+  ROUND(ia.total_spend, 2) AS total_spend_usd,
+  ROUND(ia.avg_household_score, 0) AS avg_household_score,
+  ROUND(ia.pct_high_intent, 4) AS pct_high_intent,
+  ROUND(ia.pct_peak_intent, 4) AS pct_peak_intent,
+  ROUND(ia.pct_mid_intent, 4) AS pct_mid_intent,
+  ROUND(ia.pct_max_reach, 4) AS pct_max_reach,
+  ROUND(ia.pct_unscored, 4) AS pct_unscored,
+  ROUND(ia.pct_ctv, 4) AS pct_ctv,
+  ROUND(ia.pct_display, 4) AS pct_display,
+  ROUND(ia.pct_mobile, 4) AS pct_mobile,
+
+  -- Calculated metrics
+  CASE WHEN ia.total_spend > 0 AND ld.incremental_visits > 0
+    THEN ROUND(ia.total_spend / ld.incremental_visits, 2)
+    ELSE NULL
+  END AS cost_per_incremental_visit,
+
   -- Lift sample sizes
   ld.n_treatment,
   ld.n_holdout,
@@ -202,9 +221,8 @@ LEFT JOIN advertiser_attrs aa
   ON ld.advertiser_id = aa.advertiser_id
 LEFT JOIN vertical_attrs va
   ON ld.advertiser_id = va.advertiser_id
--- TODO: Uncomment when impression aggregation is added
--- LEFT JOIN impression_attrs ia
---   ON ld.campaign_group_id = ia.group_id
+LEFT JOIN impression_attrs ia
+  ON ld.campaign_group_id = ia.group_id
 
 ORDER BY
   ld.incremental_visits DESC
