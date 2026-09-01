@@ -171,8 +171,8 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
     quietly on the 0.25-CPU pod; every bulk copy since 08-28 exited "Done" with ~2/192
     landed, so sweeps were partial forever and resolution froze (matches diagnosis).
     Proven by isolation: -m forked = hang/partial (Mac AND pod), plain or
-    parallel_process_count=1 = clean. Fix branch audi-1194-fetch-no-fork (one option:
-    threads-only -m), gauntlet running, PR next. After both merge + deploy: manual sweep,
+    parallel_process_count=1 = clean. Fix PR https://github.com/SteelHouse/airflow-ti/pull/1260 OPEN (gauntlet clean pass).
+    Review queue now: 1259 (pod rate) + 1260 (downloader). After both merge + deploy: manual sweep,
     expect complete=True and resolutions to flow again. Next natural
     task failure proves the instant trigger end to end. Was: airflow-ti COMBINED PR https://github.com/SteelHouse/airflow-ti/pull/1258
     (1255+1256+1257 closed as superseded, branches kept; octopus merge, 430 tests green);
