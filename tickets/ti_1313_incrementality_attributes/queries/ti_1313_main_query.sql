@@ -29,7 +29,9 @@ impression_attrs AS (
     SAFE_DIVIDE(COUNTIF(cil.household_score >= 1 AND cil.household_score < 3333), COUNT(*)) AS pct_max_reach,
     SAFE_DIVIDE(COUNTIF(cil.sh_device = 'CTV'), COUNT(*)) AS pct_ctv,
     SAFE_DIVIDE(COUNTIF(cil.sh_device = 'Display'), COUNT(*)) AS pct_display,
-    SAFE_DIVIDE(COUNTIF(cil.sh_device = 'Mobile'), COUNT(*)) AS pct_mobile
+    SAFE_DIVIDE(COUNTIF(cil.sh_device = 'Mobile'), COUNT(*)) AS pct_mobile,
+    SAFE_DIVIDE(COUNTIF(c.channel_id = 8), COUNT(*)) AS pct_ctv_chan,
+    SAFE_DIVIDE(COUNTIF(c.channel_id = 1), COUNT(*)) AS pct_display_chan
   FROM `dw-main-silver.logdata.cost_impression_log` cil
   JOIN `dw-main-silver.public.campaigns` c ON cil.campaign_id = c.campaign_id
   WHERE cil.campaign_id > 0 AND DATE(cil.time) BETWEEN '2026-07-01' AND '2026-08-31'
@@ -45,6 +47,7 @@ SELECT ld.campaign_group_id, ca.campaign_group_name, ld.advertiser_id, aa.compan
   ROUND(ia.pct_high_intent, 4) AS pct_high_intent, ROUND(ia.pct_peak_intent, 4) AS pct_peak_intent,
   ROUND(ia.pct_mid_intent, 4) AS pct_mid_intent, ROUND(ia.pct_max_reach, 4) AS pct_max_reach,
   ROUND(ia.pct_ctv, 4) AS pct_ctv, ROUND(ia.pct_display, 4) AS pct_display, ROUND(ia.pct_mobile, 4) AS pct_mobile,
+  ROUND(ia.pct_ctv_chan, 4) AS pct_ctv_chan, ROUND(ia.pct_display_chan, 4) AS pct_display_chan,
   CASE WHEN ia.total_spend > 0 AND ld.incremental_visits > 0 THEN ROUND(ia.total_spend / ld.incremental_visits, 2) ELSE NULL END AS cost_per_incremental_visit,
   ld.n_treatment, ld.n_holdout, ld.vis_treatment, ld.vis_holdout
 FROM lift_data ld
