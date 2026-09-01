@@ -1039,8 +1039,33 @@ they cannot fail the observed task; `plugins/` ships with the deployed image (no
 `.dockerignore`); `AIRFLOW_BEARER` + `AIRFLOW_API_BASE` are deployment env vars available to
 listeners. Routed to memory `project_airflow_debugger`.
 
-**Cross-repo review queue at close:** airflow-ti #1255/#1256/#1257 + mntn-devops #5224. The
+**Cross-repo review queue at close:** airflow-ti #1255/#1256/#1257 + mntn-devops #5224
+*(superseded the same night: all three combined into PR #1258 and merged — §7o)*. The
 #5224 gauntlet fixer swapped `roles/monitoring.viewer` for `roles/monitoring.metricReader`,
 which does not exist in GCP (IAM API 404), and the refuter CONFIRMED it instead of refuting —
 caught pre-ship; rule (verify any external identifier a fixer names against the owning system)
 routed to memory `feedback_gauntlet_findings_not_fixes`.
+
+## 7o. 2026-09-01 (evening) — #1256 live via combined PR #1258; trigger plugin registered; 12-day diagnosis
+
+- **PR #1256 merged via COMBINED PR #1258** (#1255+#1256+#1257 closed as superseded, branches
+  kept; octopus merge, 430 tests green) — **LIVE on image `deploy-2026-09-01T22-22-40`**; one
+  merge = one Astro deploy, so the superseded-build gap could not recur. mntn-devops #5224
+  merged. **The failure-trigger plugin is REGISTERED in prod:** `GET /plugins` lists
+  `airflow_debugger_trigger` with its listener. Next natural task failure (or a canary) proves
+  the instant trigger end to end.
+- **Full-production-history diagnosis written:** `outputs/audi_1191_diagnosis_2026_09_01.md` —
+  production history is 12 days (2026-08-20..08-31), not the 30 asked; all of it covered. 128
+  failure candidates, 90 diagnosed, 52 root-caused high-confidence; every terminal failure
+  inside the corpus got exactly one Slack reply since delivery went live 08-25; the only two
+  delivery gaps are the known tag-filter blind spots fixed in #1248. Two whole days (08-22,
+  08-26) were never swept and never backfilled. 50 of 90 diagnosed rows are retry-recovered
+  flakes (per-try counting inflates chronic retry loops).
+- **Cross-system finding: the debugger and the optimizer see NEAR-DISJOINT fleets.** The
+  debugger's top 3 offenders (`vertical_classification_api` 34 rows,
+  `mntn_match_verticals_precache_v1_1` 17, `mntn_match_incrementals_submit` 14 — 72% of all
+  diagnosis rows) have zero optimizer ledger rows ever: Databricks-API/dbt/pod/OpenAI-batch
+  jobs, exactly the optimizer's dbx blind spot.
+- Optimizer half of the evening (pod surface first light, v3 point-order fix PR #1259,
+  downloader fix PR #1260): `tickets/audi_1194_optimizer_efficiency_crawler/summary.md` and
+  memory `project_airflow_optimizer`.

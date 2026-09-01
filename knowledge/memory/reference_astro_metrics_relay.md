@@ -1,11 +1,11 @@
 ---
 name: reference_astro_metrics_relay
-description: DEV-8821 pod-metrics pipeline (Astro → Cloud Run relay → Grafana Alloy → Google Telemetry API/GMP) — FULLY LIVE 2026-09-01; the four-fix ladder, the receiver's label requirements, the probe/diagnosis gotchas, and the counter-read rule (relayed counters land under the /unknown descriptor variant and are invisible to PromQL — read them via the Monitoring v3 API).
+description: DEV-8821 pod-metrics pipeline (Astro → Cloud Run relay → Grafana Alloy → Google Telemetry API/GMP) — FULLY LIVE 2026-09-01; the four-fix ladder, the receiver's label requirements, the probe/diagnosis gotchas, and the counter-read rule (relayed counters land under the /unknown descriptor variant and are invisible to PromQL — read them via the Monitoring v3 API); v3 read gotcha (2026-09-01): timeSeries.list returns points NEWEST FIRST and possibly sparse — subtract in timestamp order and divide by the span between point timestamps (airflow-ti PR 1259).
 metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [astro metrics relay, astro-metrics-relay, DEV-8821, prometheus remote-write, remote-write v1, grafana alloy, GMP, google managed prometheus, promql endpoint, container_ metrics, pod_profile, metrics exports, otel collector cloud run, monitoring.googleapis.com prometheus, serviceusage mntn-prj-prod-00, astro_metrics_relay keychain, name regex matcher unsupported, builtin metric names filter, gcp.project_id, cloud.region, 200 points batch cap, dropped_items, job instance labels, GFE 404 ingress internal-only, telemetry.googleapis.com, mntn-devops 5193, mntn-devops 5210, mntn-devops 5218, mntn-devops 5220, google incident feed, snappy protobuf probe, kube_pod_status_phase, metric descriptor unknown variant, no metric-type metadata, counter not promql queryable, container_cpu_usage_seconds_total, timeSeries.list v3 api, metricDescriptors.delete, breakglass-editor descriptor delete, staleness NaN NumberDataPoint, target_info duplicate timeseries, pod surface PR 1257]
+keywords: [astro metrics relay, astro-metrics-relay, DEV-8821, prometheus remote-write, remote-write v1, grafana alloy, GMP, google managed prometheus, promql endpoint, container_ metrics, pod_profile, metrics exports, otel collector cloud run, monitoring.googleapis.com prometheus, serviceusage mntn-prj-prod-00, astro_metrics_relay keychain, name regex matcher unsupported, builtin metric names filter, gcp.project_id, cloud.region, 200 points batch cap, dropped_items, job instance labels, GFE 404 ingress internal-only, telemetry.googleapis.com, mntn-devops 5193, mntn-devops 5210, mntn-devops 5218, mntn-devops 5220, google incident feed, snappy protobuf probe, kube_pod_status_phase, metric descriptor unknown variant, no metric-type metadata, counter not promql queryable, container_cpu_usage_seconds_total, timeSeries.list v3 api, metricDescriptors.delete, breakglass-editor descriptor delete, staleness NaN NumberDataPoint, target_info duplicate timeseries, pod surface PR 1257, combined PR 1258, points newest first, timeSeries point order, sparse points rate divisor, PR 1259 pod rate fix, optimizer_pod report, dag-processor cpu, worker-default downsize]
 domain: [infra]
 lifecycle: active
 last_verified: 2026-09-01
@@ -53,6 +53,17 @@ counters via the Cloud Monitoring v3 API; PromQL only for gauges.**
 - Benign relay noise, do not chase: staleness-NaN points rejected as "NumberDataPoint had an
   unrecognized or unset value" on pod churn, and `target_info` "Duplicate TimeSeries" warnings.
 
+## Reading the v3 API: point order and sparse points (2026-09-01, airflow-ti PR 1259)
+- **`timeSeries.list` returns points NEWEST FIRST.** The pod profiler's first prod run (sweep
+  `manual__22:36`, first `optimizer_pod` report) read 0 cores everywhere because it computed the
+  cpu rate as oldest-minus-newest — negative, filtered to 0, `exec_h` NULL. Subtract in
+  TIMESTAMP order (or take the newest point for cumulative/limit values); never assume oldest
+  first.
+- **Points can be SPARSE.** Divide rates by the span between the actual point TIMESTAMPS, never
+  by point count x scrape interval — sparse points otherwise inflate the rate.
+- Fix PR #1259 verified live: dag-processor at 55% of its cpu limit; worker-default 0.875 cores
+  = 11% of its 8-core limit (a real downsize candidate).
+
 ## Diagnosis gotchas (keep)
 - **GFE generic 404 with ZERO Cloud Run request-log entries = ingress internal-only signature.**
   Auth-independent (valid and invalid credentials get the same 404); a 403 would mean invoker
@@ -75,8 +86,10 @@ counters via the Cloud Monitoring v3 API; PromQL only for gauges.**
   `https://monitoring.googleapis.com/v1/projects/mntn-prj-prod-00/location/global/prometheus/api/v1/*`.
 
 `airflow_optimizer/pod_profile.py` (requested-vs-used per task pod, ledger surface `"pod"`)
-shipped on airflow-ti PR 1257 (open 2026-09-01), blocked on mntn-devops PR 5224
-(`roles/monitoring.viewer`) + the `OPTIMIZER_POD_PROJECT` env var. See
+shipped via COMBINED airflow-ti PR 1258 (1257 closed as superseded) — MERGED + LIVE 2026-09-01
+on image deploy-2026-09-01T22-22-40; mntn-devops PR 5224 merged (`roles/monitoring.viewer`
+synced) and `OPTIMIZER_POD_PROJECT=mntn-prj-prod-00` set. Its first prod run exposed the v3
+point-order bug above (fix PR 1259, verified live). See
 [[project_airflow_optimizer]]; setup history in
 `tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_astro_metrics_exporter_setup.md`;
 deploy mechanics in [[reference_astro_deploy_mechanics]].

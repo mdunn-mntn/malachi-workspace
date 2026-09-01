@@ -1,6 +1,6 @@
 ---
 name: project_airflow_optimizer
-description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer; 2026-08-27 PR #1230 (Slack wire + cumulative savings log) and PR #1231 (fangorn shuffle partitions 2048) both merged, fangorn applied marker written to the prod ledger; full-corpus hackathon sweep (3,085 logs -> 67 pairs, 30,163+ exec-h) filed as AUDI-1241 under epic AUDI-1054; site_network_hourly + DDP dbt tests now ours (merged #1232, dbt#174 in review); 2026-08-28 PRs #1241-#1243 merged (#1244 open), BQ external table optimizer.optimization_ledger + Mode dashboard e81786de8403 live, first measured saving fangorn #1231 575.6 exec-h/day (~$58.4k/yr est); 2026-08-28 (later) #1245 merged — BQ profiler (bq_profile.py via JOBS_BY_USER), per-surface ledger (surface spark|bq|dbx), Databricks findings, billing surface_rates; pod profiler blocked on Astro metrics exporter; 2026-08-28 evening first live multi-surface sweep found the identity bug (sweep runs as spark-optimizer@ but billing+BQ grants target airflow-ti-prod@), fix PRs airflow-ti#1247 + mntn-devops#5160 open, pod-metrics relay filed as DEV-8821; 2026-08-29 both fix PRs MERGED, live BQ surface verified (optimizer_bq report + surface=bq ledger rows) and billing rate live-blended from 30d actual spend ($0.278/exec-h, no env fallback), Jira SA request ITS-6496 pending; 2026-08-31 hackathon refinement — 13 sprint tickets AUDI-1269..1281 filed into sprint 8649 grouped by change type (16 SP Malachi, 4 SP others), savings provenance = ledger applied stamps + daily PR-vs-ledger reconcile; 2026-08-31 evening — epic AUDI-1290 parents the 13, PR 1250 open (Databricks surface via SP OAuth REST; dormancy root cause = report() silently empty without DATABRICKS_WAREHOUSE on prod), PR 1252 open (gcs console links + OPTIMIZER_NAME_OVERRIDES), DEV-8821 relay LIVE; 2026-09-01 — PRs #1250/#1252/#1253 MERGED + LIVE on prod image deploy-2026-09-01T19-06-22 via retrigger PR #1254 (Astro superseded-build gap), dbx REST surface engaged (prod secret pairs prod_runner; blocked on system.lakeflow/system.query SELECT + warehouse CAN USE grants), env vars staged, DEV-8821 relay FULLY live end to end; 2026-09-01 (later) — '39 unprofiled' digest complaint decomposed (7 paused DAGs miscounted: ORM paused read forbidden on Astro tasks, REST fallback PR #1255 open; only 1 DAG cost-covered; chip reworded to 'N DAGs without cost data'), OPTIMIZER_NAME_OVERRIDES live on prod (14 source-verified entries, ETL Audience Intent excluded), pod surface PR #1257 open (pod_profile.py, core-hours/day, blocked on mntn-devops #5224 + OPTIMIZER_POD_PROJECT), Mode BQ cost table added via API.
+description: AUDI-1194 airflow_optimizer/ — key-free Spark efficiency crawler, live as the spark_optimizer_daily DAG in airflow-ti; 2026-08-26 gained an executor-hour cost unit, Databricks dollar costing from system.billing, and Block Kit Slack delivery to #spark-optimizer; 2026-08-27 PR #1230 (Slack wire + cumulative savings log) and PR #1231 (fangorn shuffle partitions 2048) both merged, fangorn applied marker written to the prod ledger; full-corpus hackathon sweep (3,085 logs -> 67 pairs, 30,163+ exec-h) filed as AUDI-1241 under epic AUDI-1054; site_network_hourly + DDP dbt tests now ours (merged #1232, dbt#174 in review); 2026-08-28 PRs #1241-#1243 merged (#1244 open), BQ external table optimizer.optimization_ledger + Mode dashboard e81786de8403 live, first measured saving fangorn #1231 575.6 exec-h/day (~$58.4k/yr est); 2026-08-28 (later) #1245 merged — BQ profiler (bq_profile.py via JOBS_BY_USER), per-surface ledger (surface spark|bq|dbx), Databricks findings, billing surface_rates; pod profiler blocked on Astro metrics exporter; 2026-08-28 evening first live multi-surface sweep found the identity bug (sweep runs as spark-optimizer@ but billing+BQ grants target airflow-ti-prod@), fix PRs airflow-ti#1247 + mntn-devops#5160 open, pod-metrics relay filed as DEV-8821; 2026-08-29 both fix PRs MERGED, live BQ surface verified (optimizer_bq report + surface=bq ledger rows) and billing rate live-blended from 30d actual spend ($0.278/exec-h, no env fallback), Jira SA request ITS-6496 pending; 2026-08-31 hackathon refinement — 13 sprint tickets AUDI-1269..1281 filed into sprint 8649 grouped by change type (16 SP Malachi, 4 SP others), savings provenance = ledger applied stamps + daily PR-vs-ledger reconcile; 2026-08-31 evening — epic AUDI-1290 parents the 13, PR 1250 open (Databricks surface via SP OAuth REST; dormancy root cause = report() silently empty without DATABRICKS_WAREHOUSE on prod), PR 1252 open (gcs console links + OPTIMIZER_NAME_OVERRIDES), DEV-8821 relay LIVE; 2026-09-01 — PRs #1250/#1252/#1253 MERGED + LIVE on prod image deploy-2026-09-01T19-06-22 via retrigger PR #1254 (Astro superseded-build gap), dbx REST surface engaged (prod secret pairs prod_runner; blocked on system.lakeflow/system.query SELECT + warehouse CAN USE grants), env vars staged, DEV-8821 relay FULLY live end to end; 2026-09-01 (later) — '39 unprofiled' digest complaint decomposed (7 paused DAGs miscounted: ORM paused read forbidden on Astro tasks, REST fallback PR #1255 open; only 1 DAG cost-covered; chip reworded to 'N DAGs without cost data'), OPTIMIZER_NAME_OVERRIDES live on prod (14 source-verified entries, ETL Audience Intent excluded), pod surface PR #1257 open (pod_profile.py, core-hours/day, blocked on mntn-devops #5224 + OPTIMIZER_POD_PROJECT), Mode BQ cost table added via API; 2026-09-01 (evening) — #1255+#1256+#1257 COMBINED into PR #1258, MERGED + LIVE on deploy-2026-09-01T22-22-40, devops #5224 merged (monitoring.viewer synced), OPTIMIZER_POD_PROJECT=mntn-prj-prod-00 set; first optimizer_pod report published (sweep manual__22:36) but numbers wrong — Cloud Monitoring v3 timeSeries.list returns points NEWEST FIRST, rate went negative->0 — fix PR #1259 verified live (dag-processor 55% of cpu limit, worker-default 0.875 cores = 11% of 8, downsize candidate); downloader freeze root-caused (gsutil -m forked workers die quietly on the 0.25-CPU pod; ~2/192 logs landed every sweep since 08-28, 'Done' exit, resolution frozen 6 sweeps) — fix PR #1260 threads-only -m via GSUTIL_OPTS in fetch.py; 12-day full-history diagnosis written (outputs/audi_1194_diagnosis_2026_09_01.md: downloader freeze root of most regressions, dbx surface 0 rows ever, debugger/optimizer fleets near-disjoint); review queue #1259+#1260.
 metadata:
   node_type: memory
   type: project
@@ -596,10 +596,47 @@ metrics; relayed counters are read via the Monitoring v3 API, never PromQL —
 [[reference_astro_metrics_relay]]). **Blocked on mntn-devops PR #5224**
 (`roles/monitoring.viewer`; its gauntlet fixer swapped in the NONEXISTENT
 `roles/monitoring.metricReader` and the refuter confirmed it — caught via the IAM API,
-[[feedback_gauntlet_findings_not_fixes]]) **+ the `OPTIMIZER_POD_PROJECT` env var.**
+[[feedback_gauntlet_findings_not_fixes]]) **+ the `OPTIMIZER_POD_PROJECT` env var.** *(Cleared the same night: #5224 merged, var set — next section.)*
 
 **Mode dashboard gained a BQ cost table entirely via the API** (query "BigQuery cost by task",
 token `3ead7301daa8`, layout section `opt-bq`, run `d2d0b89e9cef` succeeded):
 [[reference_mode_api]].
 
-Review queue at close: airflow-ti #1255/#1256/#1257 + mntn-devops #5224.
+Review queue at close: airflow-ti #1255/#1256/#1257 + mntn-devops #5224. *(Superseded the same
+night: all three combined into PR #1258 and merged — next section.)*
+
+## 2026-09-01 (evening) — combined PR #1258 LIVE; pod first light exposes two prod bugs (#1259/#1260); 12-day diagnosis
+
+- **PRs #1255/#1256/#1257 CLOSED as superseded and COMBINED into PR #1258** (branches kept;
+  octopus merge, 430 tests green) so one airflow-ti merge = one Astro deploy — no
+  superseded-build exposure. **#1258 MERGED + LIVE on image `deploy-2026-09-01T22-22-40`
+  (HEALTHY).** mntn-devops **#5224 MERGED** (`roles/monitoring.viewer` synced to IAM);
+  `OPTIMIZER_POD_PROJECT=mntn-prj-prod-00` set post-deploy. The failure-trigger plugin
+  registered in prod — [[project_airflow_debugger]].
+- **Pod surface first light:** verification sweep `manual__22:36` SUCCESS —
+  `optimizer_pod_2026-09-01.md` published, pod ledger rows landed, honest warehouse message
+  confirmed. **But the numbers were wrong: Cloud Monitoring v3 `timeSeries.list` returns points
+  NEWEST FIRST**, so the cpu rate (oldest-minus-newest) went negative, filtered to 0 cores
+  everywhere, `exec_h` NULL. **Fix PR #1259** (rate + limits use the newest point; rate divisor
+  = span between point TIMESTAMPS so sparse points no longer inflate) **verified LIVE:
+  worker-default 0.875 cores = 11% of its 8-core limit (real downsize candidate); dag-processor
+  55%.** [[reference_astro_metrics_relay]]
+- **Downloader freeze root-caused:** every sweep since 08-28 exited "Done" with ~2/192 event
+  logs landed (194/200 counted failed), freezing finding resolution for 6 consecutive sweeps —
+  gsutil `-m`'s process-forked workers die quietly on the 0.25-CPU pod. Proven by isolation
+  (forked `-m` fails on the Mac AND the pod; plain `cp` and `parallel_process_count=1` copy
+  everything). **Fix PR #1260** — threads-only `-m` via `GSUTIL_OPTS` in `fetch.py`. Also:
+  spark-events objects are GHFS-synced composites with NO hashes — "Found no hashes to
+  validate" under `check_hashes=never` is benign. [[reference_gcloud_storage_over_gsutil]]
+- **Full-history diagnosis** (`outputs/audi_1194_diagnosis_2026_09_01.md`; the "30-day" ask
+  covers the system's ENTIRE 12-day life 08-21..09-01, 936 ledger rows, BQ vs GCS mirror exact
+  match): (1) the downloader freeze is the root of nearly everything downstream (dags/day
+  65→20, 30 DAGs never seen after 08-26, resolution frozen) — now fixed via #1260; (2) **dbx
+  surface 0 rows ever** (`prod_runner` grants ask outstanding); (3) **near-disjoint fleets** —
+  the debugger's top-3 offenders (72% of its diagnosis rows) have zero ledger rows ever
+  (Databricks-API/dbt/pod/OpenAI jobs = exactly the optimizer's blind spots).
+- Two gauntlet runs on #1259 died on API server errors mid-fixer, leaving half-applied edits —
+  diff before building on a post-gauntlet tree: [[feedback_gauntlet_findings_not_fixes]].
+- **Review queue at close: #1259 (pod rate) + #1260 (downloader).** After both merge + deploy:
+  manual sweep, expect `complete=True` and resolutions flowing again; next natural task failure
+  proves the instant trigger end to end.

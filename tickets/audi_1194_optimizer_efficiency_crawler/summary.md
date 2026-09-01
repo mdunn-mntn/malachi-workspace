@@ -904,4 +904,51 @@ refuter confirmed it anyway — caught pre-ship; rule routed to memory
 `3ead7301daa8`), a layout PATCH added section `opt-bq`, and run `d2d0b89e9cef` succeeded.
 Pattern routed to memory `reference_mode_api`.
 
-**Review queue at close:** airflow-ti #1255/#1256/#1257 + mntn-devops #5224.
+**Review queue at close:** airflow-ti #1255/#1256/#1257 + mntn-devops #5224. *(Superseded the
+same night: all three combined into PR #1258 and merged — next section.)*
+
+## 2026-09-01 (evening) — combined PR #1258 LIVE; pod first light exposes two prod bugs (#1259/#1260); 12-day diagnosis
+
+**PRs #1255/#1256/#1257 combined into PR #1258** (originals closed as superseded, branches kept;
+octopus merge, 430 tests green) so one airflow-ti merge = one Astro deploy — no superseded-build
+exposure. **#1258 MERGED + LIVE on image `deploy-2026-09-01T22-22-40` (HEALTHY).** mntn-devops
+**#5224 MERGED** (`roles/monitoring.viewer` synced to IAM); `OPTIMIZER_POD_PROJECT=mntn-prj-prod-00`
+set post-deploy. The failure-trigger plugin `airflow_debugger_trigger` is REGISTERED in prod
+(`GET /plugins` lists it with its listener).
+
+**Pod surface first light:** verification sweep `manual__22:36` SUCCESS —
+`optimizer_pod_2026-09-01.md` published, pod ledger rows landed, honest warehouse message
+confirmed. **But the numbers were wrong: Cloud Monitoring v3 `timeSeries.list` returns points
+NEWEST FIRST**, so the cpu rate (computed oldest-minus-newest) went negative, was filtered to 0
+cores everywhere, and `exec_h` came out NULL. **Fix PR #1259 OPEN** (branch
+`audi-1194-pod-point-order`: rate + limits use the newest point; rate divisor = the span between
+point TIMESTAMPS, so sparse points no longer inflate; fixture reversed to newest-first),
+**verified live: worker-default 0.875 cores = 11% of its 8-core limit (a real downsize
+candidate); dag-processor 55% of its cpu limit.** Two gauntlet runs on #1259 died on API server
+errors mid-fixer, each leaving half-applied edits in the tree (an unused helper; a dangling call
+to a never-written function) — diff before building on any post-gauntlet tree; an ERROR verdict
+means findings stand unapplied; a resume replays cached agents free (memory
+`feedback_gauntlet_findings_not_fixes`).
+
+**Downloader freeze root-caused (the diagnosis's #1 item):** every sweep since 2026-08-28 exited
+"Done" with ~2/192 event logs landed (194/200 counted failed), freezing finding resolution for 6
+consecutive sweeps. Cause: gsutil `-m` FORKS worker processes that die quietly on the 0.25-CPU
+pod while the parent exits cleanly. Proven by isolation: forked `-m` hangs/loses files on the
+Mac AND the pod; plain `cp` and `-m` with `GSUtil:parallel_process_count=1` (threads-only) copy
+everything on both. **Fix PR #1260 OPEN** — threads-only `-m` via `GSUTIL_OPTS` in `fetch.py`
+(gauntlet clean pass). Also: spark-events objects are GHFS-synced composites with NO stored
+hashes — gsutil's "Found no hashes to validate" warning under `check_hashes=never` is benign.
+Memory `reference_gcloud_storage_over_gsutil`.
+
+**Full-production-history diagnosis written and verified:**
+`outputs/audi_1194_diagnosis_2026_09_01.md` — the "30 days" ask exceeds the system's life; the
+report covers ALL 12 days (2026-08-21..09-01, 936 ledger rows, BQ table vs GCS mirror exact
+match). Headlines: (1) the downloader freeze is the root of nearly everything downstream
+(dags/day 65→20, 30 DAGs never seen again after 08-26, "nothing reported as resolved" 6 sweeps
+running) — now fixed via #1260; (2) **dbx surface 0 rows ever** (blocked on the `prod_runner`
+grants, ask to ml_squad/Brian outstanding); (3) **the debugger and optimizer see near-disjoint
+fleets** — the debugger's top-3 offenders (72% of its diagnosis rows) have zero ledger rows
+ever (Databricks-API/dbt/pod/OpenAI jobs, exactly this system's blind spots).
+
+**Review queue at close: airflow-ti #1259 (pod rate) + #1260 (downloader).** After both merge +
+deploy: manual sweep, expect `complete=True` and resolutions flowing again.

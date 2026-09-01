@@ -203,7 +203,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_audi_1142_shopper_graph_spike | project | 2026-08-24 | [doc](memory/project_audi_1142_shopper_graph_spike.md) |
 | project_audi_1175_ds14_scoring_cost | project | 2026-08-24 | [doc](memory/project_audi_1175_ds14_scoring_cost.md) |
 | project_backlog_gate_pings | project | 2026-08-24 | [doc](memory/project_backlog_gate_pings.md) |
-| reference_gcloud_storage_over_gsutil | reference | 2026-08-24 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_gcs_iam_creator_vs_user | reference | 2026-08-24 | [doc](memory/reference_gcs_iam_creator_vs_user.md) |
 | reference_local_vendor_data_analysis | reference | 2026-08-24 | [doc](memory/reference_local_vendor_data_analysis.md) |
 | reference_shopper_graph_deploy | reference | 2026-08-24 | [doc](memory/reference_shopper_graph_deploy.md) |
@@ -244,4 +243,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_optimizer | project | 2026-09-01 | [doc](memory/project_airflow_optimizer.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-01 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
+| reference_gcloud_storage_over_gsutil | reference | 2026-09-01 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |

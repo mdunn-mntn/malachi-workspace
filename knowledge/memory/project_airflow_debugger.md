@@ -1,6 +1,6 @@
 ---
 name: project_airflow_debugger
-description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode; Slack delivery wire (PR #1230) merged and verified live 2026-08-27 (3 posted, threaded); 30-day backfill validated 2026-08-27 (173 failures, 94.7% root-caused), cassandra_invalid_request signature on PR #1233, 14 triage tickets AUDI-1227..1240; rapid 15-min replies (PR #1239) + in-DAG Jira triage filer (PR #1240) merged 2026-08-27/28; Confluence content now on TI On Call Playbook 2908061697 (3769991216 is a redirect stub); 2026-08-28 #1242 fallback channel + #1243 GCS-JSON-API markers merged (gsutil unauthenticated in Astro pods), #1244 open, rapid DAG live and verified, AUDI-1249 auto-filed in prod; round-2 PRs #1248+#1249 MERGED and deploy-verified 2026-08-31 (deploy_prod CI 17:37/18:22 UTC; cycle_watermark.json rewritten by prod, IMP-095 closed); digest PR #1251 open (one parent per sweep, threaded RCAs, duplicate collapse), demo live in #airflow-debugger; 2026-09-01 #1251 MERGED + LIVE on prod image deploy-2026-09-01T19-06-22 (retrigger PR #1254 after the Astro superseded-build gap), post-deploy rapid cycle clean on the new code; 2026-09-01 (later) trigger PR #1256 open — failure-triggered rapid sweep via an on_task_instance_failed listener plugin (fires in the task-runner process for FAILED/UP_FOR_RETRY; Airflow wraps listeners in try/except so they cannot fail the task). Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
+description: AUDI-1191 airflow_debugger/ — key-free deterministic RCA for FAILED Airflow tasks (Dataproc + Databricks); Phase 1 complete, live-fires through INC-014 (2026-08-08); hardened 2026-08-06 by full-corpus adversarial review (40 confirmed defects → 37 fixed); IMP-030 troubleshooting pack shipped + hardened 2026-08-08; leftovers closed 2026-08-20 (Vertex signature, committed corpus sweep 55%->85%, DNS fallback verified live; Phase 3 held); SHIPPED as a prod DAG and verified end to end 2026-08-24, with masks.py closing the 'deepest error is not the cause' failure mode; Slack delivery wire (PR #1230) merged and verified live 2026-08-27 (3 posted, threaded); 30-day backfill validated 2026-08-27 (173 failures, 94.7% root-caused), cassandra_invalid_request signature on PR #1233, 14 triage tickets AUDI-1227..1240; rapid 15-min replies (PR #1239) + in-DAG Jira triage filer (PR #1240) merged 2026-08-27/28; Confluence content now on TI On Call Playbook 2908061697 (3769991216 is a redirect stub); 2026-08-28 #1242 fallback channel + #1243 GCS-JSON-API markers merged (gsutil unauthenticated in Astro pods), #1244 open, rapid DAG live and verified, AUDI-1249 auto-filed in prod; round-2 PRs #1248+#1249 MERGED and deploy-verified 2026-08-31 (deploy_prod CI 17:37/18:22 UTC; cycle_watermark.json rewritten by prod, IMP-095 closed); digest PR #1251 open (one parent per sweep, threaded RCAs, duplicate collapse), demo live in #airflow-debugger; 2026-09-01 #1251 MERGED + LIVE on prod image deploy-2026-09-01T19-06-22 (retrigger PR #1254 after the Astro superseded-build gap), post-deploy rapid cycle clean on the new code; 2026-09-01 (later) trigger PR #1256 open — failure-triggered rapid sweep via an on_task_instance_failed listener plugin (fires in the task-runner process for FAILED/UP_FOR_RETRY; Airflow wraps listeners in try/except so they cannot fail the task); 2026-09-01 (evening) #1256 merged via COMBINED PR #1258 (with #1255+#1257) LIVE on deploy-2026-09-01T22-22-40 — failure-trigger plugin REGISTERED in prod (GET /plugins lists airflow_debugger_trigger with its listener); 12-day full-history diagnosis written (outputs/audi_1191_diagnosis_2026_09_01.md: 128 candidates, 90 diagnosed, 52 high-conf; days 08-22/08-26 never swept; debugger+optimizer fleets near-disjoint, top-3 offenders = 72% of diagnosis rows have zero optimizer rows ever). Optimizer half split to AUDI-1194 / airflow_optimizer/ on 2026-08-05
 metadata:
   node_type: memory
   type: project
@@ -411,4 +411,28 @@ airflow-ti runs):**
 Relay close-out the same session (counter-read rule, descriptor delete via PAM):
 [[reference_astro_metrics_relay]]. Review queue at close: airflow-ti #1255/#1256/#1257 +
 mntn-devops #5224 ([[feedback_gauntlet_findings_not_fixes]] — the #5224 fixer's nonexistent
-IAM role).
+IAM role). *(Superseded the same night: all three combined into PR #1258 and merged — next
+section.)*
+
+## 2026-09-01 (evening) — #1256 live via combined PR #1258; trigger plugin registered; 12-day diagnosis
+
+- **PR #1256 merged via COMBINED PR #1258** (#1255+#1256+#1257 closed as superseded, branches
+  kept; octopus merge, 430 tests green) — **LIVE on image `deploy-2026-09-01T22-22-40`**; one
+  merge = one Astro deploy, so the superseded-build gap could not recur. mntn-devops #5224
+  merged. **The failure-trigger plugin is REGISTERED in prod:** `GET /plugins` lists
+  `airflow_debugger_trigger` with its listener. Next natural task failure (or a canary) proves
+  the instant trigger end to end.
+- **Full-production-history diagnosis written:** `outputs/audi_1191_diagnosis_2026_09_01.md` —
+  production history is 12 days (2026-08-20..08-31), not the 30 asked; all of it covered. 128
+  failure candidates, 90 diagnosed, 52 root-caused high-confidence; every terminal failure
+  inside the corpus got exactly one Slack reply since delivery went live 08-25; the only two
+  delivery gaps are the known tag-filter blind spots fixed in #1248. Two whole days (08-22,
+  08-26) were never swept and never backfilled. 50 of 90 diagnosed rows are retry-recovered
+  flakes (per-try counting inflates chronic retry loops).
+- **Cross-system finding: the debugger and the optimizer see NEAR-DISJOINT fleets.** The
+  debugger's top 3 offenders (`vertical_classification_api` 34 rows,
+  `mntn_match_verticals_precache_v1_1` 17, `mntn_match_incrementals_submit` 14 — 72% of all
+  diagnosis rows) have zero optimizer ledger rows ever: Databricks-API/dbt/pod/OpenAI-batch
+  jobs, exactly the optimizer's dbx blind spot ([[project_airflow_optimizer]]).
+- Optimizer half of the evening (pod first light, v3 point-order fix PR #1259, downloader fix
+  PR #1260): [[project_airflow_optimizer]].
