@@ -91,9 +91,9 @@ Then: stamp dbt 174 provenance, OPTIMIZER_NAME_OVERRIDES after owning-team confi
     ~25/min. Our side is fully verified: ingress, auth, labels, transform all work; the
     last hop fails only at Google's door. Incident CLOSED ~19:20 UTC 2026-09-01;
     drops changed to HTTP 400 'write for resource failed: Unrecognized region or location'
-    - the Telemetry API also requires a location resource attribute. Fix branch
-    audi-1194-relay-region on mntn-devops (transform adds cloud.region=us-central1,
-    v0.2.2), in gauntlet; PR to Cristina next. gcp.project_id fix CONFIRMED effective
+    - the Telemetry API also requires a location resource attribute. Fix PR
+    https://github.com/SteelHouse/mntn-devops/pull/5218 (transform stamps cloud.region
+    from GCP_LOCATION, already in the env; v0.2.2). Cristina reviews + builds the image. gcp.project_id fix CONFIRMED effective
     (error moved past it). Then confirm container_* series in GMP and build
     pod_profile.py.
     Note: Malachi CAN read the relay logs now
