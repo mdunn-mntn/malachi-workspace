@@ -160,6 +160,75 @@ unsound for low-baseline strata and reverses the band gradient. Pool on the **lo
 `(1-p_t)/(p_t*n_t) + (1-p_h)/(p_h*n_h)`. Helper exists at
 `tickets/incr_75_eligible_advertisers/artifacts/incr_75_lift_stats.py`.
 
+### 4d. Second audit (2026-09-01) — v2 REJECTED, holdout depletion found
+
+A 12-agent verification pass was run against the rebuild. It confirmed the three v1 criticals were fixed,
+and found **six new criticals**, two of which are the same defect found independently by two lenses.
+
+**CRITICAL — the estimator self-poisons as the holdout thins, and the clean gate is one-sided.**
+`ghost_frac` is the observed share of a campaign's households in the holdout arm (it equals
+`n_holdout / (n_holdout + n_treatment)` to a correlation of 1.000). `data_catalog.md` records the
+entry-cohort ghost-bid estimator as valid only while `ghost_frac` sits in **0.09 to 0.11**. The rollup's
+own `ghost_frac_inflated` flag fires **only above ~0.15** (6 rows in the entire overall stratum), so it
+guards the high side and nothing guards the low side. Of the 930 v2 campaigns, **490 (53%) sat below 0.09**.
+
+Measured lift is strongly monotone in holdout depth, which is the signature of a depleting holdout rather
+than a real effect. Re-pooled with the workbook's own estimator:
+
+| Holdout share | Campaigns | Pooled lift |
+|---|---|---|
+| Under 8% | 165 | +16.4% |
+| 8 to 9% | 281 | +16.7% |
+| 9 to 10% | 369 | +8.4% |
+| 10 to 11% | 40 | +2.1% |
+| Over 11% | 22 | **-13.4%** |
+
+Spearman(ghost_frac, rel_itt) = -0.325, p = 2.8e-24. It survives inside every holdout-visit tercile and on
+partner 8 alone, so it is neither a small-sample artifact nor a bidder-leg artifact. The v2 headline of
++14.7% was an artifact of pooling mostly-depleted campaigns; the in-band figure is **+7.8%**.
+
+**CRITICAL — partner_id = 8 was dropped in the rebuild.** v1 filtered it; v2 did not. `data_catalog.md`
+ghost-bid gotcha (8) records partner 79 (the Rust leg) as having no trustworthy holdout. This produced the
+false headline **"Select +76.1% vs PTV +11.6%"**: 47 of 58 Select groups and 98.9% of Select's incremental
+visits were partner 79. Product and leg are 91% collinear in this population, so the two cannot be
+separated. On partner 8 alone Select is 6 campaigns at +6.6% against PTV +7.9%, intervals overlapping:
+**there is no measurable product effect here.** The contamination also reached the vertical sheet, moving
+Insurance from rank 2 to rank 22 and Household Goods from rank 3 to rank 10.
+
+**CRITICAL — the strata sheets applied the power gate only at campaign grain**, not at stratum grain, so
+individual bands under 100 holdout visits were pooled. Fixed by adding `vis_holdout >= 100` to the stratum
+select in both strata queries.
+
+**MAJOR — cost per incremental visit** divided full-campaign impression-log spend by measured-cohort
+incremental visits, mixing bases. Now scaled to the measured cohort as `ip_compliance x n_treatment /
+prospecting_ips` per `data_catalog.md`, and blanked where a campaign measured no incremental visits
+(182 rows).
+
+**MAJOR — a Read me count was wrong by 975**, and `% significant` was computed over a different row set
+than `Pooled lift` in the same table row (the v1 defect recurring). Both fixed; `pool()` now returns the
+surviving-row mask and every column in a row is computed on it.
+
+**Refuted (1):** a claim that the period label asserts a window the base table cannot express.
+
+### 4e. Final shape
+
+- **Campaign detail:** 877 campaign groups. Full clean gate, 100+ holdout visits, partner 8, `ghost_frac`
+  and an in-band flag carried as columns.
+- **Summary sheets:** the **409** campaigns inside the 0.09 to 0.11 holdout band, 256 advertisers,
+  149 significant, pooling to **+7.8%**.
+- **A "Holdout depth check" sheet ships the gradient above**, so the exclusion is visible rather than asserted.
+
+**Result that survived both audits:** lift rises monotonically with bid frequency, from **-3.9%** at one bid
+per household to **+12.6%** at 11 or more. Households are not randomised into bid-count bands, so this is
+a pattern and not a dose response, but it is the strongest attribute signal in the data and it held through
+the partner and holdout corrections.
+
+**Result that did NOT survive:** the v2 intent-band ordering appeared to reproduce the AUDI-1209 log-RR
+result (Unscored highest). After the partner and holdout corrections the ordering is monotone in intent
+instead (High +8.0%, PP +7.4%, Unscored +6.6%, Mid +4.8%, MaxReach +3.7%). The earlier corroboration claim
+is withdrawn. This is a **third reading** of the band gradient and should be appended to the existing
+contradiction in `experimentation.md`, not used to overwrite either prior one.
+
 ## 5. Solution
 
 What was done to resolve the issue:

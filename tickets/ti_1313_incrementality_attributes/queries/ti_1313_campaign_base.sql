@@ -1,5 +1,7 @@
 -- ti_1313_campaign_base.sql: one row per powered campaign group, lift plus attributes.
--- Population gate: full clean gate AND 100+ holdout visits (vis_holdout, not n_holdout).
+-- Population gate: full clean gate, 100+ holdout visits (vis_holdout, not n_holdout), partner 8 only.
+-- partner_id 79 (Rust leg) has no trustworthy holdout; see data_catalog.md ghost-bid gotcha (8).
+-- ghost_frac is carried out: the estimator is only documented valid on 0.09 to 0.11.
 -- Delivery attributes are restricted to funnel_level=1 prospecting so they describe the same
 -- campaigns the ghost-bid outcome measures; multi-touch share is carried as its own attribute.
 
@@ -23,6 +25,7 @@ WITH base AS (
     AND NOT ghost_frac_inflated
     AND NOT arm_imbalance_suspect
     AND vis_holdout >= 100
+    AND partner_id = 8
 ),
 
 cg AS (
@@ -72,7 +75,8 @@ SELECT
   b.incremental_visits, b.incremental_conversions,
   b.conv_rel_itt, b.conv_p_value, b.conv_significant_95,
   b.ntb_rel_itt, b.ntb_p_value, b.ntb_significant_95,
-  b.ip_compliance, b.holdout_won_rate,
+  b.ip_compliance, b.holdout_won_rate, b.ghost_frac,
+  (b.ghost_frac BETWEEN 0.09 AND 0.11) AS in_validity_band,
   SAFE_DIVIDE(b.bid_count_treatment, b.n_treatment) AS avg_bids_per_treated_ip,
   cg.budget, cg.frequency_cap_impressions, cg.frequency_cap_duration, cg.has_audience,
   cg.start_time, cg.end_time, cg.deleted,
@@ -80,7 +84,9 @@ SELECT
   d.prospecting_impressions, d.prospecting_spend, d.prospecting_ips,
   SAFE_DIVIDE(d.prospecting_impressions, d.prospecting_ips) AS avg_frequency,
   d.pct_impressions_multitouch, d.pct_spend_multitouch,
-  SAFE_DIVIDE(d.prospecting_spend, b.incremental_visits) AS cost_per_incremental_visit
+  SAFE_DIVIDE(
+    d.prospecting_spend * LEAST(1.0, SAFE_DIVIDE(b.ip_compliance * b.n_treatment, d.prospecting_ips)),
+    NULLIF(GREATEST(b.incremental_visits, 0), 0)) AS cost_per_incremental_visit
 FROM base b
 LEFT JOIN cg ON b.campaign_group_id = cg.campaign_group_id
 LEFT JOIN adv ON b.advertiser_id = adv.advertiser_id

@@ -10,6 +10,8 @@ WITH powered AS (
     AND se > 0 AND has_valid_holdout AND meets_min_n AND meets_min_compliance
     AND NOT ghost_frac_inflated AND NOT arm_imbalance_suspect
     AND vis_holdout >= 100
+    AND partner_id = 8
+    AND ghost_frac BETWEEN 0.09 AND 0.11
 )
 SELECT
   r.campaign_group_id, r.advertiser_id,
@@ -20,4 +22,4 @@ SELECT
   r.incremental_visits
 FROM `dw-main-gold.reporting.lift__ghost_bid_results` r
 JOIN powered p USING (campaign_group_id)
-WHERE r.stratum_type = 'score_band' AND r.se > 0
+WHERE r.stratum_type = 'score_band' AND r.se > 0 AND r.vis_holdout >= 100
