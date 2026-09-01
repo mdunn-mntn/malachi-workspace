@@ -36,10 +36,24 @@ What exactly is broken, unclear, or needed? Include:
 - Impact (data quality, revenue, user experience, etc.)
 
 ## 3. Plan of Action
-Numbered steps of the approach taken. Updated as the plan evolves.
-1. Step one
-2. Step two
-3. ...
+
+### Phase 1: Data Exploration & Query Design (IN PROGRESS)
+1. ✅ Locate lift metrics table: `dw-main-gold.sqlmesh__reporting.reporting__lift__ghost_bid_rollup__*`
+2. ✅ Locate campaign attributes: `dw-main-silver.public.campaign_groups`
+3. ✅ Locate advertiser metadata: `dw-main-bronze.integrationprod.advertisers` + `dw-main-silver.fpa.advertiser_verticals`
+4. ✅ Map available columns for all required attributes
+5. ⚠️ Draft main query (SQL file created; TODO: verify CIL impression aggregation columns)
+6. ⚠️ Test query: sample run on lift data, validate row counts & shapes
+7. Aggregate campaign attributes from cost_impression_log (device, scores, spend, impressions)
+8. Build final .xlsx with raw data + stratified summaries (vertical × channel)
+
+### Known Gaps (To Resolve)
+- **Stage mix (S2/S3)**: Not in campaign_groups; may need campaign-level join or objective mapping
+- **Attribution windows**: Not found in campaign_groups; may be in flight config
+- **CRM exclusion, Display MT, media_plan**: Unknown table locations (may need PM/Jira inquiry)
+- **Spend/impressions window**: Lift is all-time, CIL can be windowed; using all-time for consistency
+- **Device columns**: Need to verify `sh_device` + other device fields in CIL
+- **Household scores**: NULL before 2025-06-01 in CIL (recoverable from model_params back to 2025-05-06)
 
 ## 4. Investigation & Findings
 What was discovered during analysis. Include:
