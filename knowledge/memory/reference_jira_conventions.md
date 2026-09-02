@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: c6bf4a2b-c14a-42ff-a492-27870f57058b
 doc_type: memory
-keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821, sprint 8649 hackathon, future sprint issue move, assignee put endpoint, sprint ids 8303 8649 8650, board 1814 sprint list, ticket description standard, laymen BLUF description, file links in tickets, github line anchor, verify link target on main, epic create fields, epic name 10528, epic re-parent agile api, AUDI-1290, AUDI-1302 wont do same day, backlog issue sprint removal, hackathon q3_2026 labels, pipeline optimization hackathon epic]
+keywords: [jira conventions, jira comment, progress update, when to post, comment template, jira auth, set_auth, wiki markup, curl rest v2, search jql api v3, task issuetype, story points, customfield, bug origin, sprint transitions, assignee, spike issuetype, 11467, spike routes to AUDI, spike project routing, retroactive spike, 0 story points, zero SP, transition 6 Close, AUDI-1207, unticketed investigation, issueLink Relates To, resolution ids, wont do 10100, duplicate 3, triage bug spec, AUDI-1054 parent epic, bug priority mapping, two put task to bug conversion, nextPageToken only paging, startAt ignored, search 410 removed, DEV board devops request form, request type infrastructure improvement, DEV-8821, sprint 8649 hackathon, future sprint issue move, assignee put endpoint, sprint ids 8303 8649 8650, sprint_pull.sh, my open sprint issues, board 1814 sprint list, ticket description standard, laymen BLUF description, file links in tickets, github line anchor, verify link target on main, epic create fields, epic name 10528, epic re-parent agile api, AUDI-1290, AUDI-1302 wont do same day, backlog issue sprint removal, hackathon q3_2026 labels, pipeline optimization hackathon epic]
 domain: [jira-process]
 lifecycle: active
-last_verified: 2026-08-31
+last_verified: 2026-09-02
 ---
 ## from feedback_jira_formatting.md
 
@@ -295,3 +295,17 @@ Every ticket description, every time:
   the accepted path is transition to Won't Do (resolution `10100`) the same day + pull it from
   the sprint via `POST /rest/agile/1.0/backlog/issue`. Do not file a ticket for PR-only follow-on
   work the user is already driving — flag first ([[feedback_auto_capture_and_ticket_flag]]).
+
+## Reading a sprint from the CLI (`sprint_pull.sh`, 2026-09-02)
+
+`.claude/scripts/sprint_pull.sh` is the one command for "what is assigned to me this sprint" — it
+resolves the sprint live (never hardcode an id), runs the JQL, and matches each issue to its local
+ticket folder. `--next` for the next sprint, `--sprint <id>`, `--all` to include Done, `--json`.
+Output: `key type status points folder title`, folder `-` when none exists.
+
+Verified 2026-09-02: `GET /rest/agile/1.0/board/1814/sprint?state=active,future` returns 8303
+(active, ends 09/07), 8649 (09/07-09/21), 8650 (09/21-10/05). `POST /rest/api/3/search/jql` with
+`sprint = <id> AND assignee = currentUser() AND statusCategory != Done` is the working search —
+the removed `/rest/api/2/search` still 410s. `GET /rest/agile/1.0/sprint/<id>` gives name/state/
+endDate. Consumed by [[reference_sprint_skill]].
+
