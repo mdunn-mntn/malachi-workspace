@@ -246,4 +246,53 @@ Specific questions that were resolved during this ticket:
 What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+
+Checked against the AUDI-1313 description on 2026-09-02. The tables in sections 1 and 3 render as
+placeholders through the REST API (no `table` node in the ADF, no attachments, no comments), so the full
+34-attribute list could not be read; the gaps below come from the prose that IS retrievable plus Kirsa's
+spoken asks.
+
+**Section 1, inclusion filters**
+- Minimum 75% days live in the full window: **NOT applied.** Learning-period contamination is not excluded.
+  `campaign_groups.start_time`/`end_time` are carried in the base query, so this is a filter away.
+- Exclude underpowered: applied (100+ holdout visits, full clean gate, holdout validity band).
+- Exclude internal, test and demo accounts: **partial.** `campaign_groups.is_test = FALSE` only; no
+  advertiser-level internal/demo exclusion.
+
+**Section 2, outcome metrics.** The visit side is complete; the conversion side largely is not.
+
+| Metric | State |
+|---|---|
+| Visit lift %, CI, p, significance, baseline | delivered |
+| Incremental visits | delivered |
+| Cost per incremental visit | delivered, cohort-scaled, media spend only |
+| Attributed IVR | **missing** |
+| % of attributed visits that are incremental | **missing** |
+| Conversion lift % | partial: point estimate and significance on Campaign detail, no CI |
+| Incremental conversions | in the base CSV, not surfaced in the workbook |
+| Cost per incremental conversion | **missing** |
+| Control-group baseline conversion rate | **missing** |
+| Attributed CPA | **missing** |
+| **Attribution inflation ratio (attributed CPA / incremental CPA)** | **missing** |
+| % of attributed conversions that are incremental | **missing** |
+
+The attribution inflation ratio is the metric that most directly serves the ticket's stated goal of surfacing
+product gaps, and it is absent. It needs Reporting attributed visits and conversions joined to the ghost-bid
+incremental counts. `data_catalog.md` ghost-bid gotcha (4) already documents the method: `incremental_VV =
+Reporting_VV x rel_lift / (1 + rel_lift)` with `Reporting_VV = SUM(clicks + views + competing_views)` over
+objective 1 for the cohort and window. That is the path for the whole conversion side.
+
+**Section 3, attributes not delivered:** creative length (15s vs 30s, an explicit Kirsa ask), attribution
+window, CRM exclusion, Display multi-touch flag, media plan flag, geography, audience size and type. None
+were located in BigQuery; several likely need a PM or the campaign config service.
+
+**Expectation gap to flag with Kirsa:** she anticipated 950+ campaigns. 930 clear the power gate and 877 the
+bidder-leg gate, but only **409** sit inside the holdout validity band, and the summary sheets use those.
+The other 468 ship in Campaign detail with the reason shown on the Holdout depth check sheet.
+
+**Third reading of the intent-band gradient** (section 4e) should be appended to the existing contradiction
+in `experimentation.md`, not merged over either prior reading.
+
+**Not yet done:** self-review entry, Jira comment to Kirsa, `/capture` sweep of the durable schema facts in
+section 4a (the `cost_impression_log.group_id` bridge, the `sh_device` Beeswax gap, the one-sided
+`ghost_frac_inflated` flag, the `bq_run.sh` legacy-SQL and leading-comment footguns).
