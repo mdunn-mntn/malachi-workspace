@@ -194,3 +194,13 @@ kube-state-metrics rejected as "NumberDataPoint had an unrecognized or unset val
     needs an API key on a server - MNTN policy question (Vault-managed exception?), raise
     with security before building. (b) without (a) is not acceptable; (a) alone may suffice.
 16. Then: pod_profile.py, dbx grants follow-through, OPTIMIZER_NAME_OVERRIDES (items above).
+
+## User verification pass 2026-09-02 (screenshots)
+Confirmed live in Slack: override links (ETL Audience Intent, segment-updates-to-parquet
+resolve), hour-scaled dots, deltas vs last sweep, "35 DAGs without cost data" chip,
+pod + BQ report links, threaded What/Fix. Partial-sweep note correct (1260 unmerged).
+New ask: digest rank rows don't read as an aligned numbered list (emoji + number wrap
+ragged in Slack) - reformat rank rows next digest change.
+The 35 no-cost DAGs: closable only via (a) dbx grants -> dbx-run DAGs, (b) teams adding
+airflow-dag/airflow-task labels to python-client BQ jobs, (c) per-DAG event logging
+(hackathon AUDI-1290 scope). Not all 35 are closable; some run no measurable compute.
