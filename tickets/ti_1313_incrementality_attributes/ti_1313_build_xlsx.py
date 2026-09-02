@@ -361,8 +361,9 @@ SUMF = {"Pooled lift": FMT.PCT1, "CI low": FMT.PCT1, "CI high": FMT.PCT1,
 wb = MntnWorkbook(
     title="Campaign incrementality by attribute",
     ticket="AUDI-1313",
-    subtitle=f"Ghost-bid visit lift for {n_pop:,} campaign groups across {n_adv:,} advertisers",
-    period="Ghost-bid window: 22 Jun to 31 Aug 2026",
+    subtitle=f"DRAFT, NOT FINAL. Ghost-bid visit lift for {n_pop:,} campaign groups across {n_adv:,} advertisers",
+    period="DRAFT, NOT FINAL. Ghost-bid window 22 Jun to 31 Aug 2026",
+    status="DRAFT - NOT FINAL",
 )
 
 wb.table(
@@ -565,7 +566,7 @@ wb.table(
 
 wb.glossary(
     "Read me",
-    intro="What these numbers are, how they were built, and what they cannot support.",
+    intro="DRAFT - NOT FINAL. What these numbers are, how they were built, and what they cannot support.",
     rows=[
         ("What this measures", "Ghost-bid holdout lift. A slice of eligible households is withheld from bidding, and lift compares the households we bid on against the ones we held back."),
         ("Visit lift", "Relative increase in the share of households that visited the site, treated against holdout."),
@@ -589,7 +590,8 @@ wb.glossary(
         ("Everything else", "Every other attribute the ticket names is a column on Campaign detail, and those with enough spread are cut on a sheet and ranked."),
     ])
 
-wb.sql_dir("Queries", str(TICKET / "queries"), note="BigQuery SQL behind every sheet.")
+wb.sql_dir("Queries", str(TICKET / "queries"),
+           note="DRAFT - NOT FINAL. BigQuery SQL behind every sheet.")
 
 top = ranked.iloc[0] if not ranked.empty else None
 wb.cover(takeaways=[
