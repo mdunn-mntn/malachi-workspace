@@ -1,11 +1,11 @@
 ---
 name: reference_databricks_system_schema_grants
-description: The exact ladder to get a person or service principal read access to a Databricks system schema (lakeflow, query, billing, access) - who runs what, in which order, and how to verify it - plus the warehouse Can-use step that SQL grants cannot do.
+description: The exact ladder to get a person or service principal read access to a Databricks system schema (lakeflow, query, billing, access) - who runs what, in which order, and how to verify it - plus the warehouse Can-use step that SQL grants cannot do. system.billing granted 2026-09-02 (usage/list_prices for cost queries); the INSUFFICIENT_PERMISSIONS securable detail sits on the SECOND log line.
 metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [databricks grants, system schema, unity catalog, USE CATALOG, USE SCHEMA, SELECT, metastore admin, account admin, system.lakeflow, system.query, system.billing, system.access, query history, job_run_timeline, SHOW GRANTS, grants get stale, INSUFFICIENT_PERMISSIONS, PERMISSION_DENIED, not an account admin, service principal, spark_optimizer, Alyson Lefkowitz, metastore_admins, warehouse Can use, SQL Warehouses permissions, Permissions API, warehouse not sql-grantable, fa27430dfc609e6d, prod_runner 397d710b]
+keywords: [databricks grants, system schema, unity catalog, USE CATALOG, USE SCHEMA, SELECT, metastore admin, account admin, system.lakeflow, system.query, system.billing, system.access, query history, job_run_timeline, SHOW GRANTS, grants get stale, INSUFFICIENT_PERMISSIONS, PERMISSION_DENIED, not an account admin, service principal, spark_optimizer, Alyson Lefkowitz, metastore_admins, warehouse Can use, SQL Warehouses permissions, Permissions API, warehouse not sql-grantable, fa27430dfc609e6d, prod_runner 397d710b, billing.usage, list_prices, SQLSTATE 42501, securable on second log line, billing granted 2026-09-02]
 domain: [infra, routing-people]
 lifecycle: active
 last_verified: 2026-09-02
@@ -41,8 +41,13 @@ ladder still cannot execute a query without "Can use" on a SQL warehouse. Two wa
 
 **2026-09-02: full paste sent to Alyson for `prod_runner` (appId `397d710b`)** - the
 `system.lakeflow` + `system.query` SELECT ladders plus warehouse `fa27430dfc609e6d`
-(`sql_warehouse_2xs`, MAIN workspace) Can-use. Awaiting execution
-([[project_airflow_optimizer]] dbx surface blocker).
+(`sql_warehouse_2xs`, MAIN workspace) Can-use. **Executed same day - and the paste was MISSING
+`system.billing`**, which the optimizer's cost queries join (`billing.usage` +
+`billing.list_prices`). Alyson granted USE SCHEMA + SELECT on `system.billing` 2026-09-02; the
+dbx cost report went live the same day (top row `Generate Graph & Metrics - PRODUCTION`,
+10,528 DBU, $1,579 list/7d). The warehouse Can-use rung needed no separate check - **any query
+that reaches the SQL engine proves warehouse access** (the INSUFFICIENT_PERMISSIONS error came
+FROM the engine). ([[project_airflow_optimizer]] dbx surface unblocked.)
 
 ## Verify with SHOW GRANTS, never with the CLI
 
@@ -63,7 +68,11 @@ SELECT count(*) FROM system.query.history WHERE start_time > current_date() - IN
 
 **Read the error text, it names the missing rung.** `does not have USE SCHEMA on Schema '<s>'` is
 step 2 missing; `does not have SELECT on Table '<s>.<t>'` is step 3 missing with step 2 already
-done. The two are one line apart and easy to confuse.
+done. The two are one line apart and easy to confuse. **The securable detail sits on the SECOND
+log line** - the first line of the 2026-09-02 billing error ended at the colon
+(`INSUFFICIENT_PERMISSIONS: User does not have USE SCHEMA on Schema:`, SQLSTATE 42501) and
+`'system.billing'` arrived on the next line, so a single-line grep never sees WHICH securable is
+missing. Read the next line before diagnosing.
 
 ## Ask shape that works
 
@@ -78,4 +87,6 @@ looking for it. A GRANT that does nothing still prints `OK`.
 - **`system.query`** - `history` carries `statement_text`, the SQL that actually ran. It is the
   input `EXPLAIN COST` needs, and the only way to reach the optimizer's four plan checks
   ([[project_airflow_optimizer]]).
-- **`system.billing`**, **`system.access`** - same ladder, same admin tier, not yet granted.
+- **`system.billing`** - `usage` + `list_prices`, the join behind Databricks dollar costing
+  ([[reference_databricks_billing_cost]]). **Granted 2026-09-02** (Alyson, USE SCHEMA + SELECT).
+- **`system.access`** - same ladder, same admin tier, not yet granted.

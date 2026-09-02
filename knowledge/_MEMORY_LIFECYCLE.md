@@ -229,9 +229,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
-| reference_astro_deploy_mechanics | reference | 2026-09-01 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
-| reference_gcloud_storage_over_gsutil | reference | 2026-09-01 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |
 | bq-workflow | feedback | 2026-09-02 | [doc](memory/feedback_bq_workflow.md) |
 | feedback_draft_until_closed | feedback | 2026-09-02 | [doc](memory/feedback_draft_until_closed.md) |
@@ -242,9 +240,11 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
 | project_fangorn_on_mntn_id | project | 2026-09-02 | [doc](memory/project_fangorn_on_mntn_id.md) |
+| reference_astro_deploy_mechanics | reference | 2026-09-02 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-09-02 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-09-02 | [doc](memory/reference_fangorn_inference_dataproc.md) |
+| reference_gcloud_storage_over_gsutil | reference | 2026-09-02 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_slack_debugger_app | reference | 2026-09-02 | [doc](memory/reference_slack_debugger_app.md) |
 | reference_sprint_skill | reference | 2026-09-02 | [doc](memory/reference_sprint_skill.md) |
 | reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |
