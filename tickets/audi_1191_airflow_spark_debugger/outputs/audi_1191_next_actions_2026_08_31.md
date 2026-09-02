@@ -207,3 +207,12 @@ ragged in Slack) - reformat rank rows next digest change.
 The 35 no-cost DAGs: closable only via (a) dbx grants -> dbx-run DAGs, (b) teams adding
 airflow-dag/airflow-task labels to python-client BQ jobs, (c) per-DAG event logging
 (hackathon AUDI-1290 scope). Not all 35 are closable; some run no measurable compute.
+
+## Addendum 2026-09-02 (overnight)
+
+- Digest ranked rows: rewritten as one Slack rich_text ordered list (numbers and indent now render like a real numbered set). Commit dd53939 on audi-1194-fetch-no-fork (PR #1260). Format preview posted to #spark-optimizer and confirmed aligned.
+- Unlinked digest rows explained: those Spark apps ARE Airflow-launched from airflow-ti, but appName is a free string the resolver cannot tie to a dag_id. Source-verified: audience_intent DAG submits all five "ETL Audience Intent - *" scripts (dags/audience_intent/audience_intent.py lines 415-525); tpa_ipdsc_export -> tpa_export_spark_batch -> spark/exporter/export_tpa.py ("Run Single-Day TPA Export for <date>"); targeted_signal_crm -> spark/data_source/populate_targeted_signal_crm.py.
+- OPTIMIZER_NAME_OVERRIDES on prod now 22 entries (was 14): five ETL Audience Intent -> audience_intent, both targeted_signal spellings -> targeted_signal_crm, "Run Single-Day TPA Export for *" -> tpa_ipdsc_export.
+- Wildcard prefix support for dated app names added to coverage.resolve (commit 3d87c6f, PR #1260); the TPA entry goes live when #1260 deploys, the exact entries work on current prod code at next pod restart.
+- Open question: flagged apps' event logs vanish from gs://mntn-data-archive-prod/spark-events within hours (backlog app ids from 09-01 and 09-02 both 404 while same-hour neighbors persist). Did not block: launchers verified from source instead.
+- Local Slack posting: ~/.zshrc SLACK_BOT_TOKEN is dead (account_inactive, decommissioned bot). Live token: keychain `security find-generic-password -s slack_bot_token -w`.
