@@ -1004,3 +1004,5 @@ deploy: manual sweep, expect `complete=True` and resolutions flowing again.
 - Interim PR #1263 (drop -m, keep gsutil) merged but insufficient; superseded by #1264 same evening.
 
 **19:35 UTC sweep on #1264 (JSON API fetch): COMPLETE.** 346 jobs scanned (full corpus, vs 154 partial), complete=True, zero fetch failures, digest carries no partial note. Resolutions flow again for the first time since 2026-08-28: 41+ entries "stopped firing", including wildcard-override rows (Run Single-Day TPA Export for 2026-08-26/27/28 all linked to tpa_ipdsc_export). The six-day resolution freeze is closed.
+
+**dbt #174 provenance stamp: closed as unmeasurable-by-ledger.** The first dbx-measured ledger (2026-09-02) carries one dbx_heavy_job row (Generate Graph & Metrics - PRODUCTION). prod-ml-ddp_vertical_classification_api never appears: dbt #174 shipped before the dbx surface went live, so its post-fix cost (359 DBU/7d, 149 runs) is already below the detector threshold and mark_applied has no history row to stamp. The pre-fix baseline (306,352 query-s / 244 runs / 7d) stays recorded here; the ledger watches only fixes whose before-state it measured.
