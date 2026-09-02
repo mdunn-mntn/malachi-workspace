@@ -337,3 +337,41 @@ the high side of the validity band; `sh_device` is unusable on the Beeswax leg; 
 video seconds; `sum_by_campaign_by_day` is current, not stale to 2026-05-01; `bq_run.sh` needs
 `--nouse_legacy_sql` and rejects leading `--` comment lines.
 
+## 8. Open Items / Follow-ups
+
+**Delivered against the ticket.** Section 1 filters all applied (75% days live measured from delivery not
+config dates, underpowered excluded, internal/test/demo excluded). Section 2: the visit side is complete
+with point estimate, CI, p-value, significance flag and control baseline; the conversion side is complete
+but is close to a null result and is labelled as such. Section 3 attributes delivered: intent bands,
+frequency (two ways), creative length, geography, vertical, multi-touch share, customer-file exclusion,
+multi-touch access, product, budget, advertiser size, delivered footprint.
+
+**Genuinely not available, checked and confirmed:**
+- **Attribution window** exists but does not vary across these advertisers, so it cannot correlate with
+  anything. Not shipped.
+- **Audience size** is not stored anywhere in BigQuery. `has_audience` is TRUE for all 874, so it
+  discriminates nothing and is not shipped as an attribute.
+- **Media plan flag** was not located in any config table.
+
+**Known caveats a reader should carry:**
+- Customer-file exclusion is read from live audience config, not point-in-time; 45% of these advertisers
+  edited an audience mid-window.
+- Multi-touch access is an **advertiser-level** setting. There is no campaign-group display multi-touch
+  toggle anywhere in BigQuery.
+- Geographic class is the advertiser's stored targeting choice. Delivered DMA count ships separately as an
+  outcome measure, and the two agree on 96.6% of campaigns.
+- Heterogeneity above 85% on most rows: a pooled number is the centre of a wide spread, not a value to
+  expect from a single campaign.
+
+**Ticket blocked upstream:** sections 1 and 3 of AUDI-1313 contain tables that render as literal
+`<Table 5x2>` and `<Table 34x1>` placeholders in the Jira UI itself. The 34 named attributes have never
+been readable by anyone. Malachi has asked Kirsa for them. If they arrive, re-check coverage against the
+real list; the current scope came from the retrievable prose plus Kirsa's spoken asks.
+
+**Third reading of the intent-band gradient.** Section 4f's ordering (High > PP > Unscored > Mid >
+MaxReach, and not significant between levels) is a third distinct reading, after the AUDI-1209 log-RR
+result and the earlier abs/base-rate one. Append to the contradiction already recorded in
+`experimentation.md`; do not overwrite either prior reading.
+
+**Remaining process work:** self-review entry, Jira comment to Kirsa, `/capture` sweep of section 7's
+durable facts.
