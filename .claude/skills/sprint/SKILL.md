@@ -28,8 +28,13 @@ The fan-out runs through the **Workflow tool** (deterministic, background, per-a
 `/workflows`, forced-schema returns). Loose background `Agent` calls are the fallback when the
 user wants to converse with a single ticket's agent mid-flight via `SendMessage`.
 
-**Args:** `/sprint` = active sprint, my open issues. `/sprint --next` = the next sprint.
-`/sprint AUDI-1191 AUDI-1313` = only those keys. `/sprint --dry` = triage table only, no fan-out.
+**Two waves, one gate between them.** Wave 1 plans every ticket in parallel and posts each plan to
+Jira; you approve; wave 2 executes every approved plan in parallel. Execution agents are fresh — they
+inherit the distilled plan, not the research transcript, which is where the context saving comes from.
+
+**Args:** `/sprint` = both waves with the gate between. `/sprint plan` = wave 1 only, stop after the
+plans are posted. `/sprint execute` = wave 2 from already-posted plans. `/sprint --next` = the next
+sprint. `/sprint AUDI-1191 AUDI-1313` = only those keys. `/sprint --dry` = triage table, no agents.
 
 ---
 
@@ -71,26 +76,71 @@ ticket. Write §0 Framing for each ticket from the answers, set `framing_state: 
 If the user says "just go", frame each ticket from the Jira description as best you can, mark the
 assumption explicitly in §0, and say which tickets were framed unilaterally.
 
-## Step 3 — Fan out (Workflow, background)
+## Step 3 — Plan wave (parallel, background)
 
-One lead agent per ticket, `agentType: 'general-purpose'` (full tools, so it can spawn its own
-`Explore` subagents), `label` = `<KEY>: <short title>` so `/workflows` reads as the sprint board.
-Model economy:
+One plan agent per ticket. It researches and decides *how* the ticket gets answered; it does not
+answer it. `agentType: 'general-purpose'`, `label` = `<KEY> plan`, delegating breadth to `Explore`
+subagents (`model: 'haiku'`) so the reading happens in contexts that are thrown away.
+
+Each plan agent writes `## 3. Plan of Action` in its own `summary.md` and returns:
+
+```javascript
+const PLAN = {
+  type: 'object',
+  required: ['key', 'feasible', 'steps', 'jira_comment'],
+  properties: {
+    key: { type: 'string' },
+    feasible: { enum: ['yes', 'needs-decision', 'blocked'] },
+    steps: { type: 'array', items: { type: 'string' } },     // numbered, executable by someone else
+    sources: { type: 'array', items: { type: 'string' } },   // tables, files, docs the work will touch
+    assumptions: { type: 'array', items: { type: 'string' } },  // to resolve empirically FIRST
+    risks: { type: 'array', items: { type: 'string' } },
+    deliverable: { type: 'string' },                          // the artifact + the bar that closes it
+    effort: { type: 'string' },                               // half-day | 1d | 2-3d | week+
+    decisions: { type: 'array', items: { type: 'string' } },  // forks only the user can settle
+    jira_comment: { type: 'string' },                         // wiki markup, lint_comms --kind comment
+  },
+}
+```
+
+Plan-agent prompt, on top of the constitution below (same write-scope and git/Jira bans):
+
+> Produce the plan for **<KEY> — <title>**, do not execute it. Read `<folder>/summary.md` and the
+> Jira issue, then establish only what the plan depends on: which tables and files are actually the
+> source of truth, whether the data exists at the grain the question needs, what the prior art in
+> `tickets/` and `knowledge/` already settles. Verify enough to know the plan is executable —
+> schema and cardinality checks are in scope; producing the answer is not. Write §3 Plan of Action
+> to `summary.md` and return the schema. If a fork genuinely needs the user, put it in `decisions`
+> rather than picking one.
+
+## Step 4 — Post plans and gate (dispatcher, serial)
+
+Barrier here, deliberately: the user reads all plans before any execution starts.
+
+1. Commit each `summary.md` §3 (`git add <folder>`, one commit per ticket).
+2. Post each `jira_comment` via `curl` REST v2 — the dispatcher posts, never an agent.
+3. Print one table: `key · feasible · effort · deliverable · decisions`.
+4. One `AskUserQuestion` round covering every `decisions` entry across all tickets, plus go/no-go
+   on which tickets execute now.
+
+`/sprint plan` stops here. `/sprint execute` resumes from posted plans, skipping Step 3.
+
+## Step 5 — Execute wave (parallel, background)
+
+Fresh agents, not the plan agents. Each gets `summary.md` (now carrying §0 and §3) plus the
+approved plan and the user's decisions inline — none of the research transcript. That is the point:
+plan context is spent and discarded, execution starts small.
 
 | Stage | Agent | Model / effort |
 |---|---|---|
-| Scope (read folder, Jira, prior art, name the unknowns) | `Explore` | `haiku`, low — read-only, no writes |
-| Execute (the actual ticket) | `general-purpose` | inherit session model, medium effort |
-| Verify (adversarial pass on the deliverable) | `general-purpose` | `sonnet`, medium |
-
-Pipeline, never a barrier — ticket B must not wait on ticket A's scope. Cap the wave at **6
-tickets**; beyond that run waves so the concurrency limit doesn't turn parallel into a queue.
+| Execute the approved plan | `general-purpose` | inherit session model, medium effort |
+| Adversarial verify against §0 Objective | `general-purpose` | `sonnet`, medium |
 
 ```javascript
 export const meta = {
   name: 'sprint-execute',
-  description: 'One isolated lead agent per open sprint ticket',
-  phases: [{ title: 'Scope' }, { title: 'Execute' }, { title: 'Verify' }],
+  description: 'Execute each approved sprint-ticket plan in its own agent',
+  phases: [{ title: 'Execute' }, { title: 'Verify' }],
 }
 const RESULT = {
   type: 'object',
@@ -102,14 +152,13 @@ const RESULT = {
     files: { type: 'array', items: { type: 'string' } },
     open_items: { type: 'array', items: { type: 'string' } },
     knowledge: { type: 'array', items: { type: 'string' } },  // facts for /capture to route
-    jira_comment: { type: 'string' },          // wiki markup, lint_comms --kind comment clean
+    jira_comment: { type: 'string' },
     blocked_on: { type: 'string' },
   },
 }
 const results = await pipeline(
-  args.tickets,
-  t => agent(SCOPE_PROMPT(t), { label: `${t.key} scope`, phase: 'Scope', agentType: 'Explore', model: 'haiku' }),
-  (scope, t) => agent(WORK_PROMPT(t, scope), { label: `${t.key}: ${t.short}`, phase: 'Execute', agentType: 'general-purpose', schema: RESULT }),
+  args.approved,
+  t => agent(WORK_PROMPT(t, t.plan), { label: `${t.key}: ${t.short}`, phase: 'Execute', agentType: 'general-purpose', schema: RESULT }),
   (r, t) => r && r.state !== 'blocked'
     ? agent(VERIFY_PROMPT(t, r), { label: `${t.key} verify`, phase: 'Verify', agentType: 'general-purpose', model: 'sonnet', schema: RESULT }).then(v => ({ ...r, verify: v }))
     : r,
@@ -117,10 +166,11 @@ const results = await pipeline(
 return results.filter(Boolean)
 ```
 
-Arm a stall-detector `Monitor` on dispatch per global §12 — call `.claude/scripts/stall_monitor.sh`,
-never a hand-rolled mtime check.
+Pipeline, never a barrier — ticket B must not wait on ticket A. Cap each wave at **6 tickets** so
+the concurrency limit does not turn parallel into a queue. Arm a stall-detector `Monitor` on
+dispatch per global §12 via `.claude/scripts/stall_monitor.sh`, never a hand-rolled mtime check.
 
-### The ticket-agent constitution (paste into every `WORK_PROMPT`)
+### The ticket-agent constitution (paste into every plan and work prompt)
 
 > You own **<KEY> — <title>** end to end. Your working directory is `<folder>/` and that is the
 > only place you write. Read `<folder>/summary.md` first; §0 Framing is already agreed, do not
@@ -146,11 +196,14 @@ never a hand-rolled mtime check.
 > Return the schema and nothing else. Your `headline` is the one line a director reads; your
 > `jira_comment` must pass `python3 .claude/scripts/lint_comms.py --kind comment`.
 
-`SCOPE_PROMPT` is read-only: name the unknowns, list the files and tables that matter, flag
-anything that makes the ticket un-runnable. `VERIFY_PROMPT` is adversarial: try to prove the
-deliverable wrong against its own §0 Objective, and downgrade `state` if it can.
+Work prompt adds: *"§3 Plan of Action is approved — execute it. The user's answers to the open
+decisions are: <answers>. Deviate from the plan only when execution proves a step wrong; when you
+do, rewrite §3 to match what you actually did and say so in `open_items`."*
 
-## Step 4 — Land it (main chat, strictly serial)
+`VERIFY_PROMPT` is adversarial: try to prove the deliverable wrong against its own §0 Objective and
+§3 Plan, and downgrade `state` if it can.
+
+## Step 6 — Land it (dispatcher, strictly serial)
 
 Agents produced files; only the dispatcher writes history. In order, per returned ticket:
 
@@ -170,6 +223,9 @@ Agents produced files; only the dispatcher writes history. In order, per returne
   atomic in practice; the file is still shared state, so only the dispatcher commits it, once.
 - **`/capture` from N agents would fight over `knowledge/` and `MEMORY.md`.** It runs once, at the
   end, in the dispatcher, over the pooled `knowledge[]` returns.
+- **A plan agent that starts executing** burns the wave and defeats the fresh-context handoff. The
+  line is: verify the plan is runnable, do not produce the answer. Enforced in its prompt, checked
+  at Step 4 — a plan whose ticket already has §4 findings means the agent overran.
 - **A hung agent sends no notification.** Stall-detect actively; re-dispatch the unfinished ticket
   rather than waiting (global §12).
 - **A Done-looking ticket may be half-done.** Trust `summary.md`, not the Jira status.
