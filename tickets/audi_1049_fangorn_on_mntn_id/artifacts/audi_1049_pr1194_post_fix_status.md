@@ -71,3 +71,45 @@ Verified against the deployed zip.
 - `optional=self.runtime_env == "dev"` is a real improvement on the coverage-floor point: prod now
   refuses a partial lookback window instead of scoring against one. It is all-or-nothing, so a
   single missing day in a 31-day HHDSC window fails the job.
+
+## Merged
+
+Merged 2026-09-02 as `8920cf7` ("Merge pull request #1194 from SteelHouse/audi-1136"), shipping head
+`909cf9f`. Two commits landed after the status above was written.
+
+**`5d2ca0f` "minor fix"** — five lines, `optional=True` to `optional=self.runtime_env == "dev"` on the
+lookback reads in `hh_prospecting_keywords`, `hh_recency`, `hh_vertical_high`, `hh_vertical_mid`. In prod a
+missing partition now raises instead of silently scoring a partial window. All-or-nothing: one missing day
+in a 31-day HHDSC window fails the job.
+
+**`909cf9f` "fix OOM in hh_page_views"** — driver 16G to 24G plus 4G overhead, dynamic allocation 20/40/150,
+`spark.rpc.askTimeout` and `spark.network.timeout` at 600s, and
+`spark.shuffle.mapOutput.dispatcher.numThreads: 2`. That last one is the repo's established
+MapOutputTracker-OOM mitigation (PR 1198), so this is the known pattern correctly applied.
+
+The same commit replaced `_validate_graph_resolution` with `_log_graph_resolution_coverage`, dropping the
+two `countDistinct` calls and, with them, the `RuntimeError` that fired when
+`resolved_rows != input_ids`. The stated reasoning is sound and matches the library source: input keys are
+distinct and `resolve_best_household=True` returns one row per key, so plain `count` gives the same
+numbers. Coverage logging survives.
+
+**What that leaves open.** The removed assertion was the only runtime check that the deployed
+`mntn_graph.zip` still honors its one-row-per-key contract. The zip is unversioned, so a redeploy that
+regressed resolve mode would now silently duplicate page views rather than fail. Restoring it costs one
+count on an already-persisted frame: compare `resolved.count()` to `ip_keys.count()`, no distinct shuffle.
+
+## Watch on the first prod run
+
+`hhdsc_build` runs 03:35 UTC, `hh_audience_intent` 06:00 UTC, so the first production run is
+2026-09-03. Three things to check that morning:
+
+1. **`hhdsc_ds_13` and `hhdsc_ds_19` output shift.** Both switched resolver, and the equal-confidence
+   tiebreak moved from highest to lowest `household_id`. Expect some households to gain or lose category
+   ids relative to 2026-09-02. This is the correct direction (bidder parity) but it is a real output
+   change to jobs that were already running.
+2. **Coverage line.** Grep the driver logs for `[mntn_graph] IP resolution coverage`. There is no floor,
+   so a bad number will print and the job will continue.
+3. **`hh_recency` deploy window.** `most_recent_view` did not exist before `57c4c44`, and `hh_recency`
+   reads a 7-day window with `mergeSchema=true`, so until 2026-09-09 a household whose whole window is
+   old-schema gets `recency = NULL` and lands in the `without_activity` random-score branch. A backfill of
+   `hh_page_views` for 2026-08-27 through 2026-09-02 closes it early.
