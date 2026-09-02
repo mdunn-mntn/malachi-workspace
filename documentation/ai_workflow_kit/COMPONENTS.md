@@ -22,7 +22,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | Stop | — | `comms_cap_reminder.sh` | soft nudge to keep outward-facing writing terse | no |
 | Stop | — | `oncall_triage_reminder.sh` | advisory on-call-triage reminder | no |
 
-## Scripts (34)
+## Scripts (35)
 
 | script | what it does |
 |--------|--------------|
@@ -55,13 +55,14 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `preflight.sh` | probe the session's external dependencies, correctly |
 | `request_digest.py` | mine the request log for recurring work shapes; PROPOSE (never create) a skill |
 | `share_deck.sh` | Share an HTML presentation deck via GitHub Gist + githack rendering Usage: bash .claude/scripts/share_deck.sh path/to/deck_standalone.html Creates a… |
+| `sprint_pull.sh` | list MY not-Done issues in a sprint, matched to their local ticket folder |
 | `stall_monitor.sh` | the ONE correct stall-detector for background/async work on this Mac |
 | `sync_global_claude_md.sh` | version-control the ONE instruction file that lives outside the repo |
 | `transcribe.sh` | Transcribe Zoom meeting recordings using both providers, pick the best Usage: bash .claude/scripts/transcribe.sh "2026-03-30 11.33.01 Discuss… |
 | `verify.sh` | the AI Workflow Kit "doctor" |
 | `workflow_audit.sh` | deterministic signal aggregator for the weekly System-retro loop |
 
-## Skills (8)
+## Skills (9)
 
 | skill | description |
 |-------|-------------|
@@ -71,6 +72,7 @@ source of truth for the component counts (regenerate with `.claude/scripts/build
 | `/pr_gauntlet` | Run a PR, branch, or diff through the adversarial review gauntlet before it ships: two blind adversarial reviewers (Skeptic + Stylist) per round, a… |
 | `/present` | Build any deck, chart set, or *_presentation.md to the MNTN standard — resolving persuasion-vs-plain-facts by audience, applying the playbook and… |
 | `/pyspark-optimization-databricks-dataproc` | Operating instructions plus an expert reference for optimizing production PySpark on Databricks Runtime 17.3 LTS (Spark 4.0.0 + Photon) and GCP… |
+| `/sprint` | Work every open ticket assigned to me in the current sprint, in parallel, one isolated agent per ticket |
 | `/transcribe` | Transcribe the newest unprocessed Zoom recording (or a named one) and file it correctly |
 | `/workflow-audit` | The System-retro loop — the workflow reviews itself |
 

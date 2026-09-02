@@ -35,6 +35,8 @@ Design: `workflows/ARCHITECTURE.md`. Operator guide for the deterministic layer:
 
 Framing gate: `/frame` locks §0 (Question / Goal / Objective / Approach / kill-criteria) before `status: in_progress`; a trivial ticket sets `framing_state: "skip: <reason>"`. Enforced by `lint_tickets.py`. Detail: memory `reference_ticket_framing_gate`. `/frame` opens a ticket, `/capture` closes it. New-work trigger: global §14.
 
+**A whole sprint at once: `/sprint`.** Pulls my open issues on board 1814 (`.claude/scripts/sprint_pull.sh`), runs one batched framing gate, then fans out one isolated lead agent per ticket. Agents never touch git or Jira; the dispatcher lands everything serially.
+
 `summary.md` is the complete analytical record and the ONE place the terseness rules do NOT apply. Every finding, dead end, assumption, caveat, exact number; length, SQL column names, and jargon are all fine. Standards: `tickets/_template/summary_template.md`.
 
 ## Experiment Analysis Protocol
