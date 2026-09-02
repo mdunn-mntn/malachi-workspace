@@ -1975,7 +1975,7 @@ This is a THIRD ordering, differing from BOTH the 2026-08-19 log-RR reading (`no
 
 **Rule: the estimate is valid only while observed ghost_frac sits in the clean 0.09–0.11 band.** For the 2026-06-22 table floor that ends **2026-07-07** — about 15 days. This is the same failure class as the 06-22 left-edge stock artifact (which ran the other way, ghost_frac 0.118 → spurious −18.1%), so **check ghost_frac by entry day on BOTH ends before quoting any windowed ghost-bid number**: `queries/incr_75_entry_cohort_byday_window.sql`. Also right-censor: `visited` = visit within 7d of first bid, so entries after MAX(dt)−7d are incomplete.
 
-**Consequence:** a >15-day windowed ghost-bid lift needs a different anchor (re-entry after a cooldown, or a served-grain ATT with IV), not a longer date range. Raised with Matt Brorby.
+**Consequence:** a >15-day windowed ghost-bid lift **read as an ungated pool** needs a different anchor (re-entry after a cooldown, or a served-grain ATT with IV), not a longer date range. Raised with Matt Brorby. **Scope correction (TI-1313, 2026-09-02):** this holds at the ungated pooled grain, where the decaying `ghost_frac` is baked into the estimate. It does NOT license picking the shorter window once the population is gated per campaign group on power and the 0.09–0.11 band — gated, the windows converge. See the window-choice block below before choosing a window.
 
 **The gold `ghost_frac_inflated` flag is ONE-SIDED and does not implement this rule — gate the band yourself (TI-1313, 2026-09-02).** In `dw-main-gold.reporting.lift__ghost_bid_results`, `ghost_frac_inflated` fires only ABOVE the band: measured over `stratum_type='overall'`, FALSE spans ghost_frac **0.0 to 0.1476** and TRUE spans **0.1501 to 0.2308** (just 6 rows in the entire overall stratum). It catches an over-represented holdout and is **blind to a DEPLETED one**, which is the failure mode this section describes. Of **930** campaign groups passing the full standard clean gate, **490 (53%) sat below 0.09**. Pooled lift is strongly monotone in holdout depth — the depletion signature, not an effect (DL log-RR on `rel_itt`):
 
@@ -1989,9 +1989,41 @@ This is a THIRD ordering, differing from BOTH the 2026-08-19 log-RR reading (`no
 
 Spearman(`ghost_frac`, `rel_itt`) = **−0.325, p = 2.8e-24**, and it survives inside every holdout-visit tercile and on partner 8 alone, so it is not a size or leg artifact. (`ghost_frac` = `n_holdout/(n_holdout+n_treatment)` to a correlation of 1.000.)
 
-**Rule: always add `ghost_frac BETWEEN 0.09 AND 0.11` explicitly — `NOT ghost_frac_inflated` is necessary, never sufficient.** **Design consequence:** holdout depletion is a first-order threat to ANY ghost-bid readout, not a silver-only artifact — the gold tables are built on the same entry-cohort anchor (they reproduce the silver windowed calc to the digit, AUDI-1148), so a longer window buys a more depleted and more upward-biased holdout, not more signal. Report observed ghost_frac beside every ghost-bid lift number you publish.
+**Rule: always add `ghost_frac BETWEEN 0.09 AND 0.11` explicitly — `NOT ghost_frac_inflated` is necessary, never sufficient.** **Design consequence:** holdout depletion is a first-order threat to ANY ghost-bid readout, not a silver-only artifact — the gold tables are built on the same entry-cohort anchor (they reproduce the silver windowed calc to the digit, AUDI-1148). Report observed ghost_frac beside every ghost-bid lift number you publish. ~~*so a longer window buys a more depleted and more upward-biased holdout, not more signal*~~ — **that clause is CORRECTED the same day it was written (TI-1313, 2026-09-02): across windows that gradient is a property of the UNGATED population and does not survive gating. See the next block.**
 
 **Per-period gating exception (AUDI-1215, 2026-08-21):** an entry-cohort PRE/POST read past the global clean cutoff CAN be valid when observed ghost_frac is gated PER PERIOD and holds in the 0.09-0.11 band in each period. ElevenLabs CGID 122748 held pre 0.09505 / post 0.09193 (band floor; one week at 0.0877 sat below). Sign the residual bias every time: post-period holdout depletion biases post lift UP, so a flat or rising post read is an upper bound and a "did not improve" verdict is strengthened, not undermined.
+
+### Choose a ghost-bid window on POWER, never on a believed bias gradient — the across-window gradient is a property of the UNGATED population (TI-1313, 2026-09-02)
+
+**This CORRECTS the window-choice inference in the two blocks above, including the TI-1313 line written earlier the same day.** The depletion mechanism itself stands unchanged: holdout IPs never exit the entry cohort, observed `ghost_frac` decays by entry day, and WITHIN a window pooled lift is monotone in `ghost_frac` (Spearman −0.325). What does not stand is the step from that to "the earlier/shorter window is therefore the cleaner read".
+
+Same partner-8 prospecting cohort, three ghost-bid windows, two populations:
+
+| ghost-bid window | ungated: ratio-of-sums over EVERY campaign group | gated: `vis_holdout >= 100` AND `ghost_frac` 0.09–0.11 |
+|---|---|---|
+| clean band (earliest, inside the band by entry day) | +6.3% | +6.0% |
+| full span (71 days — the TI-1313 primary window) | +12.0% | +8.3% |
+| trailing 30 days | +18.4% | +8.2% |
+
+Ungated, measured lift climbs as the window moves later, which reads exactly like the depletion story and invites "pick the early window". Gated on power and the validity band, the same three windows **converge**. The gradient is a property of the ungated population, not of the window.
+
+**Honest limit — the convergence is NOT proof the bias is absent.** `ghost_frac` is the mediator of the depletion bias, so gating on it removes the contrast **by construction**; the gated comparison could not show the bias even if it were present. What the pair of columns does establish is the negative: an ungated window comparison cannot demonstrate that one window is cleaner, because the same comparison on the gated population does not reproduce it.
+
+**Rules:**
+- Gate the population first (power + `ghost_frac BETWEEN 0.09 AND 0.11`), **then choose the window on POWER — how many campaign groups survive the gate — never on a believed bias gradient across windows.**
+- **Never quote an ungated window comparison as evidence that one window is cleaner.** It confounds the window with the composition of the population that delivered in it.
+- Still report observed `ghost_frac` beside whatever window you ship, per the block above.
+
+**The power cost of a trailing-30-day read is most of the population.** Of **874** campaign groups on the full span (2026-09-01 read of `dw-main-gold.reporting.lift__ghost_bid_results` after the `is_test`/`deleted` inner joins — the table is all-time with no `dt` and is rebuilt daily, 877 pre-join on 2026-09-01 against 897 on 2026-09-02, so attach the read date to any count from it):
+
+| trailing-30-day gate, applied cumulatively | campaign groups |
+|---|---|
+| any entry-cohort row in the trailing 30 days | 669 |
+| + `vis_holdout >= 100` | 308 |
+| + inside the `ghost_frac` 0.09–0.11 band | 126 |
+| + delivering on 23+ of the 30 entry days | 115 |
+
+A **208**-campaign-group full-span primary set becomes **95**, and the conversion side does not survive the trailing window at all. That is the real trade: the short window costs more than half the population and all of the conversion power, to buy a difference in measured lift that the gated comparison cannot detect.
 
 ### A null change-test is "cannot see", never "no change": compute the MDE on the DELTA (AUDI-1215, 2026-08-21)
 

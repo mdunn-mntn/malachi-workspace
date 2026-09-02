@@ -607,7 +607,8 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 - **(9) ⚠️ `conv_rate_treatment` / `conv_rate_holdout` in `reporting.lift__ghost_bid_results` are PER VISITOR, not per household — pairing them with `n_treatment`/`n_holdout` silently corrupts any conversion pooling (TI-1313, verified live 2026-09-02).** The denominator is `vis_treatment`/`vis_holdout` (the arm's VISITORS), NOT `n_treatment`/`n_holdout` (the arm's HOUSEHOLDS). Verified over all partner-8 `stratum_type='overall'` rows (3,384 on 2026-09-01, 3,978 on 2026-09-02): `MAX(|conv_treatment/vis_treatment − conv_rate_treatment|)` = **0.0 exactly**, while `MAX(|conv_treatment/n_treatment − conv_rate_treatment|)` = **0.9999968670157855**; the platform's own `conv_se` matches the visit-denominator binomial formula to a ratio of 1.000000 on all 848 gated rows. **The VISIT-side `rate_treatment`/`rate_holdout` ARE per household** and correctly pair with `n_treatment`/`n_holdout` (`MAX(|vis_treatment/n_treatment − rate_treatment|)` = 0.0; gold `se` matches that formula to 1.000000). **Consequence: any inverse-variance or DerSimonian-Laird pool of CONVERSION lift must use `vis_treatment`/`vis_holdout` as the denominators.** Pairing the conversion rate with `n_*` inflates effective sample size by a median ~80x, understates the log-RR variance by that factor, and corrupts both the weights and the point estimate — on TI-1313 it manufactured a false "attribution inflation" headline that collapsed from 8 attribute levels clearing zero down to 1 once corrected.
 - **(10) ⚠️ `ghost_frac_inflated` is a ONE-SIDED flag — it cannot catch a DEPLETED holdout, so gate the band yourself (TI-1313, 2026-09-01).** It fires only at ghost_frac ≥ ~0.15 (FALSE spans 0.0–0.1476, TRUE spans 0.1501–0.2308, just 6 rows in the entire `overall` stratum), so `NOT ghost_frac_inflated` passes every campaign that has drifted BELOW the documented 0.09–0.11 validity band. Of 930 campaign groups passing the standard clean gate, **490 (53%) sat below 0.09**. Measured lift is strongly monotone in holdout depth — the depleting-holdout signature of (7), now visible per campaign rather than only by entry-day. Re-pooled with DerSimonian-Laird on the log risk ratio: ghost_frac <0.08 **+16.4%** (k=165) · 0.08–0.09 **+16.7%** (k=281) · 0.09–0.10 **+8.4%** (k=369) · 0.10–0.11 **+2.1%** (k=40) · >0.11 **−13.4%** (k=22). Spearman(`ghost_frac`, `rel_itt`) = **−0.325, p = 2.8e−24**; it survives inside every holdout-visit tercile and on partner 8 alone. **Always add `ghost_frac BETWEEN 0.09 AND 0.11` yourself.** `ghost_frac` = `n_holdout/(n_holdout+n_treatment)` to a correlation of 1.000.
 - **(11) Prefer `reporting.lift__ghost_bid_results` over `lift__ghost_bid_rollup` for per-campaign ATTRIBUTE work (TI-1313, verified live 2026-09-02).** `_results` carries `stratum_type` ∈ {`overall`, `score_band`, `bid_count`, `score_band_ivw`, `score_band_mh`} with `stratum_value`, so intent-band and bid-frequency decompositions come from the platform instead of being hand-rolled (`bid_count` stratum values = `1`, `2-3`, `4-10`, `11+`). It also has native `p_value`, `ip_compliance`, `holdout_won_rate`, `ntb_*` (new-to-brand), `incremental_roas`, and the full quality-gate booleans. **Grain at `stratum_type='overall'` is one row per campaign group** (`campaign_id` and `campaign_group_id` are 1:1 there). Row counts accumulate daily: overall 4,048 on 2026-09-01 → 4,150 on 2026-09-02 (same day: bid_count 16,403 · score_band 9,625 · score_band_ivw 3,093 · score_band_mh 3,093). **⚠️ `treatment_spend` is populated on only 18 of 4,150 rows** — spend and every cost-per metric still has to come from `cost_impression_log` or `summarydata.sum_by_campaign_by_day`.
-- **(12) Population arithmetic under the clean gate, `stratum_type='overall'` (TI-1313, 2026-09-01):** 4,048 all rows → 3,532 `se>0` → **3,242 full clean gate** (`has_valid_holdout AND meets_min_n AND meets_min_compliance AND NOT ghost_frac_inflated AND NOT arm_imbalance_suspect`) → 930 also `vis_holdout>=100` → 877 also `partner_id=8` → 874 also excluding internal/test advertisers and campaign groups → **409 also inside the 0.09–0.11 `ghost_frac` band** → 208 also delivering on ≥54 of the 71 window days. **`vis_holdout` (holdout VISITS) and `n_holdout` (holdout HOUSEHOLDS) are different columns** — the "950+ powered campaigns" figure people quote is the `vis_holdout>=100` step, not a household count.
+- **(12) Population arithmetic under the clean gate, `stratum_type='overall'` — READ DATE 2026-09-01, and these counts drift daily; see (13) (TI-1313):** 4,048 all rows → 3,532 `se>0` → **3,242 full clean gate** (`has_valid_holdout AND meets_min_n AND meets_min_compliance AND NOT ghost_frac_inflated AND NOT arm_imbalance_suspect`) → 930 also `vis_holdout>=100` → 877 also `partner_id=8` → 874 also excluding internal/test advertisers and campaign groups → **409 also inside the 0.09–0.11 `ghost_frac` band** → 208 also delivering on ≥54 of the 71 window days. **`vis_holdout` (holdout VISITS) and `n_holdout` (holdout HOUSEHOLDS) are different columns** — the "950+ powered campaigns" figure people quote is the `vis_holdout>=100` step, not a household count.
+- **(13) ⚠️ THE GATED POPULATION IS NOT STABLE — attach a READ DATE to every count you quote from `reporting.lift__ghost_bid_results` (TI-1313, verified live 2026-09-02).** The table is **all-time with NO `dt` column and is rebuilt daily**, so the population grows under a fixed gate. The **same documented gate** (clean gate + `vis_holdout>=100` + `partner_id=8`) returned **877 campaign groups on 2026-09-01 and 897 on 2026-09-02** — **874 vs 890** after the `is_test`/`deleted` inner joins to `campaigns`/`campaign_groups`/`advertisers`. That is the (12) arithmetic above re-run one day later, drifting ~2%/day. Consequences: (a) a cohort size, an N, or a "how many powered campaigns" figure is **only meaningful with its read date**; (b) two analyses run a day apart are on different populations and their numbers will not reconcile; (c) re-running a saved query does NOT reproduce a saved number. Freeze the cohort to a materialized id list if a result has to be reproducible.
 
 ---
 
@@ -615,12 +616,18 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 - **`advertiser_frequency_caps` = EMPTY (0 rows)** — the advertiser-level fcap table exists but is unused; there is no advertiser-scoped cap in prod. (Confirms the "no advertiser rollup" fcap defect from the counter side.)
 - **`integrationprod.campaign_group_frequency_caps`** and **`integrationprod.dso_frequency_caps` = POPULATED** — the real cap config lives at campaign_group + DSO scope. These sync to the bidder cache (`do_fcap`, Redis counters keyed on IP). See data_knowledge "IP Frequency Capping (fcap)" for mechanics.
 
+### The OPERATING cap is `dw-main-silver.dso.frequency_caps` — and it MUST be scoped to the campaign (TI-1313, verified live 2026-09-02)
+- **Read the cap from `dw-main-silver.dso.frequency_caps`, columns `secondary_cap` / `secondary_duration`.** Full schema confirmed on `INFORMATION_SCHEMA`: `advertiser_id`, `campaign_group_id`, `campaign_id`, `cap`, `duration`, `secondary_cap`, `secondary_duration`, `dsp_cap`, `dsp_duration`, `universal_cap`, `universal_duration`, `transaction_id`, `create_time`, `update_time`, `user_id`, `datastream_metadata` (all INT64 except the timestamps/strings). Manual overrides live in **`dw-main-silver.ui.campaign_group_frequency_caps`**.
+- **⚠️ `campaign_groups.frequency_cap_impressions` and `campaign_groups_raw.frequency_cap_impressions` are BOTH 100% NULL** — neither can be used as the cap, despite the inviting name. (See the `campaign_groups` schema table.)
+- **⚠️ `dso.frequency_caps` is CAMPAIGN grain and MUST be scoped to the prospecting `campaign_id`.** Every campaign group has more than one row, and unscoped **the cap varies within the group on 845 of 874 campaign groups** — a group-level `MAX()` silently mixes the multi-touch and retargeting caps into the prospecting number. Scoped to the prospecting campaign (`funnel_level = 1 AND objective_id = 1`) it is a clean 1:1 with the campaign group.
+
 ---
 
 ## silver.logdata.cost_impression_log
 - **⚠️ CIL can re-stamp real impressions to `campaign_id = -3` (unresolved-campaign sentinel) — a campaign-resolution regression (PROVEN 2026-07-29, INC-001):** CIL = `spend_log` (wins/spend, source of truth) + `win_logs` (Beeswax wins), and resolves `campaign_id` via a dim join. A build/reprocess can regress a resolved partition: the rows keep their impression but get `campaign_id = -3`, so the real id reads **0** while the count sits under `-3`. Verified: Bombora campaigns (CG 131563) `dt=2026-07-27` = 0 under 648318-648323 but **110,750 under `-3`** (spend_log 110,792 / $904 billed / 100% rendered; win_logs 110,862); time-travel showed 109,530 correctly attributed 47h ago → 0 now. Cascaded `enriched_impressions=0` (can't map `-3` to a segment). **The rows are NOT lost — check `campaign_id=-3` and reconcile vs `spend_log` before trusting a CIL per-campaign zero.** `-3` = unresolved campaign; real ids are positive. **The re-stamp blanks `campaign_id`, `group_id`, AND `creative_id` together — only `advertiser_id` (and `partner_id`) keep real values, so a `-3` row is identifiable/backfillable ONLY by `advertiser_id` (verified 2026-07-30: adv 30506 07-27 `-3` slice = 110,750; the `group_id`/`creative_id` on those rows are also `-3`). Spend breakdown (`media_spend`/`data_spend`/`platform_spend`) is NULL on `-3` rows, though `media_cost` stays populated.** **Time-travel to confirm a regression: the VIEW ignores `FOR SYSTEM_TIME` ("Snapshot time ignored ... because it is a view") — query the PHYSICAL `dw-main-silver.sqlmesh__logdata.logdata__cost_impression_log__2498930125 FOR SYSTEM_TIME AS OF ...` (worked at 26-47h back; ~48h horizon).**
 - **⚠️ JOIN KEY — recover the real campaign (or any dim) for a CIL row, incl. a `-3` one: `cost_impression_log.impression_id` = `spend_log.auction_id` = `win_logs.auction_id` (= `win_logs.request_id`) — the `<micros>.<rand>.<n>.steelhouse` id.** spend_log's OWN `impression_id` is a DIFFERENT column (a UUID, sometimes literal `'1'`), so `CIL.impression_id = spend_log.impression_id` returns **0 matches** (verified 2026-07-30 — the naive join fails). Join `CIL.impression_id → spend_log.auction_id → spend_log.campaign_group_id`/`campaign_id` (spend_log carries both natively). Row-level proof of the INC-001 `-3`: of 110,750 `-3` rows (adv 30506, 07-27), **110,735 matched spend_log by auction_id and 110,732 carried CG 131563 / campaign 648323 (Bombora)** — so the `-3` rows ARE Bombora, and spend_log (CIL's input) had the correct campaign, meaning the break is in the CIL build's campaign resolution, not the input.
 - **⚠️ JOIN KEY — `cost_impression_log.group_id` is NOT `campaign_group_id`; it is the CREATIVE-group id (TI-1313, verified live 2026-09-02).** CIL `group_id` values run ~578K–1.20M while `campaign_group_id` values are ~24K–131K, so `CIL.group_id = campaign_groups.campaign_group_id` matches **zero rows** — and as a LEFT JOIN it returns all-NULL attribute columns silently instead of erroring. Verified on a 200,000-row day slice (2026-08-25): **200,000/200,000 matched `bronze.integrationprod.core_creative_groups.group_id`, 0/200,000 matched `campaign_groups.campaign_group_id`** (same key as `viewability_log.group_id`). **To reach the campaign group, bridge through the campaign: `cost_impression_log.campaign_id → bronze.integrationprod.campaigns.campaign_id → campaigns.campaign_group_id`** (spot-verified: CIL campaign_id 643620 → CG 130485, 397337 → 85144, 147574 → 24081).
+- **⚠️ EXCLUDE `ip = '0.0.0.0'` from any per-household collapse (TI-1313, verified live 2026-09-02).** It is a sentinel, not a household. Collapsing to `(campaign_group_id, ip)` without the guard **merges millions of impressions into one fake household on 16 campaign groups** and corrupts every household-weighted statistic downstream (household counts, per-household frequency, per-household spend, score-band shares). The catalog already records the same sentinel on the bid side (`bid_ip = COALESCE(NULLIF(ip,'0.0.0.0'), impression_log.bid_ip, event_log.bid_ip)`) — **household counting on CIL needs the identical guard**, and it is easy to miss because the `COALESCE` idiom hides it inside a bid-IP recipe.
 - **Retention: NOT 90 days — floor is 2023-10-01 (fixed, so the window GROWS)**: the live table (`sqlmesh__logdata.logdata__cost_impression_log__2498930125`) has 1,012 contiguous daily partitions 20231001→today, verified with row counts (2023-10-15 = 53.6M rows; 2024-09-15 = 92M) on 2026-07-08 (TI-1037); re-verified 2026-08-11 = **1,047 partitions, 77.6B rows**, floor still 20231001. ~33 months of history today, +1 month per month. Supersedes both the old "90d TTL" note and the 2026-07-07 "floor ≈ 2025-01-01" estimate. `household_score` is NULL on ALL pre-2025-06 rows (verified same check) — IP reach is computable to Oct 2023, HI/score analysis only from Jun 2025.
 - **Type:** VIEW → `sqlmesh__logdata.logdata__cost_impression_log__2498930125` (**TABLE** — physical, 71 B rows / 56 TB)
 - **Partition:** DAY on `time`
@@ -629,6 +636,8 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 - **Use for:** Impression-level spend enriched with geo, device, segment data.
 - **⚠️ RETENTION CORRECTION (AUDI-1070, verified 2026-06-30):** NOT 90-day rolling — CIL retains **multi-year history**. Empirically probed back to **2024 and earlier** (82.5M rows on 2024-06-15; 84.7M on 2025-02-01; agent MIN(time)≈2023-10). A Jan-2024→present per-impression analysis IS feasible from CIL. Cost-control: always partition-prune on `time` (one day ≈ 0.68 GB) + exploit `advertiser_id` clustering; a 4-month × 3-AID score scan billed ~12 GB. **MCP `bigquery` tool historical failure FIXED 2026-07-16** (it ran with `--location US`; dataset isn't US — `.mcp.json` now sets `us-central1`); `bq`/`bq_run.sh` remain the default path.
 - **⚠️ SCORE COLUMNS (AUDI-1070):** `advertiser_household_score` (MM-tuned per-advertiser) and `household_score` (general) are INT 0–10000 (−1/NULL = unscored). **BOTH columns are 100% NULL before 2025-06-01 and ~0% NULL from 2025-06-01 onward — a sharp, platform-wide, single-week cutover (verified AUDI-1070 2026-06-30: 100% NULL wk of 2025-05-25 → 0% NULL wk of 2025-06-01).** This is a **CIL LOGGING change** (the score columns began being written into cost_impression_log on 2025-06-01), **NOT** a scoring-pipeline onset — the bidder scored households before this date (scores lived upstream/in the bidder), CIL just didn't carry the columns. **Consequence: the TYPED COLUMNS cannot answer "score distribution / % under 8000 / scored-fraction over time" before 2025-06-01.** BUT scores are RECOVERABLE one cutover earlier — they first appear in the `model_params` STRING on **2025-05-06** (another clean 0%→100% overnight cutover). So the recoverable CIL score floor is **2025-05-06**, not 2025-06-01: `COALESCE(advertiser_household_score, SAFE_CAST(REGEXP_EXTRACT(model_params, r'advertiser_household_score=(-?\d+)') AS INT64))` (same pattern for household_score). **No CIL score history of any kind exists before 2025-05-06.** Do not read the NULL→populated transition as a performance event. Unscored encoding: **HS = −1; AHS = NULL/−1** (the two diverge — retargeting rows have HS=−1 but AHS=10000). Where populated, AHS scored impressions are nearly all at/near max (~9,900) → AHS is effectively **binary (scored vs unscored)**; the meaningful signal is the **scored fraction**, not the level. **RTC caveat: `realtime_conquest_score=…` is logged on ~100% of rows regardless of whether RTC fired — do NOT exclude rows merely containing that token.** Genuine RTC = `realtime_conquest_score=10000`; value −1 = RTC not active (the case for Caraway/Avon/HexClad). CIL partition-prunes on `DATE(time)`, clusters on `advertiser_id`. **Beeswax-leg caveat (observed AUDI-1148, 2026-07-22, not fully explained):** for Beeswax-bidder campaigns (campaign names prefixed "Beeswax …"), CIL `household_score` can read **−1 (unscored) across ALL impressions** even for a scored prospecting campaign — every Gruns CGID 126905 impression (Jun–Jul 2026) had HS=−1 despite the campaign targeting scored mid/PP intent. Consistent with Beeswax CIL enrichment being sparse (cf. `sh_device` often NULL for Beeswax). For Beeswax-leg intent-score analysis, use the ghost-bid lift table's `eff_score`/`household_score`, not CIL HS; verify before relying on CIL HS for a Beeswax advertiser.
+- **⚠️ `household_score` DOMAIN and the score-band denominator (TI-1313, verified live 2026-09-02).** On partner-8 (Beeswax) prospecting rows the domain is exactly **{−1, −4, 1…10000}** — **no NULLs and no zeros**. `−1` is the ordinary unscored sentinel (~69% of impressions platform-wide); **`−4` also exists** on **173,982 of 1.63B impressions (0.011%)**. **Treat BOTH −1 and −4 as unscored** (this extends the "Unscored encoding: HS = −1" line above; a `hs < 0` test is safer than `hs = -1`).
+- **Consequence for intent-band shares:** divide any band percentage by the **SCORED** households only (`household_score > 0`) and **ship the unscored share as an explicit companion figure**. Dividing by all households makes the four bands sum to roughly **0.46**, and any downstream tie-break on "highest band share" then silently promotes the all-unscored campaigns into the top band.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -643,7 +652,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 | epoch | INTEGER | |
 | partner_time | TIMESTAMP | |
 | partner_id | INTEGER | |
-| ip | STRING | |
+| ip | STRING | Household key. **⚠️ `'0.0.0.0'` is a SENTINEL, not a household — exclude it before any per-household collapse** (16 campaign groups otherwise collapse millions of impressions into one fake household). See the join/quality note above. |
 | partner_ip | STRING | |
 | media_cost | NUMERIC | |
 | media_spend | BIGNUMERIC | |
@@ -665,7 +674,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 | browser | STRING | |
 | user_agent | STRING | |
 | device_type | STRING | Beeswax device type: SET_TOP_BOX, CONNECTED_TV, MOBILE, PC, TABLET, GAMES_CONSOLE |
-| sh_device | STRING | MNTN device classification. **⚠️ UNUSABLE on the Beeswax leg (`partner_id=8`) — TI-1313, 2026-09-01:** NULL on ~72% of impressions, and where populated the domain is `COMPUTER`/`MOBILE`/`TABLET` — it NEVER takes the values `CTV`/`Display`/`Mobile`, so `COUNTIF(sh_device='CTV')` returns 0.0000 for every campaign. For the CTV-vs-display split use `bronze.integrationprod.campaigns.channel_id` (8=CTV, 1=Display) or `partner_ad_format`. |
+| sh_device | STRING | MNTN device classification. **⚠️ UNUSABLE on the Beeswax leg (`partner_id=8`) — TI-1313, 2026-09-01:** NULL on ~72% of impressions, and where populated the domain is `COMPUTER`/`MOBILE`/`TABLET` — it NEVER takes the values `CTV`/`Display`/`Mobile`, so `COUNTIF(sh_device='CTV')` returns 0.0000 for every campaign. **For a per-campaign-group DEVICE MIX use `silver.summarydata.spend_facts.device_type` — it carries `campaign_group_id` natively and is the working source (TI-1313, 2026-09-02; supersedes the earlier note naming `sh_device`).** For the CTV-vs-display split use `bronze.integrationprod.campaigns.channel_id` (8=CTV, 1=Display) or `partner_ad_format`. |
 | ott_device | STRING | `bw_batch` (Beeswax batch) or `mb_rt` (real-time) |
 | publisher_type_id | INTEGER | 1=CTV/OTT, 2=premium, 3=web/display |
 | unlinked | BOOLEAN | Impression not linked to a guid |
@@ -673,7 +682,7 @@ History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path
 | partner_site | STRING | |
 | is_new | BOOLEAN | |
 | geo_version | INTEGER | |
-| household_score | INTEGER | |
+| household_score | INTEGER | Domain on partner-8 prospecting rows = **{−1, −4, 1…10000}** — no NULLs, no zeros. **Both −1 and −4 mean unscored** (`hs < 0` is the safe test); −4 is rare (0.011%). Band shares must divide by `hs > 0`. See the score-columns note above. |
 | advertiser_household_score | INTEGER | |
 | model_params | STRING | |
 | batch_epoch | INTEGER | |
@@ -1042,19 +1051,23 @@ All tables are VIEWs pointing to `sqlmesh__summarydata`.
 - **Partition:** DAY on `hour`
 - **Clustering:** advertiser_id, campaign_id
 - **Use for:** Pre-aggregated spend by campaign/geo/device/hour.
+- **⚠️ THIS IS THE WORKING DEVICE-SPLIT SOURCE for a per-campaign-group device mix (TI-1313, verified live 2026-09-02).** It is the only convenient table carrying **`device_type` AND `campaign_group_id` natively**, and it partition-prunes on `DATE(hour)` and clusters on `advertiser_id`/`campaign_id`. **This SUPERSEDES the earlier TI-1313 (2026-09-01) note naming `cost_impression_log.sh_device` as the device source — `sh_device` is unusable on the Beeswax leg (see the CIL entry).**
+  - **Buckets:** TV = `SET_TOP_BOX` + `CONNECTED_TV` + `GAMES_CONSOLE` + `CONNECTED_DEVICE` · mobile/tablet = `MOBILE` + `TABLET` + `PHONE` · desktop = `PC` + `PERSONAL_COMPUTER`.
+  - **⚠️ ALWAYS emit an explicit unknown bucket.** A `-1` `device_type` exists outside every named value and reaches **0.22% of a campaign's spend**, so shares built only from the named buckets do **not** sum to 1. Compute the unknown share as the residual and ship it.
+  - **Within prospecting the three shares are ONE piece of information, not three:** TV share and mobile/tablet share are near-exact complements (**corr −0.999999**) and desktop is **under 0.03% of spend**. Use a single TV-share variable; entering all three in a model is collinear by construction.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | hour | DATETIME | |
 | advertiser_id | INTEGER | |
-| campaign_group_id | INTEGER | |
+| campaign_group_id | INTEGER | **Native** — no bridge through `campaigns` needed (unlike `cost_impression_log`). |
 | campaign_id | INTEGER | |
 | channel_id / objective_id / group_id / creative_id | INTEGER | |
 | private_marketplace_id | STRING | |
 | country / metro_id / region / city / postal_code | STRING/INT | Geo dimensions |
 | domain | STRING | |
 | supply_vendor | STRING | |
-| device_type | STRING | |
+| device_type | STRING | **The usable device dimension.** Named values bucket to TV / mobile-tablet / desktop as above; a `-1` value sits outside all of them (≤0.22% of spend) — keep an explicit unknown bucket. |
 | media_spend | BIGNUMERIC | |
 | data_spend | BIGNUMERIC | |
 | platform_spend | BIGNUMERIC | |
@@ -1328,6 +1341,8 @@ v_campaign_group_channel_margins, v_channel_margins, v_icloud_blacklist
 **Key query:** `SELECT DISTINCT advertiser_id FROM core.media_plan WHERE media_plan_status_id=3` — active media plan users.
 
 **Gotchas:**
+- **Media plan IS in a config table, and it is THIS one, keyed on `campaign_group_id` (TI-1313, verified live 2026-09-02).** This supersedes an earlier TI-1313 pass (2026-09-01) that concluded media plan "was not located in any config table" — that conclusion was wrong; the table was simply not searched under `core.media_plan`. `dw-main-silver.core.media_plan` carries `media_plan_id`, `advertiser_id`, `campaign_group_id`, `media_plan_status_id`, `is_manual`, `original_recommendations` (JSON), `deliverability_classification`.
+- **But it is non-discriminating for a prospecting-lift cohort: 0 of the 190 TI-1313 primary campaign groups have a media plan at all** (2026-09-02). Present in the schema, empty for that population — do not spend a slot on it as a lift attribute without checking coverage first.
 - Being on the beta list doesn't mean active — must check `media_plan_status_id=3`
 - One advertiser can have many plans (one per campaign_group)
 - `original_recommendations` contains JSON with publisher names, budget percentages, and rationale
@@ -1814,20 +1829,37 @@ the `core_*` tables here.
 | currency / display_currency | STRING | |
 | country_iso_code | STRING | |
 | advertiser_vertical_id | INTEGER | Join → (no direct table found — likely lookup) |
-| status_id | INTEGER | |
-| create_time / update_time | TIMESTAMP | |
-| click_conversion_window | STRING | Attribution window (interval string) |
-| view_conversion_window | STRING | |
-| conversion_window | STRING | |
-| invoice_conversion_window | STRING | |
+| status_id | INTEGER | **`3` = live/active advertiser.** Decoded empirically against `dw-main-gold.salesforce.accounts.client_status__c` (TI-1313, 2026-09-02) — see the status-lookup note below. |
+| create_time / update_time | TIMESTAMP | `create_time` = when the ACCOUNT RECORD was made, **not** tenure on platform — see the tenure note below. |
+| click_conversion_window | STRING in bronze, **INTERVAL in silver** | **CONVERSION-side** attribution window (post-click). Constant at 30 days across the TI-1313 prospecting cohort. |
+| view_conversion_window | STRING in bronze, **INTERVAL in silver** | **CONVERSION-side** attribution window (post-view). Also constant at 30 days across that cohort. |
+| conversion_window | STRING in bronze, **INTERVAL in silver** | |
+| invoice_conversion_window | STRING in bronze, **INTERVAL in silver** | |
+| **clickpass_acquisition_ttl** | STRING in bronze, **INTERVAL in silver** | **The VISIT (Verified Visit) attribution window — the one that actually VARIES.** See the note below. |
 | control_group_percentage | NUMERIC | % traffic in control group |
 | segmentation_active / segmentation_new_active | BOOLEAN | |
 | clickpass_enabled | BOOLEAN | |
-| clickpass_click_ttl / clickpass_view_ttl / clickpass_window | STRING | |
+| clickpass_click_ttl / clickpass_view_ttl / clickpass_window | STRING in bronze, **INTERVAL in silver** | |
 | dpp_enabled | BOOLEAN | |
 | product_version_id | INTEGER | |
 
 - **Query tip:** Always filter `deleted = FALSE AND is_test = FALSE` for production data.
+
+### ⚠️ VISIT window vs CONVERSION window — read the right column (TI-1313, verified live 2026-09-02)
+- **The VISIT attribution window is `dw-main-silver.public.advertisers.clickpass_acquisition_ttl`** — how long after an impression a site visit still counts as a Verified Visit. **Read it from SILVER, where it is a native `INTERVAL`; the bronze `integrationprod.advertisers` copy of the same column is a `STRING`** (confirmed live 2026-09-02 on both `INFORMATION_SCHEMA.COLUMNS`).
+- **It VARIES, materially.** Across the 890-campaign-group TI-1313 prospecting population: **9 distinct levels — 1, 3, 7, 10, 14, 20, 21, 30 and 45 days — with 14 days on 751 of 890**, populated on 100% of rows. In a ranked test of thirteen campaign attributes against ghost-bid lift it separated lift at **p = 0.0039 (4th of 13)**.
+- **⚠️ SUPERSEDES an earlier TI-1313 pass (2026-09-01) that concluded "the attribution window does not vary."** That read `view_conversion_window` / `click_conversion_window`, which are the **CONVERSION-side** windows and ARE constant at 30 days for every advertiser in this cohort. The two are different knobs and the wrong one hides all the variation.
+- These are three independent lookback knobs and conflating them is a known, already-documented failure (PS-8572, see `data_knowledge.md` and the `advertiser_configurations` entry below): **visit window** = `clickpass_acquisition_ttl` · **conversion window** = `view_/click_conversion_window` · **block lookback** = `advertiser_configurations.conversion_lookback_window` / `page_view_lookback_window`. Name the specific knob every time.
+
+### "Live advertiser" filter + the point-in-time trap (TI-1313, verified live 2026-09-02)
+- **`bronze.integrationprod.advertisers.status_id = 3` is the live/active-advertiser filter**, decoded empirically by cross-tabbing against `dw-main-gold.salesforce.accounts.client_status__c`. On the TI-1313 cohort it removed **200 of 890 campaign groups (22.5%)** — far more than `is_test`/`deleted` remove, so it is a real filter, not a duplicate of them.
+- **There is NO status lookup/decode table anywhere.** `INFORMATION_SCHEMA` across all three projects (`dw-main-bronze`, `dw-main-silver`, `dw-main-gold`) carries only `core_campaign_statuses`, `invoice_credit_statuses` and `invoice_invoice_status` — nothing that decodes `advertisers.status_id`. Stop looking; decode empirically against Salesforce.
+- **⚠️ `status_id` is CURRENT state, and it churns fast enough to mis-time any historical window: 266 of 536 advertisers (49.6%) had a Salesforce client-status change inside a single 30-day window.** A current-status filter applied to a past analysis window is therefore materially wrong. **The as-of source is `dw-main-silver.salesforce.client_status_updates`** (`advertiser_id`, `client_status_type__c`, `prior_client_status__c`, `createddate`) — one row per status transition; take the last transition at or before the window date.
+
+### Advertiser tenure — use first launch, NOT account create_time (TI-1313, verified live 2026-09-02)
+- **Tenure on platform = `MIN(first_launch_time)` per advertiser from `dw-main-bronze.integrationprod.public_campaign_groups_raw`** (filter `is_test = FALSE AND deleted = FALSE`). `first_launch_time` is a stored TIMESTAMP on the campaign-group row (present on both `public_campaign_groups_raw` and `campaign_groups_raw`), so this is a real launch date, not an inferred one.
+- **Do NOT use `advertisers.create_time`** — that is when the ACCOUNT RECORD was created, which runs ahead of first launch (median **21 months** vs first-launch median **17 months** on the TI-1313 cohort). It is account age, not time selling on the platform.
+- **Do NOT use Salesforce `campaign_live_date__c`** — it is refreshed on re-onboarding for some accounts (median **10 months** vs 23), so it is a current go-live date, not a tenure origin.
 
 ---
 
@@ -1886,10 +1918,10 @@ the `core_*` tables here.
 | budget_type_id | INTEGER | Join → core_budget_types |
 | active_flight_id | INTEGER | FK → core_flights |
 | start_time / end_time | TIMESTAMP | |
-| first_launch_time | TIMESTAMP | |
+| first_launch_time | TIMESTAMP | **The tenure origin.** Advertiser tenure = `MIN(first_launch_time)` per advertiser over `bronze.integrationprod.public_campaign_groups_raw` (filter `is_test`/`deleted`). NOT `advertisers.create_time`, NOT Salesforce `campaign_live_date__c` — see the tenure note under `bronze.integrationprod.advertisers` (TI-1313, 2026-09-02). |
 | product_id | INTEGER | Join → core_products |
 | ctv_creatives_status_id / display_creatives_status_id / ui_creatives_status_id | INTEGER | |
-| frequency_cap_impressions / frequency_cap_duration | INTEGER/STRING | |
+| frequency_cap_impressions / frequency_cap_duration | INTEGER/STRING | **⚠️ `frequency_cap_impressions` is 100% NULL here AND on `campaign_groups_raw` (TI-1313, verified live 2026-09-02) — it is not the operating cap. Read `dw-main-silver.dso.frequency_caps.secondary_cap`, scoped to the campaign; see §"frequency_caps config tables".** |
 | has_audience | BOOLEAN | |
 | testing_type | STRING | A/B testing type |
 | parent_campaign_group_id | INTEGER | For nested campaign groups |
@@ -2649,6 +2681,12 @@ Where the live Fangorn intent scores actually live. **Two scales:** RAW `model_s
 - **Type:** TABLE (archive / change-history of HHST settings; the time-series counterpart to the current-state `dso.household_score_thresholds`).
 - **Use for:** HHST trajectory over time — one row per threshold change. Cols: advertiser_id, campaign_id, campaign_group_id, threshold, update_time. The Fangorn rollout scorer derives each campaign's **lowest *sustained* HHST** (held ≥60 min, `threshold>0`) from this table over an analysis window. An advertiser with no `threshold>0` rows in-window has never run a scored campaign there (e.g. geo-only/Select-Winback advertisers).
 
+## dw-main-silver.dso.household_score_thresholds — the CURRENT HHST per campaign (TI-1313, verified live 2026-09-02)
+- **This is where the live "Avg HHST" (household score threshold, the intent gate) comes from.** Schema confirmed on `INFORMATION_SCHEMA`: `advertiser_id` INT64, `campaign_group_id` INT64, `campaign_id` INT64, **`threshold` INT64**, `transaction_id` STRING, `create_time` / `update_time` TIMESTAMP, `datastream_metadata`. Same column set as the archive above, minus the archive's own surrogate id.
+- **Grain is campaign, not campaign group** — average over the group's campaigns (or scope to the prospecting campaign) rather than assuming one row per group.
+- **Coverage on the TI-1313 prospecting population (2026-09-02):** **741 of 890 campaign groups** carry a row, **159 of the 190-campaign primary set**, across **34 distinct threshold levels**. Absence is common enough that a HHST attribute needs an explicit missing bucket.
+- Value semantics for `threshold` (0/negative = no gate, 3333/3334 = Mid floor, 6666 = HI+PP, 8000 = PP, 10000 = HI-only): see §"household_score_threshold_archives — complete `threshold` value map".
+
 ---
 
 # bronze.tpa
@@ -3324,7 +3362,11 @@ When `dw-main-silver.salesforce.accounts_log` is restated, it triggers backfill 
   (`advertisers.clickpass_acquisition_ttl` / `clickpass_click_ttl`) and from `conversion_window`; a THIRD knob
   (`lookback_window`) lives INSIDE DS21/DS34 clauses of the `audience_segments` expression. Lovepop 58797:
   14d PRO VV / 7d RT VV / 30d conversion window but 90d block lookback (90→180 on 2026-08-04) + DS21 180d /
-  DS34 90d clause lookbacks. Name the specific knob. (PS-8572, 2026-08-06)
+  DS34 90d clause lookbacks. Name the specific knob. (PS-8572, 2026-08-06) **Worked example of the cost of
+  conflating them: TI-1313, 2026-09-02** — a pass that read `view_/click_conversion_window` (constant 30d)
+  concluded "the attribution window does not vary" and missed 9 distinct VISIT-window levels in
+  `clickpass_acquisition_ttl`. Read that one from **silver** (`dw-main-silver.public.advertisers`, native
+  `INTERVAL`; bronze stores it as a STRING). Detail: §`bronze.integrationprod.advertisers`.
 - **Per-campaign exclusion clause in `audience_audience_segments`** (`is_targeted=false`) can look like
   `UserLastVisitTime >= N,day and UserNumPageViews >= K` (lookback + threshold) — but this is NOT the
   authoritative block (block_prospecting is enforced advertiser-level by the bidder; ~96% of campaigns have no

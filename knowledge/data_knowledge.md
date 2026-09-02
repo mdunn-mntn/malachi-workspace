@@ -581,6 +581,8 @@ Zach explained the full IP column taxonomy on 2026-02-25 call and confirmed in d
 
 **Rule:** Use `ip` for analysis. `bid_ip` to trace back to bid time. `impression_ip` as non-CTV fallback. `original_ip` only for pre-relay audit.
 
+**⚠ `ip = '0.0.0.0'` is a sentinel, not a household — exclude it from any per-IP collapse on `cost_impression_log` (TI-1313, 2026-09-02).** The catalog already records the guard on the bid-lineage side (`COALESCE(NULLIF(ip,'0.0.0.0'), impression_log.bid_ip, event_log.bid_ip)`), and the event_log placeholder note below says the same thing for VV resolution. **The identical guard is required whenever `ip` is used as the HOUSEHOLD key**, which is the case nobody writes down. Collapsing `cost_impression_log` to (`campaign_group_id`, `ip`) without it merged **millions of impressions into one fake household on 16 campaign groups**, which then corrupts every household-weighted statistic built on top — households reached, impressions per household, average score per household, intent-band shares. Put `ip != '0.0.0.0'` inside the collapse, not in a filter after it.
+
 ### Audience UI "Site Visitors > Geography" — the Other bucket is non-US by design (PS-8614 / AUDI-1207, 2026-08-17)
 
 The regions breakdown in Audience > Segments > Site Visitors reads **Postgres `geo.guid_geos_summary`**
@@ -936,6 +938,10 @@ is NOT MNTN Select. Filtering by PMP-deal attachment alone would over-count Sele
 | 9 | Legacy Archived | — |
 
 To find an advertiser's **currently-delivering** campaigns: `campaign_status_id = 3` (or confirm with recent `all_facts` impressions). Don't infer "live" from `deleted=FALSE` alone — paused (4/5) and inactive (7) rows are also non-deleted.
+
+**Advertiser-level "live" = `advertisers.status_id = 3`, and there is NO status lookup table for it (TI-1313, 2026-09-02).** Decoded empirically against `dw-main-gold.salesforce.accounts.client_status__c`; `INFORMATION_SCHEMA` across bronze, silver and gold holds only `core_campaign_statuses`, `invoice_credit_statuses` and `invoice_invoice_status`, so the advertiser status enum has to be decoded from data each time — there is nothing to join to. It is a load-bearing filter, not a formality: it removed **200 of 890 campaign groups (22.5%)** from the TI-1313 cohort, far past what `is_test`/`deleted` removes.
+
+**⚠ But it is CURRENT state, and advertiser status churns fast enough to mis-time any historical window.** **266 of 536 advertisers (49.6%) had a Salesforce client-status change inside a single 30-day window.** So filtering a trailing-window cohort on today's `status_id` keeps advertisers who were dark for most of the window and drops advertisers who were live right through it — and at that churn rate the mis-timing is material, not marginal. For an as-of-date status, read `dw-main-silver.salesforce.client_status_updates` (`client_status_type__c` = the status moved TO, `prior_client_status__c` = moved FROM, `createddate` = when) and resolve the status in force on the window's dates. Same failure class as the current-state `campaign_groups` dimension in the "Days live" note below, and as `audience.mm_campaign_classifier`.
 
 ### MNTN Select campaigns are geo-only / unscored → Fangorn is a no-op for them
 Empirically (iMemories AID 37423, TI-Kale-eval 2026-06-17), live **MNTN Select** (`product_id=2`) prospecting campaigns run as **geo-only "all-US" reach**: the audience expression carries only `geos:{location_ids:[237]}` (US) + DS14 bid-routing + DS16 funnel tags + an `rtc` score directive + the 10% holdout bucket — **no MM layer (no DS13/DS19/DS46), no buyer interest segments.** Delivery is therefore **100% unscored** (`cost_impression_log.household_score = -1`, HHST=0); only a handful of `advertiser_household_score>0` rows (RTC firing for the rare recent-site-visitor). This is the "Geo-only / no buyer audience layer" cohort (TI-999 §) and the structural state of MNTN Select today (Select targets all-US until the MM Awareness Audience for Select ships).
@@ -2421,8 +2427,10 @@ before interpreting overlap.
 - **10000** = High Intent (HI) — flat score for all vertical-matched IPs. Currently 69.9% of impressions.
 - **8000** = Peak Performance (PP) — **was active Jan-Feb 2026, currently minimal** (as of 2026-04-08). Targeting logic: serve HI (10000) first, then expand to PP (8000) if pacing allows. Waterfall: HI → PP. Top advertisers with PP data: 34185, 36232, 37158, 34838. Most PP activity ended by late February. Sporadic single-digit impressions in March-April.
 - **3333-6665** = Mid Intent (MI) — bucket-matched IPs not in the vertical. 1.4% of impressions.
-- **-1** = unscored (no Fangorn/intent score assigned). 28.7% of impressions.
-- **-4** = rare edge case (9 impressions observed)
+- **-1** = unscored (no Fangorn/intent score assigned). 28.7% of impressions as of 2026-04-08 — **re-measure before quoting a share: the unscored slice ran ~69% of impressions platform-wide on 2026-09-02** (TI-1313), consistent with the 65.4% general-scoring figure recorded elsewhere in this doc.
+- **-4** = a SECOND unscored sentinel, **not the 9-impression curiosity recorded on 2026-04-08** (superseded 2026-09-02, TI-1313): on partner-8 prospecting rows it carries **173,982 of 1.63B impressions (0.011%)**. Treat it as unscored alongside -1.
+
+**Domain + denominator rule (TI-1313, 2026-09-02).** On those rows `cost_impression_log.household_score` takes values in **{-1, -4, 1..10000}** — **no NULLs and no zeros**, so a `household_score IS NULL` or `= 0` guard catches nothing and the negatives are the only unscored marker. **Any intent-band percentage must divide by SCORED households (`household_score > 0`) and ship the unscored share as its own explicit number beside it.** Dividing by all households makes the four bands sum to roughly **0.46**, and a tie-break on "largest band" then silently promotes an all-unscored campaign into the top band. Collapse to households first, with the `ip != '0.0.0.0'` guard (§ip vs ip_raw).
 
 **Once PP (8000) goes live**, per-tier incrementality analysis becomes possible: compare HI (10000) vs PP (8000) vs MI (3333-6665) holdout/targeted visit rates.
 
@@ -3150,6 +3158,18 @@ Advertiser UI path **Audience > Exclusions > Audience Exclusions**. Screen copy:
   expression itself. Lovepop 58797 ran 14d PRO VV / 7d RT VV / 30d conversion window, but a 90d block lookback
   (changed to 180d on 2026-08-04, the day PS-8572 was filed) and DS21 180d / DS34 90d clause lookbacks — five
   different numbers, all colloquially "the lookback window." Always name the specific knob.
+  - **What conflating them costs — a worked case (TI-1313, 2026-09-02).** An earlier pass in that ticket recorded
+    "the attribution window does not vary across this cohort" and **that was wrong: it read the conversion-side
+    columns.** `view_conversion_window` / `click_conversion_window` genuinely ARE constant (30 days for every
+    advertiser in the cohort), but the **VISIT window `advertisers.clickpass_acquisition_ttl` varies over 9 levels
+    in that cohort — 1, 3, 7, 10, 14, 20, 21, 30 and 45 days, 14 days on 751 of 890 campaign groups, populated
+    100%** — and in a ranked-attribute test it separated measured visit lift at **p = 0.0039, 4th of 13 attributes**.
+    Re-confirmed platform-wide 2026-09-02: across all live advertisers (`status_id = 3`) it takes **18 distinct day
+    values, 14 days on 1,297 of 1,474**. So reading the wrong knob turned a top-five explanatory attribute into a
+    "no variation, drop it" line. **Read the VV windows from SILVER** — `dw-main-silver.public.advertisers`
+    carries `clickpass_acquisition_ttl` / `clickpass_click_ttl` / `conversion_window` / `view_conversion_window` /
+    `click_conversion_window` as native INTERVAL; bronze stores the TTLs as a STRING (`'N days'`, parse the leading
+    int, per the archive note above).
 - **A CONVERSION requires a VERIFIED VISIT within the VV window (mechanism, high confidence, TI-1037 workflow 2026-07-02):**
   a UI-reported conversion (`from_verified_impression=TRUE`) is attributed to the SAME impression that produced a VV, via
   the SAME VVS engine — **100% of such conversions co-occur with a VV on the same `ad_served_id`** (Kindred 1,133/1,133;
@@ -3881,7 +3901,8 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 
 ### cost_impression_log Gotchas
 - `recency_elapsed_time` is INTERVAL type — extract with `EXTRACT(SECOND FROM ...) + EXTRACT(MINUTE FROM ...)*60 + ...`
-- `household_score = -1` means unscored
+- `household_score` = **-1 or -4** means unscored — both are sentinels; full domain is {-1, -4, 1..10000}, no NULLs and no zeros (TI-1313, 2026-09-02). Band percentages divide by scored households only — see §Special Values.
+- `ip = '0.0.0.0'` is a sentinel, never a household — exclude it inside any per-IP/household collapse (§ip vs ip_raw)
 - `advertiser_household_score = 10000` means RTC conquest
 - `partner_ad_format` is authoritative for VIDEO vs BANNER
 
@@ -4785,6 +4806,8 @@ underpowered test, not evidence of no effect. (Reuse `ti_884_mde_calculator.py`.
 - **MNTN / Rust leg = frequency-AWARE (bias A1 REDUCED).** Held-out ghosts run through `do_fcap_bid_event` ("fcap as if really bid"), so holdout IPs accrue counterfactual frequency and exit the pool symmetrically. The MNTN ghost holdout is NOT frequency-unaware. (Same fact as the experimentation.md "MNTN bidder leg = the clean reference" / `apply_ghost_bids` note.)
 - **Beeswax / JVM leg = frequency-UNAWARE (bias A1 present).** Real bids are frequency-capped; Beeswax ghost bids are not written to the fcap cache → the most active (high-frequency, high-visit-rate) IPs concentrate in the holdout, inflating it to ~13% and biasing the holdout outcome rate **upward → measured lift biased NEGATIVE**. Cannot be stratified away (frequency is post-treatment); only fixable/absent in bidder code. (Note the dominant Beeswax bias is actually `ghost_frac` bid-multiplicity, see experimentation.md.)
 - **⚠️ The bias runs BOTH ways, and the built-in flag only guards one of them (TI-1313, 2026-09-02).** `ghost_frac_inflated` fires only above ~0.15 (FALSE spans 0.0-0.1476, TRUE 0.1501-0.2308; 6 rows in the whole `overall` stratum), so it catches an INFLATED holdout and is blind to a DEPLETED one. A thinning holdout biases measured lift **upward**, and it is the common case: of 930 campaign groups passing the standard clean gate, **490 (53%) sat below `ghost_frac` 0.09**. Measured lift is monotone in holdout depth (DL log-RR pool): <0.08 = **+16.4%** (k=165) · 0.08-0.09 = +16.7% (k=281) · 0.09-0.10 = +8.4% (k=369) · 0.10-0.11 = +2.1% (k=40) · >0.11 = **-13.4%** (k=22). Spearman(`ghost_frac`, `rel_itt`) = **-0.325, p = 2.8e-24**, and it survives inside every `vis_holdout` tercile and on partner 8 alone, so it is neither a small-sample nor a bidder-leg artifact. **Always gate `ghost_frac BETWEEN 0.09 AND 0.11` explicitly — `NOT ghost_frac_inflated` is not a sufficient validity gate.** Full gradient and design consequences in `experimentation.md`.
+- **⚠️ The CONVERSION outcome is NOT mature at 7 days, and the standard freshness guard does not cover it (TI-1313, 2026-09-02).** A windowed ghost-bid read comes from `dw-main-silver.enriched.lift__ghost_bid_visits` (per-IP entry cohort: `dt`, `arm`, `visited`/`first_visit_time`, `converted`/`first_conv_time`, `order_value`). Its VISIT column is stable within a day or two, so the usual `dt <= DATE_SUB(MAX(dt), INTERVAL 7 DAY)` guard looks like it protects the read — **it protects visits and silently ships a broken conversion series.** Measured on read date 2026-09-02: conversions per visit hold flat at **4.0-4.3% through 2026-08-19** (08-19 = 35,970 conversions / 926,124 visits) then collapse to **0.12% on 08-20** and recover only to **1.99% by 08-26** — a 50-97% shortfall across 2026-08-20 to 08-26 — while daily visits stay flat (0.80-1.61M/day) over exactly the same span. It is a cliff, not a smooth decay, because the SQLMesh rebuild does not refresh the conversion outcome uniformly. **End any conversion window at 2026-08-19 on this read (a 13-day lag) and state the lag. Re-plot the by-day conversions-per-visit curve on the day you read — do not assume these dates persist.** A trailing-30-day deliverable should ship visit lift only and say so, rather than shipping empty conversion columns.
+
 New ghost-bidding tables (bid-events-log, "ghost-bid" label) have a **10-day TTL**. Treat the Beeswax ghost-ad lift read as a conservative lower bound; prefer the MNTN leg for a symmetric-arm estimand.
 
 **Attribution over-credit (Q3):** default advertiser conversion windows are **30-day** click-through,
