@@ -3798,8 +3798,10 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
     `max(probability)` therefore selects the same household as the bidder's `min(raw_score)`.
   - **Bidder rowkey = `id|id_type|version|experiment|confidence_score|household_id`**, read in lexicographic
     order, **first row wins**. So on an equal-confidence tie the bidder takes the **LOWEST `household_id`**.
-    airflow-ti `utils_model/household_resolution.py` takes the **highest** (`F.max(F.struct(confidence_score,
-    household_id, …))`). **Real 1:1 divergence, one-line fix.**
+    airflow-ti `utils_model/household_resolution.py` took the **highest** (`F.max(F.struct(confidence_score,
+    household_id, …))`) — a real 1:1 divergence. **RESOLVED 2026-09-02:** the deployed `mntn_graph`
+    library orders `confidence_score DESC NULLS LAST, household_id ASC` and calls it ID-Service parity, and
+    airflow-ti PR #1194 routed `household_resolution` through it, so the divergence is gone.
   - **Across identifiers the bidder uses strict `<`** (`bigtable.rs` `resolve_household_id`), i.e. first-wins
     on ties in the caller's input order — the same semantics as our ordered `id_columns` priority. Already
     aligned.
@@ -3824,14 +3826,14 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   its `IdTypeFamily.IP` (3000) expands to `{30, 31, 32}` — silently including IPv6 **and** the synthetic
   `IP_DAY` rows (idg: "synthetic IP identifier used during graph generation to represent (IP, day)"), with no
   3100 so IPv6 can't be requested alone. Families 1000/2000/4000/5000/6000 agree; **IP is the only break**.
-  **Always pass `IdType.IPV4` explicitly, never the family.** **Confirmed by the library author and being
-  fixed (Weiang Li, Slack 2026-08-12): "I need to make a ipv6=3100 as its own family and remove ipv6 (31)
-  from the ipv4 (3000) family, so IPV4 = 3000 = {30, 32}"** — i.e. the library converges on idg. Until that
-  ships, the explicit-`IdType` rule stands; after it ships the family is safe but the explicit form still
-  costs nothing. Full id_type list: 10/11/12/13 hardware,
+  **Always pass `IdType.IPV4` explicitly, never the family.** **RESOLVED — SHIPPED, verified from the deployed artifact 2026-09-02.**
+  Promised by the author (Weiang Li, Slack 2026-08-12); the deployed `mntn_graph.zip` now defines
+  `IdTypeFamily.IPV4 = 3000` covering `{30, 32}` and `IdTypeFamily.IPV6 = 3100` as its own family, and its
+  own docstring says families are "NOT a pure tens bucket". The library matches idg. The explicit-`IdType`
+  rule is no longer load-bearing but still costs nothing. Full id_type list: 10/11/12/13 hardware,
   20/21/22/23 email, 30 IPv4, 31 IPv6, 32 IP_DAY, 40 COOKIE, **41 MNTN_GUID**, 42 GA_CLIENT_ID, 50 LUID,
   60 PHONE_SHA256.
-- **The ID team's `mntn_graph` library does NOT do resolution (2026-08-11).** Distributed at
+- **The ID team's `mntn_graph` library did NOT do resolution as of 2026-08-11 — SUPERSEDED, it does now (verified from the deployed zip 2026-09-02; see "Deployed `mntn_graph` semantics" below).** Historical record of the 2026-08-11 version: Distributed at
   `gs://mntn-data-archive-prod/identity_resources/graph_interface/mntn_graph.zip` (Confluence `3739484272`).
   `ids_to_households()` / `households_to_ids()` read one snapshot, left-join it onto the caller's DataFrame and
   return **every** matching edge — "intentionally does not: select the best match, deduplicate matches, drop
@@ -3856,11 +3858,45 @@ design sync (ticket `audi_1049_fangorn_on_mntn_id/`):
   household at a time**, so consumers no longer pick a winner; (3) **multi-identifier resolution moves into
   the library** — `ids_to_households(id_cols = {"IP" -> IPLike, "GUID" -> CookieLike})` resolves several
   identifier columns to **one** household **per row** by confidence (explode first if you want a row to
-  reach multiple households), which is the same semantics as our ordered `id_columns` priority. **None of
-  this has shipped** — the version reviewed on 2026-08-11 is translation-only. Do not design against the
-  described behavior until it lands, but expect `household_resolution.py` to shed winner-selection when it
-  does. Governance context: Brian McAdams — consumer-side resolution rules "can lead to some very divergent
+  reach multiple households), which is the same semantics as our ordered `id_columns` priority. **SHIPPED — all three landed, verified from the deployed
+  zip 2026-09-02 (see "Deployed `mntn_graph` semantics" below).** `household_resolution.py` shed its
+  winner-selection in airflow-ti PR #1194. Governance context: Brian McAdams — consumer-side resolution rules "can lead to some very divergent
   reporting / performance … there should at least be a standardized way or list of standardized ways."
+
+- **Deployed `mntn_graph` semantics, read from the artifact (2026-09-02).** Everything below is from
+  unzipping `gs://mntn-data-archive-prod/identity_resources/graph_interface/mntn_graph.zip` and reading
+  `graph.py` / `id_types.py` / `reader.py`, not from a Slack description. The zip is **unversioned** — the
+  GCS path carries no build id, so the ID team can redeploy under a running pipeline. `__version__` inside
+  the package reads `0.1.0`.
+  - `ids_to_households(spark, df, id_cols, *, resolve_best_household=False, use_shared_ids=False,
+    id_date_col=None, graph_version=None, as_of=None, graph_df=None, log_table=None, env="dev", dt=None)`.
+    Two modes: **enrich** (default, left-joins every matching edge, rows fan out, single id column only) and
+    **resolve** (`resolve_best_household=True`, one best household per row across id columns).
+  - **Resolve mode cannot fan out.** `_best_household_lookup` builds a per-key lookup with
+    `row_number().over(partitionBy(key).orderBy(confidence_score DESC NULLS LAST, household_id ASC))` and
+    keeps `_rn == 1`, then left-joins it. One row in, one row out, unmatched rows survive with a null
+    `household_id` — so a coverage denominator taken from the **output** is still the true input count.
+  - **Equal-confidence tiebreak = lowest `household_id`**, which is bidder/ID-Service parity (see the
+    rowkey bullet above). Multi-column ties break on declaration order first (`_priority`).
+  - **`use_shared_ids` defaults to `False`** — `_prepared_graph` filters `~coalesce(is_shared, False)`
+    unless you opt in. Note the in-repo precedent
+    `models/feature_store/feature_group_2_derived/guid_log_derived_household_id_vertical_id.py` deliberately
+    passes `True` "to match resolve_households", so the two policies coexist in airflow-ti; state which one
+    a job wants.
+  - **Staleness guard exists but is unreachable through the top-line API.** `reader.GraphConfig` has
+    `max_graph_staleness_days`, but `_prepared_graph` constructs `GraphConfig(graph_version=…, as_of=…)` and
+    never sets it, and `ids_to_households` exposes no way to pass one. **The only way to get the guard is to
+    call `load_graph(spark, GraphConfig(as_of=…, max_graph_staleness_days=N), id_types)` yourself and hand
+    the result in as `graph_df`.** That is what airflow-ti `household_resolution.attach_ip_households` does.
+  - **`mntn_graph/__init__.py` re-exports `IdType`** (and `IdTypeFamily`, `GraphConfig`, `load_graph`,
+    `ids_to_households`, `households_to_ids`, `log_translation`), all listed in `__all__`. Both
+    `from mntn_graph import IdType` and `from mntn_graph.id_types import IdType` work; the repo uses both.
+  - **Temporal matching:** with no `id_date_col` the join condition is `end_time IS NULL` (current edges
+    only). With one, it matches the row's date inside `[start_time, end_time]` — which still reads the
+    latest snapshot's restated history, so it leaks later knowledge on a backfill.
+  - `log_translation(df, translation_log, *, data_source_id, data_source_category_col, direction="graph", …)`
+    is the crediting write. It needs a category column, so it fits DSC-shaped jobs; `graph_version` and
+    `sources` must come from the raw graph (a mirror-sourced frame fails).
 
 ### Top Pre-Visit Features for Targeting (by SHAP)
 1. `al_avg_segments` (augmentor_log) — average MNTN segments on the IP

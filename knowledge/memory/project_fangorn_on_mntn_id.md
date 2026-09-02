@@ -6,10 +6,10 @@ metadata:
   type: project
   originSessionId: 1e31df63-2e33-4ee1-ad1b-7fc2395f8bb7
 doc_type: memory
-keywords: [fangorn on mntn id, audi-1049, household re-key, feature store, household_id, audi-1166, audi-1105, audi-1167, audi-1170, sean yang, airflow-ti, graph_translation_signal, mntn_graph, graph_interface, household_resolution.py, bidder parity, id-service, IdTypeFamily]
+keywords: [fangorn on mntn id, audi-1049, household re-key, feature store, household_id, audi-1166, audi-1105, audi-1167, audi-1170, audi-1136, sean yang, airflow-ti, pr 1194, hh_audience_intent, tpa_hh_export, hhdsc_geo, hhdsc_ds_46, attach_ipv4_households, resolve_best_household, max_graph_staleness_days, coverage_metrics, graph_translation_signal, mntn_graph, graph_interface, household_resolution.py, bidder parity, id-service, IdTypeFamily]
 domain: [project, identity, audience-scoring]
 lifecycle: active
-last_verified: 2026-08-12
+last_verified: 2026-09-02
 ---
 **AUDI-1049 "Fangorn on MNTN ID"** (epic owner Matt Brorby; ⚠ AUDI-1057 is a *Done* modeling spike, NOT the
 epic). Re-keys the Fangorn feature store + intent scoring **IP→MNTN ID (household)**, running parallel to the
@@ -158,8 +158,36 @@ McAdams's governance push ("there should at least be a standardized way or list 
 Sean's single-source-of-truth ask. **NOT SHIPPED — do not design against it yet.** When it lands: the
 equal-confidence `household_id` tiebreak fix goes moot for non-shared IDs (hold it), the AUDI-1167 shared-IP
 cutoff becomes a parity check rather than a tuning knob, and the ~9.5%-shared IPv4 rows become an expected,
-named exclusion line in the AUDI-1170 shadow-parity readout. ⚠ **One contradiction to settle first:**
+named exclusion line in the AUDI-1170 shadow-parity readout. ⚠ **One contradiction still to settle:**
 `id-service/src/bigtable.rs` has zero `is_shared` references (read-path verified), while Jack says the ID
 Service excludes shared IDs — both hold only if the filter is upstream at Bigtable load. **Read the loader.**
 Second consumer: Alex Knorr is importing the library into the Fangorn-scoring Databricks notebook off Ryan's
-job. Detail in `knowledge/data_knowledge.md` § "MNTN ID (household) re-keying" and epic §7j/§9.
+job.
+
+**SHIPPED — the library changes landed; verified from the deployed zip 2026-09-02 (supersedes the "NOT
+SHIPPED" line above).** Unzipped `mntn_graph.zip` and read the source. `ids_to_households(...,
+resolve_best_household=True)` returns exactly one row per key (`row_number()` ranked
+`confidence_score DESC NULLS LAST, household_id ASC`, keep `_rn == 1`), so **no fan-out** and the
+**equal-confidence tiebreak is now lowest `household_id` = bidder parity** — our one-line divergence is
+moot, don't apply it. `use_shared_ids` **defaults to False**. **The `IdTypeFamily` defect is FIXED**
+(`IPV4 = 3000 = {30,32}`, `IPV6 = 3100` its own family), so the explicit-`IdType` rule is no longer
+load-bearing. **One trap:** `GraphConfig.max_graph_staleness_days` exists but `_prepared_graph` never sets
+it and `ids_to_households` won't take it — the only route to the staleness guard is
+`load_graph(spark, GraphConfig(as_of=…, max_graph_staleness_days=14), id_types)` passed back in as
+`graph_df`. The zip is **unversioned** (no build id in the GCS path), so it can change under a running
+pipeline. Full detail: `knowledge/data_knowledge.md` § "Deployed `mntn_graph` semantics".
+
+**AUDI-1136 / airflow-ti PR #1194 (Sean Yang) — reviewed and merged-track 2026-09-02.** Adds the parallel
+household-keyed audience-intent scoring chain (`hh_*` models, a separate `hh_audience_intent` DAG) plus the
+household TPA export (`tpa_hh_export`, `hhdsc_geo`, `hhdsc_ds_46`) writing to
+`gs://sh-dw-external-tables-prod/hh_data`. Review posted as 7 blocking inline comments; Sean fixed 5
+outright and 2 partially. **Two outcomes that change the design picture:** (1) his first cut added a
+SECOND resolver (`utils_model/mntn_graph_resolution.py`) alongside `household_resolution.py`, and the fix
+**deleted it and folded the wrapper back into `household_resolution.py`** — the AUDI-1167 single chokepoint
+is restored, and it now reaches the staleness guard via the `graph_df` route above. (2) **`hhdsc_ds_13` and
+`hhdsc_ds_19` — already running in prod — were switched from `resolve_households` to
+`attach_ipv4_households`.** That shifts equal-confidence household picks toward bidder parity (right
+direction, but an unannounced output change to a live job) and **removed `coverage_metrics()` from both,
+leaving it with zero callers repo-wide.** Still open at merge: no `log_translation` crediting anywhere in
+the household path, and coverage is printed with no floor. Baseline, per-finding status and the refuted
+claims: `tickets/audi_1049_fangorn_on_mntn_id/artifacts/audi_1049_pr1194_{review_baseline,post_fix_status}.md`. Detail in `knowledge/data_knowledge.md` § "MNTN ID (household) re-keying" and epic §7j/§9.
