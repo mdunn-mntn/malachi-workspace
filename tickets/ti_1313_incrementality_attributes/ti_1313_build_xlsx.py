@@ -18,8 +18,10 @@ OUT = TICKET / "outputs"
 base = pd.read_csv(OUT / "ti_1313_campaign_base.csv")
 bands = pd.read_csv(OUT / "ti_1313_score_bands.csv")
 freq = pd.read_csv(OUT / "ti_1313_bid_counts.csv")
+windows = pd.read_csv(OUT / "ti_1313_window_sensitivity.csv")
 
-base["primary"] = base["in_validity_band"] & base["meets_75pct_days_live"]
+base["primary"] = (base["in_validity_band"] & base["meets_75pct_days_live"]
+                   & base["live_advertiser"].fillna(False))
 pop = base[base["primary"]].copy()
 keep = set(pop["campaign_group_id"])
 bands = bands[bands["campaign_group_id"].isin(keep)].copy()
@@ -120,6 +122,20 @@ FREQ_Q_LABELS = [f"{_edges[i]} to {_edges[i + 1]}" for i in range(4)]
 pop["freq_bucket"] = pd.qcut(pop["avg_frequency"], 4, labels=FREQ_Q_LABELS)
 pop["dma_bucket"] = pd.cut(pop["n_dma_delivered"], bins=[-1, 10, 100, 200, 999],
                            labels=["Under 10 DMAs", "10 to 100", "100 to 200", "Over 200"])
+pop["hi_bucket"] = pd.qcut(pop["pct_hh_high_intent"], 4, duplicates="drop")
+pop["hi_bucket"] = pop["hi_bucket"].cat.rename_categories(
+    [f"{max(c.left, 0):.0%} to {c.right:.0%}" for c in pop["hi_bucket"].cat.categories])
+pop["score_bucket"] = pd.qcut(pop["avg_household_score"], 4, duplicates="drop")
+pop["score_bucket"] = pop["score_bucket"].cat.rename_categories(
+    [f"{max(c.left, 0):.0f} to {c.right:.0f}" for c in pop["score_bucket"].cat.categories])
+pop["tv_bucket"] = pd.cut(pop["pct_spend_tv"], bins=[-0.001, 0.90, 0.99, 1.001],
+                          labels=["Under 90% TV", "90 to 99% TV", "Over 99% TV"])
+pop["tenure_bucket"] = pd.cut(pop["advertiser_tenure_months"], bins=[-1, 12, 24, 48, 999],
+                              labels=["Under 1 year", "1 to 2 years", "2 to 4 years", "Over 4 years"])
+pop["vv_level"] = pop["vv_attribution_window_days"].map(
+    lambda d: f"{int(d)} days" if pd.notna(d) else None)
+pop["display_flag"] = np.where(pop["runs_display"], "Runs display multi-touch", "Prospecting only")
+pop["fcap_level"] = pop["fcap_setting"]
 
 bands["band"] = bands["score_band"].map(BAND_LABEL)
 freq["fband"] = pd.Categorical(freq["bid_count_band"], categories=FREQ_ORDER, ordered=True)
@@ -131,10 +147,19 @@ by_creative = summarize(pop, "creative", "Creative length mix",
 by_geo = summarize(pop, "geo", "Geographic targeting")
 by_vertical = summarize(pop, "vertical_name", "Vertical")
 by_freq_q = summarize(pop, "freq_bucket", "Average frequency", order=FREQ_Q_LABELS)
+by_hi = summarize(pop, "hi_bucket", "Share of scored households at High Intent")
+by_score = summarize(pop, "score_bucket", "Average household score")
+by_tv = summarize(pop, "tv_bucket", "Share of spend on TV screens")
+by_tenure = summarize(pop, "tenure_bucket", "Advertiser tenure",
+                      order=["Under 1 year", "1 to 2 years", "2 to 4 years", "Over 4 years"])
+by_vv = summarize(pop, "vv_level", "Visit attribution window")
+by_fcap = summarize(pop, "fcap_level", "Frequency cap")
+by_display = summarize(pop, "display_flag", "Display multi-touch")
 
 others = []
-for col, lab in [("crm", "Customer-file exclusion"), ("mt", "Multi-touch display access"),
-                 ("mt_bucket", "Multi-touch share of spend"), ("dma_bucket", "Delivered DMA footprint")]:
+for col, lab in [("crm", "Customer-file exclusion"), ("display_flag", "Display multi-touch"),
+                 ("mt_bucket", "Multi-touch share of spend"), ("dma_bucket", "Delivered DMA footprint"),
+                 ("tenure_bucket", "Advertiser tenure"), ("vv_level", "Visit attribution window")]:
     t = summarize(pop, col, "Value", min_k=5)
     if len(t) < 2:
         continue
@@ -147,6 +172,10 @@ RANKED_SRC = [
     ("Bids per household", by_freq, len(keep)), ("Intent band", by_band, len(keep)),
     ("Creative length mix", by_creative, None), ("Geographic targeting", by_geo, None),
     ("Vertical", by_vertical, None), ("Average frequency", by_freq_q, None),
+    ("High-intent share", by_hi, None), ("Average household score", by_score, None),
+    ("TV share of spend", by_tv, None), ("Advertiser tenure", by_tenure, None),
+    ("Visit attribution window", by_vv, None), ("Frequency cap", by_fcap, None),
+    ("Display multi-touch", by_display, None),
 ]
 rank_rows = []
 for name, tbl, fixed_n in RANKED_SRC:
@@ -268,6 +297,9 @@ detail = base[[
     "attributed_per_incremental_conv",
     "pct_attributed_visits_incremental", "pct_attributed_conv_incremental",
     "creative_length_mix", "share_15s", "n_creatives",
+    "avg_household_score", "pct_households_unscored", "pct_hh_high_intent", "pct_hh_peak",
+    "pct_hh_mid", "pct_hh_max_reach", "pct_spend_tv", "pct_spend_display", "runs_display",
+    "fcap_setting", "advertiser_tenure_months", "vv_attribution_window_days", "live_advertiser",
     "geo_targeting_class", "n_dma_delivered", "crm_file_excluded", "mt_display_access_enrolled",
     "avg_frequency", "pct_spend_multitouch", "budget",
     "n_treatment", "n_holdout", "vis_treatment", "vis_holdout",
@@ -291,6 +323,13 @@ detail = base[[
     "pct_attributed_visits_incremental": "% attr visits incremental",
     "pct_attributed_conv_incremental": "% attr conversions incremental",
     "creative_length_mix": "Creative length", "share_15s": "Share 15s", "n_creatives": "Creatives",
+    "avg_household_score": "Avg household score", "pct_households_unscored": "% households unscored",
+    "pct_hh_high_intent": "% High Intent", "pct_hh_peak": "% Peak Performance",
+    "pct_hh_mid": "% Mid Intent", "pct_hh_max_reach": "% Max Reach",
+    "pct_spend_tv": "% spend TV", "pct_spend_display": "% spend Display",
+    "runs_display": "Runs display", "fcap_setting": "Frequency cap",
+    "advertiser_tenure_months": "Tenure months", "vv_attribution_window_days": "Visit window days",
+    "live_advertiser": "Live advertiser",
     "geo_targeting_class": "Geo targeting", "n_dma_delivered": "DMAs delivered",
     "crm_file_excluded": "Excludes customer file", "mt_display_access_enrolled": "Multi-touch access",
     "avg_frequency": "Avg frequency", "pct_spend_multitouch": "Multi-touch spend", "budget": "Budget",
@@ -410,6 +449,58 @@ if not infl_tbl.empty:
         query="ti_1313_campaign_base.sql")
 
 wb.table(
+    "By audience score", pd.concat([
+        by_hi.rename(columns={"Share of scored households at High Intent": "Setting"}).assign(Attribute="High-intent share of scored households"),
+        by_score.rename(columns={"Average household score": "Setting"}).assign(Attribute="Average household score"),
+    ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Pooled lift", "CI low", "CI high",
+                           "% significant", "Heterogeneity", "Incremental visits", "Spend",
+                           "Cost per inc visit"]],
+    finding="Pooled visit lift by what the campaign's scored audience looked like",
+    method="Quartiles on scored households only, one score per household. Campaigns with no scored household are excluded rather than tie-broken into a band, and their unscored share ships on Campaign detail.",
+    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    toc="Lift by high-intent share and by average score",
+    query="ti_1313_campaign_base.sql")
+
+wb.table(
+    "By device and window", pd.concat([
+        by_tv.rename(columns={"Share of spend on TV screens": "Setting"}).assign(Attribute="TV share of spend"),
+        by_vv.rename(columns={"Visit attribution window": "Setting"}).assign(Attribute="Visit attribution window"),
+        by_tenure.rename(columns={"Advertiser tenure": "Setting"}).assign(Attribute="Advertiser tenure"),
+    ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Pooled lift", "CI low", "CI high",
+                           "% significant", "Heterogeneity", "Incremental visits", "Spend",
+                           "Cost per inc visit"]],
+    finding="Pooled visit lift by screen, attribution window and advertiser tenure",
+    method="TV share is spend-weighted from the device dimension. Mobile and tablet is its exact complement, so it is not shown separately. Attribution window is the advertiser's visit lookback.",
+    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    toc="Lift by TV share, attribution window and tenure",
+    query="ti_1313_campaign_base.sql")
+
+if not by_fcap.empty:
+    wb.table(
+        "By frequency cap", by_fcap,
+        finding="Pooled visit lift by the campaign's household frequency cap",
+        method="The operating cap, read per prospecting campaign. Caps under 5 campaigns are dropped, so this covers the common settings rather than every one.",
+        formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+        toc="Lift by household frequency cap setting",
+        query="ti_1313_campaign_base.sql")
+
+wb.table(
+    "Window sensitivity", windows.assign(
+        **{"Powered": windows["powered_campaign_groups"],
+           "Powered and in band": windows["powered_and_in_band"],
+           "Holdout share": windows["pooled_ghost_frac"],
+           "Pooled lift": windows["pooled_rel_lift"],
+           "Window": windows["window_label"]})[
+        ["Window", "Powered", "Powered and in band", "Holdout share", "Pooled lift"]],
+    finding="Measured lift rises as the window moves later, because the holdout thins",
+    method="Same entry-cohort method on all three. The holdout is not refilled as a campaign runs, so later windows measure a thinner control group and read high. The ticket asked for the trailing 30 days.",
+    formats={"Powered": FMT.INT, "Powered and in band": FMT.INT,
+             "Holdout share": FMT.PCT2, "Pooled lift": FMT.PCT1},
+    signal={"Pooled lift": {}}, kind="detail",
+    toc="Why the workbook does not use the trailing 30 days",
+    query="ti_1313_window_sensitivity.sql")
+
+wb.table(
     "Population choices", gate_tbl,
     finding="What each population filter costs, and what it does to the headline",
     method="The workbook uses the last row. The holdout band matters most: measured lift climbs as the holdout thins, which is an artifact of the estimator rather than a real effect.",
@@ -442,6 +533,10 @@ wb.table(
              "Attributed per incremental conv": FMT.MULT, "% attr visits incremental": FMT.PCT0,
              "% attr conversions incremental": FMT.PCT0, "Share 15s": FMT.PCT0,
              "Creatives": FMT.INT, "DMAs delivered": FMT.INT, "Days delivered": FMT.INT,
+             "Avg household score": FMT.INT, "% households unscored": FMT.PCT0,
+             "% High Intent": FMT.PCT0, "% Peak Performance": FMT.PCT0, "% Mid Intent": FMT.PCT0,
+             "% Max Reach": FMT.PCT0, "% spend TV": FMT.PCT0, "% spend Display": FMT.PCT0,
+             "Tenure months": FMT.INT, "Visit window days": FMT.INT,
              "Avg frequency": FMT.NUM1, "Multi-touch spend": FMT.PCT0, "Budget": FMT.USD0,
              "Treated households": FMT.INT, "Holdout households": FMT.INT,
              "Treated visits": FMT.INT, "Holdout visits": FMT.INT},

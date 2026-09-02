@@ -152,6 +152,83 @@ crm AS (
   GROUP BY 1
 ),
 
+households AS (
+  SELECT c.campaign_group_id AS cg_id, cil.ip AS ip, MAX(cil.household_score) AS hs
+  FROM `dw-main-silver.logdata.cost_impression_log` cil
+  JOIN `dw-main-silver.public.campaigns` c ON cil.campaign_id = c.campaign_id
+  WHERE c.funnel_level = 1 AND c.objective_id = 1
+    AND cil.campaign_id > 0
+    AND DATE(cil.time) BETWEEN '2026-06-22' AND '2026-08-31'
+  GROUP BY 1, 2
+),
+
+scores AS (
+  SELECT
+    cg_id,
+    COUNT(*) AS households_delivered,
+    SAFE_DIVIDE(COUNTIF(hs <= 0), COUNT(*)) AS pct_households_unscored,
+    AVG(IF(hs > 0, hs, NULL)) AS avg_household_score,
+    SAFE_DIVIDE(COUNTIF(hs >= 8001), NULLIF(COUNTIF(hs > 0), 0)) AS pct_hh_high_intent,
+    SAFE_DIVIDE(COUNTIF(hs BETWEEN 6666 AND 8000), NULLIF(COUNTIF(hs > 0), 0)) AS pct_hh_peak,
+    SAFE_DIVIDE(COUNTIF(hs BETWEEN 3333 AND 6665), NULLIF(COUNTIF(hs > 0), 0)) AS pct_hh_mid,
+    SAFE_DIVIDE(COUNTIF(hs BETWEEN 1 AND 3332), NULLIF(COUNTIF(hs > 0), 0)) AS pct_hh_max_reach
+  FROM households
+  GROUP BY 1
+),
+
+device AS (
+  SELECT
+    pc.campaign_group_id AS cg_id,
+    SUM(sf.media_spend) AS device_spend_basis,
+    SAFE_DIVIDE(SUM(IF(sf.device_type IN ('SET_TOP_BOX','CONNECTED_TV','GAMES_CONSOLE','CONNECTED_DEVICE'), sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_tv,
+    SAFE_DIVIDE(SUM(IF(sf.device_type IN ('MOBILE','TABLET','PHONE'), sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_mobile_tablet,
+    SAFE_DIVIDE(SUM(IF(sf.device_type IN ('PC','PERSONAL_COMPUTER'), sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_desktop
+  FROM `dw-main-silver.summarydata.spend_facts` sf
+  JOIN prospecting_campaigns pc USING (campaign_id)
+  WHERE DATE(sf.hour) BETWEEN '2026-06-22' AND '2026-08-31'
+  GROUP BY 1
+),
+
+display_spend AS (
+  SELECT
+    c.campaign_group_id AS cg_id,
+    SAFE_DIVIDE(SUM(IF(c.channel_id = 1, s.media_spend + s.data_spend + s.platform_spend, 0)),
+                NULLIF(SUM(s.media_spend + s.data_spend + s.platform_spend), 0)) AS pct_spend_display,
+    SUM(IF(c.channel_id = 1, s.media_spend + s.data_spend + s.platform_spend, 0)) > 0 AS runs_display
+  FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+  JOIN `dw-main-silver.public.campaigns` c USING (campaign_id)
+  WHERE s.day BETWEEN '2026-06-22' AND '2026-08-31'
+  GROUP BY 1
+),
+
+fcap AS (
+  SELECT
+    pc.campaign_group_id AS cg_id,
+    ANY_VALUE(COALESCE(f.secondary_cap, f.dsp_cap)) AS fcap_impressions,
+    ANY_VALUE(COALESCE(f.secondary_duration, f.dsp_duration)) AS fcap_duration_seconds,
+    LOGICAL_OR(f.dsp_cap IS NOT NULL) AS fcap_manual_override
+  FROM prospecting_campaigns pc
+  JOIN `dw-main-silver.dso.frequency_caps` f USING (campaign_id)
+  GROUP BY 1
+),
+
+tenure AS (
+  SELECT advertiser_id, MIN(DATE(first_launch_time)) AS platform_first_launch_date
+  FROM `dw-main-bronze.integrationprod.public_campaign_groups_raw`
+  WHERE first_launch_time IS NOT NULL AND is_test = FALSE AND deleted = FALSE
+  GROUP BY 1
+),
+
+vv_window AS (
+  SELECT advertiser_id, EXTRACT(DAY FROM clickpass_acquisition_ttl) AS vv_attribution_window_days
+  FROM `dw-main-silver.public.advertisers`
+),
+
+live_status AS (
+  SELECT advertiser_id, status_id, (status_id = 3) AS live_advertiser
+  FROM `dw-main-bronze.integrationprod.advertisers`
+),
+
 mt_feature AS (
   SELECT advertiser_id, LOGICAL_OR(feature_id = 1 AND active) AS mt_display_access_enrolled
   FROM `dw-main-bronze.integrationprod.core_advertisers_x_features`
@@ -222,6 +299,22 @@ SELECT
   crm.n_prospecting_audiences,
   COALESCE(mt.mt_display_access_enrolled, FALSE) AS mt_display_access_enrolled,
 
+  sc.avg_household_score, sc.pct_households_unscored,
+  sc.pct_hh_high_intent, sc.pct_hh_peak, sc.pct_hh_mid, sc.pct_hh_max_reach,
+  sc.households_delivered,
+  dv.pct_spend_tv, dv.pct_spend_mobile_tablet, dv.pct_spend_desktop,
+  ds.pct_spend_display, ds.runs_display,
+  fc.fcap_impressions, fc.fcap_duration_seconds, fc.fcap_manual_override,
+  CASE
+    WHEN fc.fcap_impressions IS NULL THEN 'No household cap'
+    WHEN fc.fcap_duration_seconds < 86400 THEN CONCAT(CAST(fc.fcap_impressions AS STRING), ' per ', CAST(ROUND(fc.fcap_duration_seconds/3600, 1) AS STRING), ' hours')
+    ELSE CONCAT(CAST(fc.fcap_impressions AS STRING), ' per ', CAST(ROUND(fc.fcap_duration_seconds/86400, 1) AS STRING), ' days')
+  END AS fcap_setting,
+  tn.platform_first_launch_date,
+  DATE_DIFF(DATE '2026-08-31', tn.platform_first_launch_date, MONTH) AS advertiser_tenure_months,
+  vw.vv_attribution_window_days,
+  ls.live_advertiser,
+
   cg.budget, cg.frequency_cap_impressions, cg.frequency_cap_duration, cg.has_audience,
   cg.start_time, cg.end_time, cg.deleted,
   adv.account_health, adv.monthly_muv, adv.company_size
@@ -235,5 +328,12 @@ LEFT JOIN reporting r ON b.campaign_group_id = r.cg_id
 LEFT JOIN geo_typed gt ON b.campaign_group_id = gt.campaign_group_id
 LEFT JOIN geo_radii gr ON b.campaign_group_id = gr.campaign_group_id
 LEFT JOIN crm ON b.campaign_group_id = crm.campaign_group_id
+LEFT JOIN scores sc ON b.campaign_group_id = sc.cg_id
+LEFT JOIN device dv ON b.campaign_group_id = dv.cg_id
+LEFT JOIN display_spend ds ON b.campaign_group_id = ds.cg_id
+LEFT JOIN fcap fc ON b.campaign_group_id = fc.cg_id
+LEFT JOIN tenure tn ON b.advertiser_id = tn.advertiser_id
+LEFT JOIN vv_window vw ON b.advertiser_id = vw.advertiser_id
+LEFT JOIN live_status ls ON b.advertiser_id = ls.advertiser_id
 LEFT JOIN mt_feature mt ON b.advertiser_id = mt.advertiser_id
 ORDER BY b.incremental_visits DESC
