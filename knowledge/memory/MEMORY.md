@@ -14,6 +14,7 @@
 - **Hold the evidenced verdict** — don't fold to a domain owner's plausible-but-hedged pushback; treat it as a hypothesis, keep the evidenced answer, settle it with a discriminating test. Same on the write side: contradictions append, never overwrite. [[feedback_hold_evidenced_verdict]] [[feedback_contradictions_are_appended]]
 - **Rank descending** — primary metric, most on top, every table/chart. [[feedback_rank_desc_always]]
 - **Default deliverable = branded `.xlsx`** to the Drive mount `My Drive/Tickets/<KEY>/` (lib/mntn_xlsx.py). [[feedback_xlsx_default_output]] [[reference_xlsx_master_format]]
+- **Ships `DRAFT - NOT FINAL`** — every deliverable stays marked draft until the work is confirmed and the ticket closes; `MntnWorkbook` defaults to draft, `status="Final"` is a deliberate act at close. [[feedback_draft_until_closed]]
 - **IPs from source log tables**, never proxies (CIL). [[feedback_source_table_ips]]
 - **No naive pre/post** for advertiser KPIs — CausalImpact + cluster-bootstrap DiD, report SE/CI/p. [[feedback_no_naive_pre_post]]
 - **BQ:** always via `bq_run.sh` (perf log + us-central1 reservation); sample/APPROX first; never preempt a long query; no cost warnings. [[feedback_bq_workflow]] [[feedback_fast_first_bq]] [[reference_bq_location_reservation]]

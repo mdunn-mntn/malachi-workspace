@@ -19,6 +19,7 @@ normal deliverable.
 format: `lib/mntn_xlsx.py` (`MntnWorkbook`) + the standard `documentation/docs/xlsx_deliverable_standard.md`.
 Read the standard, import the module (branded cover w/ clickable contents → finding-led table sheets w/
 heat+RAG → `Read me` glossary → `Queries` SQL → `Method & caveats`), then `save_drive(KEY, "Description")`.
+Every workbook ships marked `DRAFT - NOT FINAL` until its ticket closes — see [[feedback_draft_until_closed]].
 Visual polish (coloring, fonts, borders, cover) is the point — the user cares that shared files look
 beautiful. Swap official MNTN logo/hexes via the `BRAND` dict + `logo_path` (one-line). See
 [[reference_xlsx_master_format]].

@@ -75,6 +75,34 @@ wb.save_drive("AUDI-1141", "MM vs 3P Scorecard")        # -> My Drive/Tickets/AU
 
 **Cover takeaways — guideline, warns but does not block.** Three (Rule of Three; a 4th is silently dropped), each **≤160 chars**, each leading with its number. Range across the reference workbooks: AUDI-1204 89–96, AUDI-1172 104–155. `cover()` prints to stderr past either bound. Deliberately softer than the subtitle caps: a long takeaway is a judgment call, a 382-char method line is not.
 
+### Draft marking — every workbook ships `DRAFT - NOT FINAL` until the ticket closes
+
+**A workbook is a draft until the work is confirmed and the ticket is closed. It ships marked
+`DRAFT - NOT FINAL` in bold caps, on every sheet.** It switches to Final only once all edits are done and
+the ticket is closed (user rule, 2026-09-02).
+
+**Draft is now the library default, so this is enforced rather than advisory.** `MntnWorkbook.__init__`
+takes `status: str = "DRAFT - NOT FINAL"` (it was `"Final"` until 2026-09-02). A workbook is a draft
+unless its author deliberately passes `status="Final"` — **Final is the deliberate act.** Do not restore
+`"Final"` as the default. Why it matters: a deliverable circulating for review that doesn't announce
+itself as a draft invites a stakeholder to act on numbers that are still moving. On AUDI-1313 the
+workbook was rebuilt five times and two reported findings were retracted before it was fit to send.
+
+**Where the marker has to go to actually cover a workbook.** `status=` paints the Overview cover only —
+one sheet out of twenty. Three other slots carry it to the rest, and on AUDI-1313 they were the
+difference between 18 of 20 sheets marked and 20 of 20:
+
+| Slot | Covers | How |
+|---|---|---|
+| `MntnWorkbook(status=…)` | Overview cover meta strip (bold) | the default; leave it alone |
+| `MntnWorkbook(period=…)` | the Source footer of **every `table()` sheet** | `period="Jan-Jun 2026 · DRAFT - NOT FINAL"` |
+| `glossary(intro=…)` | the Read me tab | prefix the intro line |
+| `sql(note=…)` / `sql_dir(note=…)` / `notes(intro=…)` | the Queries and Method & caveats tabs | prefix the note/intro line |
+
+Only `table()` writes a Source footer, so a glossary, SQL or notes tab inherits nothing from `period=` and
+has to carry the marker in its own intro/note. When the ticket closes, pass `status="Final"` and strip the
+marker from those three strings in the same rebuild.
+
 ### Plain language and fact-only annotations (applies to every artifact, not just xlsx)
 
 Two rules from global `CLAUDE.md` §9, restated here because workbooks break them most often:
@@ -270,6 +298,9 @@ sizing) and reacting to how shared files actually land. When we change the look:
 Every existing builder re-run picks up the new look automatically. That is the point of centralizing it.
 
 ### Changelog
+- **2026-09-02 · v18** — `MntnWorkbook(status=…)` defaults to `"DRAFT - NOT FINAL"` instead of `"Final"`,
+  so every workbook is a draft unless its author passes `status="Final"`. Rule and the four slots that
+  carry the marker to all sheets: §2 "Draft marking".
 - **2026-07-30 · v17** — `table(query="<file>.sql")` names each sheet's source query inline in the bottom
   Source line and **deep-links** it to that query's block on the Query tab. The Source footnote becomes
   `Source: <ticket> · Query: <file>.sql · Period: … · Generated …` (middot separators) and the whole grey
@@ -317,6 +348,8 @@ Every existing builder re-run picks up the new look automatically. That is the p
 5. **Rebuild is idempotent + clean:** no `BUILD BLOCKED`, no terseness warnings.
 6. **No person-names in any cell.** They slip into Method/notes blocks (AUDI-1172 shipped "Matt Brorby
    confirmed", caught in review). Shared deliverables name no people; put the who in the ticket, not the sheet.
+7. **`DRAFT - NOT FINAL` on every sheet** (§2 "Draft marking") — cover status, every Source footer via
+   `period=`, Read me `intro=`, Queries/Method `note=`/`intro=`. Final only once the ticket is closed.
 - **2026-07-29 · v14** — SQL comment headers hard-capped. `sql()` trims any run of `--` comment lines
   (blank-separated blocks merged) to `max_comment_run` (default 3) and warns, so the Query tab never
   becomes a wall of grey. A query header is a 1-line label (what it drives + source), not prose. When
