@@ -5218,3 +5218,13 @@ as `False`, or a reader reads "no longer active" as "not Peak Performance".
 observed values and counts (2026-08-20): `non_mm` 8,153 · `mmv2` (DS19-only, keyword-only, **no PP**)
 3,577 · `mm_flagship_fangorn` 1,527 · `mmv3` 662 · `fangorn_vertical_only` 334 · `mmv1` 141. There is no
 `mm_engine` column on the view — it is `mm_class` plus `mm_engine_rank`.
+
+## BigQuery jobs launched by airflow-ti carry `airflow-dag`/`airflow-task` labels (AUDI-1194, 2026-09-02)
+
+Every BigQuery job the optimizer's cost surface measures carries `airflow-dag` and `airflow-task`
+labels - the ledger's unattributed bucket is empty (verified 2026-09-02). Cost attribution for
+airflow-launched BQ jobs is complete as-is: grouping slot-ms on those labels needs no labeling
+campaign. Caveat: raw `JOBS_BY_USER`/`JOBS` profiling still shows unlabeled slot-hours (1,185
+slot-h/day measured 2026-08-31); reconciling hypothesis = jobs outside the airflow-launched set
+(ad-hoc/service jobs), to be settled in AUDI-1278 by joining the profiled unlabeled jobs against
+the ledger population. See memory `project_airflow_optimizer`.

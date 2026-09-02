@@ -4,7 +4,7 @@ title: "AUDI-1194: Airflow/Spark optimization crawler"
 status: in_progress
 date: 2026-08-05
 summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
-result: "in progress — prod DAG live with Slack delivery; full-corpus sweep (3,085 logs) distilled to 67 (job, mechanism) pairs / 30,163+ exec-h floor (outputs/audi_1194_hackathon_optimizations_2026_08_27.md); AUDI-1241 filed under epic AUDI-1054 for the burn-down; site_network_hourly + DDP dbt tests now ours to fix (merged #1232, dbt#174 in review); 2026-08-31 hackathon refinement: 13 Tasks AUDI-1269..1281 filed into sprint 8649 (09/07-09/21), grouped by change type, 16 SP Malachi / 4 SP others; 2026-08-31 evening: PR #1250 (Databricks surface, dormancy root-caused: prod lacks DATABRICKS_WAREHOUSE) + PR #1252 open, DEV-8821 relay LIVE (GMP verification pending), epic AUDI-1290 parents the 13"
+result: "in progress — prod DAG live, 4 surfaces (spark|bq|dbx|pod): pod surface LIVE 2026-09-01 (worker-default at 11% of its cpu limit = downsize candidate), BQ attribution verified complete 2026-09-02 (ledger unattributed bucket EMPTY, no labeling campaign needed), dbx 0 rows pending prod_runner grants (paste incl. warehouse Can-use sent to Alyson 2026-09-02); downloader freeze root-caused (gsutil -m forked workers), fix + debugger parse-rate canary on PR #1260, pod point-order fix PR #1259 — review queue; full-corpus sweep 67 pairs / 30,163+ exec-h; hackathon 13 Tasks AUDI-1269..1281 in sprint 8649 under epic AUDI-1290; digest user-verified from screenshots, rank-row alignment reformat queued"
 question: "Can a scheduled key-free crawler read every succeeded Spark job (Dataproc event logs + Databricks plans/metrics) and emit a ranked, actionable optimization backlog with no manual step?"
 framing_state: locked
 ---
@@ -950,5 +950,28 @@ grants, ask to ml_squad/Brian outstanding); (3) **the debugger and optimizer see
 fleets** — the debugger's top-3 offenders (72% of its diagnosis rows) have zero ledger rows
 ever (Databricks-API/dbt/pod/OpenAI jobs, exactly this system's blind spots).
 
-**Review queue at close: airflow-ti #1259 (pod rate) + #1260 (downloader).** After both merge +
+**Review queue at close: airflow-ti #1259 (pod rate) + #1260 (downloader; retitled 2026-09-02: + parse-rate canary).** After both merge +
 deploy: manual sweep, expect `complete=True` and resolutions flowing again.
+
+## 2026-09-02 (morning) — BQ attribution complete; grants paste to Alyson; PR #1260 gains the canary; digest verified
+
+- **The BQ cost surface's unattributed bucket is EMPTY in the ledger (verified 2026-09-02):**
+  every BigQuery job the surface measures carries `airflow-dag`/`airflow-task` labels — **no
+  team-labeling campaign needed.** The 08-31 raw-profiling figure (unlabeled jobs 1,185
+  slot-h/day) is a different population; reconciling hypothesis = jobs outside the
+  airflow-launched measured set (ad-hoc/service jobs); settle in AUDI-1278 by joining the
+  profiled unlabeled jobs against the ledger population. Routed to `knowledge/data_knowledge.md`.
+- **The 35 "without cost data" DAGs close only three ways:** (1) the `prod_runner` dbx grants,
+  (2) hackathon per-DAG event logging, (3) genuinely-no-compute. **Grants paste sent to Alyson
+  2026-09-02** for `prod_runner` (`397d710b`): `system.lakeflow` + `system.query` SELECT
+  ladders + warehouse `fa27430dfc609e6d` Can-use. Warehouse access is NOT SQL-grantable — UI
+  SQL Warehouses -> Permissions -> "Can use", or the Permissions API (memory
+  `reference_databricks_system_schema_grants`).
+- **User verification pass (screenshots): the digest works as designed** — override links
+  (incl. ETL Audience Intent), hour dots, deltas, cost chip, pod/BQ report links, threaded
+  What/Fix, honest partial-sweep note. **New ask: ranked rows read ragged in Slack (emoji +
+  number prefixes misalign) — reformat queued for the post-merge digest pass** (memory
+  `feedback_slack_digest_not_per_event`).
+- **PR #1260 retitled: "AUDI-1191/1194: downloader loses the batch; canary for silent parse
+  breaks"** — the debugger's parse-rate canary rides it (275 tests; detail in AUDI-1191
+  summary §7p). **Review queue: #1259 + #1260.**

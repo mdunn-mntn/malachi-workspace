@@ -217,7 +217,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_validated_is_not_correct | feedback | 2026-08-26 | [doc](memory/feedback_validated_is_not_correct.md) |
 | reference_airflow_run_origin | reference | 2026-08-26 | [doc](memory/reference_airflow_run_origin.md) |
 | reference_databricks_billing_cost | reference | 2026-08-26 | [doc](memory/reference_databricks_billing_cost.md) |
-| reference_databricks_system_schema_grants | reference | 2026-08-26 | [doc](memory/reference_databricks_system_schema_grants.md) |
 | reference_spark_eventlog_cost_units | reference | 2026-08-26 | [doc](memory/reference_spark_eventlog_cost_units.md) |
 | feedback_pasted_reference_means_install | feedback | 2026-08-27 | [doc](memory/feedback_pasted_reference_means_install.md) |
 | reference_dataproc_eventlog_profiling | reference | 2026-08-27 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
@@ -231,7 +230,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-31 | [doc](memory/reference_airflow_ti.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-08-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
-| feedback_slack_digest_not_per_event | feedback | 2026-08-31 | [doc](memory/feedback_slack_digest_not_per_event.md) |
 | jira-conventions | reference | 2026-08-31 | [doc](memory/reference_jira_conventions.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-08-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
@@ -239,9 +237,11 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | bq-workflow | feedback | 2026-09-01 | [doc](memory/feedback_bq_workflow.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
-| project_airflow_debugger | project | 2026-09-01 | [doc](memory/project_airflow_debugger.md) |
-| project_airflow_optimizer | project | 2026-09-01 | [doc](memory/project_airflow_optimizer.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-01 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-09-01 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |
+| feedback_slack_digest_not_per_event | feedback | 2026-09-02 | [doc](memory/feedback_slack_digest_not_per_event.md) |
+| project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
+| project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
+| reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |

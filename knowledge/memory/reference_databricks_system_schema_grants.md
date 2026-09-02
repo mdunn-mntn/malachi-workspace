@@ -1,14 +1,14 @@
 ---
 name: reference_databricks_system_schema_grants
-description: The exact ladder to get a person or service principal read access to a Databricks system schema (lakeflow, query, billing, access) - who runs what, in which order, and how to verify it.
+description: The exact ladder to get a person or service principal read access to a Databricks system schema (lakeflow, query, billing, access) - who runs what, in which order, and how to verify it - plus the warehouse Can-use step that SQL grants cannot do.
 metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [databricks grants, system schema, unity catalog, USE CATALOG, USE SCHEMA, SELECT, metastore admin, account admin, system.lakeflow, system.query, system.billing, system.access, query history, job_run_timeline, SHOW GRANTS, grants get stale, INSUFFICIENT_PERMISSIONS, PERMISSION_DENIED, not an account admin, service principal, spark_optimizer, Alyson Lefkowitz, metastore_admins]
+keywords: [databricks grants, system schema, unity catalog, USE CATALOG, USE SCHEMA, SELECT, metastore admin, account admin, system.lakeflow, system.query, system.billing, system.access, query history, job_run_timeline, SHOW GRANTS, grants get stale, INSUFFICIENT_PERMISSIONS, PERMISSION_DENIED, not an account admin, service principal, spark_optimizer, Alyson Lefkowitz, metastore_admins, warehouse Can use, SQL Warehouses permissions, Permissions API, warehouse not sql-grantable, fa27430dfc609e6d, prod_runner 397d710b]
 domain: [infra, routing-people]
 lifecycle: active
-last_verified: 2026-08-26
+last_verified: 2026-09-02
 ---
 Getting anyone read access to a Databricks `system` schema takes **two different admin tiers** and
 they do not substitute. Worked twice: `system.lakeflow` (2026-08-25) and `system.query` (2026-08-26).
@@ -30,6 +30,19 @@ Metastore admin is the group `metastore_admins`; **Alyson Lefkowitz holds both t
 person to ask. Workspace `admins` membership confers neither - it returns
 `PERMISSION_DENIED: User is not an account admin for Account` on steps 2 and 3, and
 `PERMISSION_DENIED: User does not have MANAGE on Catalog 'system'` on step 1.
+
+## The warehouse step (NOT SQL-grantable)
+
+The 3-step ladder covers only catalog/schema/table. **Warehouse access is a workspace ACL, not
+a Unity Catalog grant - no GRANT statement reaches it.** A principal with the full SELECT
+ladder still cannot execute a query without "Can use" on a SQL warehouse. Two ways to set it:
+- **UI:** SQL Warehouses -> the warehouse -> Permissions -> add the principal -> **"Can use"**.
+- **Permissions API** (`/api/2.0/permissions/sql/warehouses/<id>`).
+
+**2026-09-02: full paste sent to Alyson for `prod_runner` (appId `397d710b`)** - the
+`system.lakeflow` + `system.query` SELECT ladders plus warehouse `fa27430dfc609e6d`
+(`sql_warehouse_2xs`, MAIN workspace) Can-use. Awaiting execution
+([[project_airflow_optimizer]] dbx surface blocker).
 
 ## Verify with SHOW GRANTS, never with the CLI
 

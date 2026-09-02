@@ -4,7 +4,7 @@ title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Datab
 status: in_progress
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress — LIVE end to end: prod DAG + Slack delivery verified 2026-08-27 (3 posted, threaded); 30-day backfill validated (173 failures, 94.7% deterministically root-caused); rapid 15-min DAG live; round-2 PRs airflow-ti#1248+#1249 MERGED and deploy-verified 2026-08-31 (watermark live in prod, IMP-095 closed); digest PR #1251 open; OpenAI outage proven ORG-SIDE, durable fix = AUDI-1301 (backlog). Remaining: #1233/#1251 merges, open triage tickets, Phase 3 auto-fire; hackathon alerting tickets AUDI-1279/1280 in sprint 8649"
+result: "in progress — LIVE end to end: prod DAG + Slack delivery + digest (#1251) + failure-trigger listener (#1258) live; 30-day backfill validated (173 failures, 94.7% deterministically root-caused); 12-day full-history diagnosis written 2026-09-01; parse-rate canary built 2026-09-02, riding PR #1260 (the accepted answer to silent log-format drift, no AI key); 15-min rapid KEPT as trigger backstop, hourly stretch after ~a week; OpenAI outage proven ORG-SIDE, durable fix = AUDI-1301 (backlog). Remaining: #1259/#1260 merges, #1233, open triage tickets, Phase 3 auto-fire; hackathon alerting tickets AUDI-1279/1280 in sprint 8649"
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
@@ -1069,3 +1069,31 @@ routed to memory `feedback_gauntlet_findings_not_fixes`.
 - Optimizer half of the evening (pod surface first light, v3 point-order fix PR #1259,
   downloader fix PR #1260): `tickets/audi_1194_optimizer_efficiency_crawler/summary.md` and
   memory `project_airflow_optimizer`.
+
+## 7p. 2026-09-02 (morning) — parse-rate canary built + folded into PR #1260; rapid schedule decision; digest verification pass
+
+- **Parse-rate canary BUILT and folded into PR #1260 at the user's request** (PR retitled
+  "AUDI-1191/1194: downloader loses the batch; canary for silent parse breaks").
+  `include/airflow_debugger/canary.py`: computes today's `(empty_logs + unclassified) /
+  candidates` and compares it to the mean of the same rate over the last 7 published
+  `rca_<ds>.json` (fetched key-free via the GCS JSON API); fires ONE loud warning only past
+  `max(2 * norm, norm + 25pts)` AND >= 5 failures today AND >= 3 history days (constants
+  `LOOKBACK_DAYS=7`, `MIN_HISTORY_DAYS=3`, `MIN_CANDIDATES=5`). Posts via the new
+  `notify.post_note`; `daily.py` records the warning in the rca json under `"canary"`. 275
+  debugger tests green on the branch.
+- **This is the ACCEPTED answer to "what if the log format changes":** the debugger is
+  deterministic — a format change never errors extraction, it just classifies less, silently.
+  The canary makes that visible with no AI key. **The LLM recommendation layer (auto-drafting
+  new signatures) remains an OPEN security question for Malachi to raise.**
+- **DECISION: keep the 15-min rapid schedule as the backstop** for failures the
+  `on_task_instance_failed` listener cannot see — hard worker death (the listener dies with
+  the task-runner), Airflow API blips, deploy windows, DagRun-level failures. Plan: stretch to
+  hourly after the trigger proves out over ~a week.
+- **User verification pass (screenshots): digests confirmed working as designed** — override
+  links (incl. ETL Audience Intent), hour dots, deltas, cost chip, pod/BQ report links,
+  threaded What/Fix, honest partial-sweep note. New feedback: ranked rows read ragged in Slack
+  (emoji + number prefixes misalign) — reformat queued for the post-merge digest pass (memory
+  `feedback_slack_digest_not_per_event`).
+- **Review queue now #1259 + #1260** (both verified OPEN 2026-09-02). Optimizer morning
+  (BQ-labels finding, Alyson grants paste): AUDI-1194 summary + memory
+  `project_airflow_optimizer`.
