@@ -229,75 +229,111 @@ instead (High +8.0%, PP +7.4%, Unscored +6.6%, Mid +4.8%, MaxReach +3.7%). The e
 is withdrawn. This is a **third reading** of the band gradient and should be appended to the existing
 contradiction in `experimentation.md`, not used to overwrite either prior one.
 
+### 4f. Third audit (2026-09-02) and the final shape
+
+A 16-agent audit against every AUDI-1313 requirement returned **11 findings above minor, 0 refuted**. All
+were fixed. Three mattered.
+
+**CRITICAL — the conversion pooling used the wrong denominator, and it was my bug.** `pool_conv` fed
+`conv_rate_treatment`/`conv_rate_holdout` into the pooler alongside `n_treatment`/`n_holdout`. But
+`lift__ghost_bid_results.conv_rate` is **per visitor, not per household**. Verified in BigQuery over all
+3,384 partner-8 overall rows:
+
+| Candidate denominator | max abs deviation from `conv_rate_treatment` |
+|---|---|
+| `conv_treatment / vis_treatment` | **0.0 exactly** |
+| `conv_treatment / n_treatment` | 0.9999968670157855 |
+
+Pairing a per-visitor rate with household counts inflated each campaign's effective sample size by a median
+~80x, which understated the log-RR variance by that factor and corrupted both the inverse-variance weights
+and the DerSimonian-Laird estimate. Corrected to `vis_treatment`/`vis_holdout`, the conversion side
+collapses: pooled conversion lift clears zero for **1 of 27** attribute levels (Education, +27.1%
+[+18.8%, +35.9%], k=15) rather than 8, and three previously positive levels turn negative. The whole
+headline "attribution inflation" story the v3 sheet told was an artifact of this one mis-wiring.
+
+**CRITICAL — two incompatible cost-per-incremental-conversion columns shipped side by side.** One divided
+cohort-scaled prospecting media spend by ghost-bid `incremental_conversions`; the other divided reporting
+total spend (media + data + platform, 2.30x larger) by an attributed-conversion bridge, and was unguarded,
+so it rendered negative dollars on 376 of 758 rows wherever `conv_rel_itt < 0`. Denominators differed by a
+median factor of 3.09. Resolved by deleting the second construction, guarding the survivor, and naming
+each spend basis in the column header and the Read me.
+
+**MAJOR — an MNTN internal account was inside the population.** Advertiser 30506, "MNTN - No ENG Testing"
+(`is_test = TRUE`), passed every gate. The ticket explicitly requires excluding internal, test and demo
+accounts, and only `campaign_groups.is_test` was being filtered, inside a CTE that was LEFT JOINed so it
+excluded nothing. Fixed with `is_test = FALSE AND deleted = FALSE` on the advertiser CTE and inner joins
+on both dimensions. Population 877 to 874, primary 209 to 208.
+
+**Also fixed:** the ranked sheet sorted on raw best-minus-worst spread, which is an order statistic biased
+toward high-cardinality attributes (17 verticals will out-spread 4 creative levels by chance); it now ranks
+on a between-level Cochran Q p-value. Summary sheets reverted to unscaled spend while the detail sheet used
+cohort-scaled spend; `scaled_spend` is now computed once in SQL and used everywhere. The inflation sheet
+silently deleted every level whose conversion lift was negative, which selected on the outcome; it now
+shows every level and blanks only the derived money columns. Negative conversion counts no longer render.
+
+**The ranking after correction** (between-level p, ascending):
+
+| Attribute | Levels | p | Best | Worst |
+|---|---|---|---|---|
+| Bids per household | 4 | 4.1e-12 | 11+ (+15.2%) | 1 (-5.4%) |
+| Vertical | 16 | 0.0023 | Moving (+17.8%) | Vehicles (-2.2%) |
+| Creative length mix | 4 | 0.014 | Mixed 30s-led (+10.1%) | 15s only (+4.1%) |
+| Average frequency | 4 | 0.024 | 2.5 to 4.1 (+11.4%) | 1.1 to 2.5 (+6.6%) |
+| Intent band | 5 | 0.74 | High (+8.4%) | Max Reach (+1.1%) |
+| Geographic targeting | 6 | 0.99 | DMA (+8.7%) | State (+7.5%) |
+
+Intent band and geographic targeting do **not** separate lift once the levels are tested against each
+other. Bid frequency does, by a wide margin, and it is the one result that has survived all three audits.
+
 ## 5. Solution
 
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+Delivered `AUDI-1313 Campaign Incrementality by Attribute.xlsx` to
+`My Drive/Tickets/AUDI-1313/`, built by `ti_1313_build_xlsx.py` from three committed queries.
+
+**Population.** 874 campaign groups pass power and quality: `lift__ghost_bid_results` at
+`stratum_type='overall'`, full clean gate (`se > 0 AND has_valid_holdout AND meets_min_n AND
+meets_min_compliance AND NOT ghost_frac_inflated AND NOT arm_imbalance_suspect`), `vis_holdout >= 100`,
+`partner_id = 8`, and no internal or test advertiser or campaign group. **208** of those also sit inside the
+0.09 to 0.11 `ghost_frac` holdout validity band and delivered on at least 54 of the 71 window days; those
+208 feed every summary sheet. All 874 ship on Campaign detail with both flags as columns.
+
+**Method.** Relative lift is pooled with DerSimonian-Laird random effects on the log risk ratio, variance
+`(1-p_t)/(p_t n_t) + (1-p_h)/(p_h n_h)`, per `data_catalog.md` (dividing a pooled absolute effect by a
+pooled base rate is documented as unsound and reverses the band gradient). Heterogeneity is reported on
+every row and runs above 85% on most, which is disclosed.
+
+**Sheets.** Ranked hypotheses (headline), By frequency, By creative length, By geography, By intent band,
+By vertical, By campaign frequency, Other attributes, Conversion outcomes, Attribution inflation,
+Population choices, Holdout depth check, Campaign detail, Read me, Queries.
+
+**Headline.** 208 campaign groups, 146 advertisers, 91 significant, pooled visit lift **+8.4%**
+[+7.0%, +9.9%].
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+
+- **Q:** Which campaign attributes correlate with strong incrementality?
+  **A:** Bid frequency, decisively (p = 4e-12): households bid on once show -5.4% lift, those bid on 11+
+  times show +15.2%. Vertical (p = 0.002), creative length mix (p = 0.014) and campaign average frequency
+  (p = 0.024) also separate. Intent band (p = 0.74) and geographic targeting (p = 0.99) do not. All
+  observational: households are not randomised into bid-count bands, so heavier exposure also marks a
+  household the system judged more promising.
+- **Q:** What did Kirsa's "950+ campaigns" refer to?
+  **A:** 100+ holdout **visits** (`vis_holdout`), not holdout IPs (`n_holdout`), under the full clean gate.
+  That yields 930. Adding the validated bidder leg, the holdout validity band and the ticket's own
+  75%-days-live filter brings it to 208.
+- **Q:** Is 15s or 30s creative better?
+  **A:** Not answerable as a binary; 47% of campaigns run both. On the 4-level mix, 30s-led leads (+10.1%)
+  and 15s-only trails (+4.1%), and the levels do differ (p = 0.014).
+- **Q:** What does the conversion side say?
+  **A:** Almost nothing. Pooled conversion lift clears zero for 1 of 27 attribute levels. The conversion
+  half of this ticket is close to a null result and should be reported as such.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
 
-## 8. Open Items / Follow-ups
+Routed to `knowledge/` by `/capture`. New durable facts established here:
+`cost_impression_log.group_id` is not `campaign_group_id` (bridge via `campaigns.campaign_id`);
+`lift__ghost_bid_results.conv_rate` is per visitor, not per household; `ghost_frac_inflated` guards only
+the high side of the validity band; `sh_device` is unusable on the Beeswax leg; `creatives.length` carries
+video seconds; `sum_by_campaign_by_day` is current, not stale to 2026-05-01; `bq_run.sh` needs
+`--nouse_legacy_sql` and rejects leading `--` comment lines.
 
-Checked against the AUDI-1313 description on 2026-09-02. **The two tables are broken in the ticket itself,
-not just over the API.** Sections 1 (Scope & Population, `<Table 5x2>`) and 3 (Campaign Attributes,
-`<Table 34x1>`) render as literal placeholder text in the Jira web UI as well, confirmed by screenshot.
-The paste that created the ticket did not carry them, so the 34 named attributes are unavailable to
-anyone reading the ticket. Malachi has commented to Kirsa asking for them. Until they arrive, scope comes
-from the prose that IS present plus Kirsa's spoken asks in Slack.
-
-Ticket metadata: reporter Kirsa Haenebalcke, assignee Malachi Dunn, parent EX-106, PMO rep Bryce Wagg,
-**due 2026-09-08**, status Backlog, no labels, full QA not required.
-
-**Section 1, inclusion filters**
-- Minimum 75% days live in the full window: **NOT applied.** Learning-period contamination is not excluded.
-  `campaign_groups.start_time`/`end_time` are carried in the base query, so this is a filter away.
-- Exclude underpowered: applied (100+ holdout visits, full clean gate, holdout validity band).
-- Exclude internal, test and demo accounts: **partial.** `campaign_groups.is_test = FALSE` only; no
-  advertiser-level internal/demo exclusion.
-
-**Section 2, outcome metrics.** The visit side is complete; the conversion side largely is not.
-
-| Metric | State |
-|---|---|
-| Visit lift %, CI, p, significance, baseline | delivered |
-| Incremental visits | delivered |
-| Cost per incremental visit | delivered, cohort-scaled, media spend only |
-| Attributed IVR | **missing** |
-| % of attributed visits that are incremental | **missing** |
-| Conversion lift % | partial: point estimate and significance on Campaign detail, no CI |
-| Incremental conversions | in the base CSV, not surfaced in the workbook |
-| Cost per incremental conversion | **missing** |
-| Control-group baseline conversion rate | **missing** |
-| Attributed CPA | **missing** |
-| **Attribution inflation ratio (attributed CPA / incremental CPA)** | **missing** |
-| % of attributed conversions that are incremental | **missing** |
-
-The attribution inflation ratio is the metric that most directly serves the ticket's stated goal of surfacing
-product gaps, and it is absent. It needs Reporting attributed visits and conversions joined to the ghost-bid
-incremental counts. `data_catalog.md` ghost-bid gotcha (4) already documents the method: `incremental_VV =
-Reporting_VV x rel_lift / (1 + rel_lift)` with `Reporting_VV = SUM(clicks + views + competing_views)` over
-objective 1 for the cohort and window. That is the path for the whole conversion side.
-
-**Section 3, attributes not delivered:** creative length (15s vs 30s, an explicit Kirsa ask), attribution
-window, CRM exclusion, Display multi-touch flag, media plan flag, geography, audience size and type. None
-were located in BigQuery; several likely need a PM or the campaign config service.
-
-**Expectation gap to flag with Kirsa:** she anticipated 950+ campaigns. 930 clear the power gate and 877 the
-bidder-leg gate, but only **409** sit inside the holdout validity band, and the summary sheets use those.
-The other 468 ship in Campaign detail with the reason shown on the Holdout depth check sheet.
-
-**Third reading of the intent-band gradient** (section 4e) should be appended to the existing contradiction
-in `experimentation.md`, not merged over either prior reading.
-
-**Not yet done:** self-review entry, Jira comment to Kirsa, `/capture` sweep of the durable schema facts in
-section 4a (the `cost_impression_log.group_id` bridge, the `sh_device` Beeswax gap, the one-sided
-`ghost_frac_inflated` flag, the `bq_run.sh` legacy-SQL and leading-comment footguns).
