@@ -232,7 +232,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | jira-conventions | reference | 2026-08-31 | [doc](memory/reference_jira_conventions.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-08-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
-| reference_slack_debugger_app | reference | 2026-08-31 | [doc](memory/reference_slack_debugger_app.md) |
 | bq-workflow | feedback | 2026-09-01 | [doc](memory/feedback_bq_workflow.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
@@ -244,4 +243,5 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
+| reference_slack_debugger_app | reference | 2026-09-02 | [doc](memory/reference_slack_debugger_app.md) |
 | reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |

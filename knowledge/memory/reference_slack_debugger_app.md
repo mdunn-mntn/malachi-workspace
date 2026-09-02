@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [slack, airflow-debugger, SLACK_BOT_TOKEN, SLACK_ALERT_CHANNEL, OPTIMIZER_SLACK_CHANNEL, groups:history, alerts-tpa-pipeline, monitor-tpa, C08CURMGNMQ, AUDI-1191, robin fox, SLACK_FALLBACK_CHANNEL, C0BT9TKRMKM, airflow-debugger channel, conversations.replies GET only, chat.delete tombstone, delete replies before parent, digest parent, PR 1251]
+keywords: [slack, airflow-debugger, SLACK_BOT_TOKEN, SLACK_ALERT_CHANNEL, OPTIMIZER_SLACK_CHANNEL, groups:history, alerts-tpa-pipeline, monitor-tpa, C08CURMGNMQ, AUDI-1191, robin fox, SLACK_FALLBACK_CHANNEL, C0BT9TKRMKM, airflow-debugger channel, conversations.replies GET only, chat.delete tombstone, delete replies before parent, digest parent, PR 1251, account_inactive, dead zshrc slack token, local preview post]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-08-31
+last_verified: 2026-09-02
 ---
 
 **App "Airflow Failure Debugger", bot `@airflow-debugger` (`U0BTU0FA8N4`), created 2026-08-26, approved by Robin Fox.** Bot token scopes: `chat:write`, `channels:history`, `channels:read`, `groups:history`, `groups:read`. No user token scopes.
@@ -29,6 +29,12 @@ Kit: the parent is the ranked DAG list, each DAG's fix is a threaded reply.
 **Env var trap (found live 2026-08-27):** the DEBUGGER reads `SLACK_ALERT_CHANNEL`, the OPTIMIZER reads `OPTIMIZER_SLACK_CHANNEL` — separate vars, do not confuse. `SLACK_ALERT_CHANNEL` was missing from the Astro deployment and debugger delivery silently did not post; after it was added, end-to-end delivery verified in prod 2026-08-27 (3 diagnoses posted, threaded).
 
 **Token storage:** an Astro deployment env var marked secret on airflow-ti, plus Vault. Locally it is `security find-generic-password -s slack_bot_token -w`, never a dotfile. See [[reference_pi5_server]] for why a local key is banned but a prod-held token is not, and [[reference_anthropic_api_key_keychain]] for the same pattern.
+
+**`~/.zshrc` `SLACK_BOT_TOKEN` is a DEAD token from the decommissioned Slack bot — posting with
+it returns `account_inactive` (hit live 2026-09-02).** The live bot token exists ONLY in the
+keychain (command above). Local test posts: keychain token +
+`OPTIMIZER_SLACK_CHANNEL=C0BSTH6E84T` (#spark-optimizer), verified by a successful preview post
+2026-09-02.
 
 **`SLACK_FALLBACK_CHANNEL` = `#airflow-debugger` (`C0BT9TKRMKM`).** Unmatched diagnoses post there, and per PR #1251 it also carries the per-sweep digest parent; the #1251 digest demo ran live in this channel 2026-08-31.
 

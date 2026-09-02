@@ -170,6 +170,10 @@ conversion_signal_backfill_workflow. fpa-ingestion-dataproc ->
 pixel_page_view_signal_backfill_workflow. segment-updates-to-parquet ->
 materialize_mntn_first_party.
 STILL EXCLUDED (prod launcher unconfirmed, ask owning team):
+SUPERSEDED 2026-09-02: prod launcher confirmed in source. dags/audience_intent/audience_intent.py
+submits all five audience_intent spark scripts, so the five ETL Audience Intent - * apps map to
+audience_intent and are IN the prod var (22 entries total; commit 3d87c6f adds trailing-wildcard
+prefix keys to coverage.resolve — exact beats prefix, longest prefix wins).
 
 ## Prior draft (2026-09-01, superseded above)
 
