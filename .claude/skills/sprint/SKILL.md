@@ -55,7 +55,19 @@ For each issue, read **only** its `summary.md` front-matter and the Jira descrip
 and classify:
 
 - **Folder state** — exists and framed (`framing_state: locked`) → resume · exists, draft → needs
-  framing · none → scaffold with `.claude/scripts/new_ticket.sh <prefix>_<num>_<short_desc>`.
+  framing · none → **scaffold it now, automatically, no asking**:
+
+  ```bash
+  .claude/scripts/new_ticket.sh audi_<num>_<short_desc> \
+    --title "<KEY>: <Jira title>" --summary "<one line>" --jira "https://mntn.atlassian.net/browse/<KEY>"
+  ```
+
+  Folder name is `audi_<num>_<3-5 word slug>`, lowercase and underscores, derived from the Jira
+  title (global §4). A child of an epic takes `--parent <epic_folder>`. Do every scaffold here in
+  the dispatcher, serially, before any agent starts — plan agents need a `summary.md` to write §3
+  into, and concurrent `new_ticket.sh` runs would race `build_index.sh` and `tickets/INDEX.md`.
+  Fill §1 Introduction and §2 The Problem from the Jira description in the same pass, then commit
+  all new folders in one commit.
 - **Autonomy** — `autonomous` (question is answerable from data, code, and docs) ·
   `needs-input` (a fork only the user can settle) · `blocked` (waiting on access or another team).
 - **Leverage tier** vs `knowledge/strategic_north_star.md` (global §1c). Tier 4 gets flagged, not
@@ -210,10 +222,14 @@ Agents produced files; only the dispatcher writes history. In order, per returne
 1. `git add <folder>` → `git commit -m "<KEY>: <headline>"` → `git push origin main`. **Never
    `git add .`** — other sessions share this tree (global §2).
 2. Post the agent's `jira_comment` via `curl` REST v2, and transition status if the ticket closed.
-3. Once all tickets have landed: commit `knowledge/bq_perf_log.jsonl` (agents appended to it), then
-   run `/capture` **once** with every agent's `knowledge[]` array as the input, and add the
-   self-review entries.
-4. Report to the user as a table: `key · state · headline · open items`. Nothing else.
+3. Run **`/capture <KEY>`** for that ticket, seeded with its `knowledge[]` array — scoped to one
+   ticket, so its findings route to that `summary.md` §7 and the right `knowledge/` doc, and its
+   self-review entry gets written while it is distinct. One ticket at a time, never concurrent:
+   `/capture` writes the shared `knowledge/` masters and `MEMORY.md`.
+4. After every ticket has landed: commit `knowledge/bq_perf_log.jsonl` (agents appended to it) and
+   run a final unscoped `/capture` for anything cross-cutting — a fact two tickets both proved, a
+   workflow lesson from the run itself.
+5. Report to the user as a table: `key · state · headline · open items`. Nothing else.
 
 ## Hazards (learned, not theoretical)
 
