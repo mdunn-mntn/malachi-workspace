@@ -88,6 +88,7 @@ holdout formula, advertiser IDs	domain formulas, entity IDs
 the adtech-sample 	the example-data 
 adtech	example-domain
 a narrow Databricks smoke-test one-off	a one-off vendor smoke test
+\.databrickscfg	<VENDOR_CFG>
 Databricks	a vendor platform
 
 # --- residual business-term catch-alls (ordered last; neutral) ---

@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [port, porting, package_kit, BLUEPRINT.md, AGENTS.md, agnostic blueprint, harness agnostic, ai workflow kit, portable kit, fresh machine, bootstrap, sanitize, sanitize_map, domain_scrub_map, domain-blind, cross-job, information barrier, global layer, with-global, generic kit, new use case, reverse symlink, PORTING.md, bundle, tarball]
 domain: [workflow, infra]
 lifecycle: active
-last_verified: 2026-08-12
+last_verified: 2026-09-02
 ---
 The AI Workflow Kit is portable in one command, built for cross-job transfer with a hard information barrier. `bash .claude/scripts/package_kit.sh [OUT_DIR]` emits a self-contained, sanitized, **domain-blind**, generic-seeded `ai-workflow-kit/` bundle (+ `.tar.gz`): it copies the machinery, applies TWO ordered literal maps — `sanitize_map.txt` (strip literal secrets → `<PLACEHOLDER>`) then `domain_scrub_map.txt` (strip job/domain CONTEXT: illustrative table/dataset/pipeline/incident/ticket names + the domain taxonomy → neutral generics) — overlays generic seeds from `documentation/ai_workflow_kit/templates/`, regenerates indexes + `COMPONENTS.md`, and **refuses to emit unless BOTH acceptance gates pass**: a secrets sweep (zero private tokens) AND a domain-blind sweep (zero job-identifying words), plus an in-bundle `verify.sh`. On the target machine: `bash bootstrap.sh` (repo layer) or `bash bootstrap.sh --with-global` (also installs the personal `~/.claude/` framework — CLAUDE.md/settings/MCP snippet — backing up existing files, token never copied), then fill placeholders per `PORTING.md`. Bundle carries the warehouse module + 4 subsystems as placeholdered skeletons; drops the prior job's content, `settings.local.json`, licensed assets, the Databricks one-off, the two example-dense design docs (`INGEST_GUIDE.md`, `bq_velocity_provenance_plan.md`), and `xlsx_demo.py`.
 
@@ -53,3 +53,22 @@ The AI Workflow Kit is portable in one command, built for cross-job transfer wit
 
 **How to apply:** to reuse the workflows for a new use case/job, run `package_kit.sh`; to reuse them under a
 different AGENT, read `BLUEPRINT.md` §6-7, then edit the bundle's `START_HERE.md` + `MEMORY.md` + `.claude/CLAUDE.md` and fill placeholders; the deterministic layer works unchanged. Cross-job safe by construction (two gates). Durable copy of the last-built bundle: `~/Downloads/ai-workflow-kit.tar.gz`.
+
+**2026-09-02 rebuild — the packager had been broken again, and its own secrets gate was the hole:**
+- **The secrets sweep pattern `mountain\.com` could not match an escaped literal.** `pr_gauntlet/SKILL.md`
+  and `workflows/pr_gauntlet.js` carry the org domain inside grep/regex text as `mountain\.com` and
+  `mountain\\.com`; the sweep's `\.` demands a real dot, so it read clean while the domain shipped.
+  Widened to the bare word `mountain`, which then caught the second leak below. **A literal find-replace
+  map cannot see escape variants of its own rows — the map needs one row per escaping level.**
+- **`lib/xlsx_builder.py` shipped the employer's brand-color names** ("Mountain Green", "Mountain Blue")
+  in ~18 comments, in every prior bundle. A color name is a brand name.
+- **`.claude/state/` shipped** (`chat_brevity_log.jsonl`, 200 KB of session IDs + reply telemetry) — added
+  Aug 2026, never added to the rsync denylist. Same failure class as the `global_claude_md_snapshot.md`
+  leak: **the exclude list is a denylist and rots the moment someone adds a directory.**
+- **`.claude/skills/pyspark-optimization-databricks-dataproc/`** is now excluded rather than scrubbed. The
+  domain map rewrote `Databricks` -> "a vendor platform" mid-sentence and left the lowercase form in every
+  URL, producing both a mangled doc and a gate failure. **A stack-specific skill is dropped, not scrubbed.**
+
+**How to apply (updated):** re-run `package_kit.sh` after ANY new file class lands under `.claude/` — the
+denylist does not learn. Bundle rebuilt clean 2026-09-02 (7 skills, 13 hooks, 32 scripts, 11 agents; 888 KB).
+

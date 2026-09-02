@@ -19,7 +19,8 @@ rm -rf "$B"; mkdir -p "$B"
 # 1. Copy machinery (allowlist; exclude local/secret/content) ------------------
 RS=(rsync -a --exclude='__pycache__' --exclude='*.pyc')
 "${RS[@]}" --exclude='settings.local.json' --exclude='CLAUDE.md' --exclude='global_claude_md_snapshot.md' \
-           --exclude='databricks_setup.md' \
+           --exclude='databricks_setup.md' --exclude='state/' \
+           --exclude='skills/pyspark-optimization-databricks-dataproc/' \
            --exclude='scripts/databricks_smoke.py' --exclude='scripts/package_kit.sh' "$SRC/.claude/" "$B/.claude/"
 "${RS[@]}" "$SRC/.githooks/" "$B/.githooks/"
 # workflows: drop the two dense MNTN-example docs (plan + ingest war-stories); keep design + agent runbook
@@ -174,7 +175,7 @@ bash "$B/.claude/scripts/build_kit_manifest.sh"
 # 7. Self-verify: sanitization sweep (ZERO private tokens) ----------------------
 say "== sanitization sweep =="
 LEAK=0
-if grep -rInE -e 'malachi' -e 'mdunn' -e 'dunn' -e '192\.168\.' -e 'mountain\.com' -e 'dw-main' -e 'pi5@' -e 'audience intelligence' --ignore-case "$B" ; then LEAK=1; fi
+if grep -rInE -e 'malachi' -e 'mdunn' -e 'dunn' -e '192\.168\.' -e 'mountain' -e 'dw-main' -e 'pi5@' -e 'audience intelligence' --ignore-case "$B" ; then LEAK=1; fi
 if grep -rIni 'mntn' "$B" ; then LEAK=1; fi
 if [ "$LEAK" -ne 0 ]; then say "FAIL: private tokens leaked (above). Fix sanitize_map.txt and re-run."; exit 1; fi
 say "  clean: no private tokens found"

@@ -152,7 +152,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_commit_gate | reference | 2026-08-12 | [doc](memory/reference_commit_gate.md) |
 | reference_geo_category_boolean_logic | reference | 2026-08-12 | [doc](memory/reference_geo_category_boolean_logic.md) |
 | reference_ticket_framing_gate | reference | 2026-08-12 | [doc](memory/reference_ticket_framing_gate.md) |
-| reference_workflow_kit_porting | reference | 2026-08-12 | [doc](memory/reference_workflow_kit_porting.md) |
 | reference_xlsx_subtitle_caps | reference | 2026-08-12 | [doc](memory/reference_xlsx_subtitle_caps.md) |
 | background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |
 | feedback_slack_reply_voice | feedback | 2026-08-17 | [doc](memory/feedback_slack_reply_voice.md) |
@@ -245,3 +244,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
+| reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |

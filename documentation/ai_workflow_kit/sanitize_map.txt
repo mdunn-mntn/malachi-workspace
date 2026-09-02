@@ -37,7 +37,12 @@ mdunn-mntn	<GH_USER>
 /opt/homebrew/opt/python@3.11/bin/python3.11	<PYTHON311>
 
 # --- org domain (run AFTER the email rule so malachi@mountain.com is already gone) ---
+mountain\\.com	<ORG_DOMAIN>
+mountain\.com	<ORG_DOMAIN>
 mountain.com	<ORG_DOMAIN>
+Mountain-Green	Brand-Green
+Mountain Green	Brand Green
+Mountain Blue	Brand Blue
 
 # --- the org word, last (all code identifiers containing it are renamed by package_kit.sh first) ---
 MNTN	<ORG>
