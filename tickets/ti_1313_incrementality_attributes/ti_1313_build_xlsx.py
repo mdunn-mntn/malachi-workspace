@@ -169,7 +169,8 @@ for col, lab in [("crm", "Customer-file exclusion"), ("display_flag", "Display m
 by_other = pd.concat(others, ignore_index=True) if others else pd.DataFrame()
 
 RANKED_SRC = [
-    ("Bids per household", by_freq, len(keep)), ("Intent band", by_band, len(keep)),
+    ("Bids per household", by_freq, freq["campaign_group_id"].nunique()),
+    ("Intent band", by_band, bands["campaign_group_id"].nunique()),
     ("Creative length mix", by_creative, None), ("Geographic targeting", by_geo, None),
     ("Vertical", by_vertical, None), ("Average frequency", by_freq_q, None),
     ("High-intent share", by_hi, None), ("Average household score", by_score, None),
@@ -224,15 +225,18 @@ for name, tbl_col, order in [("Creative length mix", "creative", None),
     for key, g in conv.groupby(tbl_col, dropna=True, observed=True):
         if len(g) < 5:
             continue
+        pcv = pool_conv(g)
+        clears = bool(pcv and pcv["lo"] > 0)
         conv_rows.append({
             "Attribute": name, "Setting": key, "Campaigns": len(g),
             "Median conversion lift": g["conv_rel_itt"].median(),
+            "Lift clears zero": clears,
             "% significant": g["conv_significant_95"].fillna(False).mean(),
             "Baseline conv rate": g["conv_rate_holdout"].median(),
             "Incremental conversions": (g["incremental_conversions"].sum()
-                                        if g["incremental_conversions"].sum() > 0 else np.nan),
+                                        if clears and g["incremental_conversions"].sum() > 0 else np.nan),
             "Cost per inc conversion": (g["scaled_spend"].sum() / g["incremental_conversions"].sum()
-                                        if g["incremental_conversions"].sum() > 0 else np.nan),
+                                        if clears and g["incremental_conversions"].sum() > 0 else np.nan),
         })
 conv_tbl = pd.DataFrame(conv_rows)
 
@@ -297,6 +301,8 @@ detail = base[[
     "attributed_per_incremental_conv",
     "pct_attributed_visits_incremental", "pct_attributed_conv_incremental",
     "creative_length_mix", "share_15s", "n_creatives",
+    "prospecting_impressions", "prospecting_ips", "households_delivered", "monthly_muv",
+    "advertiser_aov", "avg_hhst", "pct_spend_stage2", "pct_spend_stage3", "pct_spend_desktop",
     "avg_household_score", "pct_households_unscored", "pct_hh_high_intent", "pct_hh_peak",
     "pct_hh_mid", "pct_hh_max_reach", "pct_spend_tv", "pct_spend_display", "runs_display",
     "fcap_setting", "advertiser_tenure_months", "vv_attribution_window_days", "live_advertiser",
@@ -323,6 +329,11 @@ detail = base[[
     "pct_attributed_visits_incremental": "% attr visits incremental",
     "pct_attributed_conv_incremental": "% attr conversions incremental",
     "creative_length_mix": "Creative length", "share_15s": "Share 15s", "n_creatives": "Creatives",
+    "prospecting_impressions": "Impressions", "prospecting_ips": "Households reached",
+    "households_delivered": "Households scored basis", "monthly_muv": "Advertiser MUVs",
+    "advertiser_aov": "Advertiser AOV", "avg_hhst": "Avg score threshold",
+    "pct_spend_stage2": "% spend stage 2", "pct_spend_stage3": "% spend stage 3",
+    "pct_spend_desktop": "% spend Desktop",
     "avg_household_score": "Avg household score", "pct_households_unscored": "% households unscored",
     "pct_hh_high_intent": "% High Intent", "pct_hh_peak": "% Peak Performance",
     "pct_hh_mid": "% Mid Intent", "pct_hh_max_reach": "% Max Reach",
@@ -485,19 +496,23 @@ if not by_fcap.empty:
         query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "Window sensitivity", windows.assign(
-        **{"Powered": windows["powered_campaign_groups"],
-           "Powered and in band": windows["powered_and_in_band"],
-           "Holdout share": windows["pooled_ghost_frac"],
-           "Pooled lift": windows["pooled_rel_lift"],
-           "Window": windows["window_label"]})[
-        ["Window", "Powered", "Powered and in band", "Holdout share", "Pooled lift"]],
-    finding="Measured lift rises as the window moves later, because the holdout thins",
-    method="Same entry-cohort method on all three. The holdout is not refilled as a campaign runs, so later windows measure a thinner control group and read high. The ticket asked for the trailing 30 days.",
-    formats={"Powered": FMT.INT, "Powered and in band": FMT.INT,
-             "Holdout share": FMT.PCT2, "Pooled lift": FMT.PCT1},
-    signal={"Pooled lift": {}}, kind="detail",
-    toc="Why the workbook does not use the trailing 30 days",
+    "Window sensitivity", windows.assign(**{
+        "Window": windows["window_label"],
+        "Powered": windows["powered_campaign_groups"],
+        "Powered and in band": windows["powered_and_in_band"],
+        "Holdout share": windows["ghost_frac_powered"],
+        "Lift, all campaigns": windows["lift_all"],
+        "Lift, powered": windows["lift_powered"],
+        "Lift, powered and in band": windows["lift_powered_in_band"]})[
+        ["Window", "Powered", "Powered and in band", "Holdout share",
+         "Lift, all campaigns", "Lift, powered", "Lift, powered and in band"]],
+    finding="The three windows agree once the quality gates are applied, so the workbook uses the widest",
+    method="Ungated, lift climbs as the window moves later and the holdout thins. Gated, it does not. The full span is used because it keeps twice the campaigns, not because it is less biased.",
+    formats={"Powered": FMT.INT, "Powered and in band": FMT.INT, "Holdout share": FMT.PCT2,
+             "Lift, all campaigns": FMT.PCT1, "Lift, powered": FMT.PCT1,
+             "Lift, powered and in band": FMT.PCT1},
+    signal={"Lift, powered and in band": {}}, kind="detail",
+    toc="Why the workbook uses the full span, not the trailing 30 days",
     query="ti_1313_window_sensitivity.sql")
 
 wb.table(
@@ -521,7 +536,7 @@ wb.table(
 wb.table(
     "Campaign detail", detail,
     finding=f"{n_all:,} campaign groups pass power and quality, {n_pop:,} clear both further filters",
-    method="One row per campaign group. Only rows where In this workbook is TRUE feed the summary sheets. Every attribute and outcome the ticket asks for is a column here.",
+    method="One row per campaign group. Only rows where In this workbook is TRUE feed the summary sheets. The Read me says which named attributes are absent and why.",
     formats={"Visit lift": FMT.PCT1, "p value": FMT.NUM2, "Holdout share": FMT.PCT1,
              "Holdout visit rate": FMT.PCT2, "Treated visit rate": FMT.PCT2,
              "Incremental visits": FMT.INT, "Prospecting media spend": FMT.USD0,
@@ -533,6 +548,10 @@ wb.table(
              "Attributed per incremental conv": FMT.MULT, "% attr visits incremental": FMT.PCT0,
              "% attr conversions incremental": FMT.PCT0, "Share 15s": FMT.PCT0,
              "Creatives": FMT.INT, "DMAs delivered": FMT.INT, "Days delivered": FMT.INT,
+             "Impressions": FMT.INT, "Households reached": FMT.INT,
+             "Households scored basis": FMT.INT, "Advertiser AOV": FMT.USD2,
+             "Avg score threshold": FMT.INT, "% spend stage 2": FMT.PCT0,
+             "% spend stage 3": FMT.PCT0, "% spend Desktop": FMT.PCT2,
              "Avg household score": FMT.INT, "% households unscored": FMT.PCT0,
              "% High Intent": FMT.PCT0, "% Peak Performance": FMT.PCT0, "% Mid Intent": FMT.PCT0,
              "% Max Reach": FMT.PCT0, "% spend TV": FMT.PCT0, "% spend Display": FMT.PCT0,
@@ -564,7 +583,10 @@ wb.glossary(
         ("Conversions are thin", f"Only {n_conv:,} of {n_pop:,} campaign groups recorded holdout conversions, and pooled conversion lift clears zero for just one attribute level. The conversion side of this workbook is close to a null result."),
         ("Two spend figures", "Spend on measured households is prospecting media spend scaled to the households the holdout measured, and drives every cost per incremental figure. Attributed CPA instead uses reporting total spend."),
         ("Not causal", "Every attribute here was chosen by the advertiser, not assigned. Read each row as a hypothesis worth a designed test, never as an effect."),
-        ("Not measured", "Attribution window does not vary across these advertisers, and audience size is not stored. Neither is in this workbook."),
+        ("Visit attribution window", "The advertiser's visit lookback, from 1 to 45 days across this population. It is one of the attributes that separates lift."),
+        ("Named but flat", "Conversion attribution window is 30 days for every advertiser here. Desktop is under 0.03% of spend. No campaign here ran retargeting or had a media plan. None can correlate with anything."),
+        ("Named but absent", "Audience type, total targetable audience size, advertiser CVR and advertiser sales cycle are not stored anywhere we could find."),
+        ("Everything else", "Every other attribute the ticket names is a column on Campaign detail, and those with enough spread are cut on a sheet and ranked."),
     ])
 
 wb.sql_dir("Queries", str(TICKET / "queries"), note="BigQuery SQL behind every sheet.")

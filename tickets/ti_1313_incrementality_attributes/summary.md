@@ -453,3 +453,51 @@ is not.
 877 recorded on 2026-09-01, and 890 against 874 after the test-account inner joins.
 `lift__ghost_bid_results` is all-time with no `dt` column and is rebuilt daily, so the cohort drifts. Any
 number quoted from it needs its read date attached.
+
+## 10. Fourth audit (2026-09-02) and the corrected window reasoning
+
+12 agents, **8 findings above minor, 0 refuted**. All fixed. Three mattered.
+
+**The window sensitivity sheet compared ungated populations, and correcting it overturns my own reasoning.**
+The sheet's campaign counts were gated but its lift and holdout-share columns were ratio-of-sums over every
+campaign group in the window, including unpowered and out-of-band ones. Regated:
+
+| Window | Powered | In band | Lift, ungated | Lift, powered | Lift, powered and in band |
+|---|---|---|---|---|---|
+| Clean band, 23 Jun to 7 Jul | 672 | 540 | +6.3% | +6.0% | **+6.0%** |
+| Full span, 23 Jun to 1 Sep | 1,023 | 552 | +12.0% | +11.3% | **+8.3%** |
+| Trailing 30 days | 327 | 140 | +18.4% | +16.6% | **+8.2%** |
+
+Once the quality gates are applied the three windows **converge**. The "later window reads high" gradient is
+almost entirely a property of the ungated population. So the honest reason to prefer the full span over the
+ticket's trailing 30 days is **power** (190 campaigns against 95), not bias. Section 9a overstated this and
+is corrected here. The conditioning is expected: `ghost_frac` is the mediator of the depletion bias, so
+gating on it removes the contrast by construction.
+
+**The Read me denied an attribute the workbook ranks fourth.** It carried the stale section 8 line saying
+attribution window does not vary. The VISIT attribution window
+(`silver.public.advertisers.clickpass_acquisition_ttl`) varies over 9 levels from 1 to 45 days, is populated
+on all 190, and ranks 4th of 13 at p = 0.0039. The earlier "does not vary" reading came from the wrong
+column: `view_conversion_window` / `click_conversion_window` are the CONVERSION-side fields and those are
+genuinely constant at 30 days for every advertiser here. `data_knowledge.md` (PS-8572) already records that
+these are three independent lookback knobs that must never be conflated. Section 8 is superseded.
+
+**14 of the ticket's 33 named attributes were silently missing, and 8 were already in hand.** Impressions,
+households reached, advertiser MUVs and advertiser AOV were in the query output and had been dropped at the
+detail projection. Avg HHST was located at `silver.dso.household_score_thresholds` (159 of 190). Stage-2 and
+stage-3 spend shares were collapsed into a single multi-touch column. Media plan exists at
+`silver.core.media_plan` keyed on campaign_group_id, which overturns section 8's "not located in any config
+table". All are now columns. Four are genuinely flat in this population and now carry an explicit Read me
+line rather than silence: conversion attribution window (30 days for every advertiser), desktop (under 0.03%
+of spend), retargeting (no delivery at all), media plan (0 of the 190). Four are genuinely absent: audience
+type, targetable audience size, advertiser CVR, advertiser sales cycle.
+
+**Also fixed:** the ranked sheet claimed 190 campaigns for its top result when the bid-count strata cover
+119; conversion counts and cost now blank wherever the pooled conversion interval includes zero, matching
+the inflation sheet; the household collapse now excludes the `0.0.0.0` sentinel IP, which would otherwise
+have merged millions of impressions into one fake household on 16 campaign groups; device shares now carry
+an explicit unknown column (max 0.22%); all three extracts are same-day.
+
+**Final shape:** 890 campaign groups on Campaign detail across 67 columns, 190 in the summary population
+(holdout band, 75%+ days live, live advertiser), 130 advertisers, 83 significant, pooled visit lift +7.9%.
+13 attributes ranked; 6 separate at p < 0.05.

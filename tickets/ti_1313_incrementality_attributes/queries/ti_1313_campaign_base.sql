@@ -158,6 +158,7 @@ households AS (
   JOIN `dw-main-silver.public.campaigns` c ON cil.campaign_id = c.campaign_id
   WHERE c.funnel_level = 1 AND c.objective_id = 1
     AND cil.campaign_id > 0
+    AND cil.ip IS NOT NULL AND cil.ip != '0.0.0.0'
     AND DATE(cil.time) BETWEEN '2026-06-22' AND '2026-08-31'
   GROUP BY 1, 2
 ),
@@ -182,7 +183,8 @@ device AS (
     SUM(sf.media_spend) AS device_spend_basis,
     SAFE_DIVIDE(SUM(IF(sf.device_type IN ('SET_TOP_BOX','CONNECTED_TV','GAMES_CONSOLE','CONNECTED_DEVICE'), sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_tv,
     SAFE_DIVIDE(SUM(IF(sf.device_type IN ('MOBILE','TABLET','PHONE'), sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_mobile_tablet,
-    SAFE_DIVIDE(SUM(IF(sf.device_type IN ('PC','PERSONAL_COMPUTER'), sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_desktop
+    SAFE_DIVIDE(SUM(IF(sf.device_type IN ('PC','PERSONAL_COMPUTER'), sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_desktop,
+    SAFE_DIVIDE(SUM(IF(sf.device_type NOT IN ('SET_TOP_BOX','CONNECTED_TV','GAMES_CONSOLE','CONNECTED_DEVICE','MOBILE','TABLET','PHONE','PC','PERSONAL_COMPUTER') OR sf.device_type IS NULL, sf.media_spend, 0)), NULLIF(SUM(sf.media_spend), 0)) AS pct_spend_device_unknown
   FROM `dw-main-silver.summarydata.spend_facts` sf
   JOIN prospecting_campaigns pc USING (campaign_id)
   WHERE DATE(sf.hour) BETWEEN '2026-06-22' AND '2026-08-31'
@@ -227,6 +229,33 @@ vv_window AS (
 live_status AS (
   SELECT advertiser_id, status_id, (status_id = 3) AS live_advertiser
   FROM `dw-main-bronze.integrationprod.advertisers`
+),
+
+stage_mix AS (
+  SELECT
+    c.campaign_group_id AS cg_id,
+    SAFE_DIVIDE(SUM(IF(c.funnel_level = 2, s.media_spend + s.data_spend + s.platform_spend, 0)),
+                NULLIF(SUM(s.media_spend + s.data_spend + s.platform_spend), 0)) AS pct_spend_stage2,
+    SAFE_DIVIDE(SUM(IF(c.funnel_level = 3, s.media_spend + s.data_spend + s.platform_spend, 0)),
+                NULLIF(SUM(s.media_spend + s.data_spend + s.platform_spend), 0)) AS pct_spend_stage3,
+    SUM(IF(c.objective_id = 4, s.impressions, 0)) > 0 AS also_running_retargeting
+  FROM `dw-main-silver.summarydata.sum_by_campaign_by_day` s
+  JOIN `dw-main-silver.public.campaigns` c USING (campaign_id)
+  WHERE s.day BETWEEN '2026-06-22' AND '2026-08-31'
+  GROUP BY 1
+),
+
+hhst AS (
+  SELECT campaign_group_id, AVG(threshold) AS avg_hhst
+  FROM `dw-main-silver.dso.household_score_thresholds`
+  WHERE threshold IS NOT NULL
+  GROUP BY 1
+),
+
+media_plan AS (
+  SELECT campaign_group_id, LOGICAL_OR(TRUE) AS media_plan_enabled
+  FROM `dw-main-silver.core.media_plan`
+  GROUP BY 1
 ),
 
 mt_feature AS (
@@ -302,7 +331,12 @@ SELECT
   sc.avg_household_score, sc.pct_households_unscored,
   sc.pct_hh_high_intent, sc.pct_hh_peak, sc.pct_hh_mid, sc.pct_hh_max_reach,
   sc.households_delivered,
-  dv.pct_spend_tv, dv.pct_spend_mobile_tablet, dv.pct_spend_desktop,
+  dv.pct_spend_tv, dv.pct_spend_mobile_tablet, dv.pct_spend_desktop, dv.pct_spend_device_unknown,
+  sm.pct_spend_stage2, sm.pct_spend_stage3,
+  COALESCE(sm.also_running_retargeting, FALSE) AS also_running_retargeting,
+  hs.avg_hhst,
+  COALESCE(mp.media_plan_enabled, FALSE) AS media_plan_enabled,
+  SAFE_DIVIDE(r.attributed_order_value, NULLIF(r.attributed_conversions, 0)) AS advertiser_aov,
   ds.pct_spend_display, ds.runs_display,
   fc.fcap_impressions, fc.fcap_duration_seconds, fc.fcap_manual_override,
   CASE
@@ -335,5 +369,8 @@ LEFT JOIN fcap fc ON b.campaign_group_id = fc.cg_id
 LEFT JOIN tenure tn ON b.advertiser_id = tn.advertiser_id
 LEFT JOIN vv_window vw ON b.advertiser_id = vw.advertiser_id
 LEFT JOIN live_status ls ON b.advertiser_id = ls.advertiser_id
+LEFT JOIN stage_mix sm ON b.campaign_group_id = sm.cg_id
+LEFT JOIN hhst hs ON b.campaign_group_id = hs.campaign_group_id
+LEFT JOIN media_plan mp ON b.campaign_group_id = mp.campaign_group_id
 LEFT JOIN mt_feature mt ON b.advertiser_id = mt.advertiser_id
 ORDER BY b.incremental_visits DESC

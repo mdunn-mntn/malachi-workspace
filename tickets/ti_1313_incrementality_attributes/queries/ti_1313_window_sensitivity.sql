@@ -34,10 +34,15 @@ SELECT
   COUNT(*) AS campaign_groups,
   COUNTIF(v_h >= 100) AS powered_campaign_groups,
   COUNTIF(v_h >= 100 AND SAFE_DIVIDE(n_h, n_t + n_h) BETWEEN 0.09 AND 0.11) AS powered_and_in_band,
-  SUM(n_t) AS treated_households,
-  SUM(n_h) AS holdout_households,
-  SAFE_DIVIDE(SUM(n_h), SUM(n_t) + SUM(n_h)) AS pooled_ghost_frac,
-  SAFE_DIVIDE(SAFE_DIVIDE(SUM(v_t), SUM(n_t)), NULLIF(SAFE_DIVIDE(SUM(v_h), SUM(n_h)), 0)) - 1 AS pooled_rel_lift
-FROM per_cg
+  SAFE_DIVIDE(SUM(n_h), SUM(n_t) + SUM(n_h)) AS ghost_frac_all,
+  SAFE_DIVIDE(SAFE_DIVIDE(SUM(v_t), SUM(n_t)), NULLIF(SAFE_DIVIDE(SUM(v_h), SUM(n_h)), 0)) - 1 AS lift_all,
+  SAFE_DIVIDE(SUM(IF(v_h >= 100, n_h, 0)), SUM(IF(v_h >= 100, n_t + n_h, 0))) AS ghost_frac_powered,
+  SAFE_DIVIDE(
+    SAFE_DIVIDE(SUM(IF(v_h >= 100, v_t, 0)), SUM(IF(v_h >= 100, n_t, 0))),
+    NULLIF(SAFE_DIVIDE(SUM(IF(v_h >= 100, v_h, 0)), SUM(IF(v_h >= 100, n_h, 0))), 0)) - 1 AS lift_powered,
+  SAFE_DIVIDE(
+    SAFE_DIVIDE(SUM(IF(in_band, v_t, 0)), SUM(IF(in_band, n_t, 0))),
+    NULLIF(SAFE_DIVIDE(SUM(IF(in_band, v_h, 0)), SUM(IF(in_band, n_h, 0))), 0)) - 1 AS lift_powered_in_band
+FROM (SELECT *, (v_h >= 100 AND SAFE_DIVIDE(n_h, n_t + n_h) BETWEEN 0.09 AND 0.11) AS in_band FROM per_cg)
 GROUP BY 1,2
 ORDER BY ord
