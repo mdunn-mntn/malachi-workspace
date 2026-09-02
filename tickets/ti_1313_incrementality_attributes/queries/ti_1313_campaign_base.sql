@@ -1,5 +1,6 @@
 -- ti_1313_campaign_base.sql: one row per campaign group, lift plus every attribute AUDI-1313 asks for.
--- Population gate: full clean gate, 100+ holdout visits (vis_holdout, not n_holdout), partner 8 only.
+-- Population gate: full clean gate, 100+ holdout visits (vis_holdout, not n_holdout), partner 8 only,
+-- and internal/test/deleted advertisers and campaign groups excluded by inner join.
 -- partner_id 79 (Rust leg) has no trustworthy holdout; see data_catalog.md ghost-bid gotcha (8).
 -- ghost_frac is carried out: the estimator is only documented valid on 0.09 to 0.11.
 -- Delivery, creative and geo attributes are prospecting-only (objective_id=1 AND funnel_level=1) so they
@@ -40,6 +41,7 @@ cg AS (
 adv AS (
   SELECT advertiser_id, company_name, account_health, monthly_muv, company_size
   FROM `dw-main-bronze.integrationprod.advertisers`
+  WHERE is_test = FALSE AND deleted = FALSE
 ),
 
 vert AS (
@@ -175,20 +177,14 @@ SELECT
   r.reporting_impressions, r.reporting_total_spend, r.days_delivered,
   (r.days_delivered >= 54) AS meets_75pct_days_live,
   SAFE_DIVIDE(r.attributed_visits, r.reporting_impressions) AS attributed_ivr,
-  SAFE_DIVIDE(r.reporting_total_spend, NULLIF(r.attributed_conversions, 0)) AS attributed_cpa,
-  SAFE_DIVIDE(b.rel_itt, 1 + b.rel_itt) AS pct_attributed_visits_incremental,
-  SAFE_DIVIDE(b.conv_rel_itt, 1 + b.conv_rel_itt) AS pct_attributed_conv_incremental,
-  r.attributed_visits * SAFE_DIVIDE(b.rel_itt, 1 + b.rel_itt) AS incremental_vv,
-  r.attributed_conversions * SAFE_DIVIDE(b.conv_rel_itt, 1 + b.conv_rel_itt) AS incremental_conv_client,
-  SAFE_DIVIDE(r.reporting_total_spend,
-              NULLIF(r.attributed_conversions * SAFE_DIVIDE(b.conv_rel_itt, 1 + b.conv_rel_itt), 0)) AS incremental_cpa,
-  SAFE_DIVIDE(
-    SAFE_DIVIDE(r.reporting_total_spend, NULLIF(r.attributed_conversions, 0)),
-    NULLIF(SAFE_DIVIDE(r.reporting_total_spend,
-             NULLIF(r.attributed_conversions * SAFE_DIVIDE(b.conv_rel_itt, 1 + b.conv_rel_itt), 0)), 0)
-  ) AS attribution_inflation_ratio,
+  SAFE_DIVIDE(r.reporting_total_spend, NULLIF(r.attributed_conversions, 0)) AS attributed_cpa_total_spend,
+  IF(b.rel_itt > 0, SAFE_DIVIDE(b.rel_itt, 1 + b.rel_itt), NULL) AS pct_attributed_visits_incremental,
+  IF(b.conv_rel_itt > 0, SAFE_DIVIDE(b.conv_rel_itt, 1 + b.conv_rel_itt), NULL) AS pct_attributed_conv_incremental,
+  IF(b.rel_itt > 0, r.attributed_visits * SAFE_DIVIDE(b.rel_itt, 1 + b.rel_itt), NULL) AS incremental_vv,
+  IF(b.conv_rel_itt > 0, SAFE_DIVIDE(1 + b.conv_rel_itt, b.conv_rel_itt), NULL) AS attributed_per_incremental_conv,
 
   d.prospecting_impressions, d.prospecting_spend, d.prospecting_ips,
+  d.prospecting_spend * LEAST(1.0, SAFE_DIVIDE(b.ip_compliance * b.n_treatment, d.prospecting_ips)) AS scaled_spend,
   SAFE_DIVIDE(d.prospecting_impressions, d.prospecting_ips) AS avg_frequency,
   d.pct_impressions_multitouch, d.pct_spend_multitouch,
   SAFE_DIVIDE(
@@ -231,8 +227,8 @@ SELECT
   adv.account_health, adv.monthly_muv, adv.company_size
 
 FROM base b
-LEFT JOIN cg ON b.campaign_group_id = cg.campaign_group_id
-LEFT JOIN adv ON b.advertiser_id = adv.advertiser_id
+JOIN cg ON b.campaign_group_id = cg.campaign_group_id
+JOIN adv ON b.advertiser_id = adv.advertiser_id
 LEFT JOIN vert ON b.advertiser_id = vert.advertiser_id
 LEFT JOIN delivery d ON b.campaign_group_id = d.cg_id
 LEFT JOIN reporting r ON b.campaign_group_id = r.cg_id

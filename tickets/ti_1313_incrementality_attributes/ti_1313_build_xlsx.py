@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.stats import chi2
 
 ROOT = Path("/Users/malachi/Developer/work/mntn/workspace")
 sys.path.insert(0, str(ROOT))
@@ -63,18 +64,19 @@ def pool(df):
 
 
 def pool_conv(df):
-    """Random-effects pool of the log risk ratio on the conversion outcome."""
+    """Random-effects pool of the conversion log risk ratio. conv_rate is per visitor, so the
+    denominators are visit counts, not household counts."""
     d = df[(df["conv_rate_treatment"] > 0) & (df["conv_rate_holdout"] > 0)]
     if len(d) < 5:
         return None
     return pool(pd.DataFrame({
         "rate_treatment": d["conv_rate_treatment"].to_numpy(),
         "rate_holdout": d["conv_rate_holdout"].to_numpy(),
-        "n_treatment": d["n_treatment"].to_numpy(),
-        "n_holdout": d["n_holdout"].to_numpy(),
+        "n_treatment": d["vis_treatment"].to_numpy(),
+        "n_holdout": d["vis_holdout"].to_numpy(),
         "significant_95": d["conv_significant_95"].fillna(False).to_numpy(),
         "incremental_visits": d["incremental_conversions"].to_numpy(),
-        "prospecting_spend": d["prospecting_spend"].to_numpy(),
+        "scaled_spend": d["scaled_spend"].to_numpy(),
     }))
 
 
@@ -91,7 +93,7 @@ def summarize(df, by, label, order=None, min_k=5, extras=True):
              "Heterogeneity": p["i2"],
              "Incremental visits": gp["incremental_visits"].sum()}
         if extras:
-            sp, iv = gp["prospecting_spend"].sum(), gp["incremental_visits"].sum()
+            sp, iv = gp["scaled_spend"].sum(), gp["incremental_visits"].sum()
             r["Spend"] = sp
             r["Cost per inc visit"] = sp / iv if iv > 0 else np.nan
         rows.append(r)
@@ -164,8 +166,25 @@ for name, tbl, fixed_n in RANKED_SRC:
         "Spread": best["Pooled lift"] - worst["Pooled lift"],
         "Intervals separate": bool(best["CI low"] > worst["CI high"]),
     })
+def between_q(tbl):
+    """Cochran Q across an attribute's levels, on the log scale, with its p-value."""
+    y = np.log1p(tbl["Pooled lift"].to_numpy())
+    se = (np.log1p(tbl["CI high"].to_numpy()) - np.log1p(tbl["CI low"].to_numpy())) / (2 * 1.96)
+    ok = np.isfinite(y) & np.isfinite(se) & (se > 0)
+    if ok.sum() < 2:
+        return np.nan, np.nan
+    y, se = y[ok], se[ok]
+    w = 1.0 / se**2
+    q = float((w * (y - (w * y).sum() / w.sum()) ** 2).sum())
+    return q, float(chi2.sf(q, ok.sum() - 1))
+
+
+for row, (_, tbl, _fx) in zip(rank_rows, RANKED_SRC):
+    q, pv = between_q(tbl)
+    row["Levels differ (p)"] = pv
+
 ranked = (pd.DataFrame(rank_rows)
-          .sort_values(["Intervals separate", "Spread"], ascending=[False, False])
+          .sort_values(["Levels differ (p)", "Spread"], ascending=[True, False])
           .reset_index(drop=True))
 
 conv = pop[pop["conv_rate_holdout"] > 0].copy()
@@ -181,8 +200,9 @@ for name, tbl_col, order in [("Creative length mix", "creative", None),
             "Median conversion lift": g["conv_rel_itt"].median(),
             "% significant": g["conv_significant_95"].fillna(False).mean(),
             "Baseline conv rate": g["conv_rate_holdout"].median(),
-            "Incremental conversions": g["incremental_conversions"].sum(),
-            "Cost per inc conversion": (g["prospecting_spend"].sum() / g["incremental_conversions"].sum()
+            "Incremental conversions": (g["incremental_conversions"].sum()
+                                        if g["incremental_conversions"].sum() > 0 else np.nan),
+            "Cost per inc conversion": (g["scaled_spend"].sum() / g["incremental_conversions"].sum()
                                         if g["incremental_conversions"].sum() > 0 else np.nan),
         })
 conv_tbl = pd.DataFrame(conv_rows)
@@ -198,7 +218,7 @@ for name, col in [("Creative length mix", "creative"), ("Geographic targeting", 
         gg = g[g["attributed_conversions"] > 0]
         att_conv = gg["attributed_conversions"].sum()
         spend = gg["reporting_total_spend"].sum()
-        if att_conv <= 0 or share <= 0:
+        if att_conv <= 0:
             continue
         estimable = pc["lo"] > 0
         infl_rows.append({
@@ -214,7 +234,7 @@ for name, col in [("Creative length mix", "creative"), ("Geographic targeting", 
             "Incremental CPA": spend / (att_conv * share) if estimable else np.nan,
         })
 infl_tbl = (pd.DataFrame(infl_rows)
-            .sort_values(["Lift clears zero", "Attributed per incremental"], ascending=[False, False])
+            .sort_values(["Lift clears zero", "Pooled conversion lift"], ascending=[False, False])
             .reset_index(drop=True))
 
 gates = []
@@ -241,11 +261,11 @@ detail = base[[
     "campaign_group_id", "campaign_group_name", "advertiser_name", "vertical_name",
     "In this workbook", "in_validity_band", "meets_75pct_days_live", "ghost_frac", "days_delivered",
     "rel_itt", "p_value", "significant_95", "rate_holdout", "rate_treatment",
-    "incremental_visits", "prospecting_spend", "cost_per_incremental_visit",
+    "incremental_visits", "prospecting_spend", "scaled_spend", "cost_per_incremental_visit",
     "conv_rel_itt", "conv_p_value", "conv_significant_95", "conv_rate_holdout",
     "incremental_conversions", "cost_per_incremental_conversion",
-    "attributed_visits", "attributed_conversions", "attributed_ivr", "attributed_cpa",
-    "incremental_cpa", "attribution_inflation_ratio",
+    "attributed_visits", "attributed_conversions", "attributed_ivr", "attributed_cpa_total_spend",
+    "attributed_per_incremental_conv",
     "pct_attributed_visits_incremental", "pct_attributed_conv_incremental",
     "creative_length_mix", "share_15s", "n_creatives",
     "geo_targeting_class", "n_dma_delivered", "crm_file_excluded", "mt_display_access_enrolled",
@@ -258,14 +278,16 @@ detail = base[[
     "ghost_frac": "Holdout share", "days_delivered": "Days delivered",
     "rel_itt": "Visit lift", "p_value": "p value", "significant_95": "Significant",
     "rate_holdout": "Holdout visit rate", "rate_treatment": "Treated visit rate",
-    "incremental_visits": "Incremental visits", "prospecting_spend": "Spend",
+    "incremental_visits": "Incremental visits", "prospecting_spend": "Prospecting media spend",
     "cost_per_incremental_visit": "Cost per inc visit", "conv_rel_itt": "Conversion lift",
     "conv_p_value": "Conv p value", "conv_significant_95": "Conv significant",
     "conv_rate_holdout": "Baseline conv rate", "incremental_conversions": "Incremental conversions",
     "cost_per_incremental_conversion": "Cost per inc conversion",
+    "scaled_spend": "Spend on measured households",
     "attributed_visits": "Attributed visits", "attributed_conversions": "Attributed conversions",
-    "attributed_ivr": "Attributed IVR", "attributed_cpa": "Attributed CPA",
-    "incremental_cpa": "Incremental CPA", "attribution_inflation_ratio": "Attribution inflation",
+    "attributed_ivr": "Attributed IVR",
+    "attributed_cpa_total_spend": "Attributed CPA on total spend",
+    "attributed_per_incremental_conv": "Attributed per incremental conv",
     "pct_attributed_visits_incremental": "% attr visits incremental",
     "pct_attributed_conv_incremental": "% attr conversions incremental",
     "creative_length_mix": "Creative length", "share_15s": "Share 15s", "n_creatives": "Creatives",
@@ -295,10 +317,11 @@ wb = MntnWorkbook(
 
 wb.table(
     "Ranked hypotheses", ranked,
-    finding="Attributes ranked by how far they separate campaign lift",
-    method="Spread is the gap between the attribute's best and worst level. Intervals separate means the two do not overlap, which makes the hypothesis worth testing first. Nothing here is causal.",
+    finding="Attributes ranked by whether their levels genuinely differ in lift",
+    method="Ranked on a between-level test, not on raw spread, because an attribute with more levels shows a wider spread by chance alone. A small p value means the levels really do differ.",
     formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Spread": FMT.PCT1,
-             "Campaigns": FMT.INT, "Levels": FMT.INT},
+             "Campaigns": FMT.INT, "Levels": FMT.INT, "Smallest level": FMT.INT,
+             "Levels differ (p)": "0.0000"},
     signal={"Spread": {"sig": "Intervals separate"}}, kind="headline",
     toc="Which attribute separates lift most, ranked",
     query="ti_1313_campaign_base.sql")
@@ -364,7 +387,7 @@ if not conv_tbl.empty:
     wb.table(
         "Conversion outcomes", conv_tbl,
         finding=f"Conversion lift for the {n_conv:,} campaign groups whose holdout recorded conversions",
-        method="Medians, not pooled, because conversion counts are thin. Baseline is the holdout conversion rate. Cost per incremental conversion uses prospecting media spend only.",
+        method="Medians of per-campaign values, because conversion counts are thin. Baseline is the median holdout conversion rate. Counts and cost are blank where the group measured no net incremental conversions.",
         formats={"Median conversion lift": FMT.PCT1, "% significant": FMT.PCT0,
                  "Baseline conv rate": FMT.PCT2, "Incremental conversions": FMT.INT,
                  "Cost per inc conversion": FMT.USD2, "Campaigns": FMT.INT},
@@ -375,15 +398,15 @@ if not conv_tbl.empty:
 if not infl_tbl.empty:
     wb.table(
         "Attribution inflation", infl_tbl,
-        finding="Reporting credits far more conversions than the holdout says the ads caused",
-        method="Incremental conversions are attributed conversions scaled by the pooled conversion lift. Where that lift does not clear zero the multiple is unbounded and left blank.",
+        finding=f"Conversion lift clears zero for {int(infl_tbl['Lift clears zero'].sum())} of {len(infl_tbl)} attribute levels, so the cost comparison is only estimable there",
+        method="Where the pooled conversion lift interval includes zero, the incremental count and the cost columns are unbounded and left blank. Attributed CPA is shown throughout on reporting total spend.",
         formats={"Pooled conversion lift": FMT.PCT1, "CI low": FMT.PCT1, "CI high": FMT.PCT1,
                  "Attributed conversions": FMT.INT,
                  "Incremental conversions": FMT.INT, "% attributed that is incremental": FMT.PCT0,
                  "Attributed per incremental": FMT.MULT, "Attributed CPA": FMT.USD2,
                  "Incremental CPA": FMT.USD2, "Campaigns": FMT.INT},
-        kind="headline",
-        toc="How far reported cost per acquisition sits below the true cost",
+        kind="data",
+        toc="Where attributed and incremental cost can be compared, and where they cannot",
         query="ti_1313_campaign_base.sql")
 
 wb.table(
@@ -410,12 +433,13 @@ wb.table(
     method="One row per campaign group. Only rows where In this workbook is TRUE feed the summary sheets. Every attribute and outcome the ticket asks for is a column here.",
     formats={"Visit lift": FMT.PCT1, "p value": FMT.NUM2, "Holdout share": FMT.PCT1,
              "Holdout visit rate": FMT.PCT2, "Treated visit rate": FMT.PCT2,
-             "Incremental visits": FMT.INT, "Spend": FMT.USD0, "Cost per inc visit": FMT.USD2,
+             "Incremental visits": FMT.INT, "Prospecting media spend": FMT.USD0,
+             "Spend on measured households": FMT.USD0, "Cost per inc visit": FMT.USD2,
              "Conversion lift": FMT.PCT1, "Conv p value": FMT.NUM2, "Baseline conv rate": FMT.PCT2,
              "Incremental conversions": FMT.NUM1, "Cost per inc conversion": FMT.USD2,
              "Attributed visits": FMT.INT, "Attributed conversions": FMT.INT,
-             "Attributed IVR": FMT.PCT2, "Attributed CPA": FMT.USD2, "Incremental CPA": FMT.USD2,
-             "Attribution inflation": FMT.MULT, "% attr visits incremental": FMT.PCT0,
+             "Attributed IVR": FMT.PCT2, "Attributed CPA on total spend": FMT.USD2,
+             "Attributed per incremental conv": FMT.MULT, "% attr visits incremental": FMT.PCT0,
              "% attr conversions incremental": FMT.PCT0, "Share 15s": FMT.PCT0,
              "Creatives": FMT.INT, "DMAs delivered": FMT.INT, "Days delivered": FMT.INT,
              "Avg frequency": FMT.NUM1, "Multi-touch spend": FMT.PCT0, "Budget": FMT.USD0,
@@ -434,15 +458,16 @@ wb.glossary(
         ("Pooled lift", "Random-effects pool of the log risk ratio across campaigns. Random effects because campaigns disagree far more than their own error bars allow."),
         ("Heterogeneity", "Share of variation between campaigns that is real disagreement, not sampling noise. Above roughly 75% the pooled number is the centre of a wide spread."),
         ("Attributed against incremental", "Attributed counts every visit or conversion reporting credits to the ads. Incremental counts only what the holdout says the ads caused."),
-        ("Attributed per incremental", "How many reported conversions stand behind one genuine one. Computed from the pooled conversion lift, not from per-campaign ratios, which are unstable where lift is near zero."),
+        ("Attributed per incremental", "How many reported conversions stand behind one genuine one. Blank wherever conversion lift does not clear zero, because the ratio is unbounded there."),
         ("Holdout share", "Share of a campaign's households held back. The estimator is documented as reliable only between 9 and 11%, and measured lift climbs as it thins."),
-        ("Who is in this", f"{n_pop:,} campaign groups across {n_adv:,} advertisers: 100+ holdout visits, full quality gate, validated bidder leg, holdout inside the band, and live at least 75% of days."),
+        ("Who is in this", f"{n_pop:,} campaign groups across {n_adv:,} advertisers: 100+ holdout visits, full quality gate, validated bidder leg, holdout inside the band, live at least 75% of days, and no internal or test account."),
         ("Days live", "Distinct days the group delivered prospecting impressions in the window. Measured from delivery, not config dates, so a mid-window pause is caught."),
         ("One bidder leg only", "MNTN runs two bidders. The second has no trustworthy holdout, so it is excluded. That removes almost every Select campaign, and no product comparison is possible here."),
         ("Creative length", "Impression-weighted mix of 15 and 30 second creative on prospecting delivery. Nearly half of campaigns run both, so no clean binary split exists."),
         ("Geography", "The advertiser's stored targeting choice, not the delivered footprint. Delivered DMA count is carried separately as an outcome measure."),
         ("Customer-file exclusion", "The prospecting audience suppresses the advertiser's CRM file. Read from live audience config, which nearly half of these advertisers edited mid-window."),
-        ("Conversions are thin", f"Only {n_conv:,} of {n_pop:,} campaign groups recorded holdout conversions, so conversion sheets use medians rather than pooled estimates."),
+        ("Conversions are thin", f"Only {n_conv:,} of {n_pop:,} campaign groups recorded holdout conversions, and pooled conversion lift clears zero for just one attribute level. The conversion side of this workbook is close to a null result."),
+        ("Two spend figures", "Spend on measured households is prospecting media spend scaled to the households the holdout measured, and drives every cost per incremental figure. Attributed CPA instead uses reporting total spend."),
         ("Not causal", "Every attribute here was chosen by the advertiser, not assigned. Read each row as a hypothesis worth a designed test, never as an effect."),
         ("Not measured", "Attribution window does not vary across these advertisers, and audience size is not stored. Neither is in this workbook."),
     ])
