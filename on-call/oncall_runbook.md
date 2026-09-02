@@ -141,7 +141,7 @@ Grep the **DAG/task key** to match fast. If your alert's key is here, jump to it
 | `tpa_ipdsc_export / tpa_export` | Alert quotes `exited with 137 code ... potentially signifies a memory pressure` on **try 2+**, but try 1 ran ~44 min and tries 2+ die in 6-18s. Tries 2+ logs say verbatim `Batch with given id already exists.` / `Attaching to the job ... if it is still running.` | TWO stacked failures. (1) Driver SIGKILL 137 on try 1, which here landed AFTER the write completed. (2) The batch id is minted by upstream `create_batch_id__2` and cached in XCom; that task does NOT re-run on a downstream retry, so every retry reattaches to the failed batch and inherits its error. The 137 in the try-2 alert is INHERITED text, not a fresh OOM. | **transient_infra + dag_bug** — check GCS for `_SUCCESS` + object count BEFORE re-running (the work may already be done). To genuinely re-run, clear `create_batch_id__2` WITH downstream so a fresh id is minted (deleting the Dataproc batch also frees the id). Never read the retry's 137 as a second OOM. | INC-016 |
 | `materialize_mntn_first_party / materialize` (hourly `50 * * * *`) | Alert on **try 2 of 3**, `Batch job mntn-first-party-<dt>-<epoch> failed with error: Google Cloud Dataproc Agent reports job failure` (boilerplate). try 1 ~1.8m real, tries 2-3 die in 6-12s with `Batch with given id already exists.` / `Attaching to the job ...`. | Same shared-helper defect as INC-016: `create_batch_id` is an `@task` (`include/util/dag_vars.py:31`) that runs ONCE and caches the id in XCom, so every retry reattaches to the failed batch. try 1's real cause is PAM-gated in the staging bucket's `driveroutput.*`. | **transient_infra (cause UNCONFIRMED) + dag_bug.** 1 failure in 100 runs, next hour green, prior 7 days all 24/24 hours. **This DAG does NOT self-heal** (each run owns exactly one `hh`), so the failed hour stays missing until re-run. Re-run = clear `create_batch_id` **WITH downstream**. | INC-017 |
 | `materialize_mntn_select / materialize` (hourly `45 * * * *`) | Repeated `Dataproc Agent reports job failure` on try 1, batches dying at a **constant ~12.0-12.6 min** while healthy hours finish in ~7 min. Airflow log is boilerplate; driver output shows the GCS reads SUCCEEDING, then `java.lang.OutOfMemoryError: Java heap space` in `map-output-dispatcher` threads. | Driver-side MapOutputTracker OOM: `spark.driver.memory=9600m` against `spark.sql.shuffle.partitions=5000`. Map-status memory scales with map tasks x reduce partitions, so the driver sat at its ceiling and tips over on heavier hours (intermittent, not every hour). NOT a GCS listing timeout (INC-012) and NOT the batch-id defect. | **transient_infra trending to dag_bug (capacity).** Constant death interval = resource ceiling, not a data bug. Pull `driveroutput` (needs `dataproc-debug` PAM) before theorising. Fix = raise driver memory for the one DAG ([#1198](https://github.com/SteelHouse/airflow-ti/pull/1198), 16g + 4g). Re-run missing `hh=` only AFTER the bundle refreshes, else they OOM again. | INC-018 |
-| `fangorn_inference_pipeline_run / challenger_inference_pipeline` | Vertex `code: 9`, failed task `[create-dataproc-cluster]`; replica traceback ends on `NotFound: 404 ... Cluster` | Regional `N2_CPUS`/`DISKS_TOTAL_GB` quota refused the create while two sibling fangorn pipelines held it; the component's cleanup delete then 404s and masks the refusal | **Resource contention** (quota, not a stockout) | INC-025 |
+| `fangorn_inference_pipeline_run / challenger_inference_pipeline` | Vertex `code: 9`, failed task `[create-dataproc-cluster]`; replica traceback ends on `NotFound: 404 ... Cluster` | Regional `N2_CPUS`/`DISKS_TOTAL_GB` quota refused the create while a sibling fangorn cluster (QA's, same project) held it; the component's cleanup delete then 404s and masks the refusal | **Resource contention** (quota, not a stockout). **Largely fixed 2026-08-25** by the 3-family `instance_flexibility_policy` (`fe4e3d6` + `0b19f29`), which spreads the request across `N2_CPUS`/`N2D_CPUS`/`CPUS`: zero refusals and zero fangorn-inference stockouts in the 8 days after, against 27 stockouts in the two days before. **The disk half still cannot spread** — a recurrence will read `Insufficient 'DISKS_TOTAL_GB' quota` with `N2_CPUS` absent (IMP-099). | INC-025 |
 
 | `hashed_email_{guid_log,ds_26}_signals / wait_fpa` | `AirflowSensorTimeout: Sensor has timed out; run duration of 958.x seconds exceeds the specified timeout of 900.0.` on **both** consumer DAGs in the same hour. NOT the INC-011 fast-fail (that one dies in ~5s on `ExternalTaskFailedError`). | Producer `fpa_site_visit_batch_serverless` **SUCCEEDED** but ran longer than the sensor's 15-min budget (19.5 min on 2026-08-16T01:00Z; median run is 10.0 min, 6/99 runs exceed 15 min). Sensors quit 40s-3min before the external task went green. | **late_data** — clear `wait_fpa` with downstream on the affected run; it passes on the first poke. **A sensor timeout does NOT retry** (`AirflowSensorTimeout` fails the task outright), so `retries: 1` never fires and every occurrence is a manual clear + an hourly hole that stays open until someone notices. Durable fix = IMP-043 / [airflow-ti#1199](https://github.com/SteelHouse/airflow-ti/pull/1199). | INC-019 |
 
@@ -1711,4 +1711,31 @@ so the task had two tries. `max_tries` read 3 afterwards because clearing a task
 Yang cleared it at 23:22:26; do not read a post-hoc `max_tries` as the configured value.
 
 **Durable fix is not on-call's to make.** The pipeline requests 93% of the regional N2 ceiling, so ANY other cluster above 328 CPUs in the project starves it, in either environment. Sean Yang agreed 2026-08-24 to raise `N2_CPUS` from 5,000 to roughly 15,000 and to cap the QA cluster, scheduled for hackathon week when Brian McAdams is back (Tuesday 2026-08-25). Logged as IMP-070 (spike AUDI-1217, sprint 08/24-09/07). The masking cleanup handler is IMP-071, **closed 2026-08-24** by targeting-infra-ml#93. Owner: targeting-ml.
+
+**RESOLVED 2026-09-02 — by a different fix than the one planned, and AUDI-1217 closed Won't Do.**
+Brian McAdams (owner): devops will not raise the `N2_CPUS` ceiling and the cluster cannot shrink.
+What shipped instead, 2026-08-25, is a **3-family `instance_flexibility_policy`** on both prod
+inference pipelines — `fe4e3d6` on `fangorn_inference_dataproc_pipeline.py` and `0b19f29` on
+`fangorn_challenger_inference_pipeline.py`, both Sean Yang, workers drawn from
+`n2-standard-16` / `n2d-standard-16` / `e2-standard-16` with the load-bearing
+`google-cloud-dataproc==5.10.1` pin. **It relieves the quota half as well as the stockout half**,
+because those three types bill to three separate regional metrics (`N2_CPUS`, `N2D_CPUS`, `CPUS`,
+5,000 each) — the same 4,672-vCPU request now spreads across ~15,000 vCPU of headroom instead of
+concentrating on one pool. `N2_CPUS` itself is still 5,000.
+
+**Measured 8 days later (2026-09-02), from this project's `ClusterController` audit log:**
+**zero** quota refusals (`status.code=3`) since the pair above at 22:46/22:58Z on 08-24, and
+**zero** stockouts (`code=14`) on `fangorn-inference-*` / `fangorn-challenger-*` since
+2026-08-25 22:48Z — against **27** in the two days before the fix. The single `code=14` since is
+`fangorn-conversions-training-8012099b` (2026-09-01 21:07:56Z), a pipeline the policy does not cover
+(IMP-098).
+
+**The condition is narrowed, not removed — and the next failure will name a different metric.**
+`DISKS_TOTAL_GB` is machine-family-agnostic, so the flexibility policy gives it nothing. One
+full-shape cluster is 145,500 GB; the regional limit rose 225,280 -> 247,808 over this window, so
+two concurrent full-shape clusters (291,000 GB) are still refused by ~43,192 GB. `vertex-ai-qa@`
+still creates full-shape clusters in the same project (`fangorn-challenger-883bbd2b`, 2026-08-26
+13:19Z). **If INC-025 recurs, expect `Insufficient 'DISKS_TOTAL_GB' quota` with `N2_CPUS` absent**
+— that signature means the CPU half is working and only disk is binding. Logged as IMP-099.
+Close-out detail and the reproduce-it commands: `tickets/audi_1217_fangorn_n2_quota/summary.md`.
 

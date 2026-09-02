@@ -211,7 +211,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_ap_score_feed_migration | project | 2026-08-25 | [doc](memory/project_ap_score_feed_migration.md) |
 | reference_bidder_serving_stores | reference | 2026-08-25 | [doc](memory/reference_bidder_serving_stores.md) |
 | reference_bottom_up_keywords_pipeline | reference | 2026-08-25 | [doc](memory/reference_bottom_up_keywords_pipeline.md) |
-| reference_fangorn_inference_dataproc | reference | 2026-08-25 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_ghost_bid_lift_register | reference | 2026-08-25 | [doc](memory/reference_ghost_bid_lift_register.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-26 | [doc](memory/feedback_validated_is_not_correct.md) |
 | reference_airflow_run_origin | reference | 2026-08-26 | [doc](memory/reference_airflow_run_origin.md) |
@@ -243,5 +242,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
+| reference_fangorn_inference_dataproc | reference | 2026-09-02 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_slack_debugger_app | reference | 2026-09-02 | [doc](memory/reference_slack_debugger_app.md) |
 | reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |
