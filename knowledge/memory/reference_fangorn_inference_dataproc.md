@@ -93,4 +93,12 @@ is `PERMISSION_DENIED`. **Do not credit the auto-scaler for the recovery** — t
 audit log 2026-09-02). Conceding the stockout does not retract the quota finding; they are different tasks in the same
 DAG run.
 
+**Query shape matters on these audit reads (2026-09-02).** `gcloud logging read` with only a
+`protoPayload.methodName=~` regex and `--freshness=14d` ran past 120s and had to be backgrounded. Adding
+`resource.type="cloud_dataproc_cluster"` and pinning the method to the full literal
+(`"google.cloud.dataproc.v1.ClusterController.CreateCluster"`) instead of a regex returns in seconds over
+the same window. **Anchor on `resource.type` first, then the exact method string** — the regex form scans
+far more of the index. Use `--format="csv[no-heading](...)"` to get one row per event; the default `value()`
+form splits multi-line quota messages across lines and breaks counting.
+
 Related: [[reference_oncall_runbook]], [[reference_dataproc_eventlog_profiling]], [[feedback_hold_evidenced_verdict]], [[feedback_dataproc_cost_awareness]].

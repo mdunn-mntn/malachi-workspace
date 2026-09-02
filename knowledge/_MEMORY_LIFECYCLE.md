@@ -145,7 +145,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | Terse tickets and docs | feedback | 2026-08-12 | [doc](memory/feedback_terse_tickets.md) |
 | feedback_contradictions_are_appended | feedback | 2026-08-12 | [doc](memory/feedback_contradictions_are_appended.md) |
 | feedback_no_unrequested_subagents | feedback | 2026-08-12 | [doc](memory/feedback_no_unrequested_subagents.md) |
-| feedback_verify_claims_against_code | feedback | 2026-08-12 | [doc](memory/feedback_verify_claims_against_code.md) |
 | project_fangorn_on_mntn_id | project | 2026-08-12 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | project_hot_path_budget | project | 2026-08-12 | [doc](memory/project_hot_path_budget.md) |
 | reference_agent_harness_portability | reference | 2026-08-12 | [doc](memory/reference_agent_harness_portability.md) |
@@ -239,6 +238,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |
 | bq-workflow | feedback | 2026-09-02 | [doc](memory/feedback_bq_workflow.md) |
 | feedback_slack_digest_not_per_event | feedback | 2026-09-02 | [doc](memory/feedback_slack_digest_not_per_event.md) |
+| feedback_verify_claims_against_code | feedback | 2026-09-02 | [doc](memory/feedback_verify_claims_against_code.md) |
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
