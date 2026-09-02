@@ -247,10 +247,15 @@ What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a re
 
 ## 8. Open Items / Follow-ups
 
-Checked against the AUDI-1313 description on 2026-09-02. The tables in sections 1 and 3 render as
-placeholders through the REST API (no `table` node in the ADF, no attachments, no comments), so the full
-34-attribute list could not be read; the gaps below come from the prose that IS retrievable plus Kirsa's
-spoken asks.
+Checked against the AUDI-1313 description on 2026-09-02. **The two tables are broken in the ticket itself,
+not just over the API.** Sections 1 (Scope & Population, `<Table 5x2>`) and 3 (Campaign Attributes,
+`<Table 34x1>`) render as literal placeholder text in the Jira web UI as well, confirmed by screenshot.
+The paste that created the ticket did not carry them, so the 34 named attributes are unavailable to
+anyone reading the ticket. Malachi has commented to Kirsa asking for them. Until they arrive, scope comes
+from the prose that IS present plus Kirsa's spoken asks in Slack.
+
+Ticket metadata: reporter Kirsa Haenebalcke, assignee Malachi Dunn, parent EX-106, PMO rep Bryce Wagg,
+**due 2026-09-08**, status Backlog, no labels, full QA not required.
 
 **Section 1, inclusion filters**
 - Minimum 75% days live in the full window: **NOT applied.** Learning-period contamination is not excluded.
