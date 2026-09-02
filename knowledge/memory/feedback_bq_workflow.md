@@ -1,15 +1,15 @@
 ---
 name: bq-workflow
-description: "BQ workflow: bq_run.sh perf logging, no status polling (background+notifications), no cost warnings (reserved capacity), never preempt long queries (parallel windows)"
+description: "BQ workflow: bq_run.sh perf logging, invocation footguns (--nouse_legacy_sql on every query, SQL as last positional arg, strip leading -- comment lines), no status polling (background+notifications), no cost warnings (reserved capacity), never preempt long queries (parallel windows)"
 metadata: 
   node_type: memory
   type: feedback
   originSessionId: cc00f377-b575-43ed-84cf-3e31ce190e7a
 doc_type: memory
-keywords: [bq_run.sh, dw-main-gold access, PAM bq-read gold, gold access denied, project_id required, mntn-coredw-prod access denied, bigquery.jobs.create permission, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook, pam entitlements mntn-prj-prod-00, breakglass-editor prod-00, roles/writer, metricDescriptors delete, bq-job-history-read, dataproc-submit entitlement]
+keywords: [bq_run.sh, nouse_legacy_sql, Encountered WITH Was expecting EOF, Unknown command line flag, sql last positional arg, strip leading sql comments, dw-main-gold access, PAM bq-read gold, gold access denied, project_id required, mntn-coredw-prod access denied, bigquery.jobs.create permission, bq_perf_log, background query, no cost warnings, reserved capacity, dont preempt query, mcp bigquery, query cookbook, pam entitlements mntn-prj-prod-00, breakglass-editor prod-00, roles/writer, metricDescriptors delete, bq-job-history-read, dataproc-submit entitlement]
 domain: [bigquery, workflow]
 lifecycle: active
-last_verified: 2026-09-01
+last_verified: 2026-09-02
 ---
 ## from feedback_bq_perf_tracking.md
 
@@ -133,9 +133,16 @@ Three separate failures before a single query ran. All three look like broken SQ
    (`Unknown command line flag ' audi_1141_cohort_scorecard.sql'`). Put any `--` filename header at the
    END of the file. `mntn_xlsx.sql()` needs a `--` line naming the file for its query deep-links, so a
    trailing `-- source: <file>.sql` satisfies both.
+   When you can't move the header (a shared `.sql` file, someone else's file), strip leading comment
+   lines at call time instead (re-confirmed 2026-09-02, TI-1313):
+   `SQL="$(sed '/^[[:space:]]*--/d' file.sql)"` then pass `"$SQL"` as the last positional arg.
 2. **`--nouse_legacy_sql` is needed for ANY standard SQL, not just TEMP FUNCTION (widened 2026-08-25, AUDI-1016).** `~/.bigqueryrc` sets only `location`; with no `use_legacy_sql=false` there, bare `bq query` (and `bq_run.sh`, which doesn't inject the flag) parses backtick identifiers as legacy SQL — a `` `dw-main-bronze`.`ds`.`t` `` reference fails with `Invalid project ID '`dw-main-bronze'`. Pass `--nouse_legacy_sql` through `bq_run.sh` on every backticked query. Related TABLESAMPLE gotchas (same session): `--maximum_bytes_billed` validates against the UN-sampled upper bound (a 0.001% TABLESAMPLE of a 110TiB table quotes the full 104TB and gets rejected; combined with a partition WHERE it quotes the full partition) — on the us-central1 reservation, run TABLESAMPLE uncapped and let actual sampled-block billing apply (~1GB for 0.001% of 273B rows); block sampling clusters by partition, so a small sample may land in ONE hour/partition per day — don't infer hh/time distributions from it.
    Original narrower finding: **`CREATE TEMP FUNCTION` scripts need `--nouse_legacy_sql`.** Without it bq runs legacy SQL and errors
    `Encountered "CREATE" ... Was expecting: <EOF>` at the function line.
+   The same legacy-SQL default breaks every CTE query — a plain `WITH` fails with
+   `Encountered "WITH" ... Was expecting: <EOF>` and reads as a SQL syntax error rather than a missing
+   flag (re-confirmed 2026-09-02, TI-1313). `bq_run.sh` never injects the flag; pass `--nouse_legacy_sql`
+   on every query, backticks or not.
 3. **Pass `--project_id=dw-main-silver` explicitly.** After a fresh `gcloud auth login` the default
    project resolved to `mntn-coredw-prod`, giving
    `Access Denied: User does not have bigquery.jobs.create permission`. `bq_run.sh` defaults its internal

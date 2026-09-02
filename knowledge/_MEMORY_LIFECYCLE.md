@@ -232,13 +232,13 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | jira-conventions | reference | 2026-08-31 | [doc](memory/reference_jira_conventions.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-08-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
-| bq-workflow | feedback | 2026-09-01 | [doc](memory/feedback_bq_workflow.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-01 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-09-01 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
 | reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |
+| bq-workflow | feedback | 2026-09-02 | [doc](memory/feedback_bq_workflow.md) |
 | feedback_slack_digest_not_per_event | feedback | 2026-09-02 | [doc](memory/feedback_slack_digest_not_per_event.md) |
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
