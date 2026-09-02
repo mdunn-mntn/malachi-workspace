@@ -17,7 +17,8 @@ SELECT
   r.n_treatment, r.n_holdout, r.vis_treatment, r.vis_holdout,
   r.rate_treatment, r.rate_holdout,
   r.abs_itt, r.rel_itt, r.se, r.z, r.p_value, r.significant_95,
-  r.incremental_visits
+  r.incremental_visits,
+  r.bid_count_treatment, r.bid_count_holdout
 FROM `dw-main-gold.reporting.lift__ghost_bid_results` r
 JOIN powered p USING (campaign_group_id)
 WHERE r.stratum_type = 'bid_count' AND r.se > 0 AND r.vis_holdout >= 100

@@ -262,6 +262,24 @@ mt_feature AS (
   SELECT advertiser_id, LOGICAL_OR(feature_id = 1 AND active) AS mt_display_access_enrolled
   FROM `dw-main-bronze.integrationprod.core_advertisers_x_features`
   GROUP BY 1
+),
+
+aud_daily AS (
+  SELECT pc.campaign_group_id, a.rpt_day, SUM(a.total_audience_size) AS day_total
+  FROM `dw-main-silver.perml.flight_cid_day_audience_sizes` a
+  JOIN prospecting_campaigns pc USING (campaign_id)
+  WHERE a.rpt_day BETWEEN '2026-06-22' AND '2026-08-31' AND a.total_audience_size > 0
+  GROUP BY 1, 2
+),
+
+aud AS (
+  SELECT
+    campaign_group_id,
+    CAST(APPROX_QUANTILES(day_total, 2)[OFFSET(1)] AS INT64) AS audience_size,
+    COUNT(*) AS audience_size_days,
+    SAFE_DIVIDE(MAX(day_total) - MIN(day_total), NULLIF(MAX(day_total), 0)) AS audience_size_drift
+  FROM aud_daily
+  GROUP BY 1
 )
 
 SELECT
@@ -326,6 +344,9 @@ SELECT
 
   COALESCE(crm.crm_file_excluded, FALSE) AS crm_file_excluded,
   crm.n_prospecting_audiences,
+  au.audience_size, au.audience_size_days, au.audience_size_drift,
+  SAFE_DIVIDE(d.prospecting_ips, NULLIF(au.audience_size, 0)) AS pct_audience_reached,
+  SAFE_DIVIDE(d.prospecting_impressions, NULLIF(au.audience_size, 0)) AS impressions_per_audience_member,
   COALESCE(mt.mt_display_access_enrolled, FALSE) AS mt_display_access_enrolled,
 
   sc.avg_household_score, sc.pct_households_unscored,
@@ -373,4 +394,5 @@ LEFT JOIN stage_mix sm ON b.campaign_group_id = sm.cg_id
 LEFT JOIN hhst hs ON b.campaign_group_id = hs.campaign_group_id
 LEFT JOIN media_plan mp ON b.campaign_group_id = mp.campaign_group_id
 LEFT JOIN mt_feature mt ON b.advertiser_id = mt.advertiser_id
+LEFT JOIN aud au ON b.campaign_group_id = au.campaign_group_id
 ORDER BY b.incremental_visits DESC

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 from scipy.stats import chi2
 
 ROOT = Path("/Users/malachi/Developer/work/mntn/workspace")
@@ -137,11 +138,35 @@ pop["vv_level"] = pop["vv_attribution_window_days"].map(
 pop["display_flag"] = np.where(pop["runs_display"], "Runs display multi-touch", "Prospecting only")
 pop["fcap_level"] = pop["fcap_setting"]
 
+
+def _size(x):
+    return f"{x / 1e6:.1f}M" if x >= 1e6 else f"{x / 1e3:.0f}K"
+
+
+pop["aud_bucket"] = pd.qcut(pop["audience_size"], 4)
+AUD_ORDER = [f"{_size(c.left)} to {_size(c.right)}" for c in pop["aud_bucket"].cat.categories]
+pop["aud_bucket"] = pop["aud_bucket"].cat.rename_categories(AUD_ORDER)
+
 bands["band"] = bands["score_band"].map(BAND_LABEL)
 freq["fband"] = pd.Categorical(freq["bid_count_band"], categories=FREQ_ORDER, ordered=True)
 
-by_freq = summarize(freq, "fband", "Bids per household", order=FREQ_ORDER, extras=False)
-by_band = summarize(bands, "band", "Intent band", order=BAND_ORDER, extras=False)
+cg_spend = pop.set_index("campaign_group_id")["scaled_spend"]
+
+
+def allocate_spend(df):
+    """Split each campaign's measured spend across its strata by the stratum's share of bids.
+
+    The gold lift table populates treatment_spend on 18 of 3,978 rows, and its band assignment does not
+    agree with the impression log's stored household_score, so bids are the only shared basis."""
+    w = df["bid_count_treatment"] / df.groupby("campaign_group_id")["bid_count_treatment"].transform("sum")
+    return w * df["campaign_group_id"].map(cg_spend)
+
+
+freq["scaled_spend"] = allocate_spend(freq)
+bands["scaled_spend"] = allocate_spend(bands)
+
+by_freq = summarize(freq, "fband", "Bids per household", order=FREQ_ORDER)
+by_band = summarize(bands, "band", "Intent band", order=BAND_ORDER)
 by_creative = summarize(pop, "creative", "Creative length mix",
                         order=["15s only", "Mixed, 15s-led", "Mixed, 30s-led", "30s only"])
 by_geo = summarize(pop, "geo", "Geographic targeting")
@@ -155,6 +180,38 @@ by_tenure = summarize(pop, "tenure_bucket", "Advertiser tenure",
 by_vv = summarize(pop, "vv_level", "Visit attribution window")
 by_fcap = summarize(pop, "fcap_level", "Frequency cap")
 by_display = summarize(pop, "display_flag", "Display multi-touch")
+by_aud = summarize(pop, "aud_bucket", "Audience size", order=AUD_ORDER)
+
+band_share = (freq.pivot_table(index="campaign_group_id", columns="fband", values="n_treatment",
+                               aggfunc="sum", observed=True)
+              .fillna(0).pipe(lambda t: t.div(t.sum(axis=1), axis=0)))
+band_share.columns = [str(c) for c in band_share.columns]
+xt = (pop.set_index("campaign_group_id")[
+    ["aud_bucket", "audience_size", "avg_frequency", "pct_audience_reached", "rel_itt"]]
+    .join(band_share, how="inner"))
+aud_freq = pd.DataFrame([{
+    "Audience size": key,
+    "Campaigns": len(g),
+    "Median audience size": g["audience_size"].median(),
+    "Reached as % of audience": g["pct_audience_reached"].median(),
+    "Median campaign frequency": g["avg_frequency"].median(),
+    "Bid once": g["1"].mean(),
+    "Bid 2 to 3 times": g["2-3"].mean(),
+    "Bid 4 to 10 times": g["4-10"].mean(),
+    "Bid 11+ times": g["11+"].mean(),
+} for key, g in xt.groupby("aud_bucket", observed=True)])
+
+
+def _rho(a, b):
+    """Spearman rank correlation on the primary population, NaN-safe."""
+    s = pop[[a, b]].dropna()
+    return stats.spearmanr(s[a], s[b])
+
+
+rho_freq, p_freq = _rho("audience_size", "avg_frequency")
+rho_lift, p_lift = _rho("audience_size", "rel_itt")
+_s11 = xt[["audience_size", "11+"]].dropna()
+rho_11, p_11 = stats.spearmanr(_s11["audience_size"], _s11["11+"])
 
 others = []
 for col, lab in [("crm", "Customer-file exclusion"), ("display_flag", "Display multi-touch"),
@@ -176,7 +233,7 @@ RANKED_SRC = [
     ("High-intent share", by_hi, None), ("Average household score", by_score, None),
     ("TV share of spend", by_tv, None), ("Advertiser tenure", by_tenure, None),
     ("Visit attribution window", by_vv, None), ("Frequency cap", by_fcap, None),
-    ("Display multi-touch", by_display, None),
+    ("Display multi-touch", by_display, None), ("Audience size", by_aud, None),
 ]
 rank_rows = []
 for name, tbl, fixed_n in RANKED_SRC:
@@ -287,7 +344,7 @@ gate_tbl = pd.DataFrame(gates)
 base["gf_bin"] = pd.cut(base["ghost_frac"], bins=[0, 0.08, 0.09, 0.10, 0.11, 1.0],
                         labels=["Under 8%", "8 to 9%", "9 to 10%", "10 to 11%", "Over 11%"])
 sens = summarize(base, "gf_bin", "Holdout share of households",
-                 order=["Under 8%", "8 to 9%", "9 to 10%", "10 to 11%", "Over 11%"], extras=False)
+                 order=["Under 8%", "8 to 9%", "9 to 10%", "10 to 11%", "Over 11%"])
 
 base["In this workbook"] = base["primary"]
 detail = base[[
@@ -301,6 +358,7 @@ detail = base[[
     "attributed_per_incremental_conv",
     "pct_attributed_visits_incremental", "pct_attributed_conv_incremental",
     "creative_length_mix", "share_15s", "n_creatives",
+    "audience_size", "pct_audience_reached", "impressions_per_audience_member",
     "prospecting_impressions", "prospecting_ips", "households_delivered", "monthly_muv",
     "advertiser_aov", "avg_hhst", "pct_spend_stage2", "pct_spend_stage3", "pct_spend_desktop",
     "avg_household_score", "pct_households_unscored", "pct_hh_high_intent", "pct_hh_peak",
@@ -329,6 +387,8 @@ detail = base[[
     "pct_attributed_visits_incremental": "% attr visits incremental",
     "pct_attributed_conv_incremental": "% attr conversions incremental",
     "creative_length_mix": "Creative length", "share_15s": "Share 15s", "n_creatives": "Creatives",
+    "audience_size": "Audience size", "pct_audience_reached": "Reached as % of audience",
+    "impressions_per_audience_member": "Impressions per audience member",
     "prospecting_impressions": "Impressions", "prospecting_ips": "Households reached",
     "households_delivered": "Households scored basis", "monthly_muv": "Advertiser MUVs",
     "advertiser_aov": "Advertiser AOV", "avg_hhst": "Avg score threshold",
@@ -379,10 +439,10 @@ wb.table(
 
 wb.table(
     "By frequency", by_freq,
-    finding="Pooled visit lift by how many times a household was bid on",
-    method="From the platform's bid-count strata. Households are not randomised into these bands, so one bid on more often is also one the system judged more promising.",
+    finding="Pooled visit lift by how many times a household was bid on across the whole 71 day window",
+    method="Bids counted once over the whole 22 Jun to 31 Aug window, not per week. Households are not randomised into these bands. Spend is split across bands by each band's share of bids.",
     formats=SUMF, signal={"Pooled lift": {}}, kind="data",
-    toc="Lift at 1, 2 to 3, 4 to 10 and 11+ bids per household",
+    toc="Lift at 1, 2 to 3, 4 to 10 and 11+ bids per household over the full window",
     query="ti_1313_bid_count_strata.sql")
 
 wb.table(
@@ -403,10 +463,10 @@ wb.table(
 
 wb.table(
     "By intent band", by_band,
-    finding="Pooled visit lift by the intent band the household was scored into",
-    method="From the platform's own score-band strata. A campaign appears in every band it delivered to, so this is only partly a within-campaign contrast.",
+    finding="Pooled visit lift and cost per incremental visit by the intent band the household was scored into",
+    method="From the platform's score-band strata; a campaign appears in every band it delivered to. Spend is split across bands by each band's share of bids, so it assumes a flat cost per bid in a campaign.",
     formats=SUMF, signal={"Pooled lift": {}}, kind="data",
-    toc="Lift by High, Peak, Mid, Max Reach and Unscored",
+    toc="Lift and cost per incremental visit by High, Peak, Mid, Max Reach and Unscored",
     query="ti_1313_score_band_strata.sql")
 
 wb.table(
@@ -419,11 +479,31 @@ wb.table(
 
 wb.table(
     "By campaign frequency", by_freq_q,
-    finding="Pooled visit lift by the campaign's own average frequency",
-    method="Quartiles on prospecting impressions divided by households reached. A different question than the bid-count sheet, which splits households inside a campaign.",
+    finding="Pooled visit lift by the campaign's own average frequency over the whole 71 day window",
+    method="Quartiles on prospecting impressions divided by households reached, both counted once over the whole window. The bid-count sheet instead splits households inside a campaign.",
     formats=SUMF, signal={"Pooled lift": {}}, kind="data",
-    toc="Lift by the campaign's average frequency quartile",
+    toc="Lift by the campaign's average frequency quartile over the full window",
     query="ti_1313_campaign_base.sql")
+
+wb.table(
+    "By audience size", by_aud,
+    finding="Lift does not run with audience size: the second quartile reads highest, the smallest quartile lowest",
+    method=f"Quartiles on the targetable audience behind the prospecting campaigns, median across delivered days. Rank correlation with lift is {rho_lift:+.2f} (p = {p_lift:.2f}), so this is a quartile gap, not a trend.",
+    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    toc="Lift by targetable audience size quartile",
+    query="ti_1313_campaign_base.sql")
+
+wb.table(
+    "Audience size and frequency", aud_freq,
+    finding=f"Smaller audiences get bid on far more often (rank correlation {rho_freq:+.2f}, p under 0.001)",
+    method=f"Each row averages that quartile's campaigns. Share of households bid on 11 or more times falls as audience grows (rank correlation {rho_11:+.2f}). Size is a setting, bids per household is not.",
+    formats={"Campaigns": FMT.INT, "Median audience size": FMT.INT,
+             "Reached as % of audience": FMT.PCT1, "Median campaign frequency": FMT.NUM1,
+             "Bid once": FMT.PCT0, "Bid 2 to 3 times": FMT.PCT0,
+             "Bid 4 to 10 times": FMT.PCT0, "Bid 11+ times": FMT.PCT0},
+    signal={"Bid 11+ times": {}}, kind="data",
+    toc="How audience size drives bids per household",
+    query="ti_1313_bid_count_strata.sql")
 
 if not by_other.empty:
     wb.table(
@@ -550,6 +630,8 @@ wb.table(
              "% attr conversions incremental": FMT.PCT0, "Share 15s": FMT.PCT0,
              "Creatives": FMT.INT, "DMAs delivered": FMT.INT, "Days delivered": FMT.INT,
              "Impressions": FMT.INT, "Households reached": FMT.INT,
+             "Audience size": FMT.INT, "Reached as % of audience": FMT.PCT1,
+             "Impressions per audience member": FMT.NUM2,
              "Households scored basis": FMT.INT, "Advertiser AOV": FMT.USD2,
              "Avg score threshold": FMT.INT, "% spend stage 2": FMT.PCT0,
              "% spend stage 3": FMT.PCT0, "% spend Desktop": FMT.PCT2,
@@ -583,12 +665,16 @@ wb.glossary(
         ("Customer-file exclusion", "The prospecting audience suppresses the advertiser's CRM file. Read from live audience config, which nearly half of these advertisers edited mid-window."),
         ("Conversions are thin", f"Only {n_conv:,} of {n_pop:,} campaign groups recorded holdout conversions, and pooled conversion lift clears zero for just one attribute level. The conversion side of this workbook is close to a null result."),
         ("Two spend figures", "Spend on measured households is prospecting media spend scaled to the households the holdout measured, and drives every cost per incremental figure. Attributed CPA instead uses reporting total spend."),
+        ("Cost per visit on the split sheets", "The lift table records no spend below campaign level, so both split sheets divide the campaign figure by each band's share of bids. That assumes a flat cost per bid inside a campaign."),
+        ("Blank cost per visit", "A band whose campaigns net out to no incremental visits has no cost per incremental visit to report, so the cell is left blank rather than shown negative."),
         ("Not causal", "Every attribute here was chosen by the advertiser, not assigned. Read each row as a hypothesis worth a designed test, never as an effect."),
         ("Visit attribution window", "The advertiser's visit lookback, from 1 to 45 days across this population. It is one of the attributes that separates lift."),
         ("Named but flat", "Conversion attribution window is 30 days for every advertiser here. Desktop is under 0.03% of spend. No campaign here ran retargeting or had a media plan. None can correlate with anything."),
-        ("Named but absent", "Audience type, total targetable audience size, advertiser CVR and advertiser sales cycle are not stored anywhere we could find."),
+        ("Named but absent", "Audience type, advertiser CVR and advertiser sales cycle are not stored anywhere we could find."),
+        ("Audience size", "The targetable pool behind the prospecting campaigns, median across delivered days. It reflects the stored targeting expression and overstates what is deliverable, so compare campaigns on it rather than reading a level."),
+        ("Frequency is over the whole window", "Both frequency sheets count over the full 22 Jun to 31 Aug span, not per week or per month. 11+ bids means 11 or more across ten weeks."),
         ("Everything else", "Every other attribute the ticket names is a column on Campaign detail, and those with enough spread are cut on a sheet and ranked."),
-    ])
+    ], max_entries=25)
 
 wb.sql_dir("Queries", str(TICKET / "queries"),
            note="DRAFT - NOT FINAL. BigQuery SQL behind every sheet.")

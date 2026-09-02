@@ -517,3 +517,99 @@ and a glossary tab and a `sql_dir` tab need it in their own `intro=` and `note=`
 **Open until review comes back:** whether the 190-campaign primary population is the right cut for Kirsa's
 playbook purpose, and whether Matt agrees the conversion side should be reported as a null rather than
 dropped. The ticket stays open; status flips to Final only after both confirm.
+
+## 12. Kirsa's first review round (2026-09-02)
+
+Three questions came back on Slack. All three are now answered in the workbook (22 sheets, up from 20).
+
+### 12a. "Are the frequencies across the entire data range? 2+ months?"
+
+**Yes.** Both frequency sheets count once over the whole 71-day span, 2026-06-22 to 2026-08-31. Nothing is
+per-week or per-month. `11+` on **By frequency** means 11 or more bids on that household across ten weeks;
+`avg_frequency` on **By campaign frequency** is `prospecting_impressions / prospecting_ips` over the same
+span. The window is not a choice: `gold.reporting.lift__ghost_bid_results` has no `dt` or `period` column
+and the ghost-bid floor is 2026-06-22 with no backfill (§9a), so the strata cannot be re-cut to a shorter
+window without recomputing from silver.
+
+Fixed by stating it rather than leaving it inferable: both sheet findings and both method lines now name
+the span, and the Read me carries a "Frequency is over the whole window" entry.
+
+### 12b. "Some tabs have cost per inc visit and some do not, especially the intent band tab"
+
+The two strata sheets (**By frequency**, **By intent band**) had no spend columns because the strata come
+from the gold lift table, which reports lift per stratum but no spend per stratum. Now added on both, plus
+**Holdout depth check** which had the same gap for no reason.
+
+**`treatment_spend` exists in the gold schema and is unusable: populated on 18 of 3,978 `overall` rows and
+0 of 15,732 `bid_count` and 9,401 `score_band` rows** (verified 2026-09-02). Same for `treatment_impressions`
+and `cost_per_bid`. Anything below campaign grain has to be allocated.
+
+**First attempt, refuted by its own check.** Measure prospecting spend per (campaign group, intent band)
+straight from `cost_impression_log`, banding each household on `MAX(household_score)`. This is exact and it
+correctly captures that unscored delivery runs ~26% higher CPM ($13.01 vs ~$10.2 for every scored band).
+It fails because **the impression log's band assignment does not agree with the platform's own strata.**
+Across the 381 campaign groups in both, the mean total variation distance between the two band mixes is
+**0.284**, and **55.9% of campaigns disagree by more than 10 points**. Mean mix, platform vs impression
+log: High 62.8% / 36.7%, Unscored 29.8% / 48.3%. Four large campaign groups (96237, 81053, 106777, 117662)
+have platform High-band strata while their impression log tops out at `household_score = 8000` exactly, so
+they hold zero High-band impressions and 15% of allocated spend went missing. **The platform bands at bid
+time; `cost_impression_log.household_score` is a different value.** Do not use one to weight the other.
+
+**Shipped instead:** allocate each campaign's `scaled_spend` across its strata by the stratum's share of
+`bid_count_treatment`, which is in the gold table at both grains and sums exactly to the campaign total
+(verified: 3,978 of 3,978 campaign groups match `overall` to the unit, for both stratum types; allocated
+spend recovers 100% of campaign spend on both sheets). The assumption is a flat cost per bid inside a
+campaign, and it is stated on both sheets and in the Read me. Because the band assignment is contested,
+the measured per-band CPM correction is NOT transferable and was dropped rather than applied.
+
+Result. Bids per household: 4-10 = $35.69, 11+ = $18.11. Bands `1` and `2-3` net out to **negative**
+incremental visits (-22,529 and -7,452), so their cost per incremental visit is left blank rather than
+shown negative, with a Read me line saying why. Intent band: Unscored $19.32, Peak Performance $21.35,
+High Intent $28.11, Mid Intent $76.78.
+
+### 12c. "I'm not seeing any data for the audience size, and how does it relate to bids per household?"
+
+**The Read me was wrong and is corrected.** It listed "total targetable audience size" as not stored
+anywhere we could find. It is stored: **`dw-main-silver.perml.flight_cid_day_audience_sizes`**
+(`campaign_id, campaign_group_id, rpt_day, funnel_audience_size, total_audience_size, tmul_*`), already
+documented in `data_knowledge.md` from TI-1026. The earlier sweep missed it. Coverage is complete: **890 of
+890 campaign groups, 190 of 190 in the primary population.**
+
+Taken as the median across delivered days over prospecting campaigns, so a mid-window audience edit does
+not decide the value. Median 4.1M, range 35,904 to 91.4M. Caveat carried on the sheet and in the Read me:
+this is the stored user expression and **overstates the deliverable pool** (no DS14 clause, no holdout
+carve-out, no retargeting exclusions), so it ranks campaigns rather than giving a level.
+
+**Kirsa's actual question is the sharp one: bids per household is an outcome, audience size is a setting.**
+It resolves cleanly. On the 190 primary campaigns, Spearman rank correlation of audience size against:
+
+| against | rho | p |
+|---|---|---|
+| average frequency | **-0.487** | 1.0e-12 |
+| impressions per audience member | -0.701 | 2.2e-29 |
+| households reached as share of audience | -0.663 | 1.9e-25 |
+| households reached (count) | +0.678 | 6.1e-27 |
+| **visit lift** | **+0.045** | **0.54** |
+
+And on the 119 campaigns that also have bid-count strata, share of treated households by band against
+audience size: bid once **+0.377** (p=2.4e-05), 2-3 **+0.386**, 4-10 **-0.216**, 11+ **-0.295** (p=1.1e-03).
+
+By audience-size quartile, share of households bid on 11+ times: 48.4% / 33.8% / 29.7% / 24.1%. Median
+campaign frequency: 7.55 / 4.41 / 3.78 / 2.81. Reached as a share of audience: 45.6% / 14.2% / 6.4% / 2.3%.
+
+**So audience size is the controllable lever behind the bid-frequency finding.** New sheet **Audience size
+and frequency** carries this. It is still a correlation, not a designed test, and the confound is obvious:
+a small audience is a narrow-targeting choice, so its households differ from a broad audience's households
+in more than how often they were bid on.
+
+**Audience size does not itself predict lift.** Rank correlation +0.045 (p=0.54). The between-level test
+does register (p=0.030, ranks 7th of 14) but the pattern is **not monotone**: the second quartile
+(975K-4.1M) is highest at +10.4% and the smallest quartile (36K-975K) is lowest at +5.1%, and those two
+intervals separate. The sheet says quartile gap, not trend. Do not read "smaller audience is better" out
+of the frequency result: frequency correlates with lift, audience size does not, and audience size drives
+frequency. That triangle is the thing worth a designed test.
+
+**Also added:** `audience_size`, `pct_audience_reached` and `impressions_per_audience_member` are now
+columns on Campaign detail (70 columns).
+
+**Still open from this round:** nothing Kirsa raised. The §11 open items stand.
