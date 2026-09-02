@@ -248,7 +248,7 @@ class MntnWorkbook:
         owner: str = "Malachi Dunn · Audience Intelligence",
         logo_path: str | None = None,
         generated: str | None = None,
-        status: str = "Final",
+        status: str = "DRAFT - NOT FINAL",
     ) -> None:
         self.title = _demdash(title)
         self.ticket = ticket.upper().strip()

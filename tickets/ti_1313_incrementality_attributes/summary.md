@@ -501,3 +501,19 @@ an explicit unknown column (max 0.22%); all three extracts are same-day.
 **Final shape:** 890 campaign groups on Campaign detail across 67 columns, 190 in the summary population
 (holdout band, 75%+ days live, live advertiser), 130 advertisers, 83 significant, pooled visit lift +7.9%.
 13 attributes ranked; 6 separate at p < 0.05.
+
+## 11. Delivery (2026-09-02)
+
+Workbook sent to Matt Brorby and Kirsa Haenebalcke for review, marked **DRAFT - NOT FINAL** on all 20
+sheets. Jira comment 614657 posted to AUDI-1313 via REST v2.
+
+**New standing convention, from the user:** every .xlsx deliverable ships marked `DRAFT - NOT FINAL` until
+the work is confirmed and the ticket is closed, then switches to Final. This is now enforced rather than
+remembered: `lib/mntn_xlsx.py` `MntnWorkbook.__init__` had `status: str = "Final"` and now defaults to
+`status: str = "DRAFT - NOT FINAL"`. Final is the deliberate act. Marking every sheet takes three places,
+not one: `status=` covers the Overview cover, `period=` propagates into every table sheet's Source footer,
+and a glossary tab and a `sql_dir` tab need it in their own `intro=` and `note=`.
+
+**Open until review comes back:** whether the 190-campaign primary population is the right cut for Kirsa's
+playbook purpose, and whether Matt agrees the conversion side should be reported as a null rather than
+dropped. The ticket stays open; status flips to Final only after both confirm.
