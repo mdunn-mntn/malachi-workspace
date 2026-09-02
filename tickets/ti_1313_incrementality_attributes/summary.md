@@ -375,3 +375,81 @@ result and the earlier abs/base-rate one. Append to the contradiction already re
 
 **Remaining process work:** self-review entry, Jira comment to Kirsa, `/capture` sweep of section 7's
 durable facts.
+
+## 9. The real ticket tables (2026-09-02) and the window problem
+
+Kirsa fixed the broken tables in AUDI-1313. The scope table and the 34-attribute list are readable for the
+first time. An 18-agent hunt checked every item against BigQuery.
+
+### 9a. The trailing-30-day window is the ticket's ask and is the WORST window available
+
+The scope table says **Window: trailing 30 days**. The workbook computes all-time lift over the full 71-day
+ghost-bid span, because `gold.reporting.lift__ghost_bid_results` has no `dt` or `period` column. A windowed
+read is possible from `silver.enriched.lift__ghost_bid_visits` and was built and run.
+
+**It costs most of the population.** Of the 874 shipped campaign groups: 669 have any entry-cohort row in
+the trailing 30 days, 663 have a computable lift, **308** clear `vis_holdout >= 100`, **126** also sit
+inside the `ghost_frac` band, **115** also have 23+ of 30 entry days. The 208-campaign primary set the
+summary sheets are built on becomes **95**.
+
+**And it is the dirtiest end of the table.** This corrects a hypothesis recorded earlier in this ticket
+that a shorter window would be cleaner. `data_catalog.md` gotcha (7) makes the self-poisoning a function of
+**calendar entry date, not window length**: later entry cohorts are progressively treatment-only. So a
+short window at the START of the table is clean and a short window at the END is dirty, and the trailing
+30 days is the end.
+
+Measured, on the same cohort:
+
+| Window | Pooled rel lift | Pooled ghost_frac |
+|---|---|---|
+| Trailing 30d (2026-07-27 to 08-25) | +18.4% [+17.9, +18.9] | 0.0862 |
+| Documented clean band (2026-06-23 to 07-07) | +6.3% [+6.0, +6.6] | 0.0972 |
+| Full 71-day span | (workbook: +8.4% on the gated 208) | 0.0918 pooled |
+
+**A pooled `ghost_frac` is not evidence a window is clean.** The full-span 0.0918 sits in-band only because
+an inflated left edge (0.118) offsets a depleted tail; two opposite biases cancel in the diagnostic. The
+by-day curve is the real check. This weakens the workbook's own per-campaign `in_validity_band` flag, which
+is computed on an all-time pooled `ghost_frac`: it is a useful filter but not proof any individual campaign
+was measured cleanly.
+
+### 9b. The conversion side cannot survive a 30-day window
+
+Two independent reasons. First, power: conversion lift already cleared zero for only 1 of 27 attribute
+levels on the full 71 days, and 30 days removes what little remained. Second, a **conversion data hole at
+2026-08-20 to 2026-08-25** sits inside any trailing-30 window. The conversion outcome needs materially more
+than 7 days to mature and the SQLMesh rebuild does not refresh uniformly, so the standard
+`DATE_SUB(MAX(dt), INTERVAL 7 DAY)` guard protects visits but **not** conversions. Any conversion metric
+must end its window at **2026-08-19**, a 13-day lag, and say so. A 30-day deliverable should be visit-lift
+only and state that plainly rather than shipping empty conversion columns.
+
+### 9c. Attribute coverage against the real 34
+
+**Newly located and verified:** avg household score and the four intent-band household shares (household
+collapsed, share of SCORED households, shipped beside an explicit unscored share); device % spend to TV and
+to Mobile/Tablet; % spend to Display; live-advertiser status; advertiser tenure in months; fcap settings;
+VV attribution window.
+
+**Already in the workbook:** vertical, overall frequency, spend, impressions, unique households reached,
+geo targeting, CRM exclusion, Display MT enabled, Select campaign, advertiser MUVs.
+
+**Dead or useless:** `cost_impression_log.sh_device` (the previously assumed device source, confirmed
+unusable); Device % Spend to Desktop; advertiser `account_health` / `company_size` / tier (all
+non-discriminating across this population).
+
+### 9d. Two corrections to earlier work in this ticket
+
+**Device % Spend to Mobile/Tablet is OTT video on a phone or tablet screen, NOT display advertising.**
+100% of those rows are `partner_ad_format = 'VIDEO'` and `publisher_type_id = 1`. It does not overlap the
+separate "% spend to Display" attribute and must never be labelled as display. It is also perfectly
+anti-correlated with % spend to TV (-0.999999), so the two carry one piece of information, not two.
+
+**`objective_id` is not the stage key.** Campaigns with `objective_id = 1` sitting at `funnel_level` 2 and
+3 carry **$1,804,164** inside this cohort: 70.9% of all non-prospecting spend and 9.25% of total. Reading
+`objective_id` alone as the stage key would pull $1.8M of stage-2 and stage-3 CTV into the prospecting
+aggregate. The workbook's `objective_id = 1 AND funnel_level = 1` is correct; the single-condition version
+is not.
+
+**The population is not stable.** Re-running the documented base gate today returns 897 rows against the
+877 recorded on 2026-09-01, and 890 against 874 after the test-account inner joins.
+`lift__ghost_bid_results` is all-time with no `dt` column and is rebuilt daily, so the cohort drifts. Any
+number quoted from it needs its read date attached.
