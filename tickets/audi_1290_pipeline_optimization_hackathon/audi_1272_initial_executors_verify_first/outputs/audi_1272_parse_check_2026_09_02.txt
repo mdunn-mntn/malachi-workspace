@@ -1,0 +1,30 @@
+Parse check, planning wave 2026-09-02. One log per DAG, so these are not verdicts.
+Command: PYTHONPATH=<workspace> python3 tickets/audi_1194_optimizer_efficiency_crawler/artifacts/audi_1194_shuffle_concentration.py <logs>
+Logs downloaded from gs://mntn-data-archive-prod/spark-events/ and deleted after the check (not git-ignored).
+
+app-20260826040949342-0431.zstd  (81 executors registered)   [Populate ipdsc_ds_46.DS46; log env: min 4 / max 180 / instances 4]
+  stage 3: 340 tasks, 51% fetch wait, 696,320 blocks @ 14270 B, 81 executors live at start
+      fed by stage 1: 2048 tasks -> 9.3 GiB over 81 executors, 90% on 56, hottest holds 19.3%; 1 executors live when it started
+  stage 6: 13 tasks, 0% fetch wait, 4,420 blocks @ 1466067 B, 81 executors live at start
+      fed by stage 1: 2048 tasks -> 9.3 GiB over 81 executors, 90% on 56, hottest holds 19.3%; 1 executors live when it started
+
+app-20260825050530606-0927.zstd  (7 executors registered)   [Populate ipdsc_42_monitor.IPDSC42Monitor; log env: min 2 / max 1000 / instances 2]
+  stage 18: 116 tasks, 75% fetch wait, 4,194 blocks @ 9348820 B, 3 executors live at start
+  stage 22: 117 tasks, 83% fetch wait, 4,321 blocks @ 9074047 B, 7 executors live at start
+  stage 26: 117 tasks, 84% fetch wait, 4,321 blocks @ 9074047 B, 7 executors live at start
+  (no feeding stage printed: upstream stages have fewer than the script's 1000-task floor)
+
+app-20260826000057091-0058.zstd  (180 executors registered)   [audience_intent_scoring_staging_ds46 = fangorn_14day_lookback; log env: min 30 / max 180 / instances 30]
+  stage 20: 8192 tasks, 59% fetch wait, 85,262,336 blocks @ 55839 B, 180 executors live at start
+      fed by stage 15: 10408 tasks -> 4434.0 GiB over 180 executors, 90% on 159, hottest holds 0.8%; 30 executors live when it started
+  stage 23: 991 tasks, 40% fetch wait, 8,118,272 blocks @ 43977 B, 180 executors live at start
+      fed by stage 20: 8192 tasks -> 332.5 GiB over 180 executors, 90% on 162, hottest holds 0.7%; 180 executors live when it started
+  stage 33: 30755 tasks, 0% fetch wait, 35 blocks @ 218 B, 180 executors live at start
+  stage 37: 32771 tasks, 0% fetch wait, 32 blocks @ 218 B, 180 executors live at start
+
+app-20260826003036565-0444.zstd  (180 executors registered)   [audience_intent_scoring_staging_ds46 = fangorn_household_14day_lookback; log env: min 30 / max 180 / instances 30]
+  stage 8: 92246 tasks, 69% fetch wait, 214,378,742 blocks @ 5841 B, 142 executors live at start
+      fed by stage 3: 2324 tasks -> 1166.1 GiB over 142 executors, 90% on 121, hottest holds 1.5%; 29 executors live when it started
+  stage 11: 992 tasks, 76% fetch wait, 59,820,323 blocks @ 3662 B, 180 executors live at start
+      fed by stage 8: 92246 tasks -> 204.0 GiB over 180 executors, 90% on 155, hottest holds 0.6%; 142 executors live when it started
+  stage 25: 31987 tasks, 0% fetch wait, 4 blocks @ 220 B, 180 executors live at start
