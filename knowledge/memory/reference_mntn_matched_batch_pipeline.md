@@ -254,3 +254,13 @@ holding it. Do not reopen the shared-account hypothesis without new evidence.
 hold `was_submitted=False` receipts with LIVE batch ids, so each day's receipts must be deleted AGAIN before its re-run or the
 double-submission guard trips. `dt=2026-09-01` has no receipts at all. Ticket:
 `tickets/audi_1321_openai_storage_quota_unblock/summary.md`. Trap detail: [[reference_openai_sdk_pagination]].
+
+**Manual fetch runs: `dt read = data_interval_start - 1 day`, and `run_after = data_interval_end`
+(corrected 2026-09-03).** The DAG renders `yesterday` as `{{ data_interval_start.subtract(days=1) }}`, and for
+the `0 9 * * *` timetable a run's `data_interval_start` sits one period BEFORE its logical date. The older note
+here, "submit logical D writes dt=D; fetch logical D+1 reads dt=D", is right for SCHEDULED runs only, where the
+two coincide. Setting just `logical_date` on a manual POST reads the wrong partition (one day early), and
+setting it a day later leaves `run_after` in the future so the scheduler will not start it. To replay a past
+partition immediately, POST with explicit `data_interval_start` (the dt you want plus one day) and a
+`data_interval_end` in the past. Cost two failed triggers on 2026-09-03 before the third worked
+(`manual__recover3_dt_2026-09-02`).

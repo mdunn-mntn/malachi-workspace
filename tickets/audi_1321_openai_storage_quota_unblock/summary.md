@@ -121,6 +121,29 @@ indistinguishable in the logs from a sweep with nothing to do. That is why the 2
 for six days with a green cleanup task every single day. An operation whose success state and whose total
 failure state emit the same output has no observability at all, however green it looks.
 
+### Triggering a fetch by hand: the logical date is two steps removed from the dt it reads (2026-09-03)
+
+Recovering `dt=2026-09-02` the same night took three attempts, and the first two failed on date arithmetic
+rather than on anything about the pipeline. The DAG renders `yesterday` as
+`{{ data_interval_start.subtract(days=1) }}` (`dags/machine_learning/mntn_match_incrementals_fetch.py` L43),
+and for a `0 9 * * *` timetable a run's `data_interval_start` is one period BEFORE its logical date. So:
+
+| attempt | logical_date | data_interval_start | dt read | outcome |
+|---|---|---|---|---|
+| 1 | 2026-09-03T09:00Z | 2026-09-02T09:00Z | 2026-09-01 | FileNotFoundError, wrong partition |
+| 2 | 2026-09-04T09:00Z | 2026-09-03T09:00Z | 2026-09-02 | correct, but `run_after` 09-04T09:00 is in the future, so it sat queued |
+| 3 | now, with `data_interval_start` and `data_interval_end` passed explicitly | 2026-09-03T09:00Z | 2026-09-02 | ran immediately |
+
+**The rule:** `dt read = data_interval_start - 1 day`, and `run_after = data_interval_end`. To replay a past
+partition NOW, POST the dag run with an explicit `data_interval_start` (the dt you want, plus one day) and a
+`data_interval_end` in the past. Setting only `logical_date` gives you either the wrong partition or a run the
+scheduler correctly refuses to start early. The memory note that read "fetch logical D+1 reads dt=D" holds
+only for scheduled runs, where logical date and interval start coincide; it is wrong for manual ones.
+
+**Recovery result:** `manual__recover3_dt_2026-09-02` cleared `batch_cleanup_1`, `batch_transition`,
+`batch_fetch` and `batch_post.taxonomy_vector`, which is the first time the fetch side has moved past
+`batch_transition` since 2026-08-28.
+
 ## 5. Solution
 
 - **shopper_graph #306** (merged 2026-09-03 15:49:43 UTC, deployed 15:50): `delete_all_storage_files.py` lists
@@ -163,5 +186,10 @@ failure state emit the same output has no observability at all, however green it
   useful downstream.
 - `batch_test.test_product_categorization` will false-fail on every backfilled fetch day (wall-clock `max_dt`).
   Mark it success; do not rerun.
+- **Clear `keyword_ddp_reporting`'s `wait_for_product_categorization`** once `batch_post.product_categorization`
+  lands on the recovered day.
+- **Do not start a backfill while another day's batches are live at OpenAI.** Each submit uploads its whole
+  input set, so replaying a day on top of an in-flight one is the same pressure that caused the ceiling. Run
+  them strictly one at a time.
 - **AUDI-1301 (backlog)** — dedicated OpenAI project, audit logging, and a permissions group; unchanged by
   this ticket.
