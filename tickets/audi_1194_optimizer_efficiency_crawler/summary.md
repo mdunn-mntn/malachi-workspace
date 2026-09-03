@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1194: Airflow/Spark optimization crawler"
-status: in_progress
+status: done
 date: 2026-08-05
 summary: "Scheduled efficiency sweep over succeeded Airflow DAGs (both engines); split from AUDI-1191 debugger"
-result: "in progress — prod DAG live, 4 surfaces (spark|bq|dbx|pod): pod surface LIVE 2026-09-01 (worker-default at 11% of its cpu limit = downsize candidate), BQ attribution verified complete 2026-09-02 (ledger unattributed bucket EMPTY, no labeling campaign needed), dbx 0 rows pending prod_runner grants (paste incl. warehouse Can-use sent to Alyson 2026-09-02); downloader freeze root-caused (gsutil -m forked workers), fix + debugger parse-rate canary on PR #1260, pod point-order fix PR #1259 — review queue; full-corpus sweep 67 pairs / 30,163+ exec-h; hackathon 13 Tasks AUDI-1269..1281 in sprint 8649 under epic AUDI-1290; digest user-verified from screenshots, rank-row alignment reformat queued"
+result: "DONE 2026-09-03 (Jira Done/Done) — prod DAG live across 4 surfaces (spark|bq|dbx|pod), ranked Slack digest, Mode savings ledger. Last sweep: 346 jobs, 41 resolutions. Downloader freeze root-caused past the first wrong answer: gsutil is unusable on Astro task pods in every mode tried (forked -m, threaded -m, plain sequential cp -I all landed ~2 of 194 objects while the identical command moved all 194 from the Mac); rewritten onto the GCS JSON API in #1264, which ended a six-day resolution gap. Databricks cost surface live after the system.billing grant (top spender Generate Graph & Metrics PRODUCTION, $1,579/7d). Mode reads $0 saved because the fangorn spill fix did not hold, not because the ledger broke. Merged: #1259, #1260, #1263, #1264. Follow-on: fangorn spill re-fix leads hackathon epic AUDI-1290 (sprint 8649)."
 question: "Can a scheduled key-free crawler read every succeeded Spark job (Dataproc event logs + Databricks plans/metrics) and emit a ranked, actionable optimization backlog with no manual step?"
 framing_state: locked
 ---

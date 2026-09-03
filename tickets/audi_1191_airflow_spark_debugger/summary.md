@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "Automated Airflow/Spark failure debugger (key-free RCA, Dataproc + Databricks)"
-status: in_progress
+status: done
 date: 2026-07-31
 summary: "Build a key-free, deterministic-first debugger that RCAs a FAILED Airflow task (Dataproc + Databricks) into a ≤500-char BLUF/STAR report. Optimizer half (success-triggered efficiency crawler) SPLIT to AUDI-1194 / airflow_optimizer/ on 2026-08-05."
-result: "in progress — LIVE end to end: prod DAG + Slack delivery + digest (#1251) + failure-trigger listener (#1258) live; 30-day backfill validated (173 failures, 94.7% deterministically root-caused); 12-day full-history diagnosis written 2026-09-01; parse-rate canary built 2026-09-02, riding PR #1260 (the accepted answer to silent log-format drift, no AI key); 15-min rapid KEPT as trigger backstop, hourly stretch after ~a week; OpenAI outage proven ORG-SIDE, durable fix = AUDI-1301 (backlog). Remaining: #1259/#1260 merges, #1233, open triage tickets, Phase 3 auto-fire; hackathon alerting tickets AUDI-1279/1280 in sprint 8649"
+result: "DONE 2026-09-03 (Jira Done/Done) — live end to end: prod DAG, Slack delivery, 17:00 UTC digest, 15-min rapid alerts, failure-trigger listener, parse-rate canary, triage Bugs under AUDI-1054, no API key in the deployment. 30-day backfill validated 173 failures, 94.7% deterministically root-caused. Final wave (#1268, merged 2026-09-03): wrapper failures (Vertex/Dataproc await) now carry the downstream layer's own error text and remedy instead of pointing at it, and the person-triggered filter was removed so manual re-runs are diagnosed too. First live catch: the OpenAI 2.5TB quota wall, root-caused to the file-cleanup sweep seeing only the newest 10,000 files (shopper_graph #306). Open follow-ons tracked elsewhere: ITS-6496 Jira SA var swap, AUDI-1301 (backlog), hackathon AUDI-1279/1280 in sprint 8649."
 question: "Can we stand up a key-free debugger that, on an Airflow task failure, produces a correct ≤500-char BLUF/STAR root-cause report (with file links + confidence) for both Dataproc and Databricks — validated by replaying INC-005 and INC-009?"
 framing_state: locked
 ---
