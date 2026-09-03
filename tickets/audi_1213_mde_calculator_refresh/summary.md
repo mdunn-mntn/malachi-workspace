@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1213: mde calculator refresh"
-status: backlog
-date: 2026-08-20
+status: done
+date: 2026-09-03
 summary: "Refresh the MDE calculator onto advertiser-facing spend and a corrected arm-split, add the 365-day lapsed cohort, host on Mode"
-result: "not started"
+result: "Weekly Mode report over 4,387 advertisers; spend basis and three arm-split defects fixed; VR_STACK 0.595 refuted and removed"
 question: "For the 4,409 advertisers delivering or lapsed within 365 days, what 8-week test budget and MDE does an incrementality test require on advertiser-facing spend with the corrected holdout arm-split, and how far are those from what the shipped calculator returns?"
 framing_state: locked
 ---
