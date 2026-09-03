@@ -5,8 +5,8 @@ status: backlog
 date: 2026-09-03
 summary: "Mode query over JOBS_BY_PROJECT plus the Mode service-account grant, so unowned slot-hours are visible"
 result: "not started"
-question: ""
-framing_state: draft
+question: "Can the cost dashboard show unowned BigQuery slot-hours per day, and what grant does the Mode service account need to read them?"
+framing_state: locked
 ---
 
 # AUDI-1316: Show unowned BigQuery spend on the cost dashboard
@@ -17,13 +17,13 @@ framing_state: draft
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+## 0. Framing
+Locked 2026-09-03 by the dispatcher from the ticket description and the AUDI-1278/1281 records it follows.
+- **Question (the unknown):** Can the cost dashboard show unowned BigQuery slot-hours per day, and what grant does the Mode service account need to read them?
+- **Goal (why / the decision):** AUDI-1278 measured 612 unowned jobs and 1,110 slot-hours a day but its measurement surface is a daily file nobody opens; the dashboard is where cost is actually read. Cost-reduction lever under epic AUDI-1290.
+- **Objective (done-when):** A Mode section on report e81786de8403 showing unowned slot-hours per day by submitter, backed by a merged mntn-devops grant PR; the number falls as the AUDI-1278 labels merge.
+- **Approach (how):** Verify the Mode connection's actual service account and its current denial on dw-main-bronze INFORMATION_SCHEMA.JOBS_BY_PROJECT before writing anything; mirror the spark-optimizer grant pattern in mntn-devops (crossplane ProjectIAMMember, sync-wave 3); draft the Mode SQL in artifacts/ and validate it with bq_run.sh under a date filter and a LIMIT; the Mode report itself is edited in the UI, so this ticket ships a grant PR plus a drafted query, not a Mode PR.
+- **What would change the answer:** If the Mode connection already holds the read, the grant PR is unnecessary and the ticket is just the query. If Mode's principal is a user rather than a service account, the grant target changes and the devops ask has to name it.
 
 ## 1. Introduction
 Follow-on to AUDI-1278, which measured the unowned BigQuery jobs at 612 jobs and 1,110 slot-hours a day and shipped labels for the airflow-ti share. The Mode cost dashboard reads the optimizer's finding ledger only, so the unowned bucket never reaches it; AUDI-1278 chose the daily report as its measurement surface instead. This ticket is that report's dashboard half.

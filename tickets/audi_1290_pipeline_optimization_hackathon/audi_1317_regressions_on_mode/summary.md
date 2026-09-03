@@ -5,8 +5,8 @@ status: backlog
 date: 2026-09-03
 summary: "Write the AUDI-1281 guard's regressions to the finding ledger and render them on Mode"
 result: "not started"
-question: ""
-framing_state: draft
+question: "Can the daily sweep write the regression guard's verdicts to the finding ledger so a doubling of spill or fetch wait renders on the dashboard and in the digest?"
+framing_state: locked
 ---
 
 # AUDI-1317: Publish pipeline regressions to the cost dashboard
@@ -17,13 +17,13 @@ framing_state: draft
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+## 0. Framing
+Locked 2026-09-03 by the dispatcher from the ticket description and the AUDI-1278/1281 records it follows.
+- **Question (the unknown):** Can the daily sweep write the regression guard's verdicts to the finding ledger so a doubling of spill or fetch wait renders on the dashboard and in the digest?
+- **Goal (why / the decision):** AUDI-1281 built the guard and shipped no publisher, so a real regression is still invisible the morning it happens. Reliability lever under epic AUDI-1290, and the sweep-side option needs no new credentials.
+- **Objective (done-when):** Merged airflow-ti change: the sweep runs the guard over every profiled DAG, writes each regression as its own ledger key, and the digest carries a regression line; a seeded regression appears in both and clears when the job recovers.
+- **Approach (how):** Branch stacks on audi-1281-perf-regression-guard (PR #1279, unmerged) and the PR targets that branch, not main, until it lands; reuse the guard's own evaluate() rather than reimplementing thresholds; the new key follows the ledger's existing new/recurring/chronic/resolved replay so a recovered job resolves itself; test with the repo's own suite and a seeded row.
+- **What would change the answer:** If the guard's verdicts prove noisy across the fleet (many DAGs flagged on a normal day), the publisher gates to chronic-only or the ticket reports the noise floor instead of shipping a firehose.
 
 ## 1. Introduction
 Follow-on to AUDI-1281, whose regression guard flags a doubling of disk spill or shuffle-fetch wait against a job's own 30-day median but publishes nowhere. Its plan recorded two options for a live gate and shipped neither; this ticket takes the sweep-side one, which needs no new credentials.
