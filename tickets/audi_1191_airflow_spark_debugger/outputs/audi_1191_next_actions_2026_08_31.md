@@ -237,3 +237,34 @@ Scope: dt=2026-08-27..2026-09-01, all six 0/N was_submitted (08-30/31/09-01 re-v
 - Likely contributors: outage-week cleanups may have deleted nothing while org file access was broken (same "does not have access" class), plus tonight's six concurrent multi-try uploads (~35GiB/day/try).
 - BLOCKED on freeing storage: needs the OpenAI dashboard or API key (pod-only). Ask Alyson to open the project storage page, confirm what holds 2.5TB, and bulk-delete part-*/batch_* files older than today. NO further submit clears until freed. Then re-run ONE day at a time: delete receipts dt=D, clear submit D, wait for its batches, clear fetch D+1.
 - Today's 09:00 UTC scheduled submit will probably also quota-fail; expected, self-heals once storage clears.
+
+## 2026-09-03 ROOT CAUSE of the quota wall: the cleanup can only see the NEWEST 10,000 files
+
+Not "OpenAI is full of junk" and not a broken deploy. `GET /v1/files` caps `limit` at 10,000 and
+defaults to `created_at desc`, so `client.files.list()` returns a newest-first window. The sweep
+deletes only files older than 48h, so once more than 10,000 files are younger than 48h the entire
+page is ineligible and the sweep frees NOTHING - exactly when churn is highest and cleanup matters
+most. Evidence from the task logs:
+
+| run | files found | deleted |
+|---|---|---|
+| 08-26/27 era (normal churn) | 13, 14, 28, 131, 181, 357, 788, 1170 | mostly all |
+| 08-29 .. 09-03 (outage retries + backfill) | 0 every single run | 0 |
+
+Tonight's backfill alone uploaded 3,429+ input files in ~2 hours (visible receipts; retries and
+09-01 not counted), on top of the outage week's retry storm. That is what filled the window.
+
+Secondary finding (benign): the 404 "No such File object" skips are the submit and fetch DAGs'
+cleanups racing - both schedule 0 9 * * *, both list and delete the same ids; the loser 404s.
+
+FIX: shopper_graph PR (branch audi-1191-cleanup-oldest-first) lists `order="asc"` with explicit
+paging and stops at the first file inside the retention window, so the deletable files are always
+on page one regardless of how much recent churn exists.
+
+SHIP ORDER (openai_batch_runner has no argocd; the pod pulls the tag at task start):
+1. Merge the PR.
+2. `gh workflow run deploy_openai_dockerhub_gcp.yml -R SteelHouse/shopper_graph --ref main -f environment=prod -f mntn_cloud=gcp`
+3. Clear `batch_cleanup_1` on any recent submit run to sweep with the new image; expect a large
+   delete count. Repeat until storage is under the cap.
+4. Only then resume the cohort backfill, ONE day at a time: delete receipts dt=D, clear submit D,
+   wait for its batches, clear fetch D+1.
