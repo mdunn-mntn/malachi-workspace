@@ -148,6 +148,11 @@ plan context is spent and discarded, execution starts small.
 | Execute the approved plan | `general-purpose` | inherit session model, medium effort |
 | Adversarial verify against §0 Objective | `general-purpose` | `sonnet`, medium |
 
+**Pass `model` on every agent that is not the execute wave.** An agent with no `opts.model`
+inherits the session model, and on sprint 8649 that spent ~9.5 M subagent tokens and hit the usage
+limit twice mid-run. Plan and execute agents earn the session model; **verify runs on `sonnet`,
+`/capture` and `/pr_gauntlet` run on `haiku`**, and dispatcher work stays inline.
+
 ```javascript
 export const meta = {
   name: 'sprint-execute',

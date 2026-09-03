@@ -84,6 +84,24 @@ DAG/DDL/prod changes, a subagent budget. Agents delegate breadth to `Explore` su
 
 ## Lessons from the first run (sprint 8649, 2026-09-02, 13 hackathon tickets)
 
+- **Every agent inherits the session model unless `opts.model` says otherwise, and that is what
+  burns the session limit.** Sprint 8649 ran plan, execute, verify, gauntlet and capture agents on
+  the session model (Fable): about 9.5 M subagent tokens, and the run hit the usage limit twice,
+  each time killing agents mid-work. The fix, set by the user on 2026-09-03: **captures and
+  gauntlets on `haiku`, verify agents on `sonnet`, only the execute wave on the session model**,
+  and dispatcher work (commits, Jira, PRs, small edits) stays inline instead of becoming an agent.
+  A capture on haiku produced the same routed facts in a fifth of the tokens.
+- **A hung agent looks identical to a slow one until you check the transcript mtime.** The
+  AUDI-1272 execute agent sat with no transcript write for an hour while the rest of the wave
+  finished. `TaskStop` plus a re-dispatch carrying a RESUME note (what is already in the worktree,
+  what to reuse, and hard step bounds) recovered it; the third attempt finished in 28 minutes.
+- **Re-dispatch beats restart.** Every agent lost to a limit or a hang was resumed by pointing a
+  fresh agent at the partial worktree diff and the half-written `summary.md`, with the decisions
+  restated inline. None of the lost work had to be redone.
+- **The gauntlet's auto-fixer needs a dispatcher review.** Twice it applied a wrong finding and
+  reformatted the whole file in the same commit (AUDI-1269, AUDI-1278). Read the fix diff before
+  pushing: revert the fix, keep the finding's answer in the PR description if the finding was wrong.
+
 - **The plan wave's scope line did not hold.** "Verify the plan is runnable, do not produce the answer"
   was overrun by most plan agents: they wrote §4 findings and computed the values the execute wave was
   meant to derive (AUDI-1274's plan agent, for one, downloaded the event logs, ran the AQE probe and
