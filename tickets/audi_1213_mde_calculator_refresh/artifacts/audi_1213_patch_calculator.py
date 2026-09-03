@@ -144,6 +144,35 @@ def main():
         "imps/IP input default",
     )
 
+    html = sub(
+        html,
+        '<span class="hd-ref" id="hd-data-ref">INCREMENTALITY \u00b7 LEWIS\u2013RAO \u00b7 TI-884 \u00b7 \u2014 advertisers</span>',
+        '<span class="hd-ref" id="hd-data-ref">INCREMENTALITY \u00b7 LEWIS\u2013RAO</span>',
+        "header placeholder without ticket id",
+    )
+
+    html = sub(
+        html,
+        "if (ref) ref.textContent = `INCREMENTALITY \u00b7 LEWIS\u2013RAO \u00b7 TI-884 \u00b7 ${window.ADVERTISERS.length} advertisers \u00b7 ${window.DATA_PULL_DATE}`;",
+        "if (ref) ref.textContent = `INCREMENTALITY \u00b7 LEWIS\u2013RAO \u00b7 ${window.ADVERTISERS.length.toLocaleString()} advertisers \u00b7 LAST RAN ${window.DATA_PULL_DATE}`;",
+        "header shows advertiser count and last-ran date",
+    )
+
+    html = sub(
+        html,
+        "Source: TI-884 / Lewis-Rao (2015 QJE)",
+        "Source: AUDI-884 / Lewis-Rao (2015 QJE)",
+        "footer ticket id",
+    )
+
+    html = sub(
+        html,
+        "  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target \u00b7 ${W} week${W!==1?'s':''}`;",
+        "  const vrLabel = S.vrMode === 'stack' ? 'full stack' : 'no variance reduction';\n"
+        "  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target \u00b7 ${W} week${W!==1?'s':''} \u00b7 ${vrLabel}`;",
+        "budget tile names the active variance-reduction mode",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:

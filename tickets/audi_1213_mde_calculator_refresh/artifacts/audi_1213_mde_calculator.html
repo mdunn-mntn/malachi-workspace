@@ -517,7 +517,7 @@
     <span class="hd-mntn">MNTN</span>
     <h1 class="hd-title">mde calculator · per-advertiser prefill</h1>
     <div class="hd-sep"></div>
-    <span class="hd-ref" id="hd-data-ref">INCREMENTALITY · LEWIS–RAO · TI-884 · — advertisers</span>
+    <span class="hd-ref" id="hd-data-ref">INCREMENTALITY · LEWIS–RAO</span>
   </header>
 
   <!-- ── WORKSPACE ── -->
@@ -719,7 +719,7 @@
         <canvas id="chart"></canvas>
       </div>
       <div class="stack-note">
-        Stack: CUPED(0.934) × ghost-ad(0.75) × stratified(0.85) = 0.595 · Source: TI-884 / Lewis-Rao (2015 QJE)
+        Stack: CUPED(0.934) × ghost-ad(0.75) × stratified(0.85) = 0.595 · Source: AUDI-884 / Lewis-Rao (2015 QJE)
       </div>
 
     </main>
@@ -1066,7 +1066,8 @@ function update() {
   } else {
     monthlyEl.style.display = 'none';
   }
-  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''}`;
+  const vrLabel = S.vrMode === 'stack' ? 'full stack' : 'no variance reduction';
+  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''} · ${vrLabel}`;
 
   document.getElementById('sc-spend').textContent     = fmtBudget(raw.totalSpend);
   document.getElementById('sc-spend-s').textContent   = `${W} wk · ${fmtBudget(B)}/mo`;
@@ -1248,7 +1249,7 @@ setOutcome = function(o) {
 
 function initAdvertiserPicker() {
   const ref = document.getElementById('hd-data-ref');
-  if (ref) ref.textContent = `INCREMENTALITY · LEWIS–RAO · TI-884 · ${window.ADVERTISERS.length} advertisers · ${window.DATA_PULL_DATE}`;
+  if (ref) ref.textContent = `INCREMENTALITY · LEWIS–RAO · ${window.ADVERTISERS.length.toLocaleString()} advertisers · LAST RAN ${window.DATA_PULL_DATE}`;
 
   const search  = document.getElementById('adv-search');
   const results = document.getElementById('adv-results');
