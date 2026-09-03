@@ -150,6 +150,8 @@ Columns: `dag_id, file, team_config, alert_route, tags, watched_at_main, watched
 - `dag_run_duration_watchdog.py` references only `TGT` and `TPA_EXPORT` (the plan said "every team's watchdog channel"); the resolver handles it the same way either way (binding wins).
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/airflow-ti/pull/1274 (opened 2026-09-03 PT; medium tier, 3 findings refuted, 0 confirmed)
+
 Three files on branch `audi-1280-debugger-tag-coverage-ci` (worktree `/private/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/67074af2-5859-4b02-9a41-1fb172083596/scratchpad/wt/audi_1280`), uncommitted, ready for the gauntlet and the PR (dispatcher's step):
 1. `include/airflow_debugger/daily.py`: `"Targeting"` appended to `PAGING_TAGS` (one line). Makes 25 alerting DAGs visible to the daily and rapid sweeps (22 TGT + 3 TARGETING); candidate DAGs per sweep rise from 35 to 60 of 75 (live tag sets intersected with the old and the new list; the plan's "23" counted only the two server-side tag filters `tpa` + `Machine Learning`).
 2. `tests/dags/test_alerting_tag_coverage.py` (454 lines, stdlib + pytest, no Airflow import): the static resolver (`resolve_dag_files(repo_root) -> list[DagFile]`, also imported by the ticket's audit script) and five tests: `test_every_dag_file_parses`, `test_watch_list_and_configs_are_readable`, `test_every_alerting_dag_carries_a_watched_tag` (parametrized per file, ids = repo-relative path), `test_alerting_dag_tags_are_static` (parametrized), `test_every_alerting_team_config_in_use_is_watched`. `EXCLUDED_CONFIGS = {"ATTRIBUTION": <reason>}`, `ALLOWED_DYNAMIC = {}`.
