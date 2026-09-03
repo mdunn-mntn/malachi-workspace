@@ -1,0 +1,83 @@
+[00:00] right it doesn't matter that's what i was thinking is the spend the same so if the spend is less so
+[00:07] meaning you hit more people yeah but less of them are incremental yeah it might be more valuable
+[00:15] but if the spend is roughly the same yeah and so okay we're on the same page there because
+[00:23] the question here
+[00:25] um yeah so what's the other thing i was going to read here
+[00:34] yeah so like exactly what we're talking about high intent households visit more often i even
+[00:39] read this yet high intent households visit more often anyways minimax reach visit about a quarter
+[00:43] as often right all the bands showed roughly the same percentage left so matt reasonably concluded
+[00:48] your name's in here uh low intent inventory works fine but the same percentage of a much
+[00:54] smaller number is still a much smaller yeah exactly so let's see counting actual extra
+[00:59] visits per household high intent wins clearly and then the 37 cases where one campaign ran
+[01:04] into both the lower band lost almost every time so peak performance is the real exception
+[01:09] yeah when i was sorting when i was looking at the most recent example i have from the experiment
+[01:18] which is three advertisers was noticing like the high intent issue there's a high intent issue
+[01:27] with like the ghost bidding fraction the holdout size um so it's hard to infer something from there
+[01:35] but yeah the mid-intent did well um and then with this yeah this is always a tricky thing is
+[01:42] most of the campaigns have the largest chunk of their spend in high intent that's right you're
+[01:51] naturally going to get and high intent has a higher baseline visit rate typically than the
+[01:58] other ones so then it is harder to get a larger percentage in the high intent even though you are
+[02:03] getting more absolute visits and so that's where like the cost per incremental visit that
+[02:10] Kersa wants comes in, that's a tricky calculation to me.
+[02:17] Yeah.
+[02:18] That's probably the one that makes the most sense.
+[02:21] Yeah.
+[02:21] It is that cost per incremental visit makes the most sense as the thing to optimize for.
+[02:28] So you go where that's the best.
+[02:31] But it is a tricky thing to calculate to me.
+[02:35] So I didn't pay too close attention to that specific metric.
+[02:40] Okay.
+[02:42] And then there was the audience size is greater than a million.
+[02:48] Yeah.
+[02:50] Yeah.
+[02:51] I'm just trying to think.
+[02:53] That was, there was a tab that kind of showed that like the audience sizes and the ones
+[02:58] that were lower than a million had a, had a lower lift percentage, but they're also
+[03:03] harder to measure on.
+[03:07] Yeah.
+[03:07] I think it's just better to have a larger audience for incrementality purposes.
+[03:15] Yeah.
+[03:16] Yeah, I agree.
+[03:25] Should I rebuild the workbook on the incremental visits per household alongside relative lift?
+[03:33] Incremental visits per household.
+[03:34] That's basically what you're getting, though, because the tables that I have are all deduplicated to the IP to the household.
+[03:47] Unless you mean household, like actual household, like identity graph household.
+[03:53] Because they're deduped down.
+[03:57] So it's just like, did we bid on this IP at all over this time or did we not?
+[04:04] And that kind of puts them into the bidding pool.
+[04:09] Okay.
+[04:10] And it's deduplicated down. So, then, like, the cost per incremental visit, I guess
+[04:21] I'd have to look at exactly the query that you used. Because I think the way that we've
+[04:25] been looking at it is you take that total spend divided it's simple, yeah, the total
+[04:32] spend divided by the incremental visits that we calculated. And so, if you have that breakdown
+[04:42] by all the intent groups, I guess that is what it is.
+[04:47] Okay. Well, that makes sense.
+[04:50] Ryan has been doing a lot of this in his queries as well. So, it's probably a good
+[04:55] additional context or reference for anything that you're doing is those same lift ghost bid
+[05:07] big query tables he has ones that are underscore experiments and uh he's been adding additional
+[05:14] logic there to bring in spend and stuff like that so okay they're not they're not like 100
+[05:24] live and useful, but the join logic and the calculations might be useful.
+[05:31] Okay. Yeah. Well, it looks like Curso wants to meet. Yeah. So we can, we can break and then
+[05:38] join that. Okay. But I just wanted to run that by you before we talked to Curso. I was like, am I
+[05:43] crazy? But now it makes sense. I didn't actually know why they were, that makes sense that that's
+[05:48] why they care so much about the cpiv um right yeah because that's what they would that's what
+[05:54] they would optimize towards um is that what we're going to build our models towards when we actually
+[05:59] eventually have like a model the model in a sense that is what it's doing it has no idea what the
+[06:07] cpms are but for the most part cpm is flat within an audience right like for a given advertiser we
+[06:17] just have a flat CPM, right?
+[06:20] So
+[06:20] it all depends
+[06:23] on how often you're
+[06:26] serving impressions
+[06:27] to the same household.
+[06:29] That makes sense.
+[06:31] Which is a tricky thing. That's the other side.
+[06:33] I'm saying we need to have
+[06:35] higher frequencies, like
+[06:37] hit them more often, but that is more cost
+[06:39] than so.
+[06:41] Okay.
+[06:42] Alright. Well, I guess
+[06:45] I'll see you in 12 minutes and I'll jump
+[06:47] in there and yeah we can discuss more with carissa to see her thoughts on this okay all right okay
+[06:52] thanks matt bye

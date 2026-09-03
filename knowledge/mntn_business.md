@@ -1,5 +1,25 @@
 # MNTN Business Knowledge
 
+## ⭐ Cost per incremental visit is the metric the business optimizes (Matt Brorby, 2026-09-03)
+
+**"Cost per incremental visit makes the most sense as the thing to optimize for. So you go where that's the
+best."** This is why Kirsa Haenebalcke asks for CPIV on every tab of every incrementality deliverable, and it is
+what a future bidding model would be pointed at. Lift percentage is diagnostic; CPIV is the objective.
+
+**Why it reduces to frequency.** CPM is roughly flat within a given advertiser's audience, so cost is driven
+almost entirely by how many impressions land on the same household. CPIV therefore trades off against
+frequency directly: hitting a household more often raises the chance of an incremental visit and raises the
+cost in step. Matt's framing: "I'm saying we need to have higher frequencies, hit them more often, but that is
+more cost."
+
+**Practical consequences.**
+- A deliverable that ranks attributes on lift alone has not answered the question the business is asking.
+- CPIV is also the tiebreak when relative and absolute lift disagree (see `experimentation.md` §"Relative lift
+  hides the baseline") — use the **median per campaign**, not a pooled spend-weighted figure.
+- Matt considers the calculation itself delicate ("that's a tricky calculation to me... I didn't pay too close
+  attention to that specific metric"), so **a CPIV number is not validated just because he has seen the sheet**.
+  Walk him through the query before treating his review as sign-off.
+
 ## Security policy: no local Slack apps / no local-env API keys (2026-06-10)
 MNTN security (Robin Fox) **no longer allows locally-hosted Slack apps or API keys held in local env files.** Personal/self-hosted bots with tokens on local machines (e.g. a Raspberry Pi) are disallowed and will be disabled and deleted. Secrets are being rotated into **SOPS** (encrypted secrets in the ArgoCD repo), via a Basecamp tool that PRs the re-encrypted secret (KMS Decrypt is disabled for individuals; Vault is optional but unsupported by DevOps). The TI Slack knowledge-extraction bot was decommissioned under this policy. (via Robin Fox + Harvey Yau, 2026-06-10)
 

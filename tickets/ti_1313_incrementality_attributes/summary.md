@@ -848,3 +848,76 @@ The workbook is not wrong, it is under-specified. Three changes would prevent th
    gap.
 
 Pending the user's call, because the workbook is in review with two stakeholders.
+
+## 14. Matt call, 2026-09-03 (transcript `meetings/ti_1313_01_matt_attribute_review_2026_09_03.txt`)
+
+Six-minute call to walk him through §13 before a follow-on with Kirsa. He agreed with the correction and
+supplied the mechanism himself before I finished explaining it.
+
+### 14a. He confirmed the intent-band reversal, unprompted
+
+> "Most of the campaigns have the largest chunk of their spend in high intent... and high intent has a higher
+> baseline visit rate typically than the other ones, so then it is harder to get a larger percentage in the
+> high intent even though you are getting more absolute visits."
+
+That is exactly the §13a defect stated from the other direction. **Takeaway 3 is settled**: he is not defending
+it, and Peak Performance as the exception was accepted without argument.
+
+### 14b. Cost per incremental visit is the objective, and that reframes the whole deliverable
+
+> "It is that cost per incremental visit makes the most sense as the thing to optimize for. So you go where
+> that's the best."
+
+This answers a question that had been open since Kirsa's review round: **why she asked for CPIV on every tab.**
+It is not a nice-to-have column, it is the metric the business optimizes and what a future bidding model would
+be pointed at. Lift percentage is diagnostic; CPIV is the objective. Routed to `mntn_business.md`.
+
+**But he has not validated our CPIV numbers**: "that's a tricky calculation to me... I didn't pay too close
+attention to that specific metric." He has seen the sheet; that is not sign-off. Walk him through the query.
+
+### 14c. The rebuild I proposed is mostly unnecessary
+
+I offered to rebuild on "incremental visits per household". Matt: **that is already what the tables are.**
+
+> "The tables that I have are all deduplicated to the IP to the household... it's just like, did we bid on this
+> IP at all over this time or did we not."
+
+So `n_treatment`/`n_holdout` are deduped IPs over the window, and `abs_itt` is *already* incremental visits per
+bid-on household. **The workbook has the column and does not display it.** The change is to surface `abs_itt`
+and the baseline rate beside `rel_itt`, not to recompute anything. He also drew the distinction explicitly:
+"household" here is the deduped IP, **not** an identity-graph household. Routed to `data_catalog.md` (16).
+
+### 14d. New lead: Ryan Kleck's `_experiments` tables carry spend
+
+> "Those same lift ghost bid BigQuery tables, he has ones that are underscore experiments, and he's been adding
+> additional logic there to bring in spend and stuff like that... they're not 100% live and useful, but the
+> join logic and the calculations might be useful."
+
+This bears directly on the §12 problem (no spend below campaign grain, forcing the bid-share allocation).
+**Check these before hand-rolling another allocation.** Routed to `data_catalog.md` (17).
+
+### 14e. He softened takeaway 4 himself, to a measurability claim
+
+> "The ones that were lower than a million had a lower lift percentage, but they're also harder to measure on...
+> I think it's just better to have a larger audience for incrementality purposes."
+
+That is a different and defensible claim from the original takeaway: small audiences are noisier to measure,
+not necessarily worse performing. It matches §13c (no size gradient, flat CPIV across quartiles) rather than
+contradicting it. **No disagreement outstanding on audience size.**
+
+### 14f. New caveat from him on the High Intent band
+
+> "The most recent example I have from the experiment, which is three advertisers... there's a high intent issue
+> with like the ghost bidding fraction, the holdout size, so it's hard to infer something from there."
+
+A separate three-advertiser experiment shows a ghost-fraction / holdout-size problem specific to High Intent.
+**This is a flag on the band my own analysis says wins**, so it needs following up before the intent-band
+finding is presented as settled. Open item.
+
+### 14g. Where CPIV meets the frequency question
+
+CPM is roughly flat within an advertiser's audience, so cost is driven by how often the same household is
+served. CPIV therefore trades directly against frequency, which is why §13's frequency finding and the CPIV
+objective are the same question: "we need to have higher frequencies, hit them more often, but that is more
+cost." Our data says CPIV worsens monotonically as frequency rises ($12.92 to $36.14 across quartiles), which
+is the empirical version of his tradeoff and argues against pushing frequency up.
