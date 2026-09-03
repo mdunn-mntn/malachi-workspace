@@ -209,6 +209,8 @@ Every hour ran (168 = 7 x 24) and no aug_log run in the window was under 20 DCU-
 - `ruff check` (0.16.1) on the model file: 7 findings (F401, I001, DTZ007 x2, BLE001 x3), byte-identical on the HEAD version of the file, none on L72.
 
 ## 5. Solution
+**No PR by design.** The spec'd change breaches this ticket's own kill criterion: about 17 DCU-hours a run spent to save 0.03 to 0.13 executor-hours of fetch wait. Branch audi-1271-initial-executors-preverified holds the diff locally if the decision is revisited.
+
 - **Code:** one decorator line in `aug_log_ip_vertical_id_hourly.py` (initialExecutors 100 -> 200) plus the regenerated `dags/model_task_config.json`, in worktree `wt/audi_1271`, uncommitted. PR body ready at `artifacts/audi_1271_pr_body.md` (lint `--kind pr` clean), reviewer Ryan Kleck.
 - **Not shipped:** site_network_hourly (user decision 2). No `executorIdleTimeout` (decision 1 rule, §4.3).
 - **User decision (2026-09-03, received):** close without merging. The finding is measured and rejected: the spec raises DCU-h by ~1.7 executor-hours (~17 DCU-h, +12% of a mean run) per run while removing 0.03-0.13 executor-hours of stage 11 wait, which violates §0's kill criterion by 12-56x at the medians. The real cost driver (§4.4, §8) is the driver-side `pip install tldextract` prologue, which is a durable fix candidate but outside this ticket's scope.
