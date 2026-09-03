@@ -698,6 +698,7 @@ traffic handling. IPs from iCloud relay require special treatment for geo-target
 ### BigQuery Behavioral Gotchas
 - **GENERATE_UUID() is non-deterministic across CTE references (TI-650, 2026-03-19):** BQ CTEs are NOT guaranteed to be materialized. If a CTE uses `GENERATE_UUID()` and is referenced in multiple places (e.g., 3 UNION ALL blocks), each reference re-evaluates the function and gets a DIFFERENT UUID. Fix: use a deterministic hash like `TO_HEX(MD5(key_column))` or `FORMAT('%s-...', SUBSTR(TO_HEX(MD5(key)), ...))` when the UUID must be stable across references.
 - **Display impression timing gap (TI-650, 2026-03-19):** Display impressions can be served 2-4 weeks before the user visits the site and triggers the VV. When tracing S3 VVs back to their impression via `ad_served_id`, a ±7d window around the VV time misses 35% of display impressions. CTV is same-day. **Use ±30d for the 5-source trace when display campaigns are in scope.** Verified on 24+ advertisers.
+- **Spark-BigQuery connector query reads carry NO job labels and look like anonymous jobs in `INFORMATION_SCHEMA.JOBS_BY_PROJECT` (AUDI-1278, verified 2026-09-02/03):** a `spark.read.format("bigquery").option("viewsEnabled", "true").option("query", sql)` read submits its own BigQuery query job (the connector does, not the Airflow operator), so the job id is a bare UUID, the destination is an anonymous dataset (`_54eb8ea0...`; `materializationDataset` is deprecated since connector 0.42.1) and `labels` is empty. Label them from Spark conf: `spark.datasource.bigquery.bigQueryJobLabel.<key>=<value>` (`SparkBigQueryConfig.parseBigQueryLabels` strips the `bigQueryJobLabel.` prefix over the global `spark.datasource.bigquery.*` options; per-read `.option()` keys override) puts `<key>=<value>` on every connector-initiated query and load job. Python-client jobs are the same story: `google.cloud.bigquery.Client.query()` sends no labels unless `QueryJobConfig(labels=...)` is passed, and `BigQueryHook.get_df(sql, configuration={"labels": {...}})` is the pandas_gbq form (the hook forwards kwargs to `read_gbq` untouched; pandas_gbq 0.34.1 builds the job with `QueryJobConfig.from_api_repr`, top-level `labels` honoured). In dw-main-bronze the unlabeled fleet-SA population over 2026-08-26..09-01 was 612 jobs/day, 1,109.9 slot-h/day, 96.9% of it four `bos__spend` Spark scripts in airflow-camperbid. Detail: memory `reference_bq_job_attribution`.
 
 ### Retention / TTL
 | Table | Retention |
@@ -2157,6 +2158,8 @@ df = (
 Full pattern + alternative (Dustin's `temporaryGcsBucket=dataproc-temp-us-central1-754673906299-me0b3bsh`) documented in `.claude/databricks_setup.md`.
 
 **Other silver tables — same pattern works** for `clickpass_log` and `guid_log`. `guid_log` is also archived to `gs://mntn-data-archive-prod/guid_log/` (per Victor) — for high-volume reads, prefer GCS direct over the BQ connector.
+
+**Job attribution (AUDI-1278, 2026-09-03):** every connector `query` / `load` read submits its own BigQuery job with no labels, so it is invisible to label-based cost attribution (the optimizer's `airflow-dag` grouping). Set `spark.datasource.bigquery.bigQueryJobLabel.<key>=<value>` in Spark conf (or `.option("bigQueryJobLabel.<key>", value)` per read) to label them. See § BigQuery Behavioral Gotchas and memory `reference_bq_job_attribution`.
 
 ---
 

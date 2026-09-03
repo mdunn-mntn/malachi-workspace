@@ -4,7 +4,7 @@ title: "AUDI-1278: Label python-client BigQuery jobs for cost attribution"
 status: in_progress
 date: 2026-09-02
 summary: "Add airflow-dag/airflow-task labels to python-client BQ submits so every job is attributed"
-result: "airflow-ti PR ready (labels at 8 python-client call sites, 147 jobs/day); 97% of the 1,110 unattributed slot-h/day are camperbid bos__spend Spark-BigQuery-connector reads, two-property hand-off drafted for the owners"
+result: "airflow-ti PR #1278 open (labels at 8 python-client call sites, 147 jobs/day); 97% of the 1,110 unattributed slot-h/day are camperbid bos__spend Spark-BigQuery-connector reads, two-property hand-off drafted for the owners"
 question: "Which submitters produce the roughly 600 unlabeled BigQuery jobs a day (1,185 slot-hours), and does adding airflow-dag and airflow-task labels in the python client attribute them?"
 framing_state: locked
 ---
@@ -40,7 +40,7 @@ Jira description (verbatim, links to airflow-ti main):
 **Done-when:** the unattributed share drops on the [optimizer BQ report](https://app.mode.com/mntn/reports/e81786de8403).
 
 ## 3. Plan of Action
-Planning wave 2026-09-02 (plan only, nothing executed beyond read-only verification). Another agent executes this in a per-ticket worktree of airflow-ti on branch `AUDI-1278`; the dispatcher commits, runs the gauntlet and opens the PR.
+Planning wave 2026-09-02 (plan only, nothing executed beyond read-only verification). Another agent executes this in a per-ticket worktree of airflow-ti on branch `AUDI-1278`; the dispatcher commits, runs the gauntlet and opens the PR. *(Done 2026-09-03 PT: branch `audi-1278-bq-job-labels`, PR #1278 open, §5.)*
 
 ### 3.0 What the planning wave established (verified, cite these, do not re-derive)
 - **The "unattributed" figure is fleet-service-account jobs without labels, not outsiders.** `include/spark_optimizer/bq_profile.py` (`PROFILE_SQL`) reads `dw-main-bronze.region-us-central1.INFORMATION_SCHEMA.JOBS_BY_PROJECT` filtered to `user_email IN (airflow-ti-prod@, airflow-camperbid-prod@)` and buckets `airflow-dag=''` as `unattributed`. So every one of those jobs was submitted by one of our two Airflow deployments. The §0 hypothesis "jobs outside the airflow-launched set" is refuted.
@@ -153,7 +153,9 @@ Per submitter: camperbid 3,260 jobs / 7,741.8 slot-h / 429.74 TiB (466 jobs/day,
 ## 5. Solution
 **PR:** https://github.com/SteelHouse/airflow-ti/pull/1278 (opened 2026-09-03 PT; medium tier: 6 findings, 3 refuted, 1 confirmed style item (a docstring) whose auto-fix was dropped together with an unrelated 22-file reformat; the PR's own docstrings are already one line)
 
-**airflow-ti branch `audi-1278-bq-job-labels`** (worktree of main `825b07e`; the dispatcher commits, runs the gauntlet and opens the PR with `artifacts/audi_1278_pr_body.md`, linted `--kind pr`):
+**Jira:** completion comment posted 2026-09-03 PT (`artifacts/audi_1278_result_comment.txt`), status In Progress (PR open, camperbid hand-off unsent). Ticket folder committed (`0c998963`, `ed604ab8`).
+
+**airflow-ti branch `audi-1278-bq-job-labels`** (worktree of main `825b07e`; committed by the dispatcher 2026-09-03 PT, gauntlet passed, PR #1278 opened with `artifacts/audi_1278_pr_body.md`, linted `--kind pr`):
 - `include/util/bq_job_labels.py` (new): `airflow_job_labels(context=None) -> dict[str, str]`; reads `get_current_context()` when no context is passed, accepts either `ti` or `task_instance` in the context, returns `{"airflow-dag": dag_id.lower(), "airflow-task": task_id.lower().replace(".", "-")}` when both match `^[\w-]{0,63}$`, else `{}`; `{}` outside a task.
 - `dags/attribution/url_pattern_pipeline.py`: `run_query_to_destination(..., labels=None)` and `iter_destination_rows(..., labels=None)`; `labels = airflow_job_labels()` resolved inside the body at run time; `labels=labels` on all three `QueryJobConfig` constructions (script branch, destination branch, paging query). Callers in the two DAG files untouched.
 - `dags/attribution/tmobile_blocked_ip_workflow.py`, `tmobile_blocked_guids_workflow.py`: `client.query(ADVERTISER_QUERY, job_config=bigquery.QueryJobConfig(labels=airflow_job_labels()), project=..., location=...)`, `from google.cloud import bigquery` added.
@@ -164,7 +166,7 @@ Per submitter: camperbid 3,260 jobs / 7,741.8 slot-h / 429.74 TiB (466 jobs/day,
 
 **Camperbid hand-off (decision D2, no PR by us):** `artifacts/audi_1278_camperbid_handoff.md` = Slack send-draft (two numbered asks) + the exact two-line diff for `run_dataproc_serverless` `runtime_config.properties` and `DataprocConfig.asJson` `pyspark_job.properties` (`spark.datasource.bigquery.bigQueryJobLabel.airflow-dag = {{ dag.dag_id | lower }}`, `...airflow-task = {{ task.task_id | lower | replace('.', '-') }}`), what it covers, the residual python-client sites (`bvp_data_refresh_v7.py::load_bq`, the autotof kedro job in olympus, the hhst merge and LOAD jobs), the dev validation query, and the expected `bos__spend` jump on the report.
 
-**Deliverables:** `outputs/audi_1278_unlabeled_jobs_by_submitter.csv`; `outputs/audi_1278_unlabeled_bq_jobs.xlsx` and `My Drive/Tickets/AUDI-1278 BQ Job Labels/AUDI-1278 Unlabeled BigQuery Jobs.xlsx` (tabs: Unlabeled jobs by pipeline, Query fingerprints, Daily totals, Labels after the fix, Read me, Queries, Method & caveats; DRAFT); `artifacts/audi_1278_result_comment.txt` (Jira completion comment, linted).
+**Deliverables:** `outputs/audi_1278_unlabeled_jobs_by_submitter.csv`; `outputs/audi_1278_unlabeled_bq_jobs.xlsx` and `My Drive/Tickets/AUDI-1278 BQ Job Labels/AUDI-1278 Unlabeled BigQuery Jobs.xlsx` (tabs: Unlabeled jobs by pipeline, Query fingerprints, Daily totals, Labels after the fix, Read me, Queries, Method & caveats; DRAFT); `artifacts/audi_1278_result_comment.txt` (Jira completion comment, linted; posted 2026-09-03 PT).
 
 **Measurement surface (D1 = option C):** before = §4.1 baseline; after = the same daily report re-read 7 days after each merge (step 7, still open). No Mode change; option A (a Mode query over JOBS_BY_PROJECT, needs `bigquery.resourceViewer` for `mode-analytics@dw-main-bronze` via mntn-devops) recorded in §8.
 
@@ -177,13 +179,20 @@ Per submitter: camperbid 3,260 jobs / 7,741.8 slot-h / 429.74 TiB (466 jobs/day,
   **A:** By design (§3.0): `bq_profile.reports()` attaches no finding to the unattributed report and `ledger.record()` skips finding-less reports. The bucket lives only in the daily GCS report, which is therefore the before/after surface.
 - **Q:** Will `bigQueryJobLabel.<key>` from Spark conf work on the Dataproc Serverless 2.3 connector?
   **A:** The parsing is in `SparkBigQueryConfig.parseBigQueryLabels` (prefix-strip over global Spark-conf options + per-read options), present on master and the 0.42 line the runtime bundles; the owner's one dev batch is the remaining runtime confirmation.
+- **Q:** Is the daily optimizer report a valid before/after surface for the unattributed share?
+  **A:** Yes. Its `unattributed` row equals the per-day `JOBS_BY_PROJECT` population to within rounding on all five overlapping days (08-28..09-01), and both read the same fleet-SA filter. Its limit is its start date: the report exists only from 2026-08-28, so the report-side baseline is 5 days (606 jobs/day, 1,104.7 slot-h/day) against the 7-day query-side 612 / 1,109.9. Mode cannot be the surface without an IAM grant (§8.3).
 
 ## 7. Data Documentation Updates
-None written by this agent (knowledge/ is off-limits in the execute wave). Facts handed to the dispatcher for `/capture`, in addition to §3.4:
-- `data_knowledge.md`: Spark-BigQuery connector query reads (`viewsEnabled` + `query`) show in JOBS_BY_PROJECT as UUID-id SELECT jobs with an anonymous-dataset destination and no labels; `spark.datasource.bigquery.bigQueryJobLabel.<key>=<value>` in Spark conf labels every connector job (`SparkBigQueryConfig.parseBigQueryLabels`).
-- `reference_airflow_ti.md`: `tests/test_url_pattern_pipeline.py` `REPO_ROOT = parents[2]` is one level too high, so its two DAG-file AST tests fail on main with FileNotFoundError; root `tests/` is not in CI; `include/util/bq_job_labels.py::airflow_job_labels()` is the helper for python-client BQ submits.
-- `reference_bq_job_attribution.md`: `BigQueryHook.get_df(sql, configuration={"labels": {...}})` labels pandas_gbq jobs; the three `google_cloud_default` `get_df` DAGs do not bill in dw-main-bronze.
-- `project_airflow_optimizer.md`: baseline unattributed 606 jobs / 1,104.7 slot-h per day (08-28..09-01 reports), of which bos__spend connector reads are 1,075 slot-h/day; the daily report starts 2026-08-28.
+Written by `/capture` 2026-09-03 PT (the execute wave could not write `knowledge/`; the §3.4 and §7 hand-off lists are all landed):
+- `knowledge/data_knowledge.md` § BigQuery Behavioral Gotchas: connector query reads show as UUID-id SELECT jobs with an anonymous-dataset destination and no labels; `spark.datasource.bigquery.bigQueryJobLabel.<key>` labels them; the python-client / pandas_gbq label forms. § Spark BQ connector: attribution cross-reference.
+- `knowledge/memory/reference_bq_job_attribution.md`: 2026-09-02/03 block (bucket composition and baseline, connector label mechanism and the camperbid two-property diff, `get_df(configuration={"labels": ...})`, the `google_cloud_default` DAGs billing elsewhere, the residual camperbid jobs, Mode not showing the bucket); the "python client carries NO labels" line annotated with #1278.
+- `knowledge/memory/project_airflow_optimizer.md`: the 2026-08-31 and 2026-09-02 "jobs outside the airflow-launched set" lines annotated as refuted (appended, not overwritten); new 2026-09-03 AUDI-1278 section with the composition, the D1/D2/D3 decisions, the baseline and the expected after-merge shape.
+- `knowledge/memory/reference_airflow_ti.md`: new section (`bq_job_labels.py` helper, the `REPO_ROOT = parents[2]` failure mode, root `tests/` not in CI, no ruff config / no pre-commit, the three DAGs billing outside dw-main-bronze).
+- `knowledge/memory/reference_mode_api.md`: the BQ cost table reads ledger `surface='bq'` only; option A's IAM need.
+- `knowledge/decisions/0007_unattributed_bq_measured_on_daily_report.md`: D1 (daily report as the measurement surface), D2 (camperbid Spark properties via owner hand-off), D3 (labels on the `get_df` DAGs anyway).
+- `knowledge/glossary.md`: "Unattributed BQ jobs (optimizer)" row.
+- `improvements_backlog.md`: IMP-105 (`REPO_ROOT` test path fix).
+- `self_review/self_review_2.md`: AUDI-1278 entry.
 
 ## 8. Open Items / Follow-ups
 1. **Send the camperbid hand-off** (`artifacts/audi_1278_camperbid_handoff.md`, Slack draft at the top) to @SteelHouse/pacing and @SteelHouse/performance-ml; owner runs one `bos__spend` `tables.*.create` on dev and the JOBS_BY_PROJECT check for `airflow-camperbid-dev@`. Until it merges, the report's unattributed row only drops by ~147 jobs and ~4 slot-h a day.
@@ -191,7 +200,7 @@ None written by this agent (knowledge/ is off-limits in the execute wave). Facts
 3. **Measurement option A (not taken, D1 = C):** a Mode query "BigQuery jobs by attribution" over `dw-main-bronze.region-us-central1.INFORMATION_SCHEMA.JOBS_BY_PROJECT` filtered to the two fleet SAs would put the unattributed share on the dashboard; needs `bigquery.jobs.listAll` (`roles/bigquery.resourceViewer`) for `mode-analytics@dw-main-bronze` via a mntn-devops PR (`iam_bronze_extras.tf` line 158 grants only the layer reader role today).
 4. **Which project do the three `google_cloud_default` `get_df` DAGs bill to?** Zero jobs under `airflow-ti-prod@` in dw-main-bronze in 7 days; check the connection's `project` extra on the airflow-ti prod deployment. If it is not dw-main-bronze the optimizer never sees them regardless of labels.
 5. **Residual camperbid python-client jobs (~24/day, <1 slot-h/day) stay unattributed after the Spark-property change:** `spark_scripts/initial_bvp_V7/bvp_data_refresh_v7.py::load_bq`, the autotof kedro job (SQL in olympus), the `external.camperbid_prod__hhst_v#__campaign_bucket` MERGE (file not found) and 7 LOAD jobs/day (source not found). Listed in the hand-off for the owners.
-6. **`tests/test_url_pattern_pipeline.py` `REPO_ROOT = parents[2]`** should be `parents[1]`; a one-line fix plus whatever the AST assertions then reveal, out of scope for this PR. Candidate `improvements_backlog.md` row.
+6. **`tests/test_url_pattern_pipeline.py` `REPO_ROOT = parents[2]`** should be `parents[1]`; a one-line fix plus whatever the AST assertions then reveal, out of scope for this PR. Logged as `improvements_backlog.md` IMP-105 (2026-09-03).
 7. **Dev-deployment validation of the airflow-ti PR** was not run (agent may not deploy or trigger); first post-merge `optimizer_bq_<date>.md` shows `url_pattern_identification` / `dlv_pattern_identification` / `tmobile_blocked_*_export_dataproc` rows if the labels land.
 
 ## Verification
