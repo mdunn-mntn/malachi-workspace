@@ -228,3 +228,12 @@ Scope: dt=2026-08-27..2026-09-01, all six 0/N was_submitted (08-30/31/09-01 re-v
 1. When each submit succeeds and its OpenAI batch completes (~2h, Alyson's manual batch took that), clear fetch logical D+1 from batch_transition: fetch runs 08-28, 08-29, 08-30, 08-31, 09-01 map to dt=08-27..31. Tomorrow's scheduled fetch (logical 09-02, runs 09-03 09:00 UTC) covers dt=09-01 on its own.
 2. Then clear keyword_ddp wait_for_product_categorization.
 3. batch_test max_dt will FALSE-FAIL on every backfilled fetch day (wall-clock skew) - mark test_product_categorization success, do not rerun (memory reference_mntn_matched_batch_pipeline).
+
+## 2026-09-03 06:50 UTC — backfill submits ALL FAILED on the 2.5TB OpenAI file-storage quota
+
+- All six rerun submits failed at batch_submit try 6: 400 "exceeded your file storage quota. Projects are limited to 2.5TB". Five ended together 05:58-05:59, 09-01 at 06:34.
+- Each day PARTIALLY submitted before the wall: dt=08-27 receipts rewritten with 742 batches created 04:53-05:41 UTC (of ~1100). Those batches are live at OpenAI now that the org is fixed; their inputs occupy storage. Re-running a day later requires deleting its receipts AGAIN (partial receipts trip the double-submission guard).
+- batch_cleanup_1 (same runs) found "Total number of files to delete: 0" - the 48h retention spares tonight's own upload storm, and whatever fills the rest of 2.5TB is either <48h, unlisted, or not part-*/batch_* named. The script paginates correctly (post-#298 direct iteration).
+- Likely contributors: outage-week cleanups may have deleted nothing while org file access was broken (same "does not have access" class), plus tonight's six concurrent multi-try uploads (~35GiB/day/try).
+- BLOCKED on freeing storage: needs the OpenAI dashboard or API key (pod-only). Ask Alyson to open the project storage page, confirm what holds 2.5TB, and bulk-delete part-*/batch_* files older than today. NO further submit clears until freed. Then re-run ONE day at a time: delete receipts dt=D, clear submit D, wait for its batches, clear fetch D+1.
+- Today's 09:00 UTC scheduled submit will probably also quota-fail; expected, self-heals once storage clears.
