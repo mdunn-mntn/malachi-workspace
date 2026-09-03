@@ -693,3 +693,158 @@ underscore or longer than the 38-character cap, so the rule protects words a per
 band", "By vertical". The workbook already says what it is about, so the prefix was a word repeated eleven
 times to say nothing. Now `Frequency`, `Intent band`, `Vertical`. Both rules are checked in `_new_sheet()`
 and refuse the build, and both are written into `documentation/docs/xlsx_deliverable_standard.md`.
+
+## 13. Matt's review round (2026-09-03) and the lift-scale problem
+
+Matt Brorby read the delivered workbook and returned four takeaways plus one caveat:
+
+1. Average campaign frequencies > 2.5 appear better than lower frequency.
+2. No household cap, or higher caps, seems better.
+3. Serving into lower intent (non High Intent) buckets is effective.
+4. Audience sizes > 1M.
+5. CAVEAT (his): do not read much into Bids per household, it is biased by frequency-capping selection.
+
+Every one of these is a fair reading of what the workbook put on the page. Three of the four do not survive
+re-testing, one is contradicted, and his caveat is correct and understated. The reason is a defect in the
+workbook, not in his reading.
+
+### 13a. The defect: the workbook reports only relative lift
+
+`rel_itt` is `abs_itt / rate_holdout`. Relative lift is therefore absolute lift divided by the advertiser's
+baseline visit rate, and **the baseline varies about two-fold across every cut Matt named**:
+
+| cut | median holdout visit rate |
+|---|---|
+| audience > 1M | 0.897% |
+| audience <= 1M | 1.776% |
+| avg frequency > 2.5 | 1.289% |
+| avg frequency <= 2.5 | 0.770% |
+| no household cap | 2.061% |
+| any cap | 1.121% |
+
+In an advertiser-clustered weighted meta-regression of campaign log risk ratio on all three of Matt's binaries
+plus log baseline rate, **only the baseline term survives**: `big` p=0.231, `hifreq` p=0.815, `nocap` p=0.059,
+`log(rate_holdout)` **b = -0.0335, p = 0.0067**. Baseline visit rate alone carries roughly twice the weighted R²
+of Matt's three attributes combined. Every cut he named is a baseline cut wearing an attribute label.
+
+Consequence: a workbook that ranks attributes on relative lift alone will keep producing near-threshold results
+that invite exactly this kind of reading. The two scales disagree in sign on the audience cut.
+
+| cut | relative d (log RR) | p | absolute d (pp) | p | advertiser-clustered p (rel / abs) |
+|---|---|---|---|---|---|
+| audience > 1M | +0.0318 | 0.0196 | **-0.0090** | 0.655 | 0.210 / 0.794 |
+| avg frequency > 2.5 | +0.0281 | 0.252 | +0.0296 | 0.0381 | 0.193 / 0.213 |
+| no household cap | +0.0257 | 0.461 | +0.0203 | 0.362 | 0.615 / 0.447 |
+
+Neither scale survives clustering by the 130 advertisers. The correct message is not "Matt was wrong about
+frequency and right about audience", it is **the scale decides which of his claims looks alive, and once
+campaigns are clustered by advertiser none of them is**.
+
+### 13b. Takeaway 3 is contradicted, not merely unsupported
+
+This is the only one that points the other way, and it is the one worth acting on.
+
+The workbook's Intent band sheet is **not a within-campaign stratification**: 152 of 176 campaigns appear in
+exactly one band, so pooling by band mostly compares different campaign sets. Non-High campaigns happen to have
+higher whole-campaign lift (Mid +13.98%, Max Reach +16.27% against High +8.22%), which is what produces the
+apparent parity.
+
+Restricting to the **37 pairs across 22 campaigns where one campaign served both High and a lower band** removes
+every campaign-level confound. The lower band is worse on both scales:
+
+| scale | pooled paired difference | campaign-clustered bootstrap CI | negative pairs |
+|---|---|---|---|
+| absolute | **-0.2169 pp** (z = -6.51) | [-0.397, -0.082] pp, p < 0.001 | 33 / 37 |
+| relative | **-5.90%** (z = -3.16) | [-12.2%, -1.1%], p = 0.008 | 25 / 37 |
+
+Per band, negative pairs: Mid Intent **11/11**, Unscored **7/7**, Max Reach **4/4**, Peak Performance 11/15.
+
+**"Non-High" is not one thing.** Peak Performance is the exception on every measure: it is the weakest of the
+four on pair count and it has the *cheapest* median cost per incremental visit of any band ($17.82 against High
+$25.69, Unscored $27.06, Max Reach $34.03, Mid $41.94). The defensible split is that Peak Performance holds up
+and Mid and Max Reach do not. Mid and Max Reach together are 5.5% of measured households.
+
+Two further defects on that sheet: Max Reach, the lowest band and the most direct test of Matt's claim, was
+**dropped by the `min_k=5` floor** (k=4) and never appeared, and it does not clear zero (+6.11%, [-6.51%, +20.42%]).
+
+### 13c. Takeaway 4 is a max-selected threshold on top of a baseline confound
+
+The +8.51% vs +5.11% gap at 1M is the **maximum of a scan across 41 candidate cut points** (0.5M p=0.071, 1M
+p=0.0196, 1.5M p=0.081, 2M p=0.264, sign reverses above 5M). A max-selected-cutpoint permutation test returns
+p=0.205. 1M also sits on the 25th percentile of the population (974,916), so the contrast is bottom-quartile
+against the rest. There is no size gradient (Spearman +0.045, p=0.535) and median cost per incremental visit is
+flat across audience quartiles ($24.27, $24.14, $28.09, $25.60).
+
+An audience-size by geography interaction that looked strong in a first pass (local >1M +11.02% vs <=1M +4.80%,
+p=0.0026; broad geo p=0.68) **did not survive**. The formal difference-of-differences is p=0.161; the broad arm's
+small cell is k=9 with a 95% CI that contains the local estimate, so its null is a power failure, not a null;
+geo ranks 8th of 11 candidate moderators on interaction p; and local/broad does not carve at the joint (zip
+p=0.0012 and DMA p=0.0022, but DMA is in the broad bucket, while local_radius p=0.483 and city p=0.893). This
+was a difference-in-significance fallacy and it was caught by adversarial review, not by the first analysis.
+
+### 13d. Takeaway 2 cannot be resolved by this data
+
+Not contradicted, unmeasured. No household cap pools highest of the five common settings (+10.47%) but on 15
+campaigns across 12 advertisers; against all capped campaigns the gap is +2.6% relative, p=0.46, advertiser
+bootstrap CI [-3.4%, +10.1%]. Cochran Q across the five settings is p=0.554, Bonferroni-adjusted 1.00. The
+smallest gap this design can detect at 80% power is about 10% relative against a 2.6% observed gap. Dropping one
+two-campaign advertiser flips the sign of the continuous allowance slope. It needs a designed cap test.
+
+### 13e. Matt's caveat is right, and the evidence is stronger than he put it
+
+The decisive number is not the ghost-fraction imbalance, it is that **the 1-bid stratum pools to a significantly
+negative lift**: -5.52% [-8.16%, -2.80%], netting -22,529 incremental visits, against 11+ at +14.21% and
++184,558. **A ghost bid cannot suppress visits.** A negative bottom stratum is therefore a direct readout of
+selection rather than an effect, which is a cleaner proof of his point than anything on the sheet.
+
+| band | k | relative | absolute | net incremental visits |
+|---|---|---|---|---|
+| 1 | 97 | -5.52% | -0.0620 pp | -22,529 |
+| 2-3 | 92 | -1.37% | -0.0069 pp | -7,452 |
+| 4-10 | 94 | +9.82% | +0.1102 pp | +24,967 |
+| 11+ | 86 | +14.21% | +0.2392 pp | +184,558 |
+
+Two extensions he should have: the sheet covers only 119 of the 190 campaigns, and **the same caveat applies in
+weaker form to the Intent band sheet** (152 of 176 campaigns in a single band; treated households
+over-represented among scored ones, p < 1e-60; roughly 13x milder than the bid-count imbalance).
+
+### 13f. Multiplicity across the ranked sheet
+
+Cochran Q per attribute, Bonferroni over the 14 attributes ranked on the same 190 campaigns: only **bids per
+household** (p=4e-10, and Matt correctly discounted it), **creative length mix** (0.00027) and **vertical**
+(0.00097) clear 0.05. None of Matt's four does: frequency 0.065, audience size 0.414, frequency cap 1.00, intent
+band 1.00.
+
+### 13g. What was wrong with my own first answer
+
+Worth recording because two of the four verdicts I produced before adversarial review were themselves wrong.
+
+- I called takeaway 3 **supported** and offered a mechanism ("intent score is assigned before the bid, so band
+  membership cannot be affected by treatment"). The mechanism is **false**: within-campaign holdout share is not
+  homogeneous across bands (21 of 24 testable campaigns reject at p<0.05), and treated households are
+  over-represented among scored households (p=2.9e-70), consistent with exposure feeding the score.
+- I called the audience-by-geography interaction a **key result**. It was a difference-in-significance fallacy.
+- I over-refuted takeaway 2, asserting a negative sign on cap permissiveness from a fixed-effect fit under
+  I²≈0.90 that excluded the no-cap group Matt actually named. Under random effects it is p=0.345, and coding
+  no-cap as most permissive flips the sign. "Underpowered" was the honest verdict, and it favours Matt.
+- Nobody, including me, checked the absolute scale until the completeness critic did. That single check inverts
+  two conclusions.
+
+The corrections came from an eight-agent adversarial pass (four per-claim skeptics, three cross-cutting, one
+completeness critic), then re-verified by hand. The critic's own cost-per-incremental-visit figures were in turn
+wrong (it used the stratum bid-share spend split, giving Max Reach $126.07); the median per-campaign figures
+above are the ones to quote.
+
+### 13h. What this changes about the deliverable
+
+The workbook is not wrong, it is under-specified. Three changes would prevent the misreading:
+
+1. Report **incremental visits per household served** (absolute lift) beside relative lift on every attribute
+   sheet. This is the number that answers "where should the next impression go" and it is the one that surfaces
+   the intent-band result.
+2. **Cluster intervals by advertiser.** 190 campaign groups are 130 advertisers, and every headline contrast
+   that clears 0.05 unclustered fails clustered.
+3. State the **baseline visit rate** per level on each sheet, so a reader can see when a lift gap is a baseline
+   gap.
+
+Pending the user's call, because the workbook is in review with two stakeholders.

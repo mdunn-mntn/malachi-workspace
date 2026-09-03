@@ -2438,6 +2438,22 @@ and does **not** appear to apply the radii geo fence or the DS14 activity filter
 can actually reach (TI-1026: UI 9.7M vs ~1.9M reached). It also **inflates with 3P-OR** even though the score gate
 won't bid those IPs. Don't anchor reach/pacing decisions on the UI size; use realized reach (`cost_impression_log`).
 
+**⚠ CONTRADICTION, unsettled (TI-1313, 2026-09-03).** The overstatement claim above says the UI size does not
+apply the radius geo fence. A TI-1313 pass found the opposite pattern in the same column: audience per delivered
+DMA is 112K-305K across *all six* geo classes (national 134K, state 160K, dma 305K, city 179K, local_radius
+140K, zip 112K) and `Spearman(total_audience_size, n_dma_delivered) = +0.806, p = 1.3e-44`, which is what you
+would see if the stored size already reflects the geographic fence.
+
+**Both are kept because neither settles it.** The overstatement claim rests on a *direct* measurement (TI-1026:
+UI 9.7M against ~1.9M reached) and outranks a correlation. The TI-1313 evidence is correlational and has an
+obvious alternative explanation: an advertiser who picks zip targeting also writes a narrower audience
+expression, so size and footprint co-move under either hypothesis.
+
+**The check that settles it:** find one advertiser running two campaigns off the same audience expression with
+different geo fences, and compare `total_audience_size`. If the fenced campaign's stored size is smaller, the
+fence is applied. Until then, do not treat audience size and geographic footprint as two independent attributes
+in an analysis — on TI-1313 they behaved as one, which is a sufficient reason not to cross them.
+
 ### How deliverability is actually set — peer pacing to 96% of budget (Chris Addy deep-dive, TI-1037, 2026-06-18)
 
 **There is NO predictive targetable-IP model.** The platform does **not** compute "what % of an audience's IPs will be

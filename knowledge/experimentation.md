@@ -170,6 +170,86 @@ run Select vs those who don't", "accounts on feature X vs not"):
    mean for the per-advertiser number — per-unit relative lifts explode when a denominator (holdout rate) is
    tiny, which skews a mean but not a median. Exclude internal/test accounts and the single most extreme outlier.
 
+## ⭐ Relative lift hides the baseline — report the ABSOLUTE difference beside it (TI-1313, 2026-09-03)
+
+**`rel_itt = abs_itt / rate_holdout`. A relative-lift table is therefore an absolute-lift table divided by a
+number that varies across your rows, and when the baseline varies about two-fold the two scales can disagree
+in sign.** On TI-1313 a stakeholder read four takeaways off a relative-lift-only workbook; every cut he named
+turned out to be a baseline-rate cut wearing an attribute label.
+
+| cut | median holdout visit rate | relative d | p | absolute d | p |
+|---|---|---|---|---|---|
+| audience > 1M vs <= 1M | 0.897% vs 1.776% | +0.0318 | 0.0196 | **-0.0090 pp** | 0.655 |
+| avg frequency > 2.5 | 1.289% vs 0.770% | +0.0281 | 0.252 | +0.0296 pp | **0.0381** |
+
+Both flip. In an advertiser-clustered weighted meta-regression of log risk ratio on three attribute binaries
+plus `log(rate_holdout)`, only the baseline term survived (b = -0.0335, p = 0.0067; the three attributes
+p = 0.23 / 0.82 / 0.06), and baseline alone carried ~2x the weighted R² of all three attributes combined.
+
+**Rules.**
+1. **Report the absolute risk difference beside the relative one on every attribute cut**, and state the
+   baseline rate per level so a reader can see when a lift gap is a baseline gap. Absolute answers "where
+   should the next impression go"; relative answers "how much did this lift its own baseline". A deliverable
+   that shows one and not the other is under-specified, and the reader will not know which question they got.
+2. **A ratio can be flat while the yield collapses.** TI-1313's intent bands looked equal on relative lift
+   (non-High vs High p=0.79) purely because the low-intent bands have a ~4x lower baseline. On incremental
+   visits per household the same comparison is -0.041 pp, p=0.0013, and within the 37 same-campaign pairs it
+   is -0.217 pp with 33 of 37 pairs negative.
+3. **Cross-check with cost per incremental outcome.** It is the scale-free efficiency metric and it broke the
+   tie in the same direction. Use the **median per campaign**, not a pooled spend-weighted figure — the pooled
+   version inverted the ordering on TI-1313 (see the IVW-vs-median trap above).
+
+## ⭐ Cluster by the decision unit, not the row — campaigns are not independent (TI-1313, 2026-09-03)
+
+**190 campaign groups were 130 advertisers.** Every headline contrast that cleared p<0.05 unclustered failed
+once the bootstrap resampled advertisers instead of campaigns:
+
+| contrast | unclustered p | advertiser-clustered p |
+|---|---|---|
+| audience > 1M (relative) | 0.0196 | 0.210 |
+| avg frequency > 2.5 (absolute) | 0.0381 | 0.213 |
+| between-quartile Cochran Q on frequency | 0.0046 | 0.011 permuted, 0.065 after Bonferroni |
+
+An advertiser sets budget, audience, cap and creative once and stamps it across their campaigns, so campaigns
+within an advertiser share the very attributes under test. **Resample the advertiser.** The same applies to any
+per-campaign or per-flight panel: the independent unit is whoever made the choice.
+
+## ⭐ Three fallacies that survived two manual review passes (TI-1313, 2026-09-03)
+
+Each of these produced a confident, wrong finding that only an adversarial pass caught.
+
+1. **Difference in significance is not a difference.** "Significant in arm A (p=0.0026), null in arm B
+   (p=0.68), therefore A moderates the effect" is not an interaction test. The formal difference-of-differences
+   was p=0.161, and arm B's "null" was k=9 with a 95% CI that *contained* arm A's estimate. Always run the
+   interaction term, and always report the small arm's MDE before calling it a null.
+2. **A max-selected cut point needs a permutation test.** A threshold contrast at p=0.0196 was the maximum of
+   a scan over 41 candidate cut points; the effect was gone at 2x the threshold and reversed at 5x. The
+   max-selected permutation p was 0.205. If the cut was chosen after seeing the data, the naive p is not a p.
+3. **Subgroup-specific τ² inflates a between-level Q.** Pooling each level with its own τ² lets the one
+   internally-consistent level (low I²) dominate the between-group statistic. Under a single jointly-estimated
+   τ² the same test moved from p=0.0046 to p=0.042. Use a shared τ² (meta-regression) for between-level tests.
+
+**And the structural one: check whether a "within-unit" stratification actually is one.** TI-1313's intent-band
+sheet was described and read as a within-campaign split; 152 of 176 campaigns appeared in exactly one band, so
+it was overwhelmingly a between-campaign comparison and inherited every campaign-level confound. Count the
+units that actually contribute more than one stratum before claiming the design.
+
+## ⭐ A post-treatment stratum is not a valid cut — and a negative lift proves it (TI-1313, 2026-09-03)
+
+**Stratifying a holdout experiment on anything measured AFTER the bid breaks the randomization**, because the
+treatment changes which stratum a unit lands in. On TI-1313 the bid-count strata (1, 2-3, 4-10, 11+ bids per
+household) pooled to -5.52% [-8.16%, -2.80%] in the 1-bid stratum, netting -22,529 incremental visits.
+
+**A ghost bid cannot suppress visits. A significantly negative bottom stratum is therefore a direct readout of
+the selection, not an effect** — and it is a far more legible proof than any balance statistic, because it
+needs no statistics to explain to a stakeholder. Reach for it whenever you suspect a post-treatment split.
+
+The weaker version is worth checking too: the intent-band split *looked* pre-treatment (the score is assigned
+before the bid) but treated households were over-represented among scored households (p=2.9e-70) and 21 of 24
+testable campaigns rejected within-campaign homogeneity of the holdout share, i.e. exposure partly feeds the
+score. Roughly 13x milder than the bid-count imbalance, but not clean. **Test the balance, do not reason from
+the mechanism** — "it is assigned before the bid" was asserted and was false.
+
 ## Experiment results archive (TI-1003 / TI-1033)
 
 Every completed TI experiment is cataloged in the **TI experiment archive** — a manifest-driven internal static site that anyone can browse: a master "what TI has moved" view grouped by KPI (IVR, CVR, incrementality, …) plus one page per experiment (intention → big bold movement → every KPI moved → method → chart).
