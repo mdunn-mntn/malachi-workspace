@@ -5,15 +5,15 @@ metadata:
   node_type: memory
   type: project
 doc_type: memory
-keywords: [backlog pings, gate, AUDI-1213, AUDI-1173, AUDI-802, AUDI-1176, AUDI-1145, AUDI-1061, AUDI-1016, Nick Scialli, Matt Brorby, Zach Schoenberger, Sean Yang, Maya Triman, Edgar von Trotha, Eric Salinger]
+keywords: [backlog pings, gate, AUDI-1213, AUDI-1173, AUDI-802, AUDI-1176, AUDI-1145, AUDI-1061, AUDI-1016, Nick Scialli, Matt Brorby, Zach Schoenberger, Sean Yang, Maya Triman, Edgar von Trotha, Eric Salinger, MDE calculator scope, in-product Testing tab, delivering cohort refresh]
 domain: [project, jira-process]
 lifecycle: active
-last_verified: 2026-08-24
+last_verified: 2026-09-03
 ---
 
 All 7 gate pings for the open backlog tickets were sent on Slack 2026-08-24 (per the backlog audit ranking). On any reply, act per the branch and update this file; when all are resolved, archive it.
 
-- AUDI-1213 → Nick Scialli: RESOLVED 2026-08-25, UI covers delivering only. Scope shrunk in Jira (description + comment): lapsed-cohort-only build (2,546 advertisers), spend-basis + arm-split fixes stay, no Mode port of the delivering half.
+- AUDI-1213 → Nick Scialli: RESOLVED 2026-08-25, UI covers delivering only. Scope shrunk in Jira (description + comment): lapsed-cohort-only build (2,546 advertisers), spend-basis + arm-split fixes stay, no Mode port of the delivering half. **SUPERSEDED 2026-09-03 — the delivering half came back into scope and SHIPPED.** The premise that the in-product Testing tab covers delivering advertisers is wrong: the tab forces you to select an already-live campaign group and fixes the budget to that selection, so it cannot answer "what budget would this test need?" Only the standalone calculator does what-if budget exploration, and Edgar von Trotha is fielding a rising number of customers asking for lift-test budget recommendations ([[reference_mde_surface_choice]]). The delivering-cohort refresh shipped 2026-09-03: 1,859 delivering advertisers (trailing 30d ending 2026-09-03, no $1k floor), advertiser-facing CPM basis, all three calculator defects fixed, republished to the same gist. Still open on AUDI-1213: the 2,546 lapsed cohort, the Mode port, the VR_STACK 0.595 re-measurement.
 - AUDI-1173 → Matt Brorby: RESOLVED 2026-08-24, Matt said yes ("AMOS is basically a bandit-like approach... makes sense to merge"). Merge comments posted on both tickets; Malachi co-owns randomization (apply_flag) + measurement design in AUDI-1216; 1173 keeps only the bidder-side cap feature if AMOS lacks it.
 - AUDI-802 → Zach Schoenberger: RESOLVED 2026-08-24. Zach never investigated the missing list but agreed to close; root cause of the ~30 all-time untraceable rows stays unknown. Closed Done 2026-08-24 with completion comment; Zach flags when there's bandwidth to finish; residual promoted to AUDI-1222 (2026-08-25, Zach asked for the trace tables + DDM monitors; IMP-069 closed out).
 - AUDI-1176 → Sean Yang: REPLIED 2026-08-24, status unknown to Sean; he thinks all experiments are held off for the MNTN-ID work and will raise it in the Kirsa meeting 2026-08-25. CLOSED Won't Do 2026-08-25 by owner decision after the hold proved void (the experiment never existed); reopen path preserved in the close comment ([[project_audi_1175_ds14_scoring_cost]]).

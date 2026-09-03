@@ -181,6 +181,13 @@ Use for any branded deliverable — .xlsx (`lib/mntn_xlsx.py`), decks, charts. F
 - Audiences are inherently small, making TV-only retargeting hard to scale
 - Currently uses multi-touch display to augment small CTV retargeting audiences
 
+### Incrementality Testing tab (in-product, verified live 2026-09-03)
+- Tab in the customer-facing MNTN platform UI (`premier-ui`) for designing ghost-bid incrementality tests. Live in **premier behind the `IncrementalityV2ShowTab` feature flag**. Scope: **delivering advertisers only, one advertiser at a time.**
+- It forecasts the test's minimum detectable effect (the smallest lift the test could detect) from the selected campaign group, and separately reads ghost-bid RESULTS (`significant_95`) off the lift rollup. No measured lift ever feeds the forecast; the two share no table.
+- **Capability boundary: the tab cannot answer "what budget would this test need?"** It forces you to select an already-live campaign group and pins the budget to that selection, so what-if budget exploration is only possible in the standalone MDE calculator. Edgar von Trotha (third-party attribution liaison) reports a rising number of customers asking for lift-test budget recommendations.
+- The tab does cover delivering advertisers, but it cannot answer the budget question, so the 2026-08-25 conclusion that the standalone calculator therefore only needs the lapsed cohort is **superseded** (recorded on AUDI-1213 and in memory `project_backlog_gate_pings`). The standalone is load-bearing for delivering advertisers too.
+- **Owner: Nick Scialli (engineering).** Statistical detail and the arm-split defect: `knowledge/experimentation.md`.
+
 ---
 
 ## Org Structure & Teams
@@ -221,7 +228,9 @@ Paulo announced a reorg merging big pieces of the **reporting world** under **Ka
 ### Key People
 - **Mark** — Executive, drives product direction. Pushed multi-touch elimination (2022), pushes IVR as primary metric.
 - **Kirsa** — Experimentation Lead / Product Manager. Owns experiment design, execution, and analysis. Previously PM for data monitoring, then product PM for targeting (Mountain Match). Has a set monthly budget for experiments.
-- **Nick** — Works with Kirsa on experimentation methodology and statistical approach. Involved in power analysis and methodology improvement planning.
+- **Nick** — Works with Kirsa on experimentation methodology and statistical approach. Involved in power analysis and methodology improvement planning. **⚠️ This entry predates the disambiguation below and does not say which Nick it means.** Two people named Nick work on incrementality; do not assume either.
+- **Nick Scialli** (engineering) — owns the in-product MDE view / incrementality **Testing tab** (`premier-ui` + `gary-ql`). **A different person from Nick Martin** (conflated once on 2026-09-03); check the surname before routing anything.
+- **Nick Martin** — Mode dashboards, TI-504 experiment owner, ghost-bid lift register. Measurement and analysis side, not the Testing tab.
 - **Toph** — Production ops. Validates campaign changes for pacing risk (e.g., media plan beta rollout).
 - **Jack** — Engineering manager for identity team (took over role ~March 2026).
 - **Alex Bloore** — VP Engineering. Covering product leadership for targeting during GPM search (alongside Mike Dolt and Kale). Approved Mike's Q2 roadmap ("Mike, you killed it").

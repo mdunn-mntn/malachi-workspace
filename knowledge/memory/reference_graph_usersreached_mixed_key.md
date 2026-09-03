@@ -6,14 +6,14 @@ metadata:
   type: reference
   originSessionId: b2e26231-0715-4211-9711-2f60a8021621
 doc_type: memory
-keywords: [usersreached, all_facts.uniques, graph.usersreached, HLL mixed key, IP vs cookie reach, cost_impression_log, sitevisitors, uniques_arr ClickHouse, served IP count, MDE power baseline]
+keywords: [usersreached, all_facts.uniques, graph.usersreached, HLL mixed key, IP vs cookie reach, cost_impression_log, sitevisitors, uniques_arr ClickHouse, served IP count, MDE power baseline, IPUserSiteVisitorRate, IPUserConversionRate, RX-7420]
 domain: [data-catalog, identity, incrementality]
 lifecycle: active
-last_verified: 2026-06-25
+last_verified: 2026-09-03
 ---
 `graph.usersreached` = `summarydata.all_facts.uniques` = `impression_facts.uniques`, defined as `HLL_COUNT.INIT(CASE WHEN channel_id = 8 OR objective_id IN (5,6) THEN l.ip ELSE l.guid END)` over the **served** `cost_impression_log` (`unlinked=FALSE AND ad_served_id IS NOT NULL`). So **CTV/video reach is counted by IP, display reach by `guid` (browser cookie)**. Cookies fan out ~2.4x per IP, so for a mixed/display advertiser `usersreached` runs ~**2x** the true distinct served IPs. WGU 30d: `usersreached` = 32.1M (14M CTV-IPs + 18.4M display-cookies) vs `count(distinct ip) from cost_impression_log` = 15.7M.
 
-**Implication:** `usersreached` is NOT a per-IP/per-household reach. For anything needing distinct served IPs/households (MDE/power baselines — the holdout randomizes per-IP `MD5(advertiser_id:ip)`), use `count(distinct ip) from cost_impression_log` (served), NOT `graph.usersreached`. `graph.sitevisitors` (= `visit_facts.site_visitors`) IS always IP-keyed (`HLL_COUNT.INIT(ip)` from ui_visits).
+**Implication:** `usersreached` is NOT a per-IP/per-household reach. For anything needing distinct served IPs/households (MDE/power baselines — the holdout randomizes per-IP `MD5(advertiser_id:ip)`), use `count(distinct ip) from cost_impression_log` (served), NOT `graph.usersreached`. `graph.sitevisitors` (= `visit_facts.site_visitors`) IS always IP-keyed (`HLL_COUNT.INIT(ip)` from ui_visits). **The in-product MDE view acted on this 2026-08-25** (RX-7420 series, gary-ql #4664 `27ffe77c`, plus #4662/#4665/#4666): the Testing tab moved off `graph.usersreached` and the FPA `totalConversionRate` onto ChAPI per-IP-user rates `Graph.IPUserSiteVisitorRate` (visits goal) / `Graph.IPUserConversionRate` (conversions), selected by `goal_metric`; `getAudienceFpaReportTotalsByAdvertiserId` is now dead code ([[project_incrementality_experiment]], [[reference_mde_surface_choice]]).
 
 **Can't fix by channel-splitting for mixed advertisers:** CTV-IP + display-IP can't be summed — ~33% of served IPs see both channels (WGU). Cross-channel-deduped served-IP needs a new always-IP array column or a CIL query. Exact in-window parity isn't graph-reachable (`impression_hour`/`day_number` live only in `ber_stg.visit_facts__base`, dropped before the graph layer). Full trace: `tickets/ber_2250_incrementality_overhaul/ti_1019_mde_calculator_advertiser_prefill/summary.md` §7g/7h/7i.
 

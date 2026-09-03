@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MDE Calculator · MNTN Incrementality</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=Overpass+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── DESIGN TOKENS — LIGHT ─── */
+    :root {
+      --bg:          #f2f5f8;
+      --panel:       #ffffff;
+      --panel-2:     #eef2f6;
+      --border:      #dde5ed;
+      --border-hi:   #c6d4e0;
+      --accent:      #0070a8;
+      --accent-glow: rgba(0, 112, 168, 0.12);
+      --accent-dim:  rgba(0, 112, 168, 0.06);
+      --green:       #127a48;
+      --green-glow:  rgba(18, 122, 72, 0.10);
+      --amber:       #a85800;
+      --amber-glow:  rgba(168, 88, 0, 0.10);
+      --red:         #be1733;
+      --red-glow:    rgba(190, 23, 51, 0.10);
+      --t1:          #18283a;
+      --t2:          #4e6878;
+      --t3:          #b0c4d2;
+      --mono:        'Major Mono Display', monospace;
+      --ui:          'Overpass Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--t1);
+      font-family: var(--ui);
+      font-size: 12px;
+      overflow-x: hidden;
+    }
+
+    /* Subtle dot grid */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── APP SHELL ─── */
+    .app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 28px 12px;
+      border-bottom: 1px solid var(--border-hi);
+      background: linear-gradient(180deg, rgba(0,112,168,0.04) 0%, transparent 100%);
+      flex-shrink: 0;
+    }
+
+    .hd-mntn {
+      font-family: var(--ui);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.4em;
+      color: var(--accent);
+      padding: 3px 8px;
+      border: 1px solid rgba(0,112,168,0.3);
+    }
+
+    .hd-title {
+      font-family: var(--mono);
+      font-size: 18px;
+      letter-spacing: 0.04em;
+      color: var(--t1);
+    }
+
+    .hd-sep { flex: 1; height: 1px; background: var(--border-hi); }
+
+    .hd-ref {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--t2);
+    }
+
+    /* ─── WORKSPACE ─── */
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 0;
+    }
+
+    /* ─── CONTROLS ─── */
+    .controls {
+      border-right: 1px solid var(--border-hi);
+      padding: 20px 20px 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      background: var(--panel);
+      overflow-y: auto;
+    }
+
+    .ctrl-section { display: flex; flex-direction: column; gap: 13px; }
+
+    .ctrl-section-head {
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.38em;
+      color: var(--accent);
+      opacity: 0.7;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-hi);
+    }
+
+    /* ─── SLIDER ─── */
+    .sl-wrap { display: flex; flex-direction: column; gap: 5px; }
+
+    .sl-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .sl-lbl {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      color: var(--t2);
+    }
+
+    .sl-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      min-width: 70px;
+      text-align: right;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 2px;
+      outline: none;
+      cursor: pointer;
+      background: linear-gradient(to right, var(--accent) 0% var(--fill,0%), var(--border-hi) var(--fill,0%) 100%);
+      border-radius: 0;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 11px;
+      height: 11px;
+      background: var(--panel);
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 5px var(--accent-glow);
+      cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 11px;
+      height: 11px;
+      background: var(--panel);
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 5px var(--accent-glow);
+      cursor: pointer;
+    }
+    input[type=range]::-moz-range-progress {
+      background: var(--accent);
+      height: 2px;
+    }
+
+    /* ─── TOGGLE ─── */
+    .toggle-row { display: flex; border: 1px solid var(--border-hi); }
+
+    .tog-btn {
+      flex: 1;
+      padding: 5px 4px;
+      font-family: var(--ui);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      color: var(--t2);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      text-align: center;
+    }
+    .tog-btn + .tog-btn { border-left: 1px solid var(--border-hi); }
+    .tog-btn.on { background: var(--accent); color: #fff; font-weight: 600; }
+
+    /* ─── NUMBER INPUTS ─── */
+    .num-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .num-group { display: flex; flex-direction: column; gap: 4px; }
+    .num-lbl { font-size: 8px; letter-spacing: 0.16em; color: var(--t2); }
+    .num-inp {
+      background: var(--panel-2);
+      border: 1px solid var(--border-hi);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 4px 7px;
+      width: 100%;
+      outline: none;
+      border-radius: 0;
+      transition: border-color 0.15s;
+    }
+    .num-inp:focus { border-color: var(--accent); }
+
+    /* ─── OUTPUT PANEL ─── */
+    .output {
+      padding: 20px 26px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* ─── HERO SECTION ─── */
+    .hero {
+      display: grid;
+      grid-template-columns: auto 1px auto auto;
+      justify-content: space-between;
+      gap: 0 24px;
+      align-items: start;
+      padding: 16px 20px;
+      background: var(--panel);
+      border: 1px solid var(--border-hi);
+    }
+
+    .hero-block { display: flex; flex-direction: column; }
+
+    .hero-lbl {
+      font-size: 8px;
+      letter-spacing: 0.3em;
+      color: var(--t2);
+      margin-bottom: 3px;
+    }
+
+    .hero-num {
+      font-family: var(--mono);
+      font-size: 58px;
+      line-height: 1;
+      color: var(--accent);
+      transition: color 0.25s;
+    }
+    .hero-num.well-powered { color: var(--green); }
+    .hero-num.borderline   { color: var(--amber); }
+    .hero-num.underpowered { color: var(--red); }
+
+    .hero-num-sm {
+      font-family: var(--mono);
+      font-size: 36px;
+      line-height: 1;
+      color: var(--accent);
+      transition: color 0.25s;
+    }
+    .hero-num-sm.well-powered { color: var(--green); }
+    .hero-num-sm.borderline   { color: var(--amber); }
+    .hero-num-sm.underpowered { color: var(--red); }
+
+    .tier-pill {
+      display: inline-block;
+      margin-top: 7px;
+      padding: 2px 8px;
+      font-size: 8px;
+      letter-spacing: 0.18em;
+      font-weight: 600;
+      border: 1px solid;
+      width: fit-content;
+    }
+    .tier-pill.well-powered { color: var(--green); border-color: var(--green); background: var(--green-glow); }
+    .tier-pill.borderline   { color: var(--amber); border-color: var(--amber); background: var(--amber-glow); }
+    .tier-pill.underpowered { color: var(--red);   border-color: var(--red);   background: var(--red-glow); }
+
+    .hero-ci {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      color: var(--t2);
+      margin-top: 6px;
+      opacity: 0.75;
+    }
+
+    .v-sep { width: 1px; background: var(--border-hi); align-self: stretch; }
+
+    /* Required budget block */
+    .req-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-self: center;
+      padding-left: 4px;
+    }
+    .req-label   { font-size: 8px; letter-spacing: 0.3em; color: var(--t2); }
+    .req-total   { font-family: var(--mono); font-size: 30px; color: var(--amber); line-height: 1; }
+    .req-monthly { font-family: var(--mono); font-size: 15px; color: var(--t2); }
+    .req-detail  { font-size: 9px; color: var(--t2); margin-top: 2px; }
+
+    /* ─── STAT CARDS ─── */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+    .stat {
+      border: 1px solid var(--border-hi);
+      padding: 10px 12px;
+      background: var(--panel);
+    }
+    .stat-lbl { font-size: 8px; letter-spacing: 0.22em; color: var(--t2); margin-bottom: 5px; }
+    .stat-val  { font-family: var(--mono); font-size: 17px; color: var(--t1); line-height: 1; }
+    .stat-sub  { font-size: 9px; color: var(--t2); margin-top: 4px; opacity: 0.65; }
+
+    /* ─── CHART ─── */
+    .chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chart-title { font-size: 8px; letter-spacing: 0.28em; color: var(--t2); }
+    .chart-legend { display: flex; gap: 14px; }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9px;
+      color: var(--t2);
+    }
+    .legend-line { width: 20px; height: 2px; background: var(--accent); }
+    .legend-line.dashed {
+      background: repeating-linear-gradient(90deg, rgba(0,112,168,0.5) 0 5px, transparent 5px 8px);
+    }
+    .legend-ci {
+      width: 20px; height: 9px;
+      background: rgba(0,112,168,0.10);
+      border-top: 1px solid rgba(0,112,168,0.30);
+      border-bottom: 1px solid rgba(0,112,168,0.30);
+    }
+
+    .chart-wrap {
+      flex: 1;
+      position: relative;
+      min-height: 240px;
+    }
+
+    .stack-note {
+      font-size: 9px;
+      color: var(--t2);
+      opacity: 0.5;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+
+    /* ─── ADVERTISER PICKER ─── */
+    .adv-picker { position: relative; }
+    .adv-search {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border-hi);
+      color: var(--t1);
+      font-family: var(--ui);
+      font-size: 12px;
+      padding: 6px 9px;
+      outline: none;
+      border-radius: 0;
+      transition: border-color 0.15s;
+    }
+    .adv-search:focus { border-color: var(--accent); }
+    .adv-search::placeholder { color: var(--t3); }
+
+    .adv-results {
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      max-height: 260px;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--border-hi);
+      border-top: none;
+      z-index: 10;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .adv-results.open { display: block; }
+    .adv-item {
+      padding: 6px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .adv-item:last-child { border-bottom: none; }
+    .adv-item:hover, .adv-item.active { background: var(--accent-dim); }
+    .adv-item-name {
+      font-size: 11px;
+      color: var(--t1);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .adv-item-meta {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--t2);
+      flex-shrink: 0;
+    }
+
+    .adv-loaded {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--accent-dim);
+      border-left: 2px solid var(--accent);
+      display: none;
+    }
+    .adv-loaded.on { display: block; }
+    .adv-loaded-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--t1);
+      margin-bottom: 5px;
+    }
+    .adv-loaded-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px 12px;
+      font-size: 9px;
+      color: var(--t2);
+    }
+    .adv-loaded-stats span {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-size: 10px;
+    }
+    .adv-clear {
+      margin-top: 6px;
+      font-size: 8px;
+      letter-spacing: 0.18em;
+      color: var(--t2);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      text-decoration: underline;
+    }
+    .adv-clear:hover { color: var(--red); }
+
+    .basis-row {
+      display: flex;
+      border: 1px solid var(--border-hi);
+      margin-top: 4px;
+    }
+    .basis-btn {
+      flex: 1;
+      padding: 4px 2px;
+      font-family: var(--ui);
+      font-size: 8px;
+      letter-spacing: 0.10em;
+      color: var(--t2);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      text-align: center;
+    }
+    .basis-btn + .basis-btn { border-left: 1px solid var(--border-hi); }
+    .basis-btn.on { background: var(--accent); color: #fff; font-weight: 600; }
+    .basis-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── COMPACT-SIZING OVERRIDES + RESPONSIVE ─── */
+    .output       { padding: 14px 18px; gap: 10px; min-width: 0; max-width: 920px; }
+    .hero         { padding: 12px 16px; gap: 0 18px; }
+    .hero-num     { font-size: 42px; }
+    .hero-num-sm  { font-size: 26px; }
+    .req-total    { font-size: 22px; }
+    .req-monthly  { font-size: 12px; }
+    .stats        { gap: 8px; }
+    .stat         { padding: 7px 10px; }
+    .stat-val     { font-size: 13px; }
+    .chart-wrap   { min-height: 280px; max-height: 560px; }
+
+    /* Narrow-window: stack controls above output so chart isn't squished */
+    @media (max-width: 820px) {
+      .workspace      { grid-template-columns: 1fr; }
+      .controls       { border-right: none; border-bottom: 1px solid var(--border-hi); padding: 14px 16px; gap: 16px; }
+      .hero           { grid-template-columns: 1fr; gap: 12px 0; }
+      .hero .v-sep    { display: none; }
+      .stats          { grid-template-columns: repeat(2, 1fr); }
+      .hero-num       { font-size: 36px; }
+      .hero-num-sm    { font-size: 24px; }
+      .chart-wrap     { max-height: 440px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── HEADER ── -->
+  <header>
+    <span class="hd-mntn">MNTN</span>
+    <h1 class="hd-title">mde calculator · per-advertiser prefill</h1>
+    <div class="hd-sep"></div>
+    <span class="hd-ref" id="hd-data-ref">INCREMENTALITY · LEWIS–RAO · TI-884 · — advertisers</span>
+  </header>
+
+  <!-- ── WORKSPACE ── -->
+  <div class="workspace">
+
+    <!-- ── CONTROLS ── -->
+    <aside class="controls">
+
+      <!-- Advertiser picker -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-head">ADVERTISER</div>
+        <div class="adv-picker">
+          <input type="text" id="adv-search" class="adv-search" placeholder="Search by name or ID…" autocomplete="off">
+          <div id="adv-results" class="adv-results"></div>
+        </div>
+        <div id="adv-loaded" class="adv-loaded">
+          <div class="adv-loaded-name" id="adv-loaded-name">—</div>
+          <div class="adv-loaded-stats">
+            <div>30d spend <span id="adv-stat-spend">—</span></div>
+            <div>typical/mo <span id="adv-stat-typical">—</span></div>
+            <div>visit rate <span id="adv-stat-pvisit">—</span></div>
+            <div>cvr rate <span id="adv-stat-pcvr">—</span></div>
+            <div>CPM <span id="adv-stat-cpm">—</span></div>
+            <div>imps/IP <span id="adv-stat-impsip">—</span></div>
+          </div>
+          <button class="adv-clear" id="adv-clear">CLEAR / USE COHORT DEFAULTS</button>
+        </div>
+        <div style="margin-top:8px;">
+          <div class="sl-lbl" style="margin-bottom:3px;">BUDGET BASIS</div>
+          <div class="basis-row">
+            <button class="basis-btn on" id="bb-typical" onclick="setBudgetBasis('typical')">TYPICAL ACTIVE MO</button>
+            <button class="basis-btn"    id="bb-30d"     onclick="setBudgetBasis('30d')">TRAILING 30D</button>
+            <button class="basis-btn"    id="bb-max"     onclick="setBudgetBasis('max')">PEAK MONTH</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget & flight -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-head">BUDGET &amp; FLIGHT</div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="sl-lbl">MONTHLY BUDGET</span>
+            <span class="sl-val" id="v-budget">$200k</span>
+          </div>
+          <input type="range" id="sl-budget" min="0" max="100" step="0.25" value="48.2">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="sl-lbl">DURATION (WEEKS)</span>
+            <span class="sl-val" id="v-dur">8 wk</span>
+          </div>
+          <input type="range" id="sl-dur" min="1" max="52" step="1" value="8">
+        </div>
+      </div>
+
+      <!-- Test design -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-head">TEST DESIGN</div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="sl-lbl">HOLDOUT %</span>
+            <span class="sl-val" id="v-holdout">10%</span>
+          </div>
+          <input type="range" id="sl-holdout" min="2" max="18" step="1" value="10">
+        </div>
+
+        <div class="sl-wrap">
+          <div class="sl-head">
+            <span class="sl-lbl">TARGET MDE</span>
+            <span class="sl-val" id="v-tmde">5.0%</span>
+          </div>
+          <input type="range" id="sl-tmde" min="0.5" max="30" step="0.5" value="5">
+        </div>
+      </div>
+
+      <!-- Signal parameters -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-head">SIGNAL PARAMETERS</div>
+
+        <div class="sl-wrap">
+          <div class="sl-head"><span class="sl-lbl">OUTCOME</span></div>
+          <div class="toggle-row">
+            <button class="tog-btn on" id="btn-ivr" onclick="setOutcome('ivr')">IVR</button>
+            <button class="tog-btn" id="btn-cvr" onclick="setOutcome('cvr')">CVR</button>
+          </div>
+          <div style="font-size:8px; color:var(--t2); letter-spacing:0.05em; margin-top:4px; opacity:0.75;">
+            rate per advertised IP (not per impression)
+          </div>
+        </div>
+
+        <div class="num-grid">
+          <div class="num-group">
+            <label class="num-lbl">BASELINE RATE %</label>
+            <input type="number" class="num-inp" id="inp-base" value="2.639" min="0.001" max="50" step="0.01">
+          </div>
+          <div class="num-group">
+            <label class="num-lbl">CPM ($)</label>
+            <input type="number" class="num-inp" id="inp-cpm" value="26.62" min="1" step="0.01">
+          </div>
+        </div>
+
+        <div class="num-grid">
+          <div class="num-group">
+            <label class="num-lbl">IMPS / IP</label>
+            <input type="number" class="num-inp" id="inp-imps" value="3.43" min="0.1" step="0.1">
+          </div>
+          <div class="num-group">
+            <label class="num-lbl">ALPHA (α)</label>
+            <input type="number" class="num-inp" id="inp-alpha" value="0.05" min="0.01" max="0.2" step="0.01">
+          </div>
+        </div>
+
+        <div class="num-grid">
+          <div class="num-group">
+            <label class="num-lbl">POWER (1–β)</label>
+            <input type="number" class="num-inp" id="inp-power" value="0.80" min="0.5" max="0.99" step="0.05">
+          </div>
+        </div>
+      </div>
+
+      <!-- Variance reduction -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-head">VARIANCE REDUCTION</div>
+        <div class="toggle-row">
+          <button class="tog-btn on" id="btn-raw" onclick="setVR('raw')">NONE (RAW)</button>
+          <button class="tog-btn" id="btn-stack" onclick="setVR('stack')">FULL STACK</button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ── OUTPUT ── -->
+    <main class="output">
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-block">
+          <div class="hero-lbl">CURRENT MDE (RAW)</div>
+          <div class="hero-num" id="h-raw">—</div>
+          <div class="tier-pill" id="tp-raw">—</div>
+          <div class="hero-ci" id="ci-raw">95% CI ±—</div>
+        </div>
+
+        <div class="v-sep"></div>
+
+        <div class="hero-block">
+          <div class="hero-lbl">POST-STACK MDE</div>
+          <div class="hero-num-sm" id="h-stk">—</div>
+          <div class="tier-pill" id="tp-stk">—</div>
+          <div class="hero-ci" id="ci-stk">95% CI ±—</div>
+        </div>
+
+        <div class="req-block">
+          <div class="req-label">BUDGET FOR TARGET MDE</div>
+          <div class="req-total" id="req-total">—</div>
+          <div class="req-monthly" id="req-monthly">— /mo</div>
+          <div class="req-detail" id="req-detail">at — target · — weeks</div>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-lbl">TOTAL SPEND</div>
+          <div class="stat-val" id="sc-spend">—</div>
+          <div class="stat-sub" id="sc-spend-s">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">TREATED IPs</div>
+          <div class="stat-val" id="sc-treated">—</div>
+          <div class="stat-sub" id="sc-treated-s">— of pool</div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">HOLDOUT IPs</div>
+          <div class="stat-val" id="sc-holdout">—</div>
+          <div class="stat-sub" id="sc-holdout-s">control arm</div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">$200k/MO THRESHOLD</div>
+          <div class="stat-val" id="sc-thresh">—</div>
+          <div class="stat-sub">raw MDE at median IVR</div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-head">
+        <span class="chart-title">MDE vs MONTHLY BUDGET — CURRENT POSITION MARKED</span>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-line"></div>RAW</div>
+          <div class="legend-item"><div class="legend-line dashed"></div>POST-STACK</div>
+          <div class="legend-item"><div class="legend-ci"></div>95% CI</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="stack-note">
+        Stack: CUPED(0.934) × ghost-ad(0.75) × stratified(0.85) = 0.595 · Source: TI-884 / Lewis-Rao (2015 QJE)
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+<script>
+/* Per-advertiser trailing-30d signal params + 12mo typical spend.
+   Generated 2026-09-03 by incr_75_advertiser_metrics.sql (AUDI-1213 refresh).
+   Spend is advertiser-facing (media + data + platform), not media cost. */
+/* Mode data bridge. window.datasets is [{name, content:[rows]}]; rows key off the SQL
+   column aliases. Everything below this block is the standalone calculator unchanged. */
+(function () {
+  var WANT = 'Advertiser Prefill';
+  var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+  var sets = window.datasets || [];
+  var hit = null;
+  for (var i = 0; i < sets.length; i++) {
+    if (norm(sets[i].name) === norm(WANT)) { hit = sets[i]; break; }
+  }
+  if (!hit && sets.length === 1) hit = sets[0];
+  var rows = (hit && hit.content) || [];
+
+  var num = function (v) { var n = Number(v); return isFinite(n) ? n : 0; };
+  window.ADVERTISERS = rows.map(function (r) {
+    return {
+      id: num(r.advertiser_id),
+      name: r.advertiser_name,
+      spend30: num(r.spend_30d),
+      imps30: num(r.impressions_30d),
+      ips30: num(r.distinct_ips_30d),
+      cpm: num(r.cpm),
+      impsIp: num(r.imps_per_ip),
+      pVisit: num(r.p_visit),
+      pCvr: num(r.p_cvr),
+      typical: num(r.typical_active_month_spend),
+      maxMo: num(r.max_month_spend),
+      months: num(r.active_months_count)
+    };
+  }).filter(function (a) { return a.id && a.name; })
+    .sort(function (a, b) { return b.spend30 - a.spend30; });
+
+  var median = function (key) {
+    var v = window.ADVERTISERS.map(function (a) { return a[key]; })
+      .filter(function (x) { return x > 0; }).sort(function (a, b) { return a - b; });
+    if (!v.length) return 0;
+    var m = Math.floor(v.length / 2);
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+  };
+  window.COHORT = {
+    cpm: +median('cpm').toFixed(2),
+    impsIp: +median('impsIp').toFixed(2),
+    ivr: +(median('pVisit') * 100).toFixed(3),
+    cvr: +(median('pCvr') * 100).toFixed(3)
+  };
+
+  var stamp = rows.length && rows[0].data_pull_date;
+  window.DATA_PULL_DATE = stamp ? String(stamp).slice(0, 10) : 'refreshed weekly';
+})();
+
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   MDE MATH — ported from ti_884_mde_calculator.py
+   Lewis-Rao (2015 QJE) power analysis
+   ═══════════════════════════════════════════════════════ */
+
+// Acklam rational approximation of inverse normal CDF
+function normPPF(p) {
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+              1.383577518672690e+02, -3.066479806614716e+01,  2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+              6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+             -2.549732539343734e+00,  4.374664141464968e+00,  2.938163982698783e+00];
+  const d = [7.784695709041462e-03,  3.224671290700398e-01,  2.445134137142996e+00,
+              3.754408661907416e+00];
+  const pL = 0.02425, pH = 1 - pL;
+  if (p <= 0 || p >= 1) return NaN;
+  let q, r;
+  if (p < pL) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+            ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  } else if (p <= pH) {
+    q = p - 0.5; r = q * q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
+            (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  } else {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+              ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+}
+
+function zFactor(alpha, power) { return normPPF(1 - alpha / 2) + normPPF(power); }
+
+function mdeBinomial(nT, nC, p, alpha, power, varR) {
+  if (nT <= 0 || nC <= 0 || p <= 0 || p >= 1) return Infinity;
+  const z = zFactor(alpha, power);
+  const mdeAbs = z * Math.sqrt(p * (1 - p)) * Math.sqrt(1 / nT + 1 / nC) * varR;
+  return mdeAbs / p;
+}
+
+// 52 weeks / 12 months (standard calendar conversion)
+const WEEKS_PER_MONTH = 52 / 12;
+
+function computeMDE(monthlyBudget, durationWk, holdoutFrac, p, alpha, power, varR, cpm, impsPerIp) {
+  const totalSpend = monthlyBudget * (durationWk / WEEKS_PER_MONTH);
+  // The holdout is never served, so the budget buys the treated arm only.
+  const nTreated   = (totalSpend / cpm * 1000) / impsPerIp;
+  const nControl   = nTreated * (holdoutFrac / (1 - holdoutFrac));
+  const totalIps   = nTreated + nControl;
+  const mdeRel     = mdeBinomial(nTreated, nControl, p, alpha, power, varR);
+  return { totalSpend, totalIps, nTreated, nControl, mdeRel };
+}
+
+// Required spend → N_total = (z·σ·varR / mde_abs)² / (h·(1−h)); totalSpend covers full N_total reach
+function spendRequired(targetMdeRel, holdoutFrac, p, alpha, power, varR, cpm, impsPerIp, durationWk) {
+  if (targetMdeRel <= 0 || p <= 0) return { totalSpend: Infinity, monthlySpend: Infinity };
+  const z = zFactor(alpha, power);
+  const nTotal     = Math.pow(z * Math.sqrt(p*(1-p)) * varR / (targetMdeRel * p), 2) / (holdoutFrac * (1 - holdoutFrac));
+  const totalSpend = nTotal * (1 - holdoutFrac) * impsPerIp * cpm / 1000;
+  const durationMo = durationWk / WEEKS_PER_MONTH;
+  return { totalSpend, monthlySpend: totalSpend / durationMo };
+}
+
+function tier(mdeRel) {
+  if (!isFinite(mdeRel) || isNaN(mdeRel)) return 'no-data';
+  if (mdeRel < 0.05) return 'well-powered';
+  if (mdeRel < 0.10) return 'borderline';
+  return 'underpowered';
+}
+function tierLabel(t) {
+  return { 'well-powered': 'WELL POWERED', 'borderline': 'BORDERLINE', 'underpowered': 'UNDERPOWERED' }[t] || '—';
+}
+
+/* ═══════════════════════════════════════════════════════
+   FORMATTERS
+   ═══════════════════════════════════════════════════════ */
+function fmtPct(r)    { return isFinite(r) ? (r * 100).toFixed(1) + '%' : '—'; }
+function fmtBudget(v) {
+  if (!isFinite(v)) return '—';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return '$' + Math.round(v / 1000) + 'k';
+  return '$' + v.toFixed(0);
+}
+function fmtIPs(n) {
+  if (!isFinite(n)) return '—';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return Math.round(n / 1000) + 'k';
+  return Math.round(n).toString();
+}
+function sliderFill(el) {
+  el.style.setProperty('--fill', ((el.value - el.min) / (el.max - el.min) * 100) + '%');
+}
+
+// Log-scale budget slider: 0–100 ↔ $10k–$5M
+const L_MIN = Math.log10(10000), L_MAX = Math.log10(5000000);
+const sliderToBudget = v => Math.pow(10, L_MIN + (v / 100) * (L_MAX - L_MIN));
+const budgetToSlider = b => ((Math.log10(Math.max(b, 10000)) - L_MIN) / (L_MAX - L_MIN)) * 100;
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════ */
+const VR_STACK = 0.595; // CUPED(0.934) × ghost-ad(0.75) × stratified(0.85)
+
+const S = {
+  monthlyBudget : 200000,
+  durationWk    : 8,        // 8-week default (cap 52)
+  holdoutFrac   : 0.10,
+  targetMdeRel  : 0.05,
+  baselineRate  : 0.026389999999999997,
+  cpm           : 26.62,
+  impsPerIp     : 3.43,
+  alpha         : 0.05,
+  power         : 0.80,
+  vrMode        : 'raw',
+};
+
+/* ═══════════════════════════════════════════════════════
+   CHART
+   ═══════════════════════════════════════════════════════ */
+let chart;
+
+function ciFactor() {
+  const za = normPPF(1 - S.alpha / 2);
+  return za / (za + normPPF(S.power));
+}
+
+function curvePts() {
+  const N = 90, cf = ciFactor();
+  const rawPts = [], stkPts = [], rawCiHi = [], rawCiLo = [], stkCiHi = [], stkCiLo = [];
+  for (let i = 0; i <= N; i++) {
+    const spend = Math.pow(10, L_MIN + (i / N) * (Math.log10(1e7) - L_MIN));
+    const r = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0,      S.cpm, S.impsPerIp);
+    const k = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, VR_STACK, S.cpm, S.impsPerIp);
+    const rawMde = Math.min(r.mdeRel * 100, 35);
+    const stkMde = Math.min(k.mdeRel * 100, 35);
+    rawPts.push({ x: spend, y: rawMde });
+    stkPts.push({ x: spend, y: stkMde });
+    rawCiHi.push({ x: spend, y: Math.min(rawMde * (1 + cf), 35) });
+    rawCiLo.push({ x: spend, y: Math.max(rawMde * (1 - cf), 0) });
+    stkCiHi.push({ x: spend, y: Math.min(stkMde * (1 + cf), 35) });
+    stkCiLo.push({ x: spend, y: Math.max(stkMde * (1 - cf), 0) });
+  }
+  return { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo };
+}
+
+function initChart() {
+  const ctx = document.getElementById('chart').getContext('2d');
+  const { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo } = curvePts();
+
+  const tierPlugin = {
+    beforeDraw(ch) {
+      const { ctx: c, chartArea: a, scales } = ch;
+      if (!a) return;
+      const xs = scales.x, ys = scales.y;
+
+      // Tier zone fills
+      [ [0, 5,  'rgba(18,122,72,0.07)'],
+        [5, 10, 'rgba(168,88,0,0.07)'],
+        [10, 35,'rgba(190,23,51,0.06)'] ].forEach(([lo, hi, col]) => {
+        c.fillStyle = col;
+        c.fillRect(a.left, ys.getPixelForValue(hi), a.width, ys.getPixelForValue(lo) - ys.getPixelForValue(hi));
+      });
+
+      // Horizontal dashed tier lines
+      [ [5, 'rgba(18,122,72,0.35)'], [10, 'rgba(168,88,0,0.35)'] ].forEach(([v, col]) => {
+        const py = ys.getPixelForValue(v);
+        c.save(); c.beginPath();
+        c.strokeStyle = col; c.lineWidth = 1;
+        c.setLineDash([4, 5]);
+        c.moveTo(a.left, py); c.lineTo(a.right, py);
+        c.stroke(); c.restore();
+      });
+
+      // Tier zone labels (right-aligned)
+      [[ 2.5, 'rgba(18,122,72,0.55)',  '< 5%  WELL POWERED'],
+       [ 7.5, 'rgba(168,88,0,0.55)',   '5–10%  BORDERLINE'],
+       [ 18,  'rgba(190,23,51,0.5)',   '> 10%  UNDERPOWERED']].forEach(([y, col, txt]) => {
+        c.save();
+        c.fillStyle = col;
+        c.font = "8px 'Overpass Mono', monospace";
+        c.textAlign = 'right';
+        c.fillText(txt, a.right - 6, ys.getPixelForValue(y) + 4);
+        c.restore();
+      });
+
+      // Vertical line at current budget
+      const bx = xs.getPixelForValue(S.monthlyBudget);
+      if (bx >= a.left && bx <= a.right) {
+        c.save(); c.beginPath();
+        c.strokeStyle = 'rgba(0,112,168,0.3)'; c.lineWidth = 1;
+        c.setLineDash([3, 4]);
+        c.moveTo(bx, a.top); c.lineTo(bx, a.bottom);
+        c.stroke(); c.restore();
+      }
+
+      // Dots + CI whiskers at current budget (raw & stack)
+      const rawR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0,      S.cpm, S.impsPerIp);
+      const stkR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, VR_STACK, S.cpm, S.impsPerIp);
+      const cf = ciFactor();
+      [[rawR.mdeRel * 100, 'rgba(0,112,168,0.55)', 'rgba(0,112,168,1)'],
+       [stkR.mdeRel * 100, 'rgba(0,112,168,0.22)', 'rgba(0,112,168,0.4)']].forEach(([mde100, whiskerCol, dotCol]) => {
+        const mde = Math.min(mde100, 35);
+        const yMid = ys.getPixelForValue(mde);
+        const yHi  = ys.getPixelForValue(Math.min(mde * (1 + cf), 35));
+        const yLo  = ys.getPixelForValue(Math.max(mde * (1 - cf), 0));
+        // whisker line
+        c.save(); c.beginPath();
+        c.strokeStyle = whiskerCol; c.lineWidth = 1.5;
+        c.moveTo(bx, yLo); c.lineTo(bx, yHi);
+        c.stroke();
+        // end caps
+        [-1, 1].forEach(dir => {
+          const py = dir === -1 ? yHi : yLo;
+          c.beginPath(); c.moveTo(bx - 4, py); c.lineTo(bx + 4, py); c.stroke();
+        });
+        c.restore();
+        // dot
+        c.save(); c.beginPath();
+        c.arc(bx, yMid, 5.5, 0, 2 * Math.PI);
+        c.fillStyle = dotCol;
+        c.shadowColor = dotCol; c.shadowBlur = 8;
+        c.fill(); c.restore();
+      });
+    }
+  };
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        // index 0: raw CI upper — fills to index 1 (lower)
+        { label: '_rawCiHi', data: rawCiHi, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'rgba(0,112,168,0.09)', pointRadius: 0, tension: 0.35, fill: '+1' },
+        // index 1: raw CI lower
+        { label: '_rawCiLo', data: rawCiLo, borderWidth: 0, borderColor: 'transparent', pointRadius: 0, tension: 0.35, fill: false },
+        // index 2: raw MDE main line
+        { label: 'Raw MDE',  data: rawPts, borderColor: 'rgba(0,112,168,0.85)', borderWidth: 2, pointRadius: 0, tension: 0.35, fill: false },
+        // index 3: stack CI upper — fills to index 4
+        { label: '_stkCiHi', data: stkCiHi, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'rgba(0,112,168,0.04)', pointRadius: 0, tension: 0.35, fill: '+1' },
+        // index 4: stack CI lower
+        { label: '_stkCiLo', data: stkCiLo, borderWidth: 0, borderColor: 'transparent', pointRadius: 0, tension: 0.35, fill: false },
+        // index 5: stack MDE main line
+        { label: 'Post-Stack MDE', data: stkPts, borderColor: 'rgba(0,112,168,0.35)', borderWidth: 2, borderDash: [6,4], pointRadius: 0, tension: 0.35, fill: false },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 180 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: item => item.datasetIndex === 2 || item.datasetIndex === 5,
+          backgroundColor: 'rgba(255,255,255,0.97)',
+          borderColor: 'rgba(0,112,168,0.2)',
+          borderWidth: 1,
+          titleColor: 'rgba(0,112,168,0.85)',
+          bodyColor: '#4e6878',
+          titleFont: { family: "'Overpass Mono', monospace", size: 10 },
+          bodyFont:  { family: "'Overpass Mono', monospace", size: 11 },
+          callbacks: {
+            title: items => fmtBudget(items[0].parsed.x) + ' /mo',
+            label: item => `${item.dataset.label}: ${item.parsed.y.toFixed(1)}%`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'logarithmic',
+          min: 10000, max: 10000000,
+          grid: { color: 'rgba(198,212,224,0.7)' },
+          ticks: {
+            color: 'rgba(78,104,120,0.8)',
+            font: { family: "'Overpass Mono', monospace", size: 9 },
+            maxTicksLimit: 7,
+            callback: v => fmtBudget(v),
+          },
+          title: { display: true, text: 'MONTHLY BUDGET', color: 'rgba(78,104,120,0.6)', font: { family: "'Overpass Mono', monospace", size: 8 } },
+        },
+        y: {
+          min: 0, max: 30,
+          grid: { color: 'rgba(198,212,224,0.7)' },
+          ticks: {
+            color: 'rgba(78,104,120,0.8)',
+            font: { family: "'Overpass Mono', monospace", size: 9 },
+            callback: v => v + '%',
+          },
+          title: { display: true, text: 'MDE (RELATIVE %)', color: 'rgba(78,104,120,0.6)', font: { family: "'Overpass Mono', monospace", size: 8 } },
+        },
+      },
+    },
+    plugins: [tierPlugin],
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   UPDATE
+   ═══════════════════════════════════════════════════════ */
+function update() {
+  const { monthlyBudget: B, durationWk: W, holdoutFrac: H,
+          targetMdeRel: T, baselineRate: p, alpha: a, power: pw,
+          cpm, impsPerIp } = S;
+
+  const raw = computeMDE(B, W, H, p, a, pw, 1.0,      cpm, impsPerIp);
+  const stk = computeMDE(B, W, H, p, a, pw, VR_STACK,  cpm, impsPerIp);
+  const reqVR = S.vrMode === 'stack' ? VR_STACK : 1.0;
+  const req = spendRequired(T, H, p, a, pw, reqVR, cpm, impsPerIp, W);
+
+  setHero('h-raw', 'tp-raw', raw.mdeRel, tier(raw.mdeRel), 'hero-num');
+  setHero('h-stk', 'tp-stk', stk.mdeRel, tier(stk.mdeRel), 'hero-num-sm');
+
+  const zAlpha = normPPF(1 - a / 2);
+  const ciFactor = zAlpha / (zAlpha + normPPF(pw));
+  const ciPct = v => isFinite(v) ? '95% CI ±' + fmtPct(v * ciFactor) : '95% CI ±—';
+  document.getElementById('ci-raw').textContent = ciPct(raw.mdeRel);
+  document.getElementById('ci-stk').textContent = ciPct(stk.mdeRel);
+
+  document.getElementById('req-total').textContent = fmtBudget(req.totalSpend);
+  // Hide /mo run-rate for sub-month tests: it exceeds total budget and confuses
+  // the panel. A calendar month = 52/12 ≈ 4.33 weeks, so W=4 still produces a
+  // /mo > total (~8% higher). W >= 5 is the first integer week count where /mo
+  // is meaningfully below total.
+  const monthlyEl = document.getElementById('req-monthly');
+  if (W >= 5) {
+    monthlyEl.textContent = fmtBudget(req.monthlySpend) + ' /mo';
+    monthlyEl.style.display = '';
+  } else {
+    monthlyEl.style.display = 'none';
+  }
+  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''}`;
+
+  document.getElementById('sc-spend').textContent     = fmtBudget(raw.totalSpend);
+  document.getElementById('sc-spend-s').textContent   = `${W} wk · ${fmtBudget(B)}/mo`;
+  document.getElementById('sc-treated').textContent   = fmtIPs(raw.nTreated);
+  document.getElementById('sc-treated-s').textContent = `${((1-H)*100).toFixed(0)}% of pool`;
+  document.getElementById('sc-holdout').textContent   = fmtIPs(raw.nControl);
+  document.getElementById('sc-holdout-s').textContent = `${(H*100).toFixed(0)}% holdout`;
+
+  // MDE at $200k/mo × 1 month with current signal params
+  const ref = computeMDE(200000, WEEKS_PER_MONTH, H, p, a, pw, 1.0, cpm, impsPerIp);
+  document.getElementById('sc-thresh').textContent = fmtPct(ref.mdeRel);
+
+  if (chart) {
+    const { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo } = curvePts();
+    chart.data.datasets[0].data = rawCiHi;
+    chart.data.datasets[1].data = rawCiLo;
+    chart.data.datasets[2].data = rawPts;
+    chart.data.datasets[3].data = stkCiHi;
+    chart.data.datasets[4].data = stkCiLo;
+    chart.data.datasets[5].data = stkPts;
+    chart.update('none');
+  }
+}
+
+function setHero(numId, pillId, mdeRel, t, baseClass) {
+  const el = document.getElementById(numId);
+  el.textContent = fmtPct(mdeRel);
+  el.className = baseClass + ' ' + t;
+  const pill = document.getElementById(pillId);
+  pill.textContent = tierLabel(t);
+  pill.className = 'tier-pill ' + t;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOGGLE HANDLERS
+   ═══════════════════════════════════════════════════════ */
+function setOutcome(o) {
+  S.currentOutcome = o;
+  const adv = S.advertiser;
+  const pct = adv
+    ? (o === 'cvr' ? adv.pCvr : adv.pVisit) * 100
+    : (o === 'cvr' ? window.COHORT.cvr : window.COHORT.ivr);
+  document.getElementById('inp-base').value = pct.toFixed(3);
+  S.baselineRate = pct / 100;
+  document.getElementById('btn-ivr').classList.toggle('on', o === 'ivr');
+  document.getElementById('btn-cvr').classList.toggle('on', o === 'cvr');
+  update();
+}
+
+function setVR(mode) {
+  S.vrMode = mode;
+  document.getElementById('btn-raw').classList.toggle('on', mode === 'raw');
+  document.getElementById('btn-stack').classList.toggle('on', mode === 'stack');
+  update();
+}
+
+/* ═══════════════════════════════════════════════════════
+   ADVERTISER PICKER — prefill state from window.ADVERTISERS
+   ═══════════════════════════════════════════════════════ */
+S.advertiser     = null;
+S.budgetBasis    = 'typical'; // 'typical' | '30d' | 'max'
+S.currentOutcome = 'ivr';
+
+function searchAdvertisers(q) {
+  q = (q || '').trim().toLowerCase();
+  if (!q) return { items: window.ADVERTISERS, total: window.ADVERTISERS.length, empty: true };
+  const qNum = q.replace(/[^0-9]/g, '');
+  const hits = [];
+  for (const a of window.ADVERTISERS) {
+    const nameLc = a.name.toLowerCase();
+    const idStr  = String(a.id);
+    if (nameLc.includes(q) || (qNum && idStr.includes(qNum))) hits.push(a);
+  }
+  return { items: hits, total: hits.length, empty: false };
+}
+
+function renderAdvResults(result) {
+  const box = document.getElementById('adv-results');
+  const { items, total, empty } = result;
+  if (!items.length) {
+    box.innerHTML = '<div class="adv-item" style="cursor:default;opacity:0.55;"><span class="adv-item-name">No match</span></div>';
+    box.classList.add('open');
+    return;
+  }
+  const hint = empty
+    ? `<div class="adv-item" style="cursor:default;opacity:0.7;background:var(--panel-2);"><span class="adv-item-name">ALL ${total} ADVERTISERS · sorted by 30d spend · type to filter</span></div>`
+    : `<div class="adv-item" style="cursor:default;opacity:0.7;background:var(--panel-2);"><span class="adv-item-name">${total} match${total===1?'':'es'}</span></div>`;
+  box.innerHTML = hint + items.map(a =>
+    `<div class="adv-item" data-id="${a.id}">
+       <span class="adv-item-name">${a.name}</span>
+       <span class="adv-item-meta">${a.id} · ${fmtBudget(a.spend30)}/30d</span>
+     </div>`).join('');
+  box.classList.add('open');
+  box.querySelectorAll('.adv-item').forEach(el => {
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const adv = window.ADVERTISERS.find(a => a.id === +el.dataset.id);
+      if (adv) selectAdvertiser(adv);
+    });
+  });
+}
+
+function selectAdvertiser(adv) {
+  S.advertiser = adv;
+  const baselinePct = (S.currentOutcome === 'cvr' ? adv.pCvr : adv.pVisit) * 100;
+  document.getElementById('inp-base').value = baselinePct.toFixed(3);
+  S.baselineRate = baselinePct / 100;
+  document.getElementById('inp-cpm').value  = adv.cpm.toFixed(2);
+  document.getElementById('inp-imps').value = adv.impsIp.toFixed(2);
+  S.cpm       = adv.cpm;
+  S.impsPerIp = adv.impsIp;
+  applyBudgetBasis();
+  document.getElementById('adv-search').value = `${adv.name} (${adv.id})`;
+  document.getElementById('adv-results').classList.remove('open');
+  renderAdvLoaded();
+  update();
+}
+
+function applyBudgetBasis() {
+  if (!S.advertiser) return;
+  const a = S.advertiser;
+  const v = S.budgetBasis === '30d' ? a.spend30 : (S.budgetBasis === 'max' ? a.maxMo : a.typical);
+  S.monthlyBudget = Math.max(v, 10000);
+  const slBudget = document.getElementById('sl-budget');
+  slBudget.value = budgetToSlider(S.monthlyBudget);
+  sliderFill(slBudget);
+  document.getElementById('v-budget').textContent = fmtBudget(S.monthlyBudget);
+}
+
+function renderAdvLoaded() {
+  const a = S.advertiser;
+  const box = document.getElementById('adv-loaded');
+  if (!a) { box.classList.remove('on'); return; }
+  document.getElementById('adv-loaded-name').textContent = `${a.name} · ${a.id}`;
+  document.getElementById('adv-stat-spend').textContent   = fmtBudget(a.spend30);
+  document.getElementById('adv-stat-typical').textContent = fmtBudget(a.typical) + ` (${a.months}mo)`;
+  document.getElementById('adv-stat-cpm').textContent     = '$' + a.cpm.toFixed(2);
+  document.getElementById('adv-stat-impsip').textContent  = a.impsIp.toFixed(1);
+  document.getElementById('adv-stat-pvisit').textContent  = (a.pVisit * 100).toFixed(2) + '%';
+  document.getElementById('adv-stat-pcvr').textContent    = (a.pCvr   * 100).toFixed(3) + '%';
+  box.classList.add('on');
+}
+
+function clearAdvertiser() {
+  S.advertiser = null;
+  document.getElementById('adv-search').value = '';
+  document.getElementById('adv-loaded').classList.remove('on');
+  document.getElementById('inp-cpm').value  = window.COHORT.cpm.toFixed(2);
+  document.getElementById('inp-imps').value = window.COHORT.impsIp.toFixed(2);
+  S.cpm = window.COHORT.cpm; S.impsPerIp = window.COHORT.impsIp;
+  setOutcome(S.currentOutcome); // resets baseline to cohort default for current outcome
+  update();
+}
+
+function setBudgetBasis(mode) {
+  S.budgetBasis = mode;
+  ['typical','30d','max'].forEach(m => {
+    document.getElementById('bb-' + m).classList.toggle('on', m === mode);
+  });
+  applyBudgetBasis();
+  update();
+}
+
+// Wrap the existing setOutcome so it pulls advertiser-specific baseline when one is loaded
+const _origSetOutcome = setOutcome;
+setOutcome = function(o) {
+  S.currentOutcome = o;
+  if (S.advertiser) {
+    const baselinePct = (o === 'cvr' ? S.advertiser.pCvr : S.advertiser.pVisit) * 100;
+    document.getElementById('inp-base').value = baselinePct.toFixed(3);
+    S.baselineRate = baselinePct / 100;
+    document.getElementById('btn-ivr').classList.toggle('on', o === 'ivr');
+    document.getElementById('btn-cvr').classList.toggle('on', o === 'cvr');
+    update();
+  } else {
+    _origSetOutcome(o);
+  }
+};
+
+function initAdvertiserPicker() {
+  const ref = document.getElementById('hd-data-ref');
+  if (ref) ref.textContent = `INCREMENTALITY · LEWIS–RAO · TI-884 · ${window.ADVERTISERS.length} advertisers · ${window.DATA_PULL_DATE}`;
+
+  const search  = document.getElementById('adv-search');
+  const results = document.getElementById('adv-results');
+
+  search.addEventListener('focus', () => {
+    // On focus, always show the full list — don't filter by the currently-selected
+    // advertiser's label still sitting in the box. Select-all so typing replaces.
+    search.select();
+    renderAdvResults(searchAdvertisers(''));
+  });
+  search.addEventListener('input', () => renderAdvResults(searchAdvertisers(search.value)));
+  search.addEventListener('blur',  () => setTimeout(() => results.classList.remove('open'), 150));
+  search.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { results.classList.remove('open'); search.blur(); }
+    if (e.key === 'Enter' && search.value.trim()) {
+      const { items } = searchAdvertisers(search.value);
+      if (items.length) selectAdvertiser(items[0]);
+    }
+  });
+
+  document.getElementById('adv-clear').addEventListener('click', clearAdvertiser);
+}
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+
+  initAdvertiserPicker();
+
+  // Budget (log-scale)
+  const slBudget = document.getElementById('sl-budget');
+  slBudget.value = budgetToSlider(200000);
+  sliderFill(slBudget);
+  slBudget.addEventListener('input', () => {
+    S.monthlyBudget = sliderToBudget(+slBudget.value);
+    document.getElementById('v-budget').textContent = fmtBudget(S.monthlyBudget);
+    sliderFill(slBudget);
+    update();
+  });
+
+  // Duration (weeks)
+  const slDur = document.getElementById('sl-dur');
+  sliderFill(slDur);
+  slDur.addEventListener('input', () => {
+    S.durationWk = +slDur.value;
+    document.getElementById('v-dur').textContent = slDur.value + ' wk';
+    sliderFill(slDur);
+    update();
+  });
+
+  // Holdout
+  const slHold = document.getElementById('sl-holdout');
+  sliderFill(slHold);
+  slHold.addEventListener('input', () => {
+    S.holdoutFrac = +slHold.value / 100;
+    document.getElementById('v-holdout').textContent = slHold.value + '%';
+    sliderFill(slHold);
+    update();
+  });
+
+  // Target MDE
+  const slTmde = document.getElementById('sl-tmde');
+  sliderFill(slTmde);
+  slTmde.addEventListener('input', () => {
+    S.targetMdeRel = +slTmde.value / 100;
+    document.getElementById('v-tmde').textContent = (+slTmde.value).toFixed(1) + '%';
+    sliderFill(slTmde);
+    update();
+  });
+
+  // Number inputs
+  [
+    ['inp-base',  v => { S.baselineRate = v / 100; }],
+    ['inp-cpm',   v => { S.cpm = v; }],
+    ['inp-imps',  v => { S.impsPerIp = v; }],
+    ['inp-alpha', v => { S.alpha = v; }],
+    ['inp-power', v => { S.power = v; }],
+  ].forEach(([id, fn]) => {
+    document.getElementById(id).addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if (!isNaN(v) && v > 0) { fn(v); update(); }
+    });
+  });
+
+  initChart();
+  update();
+});
+</script>
+</body>
+</html>
