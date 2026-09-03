@@ -153,3 +153,21 @@ question the framing raised is untouched.
 **Sanity flag:** ElevenLabs (51660) reads IVR 0.58% and CPM $31.80 against 3.07% / $8.58 in June. The
 account paused a $770K campaign group on 2026-08-20 (AUDI-1215), so the trailing-30d window spans that
 change. Not reconciled here.
+
+## AUDI-1324 folded back in, 2026-09-03
+
+Filed AUDI-1324 in the afternoon to split the Mode port out of this ticket, then closed it as a
+duplicate the same day on the user's call. The split was wrong: it treated the Mode report as a
+separate deliverable when it is the calculator itself, which left two tickets describing one tool.
+AUDI-1213 is now the whole thing, retitled "One weekly-refreshed Mode MDE calculator for every
+advertiser".
+
+Build artifacts stay under `tickets/audi_1324_mde_calculator_mode_dashboard/` because the committed
+scripts and the deployed Mode report reference those paths; that folder's `summary.md` carries a
+pointer here.
+
+**Shipped:** the delivering cohort (1,859 advertisers) on advertiser-facing spend, all three
+calculator defects fixed, live in Mode report `9a5afa55ca99` and on the original gist link.
+
+**Open:** the 2,546 lapsed advertisers, the weekly schedule and publish/share (both Mode UI actions
+the user owns), and the `VR_STACK` 0.595 re-measurement.

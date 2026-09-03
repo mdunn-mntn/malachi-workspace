@@ -1,12 +1,12 @@
 ---
 doc_type: ticket
 title: "AUDI-1324: Port the MDE calculator to a daily-refreshed Mode dashboard"
-status: backlog
+status: done
 date: 2026-09-03
 summary: "Port the MDE calculator to Mode so the advertiser data refreshes daily instead of by hand"
-result: "not started"
+result: "Mode report shipped; ticket folded into AUDI-1213 as duplicate 2026-09-03"
 question: ""
-framing_state: draft
+framing_state: "skip: closed as a duplicate of AUDI-1213, which carries the locked framing"
 ---
 
 # AUDI-1324: Port the MDE calculator to a daily-refreshed Mode dashboard
@@ -24,6 +24,12 @@ The agreed question, why it matters, and how we plan to answer it. Locked before
 - **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
 - **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
 - **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+
+**FOLDED INTO AUDI-1213 on 2026-09-03.** Splitting the Mode port off AUDI-1213 stopped making
+sense once the Mode report became the calculator rather than a second copy of it, so AUDI-1324 is
+closed as a duplicate and the remaining scope (the lapsed cohort, the weekly schedule, publishing)
+lives on AUDI-1213. The build artifacts stay in this folder because the committed scripts and the
+deployed report reference these paths.
 
 ## 1. Introduction
 Brief context: what system/feature/data is involved, and why this ticket exists.
