@@ -118,7 +118,8 @@ the squash commit on main:
 | 10 | #1281 | AUDI-1272 | `cd353d7` | 20:12 |
 | 11 | #1271 | AUDI-1275 | `b9428f4` | 20:20 |
 
-Plus **shopper_graph #305** (AUDI-1279, merged 18:39, commit `85855ce`, deployed same day).
+Plus **shopper_graph #305** (AUDI-1279, merged 18:39, commit `85855ce`, deployed same day), and **airflow-ti #1282**
+(AUDI-1317, branch `audi-1317-publish-regressions`, squash `e9cb5b9`) which merged earlier at 18:22, ahead of the train.
 
 **Wait for a DEPLOYED status between merges.** Merging the next PR before the previous one's Astro build
 finished would leave a superseded-build gap where a merged change never reaches prod. Each Astro build took

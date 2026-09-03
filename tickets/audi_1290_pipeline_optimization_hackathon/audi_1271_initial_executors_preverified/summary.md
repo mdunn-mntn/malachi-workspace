@@ -4,7 +4,7 @@ title: "AUDI-1271: Raise initialExecutors on 2 pre-verified fetch-wait DAGs"
 status: in_progress
 date: 2026-09-02
 summary: "Raise dynamicAllocation.initialExecutors to 200 on two hourly DAGs stalled on shuffle-fetch wait"
-result: "Diff ready on aug_log only (initialExecutors 200, config regenerated); 20-run profile says it adds ~1.7 executor-hours (~17 DCU-h, +12%) per run for 0.03-0.13 executor-hours of stage 11 wait; merge awaits the user's call"
+result: "Diff ready on aug_log only (initialExecutors 200, config regenerated); 20-run profile says it adds ~1.7 executor-hours (~17 DCU-h, +12%) per run for 0.03-0.13 executor-hours of stage 11 wait; merge awaits the user's call. CLOSED 2026-09-03 with NO PR and no change, per the refutation above: no audi-1271 branch or PR exists. Do not read airflow-ti PR #1271 as this ticket; #1271 is AUDI-1275's speculation canary."
 question: "Does raising spark.dynamicAllocation.initialExecutors to 200 on aug_log_ip_vertical_id_hourly and site_network_hourly remove the shuffle-fetch wait on stage 11 and stage 9 without raising DCU-hours per run?"
 framing_state: locked
 ---

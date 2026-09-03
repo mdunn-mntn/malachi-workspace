@@ -4,7 +4,7 @@ title: "AUDI-1281: Perf-regression guard POC from optimizer metrics"
 status: in_progress
 date: 2026-09-02
 summary: "CI check that fails when a model's spill or fetch-wait doubles vs its 30-day optimizer baseline"
-result: "POC built and demonstrated: guard flags seeded 2x regressions on intent_score_map (spill) and site_network_hourly (fetch-wait), passes both real runs; PR body drafted, awaiting dispatcher commit + gauntlet"
+result: "POC built and demonstrated: guard flags seeded 2x regressions on intent_score_map (spill) and site_network_hourly (fetch-wait), passes both real runs; PR body drafted, awaiting dispatcher commit + gauntlet. SHIPPED: PR airflow-ti #1279 (branch audi-1281-perf-regression-guard) MERGED 2026-09-03 19:37 UTC, squash 090a58f, deployed. Note the offset: PR #1279 is AUDI-1281."
 question: "Can a CI check compare a model's latest spill and shuffle-fetch-wait against its own 30-day baseline from optimizer metrics and fail on a 2x regression?"
 framing_state: locked
 ---

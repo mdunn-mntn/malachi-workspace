@@ -4,7 +4,7 @@ title: "AUDI-1272: Verify map-output spread then raise initialExecutors on 10 fe
 status: in_progress
 date: 2026-09-02
 summary: "Per DAG confirm map output sits on few executors, then raise initialExecutors"
-result: "2 of 10 confirmed (advertiser_mid initial 90, ipdsc_42_monitor initial 7), 8 no change; diff in wt/audi_1272, PR pending"
+result: "2 of 10 confirmed (advertiser_mid initial 90, ipdsc_42_monitor initial 7), 8 no change; diff in wt/audi_1272, PR pending. SHIPPED: PR airflow-ti #1281 (branch audi-1272-initial-executors-verify-first) MERGED 2026-09-03 20:12 UTC, squash cd353d7, deployed. Note the offset: PR #1281 is AUDI-1272."
 question: "For each of the 10 DAGs, does the slow-fetch stage's map output sit on the few executors the job started with, and what initialExecutors value spreads it?"
 framing_state: locked
 ---

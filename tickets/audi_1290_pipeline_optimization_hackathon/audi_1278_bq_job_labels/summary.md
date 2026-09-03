@@ -4,7 +4,7 @@ title: "AUDI-1278: Label python-client BigQuery jobs for cost attribution"
 status: in_progress
 date: 2026-09-02
 summary: "Add airflow-dag/airflow-task labels to python-client BQ submits so every job is attributed"
-result: "airflow-ti PR #1278 open (labels at 8 python-client call sites, 147 jobs/day); 97% of the 1,110 unattributed slot-h/day are camperbid bos__spend Spark-BigQuery-connector reads, two-property hand-off drafted for the owners"
+result: "airflow-ti PR #1278 open (labels at 8 python-client call sites, 147 jobs/day); 97% of the 1,110 unattributed slot-h/day are camperbid bos__spend Spark-BigQuery-connector reads, two-property hand-off drafted for the owners. SHIPPED: PR airflow-ti #1278 MERGED 2026-09-03 19:18 UTC, squash fc51c0c, deployed. The camperbid hand-off is unsent; route it to Tony Chen."
 question: "Which submitters produce the roughly 600 unlabeled BigQuery jobs a day (1,185 slot-hours), and does adding airflow-dag and airflow-task labels in the python client attribute them?"
 framing_state: locked
 ---

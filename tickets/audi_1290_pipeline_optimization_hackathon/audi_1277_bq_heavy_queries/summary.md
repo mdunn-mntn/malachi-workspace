@@ -4,7 +4,7 @@ title: "AUDI-1277: Tune the 2 heaviest BigQuery query shapes"
 status: in_progress
 date: 2026-09-02
 summary: "bos__spend hourly creates and intent_score_threshold_v4 histogram, ~2,300 slot-h/day together"
-result: "Executed 2026-09-03: profiler double count fixed (airflow-ti branch), fingerprint skip gate on flight_metrics_per2388 + INT64 dedup key on population_histogram (airflow-camperbid branch, 31% slot saving on a pinned A/B), spend_pacing materialization ask drafted for Data Platform"
+result: "Executed 2026-09-03: profiler double count fixed (airflow-ti branch), fingerprint skip gate on flight_metrics_per2388 + INT64 dedup key on population_histogram (airflow-camperbid branch, 31% slot saving on a pinned A/B), spend_pacing materialization ask drafted for Data Platform. SHIPPED: PR airflow-ti #1277 MERGED 2026-09-03 19:10 UTC, squash b836214, deployed (first of the merge train, because it also fixed a red spark-optimizer CI job on main). airflow-camperbid #580 is still OPEN, blocked on that team; route it to Tony Chen, who owns camperbid/pacing now and wants stability prioritized since those pipelines may be migrated away."
 question: "What in the bos__spend hourly create queries and the intent_score_threshold_v4 population_histogram drives about 2,300 slot-hours a day, and what change to the query shape or its filters cuts it?"
 framing_state: locked
 ---

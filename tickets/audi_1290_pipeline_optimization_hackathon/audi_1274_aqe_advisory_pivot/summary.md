@@ -4,7 +4,7 @@ title: "AUDI-1274: Set AQE advisoryPartitionSizeInBytes=16m on the 2 pivot DAGs"
 status: in_progress
 date: 2026-09-02
 summary: "Cap AQE coalesce target at 16m on the two guid pivot DAGs where shuffle.partitions is a no-op"
-result: "landed 2026-09-02: one builder line added to both models, committed on branch audi-1274-aqe-advisory-pivot, dry run exit 0 with generated config unchanged, Jira comment posted; pending gauntlet, PR, merge, ledger stamp and the post-merge run check"
+result: "landed 2026-09-02: one builder line added to both models, committed on branch audi-1274-aqe-advisory-pivot, dry run exit 0 with generated config unchanged, Jira comment posted; pending gauntlet, PR, merge, ledger stamp and the post-merge run check. SHIPPED: PR airflow-ti #1270 (branch audi-1274-aqe-advisory-pivot) MERGED 2026-09-03 19:44 UTC, squash ca3b9e4, deployed. Note the offset: PR #1270 is AUDI-1274."
 question: "Does spark.sql.adaptive.advisoryPartitionSizeInBytes=16m stop guid_log_pivot_ip_vertical_id and guid_conv_log_pivot_ip_vertical_id from spilling after AQE coalesces their shuffle back to about 800 partitions?"
 framing_state: locked
 ---

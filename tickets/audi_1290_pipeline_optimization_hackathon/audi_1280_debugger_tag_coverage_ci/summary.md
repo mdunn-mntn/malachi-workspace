@@ -4,7 +4,7 @@ title: "AUDI-1280: Debugger alerting tag coverage: fleet audit and CI check"
 status: in_progress
 date: 2026-09-02
 summary: "Audit every alerting DAG tag vs PAGING_TAGS, fix misses, add a CI check that blocks regressions"
-result: "32 of 67 alerting DAGs unwatched at main; Targeting tag added (25 fixed), Attribution's 7 excluded by decision D1, CI test + workflow built and validated on branch audi-1280-debugger-tag-coverage-ci; PR airflow-ti #1274 open 2026-09-03 (gauntlet medium tier, 3 refuted, 0 confirmed), Jira In Progress"
+result: "32 of 67 alerting DAGs unwatched at main; Targeting tag added (25 fixed), Attribution's 7 excluded by decision D1, CI test + workflow built and validated on branch audi-1280-debugger-tag-coverage-ci; PR airflow-ti #1274 open 2026-09-03 (gauntlet medium tier, 3 refuted, 0 confirmed), Jira In Progress. SHIPPED: PR airflow-ti #1274 (branch audi-1280-debugger-tag-coverage-ci) MERGED 2026-09-03 19:29 UTC, squash 4091d33, deployed. Note the offset: PR #1274 is AUDI-1280."
 question: "Does every alerting DAG in airflow-ti carry a tag on the debugger's PAGING_TAGS watch list, and can a CI check block any DAG that does not?"
 framing_state: locked
 ---

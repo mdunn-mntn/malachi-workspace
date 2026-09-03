@@ -4,7 +4,7 @@ title: "AUDI-1269: Raise shuffle.partitions on 10 pre-verified spill DAGs"
 status: in_progress
 date: 2026-09-02
 summary: "Config-only: raise spark.sql.shuffle.partitions on the spilling DAGs whose latest prod event log passes the gate"
-result: "executed 2026-09-02: 6 of 9 DAGs edited in the worktree and config regenerated, PR body linted; intent_score_map and prospecting_join pulled by the event-log gate, household monitor dropped by decision 1"
+result: "executed 2026-09-02: 6 of 9 DAGs edited in the worktree and config regenerated, PR body linted; intent_score_map and prospecting_join pulled by the event-log gate, household monitor dropped by decision 1. SHIPPED: PR airflow-ti #1273 (branch audi-1269-shuffle-partitions-preverified) MERGED 2026-09-03 19:56 UTC, squash 96b020e, deployed. Note the offset: PR #1273 is AUDI-1269."
 question: "Does raising spark.sql.shuffle.partitions to the 08-27 sweep's computed value on the 9 named DAGs stop their shuffle-side spill without changing outputs or failing the run?"
 framing_state: locked
 ---

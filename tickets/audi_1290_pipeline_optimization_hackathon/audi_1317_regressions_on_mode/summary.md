@@ -4,7 +4,7 @@ title: "AUDI-1317: Publish pipeline regressions to the cost dashboard"
 status: in_progress
 date: 2026-09-03
 summary: "Write the AUDI-1281 guard's regressions to the finding ledger and render them on Mode"
-result: "Publisher built and demonstrated end to end: 3 regression keys written by a real sweep, digest line carried, all three resolved on schedule; fleet noise 0 in 278 gated judgements so it ships ungated; PR/Jira left to the dispatcher"
+result: "Publisher built and demonstrated end to end: 3 regression keys written by a real sweep, digest line carried, all three resolved on schedule; fleet noise 0 in 278 gated judgements so it ships ungated; PR/Jira left to the dispatcher. SHIPPED: PR airflow-ti #1282 (branch audi-1317-publish-regressions) MERGED 2026-09-03 18:22 UTC, squash e9cb5b9, deployed, ahead of the 11-PR train."
 question: "Can the daily sweep write the regression guard's verdicts to the finding ledger so a doubling of spill or fetch wait renders on the dashboard and in the digest?"
 framing_state: locked
 ---

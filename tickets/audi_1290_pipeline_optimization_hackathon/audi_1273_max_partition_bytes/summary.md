@@ -4,7 +4,7 @@ title: "AUDI-1273: Lower files.maxPartitionBytes on 3 map-side-spill DAGs"
 status: in_progress
 date: 2026-09-02
 summary: "Read input in smaller pieces on 3 DAGs that spill while reading, not shuffling"
-result: "executed 2026-09-02: ipdsc_ds_49 maxPartitionBytes 64 MiB and conv_log_derived_ip 256 to 128 MiB edited on branch audi-1273-max-partition-bytes, dryrun clean, config unchanged, 145 model tests pass; ipdsc_ds_67 dropped (D1 Option A), its two spill keys go to wont_fix; conversion_log 08-20 volume drop flagged only (D2)"
+result: "executed 2026-09-02: ipdsc_ds_49 maxPartitionBytes 64 MiB and conv_log_derived_ip 256 to 128 MiB edited on branch audi-1273-max-partition-bytes, dryrun clean, config unchanged, 145 model tests pass; ipdsc_ds_67 dropped (D1 Option A), its two spill keys go to wont_fix; conversion_log 08-20 volume drop flagged only (D2). SHIPPED: PR airflow-ti #1272 (branch audi-1273-max-partition-bytes) MERGED 2026-09-03 19:47 UTC, squash 370f2bd, deployed. Note the offset: PR #1272 is AUDI-1273."
 question: "Does lowering spark.sql.files.maxPartitionBytes on ipdsc_ds_49, conv_log_derived_ip and ipdsc_ds_67 remove their map-side spill?"
 framing_state: locked
 ---

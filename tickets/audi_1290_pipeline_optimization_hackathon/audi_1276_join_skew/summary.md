@@ -4,7 +4,7 @@ title: "AUDI-1276: Confirm joins and fix skew on 4 DAGs"
 status: in_progress
 date: 2026-09-02
 summary: "Join-caused skew on all 4 DAGs: a plan-time broadcast hint removes the join-key shuffle; the DS42 monitor also computes its comparison once instead of three times"
-result: "Skew confirmed as join-caused on 4/4 DAGs (every join is broadcast at runtime, so AQE skewJoin cannot fire); F.broadcast / BROADCAST hints applied in 4 files plus a one-pass comparison in ipdsc_42_monitor; branch audi-1276-join-skew ready for the gauntlet and PR; no dev run (user decision)"
+result: "Skew confirmed as join-caused on 4/4 DAGs (every join is broadcast at runtime, so AQE skewJoin cannot fire); F.broadcast / BROADCAST hints applied in 4 files plus a one-pass comparison in ipdsc_42_monitor; branch audi-1276-join-skew ready for the gauntlet and PR; no dev run (user decision). SHIPPED: PR airflow-ti #1276 (branch audi-1276-join-skew) MERGED 2026-09-03 19:50 UTC, squash fac8e94, deployed."
 question: "For each of the 4 DAGs, is the skewed stage a join, and does AQE skewJoin or salting the hot key spread it?"
 framing_state: locked
 ---

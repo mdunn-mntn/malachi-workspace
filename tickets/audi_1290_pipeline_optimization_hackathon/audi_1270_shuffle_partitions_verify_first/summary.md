@@ -4,7 +4,7 @@ title: "AUDI-1270: Verify event logs then raise shuffle.partitions on 15 spill D
 status: in_progress
 date: 2026-09-02
 summary: "Per DAG confirm shuffle-side spill in the event log, then size partitions to ~256 MiB per task"
-result: "executed 2026-09-02: 1 of 15 DAGs is shuffle-side and edited (vertical_size_monitor 128 -> 600, decorator + builder, config regenerated, dryrun clean, 145 model tests pass); guid_log_advertiser_id_dsc_id is shuffle-side but owned by AUDI-1269 (3400; in-memory sizing says 4100, §8); 11 DAGs spill on the map side while reading input (AUDI-1273 mechanism), ipdsc_ds_47 spills on its BigQuery read stage (code), ipdsc_ds_14 / guid_log_pivot_household_id_vertical_id / aug_log_ip no longer spill above the 2 GiB floor"
+result: "executed 2026-09-02: 1 of 15 DAGs is shuffle-side and edited (vertical_size_monitor 128 -> 600, decorator + builder, config regenerated, dryrun clean, 145 model tests pass); guid_log_advertiser_id_dsc_id is shuffle-side but owned by AUDI-1269 (3400; in-memory sizing says 4100, §8); 11 DAGs spill on the map side while reading input (AUDI-1273 mechanism), ipdsc_ds_47 spills on its BigQuery read stage (code), ipdsc_ds_14 / guid_log_pivot_household_id_vertical_id / aug_log_ip no longer spill above the 2 GiB floor. SHIPPED: PR airflow-ti #1275 (branch audi-1270-shuffle-partitions-verify-first) MERGED 2026-09-03 20:04 UTC, squash f58f756, deployed. Note the offset: PR #1275 is AUDI-1270."
 question: "For each of the 15 DAGs, is the spilling stage's spill shuffle-side, and what partition count puts about 256 MiB per task in memory?"
 framing_state: locked
 ---
