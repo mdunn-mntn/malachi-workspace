@@ -52,7 +52,11 @@ $100,000/mo, 2 months, CPM $25, 3.5 imps/IP, 10% holdout, baseline 10.7%:
 | Fixed | 2,285,714 | 253,968 | 1.6919% |
 
 Ratio 1.054093, exactly `1/sqrt(0.9)`. The ratio is baseline-independent, so any `p` works
-as an assertion.
+as an assertion, and it is the same under either z convention.
+
+Those two percentages are computed with your `Z_ALPHA_2 + Z_BETA = 2.80`. The Python uses
+`norm.ppf` and gets 2.8015852, so the same inputs there read 1.7845% and 1.6929%. Assert on the
+ratio, not the absolute percentages, unless you also match the z.
 
 ## Second bug: the "Impressions" stat is a household count
 

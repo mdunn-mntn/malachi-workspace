@@ -19,8 +19,8 @@
       --mono:        'Major Mono Display', monospace;
       --ui:          'Overpass Mono', monospace;
     }
-#mde, #mde *::before, #mde *::after { box-sizing: border-box; margin: 0; padding: 0; }
-#mde, #mde { height: 100%; }
+#mde *, #mde *::before, #mde *::after { box-sizing: border-box; margin: 0; padding: 0; }
+#mde { height: 100%; }
 #mde {
       background: var(--bg);
       color: var(--t1);
@@ -1307,7 +1307,7 @@ function __mdeBoot() {
     });
   });
 
-  initChart();
+  try { initChart(); } catch (e) { console.error('chart init failed', e); }
   update();
 }
 
@@ -1327,8 +1327,8 @@ function __mdeBoot() {
     }
   }
   (function wait() {
-    if (window.datasets && window.datasets.length) return go();
-    if (++tries > 40) return go();
+    if (window.datasets && window.datasets.length && window.Chart) return go();
+    if (++tries > 60) return go();
     setTimeout(wait, 100);
   })();
 })();

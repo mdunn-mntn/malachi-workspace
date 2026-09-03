@@ -80,8 +80,8 @@ LAUNCHER = """
     }
   }
   (function wait() {
-    if (window.datasets && window.datasets.length) return go();
-    if (++tries > 40) return go();
+    if (window.datasets && window.datasets.length && window.Chart) return go();
+    if (++tries > 60) return go();
     setTimeout(wait, 100);
   })();
 })();"""
@@ -113,7 +113,9 @@ def _scope_selector(sel, scope):
     sel = sel.strip()
     if not sel:
         return ""
-    if sel in (":root", "html", "body", "*"):
+    if sel == "*":
+        return scope + " *"
+    if sel in (":root", "html", "body"):
         return scope
     for tag in ("html", "body"):
         if sel.startswith(tag) and (len(sel) == len(tag) or not sel[len(tag)].isalnum()):
@@ -135,8 +137,13 @@ def scope_css(css, scope):
         elif head.startswith("@"):
             out.append(f"{head} {{{block}}}")
         else:
-            sels = [_scope_selector(x, scope) for x in head.split(",")]
-            out.append("{} {{{}}}".format(", ".join(x for x in sels if x), block))
+            sels, seen = [], set()
+            for raw in head.split(","):
+                one = _scope_selector(raw, scope)
+                if one and one not in seen:
+                    seen.add(one)
+                    sels.append(one)
+            out.append("{} {{{}}}".format(", ".join(sels), block))
     return "\n".join(out)
 
 
@@ -177,6 +184,16 @@ def main():
     )
     if n != 1:
         raise SystemExit("DOMContentLoaded anchor not found")
+
+    html, n = re.subn(
+        r"^  initChart\(\);$",
+        "  try { initChart(); } catch (e) { console.error('chart init failed', e); }",
+        html,
+        count=1,
+        flags=re.M,
+    )
+    if n != 1:
+        raise SystemExit("initChart call not found")
 
     tail = "});\n</script>"
     if html.count(tail) != 1:
