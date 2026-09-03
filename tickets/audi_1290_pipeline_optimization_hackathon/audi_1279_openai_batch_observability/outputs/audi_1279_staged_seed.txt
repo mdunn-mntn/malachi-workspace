@@ -1,0 +1,5 @@
+seed written 2026-09-03T06:50:43.396972Z submit=2026-09-02T00:50:39
+                  s3_filename  openai_input_file_id        openai_batch_id   batch_submit_time  was_submitted  was_downloaded
+0  part-audi1279-dead-1.jsonl  file-audi1279-dead-1  batch_audi1279_dead_1 2026-09-02 00:50:39          False           False
+1  part-audi1279-dead-2.jsonl  file-audi1279-dead-2  batch_audi1279_dead_2 2026-09-02 00:50:39          False           False
+2  part-audi1279-dead-3.jsonl  file-audi1279-dead-3  batch_audi1279_dead_3 2026-09-02 00:50:39          False           False

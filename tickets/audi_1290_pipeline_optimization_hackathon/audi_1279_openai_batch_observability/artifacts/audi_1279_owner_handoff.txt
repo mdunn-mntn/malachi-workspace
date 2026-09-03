@@ -1,0 +1,5 @@
+1. Can one of you review and merge the shopper_graph PR for AUDI-1279?
+
+2. Who runs the prod deploy workflow after the merge? I can run it with your written OK.
+
+3. Are you fine with batch_fetch going red daily while the org-side file error (AUDI-1301) continues? batch_post already fails those days, so no new data loss; the failure moves one task earlier with the OpenAI error in the log.

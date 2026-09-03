@@ -1,0 +1,10 @@
+*Result:* branch ready for PR: batch_transition logs every batch's OpenAI status and error; batch_fetch fails when no batch progressed and the youngest is over 12 hours old.
+
+*Findings*
+* Staged run on a seeded dead cohort in the dev bucket: three status lines, a summary, then exit 1; threshold raised, it warns and exits 0.
+* 16 unit tests pass; isort, flake8, mypy clean with the CI flags.
+* The dead cohorts (08-27 to 09-01) were re-submitted to OpenAI on 09-03, 04:43 to 05:41 UTC, by an unknown process; their fate is not readable from here.
+
+*Next*
+* Open the PR for DS team review; they run the prod deploy.
+* Until AUDI-1301 lands, batch_fetch fails every day by design.

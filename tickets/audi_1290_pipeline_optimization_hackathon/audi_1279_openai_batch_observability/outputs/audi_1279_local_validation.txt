@@ -1,0 +1,45 @@
+# AUDI-1279 local validation, 2026-09-03T06:59:31Z, worktree base e2f3800 + uncommitted diff
+# venv: Python 3.11.12; flake8 7.0.0;gcsfs 2026.8.0;isort 6.0.1;mypy 1.9.0;openai 3.7.0;pandas 3.0.5;pyarrow 25.0.1;pytest 9.1.1;
+
+## isort --check-only --line-length=120 --ensure-newline-before-comments --force-single-line --diff openai
+exit=0
+
+## flake8 --ignore=E501,W503 openai
+exit=0
+
+## mypy --ignore-missing-imports --follow-imports=skip --namespace-packages --explicit-package-bases --disallow-untyped-defs openai
+Success: no issues found in 10 source files
+exit=0
+
+## python -m pytest -v tests/unit/test_openai.py
+============================= test session starts ==============================
+platform darwin -- Python 3.11.12, pytest-9.1.1, pluggy-1.6.0 -- /private/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/67074af2-5859-4b02-9a41-1fb172083596/scratchpad/venv_1279/bin/python
+rootdir: /private/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/67074af2-5859-4b02-9a41-1fb172083596/scratchpad/wt/audi_1279
+configfile: pyproject.toml
+plugins: anyio-4.15.0
+collecting ... collected 16 items
+tests/unit/test_openai.py::test_dead_cohort_raises_with_count_and_first_error PASSED [  6%]
+tests/unit/test_openai.py::test_dead_cohort_under_threshold_warns_instead PASSED [ 12%]
+tests/unit/test_openai.py::test_one_in_progress_batch_keeps_cohort_alive PASSED [ 18%]
+tests/unit/test_openai.py::test_expired_with_completed_requests_counts_as_progressed PASSED [ 25%]
+tests/unit/test_openai.py::test_retrieve_error_rows_count_as_not_progressed PASSED [ 31%]
+tests/unit/test_openai.py::test_validating_after_threshold_is_dead PASSED [ 37%]
+tests/unit/test_openai.py::test_empty_cohort_never_raises PASSED         [ 43%]
+tests/unit/test_openai.py::test_format_line_exact PASSED                 [ 50%]
+tests/unit/test_openai.py::test_format_line_without_error PASSED         [ 56%]
+tests/unit/test_openai.py::test_summarize_exact PASSED                   [ 62%]
+tests/unit/test_openai.py::test_min_age_hours_defaults_to_12 PASSED      [ 68%]
+tests/unit/test_openai.py::test_batch_status_is_plain_data PASSED        [ 75%]
+tests/unit/test_openai.py::test_transitioner_flags_finalizing_and_logs_every_batch PASSED [ 81%]
+tests/unit/test_openai.py::test_fetcher_raises_on_dead_cohort 
+PASSED                                                                   [ 87%]
+tests/unit/test_openai.py::test_fetcher_warns_under_threshold PASSED     [ 93%]
+tests/unit/test_openai.py::test_fetcher_skips_check_when_any_batch_was_submitted PASSED [100%]
+============================== 16 passed in 0.71s ==============================
+exit=0
+
+## flake8 --max-line-length=120 --per-file-ignores=tests/*:E402 tests/unit/test_openai.py (the repo pre-commit rule for tests)
+exit=0
+
+## isort --check-only (same flags) tests/unit/test_openai.py
+exit=0
