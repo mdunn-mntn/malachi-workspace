@@ -91,3 +91,65 @@ Anything not resolved, handed off, or deferred.
 **2026-09-03 — the in-product tab shipped WITH the arm-split defect (Edgar von Trotha question).** Edgar asked whether the MDE calculator is the same logic/data behind the new ghost-bid incrementality testing tab. Answer: same formula family, separate implementation, different data. Settled the AUDI-1213 §8 open question by reading the live code: `SteelHouse/gary-ql@cbae0e94 src/utils/mde/computeMde.ts` derives `totalIps` from spend then splits it `nTreated = totalIps*(1-h)` / `nControl = totalIps*h`, so the never-served holdout is charged for impressions. Against the `ti_884_mde_calculator.py` `spend_required` convention that is MDE **1/sqrt(1-h) = 1.0541x high** at h=0.10 (numeric check at a 1M-IP pool, p=0.02: 6.5370% vs 6.2016%, ratio 1.054093). The warning sent 2026-08-24 was not applied, or was applied only to `spendRequired` and not the forward path. Also confirmed live: `DEFAULT_VAR_REDUCTION = 1`, alpha/power hardcoded with no user control, `DEFAULT_CPM`/`DEFAULT_IMPRESSIONS_PER_IP` deleted 2026-08-25 (RX-7420 series) in favor of live per-advertiser ChAPI values, and the baseline moved off the FPA conversion rate / `graph.usersreached` onto `Graph.IPUserSiteVisitorRate` / `Graph.IPUserConversionRate`. Full comparison in `knowledge/experimentation.md` under "Premier-UI status update (2026-09-03)". Follow-up owed to eng: the 1.0541x forward-path correction.
 
 **AUDI-1323 filed 2026-09-03** for the arm-split fix: https://mntn.atlassian.net/browse/AUDI-1323 (Spike, 0 SP, sprint 8303, Relates To AUDI-1213, writeup attached). Owner routing to Nick Scialli is Malachi's to send. Note the sign correction against the 2026-08-24 entry above: the gist `computeMDE` and the tab both read MDE 1.0541x **high**, i.e. pessimistic, so the fix makes tests look easier to power, not harder. The `spendRequired` 1.1111x-high figure is unchanged and independent.
+
+## Delivering-cohort refresh shipped 2026-09-03 (reverses the 2026-08-25 scope shrink)
+
+**Trigger:** Edgar von Trotha, Slack 2026-09-03. The in-product Testing tab forces you to pick an
+already-live campaign, so it cannot answer "what budget would this test need?" He is fielding more
+customers asking for lift-test budget recommendations and needs what-if budget exploration, which
+only the standalone does. That breaks the 2026-08-25 premise that the UI owns delivering advertisers.
+The delivering half is back in scope; the lapsed half (2,546) is still open.
+
+**Data.** Re-ran `tickets/incr_75_eligible_advertisers/queries/incr_75_advertiser_metrics.sql`
+(471.7 GB dry-run estimate, on the us-central1 reservation) to
+`outputs/audi_1213_prefill_metrics.csv`: **1,859 delivering advertisers**, trailing 30d ending
+2026-09-03. This is the AUDI-1213 spend-basis fix landing: CPM is now advertiser-facing
+(media + data + platform), not `media_cost`, and the 12-month pattern comes from
+`summarydata.sum_by_advertiser_by_day` rather than the deleted `agg__daily_sum_by_campaign`.
+Universe is wider than TI-1019's 879 because the >$1k spend floor is gone.
+
+**Cohort defaults moved** (CLEAR button, and the no-advertiser initial state):
+
+| | TI-1019 (2026-06-04) | AUDI-1213 (2026-09-03) |
+|---|---:|---:|
+| CPM | $24.84 | $26.62 |
+| imps/IP | 3.5 | 3.43 |
+| IVR | 2.15% | 2.639% |
+| CVR | 0.054% | 0.086% |
+
+Medians are over a different universe (1,859 vs 879, no spend floor), so this is composition as much
+as drift. WGU CPM $4.607 to $9.222 is the spend-basis change, not a rate move.
+
+**Three code defects fixed in the same pass:**
+
+1. `computeMDE` charged the unserved holdout for impressions. Now
+   `nTreated = spend-derived pool`, `nControl = nTreated * h/(1-h)`. Was 1.0541x high at h=0.10.
+2. `spendRequired` had the mirror defect (`nTotal * impsPerIp * cpm`, now
+   `nTotal * (1-h) * impsPerIp * cpm`). Was 1.1111x high. Fixing either alone breaks the
+   budget-to-MDE inverse, which is why both moved together.
+3. **New defect found 2026-09-03:** `setOutcome` never read `S.advertiser`, so toggling IVR to CVR
+   with an advertiser loaded silently dropped that advertiser's rate and substituted the cohort
+   default. It also never wrote `S.currentOutcome`, so `clearAdvertiser`'s
+   `setOutcome(S.currentOutcome)` always restored IVR. Both fixed; cohort defaults now read from a
+   generated `window.COHORT` instead of three hardcoded literals.
+
+**Verified numerically** (`node` against `ti_884_mde_calculator.py`, 3 cases spanning h=0.10/0.20 and
+p=0.0058/0.107/0.1183): `mdeRel` agrees to <1e-11, and `spendRequired(computeMDE(budget)) == budget`
+to <1e-9. The round-trip is the check that catches fixing only one side.
+
+**Files:** `artifacts/audi_1213_build_prefill.py` (CSV to JSON + cohort medians),
+`artifacts/audi_1213_patch_calculator.py` (rebuilds the HTML from the TI-1019 file; every anchor
+asserts uniqueness so a silent no-op edit fails loudly), `artifacts/audi_1213_mde_calculator.html`,
+`outputs/audi_1213_prefill_compact.json`.
+
+**Published** to the existing gist under the original filename so every previously shared link stays
+valid: https://gist.githack.com/mdunn-mntn/2d362849df017fa243eef03bb61cdfbb/raw/ti_xxx_mde_calculator_prefill.html
+Live copy byte-identical to the local build. Exposure widened from 879 to 1,859 named delivering
+advertisers now carrying advertiser-facing spend; still no lapsed/churned accounts, so the former-customer
+question the framing raised is untouched.
+
+**Still open:** the lapsed 2,546 cohort, the Mode port, and the `VR_STACK` 0.595 re-measurement.
+
+**Sanity flag:** ElevenLabs (51660) reads IVR 0.58% and CPM $31.80 against 3.07% / $8.58 in June. The
+account paused a $770K campaign group on 2026-08-20 (AUDI-1215), so the trailing-30d window spans that
+change. Not reconciled here.
