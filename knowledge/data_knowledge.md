@@ -5363,7 +5363,15 @@ observed values and counts (2026-08-20): `non_mm` 8,153 · `mmv2` (DS19-only, ke
 3,577 · `mm_flagship_fangorn` 1,527 · `mmv3` 662 · `fangorn_vertical_only` 334 · `mmv1` 141. There is no
 `mm_engine` column on the view — it is `mm_class` plus `mm_engine_rank`.
 
-## BigQuery jobs launched by airflow-ti carry `airflow-dag`/`airflow-task` labels (AUDI-1194, 2026-09-02)
+## BigQuery INFORMATION_SCHEMA.JOBS double-counts multi-statement scripts (AUDI-1277, verified 2026-09-03)
+
+**A BigQuery script's parent job (statement_type SCRIPT, parent_job_id IS NULL) already carries the sum of its children's total_slot_ms and total_bytes_billed.** When profiling cost per DAG task, any SUM over JOBS rows must filter `parent_job_id IS NULL` to get top-level jobs only; otherwise the script parent's costs are double-counted with its constituent statements' costs. Verified over 7h logs: `campaign_summary_hourly-create` (DELETE+INSERT script) has a SCRIPT parent (151.7 slot-h) + DELETE child (0) + INSERT child (151.7) = two rows reporting 151.7 each when summed (uncorrected measurement: 303.4 slot-h, off by 2×). The children table rows are real and needed for lineage, but the sum gate is `WHERE parent_job_id IS NULL`. Query: `include/spark_optimizer/bq_profile.py PROFILE_SQL` in airflow-ti, PR #1277 merged.
+
+## FOR SYSTEM_TIME AS OF on a BigQuery VIEW is silently ignored (AUDI-1277, verified 2026-09-03)
+
+**`FOR SYSTEM_TIME AS OF <timestamp>` on a BigQuery VIEW succeeds and returns current rows with no error.** The job succeeds and emits a warning `"Snapshot time ignored in <view> because it is a view"` (visible in `bq show -j`'s `warnings` field), but the query returns current data only, not time-travel data. Time travel must target a physical TABLE or a view whose entire lineage is physical tables. Applied to views in the architecture (e.g., `dw-main-gold.dso.campaign_group_flight` = view over `bronze.integrationprod.dso_campaign_group_flight` = SQLMesh VIEW model = view again), time-travel probes are invalid and must fall back to deriving the state from the underlying table's change events (e.g., `core_flights.start_time/end_time` to reconstruct the active-flight set at a past timestamp). Detail: AUDI-1277 §4.2.
+
+## BigQuery jobs landed by airflow-ti carry `airflow-dag`/`airflow-task` labels (AUDI-1194, 2026-09-02)
 
 Every BigQuery job the optimizer's cost surface measures carries `airflow-dag` and `airflow-task`
 labels - the ledger's unattributed bucket is empty (verified 2026-09-02). Cost attribution for

@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1277: Tune the 2 heaviest BigQuery query shapes
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1277
-**Status:** in_progress (branches ready, PRs not yet opened)
+**Status:** in_progress (PRs open: airflow-ti #1277, airflow-camperbid #580)
 **Date Started:** 2026-09-02
 **Assignee:** Malachi
 

@@ -3511,3 +3511,17 @@ Leg 1 = auction translation (household ⟶ IP at bid time), leg 2 = graph transl
 from** — it holds the impression join already, so most questions need no `enriched_impressions` access.
 Sibling `ddp_crm_graph_matches_cpm` adds `type` and `auction_signal_timestamp`. Its `graph_dsids` **retain**
 free/internal sources (23, 30, 58) and non-externally-reported partners (22), unlike `bae-sql-utility#24`.
+
+<!-- OBSERVED:FACTS START — AUDI-1277 2026-09-03 -->
+
+## Observed Facts — AUDI-1277 BigQuery Optimization
+
+**airflow-camperbid BigQuery jobs live in `dw-main-bronze` JOBS_BY_PROJECT (region-us-central1) under the user_email `airflow-camperbid-prod@mntn-prj-prod-00.iam.gserviceaccount.com`.** The BQ profiler reads them via INFORMATION_SCHEMA.JOBS_BY_PROJECT; cost of a `JOBS` view dry-run: ~9.3 GB/day, ~3 GB per 6-7 hours (stay under 5 GB cap with 12h windows). The projects `mntn-prj-prod-00` and `dw-main-silver` JOBS_BY_PROJECT are readable; `dw-main-bronze` is not accessible to malachi. (AUDI-1277, verified 2026-09-02/03)
+
+**summarydata.all_facts MERGE write cadence:** the physical table `sqlmesh__summarydata.summarydata__all_facts__3194417682` (INCREMENTAL_BY_TIME_RANGE model with 72h lookback) is MERGE-written approximately 13 times per day (range 11-15, verified over 2026-08-30 to 09-02), with gaps 0.3 to 4.6 hours between MERGEs. Each MERGE consumes 12-21 slot-h and 310-423 GiB. A change detector based on `MAX(last_modified_time)` from `dw-main-silver.sqlmesh__summarydata.INFORMATION_SCHEMA.PARTITIONS` with table_name REGEXP `'^summarydata__all_facts__[0-9]+$'` reads as an approximately 2 slot-second operation. (AUDI-1277, verified 2026-09-03)
+
+**dw-main-gold.dso.campaign_group_flight shape and churn:** the view = one row per currently-active flight per campaign_group (WHERE start_time <= now < end_time). Approximately 21,871 rows on any given read. Flight starts/ends (row-set changes) occur frequently: 170-400 distinct flight start/end events per quarter-hour on weekdays (affecting 50-70 of 96 quarter-hours per day), ~100 on weekends (affecting ~20 quarter-hours), and ~41,915 on month-start days (the 2026-09-01 rollover affected all 96). This high churn caps an exact-fingerprint skip gate on repeated work to approximately 50% of runs on a typical day (48% on 08-31, 28% on rollover day 09-01), with the union of all_facts MERGE windows. (AUDI-1277, verified 2026-09-03)
+
+**external.camperbid_prod__bos__flight_metrics_per2388 does not exist for most of every 15-minute DAG cycle:** the `bos__spend` DAG drops the table at the cycle start and the `CREATE` statement finishes approximately 8 minutes later (observed missing 07:19-07:23 UTC, present at 07:23:18, 2026-09-03). The `drop` task runs before the gate, so with a skip gate (when no rebuild is needed) the table persists across the skipped cycle; without the gate the table is absent until the next create. Only the DAG's own Spark job (`campaign_performance` consumer) reads the table. (AUDI-1277, verified 2026-09-03)
+
+<!-- OBSERVED:FACTS END -->
