@@ -182,6 +182,8 @@ Flag state: `camperbid_prod__hhst_v4__campaign_bucket` has 1,954 campaigns, 0 wi
 `outputs/audi_1277_csh_stage_attribution.txt` from the saved plan (259 stages, 6.87 slot-h): 76.2% stages whose lineage is only the `spend_pacing` view's sources (`external.impression__v1`, `bidder_win_notifications__v1` and 17 `integrationprod` dim tables), 4.7% dims only, 13.3% after the union with the cost log, 5.7% the cost log half. Top stages S111/S10D/SFE/SF2 each read 0.2-1.3 B rows from the impression and win-notification parquet. The ask is in `artifacts/audi_1277_sqlmesh_ask.md`.
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/airflow-camperbid/pull/580 (opened 2026-09-03 PT; airflow-camperbid skip gate + histogram, medium tier, 4 findings refuted, 0 confirmed; reviewers per CODEOWNERS (pacing, performance-ml))
+
 **PR:** https://github.com/SteelHouse/airflow-ti/pull/1277 (opened 2026-09-03 PT; airflow-ti profiler fix, fast tier, 2 findings refuted, 0 confirmed; the airflow-camperbid PR follows its own gauntlet)
 
 - **airflow-ti** (`/private/tmp/.../scratchpad/wt/audi_1277_ti`, branch `audi-1277-bq-profile-parent-jobs`, 2 files, +16/-1): `include/spark_optimizer/bq_profile.py` `PROFILE_SQL` adds `AND parent_job_id IS NULL` and the module docstring says why; `include/spark_optimizer/tests/test_bq_profile.py` adds `test_profile_sums_only_top_level_jobs`. PR body: `artifacts/audi_1277_pr_body_ti.md`.
