@@ -90,15 +90,15 @@ def summarize(df, by, label, order=None, min_k=5, extras=True):
         if p is None or p["k"] < min_k:
             continue
         gp = g[p["mask"]]
-        r = {label: key, "Campaigns": p["k"], "Pooled lift": p["lift"],
-             "CI low": p["lo"], "CI high": p["hi"],
-             "% significant": gp["significant_95"].mean(),
-             "Heterogeneity": p["i2"],
+        r = {label: key, "Campaigns": p["k"], "Lift": p["lift"],
+             "Low end": p["lo"], "High end": p["hi"],
+             "% with a clear effect": gp["significant_95"].mean(),
+             "Campaigns disagree": p["i2"],
              "Incremental visits": gp["incremental_visits"].sum()}
         if extras:
             sp, iv = gp["scaled_spend"].sum(), gp["incremental_visits"].sum()
             r["Spend"] = sp
-            r["Cost per inc visit"] = sp / iv if iv > 0 else np.nan
+            r["Cost per incremental visit"] = sp / iv if iv > 0 else np.nan
         rows.append(r)
     out = pd.DataFrame(rows)
     if out.empty:
@@ -107,7 +107,7 @@ def summarize(df, by, label, order=None, min_k=5, extras=True):
         out[label] = pd.Categorical(out[label], categories=order, ordered=True)
         out = out.sort_values(label)
     else:
-        out = out.sort_values("Pooled lift", ascending=False)
+        out = out.sort_values("Lift", ascending=False)
     return out.reset_index(drop=True)
 
 
@@ -239,24 +239,24 @@ rank_rows = []
 for name, tbl, fixed_n in RANKED_SRC:
     if tbl.empty or len(tbl) < 2:
         continue
-    t = tbl.sort_values("Pooled lift", ascending=False)
+    t = tbl.sort_values("Lift", ascending=False)
     best, worst = t.iloc[0], t.iloc[-1]
     rank_rows.append({
         "Attribute": name,
-        "Levels": len(t),
         "Campaigns": int(fixed_n if fixed_n else t["Campaigns"].sum()),
-        "Smallest level": int(t["Campaigns"].min()),
-        "Best level": str(best[t.columns[0]]),
-        "Best lift": best["Pooled lift"],
-        "Worst level": str(worst[t.columns[0]]),
-        "Worst lift": worst["Pooled lift"],
-        "Spread": best["Pooled lift"] - worst["Pooled lift"],
-        "Intervals separate": bool(best["CI low"] > worst["CI high"]),
+        "Settings compared": len(t),
+        "Campaigns in the thinnest setting": int(t["Campaigns"].min()),
+        "Best setting": str(best[t.columns[0]]),
+        "Best lift": best["Lift"],
+        "Worst setting": str(worst[t.columns[0]]),
+        "Worst lift": worst["Lift"],
+        "Gap, best minus worst": best["Lift"] - worst["Lift"],
+        "Best and worst do not overlap": bool(best["Low end"] > worst["High end"]),
     })
 def between_q(tbl):
     """Cochran Q across an attribute's levels, on the log scale, with its p-value."""
-    y = np.log1p(tbl["Pooled lift"].to_numpy())
-    se = (np.log1p(tbl["CI high"].to_numpy()) - np.log1p(tbl["CI low"].to_numpy())) / (2 * 1.96)
+    y = np.log1p(tbl["Lift"].to_numpy())
+    se = (np.log1p(tbl["High end"].to_numpy()) - np.log1p(tbl["Low end"].to_numpy())) / (2 * 1.96)
     ok = np.isfinite(y) & np.isfinite(se) & (se > 0)
     if ok.sum() < 2:
         return np.nan, np.nan
@@ -268,11 +268,20 @@ def between_q(tbl):
 
 for row, (_, tbl, _fx) in zip(rank_rows, RANKED_SRC):
     q, pv = between_q(tbl)
-    row["Levels differ (p)"] = pv
+    row["Chance of seeing this gap if nothing differs"] = pv
+    row["Real difference?"] = ("Yes, strong" if pv < 0.01 else
+                               "Yes" if pv < 0.05 else
+                               "Too close to call" if pv < 0.20 else "No")
 
 ranked = (pd.DataFrame(rank_rows)
-          .sort_values(["Levels differ (p)", "Spread"], ascending=[True, False])
+          .sort_values(["Chance of seeing this gap if nothing differs", "Gap, best minus worst"],
+                       ascending=[True, False])
           .reset_index(drop=True))
+RANK_ORDER = ["Attribute", "Real difference?", "Chance of seeing this gap if nothing differs",
+              "Best setting", "Best lift", "Worst setting", "Worst lift", "Gap, best minus worst",
+              "Best and worst do not overlap", "Campaigns", "Settings compared",
+              "Campaigns in the thinnest setting"]
+ranked = ranked[RANK_ORDER]
 
 conv = pop[pop["conv_rate_holdout"] > 0].copy()
 conv_rows = []
@@ -286,13 +295,13 @@ for name, tbl_col, order in [("Creative length mix", "creative", None),
         clears = bool(pcv and pcv["lo"] > 0)
         conv_rows.append({
             "Attribute": name, "Setting": key, "Campaigns": len(g),
-            "Median conversion lift": g["conv_rel_itt"].median(),
-            "Lift clears zero": clears,
-            "% significant": g["conv_significant_95"].fillna(False).mean(),
+            "Typical conversion lift": g["conv_rel_itt"].median(),
+            "Clearly above zero": clears,
+            "% with a clear effect": g["conv_significant_95"].fillna(False).mean(),
             "Baseline conv rate": g["conv_rate_holdout"].median(),
             "Incremental conversions": (g["incremental_conversions"].sum()
                                         if clears and g["incremental_conversions"].sum() > 0 else np.nan),
-            "Cost per inc conversion": (g["scaled_spend"].sum() / g["incremental_conversions"].sum()
+            "Cost per incremental conversion": (g["scaled_spend"].sum() / g["incremental_conversions"].sum()
                                         if clears and g["incremental_conversions"].sum() > 0 else np.nan),
         })
 conv_tbl = pd.DataFrame(conv_rows)
@@ -313,18 +322,18 @@ for name, col in [("Creative length mix", "creative"), ("Geographic targeting", 
         estimable = pc["lo"] > 0
         infl_rows.append({
             "Attribute": name, "Setting": key, "Campaigns": pc["k"],
-            "Pooled conversion lift": pc["lift"],
-            "CI low": pc["lo"], "CI high": pc["hi"],
-            "Lift clears zero": bool(estimable),
+            "Conversion lift": pc["lift"],
+            "Low end": pc["lo"], "High end": pc["hi"],
+            "Clearly above zero": bool(estimable),
             "Attributed conversions": att_conv,
             "Incremental conversions": att_conv * share if estimable else np.nan,
             "% attributed that is incremental": share if estimable else np.nan,
-            "Attributed per incremental": 1.0 / share if estimable else np.nan,
+            "Reported per real one": 1.0 / share if estimable else np.nan,
             "Attributed CPA": spend / att_conv,
             "Incremental CPA": spend / (att_conv * share) if estimable else np.nan,
         })
 infl_tbl = (pd.DataFrame(infl_rows)
-            .sort_values(["Lift clears zero", "Pooled conversion lift"], ascending=[False, False])
+            .sort_values(["Clearly above zero", "Conversion lift"], ascending=[False, False])
             .reset_index(drop=True))
 
 gates = []
@@ -335,10 +344,10 @@ for lab, sub in [("Everything that passes power and quality", base),
     p = pool(sub)
     if p is None:
         continue
-    gates.append({"Population": lab, "Campaigns": p["k"], "Pooled lift": p["lift"],
-                  "CI low": p["lo"], "CI high": p["hi"],
-                  "% significant": sub[p["mask"]]["significant_95"].mean(),
-                  "Heterogeneity": p["i2"]})
+    gates.append({"Population": lab, "Campaigns": p["k"], "Lift": p["lift"],
+                  "Low end": p["lo"], "High end": p["hi"],
+                  "% with a clear effect": sub[p["mask"]]["significant_95"].mean(),
+                  "Campaigns disagree": p["i2"]})
 gate_tbl = pd.DataFrame(gates)
 
 base["gf_bin"] = pd.cut(base["ghost_frac"], bins=[0, 0.08, 0.09, 0.10, 0.11, 1.0],
@@ -375,10 +384,10 @@ detail = base[[
     "rel_itt": "Visit lift", "p_value": "p value", "significant_95": "Significant",
     "rate_holdout": "Holdout visit rate", "rate_treatment": "Treated visit rate",
     "incremental_visits": "Incremental visits", "prospecting_spend": "Prospecting media spend",
-    "cost_per_incremental_visit": "Cost per inc visit", "conv_rel_itt": "Conversion lift",
+    "cost_per_incremental_visit": "Cost per incremental visit", "conv_rel_itt": "Conversion lift",
     "conv_p_value": "Conv p value", "conv_significant_95": "Conv significant",
     "conv_rate_holdout": "Baseline conv rate", "incremental_conversions": "Incremental conversions",
-    "cost_per_incremental_conversion": "Cost per inc conversion",
+    "cost_per_incremental_conversion": "Cost per incremental conversion",
     "scaled_spend": "Spend on measured households",
     "attributed_visits": "Attributed visits", "attributed_conversions": "Attributed conversions",
     "attributed_ivr": "Attributed IVR",
@@ -414,9 +423,9 @@ n_sig = int(pop["significant_95"].sum())
 n_conv = len(conv)
 head = pool(pop)
 
-SUMF = {"Pooled lift": FMT.PCT1, "CI low": FMT.PCT1, "CI high": FMT.PCT1,
-        "% significant": FMT.PCT0, "Heterogeneity": FMT.PCT0, "Campaigns": FMT.INT,
-        "Incremental visits": FMT.INT, "Spend": FMT.USD0, "Cost per inc visit": FMT.USD2}
+SUMF = {"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
+        "% with a clear effect": FMT.PCT0, "Campaigns disagree": FMT.PCT0, "Campaigns": FMT.INT,
+        "Incremental visits": FMT.INT, "Spend": FMT.USD0, "Cost per incremental visit": FMT.USD2}
 
 wb = MntnWorkbook(
     title="Campaign incrementality by attribute",
@@ -428,12 +437,15 @@ wb = MntnWorkbook(
 
 wb.table(
     "Ranked hypotheses", ranked,
-    finding="Attributes ranked by whether their levels genuinely differ in lift",
-    method="Ranked on a between-level test, not on raw spread, because an attribute with more levels shows a wider spread by chance alone. A small p value means the levels really do differ.",
-    formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Spread": FMT.PCT1,
-             "Campaigns": FMT.INT, "Levels": FMT.INT, "Smallest level": FMT.INT,
-             "Levels differ (p)": "0.0000"},
-    signal={"Spread": {"sig": "Intervals separate"}}, kind="headline",
+    finding="Attributes ranked by how sure we are that their settings really differ in lift",
+    method="Ranked on the third column, not on the gap, because an attribute with more settings shows a wider gap by chance alone. Read the gap only where the answer is yes.",
+    formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap, best minus worst": FMT.PCT1,
+             "Campaigns": FMT.INT, "Settings compared": FMT.INT,
+             "Campaigns in the thinnest setting": FMT.INT,
+             "Chance of seeing this gap if nothing differs": FMT.PCT2},
+    rag={"Real difference?": lambda v: {"Yes, strong": "POS", "Yes": "POS",
+                                        "Too close to call": "WARN"}.get(v)},
+    kind="headline",
     toc="Which attribute separates lift most, ranked",
     query="ti_1313_campaign_base.sql")
 
@@ -441,7 +453,7 @@ wb.table(
     "By frequency", by_freq,
     finding="Pooled visit lift by how many times a household was bid on across the whole 71 day window",
     method="Bids counted once over the whole 22 Jun to 31 Aug window, not per week. Households are not randomised into these bands. Spend is split across bands by each band's share of bids.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift at 1, 2 to 3, 4 to 10 and 11+ bids per household over the full window",
     query="ti_1313_bid_count_strata.sql")
 
@@ -449,7 +461,7 @@ wb.table(
     "By creative length", by_creative,
     finding="Pooled visit lift by the mix of 15 and 30 second creative delivered",
     method="Impression-weighted over prospecting delivery. Nearly half of campaigns run both lengths, so a clean 15 against 30 split is not available in the data.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by 15s only, mixed, or 30s only",
     query="ti_1313_campaign_base.sql")
 
@@ -457,7 +469,7 @@ wb.table(
     "By geography", by_geo,
     finding="Pooled visit lift by the geographic targeting the advertiser chose",
     method="From stored targeting rather than delivered footprint, so it is the advertiser's choice and not an outcome of pacing. Class order is radius, zip, city, state, DMA.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by national, DMA, state, city, zip or local radius",
     query="ti_1313_campaign_base.sql")
 
@@ -465,7 +477,7 @@ wb.table(
     "By intent band", by_band,
     finding="Pooled visit lift and cost per incremental visit by the intent band the household was scored into",
     method="From the platform's score-band strata; a campaign appears in every band it delivered to. Spend is split across bands by each band's share of bids, so it assumes a flat cost per bid in a campaign.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift and cost per incremental visit by High, Peak, Mid, Max Reach and Unscored",
     query="ti_1313_score_band_strata.sql")
 
@@ -473,7 +485,7 @@ wb.table(
     "By vertical", by_vertical,
     finding="Pooled visit lift by advertiser vertical",
     method="Advertisers pick their own vertical, so this compares populations rather than a setting. Verticals under 5 campaigns are dropped.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Pooled lift for each vertical, ranked",
     query="ti_1313_campaign_base.sql")
 
@@ -481,7 +493,7 @@ wb.table(
     "By campaign frequency", by_freq_q,
     finding="Pooled visit lift by the campaign's own average frequency over the whole 71 day window",
     method="Quartiles on prospecting impressions divided by households reached, both counted once over the whole window. The bid-count sheet instead splits households inside a campaign.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by the campaign's average frequency quartile over the full window",
     query="ti_1313_campaign_base.sql")
 
@@ -489,7 +501,7 @@ wb.table(
     "By audience size", by_aud,
     finding="Lift does not run with audience size: the second quartile reads highest, the smallest quartile lowest",
     method=f"Quartiles on the targetable audience behind the prospecting campaigns, median across delivered days. Rank correlation with lift is {rho_lift:+.2f} (p = {p_lift:.2f}), so this is a quartile gap, not a trend.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by targetable audience size quartile",
     query="ti_1313_campaign_base.sql")
 
@@ -510,7 +522,7 @@ if not by_other.empty:
         "Other attributes", by_other,
         finding="Pooled visit lift by customer-file exclusion, multi-touch and delivered footprint",
         method="Each block pools the same campaigns a different way. Multi-touch access is an advertiser setting, not a campaign one. Values under 5 campaigns are dropped.",
-        formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+        formats=SUMF, signal={"Lift": {}}, kind="data",
         toc="Lift by customer-file exclusion, multi-touch and footprint",
         query="ti_1313_campaign_base.sql")
 
@@ -519,22 +531,22 @@ if not conv_tbl.empty:
         "Conversion outcomes", conv_tbl,
         finding=f"Conversion lift for the {n_conv:,} campaign groups whose holdout recorded conversions",
         method="Medians of per-campaign values, because conversion counts are thin. Baseline is the median holdout conversion rate. Counts and cost are blank where the group measured no net incremental conversions.",
-        formats={"Median conversion lift": FMT.PCT1, "% significant": FMT.PCT0,
+        formats={"Typical conversion lift": FMT.PCT1, "% with a clear effect": FMT.PCT0,
                  "Baseline conv rate": FMT.PCT2, "Incremental conversions": FMT.INT,
-                 "Cost per inc conversion": FMT.USD2, "Campaigns": FMT.INT},
-        signal={"Median conversion lift": {}}, kind="data",
+                 "Cost per incremental conversion": FMT.USD2, "Campaigns": FMT.INT},
+        signal={"Typical conversion lift": {}}, kind="data",
         toc="Conversion lift and cost per incremental conversion",
         query="ti_1313_campaign_base.sql")
 
 if not infl_tbl.empty:
     wb.table(
         "Attribution inflation", infl_tbl,
-        finding=f"Conversion lift clears zero for {int(infl_tbl['Lift clears zero'].sum())} of {len(infl_tbl)} attribute levels, so the cost comparison is only estimable there",
+        finding=f"Conversion lift clears zero for {int(infl_tbl['Clearly above zero'].sum())} of {len(infl_tbl)} attribute levels, so the cost comparison is only estimable there",
         method="Where the pooled conversion lift interval includes zero, the incremental count and the cost columns are unbounded and left blank. Attributed CPA is shown throughout on reporting total spend.",
-        formats={"Pooled conversion lift": FMT.PCT1, "CI low": FMT.PCT1, "CI high": FMT.PCT1,
+        formats={"Conversion lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
                  "Attributed conversions": FMT.INT,
                  "Incremental conversions": FMT.INT, "% attributed that is incremental": FMT.PCT0,
-                 "Attributed per incremental": FMT.MULT, "Attributed CPA": FMT.USD2,
+                 "Reported per real one": FMT.MULT, "Attributed CPA": FMT.USD2,
                  "Incremental CPA": FMT.USD2, "Campaigns": FMT.INT},
         kind="data",
         toc="Where attributed and incremental cost can be compared, and where they cannot",
@@ -544,12 +556,12 @@ wb.table(
     "By audience score", pd.concat([
         by_hi.rename(columns={"Share of scored households at High Intent": "Setting"}).assign(Attribute="High-intent share of scored households"),
         by_score.rename(columns={"Average household score": "Setting"}).assign(Attribute="Average household score"),
-    ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Pooled lift", "CI low", "CI high",
-                           "% significant", "Heterogeneity", "Incremental visits", "Spend",
-                           "Cost per inc visit"]],
+    ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Lift", "Low end", "High end",
+                           "% with a clear effect", "Campaigns disagree", "Incremental visits", "Spend",
+                           "Cost per incremental visit"]],
     finding="Pooled visit lift by what the campaign's scored audience looked like",
     method="Quartiles on scored households only, one score per household. Campaigns with no scored household are excluded rather than tie-broken into a band, and their unscored share ships on Campaign detail.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by high-intent share and by average score",
     query="ti_1313_campaign_base.sql")
 
@@ -558,12 +570,12 @@ wb.table(
         by_tv.rename(columns={"Share of spend on TV screens": "Setting"}).assign(Attribute="TV share of spend"),
         by_vv.rename(columns={"Visit attribution window": "Setting"}).assign(Attribute="Visit attribution window"),
         by_tenure.rename(columns={"Advertiser tenure": "Setting"}).assign(Attribute="Advertiser tenure"),
-    ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Pooled lift", "CI low", "CI high",
-                           "% significant", "Heterogeneity", "Incremental visits", "Spend",
-                           "Cost per inc visit"]],
+    ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Lift", "Low end", "High end",
+                           "% with a clear effect", "Campaigns disagree", "Incremental visits", "Spend",
+                           "Cost per incremental visit"]],
     finding="Pooled visit lift by screen, attribution window and advertiser tenure",
     method="TV share is spend-weighted from the device dimension. Mobile and tablet is its exact complement, so it is not shown separately. Attribution window is the advertiser's visit lookback.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+    formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by TV share, attribution window and tenure",
     query="ti_1313_campaign_base.sql")
 
@@ -572,7 +584,7 @@ if not by_fcap.empty:
         "By frequency cap", by_fcap,
         finding="Pooled visit lift by the campaign's household frequency cap",
         method="The operating cap, read per prospecting campaign. Caps under 5 campaigns are dropped, so this covers the common settings rather than every one.",
-        formats=SUMF, signal={"Pooled lift": {}}, kind="data",
+        formats=SUMF, signal={"Lift": {}}, kind="data",
         toc="Lift by household frequency cap setting",
         query="ti_1313_campaign_base.sql")
 
@@ -600,9 +612,9 @@ wb.table(
     "Population choices", gate_tbl,
     finding="What each population filter costs, and what it does to the headline",
     method="The workbook uses the last row. The holdout band matters most: measured lift climbs as the holdout thins, which is an artifact of the estimator rather than a real effect.",
-    formats={"Pooled lift": FMT.PCT1, "CI low": FMT.PCT1, "CI high": FMT.PCT1,
-             "% significant": FMT.PCT0, "Heterogeneity": FMT.PCT0, "Campaigns": FMT.INT},
-    signal={"Pooled lift": {}}, kind="detail",
+    formats={"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
+             "% with a clear effect": FMT.PCT0, "Campaigns disagree": FMT.PCT0, "Campaigns": FMT.INT},
+    signal={"Lift": {}}, kind="detail",
     toc="Headline lift under each combination of filters",
     query="ti_1313_campaign_base.sql")
 
@@ -610,7 +622,7 @@ wb.table(
     "Holdout depth check", sens,
     finding="Measured lift climbs as the holdout thins, which is why the band filter exists",
     method="Every campaign on the validated bidder leg, binned on the share of households held back. The estimator is documented as reliable only between 9 and 11%.",
-    formats=SUMF, signal={"Pooled lift": {}}, kind="detail",
+    formats=SUMF, signal={"Lift": {}}, kind="detail",
     toc="The gradient behind the holdout band filter",
     query="ti_1313_campaign_base.sql")
 
@@ -621,9 +633,9 @@ wb.table(
     formats={"Visit lift": FMT.PCT1, "p value": FMT.NUM2, "Holdout share": FMT.PCT1,
              "Holdout visit rate": FMT.PCT2, "Treated visit rate": FMT.PCT2,
              "Incremental visits": FMT.INT, "Prospecting media spend": FMT.USD0,
-             "Spend on measured households": FMT.USD0, "Cost per inc visit": FMT.USD2,
+             "Spend on measured households": FMT.USD0, "Cost per incremental visit": FMT.USD2,
              "Conversion lift": FMT.PCT1, "Conv p value": FMT.NUM2, "Baseline conv rate": FMT.PCT2,
-             "Incremental conversions": FMT.NUM1, "Cost per inc conversion": FMT.USD2,
+             "Incremental conversions": FMT.NUM1, "Cost per incremental conversion": FMT.USD2,
              "Attributed visits": FMT.INT, "Attributed conversions": FMT.INT,
              "Attributed IVR": FMT.PCT2, "Attributed CPA on total spend": FMT.USD2,
              "Attributed per incremental conv": FMT.MULT, "% attr visits incremental": FMT.PCT0,
@@ -652,10 +664,12 @@ wb.glossary(
     rows=[
         ("What this measures", "Ghost-bid holdout lift. A slice of eligible households is withheld from bidding, and lift compares the households we bid on against the ones we held back."),
         ("Visit lift", "Relative increase in the share of households that visited the site, treated against holdout."),
-        ("Pooled lift", "Random-effects pool of the log risk ratio across campaigns. Random effects because campaigns disagree far more than their own error bars allow."),
-        ("Heterogeneity", "Share of variation between campaigns that is real disagreement, not sampling noise. Above roughly 75% the pooled number is the centre of a wide spread."),
+        ("Lift", "Random-effects pool of the log risk ratio across campaigns. Random effects because campaigns disagree far more than their own error bars allow."),
+        ("Low end and High end", "The range the true lift is very likely to sit in. A range that stays above zero means the effect is real; one that crosses zero means we cannot rule out no effect at all."),
+        ("% with a clear effect", "Share of the campaigns in that row whose own result was strong enough to stand on its own. The rest may still be real, just too small to prove one at a time."),
+        ("Campaigns disagree", "Share of variation between campaigns that is real disagreement, not sampling noise. Above roughly 75% the pooled number is the centre of a wide spread."),
         ("Attributed against incremental", "Attributed counts every visit or conversion reporting credits to the ads. Incremental counts only what the holdout says the ads caused."),
-        ("Attributed per incremental", "How many reported conversions stand behind one genuine one. Blank wherever conversion lift does not clear zero, because the ratio is unbounded there."),
+        ("Reported per real one", "How many reported conversions stand behind one genuine one. Blank wherever conversion lift does not clear zero, because the ratio is unbounded there."),
         ("Holdout share", "Share of a campaign's households held back. The estimator is documented as reliable only between 9 and 11%, and measured lift climbs as it thins."),
         ("Who is in this", f"{n_pop:,} campaign groups across {n_adv:,} advertisers: 100+ holdout visits, full quality gate, validated bidder leg, holdout inside the band, live at least 75% of days, and no internal or test account."),
         ("Days live", "Distinct days the group delivered prospecting impressions in the window. Measured from delivery, not config dates, so a mid-window pause is caught."),
@@ -674,7 +688,7 @@ wb.glossary(
         ("Audience size", "The targetable pool behind the prospecting campaigns, median across delivered days. It reflects the stored targeting expression and overstates what is deliverable, so compare campaigns on it rather than reading a level."),
         ("Frequency is over the whole window", "Both frequency sheets count over the full 22 Jun to 31 Aug span, not per week or per month. 11+ bids means 11 or more across ten weeks."),
         ("Everything else", "Every other attribute the ticket names is a column on Campaign detail, and those with enough spread are cut on a sheet and ranked."),
-    ], max_entries=25)
+    ], max_entries=27)
 
 wb.sql_dir("Queries", str(TICKET / "queries"),
            note="DRAFT - NOT FINAL. BigQuery SQL behind every sheet.")

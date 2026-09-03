@@ -613,3 +613,28 @@ frequency. That triangle is the thing worth a designed test.
 columns on Campaign detail (70 columns).
 
 **Still open from this round:** nothing Kirsa raised. The §11 open items stand.
+
+### 12d. Column names were jargon (2026-09-02)
+
+Flagged on the ranked sheet, and it was on ten sheets through the shared column set. Renamed everywhere:
+
+| was | now | why it was wrong |
+|---|---|---|
+| Pooled lift | Lift | "pooled" is a method detail, not a column |
+| CI low / CI high | Low end / High end | statistics notation in a client sheet |
+| % significant | % with a clear effect | |
+| Heterogeneity | Campaigns disagree | |
+| Cost per inc visit | Cost per incremental visit | abbreviation saved nothing |
+| Smallest level | Campaigns in the thinnest setting | read as a level NAME next to "Best level", but it is a COUNT |
+| Levels | Settings compared | |
+| Spread | Gap, best minus worst | |
+| Intervals separate | Best and worst do not overlap | |
+| Levels differ (p) | Chance of seeing this gap if nothing differs | a bare p-value, last column, formatted 0.0000 |
+
+**The ranked sheet had a structural problem, not just naming.** The sort key was the last column, in the
+least readable form, while the heat colour sat on Spread, which the method line explicitly tells the reader
+NOT to rank on. Colouring the column you just told someone to ignore is the lie-factor failure in Tufte
+terms. Fixed: new plain-language **Real difference?** column (Yes strong / Yes / Too close to call / No at
+0.01 and 0.05) sits second with the traffic-light fill, the p-value follows it as a percentage, and the
+supporting counts move to the right-hand end. Read me gained entries for "Low end and High end" and
+"% with a clear effect".
