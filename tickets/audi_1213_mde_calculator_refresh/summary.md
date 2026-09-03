@@ -265,3 +265,42 @@ delivering advertiser's values, no console errors.
 **Live:** Mode run `e2073005c2f1` returned 4,387 rows (1,857 delivering, 2,530 lapsed), 180s
 end to end. Largest lapsed accounts: Absher Land Service $633k (180d), LifeMD $535k (221d),
 UnitedHealthcare $322k (231d). Gist republished from the same build.
+
+## VR_STACK 0.595 re-measured and refuted, 2026-09-03
+
+Four independent measurements against `dw-main-gold.reporting.lift__ghost_bid_results`, each
+adversarially re-run by a second agent. Full write-up in `knowledge/experimentation.md` under
+"VR_STACK 0.595 is REFUTED end to end".
+
+**Headline: the defensible multiplier is 1.0, not 0.595 and not 0.794.** Over 421 clean campaign
+groups the empirical multiplier (`z * se_reported` over the naive binomial MDE) has median 1.0030
+and SD 0.0073, and **zero campaigns land at or below 0.595 or 0.794** under any of five gate
+variants. 0.595 sits 56 SDs below the observed minimum.
+
+**Why, mechanically:** `se_reported / sqrt(p_t(1-p_t)/n_t + p_h(1-p_h)/n_h)` = 1.000000000 at both
+min and max across all 3,273 rows. The ghost-bid pipeline's SE *is* the plain two-proportion
+binomial SE. Nothing in the lineage applies CUPED, ghost-ad conditioning or stratification, so there
+is no variance reduction for the calculator to inherit.
+
+**Per factor:** ghost-ad 0.75 is a LATE rescaling that *divides* SE (inflating it 1.33x) and is
+applied here as a multiplier, the wrong sign; its exposure rate also measures 0.493 mean, not 0.75.
+Stratified 0.85 buys ~1.00 on a rare-binary outcome and was authored for a different design
+(advertiser-randomized rollout, continuous outcome). CUPED 0.934 roughly survives on its own terms
+(measured rho 0.3299 over 18.4M units gives 0.944) but is moot, since the pipeline does not apply
+CUPED.
+
+**Method caveat worth keeping.** The first cut of this measurement compared the pipeline's `se`
+against a binomial SE rebuilt from the same four stored integers, which is an arithmetic identity
+with zero degrees of freedom: it returns 1.0000 by construction and returns it just as readily on
+the `bid_count` strata that are documented as contaminated. The verifier caught it. The end-to-end
+result above is not that artifact, because its numerator is the stored `se` column and its
+denominator is the calculator's own formula on independently pulled arm sizes, but the near-miss is
+the reason the SE-identity line is reported as a mechanism finding rather than as the measurement.
+
+**Consequence for anything already circulated:** every post-stack MDE this tool has published is
+understated by 1/0.595 = 1.68x, and every post-stack budget by 2.82x.
+
+**Not yet actioned.** `VR_STACK` is still 0.595 in both builds and the FULL STACK toggle still ships.
+Changing it moves numbers people have already been quoted, so it needs Malachi's call. Options: set
+`VR_STACK` to 1.0 and keep the toggle as a no-op placeholder, or remove the toggle and the
+post-stack hero entirely and show RAW only.

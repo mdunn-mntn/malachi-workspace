@@ -1897,6 +1897,49 @@ Each visiting IP fires ~2.9 visit events. For the full derivation of why this is
 
 The arm split and its `spendRequired` mirror (1.1111x) are now **correct and verified** in the standalone, together with the `setOutcome` defect: checked with node against `ti_884_mde_calculator.py`, `mdeRel` agrees to **<1e-11** across h=0.10/0.20 and p=0.0058/0.107/0.1183, and `spendRequired(computeMDE(budget)) == budget` to **<1e-9**. Republished to the SAME gist under the ORIGINAL filename so previously shared links stay valid (`gh gist edit <id> -f ti_xxx_mde_calculator_prefill.html <local path>`); live copy verified byte-identical to the local build. Exposure widened 879 → 1,859 named delivering advertisers now carrying advertiser-facing spend; still no lapsed/churned accounts. Build artifacts: `tickets/audi_1213_mde_calculator_refresh/artifacts/audi_1213_build_prefill.py`, `audi_1213_patch_calculator.py`, `audi_1213_mde_calculator.html`. Still open on AUDI-1213: the 2,546 lapsed cohort, the Mode port, the VR_STACK 0.595 re-measurement.
 
+**VR_STACK 0.595 is REFUTED end to end, measured 2026-09-03 (AUDI-1213).** The MDE calculator's
+"FULL STACK" toggle multiplies the standard error by 0.595, documented as CUPED(0.934) x
+ghost-ad(0.75) x stratified(0.85). It makes every required budget look `1/0.595^2 = 2.82x` cheaper
+and every MDE `1.68x` smaller. Four measurements against `dw-main-gold.reporting.lift__ghost_bid_results`,
+each adversarially re-run:
+
+- **End to end (the decisive one, n=421 clean campaign groups, partner 8).** Empirical multiplier =
+  `(z * se_reported) / (z * sqrt(p(1-p)) * sqrt(1/n_t + 1/n_c))`: min 0.9817 · p05 0.9963 · median
+  **1.0030** · p95 1.0127 · max 1.0847, SD 0.0073. **Zero of 421 campaigns land at or below 0.595 or
+  0.794**; 0.595 sits 56 SDs below the observed minimum. Holds across every gate variant tried
+  (ungated all-partners n=3,273, ghost_frac-tightened n=160, n_holdout>=100k n=113, partner 79
+  n=135): count at or below 0.794 is 0 in all of them. Real ghost-bid tests detect what plain
+  binomial math says they detect. The ~0.3% excess over 1.0 is the calculator's single-baseline-p
+  approximation, not variance reduction.
+- **Mechanism, measured directly:** `se_reported / sqrt(p_t(1-p_t)/n_t + p_h(1-p_h)/n_h)` =
+  1.000000000 at both min and max across all 3,273 rows. The pipeline's reported SE **is** the plain
+  two-proportion binomial SE. No CUPED, no ghost-ad conditioning, no stratification adjustment
+  touches it, so there is no reduction anywhere in the lineage for the calculator to inherit.
+- **Ghost-ad 0.75 is applied with the wrong sign.** Per `ti_884_methodology.md` it comes from LATE
+  rescaling, `tau_LATE = ITT / exposure_rate`, "which has SE divided by the same factor" — dividing
+  by 0.75 *inflates* SE 1.33x, and since estimate and SE rescale together the relative MDE is
+  unchanged. The calculator applies it as a 0.75 SE *multiplier*, the opposite direction. The
+  exposure rate it stands in for also measures wrong: `ip_compliance` on the clean set is mean
+  **0.493** / median 0.521 (p05 0.132, p95 0.735), not 0.75.
+- **Stratified 0.85 buys ~1.00 on this outcome.** For a rare-binary visit-rate difference,
+  `se(score_band_mh)/se(overall)` has median exactly 1.0000 over 330 campaigns, 0 of 330 at or below
+  0.85; the closed form `sqrt(1 - Var_w(p)/(p_bar(1-p_bar)))` lands at 0.997-0.999 because the
+  measured `Var_w(p)/(p_bar(1-p_bar))` is ~0.0019 against the 0.28 that 0.85 would require. Note the
+  0.85 was authored for a different design (advertiser-randomized rollout, continuous outcome, see
+  `documentation/docs/feature_rollout_experimental_design.md`), so it is not so much wrong as
+  imported from a place it does not apply.
+- **CUPED 0.934 is the one factor that roughly survives, and it is moot.** Pooled treatment-arm rho
+  measured 0.3299 over 18.4M units gives 0.944, close to the claimed 0.934 (which came from an
+  unweighted mean of three advertisers in TI-884). But CUPED only pays if the analysis actually
+  applies it, and the SE identity above proves the pipeline does not.
+
+**What to do with the number.** The defensible multiplier today is **1.0**. Quote RAW. The earlier
+2026-08-20 ad-hoc read that landed on 0.794 (drop ghost-ad, keep CUPED x stratified) was directionally
+right that 0.595 is wrong, but 0.794 is not supported either: nothing in the lineage reduces variance
+at all. **Every post-stack MDE ever published from this tool is understated by `1/0.595 = 1.68x`, and
+every post-stack budget understated by 2.82x.** SQL and the reproduction scripts are committed under
+`tickets/audi_1213_mde_calculator_refresh/`.
+
 **Deeper caveat (applies to both tools equally; methodology, not a matching issue):** this served-arm clickpass IVR is the *observed* visit rate among the exposed — fine as a screening magnitude, but it is **not** the holdout/unexposed baseline an incrementality test measures lift against. VV-attributed (clickpass) visits are structurally ~0 for never-served holdout IPs, so the true control-arm rate is far below the served-arm rate. For an honest incrementality estimand the binomial `p` should be the holdout's **total-traffic** visit rate (guid_log), where holdout ≈ served (TI-835 showed ~0% total-traffic lift). Worth formalizing before the customer-facing forecast is final.
 
 ## TI-933 — Per-impression attribution window (lesson learned)
