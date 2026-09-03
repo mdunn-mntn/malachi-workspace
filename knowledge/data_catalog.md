@@ -255,6 +255,25 @@ per file) from 2026-08-20** with no recovery through 08-31. This tracks a ~6x dr
 
 ---
 
+## shopper_graph/openai_batch_submissions (parquet, per-batch receipts, daily `dt=`)
+- **Type:** Parquet at `gs://mntn-data-archive-prod/shopper_graph/openai_batch_submissions/dt=<D>/<s3_filename with "." replaced by "_">.parquet`, **one file per OpenAI batch** (~1,070-1,130 per day at first write: dt=2026-08-26 1113, 08-27 1067, 08-31 1132, 09-01 1084).
+- **Writer:** `SteelHouse/shopper_graph` `openai/openai_wrapper/batch_submitter.py` (`batch_submit` task of `mntn_match_incrementals_submit`; logical D runs D+1 09:00Z, `run_date` = D). **Readers:** `batch_transition` + `batch_fetch` of `mntn_match_incrementals_fetch` at D+2 09:00Z (`yesterday = data_interval_start - 1d` = D); `batch_transitioner` rewrites one row's file when it flips `was_submitted`. Verified AUDI-1279 2026-09-02/03 on two live partitions (`tickets/audi_1290_pipeline_optimization_hackathon/audi_1279_openai_batch_observability/outputs/receipt_sample_dt_*.parquet`).
+
+| Column | dtype | Notes |
+|---|---|---|
+| s3_filename | str | input JSONL name (`part-...-300-10.c009.jsonl`); also the parquet file stem |
+| openai_input_file_id | str | `file-...`, the uploaded batch input |
+| openai_batch_id | str | `batch_...` |
+| batch_submit_time | datetime64[us], **naive UTC** | the submit pod's `datetime.now()` in a UTC container (`2026-09-02 10:42:38` for dt=2026-09-01); age math is naive minus naive |
+| was_submitted | bool | set True by `batch_transition` once OpenAI reports `in_progress`/`completed` (and `finalizing` after shopper_graph#305) |
+| was_downloaded | bool | set True by `batch_fetch` after a real download (#296) |
+
+- **Read tips:** `pd.read_parquet("gs://.../dt=D/")` over ~1,100 objects took >2 min from a Mac (timed out); copy the partition down first with `gcloud -q storage cp -r`. pandas 3.x reads the three string columns as `str` dtype (pandas 2.x: `object`); `.query()` behaves the same.
+- **Gotcha, object counts are NOT stable evidence of cohort size:** the dead-cohort recovery deletes a partition and the rerun submit rewrites it with new file/batch ids, and a submit that dies mid-way (the 2.5TB file-storage quota, 2026-09-03) leaves a PARTIAL partition (742/791/653/510/733 objects for dt=08-27..08-31; dt=09-01 absent). Nothing in `openai/` deletes receipts and the bucket lifecycle rules (`temp/ tmp/ ...log/ ipdsc*`) do not match `shopper_graph/`. Detail: `data_knowledge.md` § MNTN Matched pipeline, memory `reference_mntn_matched_batch_pipeline`.
+- **Downstream chain:** `openai_batch_results/` → `openai_batch_results_joined/` → `product_categorization/` (`data_knowledge.md` § MNTN Matched pipeline).
+
+---
+
 ## silver.logdata.click_log
 - **Type:** VIEW → `sqlmesh__logdata.logdata__click_log__3304395312` (VIEW → upstream Postgres)
 - **Use for:** Raw click events (exchange-level clicks, distinct from clickpass)

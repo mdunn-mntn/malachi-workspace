@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49]
+keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49, partial receipts partition, rerun submits quota failed, receipts rewritten new batch ids, object count not cohort size, AUDI-1279, shopper_graph#305, DeadCohortError, dead cohort alarm, batch_status.py, DEAD_COHORT_MIN_AGE_HOURS, retrieve_error, per-batch status line, cohort summary line, assert_cohort_alive, retrieve_batch, PYTHONUNBUFFERED, Batch.status literal, request_counts, openai 3.7.0, pandas 3 str dtype, unpinned image, monitor-emr, JobTeamConfig.ML, severity 5 no pagerduty]
 domain: [repos, infra]
 lifecycle: active
-last_verified: 2026-09-02
+last_verified: 2026-09-03
 ---
 **The two DAGs that run the MNTN Matched (DS19 keyword) OpenAI batch pipeline** (`SteelHouse/airflow-ti`,
 `dags/machine_learning/`). Both schedule **`0 9 * * *`, `catchup=False`**. Deploy/image routing lives in
@@ -151,3 +151,50 @@ via `deploy_openai_dockerhub_gcp.yml`.
   `keyword_ddp` `wait_for_product_categorization`; expect `max_dt` FALSE-FAILS on the
   backfilled fetch days (mark `test_product_categorization` success, do not rerun — the
   `batch_test` section above).
+
+## 2026-09-03 — the rerun submits died on the 2.5TB quota; receipts are PARTIAL (observed: AUDI-1191 record + a GCS re-list, AUDI-1279)
+- The six rerun submits (dt=2026-08-27..09-01) each created batches 04:43-05:41Z, then failed `batch_submit` try 6 with the
+  400 file-storage-quota error at 05:58-06:34Z (`tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_actions_2026_08_31.md`
+  § 2026-09-03 06:50 UTC). `batch_cleanup_1` in the same runs deleted 0 files (48h retention spares the night's own uploads).
+- GCS at 06:45-06:51Z: dt=08-27 742, 08-28 791, 08-29 653, 08-30 510, 08-31 733 receipts with NEW `openai_batch_id` /
+  `openai_input_file_id` and `batch_submit_time` 2026-09-03 04:4x-05:41; dt=09-01 prefix ABSENT; alive dt=08-26 untouched at 1113.
+  All three listed partitions stop at 05:41:12-13Z (one process, killed or finished together).
+- **Rules that follow:** a `dt=` object count is not a cohort size; a partial partition trips the double-submission guard, so
+  re-running a day needs its receipts deleted AGAIN; no further submit clears until OpenAI storage is freed (Alyson / dashboard),
+  then ONE day at a time. The scheduled fetch for `yesterday=2026-09-01` finds no prefix (today: `FileNotFoundError` in
+  `get_batch_ids`; after #305 `assert_cohort_alive` returns first and `get_batch_ids` still raises).
+
+## 2026-09-03 — AUDI-1279: per-batch status lines + a dead-cohort alarm (shopper_graph#305, OPEN, not deployed)
+Extends "the parquet flags are the only automated visibility" (appended, not overwritten): once #305 is deployed the pod logs
+become the second signal; the flags stay the only key-free, dashboard-free one. Ticket:
+`tickets/audi_1290_pipeline_optimization_hackathon/audi_1279_openai_batch_observability/summary.md`; decision
+`knowledge/decisions/0006_dead_cohort_alarm_is_batch_fetch_failure.md`.
+- **What ships:** new `openai/openai_wrapper/batch_status.py` (stdlib only); `batch_base.retrieve_batch(batch_id)` returns the
+  Batch or the exception; `batch_transitioner` prints one line per unflagged receipt and now flags `was_submitted` on `finalizing`
+  too (was `in_progress`/`completed` only); `batch_fetcher.assert_cohort_alive()` runs before `get_batch_ids()` in
+  `fetch_results.py`; `openai/Dockerfile` gets `ENV PYTHONUNBUFFERED=1`; `tests/unit/test_openai.py` 0 -> 16 tests.
+- **Log shape:** `batch=<id> file=<s3_filename> status=<status> submitted_utc=<iso> age_h=<x.x> counts=<completed>/<failed>/<total>
+  error=<code>: <message>` per receipt, then `cohort dt=<D>: n=<N> in_progress=.. finalizing=.. completed=.. validating=.. failed=..
+  expired=.. cancelling=.. cancelled=.. retrieve_error=.. other=.. flagged_now=..`. A `retrieve` exception is logged as
+  `status=retrieve_error error=<ExceptionType>: ...` and never aborts the loop; a None error code/message prints as empty.
+- **Dead cohort =** receipts exist AND none `was_submitted` AND every live status is outside {`in_progress`, `finalizing`,
+  `completed`} with `request_counts.completed == 0` (an `expired` batch with partial output counts as progressed) AND the youngest
+  `batch_submit_time` is >= `DEAD_COHORT_MIN_AGE_HOURS` old (env, default 12; a non-numeric value falls back to 12). Then
+  `batch_fetch` raises `DeadCohortError: dead cohort dt=<D>: 0 of <N> batches progressed <age>h after submit (threshold 12.0h);
+  first error: <err>` and the pod exits 1. Under threshold: one `WARNING: cohort dt=<D> has 0 of <N> progressed but is only <age>h
+  old; below threshold <min>h, not failing` line, exit 0. A missing receipts partition returns silently. The scheduled fetch runs
+  ~22-24h after submit, so the default only guards a manual early run.
+- **Failure surface = the DAG's existing routing, nothing new wired:** the task fails after `retries: 4` (backoff to 45 min, so
+  Slack lands 1-2h after first detection; each retry re-queries OpenAI, so a late-waking cohort self-clears) -> `JobTeamConfig.ML`
+  -> Slack `#monitor-emr` (prod; `#monitor-test` non-prod) + `machine-learning-squad@mountain.com`. PagerDuty fires only at
+  `severity == 0`; the fetch DAG is severity 5, so NO page without a separate airflow-ti change (open ask for Ryan Kleck). The
+  Slack text is the generic `Pod ... returned a failure`; the cause is in the task log under `[base]`.
+- **Live consequence once deployed:** every scheduled `batch_fetch` fails on a dead day until AUDI-1301 fixes the org-side file
+  access; `batch_post` already failed those days, so no new data loss.
+- **Runtime facts the alarm relies on (verified 2026-09-02/03, openai 3.7.0):** `Batch.status` literal =
+  `validating|failed|in_progress|finalizing|completed|expired|cancelling|cancelled`; `Batch.errors.data[].{code,line,message,param}`;
+  `Batch.request_counts.{completed,failed,total}`; `NotFoundError < APIStatusError < APIError < OpenAIError`. The
+  `openai_batch_runner` image builds UNPINNED (`openai/requirements.txt`) and today resolves python 3.11.16, openai 3.7.0, pandas
+  3.0.5, pyarrow 25.0.1, gcsfs 2026.8.0; pandas 3 reads the receipts' string columns as `str` dtype (2.x: `object`), `.query()`
+  unchanged. A future SDK field rename degrades to `retrieve_error` lines plus a dead-cohort alarm, not a crash. Staging recipe,
+  CI limits and deploy gates: [[reference_shopper_graph_deploy]].

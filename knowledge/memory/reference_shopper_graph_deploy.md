@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py, ti_argocd_logs, pod logs GCS, VERTICAL_HANDLER COMPLETE, SCRAPING FAILED, VALIDATION PASSED, AUTOPILOT_FROM_URL 429]
+keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py, ti_argocd_logs, pod logs GCS, VERTICAL_HANDLER COMPLETE, SCRAPING FAILED, VALIDATION PASSED, AUTOPILOT_FROM_URL 429, pr_openai.yml, Dockerfile.test, openai CI no pandas, importorskip pandas, isort flake8 mypy pytest openai, get_s3_bucket f-string, env staging prefix, mntn-data-archive-dev write, staged test dev bucket, github environments dev prod protection_rules, custom_branch_policies, workflow_dispatch no reviewer, deploy_openai_dockerhub_gcp id 192234555, self-merge contradiction, mdunn-mntn merged own PRs, branch protection main, AUDI-1279, shopper_graph#305]
 domain: [repos, infra, routing-people]
 lifecycle: active
-last_verified: 2026-08-24
+last_verified: 2026-09-03
 ---
 `SteelHouse/shopper_graph` = the **MNTN Matched backend** ("Shopper Graph" is the original name for MNTN
 Matched — Alyson Lefkowitz + Brian McAdams, INC-006 2026-07-30). Its API services the **entire MNTN Match
@@ -81,6 +81,40 @@ Pull with `gcloud -q storage cp`, never `gsutil -m` ([[reference_gcloud_storage_
 - **OpenAI:** all API keys are linked to **Brian McAdams' account** (he holds the OpenAI admin dashboard).
 - **Repo:** Malachi's `SteelHouse/shopper_graph` access = **`push`** — can `workflow_dispatch` a deploy;
   cannot self-merge protected `main` (route to the owning team, see [[reference_github_pr_no_clone]]).
+  **Contradiction (appended 2026-09-03, AUDI-1279; evidence: GitHub PR history read via `gh`):** the line above says self-merge
+  is impossible, yet `mdunn-mntn` merged his own #296, #297, #298, #300, #301, #302 (Brian McAdams reviewed #296/#298, the
+  others show no reviewer). Reconciling hypothesis: `main`'s protection requires an approval or a status check, not a
+  non-author merger, or the `push` role bypasses it. Settle with `gh api repos/SteelHouse/shopper_graph/branches/main/protection`.
+  **The rule stands regardless: route every merge to the owner (Alyson Lefkowitz / Brian McAdams); never self-merge.**
+
+## CI for `openai/` (`.github/workflows/pr_openai.yml`, verified 2026-09-03, AUDI-1279)
+On PRs touching `openai/**` CI builds `Dockerfile.test` (installs `middleware/k8s/requirements.txt` + `dev-requirements.txt`,
+copies `middleware/` + `tests/`) and runs, verbatim: `isort --check-only --line-length=120 --ensure-newline-before-comments
+--force-single-line --diff openai` · `flake8 --ignore=E501,W503 openai` · `mypy --ignore-missing-imports --follow-imports=skip
+--namespace-packages --explicit-package-bases --disallow-untyped-defs openai` · `python -m pytest -v -s --cov=/app/openai
+tests/unit` (pins mypy 1.9.0, flake8 7.0.0). **The `openai` SDK is present (via `langchain-openai`) but `pandas`, `pyarrow`,
+`gcsfs` are NOT, and `openai/Dockerfile` is never built by CI** (first built by the deploy workflow; ship the `dev` tag first
+after a Dockerfile change). So: parsing/alarm logic lives in a stdlib-only module; tests that import the wrappers
+`pytest.importorskip("pandas")`; `sys.path.insert(0, <repo>/openai)` in a test does NOT shadow the installed `openai` SDK (a
+regular site-packages package beats a namespace dir in the import scan). `openai/` and `openai/openai_wrapper/` have no
+`__init__.py`; the runtime imports `openai_wrapper.*` with `/app` as cwd.
+
+## Staging the batch runner without prod access (verified 2026-09-03, AUDI-1279)
+`batch_base.get_s3_bucket()` is the plain f-string `f"mntn-data-archive-{env}"`, so **`env=dev/shopper_graph/audi_1279_staging`
+points every `gs://{bucket}/shopper_graph/...` path at a prefix inside the dev bucket with no code change.**
+`malachi@mountain.com` can write and delete under `gs://mntn-data-archive-dev/` (`get-iam-policy` is denied, so try the write
+instead of checking). Recipe: seed 3 fake receipts (the six prod columns/dtypes, `batch_submit_time` 30h ago, both flags False),
+run `python transition_batch.py` then `python fetch_results.py` from a venv or the container with `OPENAI_API_KEY=invalid` so
+every retrieve is a 401 `retrieve_error`, read the exit codes, then `gcloud -q storage rm -r` the prefix. Never `env=prod`. Dev
+Airflow (`critical-plasma-3458`, id `cmcvcbd3j03vk01p91ksvm1vd`) was not used: no kube context on the Mac, and
+`submit_batch.py` never submits on `env == 'dev'`, so dev has no real receipts.
+
+## GitHub environments and deploy-workflow gates (verified `gh api` 2026-09-03)
+`dev`: `protection_rules: []` (a `workflow_dispatch` to dev needs no reviewer). `prod`: one `branch_policy` rule with
+`custom_branch_policies: true`, no reviewer gate. `qa` and `copilot` also exist. `deploy_openai_dockerhub_gcp.yml`
+(id 192234555) had 18 runs, the last three on 2026-07-30 from `main`. Prod deploy of an `openai/` change:
+`gh workflow run deploy_openai_dockerhub_gcp.yml -R SteelHouse/shopper_graph --ref main -f environment=prod -f mntn_cloud=gcp`,
+only with Brian McAdams' or Alyson Lefkowitz's written OK; a deploy after 09:00Z lands on the following day's fetch.
 
 ## QA / dev environment limits
 - **Batch jobs do NOT run in QA/dev** — so `batch_fetch` / `batch_submit` can't be meaningfully tested

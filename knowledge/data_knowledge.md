@@ -1812,6 +1812,28 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   homepage-description join is hardcoded to `apollaperformance.com` only (enrichment off elsewhere — likely
   leftover/test); prompt has missing spaces; taxonomy auto-add disabled. BGE-large is free + already in-pipeline →
   candidate to replace gpt-4o-mini for many URLs.
+- **Receipt partitions get deleted and rewritten, and a PARTIAL rewrite is a real state (AUDI-1279 + AUDI-1191, 2026-09-03):**
+  the dead-cohort recovery (delete `openai_batch_submissions/dt=<D>` receipts, clear submit logical D from `batch_cleanup_1`; memory
+  `reference_mntn_matched_batch_pipeline`) ran for dt=2026-08-27..09-01 on 2026-09-02 night (user-authorized, AUDI-1191 session). The
+  rerun submits wrote NEW receipts (new `openai_input_file_id`/`openai_batch_id`, `batch_submit_time` 2026-09-03 04:43-05:41Z), then all
+  six died on the 2.5TB OpenAI file-storage quota at 05:58-06:34Z, leaving partial partitions: dt=08-27 742, 08-28 791, 08-29 653, 08-30
+  510, 08-31 733 objects (vs ~1,100 originally; alive dt=08-26 untouched at 1113); the dt=09-01 prefix absent. Seen from the AUDI-1279
+  side it looked like an unknown external re-submitter; it was our own recovery. Consequences: (1) a per-`dt` object count is not a cohort
+  size, compare against `openai_batch_input_formatted/dt=` or the original count; (2) a partial partition trips `get_files_without_batch`'s
+  double-submission guard, so re-running a day needs its receipts deleted AGAIN; (3) `pd.read_parquet` on an absent prefix raises
+  `FileNotFoundError` in `get_batch_ids` (shopper_graph#305 makes the new `assert_cohort_alive` return on it, `get_batch_ids` still raises).
+  Not the bucket lifecycle (rules cover `temp/ tmp/ ...log/ ipdsc*` only); nothing in `openai/` deletes receipts. Record:
+  `tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_actions_2026_08_31.md` § 2026-09-03 06:50 UTC; GCS re-listed
+  2026-09-03 06:45-06:51Z (AUDI-1279 §4.2). Schema of the receipts: `data_catalog.md` § shopper_graph/openai_batch_submissions.
+- **Observability after shopper_graph#305 (AUDI-1279; PR open 2026-09-03, NOT deployed):** `batch_transition` and `batch_fetch` print
+  one line per receipt `batch=<id> file=<s3_filename> status=<status> submitted_utc=<t> age_h=<x.x> counts=<completed>/<failed>/<total>
+  error=<code>: <message>` plus a `cohort dt=<D>: n=.. in_progress=.. ... retrieve_error=.. flagged_now=..` summary, and `batch_fetch`
+  exits 1 with `DeadCohortError: dead cohort dt=<D>: 0 of <N> batches progressed <age>h after submit (threshold 12.0h); first error: ...`
+  when receipts exist, none `was_submitted`, every live status is outside {in_progress, finalizing, completed} with
+  `request_counts.completed == 0`, and the youngest receipt is >= `DEAD_COHORT_MIN_AGE_HOURS` (default 12) old. Routing = the DAG's
+  existing `JobTeamConfig.ML` failure path (Slack `#monitor-emr` + machine-learning-squad@ email; no PagerDuty, the fetch DAG is severity
+  5). Until AUDI-1301 fixes the org side, a deployed #305 turns every scheduled `batch_fetch` red. Detail: memory
+  `reference_mntn_matched_batch_pipeline` § 2026-09-03, decision `knowledge/decisions/0006_dead_cohort_alarm_is_batch_fetch_failure.md`.
 
 ### MM targeting is at the (IP × CATEGORY × 30-day) grain — an IP is biddable via ANY same-category visit (user, 2026-07-20)
 The unit of MM targeting is the **category**, not the domain. An IP becomes eligible (and can score HI) for an MM

@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [gsutil, gcloud storage, GCS download, multi-file copy, hang, stall, LibreSSL, parallel copy, multiprocessing, python 3.9, parallel_process_count, threads-only gsutil, forked workers die, constrained pod cpu, fetch.py GSUTIL_OPTS, PR 1260, downloader freeze partial sweep, spark-events composite, GHFS composite no hashes, found no hashes to validate, gsutil banned astro pods, json api download, objects.list alt=media, cp -I sequential, PR 1263, PR 1264, zstd -t verify, stored bytes untranscoded]
+keywords: [gsutil, gcloud storage, GCS download, multi-file copy, hang, stall, LibreSSL, parallel copy, multiprocessing, python 3.9, parallel_process_count, threads-only gsutil, forked workers die, constrained pod cpu, fetch.py GSUTIL_OPTS, PR 1260, downloader freeze partial sweep, spark-events composite, GHFS composite no hashes, found no hashes to validate, gsutil banned astro pods, json api download, objects.list alt=media, cp -I sequential, PR 1263, PR 1264, zstd -t verify, stored bytes untranscoded, gsutil rm -r hang, gcloud storage rm -r, delete prefix, AUDI-1279]
 domain: [infra, workflow]
 lifecycle: active
-last_verified: 2026-09-02
+last_verified: 2026-09-03
 ---
 
 `gsutil -m cp` (and `-m cp -r`) stalls indefinitely on multi-file transfers on this Mac (single-file and sequential copies work). `gcloud -q storage cp` moves the same file sets at ~10-30 MiB/s without issue.
@@ -48,5 +48,9 @@ downloads (stored bytes come back untranscoded; verify zstd payloads with `zstd 
 
 Rule of thumb: pods get the JSON API; the Mac gets `gcloud -q storage cp`; `gsutil` survives only
 for `ls`/`du` listings.
+
+## 2026-09-03 — `rm -r` too (AUDI-1279)
+`gsutil -m rm -r gs://mntn-data-archive-dev/shopper_graph/audi_1279_staging/` hung for 2 min on this Mac and was killed;
+`gcloud -q storage rm -r` on the same prefix finished in seconds. Same rule as `cp`: `gcloud storage` for any multi-object delete.
 
 [[project_airflow_optimizer]]

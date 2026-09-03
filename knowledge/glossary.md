@@ -78,6 +78,7 @@ For a table's schema/grain/cost, start at [`bq/_CATALOG_INDEX.md`](bq/_CATALOG_I
 - **Datastream / CDC** — `bronze.integrationprod` = Postgres CDC dims; filter `deleted=FALSE AND is_test=FALSE` (when those columns exist). → `data_knowledge.md` § is_test/deleted Filters
 - **TTL floors** — cost_impression_log 2023-10-01 (fixed); bidder_bid_events 10-day (not 90); event_log_filtered 60-day; augmentor/bid_price 10-day. → `data_knowledge.md` § TTL / Retention Summary; each table's Cost notes
 - **BQ job location** — must be us-central1 (slot reservation); dataset-less/external-table queries default to US = on-demand $. → `data_catalog.md`, `.claude/CLAUDE.md` § BigQuery
+- **Dead cohort (OpenAI batch)** — a day's `openai_batch_submissions/dt=` receipts where 0 of N batches ever progressed (`was_submitted` all False; live status outside in_progress/finalizing/completed with 0 completed requests). After shopper_graph#305 `batch_fetch` fails with `DeadCohortError` once the youngest receipt is ≥ 12 h old (`DEAD_COHORT_MIN_AGE_HOURS`). → `data_catalog.md` § shopper_graph/openai_batch_submissions, MEMORY `reference_mntn_matched_batch_pipeline`, decision 0006
 
 ## Where to go next
 | I need… | open |
