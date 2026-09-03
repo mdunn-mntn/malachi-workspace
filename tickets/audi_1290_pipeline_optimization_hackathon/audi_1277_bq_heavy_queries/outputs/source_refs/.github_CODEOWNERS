@@ -1,0 +1,35 @@
+# See https://help.github.com/articles/about-codeowners/
+
+# Global owners of the repository. Both teams are requested on any path that has
+# no more-specific rule below, so shared/unclaimed code surfaces to
+# performance-pacing and performance-ml together. CODEOWNERS is last-match-wins,
+# so the more-specific rules below override this default for the paths they name.
+* @SteelHouse/pacing @SteelHouse/performance-ml
+
+# Performance ML-owned DAGs. These rules override the global default so PRs
+# touching these paths request review from performance-ml only. Each perml DAG
+# family has code in two trees -- the DAG definition under dags/ and its
+# bootstrap/spark dependencies under spark_scripts/ -- so both are listed.
+# Patterns are prefix globs so current and future variants of each family are
+# covered automatically (e.g. media_plan, media_plan_analytics, ...). When perml
+# starts a brand-new DAG family, add a dags/<family>*/ (and spark_scripts/
+# <family>*/) rule here.
+
+# inventory_forecast
+/dags/inventory_forecast*/                   @SteelHouse/performance-ml
+/spark_scripts/inventory_forecast*/          @SteelHouse/performance-ml
+
+# media_plan family (media_plan, media_plan_analytics, media_plan_regeneration, ...)
+/dags/media_plan*/                           @SteelHouse/performance-ml
+/spark_scripts/media_plan*/                  @SteelHouse/performance-ml
+
+# deliverability (deliverability_classification_monitor, ...; BigQuery-only today)
+/dags/deliverability*/                       @SteelHouse/performance-ml
+/spark_scripts/deliverability*/              @SteelHouse/performance-ml
+
+# autotof
+/dags/autotof*/                              @SteelHouse/performance-ml
+/spark_scripts/autotof*/                     @SteelHouse/performance-ml
+
+# NOTE: Shared infra (dag_utils/, spark_scripts/utils/) has no specific rule, so
+# it falls under the global default and is owned by both teams.
