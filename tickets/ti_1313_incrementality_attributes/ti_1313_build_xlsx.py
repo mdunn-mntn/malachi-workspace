@@ -193,7 +193,24 @@ pop["tenure_bucket"] = pd.cut(pop["advertiser_tenure_months"], bins=[-1, 12, 24,
 pop["vv_level"] = pop["vv_attribution_window_days"].map(
     lambda d: f"{int(d)} days" if pd.notna(d) else None)
 pop["display_flag"] = np.where(pop["runs_display"], "Runs display multi-touch", "Prospecting only")
-pop["fcap_level"] = pop["fcap_setting"]
+_fcw = pd.read_csv(OUT / "ti_1313_fcap_in_window.csv")
+
+
+def _fcap_label(imp, dur):
+    """Same label the base query builds, applied to the cap that actually ran during the window."""
+    if pd.isna(imp) or pd.isna(dur):
+        return "No household cap"
+    unit, size = ("hours", 3600) if dur < 86400 else ("days", 86400)
+    n = round(dur / size, 1)
+    return f"{int(imp)} per {int(n) if n == int(n) else n} {unit}"
+
+
+_fcw["fcap_in_window"] = [_fcap_label(i, d) for i, d in
+                          zip(_fcw["fcap_impressions_in_window"], _fcw["fcap_duration_seconds_in_window"])]
+pop = pop.merge(_fcw[["campaign_group_id", "fcap_in_window"]], on="campaign_group_id", how="left")
+pop["fcap_level"] = pop["fcap_in_window"].fillna(pop["fcap_setting"])
+_fcap_changed = int((pop["fcap_in_window"].notna()
+                     & (pop["fcap_in_window"] != pop["fcap_setting"])).sum())
 
 
 def _size(x):
@@ -262,14 +279,21 @@ for _cg, _g in bands[bands["campaign_group_id"].isin(_has_high)].groupby("campai
         _yo, _vo = abs_rd(pd.DataFrame([_o]))
         if not (np.isfinite(_yh.iloc[0]) and np.isfinite(_yo.iloc[0])):
             continue
+        _rh = _h["rate_treatment"] / _h["rate_holdout"] - 1 if _h["rate_holdout"] > 0 else np.nan
+        _yhr, _vhr = log_rr(pd.DataFrame([_h]))
+        _yor, _vor = log_rr(pd.DataFrame([_o]))
+        if not (np.isfinite(_yhr.iloc[0]) and np.isfinite(_yor.iloc[0])):
+            continue
         _pair_rows.append({"campaign_group_id": _cg, "band": _o["band"],
                            "d": _yo.iloc[0] - _yh.iloc[0], "v": _vo.iloc[0] + _vh.iloc[0],
+                           "dr": _yor.iloc[0] - _yhr.iloc[0], "vr": _vor.iloc[0] + _vhr.iloc[0],
+                           "d_mech": _o["rate_holdout"] * _rh - (_h["rate_treatment"] - _h["rate_holdout"]),
                            "cpiv_other": _o["cost_per_incremental_visit"],
                            "cpiv_high": _h["cost_per_incremental_visit"]})
 pairs = pd.DataFrame(_pair_rows)
 
 
-def _pair_boot(sub):
+def _pair_boot(sub, col="d"):
     """Bootstrap the paired difference over CAMPAIGNS, the unit each pair belongs to."""
     cgs = sub["campaign_group_id"].unique()
     if len(cgs) < 3:
@@ -279,35 +303,36 @@ def _pair_boot(sub):
     for _ in range(BOOT_DRAWS):
         idx = np.concatenate([where[c] for c in RNG.choice(cgs, size=len(cgs), replace=True)])
         d = sub.loc[idx]
-        out.append(_dl(d["d"].to_numpy(), d["v"].to_numpy())["est"])
+        vcol = "vr" if col == "dr" else "v"
+        out.append(_dl(d[col].to_numpy(), d[vcol].to_numpy())["est"])
     lo, hi = np.percentile(out, [2.5, 97.5])
-    return float(lo) * 1000, float(hi) * 1000
+    return float(lo), float(hi)
 
 
-paired_rows = []
-for _b in [b for b in BAND_ORDER if b != HIGH]:
-    _s = pairs[pairs["band"] == _b]
-    if len(_s) < 3:
-        continue
-    _r = _dl(_s["d"].to_numpy(), _s["v"].to_numpy())
-    _lo, _hi = _pair_boot(_s)
-    paired_rows.append({
-        "Band compared with High Intent": _b,
-        "Campaigns serving both": _s["campaign_group_id"].nunique(),
-        "Extra visits per 1,000 households against High Intent": _r["est"] * 1000,
-        "Low end": _lo, "High end": _hi,
-        "Campaigns where this band did worse": f"{int((_s['d'] < 0).sum())} of {len(_s)}",
-    })
-_all = pairs
-_ra = _dl(_all["d"].to_numpy(), _all["v"].to_numpy())
-_alo, _ahi = _pair_boot(_all)
-paired_rows.append({
-    "Band compared with High Intent": "Every lower band together",
-    "Campaigns serving both": _all["campaign_group_id"].nunique(),
-    "Extra visits per 1,000 households against High Intent": _ra["est"] * 1000,
-    "Low end": _alo, "High end": _ahi,
-    "Campaigns where this band did worse": f"{int((_all['d'] < 0).sum())} of {len(_all)}",
-})
+def _pair_row(label, sub):
+    """One row of the like-for-like table, on both scales, with the arithmetic share separated out.
+
+    Bands are defined by household propensity, so High Intent has a much higher baseline by
+    construction. Holding relative lift equal would still make the absolute gap negative, so that
+    part of it is definitional and is reported separately."""
+    rel = _dl(sub["dr"].to_numpy(), sub["vr"].to_numpy())
+    ab = _dl(sub["d"].to_numpy(), sub["v"].to_numpy())
+    mech = _dl(sub["d_mech"].to_numpy(), sub["v"].to_numpy())
+    lo, hi = _pair_boot(sub, "dr")
+    return {
+        "Band compared with High Intent": label,
+        "Campaigns serving both": sub["campaign_group_id"].nunique(),
+        "Lift gap against High Intent": np.expm1(rel["est"]),
+        "Low end": np.expm1(lo), "High end": np.expm1(hi),
+        "Campaigns where this band lifted less": f"{int((sub['dr'] < 0).sum())} of {len(sub)}",
+        "Visit gap per 1,000 households": ab["est"] * 1000,
+        "Of which is the lower baseline alone": mech["est"] * 1000,
+    }
+
+
+paired_rows = [_pair_row(b, pairs[pairs["band"] == b])
+               for b in BAND_ORDER if b != HIGH and len(pairs[pairs["band"] == b]) >= 3]
+paired_rows.append(_pair_row("Every lower band together", pairs))
 paired_tbl = pd.DataFrame(paired_rows)
 
 band_share = (freq.pivot_table(index="campaign_group_id", columns="fband", values="n_treatment",
@@ -582,9 +607,10 @@ SUMF = {"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
         "% with a clear effect": FMT.PCT0, "Campaigns disagree": FMT.PCT0, "Campaigns": FMT.INT,
         "Advertisers": FMT.INT,
         "Incremental visits": FMT.INT, "Spend": FMT.USD0, "Cost per incremental visit": FMT.USD2}
-PAIRF = {"Campaigns serving both": FMT.INT,
-         "Extra visits per 1,000 households against High Intent": FMT.NUM2,
-         "Low end": FMT.NUM2, "High end": FMT.NUM2}
+PAIRF = {"Campaigns serving both": FMT.INT, "Lift gap against High Intent": FMT.PCT1,
+         "Low end": FMT.PCT1, "High end": FMT.PCT1,
+         "Visit gap per 1,000 households": FMT.NUM2,
+         "Of which is the lower baseline alone": FMT.NUM2}
 FREQF = {**SUMF, "Treated households": FMT.INT, "Holdout households": FMT.INT,
          "Holdout share of households": FMT.PCT1}
 
@@ -644,8 +670,8 @@ wb.table(
 
 wb.table(
     "Intent band like for like", paired_tbl,
-    finding="Where one campaign served both, every lower band produced fewer extra visits per household than High Intent",
-    method="Only campaigns that served High Intent and at least one lower band, so the campaign is held fixed. Each row is that band minus High Intent inside the same campaign.",
+    finding="Held like for like, the lower bands lift their own baseline less than High Intent lifts its own",
+    method="Only campaigns serving both, so the campaign is held fixed. Read the lift gap: bands are defined by propensity, so most of the visit gap is the lower baseline alone.",
     formats=PAIRF, kind="headline",
     toc="The same comparison with the campaign held fixed",
     query="ti_1313_score_band_strata.sql")
@@ -751,11 +777,11 @@ wb.table(
 if not by_fcap.empty:
     wb.table(
         "Frequency cap", by_fcap,
-        finding="Pooled visit lift by the campaign's household frequency cap",
-        method="The operating cap, read per prospecting campaign. Caps under 5 campaigns are dropped, so this covers the common settings rather than every one.",
+        finding="Pooled visit lift by the household frequency cap that was actually running during the window",
+        method=f"From the cap archive as at 31 Aug, not today's setting: the live table rewrites daily and mislabelled {_fcap_changed} of {len(pop):,} campaigns here. Caps under 5 campaigns are dropped.",
         formats=SUMF, signal={"Lift": {}}, kind="data",
-        toc="Lift by household frequency cap setting",
-        query="ti_1313_campaign_base.sql")
+        toc="Lift by the household frequency cap in force during the window",
+        query="ti_1313_fcap_in_window.sql")
 
 wb.table(
     "Window sensitivity", windows.assign(**{

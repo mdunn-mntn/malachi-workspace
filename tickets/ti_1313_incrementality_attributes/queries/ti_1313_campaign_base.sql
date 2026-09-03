@@ -2,7 +2,7 @@
 -- Population gate: full clean gate, 100+ holdout visits (vis_holdout, not n_holdout), partner 8 only,
 -- and internal/test/deleted advertisers and campaign groups excluded by inner join.
 -- partner_id 79 (Rust leg) has no trustworthy holdout; see data_catalog.md ghost-bid gotcha (8).
--- ghost_frac is carried out: the estimator is only documented valid on 0.09 to 0.11.
+-- ghost_frac is carried out: gated 0.07 to under 0.11 per Kirsa and Matt, 2026-09-03.
 -- Delivery, creative and geo attributes are prospecting-only (objective_id=1 AND funnel_level=1) so they
 -- describe the same campaigns the ghost-bid outcome measures. One pass over cost_impression_log.
 
@@ -295,7 +295,7 @@ SELECT
   b.conv_se, b.conv_z, b.conv_p_value, b.conv_significant_95,
   b.ntb_rel_itt, b.ntb_p_value, b.ntb_significant_95,
   b.ip_compliance, b.holdout_won_rate, b.ghost_frac,
-  (b.ghost_frac BETWEEN 0.09 AND 0.11) AS in_validity_band,
+  (b.ghost_frac >= 0.07 AND b.ghost_frac < 0.11) AS in_validity_band,
 
   r.attributed_visits, r.attributed_conversions, r.attributed_order_value,
   r.reporting_impressions, r.reporting_total_spend, r.days_delivered,

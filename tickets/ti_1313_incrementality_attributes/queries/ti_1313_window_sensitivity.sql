@@ -33,7 +33,7 @@ SELECT
   window_label, ord,
   COUNT(*) AS campaign_groups,
   COUNTIF(v_h >= 100) AS powered_campaign_groups,
-  COUNTIF(v_h >= 100 AND SAFE_DIVIDE(n_h, n_t + n_h) BETWEEN 0.09 AND 0.11) AS powered_and_in_band,
+  COUNTIF(v_h >= 100 AND SAFE_DIVIDE(n_h, n_t + n_h) >= 0.07 AND SAFE_DIVIDE(n_h, n_t + n_h) < 0.11) AS powered_and_in_band,
   SAFE_DIVIDE(SUM(n_h), SUM(n_t) + SUM(n_h)) AS ghost_frac_all,
   SAFE_DIVIDE(SAFE_DIVIDE(SUM(v_t), SUM(n_t)), NULLIF(SAFE_DIVIDE(SUM(v_h), SUM(n_h)), 0)) - 1 AS lift_all,
   SAFE_DIVIDE(SUM(IF(v_h >= 100, n_h, 0)), SUM(IF(v_h >= 100, n_t + n_h, 0))) AS ghost_frac_powered,
@@ -43,6 +43,6 @@ SELECT
   SAFE_DIVIDE(
     SAFE_DIVIDE(SUM(IF(in_band, v_t, 0)), SUM(IF(in_band, n_t, 0))),
     NULLIF(SAFE_DIVIDE(SUM(IF(in_band, v_h, 0)), SUM(IF(in_band, n_h, 0))), 0)) - 1 AS lift_powered_in_band
-FROM (SELECT *, (v_h >= 100 AND SAFE_DIVIDE(n_h, n_t + n_h) BETWEEN 0.09 AND 0.11) AS in_band FROM per_cg)
+FROM (SELECT *, (v_h >= 100 AND SAFE_DIVIDE(n_h, n_t + n_h) >= 0.07 AND SAFE_DIVIDE(n_h, n_t + n_h) < 0.11) AS in_band FROM per_cg)
 GROUP BY 1,2
 ORDER BY ord

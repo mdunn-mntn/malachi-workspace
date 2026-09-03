@@ -1051,3 +1051,119 @@ band reads 4-10 at $8.20.
   if the root cause cannot be fixed.
 - Matt to double-check what his standard pipelines exclude; he believed it was nothing, and thought the loose
   bound was 15%.
+
+## 17. Gate shift to 7-11%, and three of my own conclusions overturned (2026-09-03)
+
+Applied Kirsa and Matt's instruction (§16d): ghost fraction gated at 7% to under 11%, all four queries
+re-pulled. Population **190 to 433** campaign groups, 296 advertisers, pooled visit lift **+7.92% to +9.63%**.
+I flagged that this loosens rather than tightens the gate; the instruction was reaffirmed, so it ships.
+
+An eight-agent adversarial pass then overturned three things I had reported, including two that reached the
+stakeholders. Each was re-verified by hand before being accepted.
+
+### 17a. OVERTURNED: the intent-band gap is mostly arithmetic
+
+I reported the like-for-like finding on the **absolute** scale: every lower band delivers fewer extra visits
+per household, −0.227 per 1,000, 40 of 46 pairs negative. **70% of that is definitional.**
+
+Intent bands are *defined* by household propensity, so High Intent's baseline is 1.92% against 0.58% for the
+lower bands in the same campaigns. Holding relative lift exactly equal still produces a gap of **−1.59 per
+1,000** from baseline arithmetic alone. Observed is −2.27, so the residual is **−0.68**, and campaign-clustered
+it does **not** clear zero: CI [−2.38, +0.15], **p=0.243**.
+
+I had it backwards. §13a is right that relative lift hides a varying baseline *across campaigns*. But for a
+**within-campaign comparison across bands whose baselines differ by construction**, the absolute difference
+double-counts that definition and the **relative** comparison is the clean one.
+
+**The defensible finding is the relative one:** pooled across the 30 paired campaigns, lower bands lift their
+own baseline **−6.8%** less than High Intent lifts its own, campaign-clustered CI **[−12.4%, −1.9%]**, 29 of 46
+pairs negative. Per band: Unscored −10.5% [−21.5%, −1.2%], Max Reach −9.4%, Peak Performance −6.2%, Mid −3.1%,
+the last three all crossing zero individually. Real, and about half the size I claimed.
+
+The workbook sheet now leads with the lift gap and carries the visit gap beside a column naming how much of it
+is the lower baseline alone.
+
+### 17b. OVERTURNED: Peak Performance is not the cheap exception
+
+I told the user twice, and it is in the draft reply to Matt, that Peak Performance is "good value, cheapest
+band per incremental visit" ($10.03 against High's $20.07). **That compared 29 PP campaigns against 360
+different High campaigns.** Held like for like, on the 35 pairs where one campaign served both:
+
+| Band | High Intent cheaper in | Median High | Median other |
+|---|---|---|---|
+| Peak Performance | **11 of 16** | $10.43 | $14.98 |
+| Mid Intent | 10 of 10 | $11.29 | $35.45 |
+| Max Reach | 4 of 4 | $8.97 | $44.76 |
+| Unscored | 5 of 5 | $6.65 | $73.05 |
+| **All** | **30 of 35** | | |
+
+**There is no cost exception.** High Intent is cheaper per incremental visit in 30 of 35 like-for-like pairs.
+The draft Slack reply must not go out with the PP claim in it.
+
+### 17c. OVERTURNED: frequency cap is measurable after all, and it now contradicts Matt
+
+I concluded the attribute was unmeasurable because `dso.frequency_caps` is current state. A skeptic pointed at
+**`dw-main-silver.archives.frequency_cap_archives`**, which is versioned. It **covers 433 of 433** campaign
+groups at the window end, and **144 of 433 (33%) ran a different cap during the window than they carry today**.
+So the attribute is recoverable; my verdict was wrong. New query `ti_1313_fcap_in_window.sql`; 157 of 433
+labels change once the archive is used.
+
+With the correct in-window labels the finding **reverses**:
+
+| Cap in force during the window | Campaigns | Lift | Cost per incremental visit |
+|---|---|---|---|
+| 2 per 7 days | 129 | +10.76% | $23.46 |
+| 1 per 14 days | 199 | +9.61% | **$8.98** |
+| 4 per 3 days | 51 | +8.18% | $31.69 |
+| **No household cap** | 21 | **+7.84%** | $43.90 |
+| 6 per 1 days | 16 | +6.61% | $49.62 |
+
+**No household cap is now second from bottom, not top**, and the most permissive standard cap is last. Between
+levels p=0.0112, which does not survive correction for testing 14 attributes. **Matt's takeaway 2 is not
+"unmeasured", it is contradicted on the corrected labels** — and the cost column runs the same way, with the
+tightest cap cheapest by a factor of five.
+
+### 17d. NOT RESOLVED: which gate is less biased
+
+A skeptic argued forcefully that widening was right and that 9-11% is the *contaminated* band, on a
+within-campaign regression of lift on realised holdout share fitted over bid-count strata: flat below 9%,
+steep above. **That test does not hold up.** Bid-count strata are post-treatment (`data_catalog.md` 14), and
+holdout share and lift both track the band, so the fit is partly circular. Splitting it myself:
+
+| Design | below 9% | at or above 9% |
+|---|---|---|
+| bid-count strata (post-treatment) | −0.084/pp, p=0.175 | −0.022/pp, p=0.535 |
+| score-band strata (assigned pre-bid) | **−0.163/pp, p=7.9e-05** | −0.019/pp, p=0.768 |
+
+Neither half of the bid-count version is significant on its own, and the cleaner score-band design gives the
+**opposite** pattern: steep below 9%, flat above. The two stratifications contradict each other about where
+the artifact switches on.
+
+The cross-campaign profile is also a baseline story rather than a clean gradient:
+
+| Holdout share | Campaigns | Lift | Per 1,000 households | Median baseline |
+|---|---|---|---|---|
+| under 7% | 37 | +8.09% | +1.342 | 2.09% |
+| 7 to 8% | 69 | +8.78% | +0.783 | 1.75% |
+| 8 to 9% | 167 | +12.86% | +0.604 | 1.22% |
+| 9 to 9.5% | 130 | +9.25% | +0.379 | 1.08% |
+| 9.5 to 10% | 50 | +5.40% | +0.364 | 1.36% |
+| 10 to 11% | 17 | −1.65% | +1.268 | 1.53% |
+| 11% and over | 8 | −11.48% | −0.259 | 1.14% |
+
+Relative lift peaks at 8-9% while the baseline falls monotonically across the same range, so the "clean
+plateau" is largely §13a applied to the gate itself. On the absolute scale there is no plateau at all.
+
+**Conclusion: the data cannot say which of 7-11% or 9-11% is less biased.** What is solid is that above 11% is
+bad (8 campaigns, −11.48%, and Matt's control-negatives), and that the population barely reaches there anyway
+(median holdout share 8.86%). Ship 7-11% as instructed, put the band profile on the sheet, and say plainly
+that most of the +1.7pp move is baseline composition.
+
+### 17e. Corrections to carry forward
+
+- Everything in §13 and §15 computed on 190 campaigns is superseded by the 433-campaign numbers here.
+- §15b's Peak Performance cost claim is **wrong** and is corrected in 17b.
+- The §13 framing that the absolute scale is always "the honest one" is **too strong**; 17a gives the
+  exception. Routed to `experimentation.md`.
+- Matt's takeaways now stand as: 1 unresolved and gate-dependent, 2 contradicted on corrected labels,
+  3 real but half-size and on the relative scale, 4 not supported.

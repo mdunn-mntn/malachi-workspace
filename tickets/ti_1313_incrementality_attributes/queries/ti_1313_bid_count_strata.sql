@@ -9,7 +9,7 @@ WITH powered AS (
     AND NOT ghost_frac_inflated AND NOT arm_imbalance_suspect
     AND vis_holdout >= 100
     AND partner_id = 8
-    AND ghost_frac BETWEEN 0.09 AND 0.11
+    AND ghost_frac >= 0.07 AND ghost_frac < 0.11
 )
 SELECT
   r.campaign_group_id, r.advertiser_id,

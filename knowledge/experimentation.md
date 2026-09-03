@@ -199,6 +199,27 @@ p = 0.23 / 0.82 / 0.06), and baseline alone carried ~2x the weighted R² of all 
    tie in the same direction. Use the **median per campaign**, not a pooled spend-weighted figure — the pooled
    version inverted the ordering on TI-1313 (see the IVW-vs-median trap above).
 
+## ⭐ The exception: when the strata are DEFINED by baseline, the relative scale is the clean one (TI-1313, 2026-09-03)
+
+The rule above says report the absolute difference because relative lift hides a varying baseline. **That is
+right across campaigns and wrong within a campaign when the strata are defined by propensity.**
+
+TI-1313 compared intent bands inside the same campaign. High Intent's baseline is 1.92% against 0.58% for the
+lower bands, **because that is what the bands mean**. So an absolute comparison double-counts the definition:
+holding relative lift exactly equal still yields a gap of -1.59 visits per 1,000 from arithmetic alone, which
+was **70%** of the -2.27 observed. The residual, -0.68, does not clear zero once clustered (p=0.243), while the
+relative comparison does: **-6.8%, campaign-clustered CI [-12.4%, -1.9%]**.
+
+**Test for it:** before reporting an absolute gap between strata, compute the counterfactual gap you would see
+if every stratum had the *same relative lift* and only its own baseline. If that counterfactual explains most
+of the observed gap, the absolute scale is measuring your stratum definition, not an effect. Report the
+residual beside it, or switch to the relative scale and say why.
+
+**The general rule:** ask what makes the strata different. Strata differing by an advertiser *choice* (creative
+length, geography, cap) keep the absolute scale as the decision metric. Strata differing by *baseline
+propensity* (intent band, score decile, prior-visitor status) need the relative one, because their baselines
+are the definition. Related: [[feedback_report_both_lift_scales]].
+
 ## ⭐ Cluster by the decision unit, not the row — campaigns are not independent (TI-1313, 2026-09-03)
 
 **190 campaign groups were 130 advertisers.** Every headline contrast that cleared p<0.05 unclustered failed
