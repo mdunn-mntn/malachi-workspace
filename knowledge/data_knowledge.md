@@ -395,6 +395,19 @@ plausibly a ~$1M cap; mechanism/location not found). So bronze ⊃ silver ⊃ ui
 begin mid-Oct 2025; Sep 2025 fully absent) — NOT a 10–90d TTL. Silver `conversion_log` floor ≈ **2024-01**
 (no partitions exist before that). Any bronze-vs-silver comparison older than ~9 months is impossible.
 
+### OPEN QUESTION — the conversion_log GCS archive fell ~6x on 2026-08-20 (observed 2026-09-02 on AUDI-1273, root cause NOT established)
+`gs://mntn-data-archive-prod/conversion_log/dt=<date>` (the parquet sink `conv_log_ip.py` reads) was 18-23 GiB/day on
+08-18 and 08-19 and **3-4 GiB/day from 2026-08-20 with no recovery through 08-31**. Downstream
+`feature_store/feature_group_1_source/conv_log_ip/dt=<date>` fell from 500-750 MiB/day (8 files of 62-93 MiB) to
+72-89 MiB/day (9-11 MiB files), and the optimizer ledger shows `conv_log_derived_ip disk_spill:1` shrinking every
+sweep since 08-20 (6.3 -> 4.2 GiB disk on 09-02), the same drop seen from the compute side. `conv_log_ip.py` has no
+commit since before 2026-08-01. Consumers: the feature store from group 2 down (`conv_log_derived_ip` and everything
+built on it) and Fangorn. Either an intended upstream change (a filter or source switch in the archive writer) or a
+loss. Not checked yet: BQ `logdata.conversion_log` daily row counts across 08-19/08-20 (settles archive-only vs
+platform-wide in one query), and which job writes that GCS prefix. Flagged to the user only; no ticket opened;
+proposed shape is a Spike under AUDI, "conversion_log volume drop 2026-08-20" (backlog IMP-103). Evidence:
+`tickets/audi_1290_pipeline_optimization_hackathon/audi_1273_max_partition_bytes/outputs/audi_1273_input_parquet_probe_2026_09_02.txt`.
+
 ### Three different "visit" counts, and which one answers "are we reaching this advertiser's audience?" (AUDI-1210, 2026-08-19)
 
 For one advertiser over one window there are three distinct visit numbers, and mixing them produces the wrong conclusion:
@@ -3968,6 +3981,7 @@ Structure: `{"key_value": [{"KEY": "shoid", "value": "xxx"}, ...]}`
 - **Archive scale (INC-012, 2026-08-06):** ~18.4K files per hour partition (tiny-files smell) → ~17M objects under the prefix. A mid-path glob (`region={east,west}/...`) flat-lists ALL of it via the GCS connector — use literal partition paths in Spark readers (see memory `reference_airflow_ti` § GCS globStatus flat-glob gotchas).
 - Consumers: `materialize_mntn_select` (hourly, TPA_EXPORT) unions it with `bidder_auction_events` and writes `gs://mntn-data-archive-prod/ipdsc_mntn_select/dt=/hh=`; Ryan's pipeline (`aug_log_ip_vertical_id_hourly.py`) reads it hourly, maps domains to vertical IDs via tldextract
 - **Efficiency profile of this hourly family (AUDI-1194 crawl, 2026-08-20).** `site_network_hourly` is the fleet's biggest measured consumer: **8,663 DCU-h across 17 runs in one day** (mean 510, range 164-1,547, from `runtimeInfo.approximateUsage.milliDcuSeconds`), and its Stage 9 waits **44-73% of task time on shuffle fetch on every run** since at least 2026-08-07. The cause is map-side output concentration, not partition sizing: its first map stage always starts with `initialExecutors=50` and lands 90% of its shuffle output on 48-105 executors, while the same app's later map stages run with 400+ up, spread across ~480, and their reducers wait ~0%. `aug_log_ip_hourly` / `aug_log_ip_vertical_id_hourly` run at **4-11% executor utilization** holding 21-52 idle executor-hours per run (99-208 DCU-h/run), and `aug_log_ip_vertical_id_hourly` Stage 11 waits 31-45% on 11 of 11 runs. `materialize_mntn_select` (Stage 6, 40-78%) and `segment-updates-to-parquet` (Stage 2, 36-67%) show the same fetch-wait shape. None of these are routed to an owner yet beyond the `site_network_hourly` draft. See [[project_airflow_optimizer]], [[reference_dataproc_eventlog_profiling]].
+- **`site_network_hourly` output layout (verified 2026-09-02, AUDI-1273):** `gs://mntn-data-archive-prod/ipdsc_site_network/site_network_hourly/dt=<date>/hh=<hh>/`, 716 files/day, median 13 MiB, max 26 MiB, ~7 GiB/day, one parquet row group per file (hh=12 part-00000: 14.6 MiB, 1,259,242 rows, 23.1 MiB uncompressed). `ipdsc_ds_49` reads 7 days of it (~49 GiB; 583 tasks, 406.7 GiB memory / 17.9 GiB disk spilled on 08-05) at the 128 MiB default `spark.sql.files.maxPartitionBytes`, i.e. ~82 MiB of whole files per task with the 4 MiB per-file open cost; AUDI-1273 lowers it to 64 MiB (~45 MiB/task).
 - Output: `gs://mntn-data-archive-prod/feature_store/feature_group_1_source/` partitioned by dt/hh
 - Pipeline code: `steelhouse/airflow-ti` repo, `models/feature_store/feature_group_1_source/`
 
@@ -4368,6 +4382,8 @@ spark.read.parquet("gs://mntn-data-archive-prod/augmentor_log/") \
 ```
 
 Without the filter pushed at read level, Spark scans every partition (orders of magnitude slower).
+
+**`spark.sql.files.maxPartitionBytes` cannot split a parquet row group (verified 2026-09-02 on Spark 3.5.3, AUDI-1273).** Spark's parquet reader assigns each row group to the file split that contains the row group's midpoint, so a cap smaller than a file's single row group produces one task that reads the whole file and one that reads zero rows; lowering the cap adds empty tasks and changes no spill. Before prescribing the knob for a read-stage spill, read one or two footers with pyarrow (`pq.ParquetFile(f).metadata.num_row_groups`, `.row_group(0).num_rows`). Measured inputs: `ipdsc/dt=<date>/data_source_id=4/` = ~160 x 60 MiB files, one row group each (knob is a no-op; the writer's `parquet.block.size` is the lever); `ipdsc_site_network/site_network_hourly/dt=<date>/hh=*` = 716 files/day, median 13 MiB, one row group each, and `feature_store/feature_group_1_source/conv_log_ip/dt=<date>` = 8 files/day, one row group each, where files sit below the cap and it only sets how many whole files pack into one task (works). Probe script and the `ipdsc_ds_67` spill mechanism: memory `reference_dataproc_eventlog_profiling`.
 
 ### Running Databricks compute from a local laptop — three patterns
 

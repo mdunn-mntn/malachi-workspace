@@ -211,6 +211,7 @@ GROUP BY conversion_type ORDER BY fires DESC;
 ## Observed facts
 <!-- OBSERVED:FACTS START -->
 <!-- capture/curator appends tribal findings here: `- YYYY-MM-DD: <fact verified against source>` -->
+- 2026-09-02 (OBSERVED, cause unknown, not checked against this table): the GCS parquet archive gs://mntn-data-archive-prod/conversion_log/dt=<date> fell from 18-23 GiB/day (08-18, 08-19) to 3-4 GiB/day from 2026-08-20 through at least 08-31; downstream feature_store conv_log_ip fell 500-750 -> 72-89 MiB/day. A daily COUNT(*) on this table across 08-19/08-20 settles archive-only vs platform-wide. Detail: data_knowledge.md § conversion_log GCS archive volume drop (AUDI-1273, IMP-103).
 <!-- OBSERVED:FACTS END -->
 
 ## Changelog

@@ -179,6 +179,7 @@ WHERE dt BETWEEN '2026-07-26' AND '2026-07-28'
 - 2026-07-29: Resolved `external` → dw-main-bronze (not in silver). EXTERNAL Parquet at gs://mntn-data-archive-prod/ipdsc/, hive-partitioned dt (STRING date) + data_source_id (INT), sourceUriPrefix confirmed via `bq show`.
 - 2026-07-29: dt range 2026-04-29 … 2026-07-28 (91 daily partitions = ~90-day rolling retention). data_source_id set 15 sources on earliest dt → 18 on latest (2,4,8,9,13,14,16,17,18,19,35,42,43,46,47,49,51,63); DS51 Bombora onboarded ~2026-07-06.
 - 2026-07-29: grain verified via LIMIT 5 — one row per (ip, data_source_id, dt), data_source_category_ids = hierarchical array (parent+leaf, e.g. 101+101001).
+- 2026-09-02: DS4 physical layout (AUDI-1273, pyarrow footer read of 2 files): dt=2026-08-31/data_source_id=4 = 162 files x 60 MiB (9 GiB; dt=2026-08-05: 160 files, median 67 MiB, 10.6 GiB), each ONE row group of ~1.32 M rows (~69 MiB uncompressed), writer parquet-mr 1.13.1-dataproc-1.0.8, parquet schema ip:string + data_source_category_ids:list<int64>. Writer = the targeted-signal pipeline (`spark/data_source/populate_data_source.py`). Spark cannot split a file below one row group, so `spark.sql.files.maxPartitionBytes` under 60 MiB is a no-op on this partition (mechanism: memory `reference_dataproc_eventlog_profiling`).
 <!-- OBSERVED:FACTS END -->
 
 ## Changelog

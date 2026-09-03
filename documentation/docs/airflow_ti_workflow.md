@@ -75,7 +75,7 @@ Spins up 5 Docker containers (Postgres, Scheduler, DAG processor, API server, Tr
 
 - **Feature branches off `main`.** Observed pattern in merged PRs (#57, #67, #190): just `TI-XXX` (uppercase ticket, no description suffix). Match that.
 - **Never push to `main`.** Open a PR; merge after review. Deploy fires on merge.
-- **`dags/model_task_config.json` is auto-generated** by `model_upload.py --dryrun`. **Commit it after any model config change** — CI checks freshness.
+- **`dags/model_task_config.json` is auto-generated** by `model_upload.py --dryrun`. **Commit it after any model config change** — CI checks freshness. "Model config" means the decorators (`@compute.dataproc_batch(runtime_properties=...)`, `@model_config`): a `SparkSession.builder.config()` edit leaves the file byte-identical (verified 2026-09-02, AUDI-1273 and AUDI-1274) because `--dryrun` imports each module and runs the decorators without instantiating the class.
 - **`dags/` files** (DAG definitions) — each model needs both: (a) a model file under `models/<category>/` AND (b) a DAG file under `dags/<category>/` that references its `model_id` via `ModelPysparkBatchOperator`. The framework auto-wires the *task config* into `model_task_config.json` but you write the DAG file by hand. (Discovered the hard way during TI-956 — assumed the framework also auto-generated DAGs.)
 - **For *cross-DAG dependencies*** (upstream sensors, etc.) coordinate with Ryan.
 
@@ -245,6 +245,24 @@ uv pip install pretty_html_table matplotlib seaborn scipy scikit-learn statsmode
 ```
 
 After that the dryrun completes. If a new model with another exotic dep gets added, you'll hit a different `ModuleNotFoundError` and have to install that too.
+
+### Running `tests/models` locally (verified 2026-09-02, main `825b07e`, 145/145)
+
+CI's `model-unit-test` job (`pr_model.yaml`, not a required check) runs `python -m pytest tests/models -v`. On this Mac it needs three things the repo docs do not say:
+
+```bash
+uv sync --python 3.11 --only-group models --only-group test
+MNTN_SDLC_ENV=dev .venv/bin/python model_upload.py --dryrun
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 PATH=$JAVA_HOME/bin:$PATH \
+PYSPARK_PYTHON=$PWD/.venv/bin/python PYSPARK_DRIVER_PYTHON=$PWD/.venv/bin/python \
+.venv/bin/python -m pytest tests/models -q
+```
+
+- The `uv sync` line is CI's exact dependency groups; `.venv` and `uv.lock` are git-ignored. The dryrun writes the git-ignored `utils_model/model_core/model_config.json` that the tests import at collection.
+- No Java on PATH: 62 collection errors, `JAVA_GATEWAY_EXITED`. Homebrew `openjdk@17` is installed but not linked, so set `JAVA_HOME` explicitly.
+- Java present but `PYSPARK_PYTHON` unset: 47 failures, `PYTHON_VERSION_MISMATCH` (the Spark worker resolves `/usr/bin/python3` = 3.9 against the 3.11 driver) in every test that starts a local SparkSession. Pin both variables to the venv interpreter.
+- Do not use a `git archive` copy as a clean baseline: `utils_model/model_core/context.py` shells out to git at import and collection dies with `git branch --show-current` exit 128. Baseline with `git show HEAD:<path> > <path>` and re-apply your diff.
+- The 2026-08-26 note that this job is red repo-wide since #1209 did not reproduce here; both claims and the settling check (the CI log of the next `models/**` PR) are in memory `reference_airflow_ti` § CI Pipeline.
 
 ## Naming standards (must follow)
 

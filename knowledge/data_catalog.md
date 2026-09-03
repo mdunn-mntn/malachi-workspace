@@ -215,6 +215,13 @@ All tables in this dataset are VIEWs pointing to `sqlmesh__logdata`.
 
 History starts ~2026-04-09. Daily TTL on the regular path; monthly snapshot path retains forever (see `conv_log_derived_ip` below).
 
+**Layout + volume (verified 2026-09-02, AUDI-1273):** 8 files per day (`repartition(8, "ip")` in `conv_log_ip.py`),
+one parquet row group each. **500-750 MiB/day (62-93 MiB per file) through 2026-08-19, then 72-89 MiB/day (9-11 MiB
+per file) from 2026-08-20** with no recovery through 08-31. This tracks a ~6x drop in the upstream GCS archive
+`gs://mntn-data-archive-prod/conversion_log/dt=<date>` (18-23 GiB/day on 08-18 and 08-19, 3-4 GiB/day from 08-20);
+`conv_log_ip.py` has no commit since before 2026-08-01. Root cause unknown, an open data-quality question:
+`data_knowledge.md` § conversion_log GCS archive volume drop, backlog IMP-103.
+
 ---
 
 ## feature_store/feature_group_2_derived/conv_log_derived_ip (parquet, daily)
@@ -2552,6 +2559,17 @@ WHERE t.data_source_id = 4
 ```
 
 **Key fact:** `category_id` here = `audience_upload_id` = `data_source_category_id` in integrationprod.audience_uploads.
+
+**Physical layout of the DS4 partition (verified 2026-09-02, AUDI-1273, pyarrow footer read of two files):**
+`dt=<date>/data_source_id=4/` is ~160 files of ~60 MiB (dt=2026-08-05: 160 files, median 67 MiB, 10.6 GiB;
+dt=2026-08-31: 162 files, all 60 MiB, 9 GiB), each holding **ONE parquet row group** (~1.32 M rows, ~69 MiB
+uncompressed; writer `parquet-mr 1.13.1-dataproc-1.0.8`; parquet schema `ip:string`, `data_source_category_ids:list<int64>`).
+Written by the targeted-signal pipeline (`spark/data_source/populate_data_source.py`,
+`include/spark/data_source/targeted_signal_cluster.py`), not by a `models/` file. Consequence for Spark readers
+(`ipdsc_ds_67` and anything else scanning DS4): `spark.sql.files.maxPartitionBytes` below 60 MiB cannot split
+these files (a row group goes whole to the split holding its midpoint), so the scan is ~160 tasks of 60 MiB
+whatever the cap; only a smaller `parquet.block.size` at the writer changes the task size. Mechanism and probe:
+memory `reference_dataproc_eventlog_profiling`.
 
 **⚠ Performance — filter `dt` with a LITERAL, never a subquery.** `WHERE dt = (SELECT MAX(dt) FROM ipdsc__v1)`
 does NOT prune partitions — it scanned **164.9B rows / 85,043 slot-sec / 280s wall** for a single-day COUNT
