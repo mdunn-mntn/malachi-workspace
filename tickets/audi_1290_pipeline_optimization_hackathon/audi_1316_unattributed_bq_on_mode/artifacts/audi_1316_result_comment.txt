@@ -1,0 +1,9 @@
+No access grant is needed. Mode can already read BigQuery job history, so this ships the query only.
+
+*Findings*
+* Mode's BigQuery connection runs as mode-analytics@dw-main-bronze, confirmed from the dataset permissions on the table report e81786de8403 reads. Its one role on dw-main-bronze already carries bigquery.jobs.listAll, so the planned devops grant is unnecessary.
+* The drafted query returns unowned slot-hours per day by submitter and reconciles with the daily report: 592 jobs and 1,010 slot-hours on 08-31, 620 and 978 on 09-01, 600 and 959 on 09-02.
+* It costs 0.178 GB and 10.6 slot-seconds per day of window.
+
+*Next*
+* Paste artifacts/audi_1316_mode_query.sql into report e81786de8403 as a new query in the BigQuery cost section.

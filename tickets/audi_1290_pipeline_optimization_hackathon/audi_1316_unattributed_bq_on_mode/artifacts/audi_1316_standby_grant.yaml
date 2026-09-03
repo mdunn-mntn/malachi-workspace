@@ -1,0 +1,30 @@
+# STANDBY - NOT OPENED. mode-analytics@dw-main-bronze already holds
+# bigquery.jobs.listAll on dw-main-bronze through medallion_bronze_reader, its
+# only role there (verified live 2026-09-03), so no grant is needed. Apply this
+# only if the Mode run of audi_1316_mode_query.sql returns 403 on
+# INFORMATION_SCHEMA.JOBS_BY_PROJECT, which would mean the org role drifted from
+# the terraform that declares it.
+#
+# Repo path it would take (identity's owning project is dw-main-bronze, and that
+# base uses bigquery-permissions.yaml, unlike mntn-prj-prod-00/iam/spark-optimizer):
+#   argocd-v2/mgmt/platform/crossplane/managed-resources/prod/manifests/base/
+#     dw-main-bronze/iam/mode-analytics/bigquery-permissions.yaml
+# plus "- mode-analytics" added to base/dw-main-bronze/iam/kustomization.yaml.
+---
+# Job history for the Mode cost dashboard's unowned-BigQuery section: resourceViewer
+# carries bigquery.jobs.listAll, which JOBS_BY_PROJECT needs to return other
+# principals' jobs. Mirrors the spark-optimizer grant added for the same read (AUDI-1241).
+apiVersion: cloudplatform.gcp.upbound.io/v1beta2
+kind: ProjectIAMMember
+metadata:
+  name: mode-analytics-bronze-resourceviewer
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  deletionPolicy: Orphan
+  forProvider:
+    project: dw-main-bronze
+    role: roles/bigquery.resourceViewer
+    member: serviceAccount:mode-analytics@dw-main-bronze.iam.gserviceaccount.com
+  providerConfigRef:
+    name: default
