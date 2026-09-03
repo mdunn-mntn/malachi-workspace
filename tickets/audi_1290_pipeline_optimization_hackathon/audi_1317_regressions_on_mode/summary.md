@@ -105,6 +105,8 @@ The framing's kill criterion was "if the guard's verdicts prove noisy across the
 - **Gotcha for anyone re-running it:** a `.sql` file whose FIRST line is a `--` comment cannot be passed to `bq_run.sh` as an argument. The bq CLI parses the leading `--` as a flag and fails with `Unknown command line flag`. Use a `/* */` header instead. The truncation point in the error message moves with the query text, which makes it look like a quoting bug in the shell; it is not.
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/airflow-ti/pull/1282 (opened 2026-09-03 PT; medium tier, 2 rounds: 3 findings confirmed and fixed (regressions were rendered and counted twice in the digest, two new docstrings trimmed); the fixer's reformatting of regression_guard.py was reverted; 197 tests green; base is audi-1281-perf-regression-guard until #1279 merges)
+
 Branch `audi-1317-publish-regressions` in `SteelHouse/airflow-ti`, stacked on `audi-1281-perf-regression-guard`; the PR targets that branch. Five files, +256 / -4 against the stack base, no DAG change and no new credential.
 
 **`include/spark_optimizer/regression_guard.py`** (+79) — the publish half, on top of `evaluate()` unchanged:
