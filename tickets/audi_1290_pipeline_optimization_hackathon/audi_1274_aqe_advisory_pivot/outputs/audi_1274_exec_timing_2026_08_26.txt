@@ -1,0 +1,45 @@
+=== outputs/app-20260826014549943-0459.zstd
+spark.default.parallelism = <unset>
+spark.executor.cores = 8
+spark.dynamicAllocation.initialExecutors = 100
+spark.sql.adaptive.advisoryPartitionSizeInBytes = <unset>
+spark.sql.adaptive.coalescePartitions.parallelismFirst = <unset>
+spark.sql.adaptive.coalescePartitions.minPartitionSize = <unset>
+stage_id tasks elapsed_s executors_registered cores_registered
+0 1 7.0 0 0
+1 750 13.6 88 704
+3 728 34.2 90 720
+6 8000 42.1 90 720
+9 8000 66.1 100 800
+13 49 72.6 100 800
+14 750 80.1 100 800
+15 750 80.3 100 800
+17 800 94.2 100 800
+19 800 99.8 100 800
+22 800 100.8 100 800
+26 800 111.5 100 800
+33 800 121.7 100 800
+41 500 231.2 100 800
+=== outputs/app-20260826013253579-0911.zstd
+spark.default.parallelism = <unset>
+spark.executor.cores = 8
+spark.dynamicAllocation.initialExecutors = 100
+spark.sql.adaptive.advisoryPartitionSizeInBytes = <unset>
+spark.sql.adaptive.coalescePartitions.parallelismFirst = <unset>
+spark.sql.adaptive.coalescePartitions.minPartitionSize = <unset>
+stage_id tasks elapsed_s executors_registered cores_registered
+0 1 6.8 0 0
+1 1 11.9 87 696
+2 750 16.5 95 760
+4 800 37.6 95 760
+7 8000 47.7 95 760
+10 8000 70.1 100 800
+14 49 77.5 100 800
+15 750 85.0 100 800
+16 750 85.2 100 800
+18 800 100.1 100 800
+20 800 103.2 100 800
+23 800 107.7 100 800
+27 800 117.0 100 800
+34 800 129.1 100 800
+42 500 277.3 100 800

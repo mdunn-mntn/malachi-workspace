@@ -1,0 +1,10 @@
+Branch ready: both guid pivot models cap Spark's adaptive shuffle merge at 16 MiB, one line each; dry run and generated config clean.
+
+*Findings*
+* Today's merge target is total shuffle bytes over registered cores, not the 64 MiB advisory size (728 partitions at 90 executors, 800 at 100); shuffle.partitions cannot move it.
+* The pivot stage reads 49.1 GiB in 800 tasks and spills 862.5 GiB to memory, 19.0 GiB to disk, per run; with the cap it runs 3,100 to 4,000 tasks.
+* Session wide: five other shuffles go from 800 to 1,100 to 2,700 partitions.
+
+*Next*
+* Gauntlet, PR against main, ledger stamp after merge.
+* Next scheduled run: 3,100 to 4,000 pivot tasks, zero disk spill.
