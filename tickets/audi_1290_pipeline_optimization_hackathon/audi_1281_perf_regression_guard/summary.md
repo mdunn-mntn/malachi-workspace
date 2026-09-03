@@ -163,6 +163,8 @@ Planning wave, written 2026-09-02. Nothing below has been executed; every "verif
 - Not done, by rule: no `model_run.py`, no DAG trigger, no Jira write, no git write.
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/airflow-ti/pull/1279 (opened 2026-09-03 PT; thorough tier, 3 rounds converged clean: 2 code findings confirmed and fixed (rows without a stage id skipped, lookup return typed), 189 tests green; the fixer's reformatting was dropped)
+
 Branch `audi-1281-perf-regression-guard` in the dispatcher's worktree of `SteelHouse/airflow-ti` (base `825b07e`). Files:
 - `include/spark_optimizer/stage_metrics.py` (new, 93 lines): `STAGE_METRICS = "optimizer_stage_metrics.jsonl"`, `stage_fields`, `rows_for`, `read`, `append` (replaces a re-read run's rows, 45-day retention, atomic rewrite), `RETENTION_DAYS = 45`, `NAME_CHARS = 80`.
 - `include/spark_optimizer/regression_guard.py` (new, 315 lines): the CLI and the rule (`FLOORS`, `CV_LIMIT`, `MAD_SIGMAS`, `lookup`, `judge`, `check`, `seed`, `evaluate`, `render`, `rows_from_logs`, `main`), exit codes 0/1/2.
