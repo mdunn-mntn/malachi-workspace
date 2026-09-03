@@ -365,6 +365,7 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 ## Decisions
 - [0001 — Model Match (MM) component taxonomy: DS19 / DS13 / DS46](decisions/0001_mm_component_taxonomy.md) — MM = DS19 (Core) + one PP slot (DS13 = PP v1, DS46 = PP v2); counting MM as DS19 alone undercounts ~7.6%  ·  _verified 2026-07-19_
 - [0002 — funnel_level is authoritative for campaign stage, not objective_id](decisions/0002_funnel_level_authoritative_for_stage.md) — Use campaigns.funnel_level for stage; objective_id is unreliable for stage (use it only for prospecting = IN (1,5,6))  ·  _verified 2026-07-19_
+- [0003 — ipdsc_ds_67 spill: maxPartitionBytes dropped, keys wont_fix, the fix is the join or the writer](decisions/0003_ipdsc_ds_67_max_partition_bytes_dropped.md) — Drop the 32 MiB maxPartitionBytes edit for ipdsc_ds_67 (its DS4 input is single-row-group parquet the knob cannot split); set disk_spill:3/:5 wont_fix; the real fix is F.broadcast on the audience_uploads join or smaller row groups at the DS4 writer  ·  _verified 2026-09-03_
 
 ## Runbooks
 - [On-Call Runbook — Master](../on-call/oncall_runbook.md) — Read FIRST on any Airflow/pager/pipeline alert. Triage protocol, alert catalog (signature→verdict→protocol), incident log, producer→consumer maps. Every resolution appends back here.  ·  _verified 2026-08-10_

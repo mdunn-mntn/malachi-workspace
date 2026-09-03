@@ -226,7 +226,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
 | reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-09-02 | [doc](memory/reference_airflow_ti.md) |
 | bq-workflow | feedback | 2026-09-02 | [doc](memory/feedback_bq_workflow.md) |
 | feedback_draft_until_closed | feedback | 2026-09-02 | [doc](memory/feedback_draft_until_closed.md) |
 | feedback_slack_digest_not_per_event | feedback | 2026-09-02 | [doc](memory/feedback_slack_digest_not_per_event.md) |
@@ -235,12 +234,10 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_verify_claims_against_code | feedback | 2026-09-02 | [doc](memory/feedback_verify_claims_against_code.md) |
 | jira-conventions | reference | 2026-09-02 | [doc](memory/reference_jira_conventions.md) |
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
-| project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
 | project_fangorn_on_mntn_id | project | 2026-09-02 | [doc](memory/project_fangorn_on_mntn_id.md) |
 | reference_airflow_run_origin | reference | 2026-09-02 | [doc](memory/reference_airflow_run_origin.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-02 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
-| reference_dataproc_eventlog_profiling | reference | 2026-09-02 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-09-02 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-09-02 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-09-02 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
@@ -249,3 +246,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_sprint_skill | reference | 2026-09-02 | [doc](memory/reference_sprint_skill.md) |
 | reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |
 | reference_xlsx_master_format | reference | 2026-09-02 | [doc](memory/reference_xlsx_master_format.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-09-03 | [doc](memory/reference_airflow_ti.md) |
+| project_airflow_optimizer | project | 2026-09-03 | [doc](memory/project_airflow_optimizer.md) |
+| reference_dataproc_eventlog_profiling | reference | 2026-09-03 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
