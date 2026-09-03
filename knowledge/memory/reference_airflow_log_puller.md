@@ -41,5 +41,5 @@ astro deployment token create --deployment-id cmd6bd10c0gl901rfuokgryiq \
 - The astro CLI token in `~/.astro/config.yaml` (`contexts.astronomer_io.token`) works as a Bearer directly against the deployment's Airflow REST API: list dagRuns; task logs via `GET /api/v2/dags/<dag>/dagRuns/<run_id>/taskInstances/<task>/logs/<attempt>?full_content=true` with `Accept: application/json`.
 - **Malachi's role CANNOT mint deployment API tokens** — `astro deployment token create` returns 403.
 - `astro deployment inspect --deployment-name prod --key metadata.status` gates on `DEPLOYING` vs `HEALTHY` — check before triggering post-merge runs.
-- `astro deployment variable update` edits env vars; `SLACK_ALERT_CHANNEL` is now `"C08CURMGNMQ,C067ZM2EC5S"` (monitor-tpa added).
+- `astro deployment variable update` edits env vars; `SLACK_ALERT_CHANNEL` is now `"C08CURMGNMQ,C067ZM2EC5S"` (monitor-tpa added). CORRECTION 2026-09-02: prod held only `C08CURMGNMQ` when checked (the 08-10 comma list never stuck or was reverted), which left debugger replies unable to thread under monitor-tpa alerts; re-applied 2026-09-02 and verified in the var list. Verify the var, not the memory, before trusting channel routing.
 - Prod deployment id `cmd6bd10c0gl901rfuokgryiq`, API base `https://cmd6bd10c0gl901rfuokgryiq.iq.astronomer.run/dokgryiq/api/v2`.
