@@ -268,16 +268,16 @@ def between_q(tbl):
 
 for row, (_, tbl, _fx) in zip(rank_rows, RANKED_SRC):
     q, pv = between_q(tbl)
-    row["Chance of seeing this gap if nothing differs"] = pv
+    row["p value"] = pv
     row["Real difference?"] = ("Yes, strong" if pv < 0.01 else
                                "Yes" if pv < 0.05 else
                                "Too close to call" if pv < 0.20 else "No")
 
 ranked = (pd.DataFrame(rank_rows)
-          .sort_values(["Chance of seeing this gap if nothing differs", "Gap, best minus worst"],
+          .sort_values(["p value", "Gap, best minus worst"],
                        ascending=[True, False])
           .reset_index(drop=True))
-RANK_ORDER = ["Attribute", "Real difference?", "Chance of seeing this gap if nothing differs",
+RANK_ORDER = ["Attribute", "Real difference?", "p value",
               "Best setting", "Best lift", "Worst setting", "Worst lift", "Gap, best minus worst",
               "Best and worst do not overlap", "Campaigns", "Settings compared",
               "Campaigns in the thinnest setting"]
@@ -438,11 +438,11 @@ wb = MntnWorkbook(
 wb.table(
     "Ranked hypotheses", ranked,
     finding="Attributes ranked by how sure we are that their settings really differ in lift",
-    method="Ranked on the third column, not on the gap, because an attribute with more settings shows a wider gap by chance alone. Read the gap only where the answer is yes.",
+    method="Ranked on a between-setting test, not on the gap, because an attribute with more settings shows a wider gap by chance alone. Read the gap only where the p value clears 0.05.",
     formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap, best minus worst": FMT.PCT1,
              "Campaigns": FMT.INT, "Settings compared": FMT.INT,
              "Campaigns in the thinnest setting": FMT.INT,
-             "Chance of seeing this gap if nothing differs": FMT.PCT2},
+             "p value": "0.0000"},
     rag={"Real difference?": lambda v: {"Yes, strong": "POS", "Yes": "POS",
                                         "Too close to call": "WARN"}.get(v)},
     kind="headline",

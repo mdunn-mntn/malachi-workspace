@@ -629,12 +629,12 @@ Flagged on the ranked sheet, and it was on ten sheets through the shared column 
 | Levels | Settings compared | |
 | Spread | Gap, best minus worst | |
 | Intervals separate | Best and worst do not overlap | |
-| Levels differ (p) | Chance of seeing this gap if nothing differs | a bare p-value, last column, formatted 0.0000 |
+| Levels differ (p) | p value | was the sort key but sat last |
 
 **The ranked sheet had a structural problem, not just naming.** The sort key was the last column, in the
 least readable form, while the heat colour sat on Spread, which the method line explicitly tells the reader
 NOT to rank on. Colouring the column you just told someone to ignore is the lie-factor failure in Tufte
 terms. Fixed: new plain-language **Real difference?** column (Yes strong / Yes / Too close to call / No at
 0.01 and 0.05) sits second with the traffic-light fill, the p-value follows it as a percentage, and the
-supporting counts move to the right-hand end. Read me gained entries for "Low end and High end" and
+supporting counts move to the right-hand end. The p value keeps its name: it was briefly spelled out as "chance of seeing this gap if nothing differs" and the user pulled that back, this audience reads p-values. Read me gained entries for "Low end and High end" and
 "% with a clear effect".
