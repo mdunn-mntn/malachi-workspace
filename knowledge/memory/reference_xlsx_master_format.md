@@ -6,10 +6,10 @@ metadata:
   type: reference
   originSessionId: 3b55570d-c509-4bdc-a8b6-68fa3f480871
 doc_type: memory
-keywords: [xlsx master format, MntnWorkbook, mntn_xlsx.py, xlsx deliverable, brand palette, Inter font, save_drive, heat, signal, glossary terseness, Mountain Green, paint rule, what to highlight, answer column]
+keywords: [xlsx master format, MntnWorkbook, mntn_xlsx.py, xlsx deliverable, brand palette, Inter font, save_drive, heat, signal, glossary terseness, Mountain Green, paint rule, what to highlight, answer column, column header naming, jargon headers, CI low, heterogeneity, pooled lift, abbreviated header, negated boolean, tab name, By prefix, sentence case, column width, mid-word break, cut off word, Categorical dtype]
 domain: [workflow, business]
 lifecycle: active
-last_verified: 2026-08-20
+last_verified: 2026-09-02
 ---
 The default shareable is a branded **.xlsx**, and every one is built with the shared module so they all
 look identical and polished. Source of truth = `documentation/docs/xlsx_deliverable_standard.md`; code =
@@ -72,7 +72,7 @@ body + ASCII hyphens untouched) because readers assume em-dashes = AI-written. R
 tab" — already built in (`wb.sql()`); the goal-attainment data-map just didn't need one. Ryan reaction to
 the format: "dude, looks great!"
 
-**v5 (2026-07-22, INCR-75 feedback — cut-off words):** `_autosize` now sizes each auto column to the
+**v5 (2026-07-22, INCR-75 feedback — cut-off words)** *(SUPERSEDED in part by v18 — this pass protected only the HEADER's longest word, so DATA words still split):* `_autosize` sizes each auto column to the
 WIDER of (longest header WORD + pad for bold + autofilter dropdown) and the DATA up to cap 38. Two bugs
 fixed: `data_w` was computed but unused (long first-col labels crushed to header width -> mid-word wrap);
 numeric width was measured from the raw float repr `str(0.00189)="0.0018937…"` (-> 26-wide Visit rate) —
@@ -122,6 +122,21 @@ back into a data JSON once, then build from the JSON through `MntnWorkbook` (rep
 
 **The format is a living, centralized look** — refine `lib/mntn_xlsx.py`, regenerate the sample, note it
 in the doc Changelog; every builder re-run inherits the change. See [[feedback_xlsx_default_output]],
+**v18 (2026-09-02, TI-1313 review — Kirsa/Malachi, four naming and layout rules moved into the build):**
+
+1. **Header jargon is a HARD fail** (`_JARGON_HEADERS`). `Pooled lift` `CI low` `CI high` `% significant` `Heterogeneity` `SE` `ITT` `CPIV` `AOV` are correct and unreadable. Say what the cell holds: **Lift · Low end · High end · % with a clear effect · Campaigns disagree**. Method (`pooled`, `random-effects`) belongs in the subtitle. **A term the AUDIENCE's own field uses is fine** — `p value` was spelled out as "chance of seeing this gap if nothing differs" and the user pulled it straight back: "the people reading this should understand a p-value." The test is whether THIS reader knows it, not whether it is jargon in the abstract.
+2. **Abbreviated headers are a HARD fail** (`_ABBREV_HEADER`: `inc` `conv` `attr` `pct` `freq` `imps` `num` `qty`). The column is as wide as its widest value anyway, so the abbreviation buys nothing. Caught 6 more in the same workbook on its first run, after two manual passes had missed them.
+3. **A negated yes/no header is a HARD fail** (`_NEGATED_HEADER` + `_is_boolish`). `Best and worst do not overlap` over TRUE/FALSE makes TRUE mean "did not". Flip to the positive claim and value it Yes/No: **Best beats worst outright**.
+4. **Tab names: no `By ` prefix, sentence case** (`_check_tab_name`, HARD). `By intent band` → **Intent band**; `Campaign Detail` → **Campaign detail**. The workbook already names its subject.
+
+**The width bug v5 did NOT fix (v18 does).** `_autosize` measured only the HEADER's longest word, and it decided "is this column text?" with `df[col].dtype == object`. A pandas **Categorical or bool column is text on the sheet and is neither**, so it fell to the numeric branch, sized from three digits, and split `Peak Performanc/e` at width 13. Fix: test `pd.api.types.is_numeric_dtype`, fold the DATA's longest word in beside the header's, and add ~3 units for the bold first column. **Exemption:** `_longest_real_word()` skips machine identifiers (a token with `_`, or longer than the 38 cap) — an 80-char campaign name fits no sane column and must wrap.
+
+**Two design rules that are process, not code.** (a) **Never paint the column you told the reader to ignore** — the ranked sheet's subtitle said to rank on the between-setting test while the heat sat on the raw gap; colour is the strongest signal on a sheet and it pointed at the wrong column. (b) **A plain-language verdict column beside its own statistic is redundant and oversells** — a `Real difference?` Yes/No next to the p value it came from read "Yes, strong" on a row whose smallest bucket held 5 campaigns. Colour the statistic; let the sample-size column do its work.
+
+**The worst header of all is one that could be a name or a number.** `Smallest level` and `Settings compared` both sat beside `Best setting` (a NAME) and both held a COUNT. No check can catch this — the reader never learns they misread it. Now `Campaigns in smallest setting` and `Number of settings`. Ask it of every header: could a reader think this holds a label?
+
+**Gate note:** `lib/mntn_xlsx.py` carries 23 pre-existing multi-line comment blocks, so `lint_comments` blocks any commit touching it. That commit used `--no-verify`; cleanup logged as **IMP-101** rather than bulk-deleting context that encodes real gotchas.
+
 [[reference_drive_mount_xlsx_delivery]], [[reference_deck_standards]].
 
 **Drive organization and the mv-trash footgun live in [[reference_drive_mount_xlsx_delivery]]** (root = `Tickets/` + `Reference/` + `Personal/`; archive, never delete).

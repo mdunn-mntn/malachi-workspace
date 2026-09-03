@@ -183,7 +183,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mntn_devops_permissions | reference | 2026-08-20 | [doc](memory/reference_mntn_devops_permissions.md) |
 | reference_oncall_runbook | reference | 2026-08-20 | [doc](memory/reference_oncall_runbook.md) |
 | reference_pihole_dns_contaminates_fetch | reference | 2026-08-20 | [doc](memory/reference_pihole_dns_contaminates_fetch.md) |
-| reference_xlsx_master_format | reference | 2026-08-20 | [doc](memory/reference_xlsx_master_format.md) |
 | feedback_branch_from_origin_not_local_main | feedback | 2026-08-21 | [doc](memory/feedback_branch_from_origin_not_local_main.md) |
 | project_dsh_harness_spike | project | 2026-08-21 | [doc](memory/project_dsh_harness_spike.md) |
 | reference_dsh_harness | reference | 2026-08-21 | [doc](memory/reference_dsh_harness.md) |
@@ -249,3 +248,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_slack_debugger_app | reference | 2026-09-02 | [doc](memory/reference_slack_debugger_app.md) |
 | reference_sprint_skill | reference | 2026-09-02 | [doc](memory/reference_sprint_skill.md) |
 | reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |
+| reference_xlsx_master_format | reference | 2026-09-02 | [doc](memory/reference_xlsx_master_format.md) |
