@@ -225,6 +225,8 @@ Every one has `shuffle_read_bytes = 0` on the spilling stage: the tasks are the 
 - `git diff --stat`: `dags/model_task_config.json` (1 line) and `models/monitoring/vertical_size_monitor.py` (2 lines). Matches the verdict table's single `change` row.
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/airflow-ti/pull/1275 (opened 2026-09-03 PT; fast tier, 1 finding refuted, 0 confirmed)
+
 - Branch `audi-1270-shuffle-partitions-verify-first` (worktree `scratchpad/wt/audi_1270`, base main `825b07e`): `models/monitoring/vertical_size_monitor.py` decorator L202 and builder L234 `spark.sql.shuffle.partitions` 128 -> 600; `dags/model_task_config.json` regenerated (one line). Uncommitted; the dispatcher commits, runs the gauntlet and opens the PR.
 - PR body: `artifacts/audi_1270_pr_body.md` (lint `--kind pr` OK, 128 words / 835 chars). Result comment: `artifacts/audi_1270_result_comment.txt` (lint `--kind completion` OK).
 - Verdict table: `outputs/audi_1270_verdict_table.csv` (21 rows, one per spilling stage, every DAG represented). Builder: `artifacts/audi_1270_build_verdict.py`; parser wrapper: `artifacts/audi_1270_stage_verdict.py`; archive name scan: `artifacts/audi_1270_archive_scan.sh`.
