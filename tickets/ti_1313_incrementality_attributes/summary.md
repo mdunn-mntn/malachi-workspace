@@ -921,3 +921,46 @@ served. CPIV therefore trades directly against frequency, which is why §13's fr
 objective are the same question: "we need to have higher frequencies, hit them more often, but that is more
 cost." Our data says CPIV worsens monotonically as frequency rises ($12.92 to $36.14 across quartiles), which
 is the empirical version of his tradeoff and argues against pushing frequency up.
+
+## 15. Workbook rebuild (2026-09-03)
+
+Six changes, all driven by §13 and §14. Workbook stays `DRAFT - NOT FINAL`. 23 tabs (was 22).
+
+1. **Every attribute sheet now carries `Extra visits per 1,000 households` and `Baseline visit rate`**
+   beside relative lift, plus `Advertisers` and an advertiser-clustered range
+   (`Low/High end allowing for advertisers`, 600 draws resampling advertisers). `abs_itt` already existed
+   in the data; the workbook simply was not showing it (§14c).
+2. **New sheet `Intent band like for like`** — the 37-pair within-campaign comparison. Every lower band
+   is below High Intent on visits per household: Peak Performance −1.44 [−3.54, −0.01], Mid −2.12
+   [−4.12, −0.90], Max Reach −1.87 [−3.62, −1.49], Unscored −4.46 [−8.37, −1.09]; pooled −2.17
+   [−4.15, −0.84], 33 of 37 pairs negative. Ranges resample campaigns, the unit each pair belongs to.
+3. **`Intent band` min_k lowered to 4 so Max Reach appears.** It pools to +6.1% with a range crossing
+   zero, which is the honest reading of the most on-point band and was previously hidden.
+4. **`Frequency` (bids per household) restated as a warning on its own sheet**, not only in the Read me:
+   the single-bid band reads negative, and withholding a bid cannot reduce visits.
+5. **`Ranked hypotheses` gained `Survives testing every attribute`** at a Bonferroni bar of 0.0036.
+   Three of fourteen survive: bids per household (which is not a valid split), creative length mix,
+   vertical. The method line now names the bid-count caveat and points at the tab.
+6. **Cost per incremental visit switched to the median per campaign.** The pooled spend-weighted version
+   inverts the ordering (§13g).
+
+### 15a. Two defects in my own rebuild, caught before shipping
+
+- `Advertisers` on the ranked sheet was `max()` across an attribute's levels, so Vertical read 13
+  advertisers instead of 130. Replaced with a distinct count per attribute.
+- The ranked sheet marked bids per household as surviving correction while its own tab calls it invalid.
+  The method line now carries the warning. The library also blocked a method line that said "see that
+  sheet" without naming the tab.
+
+### 15b. One nuance that changes what was said to Matt
+
+Peak Performance was described in the draft reply as "the exception, looks good." Held like for like it is
+**also below High Intent on visits per household** (−1.44, range excluding zero), just least so. What holds
+is the cost claim: PP is the cheapest band at **$15.36** per incremental visit against High at $26.71.
+So PP is good value, not higher yield. The reply should say that rather than "looks good".
+
+### 15c. Tab rename (Kirsa, 2026-09-03)
+
+`Frequency` renamed to **`Bids per household`**, matching its own first column and removing the collision
+with `Campaign frequency` (a different sheet, on the campaign's own average frequency). Kept sentence case
+rather than the requested Title Case, per the tab-name rule enforced in `mntn_xlsx._check_tab_name`.

@@ -9,6 +9,8 @@ import pandas as pd
 from scipy import stats
 from scipy.stats import chi2
 
+RNG = np.random.default_rng(1313)
+
 ROOT = Path("/Users/malachi/Developer/work/mntn/workspace")
 sys.path.insert(0, str(ROOT))
 from lib.mntn_xlsx import FMT, MntnWorkbook  # noqa: E402
@@ -53,17 +55,7 @@ def pool(df):
     k = int(m.sum())
     if k == 0:
         return None
-    yv, vv = y[m].to_numpy(), v[m].to_numpy()
-    w = 1.0 / vv
-    fixed = (w * yv).sum() / w.sum()
-    q = float((w * (yv - fixed) ** 2).sum())
-    tau2 = max(0.0, (q - (k - 1)) / (w.sum() - (w**2).sum() / w.sum())) if k > 1 else 0.0
-    wr = 1.0 / (vv + tau2)
-    est = float((wr * yv).sum() / wr.sum())
-    se = float(np.sqrt(1.0 / wr.sum()))
-    i2 = max(0.0, (q - (k - 1)) / q) if (k > 1 and q > 0) else 0.0
-    return {"k": k, "mask": m, "lift": np.expm1(est), "lo": np.expm1(est - 1.96 * se),
-            "hi": np.expm1(est + 1.96 * se), "i2": i2}
+    return {**_dl(y[m].to_numpy(), v[m].to_numpy()), "mask": m}
 
 
 def pool_conv(df):
@@ -83,22 +75,85 @@ def pool_conv(df):
     }))
 
 
-def summarize(df, by, label, order=None, min_k=5, extras=True):
+def abs_rd(df):
+    """Absolute risk difference per household and its variance. rate_* are per deduped bid IP."""
+    pt, ph = df["rate_treatment"], df["rate_holdout"]
+    nt, nh = df["n_treatment"], df["n_holdout"]
+    ok = (nt > 0) & (nh > 0)
+    y = pd.Series(np.where(ok, pt - ph, np.nan), index=df.index)
+    v = pd.Series(np.where(ok, pt * (1 - pt) / nt + ph * (1 - ph) / nh, np.nan), index=df.index)
+    return y, v
+
+
+def pool_abs(df):
+    """Random-effects pool of the absolute risk difference, in visits per 1,000 households."""
+    y, v = abs_rd(df)
+    m = y.notna() & v.notna() & (v > 0)
+    if not m.any():
+        return None
+    return _dl(y[m].to_numpy(), v[m].to_numpy())
+
+
+def _dl(y, v):
+    """DerSimonian-Laird pool of pre-computed effects and variances."""
+    k = len(y)
+    w = 1.0 / v
+    fixed = (w * y).sum() / w.sum()
+    q = float((w * (y - fixed) ** 2).sum())
+    tau2 = max(0.0, (q - (k - 1)) / (w.sum() - (w**2).sum() / w.sum())) if k > 1 else 0.0
+    wr = 1.0 / (v + tau2)
+    est = float((wr * y).sum() / wr.sum())
+    se = float(np.sqrt(1.0 / wr.sum()))
+    i2 = max(0.0, (q - (k - 1)) / q) if (k > 1 and q > 0) else 0.0
+    return {"k": k, "est": est, "se": se, "i2": i2,
+            "lift": np.expm1(est), "lo": np.expm1(est - 1.96 * se), "hi": np.expm1(est + 1.96 * se)}
+
+
+BOOT_DRAWS = 600
+
+
+def boot_adv(g, fn):
+    """Advertiser-clustered bootstrap interval. Campaigns share an advertiser's settings, so the
+    advertiser is the independent unit and resampling campaigns understates the interval."""
+    adv = g["advertiser_id"].to_numpy()
+    uniq = np.unique(adv)
+    if len(uniq) < 3:
+        return np.nan, np.nan
+    where = {a: np.where(adv == a)[0] for a in uniq}
+    out = []
+    for _ in range(BOOT_DRAWS):
+        rows = np.concatenate([where[a] for a in RNG.choice(uniq, size=len(uniq), replace=True)])
+        p = fn(g.iloc[rows])
+        if p is not None:
+            out.append(p["est"])
+    if len(out) < BOOT_DRAWS // 2:
+        return np.nan, np.nan
+    lo, hi = np.percentile(out, [2.5, 97.5])
+    return float(lo), float(hi)
+
+
+def summarize(df, by, label, order=None, min_k=5, extras=True, clustered=True):
     rows = []
     for key, g in df.groupby(by, dropna=True, observed=True):
         p = pool(g)
         if p is None or p["k"] < min_k:
             continue
         gp = g[p["mask"]]
-        r = {label: key, "Campaigns": p["k"], "Lift": p["lift"],
-             "Low end": p["lo"], "High end": p["hi"],
+        pa = pool_abs(gp)
+        r = {label: key, "Campaigns": p["k"], "Advertisers": gp["advertiser_id"].nunique(),
+             "Lift": p["lift"], "Low end": p["lo"], "High end": p["hi"],
+             "Extra visits per 1,000 households": pa["est"] * 1000 if pa else np.nan,
+             "Baseline visit rate": gp["rate_holdout"].median(),
              "% with a clear effect": gp["significant_95"].mean(),
              "Campaigns disagree": p["i2"],
              "Incremental visits": gp["incremental_visits"].sum()}
+        if clustered:
+            lo, hi = boot_adv(gp, lambda d: pool(d))
+            r["Low end allowing for advertisers"] = np.expm1(lo) if np.isfinite(lo) else np.nan
+            r["High end allowing for advertisers"] = np.expm1(hi) if np.isfinite(hi) else np.nan
         if extras:
-            sp, iv = gp["scaled_spend"].sum(), gp["incremental_visits"].sum()
-            r["Spend"] = sp
-            r["Cost per incremental visit"] = sp / iv if iv > 0 else np.nan
+            r["Spend"] = gp["scaled_spend"].sum()
+            r["Cost per incremental visit"] = gp["cost_per_incremental_visit"].median()
         rows.append(r)
     out = pd.DataFrame(rows)
     if out.empty:
@@ -164,9 +219,12 @@ def allocate_spend(df):
 
 freq["scaled_spend"] = allocate_spend(freq)
 bands["scaled_spend"] = allocate_spend(bands)
+for _t in (freq, bands):
+    _t["cost_per_incremental_visit"] = np.where(
+        _t["incremental_visits"] > 0, _t["scaled_spend"] / _t["incremental_visits"], np.nan)
 
 by_freq = summarize(freq, "fband", "Bids per household", order=FREQ_ORDER)
-by_band = summarize(bands, "band", "Intent band", order=BAND_ORDER)
+by_band = summarize(bands, "band", "Intent band", order=BAND_ORDER, min_k=4)
 by_creative = summarize(pop, "creative", "Creative length mix",
                         order=["15s only", "Mixed, 15s-led", "Mixed, 30s-led", "30s only"])
 by_geo = summarize(pop, "geo", "Geographic targeting")
@@ -181,6 +239,66 @@ by_vv = summarize(pop, "vv_level", "Visit attribution window")
 by_fcap = summarize(pop, "fcap_level", "Frequency cap")
 by_display = summarize(pop, "display_flag", "Display multi-touch")
 by_aud = summarize(pop, "aud_bucket", "Audience size", order=AUD_ORDER)
+
+HIGH = "High Intent"
+_has_high = set(bands.loc[bands["band"] == HIGH, "campaign_group_id"])
+_pair_rows = []
+for _cg, _g in bands[bands["campaign_group_id"].isin(_has_high)].groupby("campaign_group_id"):
+    if len(_g) < 2:
+        continue
+    _h = _g[_g["band"] == HIGH].iloc[0]
+    for _, _o in _g[_g["band"] != HIGH].iterrows():
+        _yh, _vh = abs_rd(pd.DataFrame([_h]))
+        _yo, _vo = abs_rd(pd.DataFrame([_o]))
+        if not (np.isfinite(_yh.iloc[0]) and np.isfinite(_yo.iloc[0])):
+            continue
+        _pair_rows.append({"campaign_group_id": _cg, "band": _o["band"],
+                           "d": _yo.iloc[0] - _yh.iloc[0], "v": _vo.iloc[0] + _vh.iloc[0],
+                           "cpiv_other": _o["cost_per_incremental_visit"],
+                           "cpiv_high": _h["cost_per_incremental_visit"]})
+pairs = pd.DataFrame(_pair_rows)
+
+
+def _pair_boot(sub):
+    """Bootstrap the paired difference over CAMPAIGNS, the unit each pair belongs to."""
+    cgs = sub["campaign_group_id"].unique()
+    if len(cgs) < 3:
+        return np.nan, np.nan
+    where = {c: sub.index[sub["campaign_group_id"] == c] for c in cgs}
+    out = []
+    for _ in range(BOOT_DRAWS):
+        idx = np.concatenate([where[c] for c in RNG.choice(cgs, size=len(cgs), replace=True)])
+        d = sub.loc[idx]
+        out.append(_dl(d["d"].to_numpy(), d["v"].to_numpy())["est"])
+    lo, hi = np.percentile(out, [2.5, 97.5])
+    return float(lo) * 1000, float(hi) * 1000
+
+
+paired_rows = []
+for _b in [b for b in BAND_ORDER if b != HIGH]:
+    _s = pairs[pairs["band"] == _b]
+    if len(_s) < 3:
+        continue
+    _r = _dl(_s["d"].to_numpy(), _s["v"].to_numpy())
+    _lo, _hi = _pair_boot(_s)
+    paired_rows.append({
+        "Band compared with High Intent": _b,
+        "Campaigns serving both": _s["campaign_group_id"].nunique(),
+        "Extra visits per 1,000 households against High Intent": _r["est"] * 1000,
+        "Low end": _lo, "High end": _hi,
+        "Campaigns where this band did worse": f"{int((_s['d'] < 0).sum())} of {len(_s)}",
+    })
+_all = pairs
+_ra = _dl(_all["d"].to_numpy(), _all["v"].to_numpy())
+_alo, _ahi = _pair_boot(_all)
+paired_rows.append({
+    "Band compared with High Intent": "Every lower band together",
+    "Campaigns serving both": _all["campaign_group_id"].nunique(),
+    "Extra visits per 1,000 households against High Intent": _ra["est"] * 1000,
+    "Low end": _alo, "High end": _ahi,
+    "Campaigns where this band did worse": f"{int((_all['d'] < 0).sum())} of {len(_all)}",
+})
+paired_tbl = pd.DataFrame(paired_rows)
 
 band_share = (freq.pivot_table(index="campaign_group_id", columns="fband", values="n_treatment",
                                aggfunc="sum", observed=True)
@@ -225,6 +343,21 @@ for col, lab in [("crm", "Customer-file exclusion"), ("display_flag", "Display m
     others.append(t)
 by_other = pd.concat(others, ignore_index=True) if others else pd.DataFrame()
 
+def _adv_n(df, by):
+    """Distinct advertisers contributing to an attribute, not the largest single level."""
+    return int(df.loc[df[by].notna(), "advertiser_id"].nunique())
+
+
+RANKED_ADV = {
+    "Bids per household": _adv_n(freq, "fband"), "Intent band": _adv_n(bands, "band"),
+    "Creative length mix": _adv_n(pop, "creative"), "Geographic targeting": _adv_n(pop, "geo"),
+    "Vertical": _adv_n(pop, "vertical_name"), "Average frequency": _adv_n(pop, "freq_bucket"),
+    "High-intent share": _adv_n(pop, "hi_bucket"), "Average household score": _adv_n(pop, "score_bucket"),
+    "TV share of spend": _adv_n(pop, "tv_bucket"), "Advertiser tenure": _adv_n(pop, "tenure_bucket"),
+    "Visit attribution window": _adv_n(pop, "vv_level"), "Frequency cap": _adv_n(pop, "fcap_level"),
+    "Display multi-touch": _adv_n(pop, "display_flag"), "Audience size": _adv_n(pop, "aud_bucket"),
+}
+
 RANKED_SRC = [
     ("Bids per household", by_freq, freq["campaign_group_id"].nunique()),
     ("Intent band", by_band, bands["campaign_group_id"].nunique()),
@@ -244,6 +377,7 @@ for name, tbl, fixed_n in RANKED_SRC:
     rank_rows.append({
         "Attribute": name,
         "Campaigns": int(fixed_n if fixed_n else t["Campaigns"].sum()),
+        "Advertisers": RANKED_ADV.get(name, 0),
         "Number of settings": len(t),
         "Campaigns in smallest setting": int(t["Campaigns"].min()),
         "Best setting": str(best[t.columns[0]]),
@@ -270,12 +404,17 @@ for row, (_, tbl, _fx) in zip(rank_rows, RANKED_SRC):
     q, pv = between_q(tbl)
     row["p value"] = pv
 
+BONFERRONI = 0.05 / len(rank_rows)
+for row in rank_rows:
+    row["Survives testing every attribute"] = "Yes" if row["p value"] < BONFERRONI else "No"
+
 ranked = (pd.DataFrame(rank_rows)
           .sort_values(["p value", "Gap"], ascending=[True, False])
           .reset_index(drop=True))
-RANK_ORDER = ["Attribute", "p value", "Best setting", "Best lift", "Worst setting", "Worst lift",
-              "Gap", "Best beats worst outright", "Campaigns", "Number of settings",
-              "Campaigns in smallest setting"]
+RANK_ORDER = ["Attribute", "p value", "Survives testing every attribute",
+              "Best setting", "Best lift", "Worst setting", "Worst lift",
+              "Gap", "Best beats worst outright", "Campaigns", "Advertisers",
+              "Number of settings", "Campaigns in smallest setting"]
 ranked = ranked[RANK_ORDER]
 
 conv = pop[pop["conv_rate_holdout"] > 0].copy()
@@ -419,8 +558,14 @@ n_conv = len(conv)
 head = pool(pop)
 
 SUMF = {"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
+        "Low end allowing for advertisers": FMT.PCT1, "High end allowing for advertisers": FMT.PCT1,
+        "Extra visits per 1,000 households": FMT.NUM2, "Baseline visit rate": FMT.PCT2,
         "% with a clear effect": FMT.PCT0, "Campaigns disagree": FMT.PCT0, "Campaigns": FMT.INT,
+        "Advertisers": FMT.INT,
         "Incremental visits": FMT.INT, "Spend": FMT.USD0, "Cost per incremental visit": FMT.USD2}
+PAIRF = {"Campaigns serving both": FMT.INT,
+         "Extra visits per 1,000 households against High Intent": FMT.NUM2,
+         "Low end": FMT.NUM2, "High end": FMT.NUM2}
 
 wb = MntnWorkbook(
     title="Campaign incrementality by attribute",
@@ -432,10 +577,10 @@ wb = MntnWorkbook(
 
 wb.table(
     "Ranked hypotheses", ranked,
-    finding="Attributes ranked by how sure we are that their settings really differ in lift",
-    method="Ranked on a between-setting test, not on the gap, because an attribute with more settings shows a wider gap by chance alone. Check the last column before trusting a gap.",
+    finding="Three attributes separate lift once you allow for having tested fourteen of them",
+    method=f"Ranked on a between-setting test, not the gap. The survives column applies a stricter {BONFERRONI:.4f} bar for having tested {len(rank_rows)}. Bids per household is decided after the auction, see the Bids per household tab.",
     formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap": FMT.PCT1,
-             "Campaigns": FMT.INT, "Number of settings": FMT.INT,
+             "Campaigns": FMT.INT, "Advertisers": FMT.INT, "Number of settings": FMT.INT,
              "Campaigns in smallest setting": FMT.INT, "p value": "0.0000"},
     rag={"p value": lambda v: "POS" if v < 0.05 else ("WARN" if v < 0.20 else None)},
     kind="headline",
@@ -443,9 +588,9 @@ wb.table(
     query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "Frequency", by_freq,
-    finding="Pooled visit lift by how many times a household was bid on across the whole 71 day window",
-    method="Bids counted once over the whole 22 Jun to 31 Aug window, not per week. Households are not randomised into these bands. Spend is split across bands by each band's share of bids.",
+    "Bids per household", by_freq,
+    finding="A warning, not a result: bid count is decided after the auction, so these bands are not comparable groups",
+    method="The single-bid band reads negative, and withholding a bid cannot reduce visits, so that is sorting, not effect. Covers 119 of the 190 campaigns.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift at 1, 2 to 3, 4 to 10 and 11+ bids per household over the full window",
     query="ti_1313_bid_count_strata.sql")
@@ -468,10 +613,18 @@ wb.table(
 
 wb.table(
     "Intent band", by_band,
-    finding="Pooled visit lift and cost per incremental visit by the intent band the household was scored into",
-    method="From the platform's score-band strata; a campaign appears in every band it delivered to. Spend is split across bands by each band's share of bids, so it assumes a flat cost per bid in a campaign.",
+    finding="Bands look similar on lift percentage only because the lower bands start from a much lower baseline",
+    method="From the platform's score-band strata. Most campaigns deliver into one band, so these rows compare different campaigns. The next sheet holds the campaign fixed.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift and cost per incremental visit by High, Peak, Mid, Max Reach and Unscored",
+    query="ti_1313_score_band_strata.sql")
+
+wb.table(
+    "Intent band like for like", paired_tbl,
+    finding="Where one campaign served both, every lower band produced fewer extra visits per household than High Intent",
+    method="Only campaigns that served High Intent and at least one lower band, so the campaign is held fixed. Each row is that band minus High Intent inside the same campaign.",
+    formats=PAIRF, kind="headline",
+    toc="The same comparison with the campaign held fixed",
     query="ti_1313_score_band_strata.sql")
 
 wb.table(
@@ -492,8 +645,8 @@ wb.table(
 
 wb.table(
     "Audience size", by_aud,
-    finding="Lift does not run with audience size: the second quartile reads highest, the smallest quartile lowest",
-    method=f"Quartiles on the targetable audience behind the prospecting campaigns, median across delivered days. Rank correlation with lift is {rho_lift:+.2f} (p = {p_lift:.2f}), so this is a quartile gap, not a trend.",
+    finding="Lift does not run with audience size, and the gap that does show is a baseline gap",
+    method=f"Quartiles on the targetable audience, median across delivered days. Rank correlation with lift is {rho_lift:+.2f} (p = {p_lift:.2f}). The smallest quartile has twice the baseline rate of the largest.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by targetable audience size quartile",
     query="ti_1313_campaign_base.sql")
@@ -658,6 +811,9 @@ wb.glossary(
         ("What this measures", "Ghost-bid holdout lift. A slice of eligible households is withheld from bidding, and lift compares the households we bid on against the ones we held back."),
         ("Visit lift", "Relative increase in the share of households that visited the site, treated against holdout."),
         ("Lift", "Random-effects pool of the log risk ratio across campaigns. Random effects because campaigns disagree far more than their own error bars allow."),
+        ("Extra visits per 1,000 households", "The result counted, not expressed as a percentage. Lift percentage is this divided by the baseline rate, so a low-baseline row can read high on very few visits. When the two disagree, this answers where to spend."),
+        ("Baseline visit rate", "How often the held-back households visited anyway. It varies about two-fold across the cuts on these sheets, and it is the denominator of the lift percentage, so read it before comparing two rows."),
+        ("Allowing for advertisers", "A wider range built by resampling advertisers, not campaigns. One advertiser stamps the same settings across several campaigns, so campaigns are not independent. This is the honest range."),
         ("Low end and High end", "The range the true lift is very likely to sit in. A range that stays above zero means the effect is real; one that crosses zero means we cannot rule out no effect at all."),
         ("% with a clear effect", "Share of the campaigns in that row whose own result was strong enough to stand on its own. The rest may still be real, just too small to prove one at a time."),
         ("Campaigns disagree", "Share of variation between campaigns that is real disagreement, not sampling noise. Above roughly 75% the pooled number is the centre of a wide spread."),
@@ -678,7 +834,9 @@ wb.glossary(
         ("Visit attribution window", "The advertiser's visit lookback, from 1 to 45 days across this population. It is one of the attributes that separates lift."),
         ("Named but flat", "Conversion attribution window is 30 days for every advertiser here. Desktop is under 0.03% of spend. No campaign here ran retargeting or had a media plan. None can correlate with anything."),
         ("Named but absent", "Audience type, advertiser CVR and advertiser sales cycle are not stored anywhere we could find."),
-        ("Audience size", "The targetable pool behind the prospecting campaigns, median across delivered days. It reflects the stored targeting expression and overstates what is deliverable, so compare campaigns on it rather than reading a level."),
+        ("Audience size", "The targetable pool, median across delivered days. It overstates what is deliverable, so compare campaigns rather than reading a level. It tracks geographic footprint closely, so it is not an independent attribute."),
+        ("Why the bid-count sheet is a warning", "Bid count is decided after the auction, so winning an impression changes which band a household lands in. The single-bid band reads negative, and withholding a bid cannot reduce visits."),
+        ("Testing many attributes", "Fourteen attributes were tested on the same campaigns, so roughly one would clear the usual 0.05 bar by chance. The ranked sheet marks which ones survive a stricter bar that accounts for that."),
         ("Frequency is over the whole window", "Both frequency sheets count over the full 22 Jun to 31 Aug span, not per week or per month. 11+ bids means 11 or more across ten weeks."),
         ("Everything else", "Every other attribute the ticket names is a column on Campaign detail, and those with enough spread are cut on a sheet and ranked."),
     ], max_entries=27)
