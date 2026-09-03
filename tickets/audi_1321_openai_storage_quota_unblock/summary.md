@@ -22,7 +22,7 @@ The agreed question, why it matters, and how we plan to answer it. Locked before
 - **Question (the unknown):** Does a correctly ordered file sweep free enough of the OpenAI project's 2.5TB to let `batch_submit` run again, and how much of the 2026-08-27 → 09-01 gap is worth recovering once we know what one backfilled day actually costs?
 - **Goal (why / the decision):** `keyword_ddp_reporting` has been blocked since 2026-08-28, so DDP product categorization is stale for the MNTN Matched keyword pipeline. The decision this answers: whether the storage ceiling is ours to manage (our sweep was broken, now fixed) or a shared-account problem that needs OpenAI dashboard access from Alyson. Tier 3 — a prod outage on the pipeline that feeds MNTN Matched keyword scoring.
 - **Objective (done-when):** `batch_submit` completes without a 400 on the storage quota; the shipped sweep is proven to delete on a normal day; a zero-delete sweep raises an alarm; and each backfilled day either lands or carries a written reason it was skipped. Binary: `keyword_ddp_reporting` runs to success, or it does not.
-- **Approach (how):** The fix is already in prod (shopper_graph #306: `order="asc"` + explicit paging + break at the first file inside the 48h window). Validate on today's submit run first, then backfill one day at a time — delete the partial receipts for `dt=D`, clear submit `D`, wait ~2h for the OpenAI batches, then clear fetch `D+1`. Backfill 08-27 first and price the real cost before committing to the remaining five. Build the zero-delete alarm here rather than folding it into AUDI-1279, so the guard ships with the defect that needed it. Assumption to resolve empirically before anything else: that the 2.5TB is held by files matching `part-*` / `batch_*` — our sweep only ever touches those names.
+- **Approach (how):** The fix is already in prod (shopper_graph #306: `order="asc"` + explicit paging + break at the first file inside the 48h window). Validate on today's submit run first, then backfill one day at a time — delete the partial receipts for `dt=D`, clear submit `D`, wait ~2h for the OpenAI batches, then clear fetch `D+1`. Backfill 08-27 first and price the real cost before committing to the remaining five. Ship the zero-delete alarm on AUDI-1279's open PR (shopper_graph #305) rather than a separate one, so the OpenAI pipeline has a single observability change to review (reversed 2026-09-03; the two touch different files, so there is no merge conflict, but splitting them would put two alarms for the same pipeline in two PRs). Assumption to resolve empirically before anything else: that the 2.5TB is held by files matching `part-*` / `batch_*` — our sweep only ever touches those names.
 - **What would change the answer:** If `batch_submit` still returns a storage 400 after a sweep that provably deleted its full eligible set, the storage is not ours and the conclusion flips from "our cleanup was broken" to "the shared account is full." That is the stop line: escalate to Alyson for OpenAI dashboard visibility rather than chasing files this pipeline does not own. Equally, if backfilling 08-27 shows the recovered day is no longer useful downstream, the remaining five days are documented as a gap instead of replayed.
 
 ## 1. Introduction
@@ -65,8 +65,12 @@ the pipeline sat blocked until a human looked.
    batches, then clear fetch `dt=2026-08-28`. Record the wall-clock and dollar cost.
 5. Decide from step 4 whether the remaining five days (08-28 → 09-01) are worth replaying or are documented
    as a gap. Do not commit to all six up front.
-6. Add an alarm on a sweep that deletes zero files, so this failure mode cannot recur silently. Built here
-   rather than folded into AUDI-1279, so the guard ships with the defect that needed it.
+6. Add an alarm on a sweep that deletes zero files, so this failure mode cannot recur silently.
+   **Done 2026-09-03** on shopper_graph #305 (AUDI-1279's observability PR, commit `1d7fb2f`): the script
+   now raises when every eligible delete fails, and when it frees nothing while at least
+   `STORAGE_ALARM_MIN_FILES` (default 10,000) are still stored. The threshold is a file count standing in
+   for bytes; normal volume is a few hundred to ~1,200 files a day, so a quiet run stays silent. The guard
+   is straight-line script code with no import surface, so it carries no unit test.
 7. Clear `keyword_ddp_reporting`'s `wait_for_product_categorization` once the categorization it waits on
    exists.
 
