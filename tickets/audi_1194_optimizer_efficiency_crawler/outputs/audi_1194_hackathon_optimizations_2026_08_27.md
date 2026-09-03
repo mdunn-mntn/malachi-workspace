@@ -139,11 +139,13 @@ Method: for each of rows 4-8 and 10-14, two real event logs per DAG were re-pars
 - Verdict: mechanism confirmed; raising `spark.sql.shuffle.partitions` (decorator line 26) is a no-op because AQE re-coalesces on compressed bytes, blind to the expansion.
 - Change: add `.config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "16m")` to the builder -> ~3,100 tasks, ~280 MiB in-memory each.
 - File: `models/feature_store/feature_group_3_pivoted/guid_log_pivot_ip_vertical_id.py`
+- Correction appended 2026-09-02 (AUDI-1274 §4, 08-26 logs): the 800-task floor is registered cores at plan time (`spark.default.parallelism` unset, `coalescePartitions.parallelismFirst` default true; a stage planned at 90 executors landed on 728), not the 64 MiB advisory size; the 61 MiB figure is the two co-partitioned inputs summed per task. Remedy unchanged; expected pivot tasks 3,100 to 4,000 (greedy merge over 6.29 MiB granules), about 215 MiB in memory each.
 
 ### Row 11 - guid_conv_log_pivot_ip_vertical_id / disk_spill (stage 34) - PR-READY (corrected fix)
 - Evidence (app-20260805014206164-0176, app-20260806013618285-0913): numerically identical to row 10 (same feature-group pipeline shape): stage 34 reads 48.9 GiB shuffle over 800 AQE-coalesced tasks (config says 8000), 862.5 GiB memory-bytes spilled -> ~1.1 GiB in-memory per 61 MiB-compressed task.
 - Verdict / change / caveat: same as row 10 - `spark.sql.adaptive.advisoryPartitionSizeInBytes=16m` in the builder.
 - File: `models/feature_store/feature_group_3_pivoted/guid_conv_log_pivot_ip_vertical_id.py`
+- Correction appended 2026-09-02: same as row 10 (core-count floor, not the 64 MiB advisory size; remedy unchanged).
 
 ### Row 12 - conv_log_derived_ip / disk_spill (stage 1) - PR-READY (corrected fix)
 - Evidence (app-20260805012514130-0370, app-20260806012306304-0847): stage 1 spill is map-side (shuffle read 0; input 14.5 GiB over 91 tasks = ~160 MiB each, driven by the builder's own `spark.sql.files.maxPartitionBytes=268435456` override; 58-66 GiB memory-bytes spilled -> ~700 MiB in-memory per task on 9600m/4-core executors).

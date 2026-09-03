@@ -212,7 +212,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_databricks_billing_cost | reference | 2026-08-26 | [doc](memory/reference_databricks_billing_cost.md) |
 | reference_spark_eventlog_cost_units | reference | 2026-08-26 | [doc](memory/reference_spark_eventlog_cost_units.md) |
 | feedback_pasted_reference_means_install | feedback | 2026-08-27 | [doc](memory/feedback_pasted_reference_means_install.md) |
-| reference_dataproc_eventlog_profiling | reference | 2026-08-27 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_frequency_capping | reference | 2026-08-27 | [doc](memory/reference_frequency_capping.md) |
 | reference_gcp_billing_export | reference | 2026-08-27 | [doc](memory/reference_gcp_billing_export.md) |
 | reference_hi_depletion_adverse_selection | reference | 2026-08-27 | [doc](memory/reference_hi_depletion_adverse_selection.md) |
@@ -221,13 +220,13 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | design-ti-999-3p-scoring-at-hhst | project | 2026-08-28 | [doc](memory/design_ti_999_3p_scoring_at_hhst.md) |
 | reference_airflow_log_puller | reference | 2026-08-28 | [doc](memory/reference_airflow_log_puller.md) |
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
-| airflow-ti-repo-and-deployment | reference | 2026-08-31 | [doc](memory/reference_airflow_ti.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-08-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
 | reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
 | reference_mode_api | reference | 2026-09-01 | [doc](memory/reference_mode_api.md) |
+| airflow-ti-repo-and-deployment | reference | 2026-09-02 | [doc](memory/reference_airflow_ti.md) |
 | bq-workflow | feedback | 2026-09-02 | [doc](memory/feedback_bq_workflow.md) |
 | feedback_draft_until_closed | feedback | 2026-09-02 | [doc](memory/feedback_draft_until_closed.md) |
 | feedback_slack_digest_not_per_event | feedback | 2026-09-02 | [doc](memory/feedback_slack_digest_not_per_event.md) |
@@ -241,6 +240,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_airflow_run_origin | reference | 2026-09-02 | [doc](memory/reference_airflow_run_origin.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-02 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
+| reference_dataproc_eventlog_profiling | reference | 2026-09-02 | [doc](memory/reference_dataproc_eventlog_profiling.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-09-02 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-09-02 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-09-02 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |

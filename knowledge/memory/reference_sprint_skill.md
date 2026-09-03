@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [sprint skill, /sprint, sprint_pull.sh, parallel tickets, work the sprint, plan wave, execute wave, one agent per ticket, ticket-agent constitution, board 1814 sprint, dispatcher lands serially, fresh context handoff, sprint waves of 6, framing gate blocks autonomy]
+keywords: [sprint skill, /sprint, sprint_pull.sh, parallel tickets, work the sprint, plan wave, execute wave, one agent per ticket, ticket-agent constitution, board 1814 sprint, dispatcher lands serially, fresh context handoff, sprint waves of 6, framing gate blocks autonomy, plan agents overran scope, plan wave wrote findings, session limit cutoff, RESUME notes, resume from partial worktree, re-dispatch execute wave, plans never posted to Jira, sprint 8649 first run]
 domain: [workflow, jira-process]
 lifecycle: active
 last_verified: 2026-09-02
@@ -81,5 +81,25 @@ DAG/DDL/prod changes, a subagent budget. Agents delegate breadth to `Explore` su
 - **`/capture` runs one ticket at a time**, never concurrently — it writes shared `knowledge/`
   masters and `MEMORY.md`.
 - **Trust `summary.md`, not the Jira status** for whether a ticket is actually done.
+
+## Lessons from the first run (sprint 8649, 2026-09-02, 13 hackathon tickets)
+
+- **The plan wave's scope line did not hold.** "Verify the plan is runnable, do not produce the answer"
+  was overrun by most plan agents: they wrote §4 findings and computed the values the execute wave was
+  meant to derive (AUDI-1274's plan agent, for one, downloaded the event logs, ran the AQE probe and
+  filled §4 with the numbers). The Step 4 check ("a plan whose ticket already has §4 findings means the
+  agent overran") fired after the fact, not before. **How to apply:** treat a filled §4 at the gate as
+  the normal case, not an exception; the execute agent then verifies and extends rather than
+  re-deriving, and the prompt should say so explicitly. The context saving still holds because the
+  execute agent starts from the distilled §3/§4, not the research transcript.
+- **A session limit cut the execute wave off mid-run.** Agents were mid-edit in their worktrees when the
+  dispatcher's session ended; no completion notification arrived. Recovery was a re-dispatch of each
+  unfinished ticket with a RESUME note pointing at the partial worktree diff (`git diff` in
+  `scratchpad/wt/<ticket>`) and at whatever §4-§5 the first agent had already written. **How to apply:**
+  every execute prompt carries a resume block (worktree path, branch, "read `git diff` and §4-§5 first,
+  continue from there"); agents write §4/§5 incrementally so a cutoff leaves resumable state; the
+  dispatcher records per-ticket state before dispatch so the re-dispatch list is mechanical.
+- **Plans are never posted to Jira** (user's call 2026-09-02, already in Step 4 above): one Jira comment
+  per ticket, at landing, with the result.
 
 Related: [[reference_jira_conventions]] (sprint endpoints, board 1814), [[feedback_terse_chat_replies]].

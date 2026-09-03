@@ -236,7 +236,9 @@ Don't set any of these manually in your model file — they're injected by the b
 
 ### Local dev environment gotcha
 
-`uv sync --group models` does NOT install everything `model_upload.py --dryrun` needs. The compilation pass imports every model file in the repo, including ones using analytics packages your branch doesn't touch. Hit during TI-956:
+**Superseded 2026-09-02 (AUDI-1274, airflow-ti main `825b07e`):** `pyproject.toml` now pins `pretty_html_table`, `matplotlib`, `sendgrid` in the `models` group, and the CI-equivalent recipe completes with no extra installs: `uv venv --python 3.11 .venv` → `uv export --no-hashes --only-group models -o requirements-model-upload.txt` → `VIRTUAL_ENV=$PWD/.venv uv pip install -r requirements-model-upload.txt` → `MNTN_SDLC_ENV=dev .venv/bin/python model_upload.py --dryrun`. Exit 0 prints exactly two lines (`Compiling all models` / `Skipping all models upload to 'dev' env`) and leaves gitignored `dags/current_branch.json`, `utils_model/model_core/model_config.json`, `uv.lock` behind. The list below is the 2026-06-08 state, kept as history; if a `ModuleNotFoundError` reappears it is a newly added dep, install just that one.
+
+`uv sync --group models` did NOT (2026-06-08) install everything `model_upload.py --dryrun` needs. The compilation pass imports every model file in the repo, including ones using analytics packages your branch doesn't touch. Hit during TI-956:
 
 ```bash
 uv pip install pretty_html_table matplotlib seaborn scipy scikit-learn statsmodels
