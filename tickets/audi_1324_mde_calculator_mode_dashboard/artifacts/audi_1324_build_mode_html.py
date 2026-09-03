@@ -8,6 +8,7 @@ WORKSPACE = TICKET.parents[1]
 SRC = WORKSPACE / "tickets/audi_1213_mde_calculator_refresh/artifacts/audi_1213_mde_calculator.html"
 OUT = TICKET / "artifacts" / "audi_1324_index.html"
 QUERY_NAME = "Advertiser Prefill"
+SCOPE = "#mde"
 
 BRIDGE = """/* Mode data bridge. window.datasets is [{name, content:[rows]}]; rows key off the SQL
    column aliases. Everything below this block is the standalone calculator unchanged. */
@@ -86,6 +87,71 @@ LAUNCHER = """
 })();"""
 
 
+def _split_top(css):
+    """Yield (prelude, block) for each top-level rule; block is None past the last brace."""
+    i = 0
+    while i < len(css):
+        brace = css.find("{", i)
+        if brace == -1:
+            tail = css[i:]
+            if tail.strip():
+                yield tail, None
+            return
+        prelude = css[i:brace]
+        depth, j = 1, brace + 1
+        while j < len(css) and depth:
+            if css[j] == "{":
+                depth += 1
+            elif css[j] == "}":
+                depth -= 1
+            j += 1
+        yield prelude, css[brace + 1 : j - 1]
+        i = j
+
+
+def _scope_selector(sel, scope):
+    sel = sel.strip()
+    if not sel:
+        return ""
+    if sel in (":root", "html", "body", "*"):
+        return scope
+    for tag in ("html", "body"):
+        if sel.startswith(tag) and (len(sel) == len(tag) or not sel[len(tag)].isalnum()):
+            return scope + sel[len(tag) :]
+    return scope + " " + sel
+
+
+def scope_css(css, scope):
+    """Prefix every selector with `scope` so the fragment cannot style Mode's own chrome."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    out = []
+    for prelude, block in _split_top(css):
+        if block is None:
+            out.append(prelude)
+            continue
+        head = prelude.strip()
+        if head.startswith("@media") or head.startswith("@supports"):
+            out.append(f"{head} {{{scope_css(block, scope)}}}")
+        elif head.startswith("@"):
+            out.append(f"{head} {{{block}}}")
+        else:
+            sels = [_scope_selector(x, scope) for x in head.split(",")]
+            out.append("{} {{{}}}".format(", ".join(x for x in sels if x), block))
+    return "\n".join(out)
+
+
+def to_fragment(html, scope):
+    """Mode injects the layout into its own page, so emit a fragment, not a document."""
+    css = re.search(r"<style[^>]*>(.*?)</style>", html, re.S).group(1)
+    html = html.replace(css, scope_css(css, scope), 1)
+
+    body = re.search(r"<body[^>]*>(.*?)</body>", html, re.S).group(1)
+    head_keep = "".join(re.findall(r'<link[^>]+>|<script[^>]+src=[^>]+></script>|<style[^>]*>.*?</style>', html[: html.index("</head>")], re.S))
+    tail_scripts = "".join(re.findall(r"<script(?![^>]*\ssrc=)[^>]*>.*?</script>", body, re.S))
+    markup = re.sub(r"<script(?![^>]*\ssrc=)[^>]*>.*?</script>", "", body, flags=re.S).strip()
+    return f'{head_keep}\n<div id="{scope[1:]}">\n{markup}\n</div>\n{tail_scripts}\n'
+
+
 def main():
     html = SRC.read_text()
     html, n = re.subn(
@@ -116,6 +182,8 @@ def main():
     if html.count(tail) != 1:
         raise SystemExit(f"boot tail not unique ({html.count(tail)})")
     html = html.replace(tail, "}\n" + LAUNCHER + "\n</script>")
+
+    html = to_fragment(html, SCOPE)
 
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
