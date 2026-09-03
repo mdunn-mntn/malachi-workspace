@@ -94,3 +94,5 @@ model unless the user asks.
 LINKED WORKTREE that is `.git/worktrees/<name>/pr_gauntlet_pass` under the MAIN repo, not the
 worktree's own dir. And the marker must exist BEFORE the `gh pr create` tool call — write it in a
 separate, earlier command; writing it inside the same compound command as the create still blocks.
+
+**Auto-fix + reformat must be reviewed as two changes (AUDI-1269, 2026-09-03).** A fixer that both applies a finding and reformats a file introduces two independent sources of change. When the finding is disproven (the builder config applies at session start, not Dataproc batch — the mechanism was wrong) and the reformat is unrelated to the proof, revert the WHOLE fix commit and amend only the PR description instead. The description now carries the clarification ("builder values apply at getOrCreate, not at batch launch") so the fact survives even though the wrong fix is gone. Rule: **run a fixer's full diff through the gauntlet; if a finding is refuted, check whether the reformat and the finding are dependent** (loosely coupled reformat can stay; tightly coupled cannot). This applies to any auto-fix, not just the gauntlet.

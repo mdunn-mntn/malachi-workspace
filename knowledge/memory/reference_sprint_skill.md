@@ -102,4 +102,6 @@ DAG/DDL/prod changes, a subagent budget. Agents delegate breadth to `Explore` su
 - **Plans are never posted to Jira** (user's call 2026-09-02, already in Step 4 above): one Jira comment
   per ticket, at landing, with the result.
 
+**Cross-ticket ownership rule (AUDI-1269/1270, 2026-09-03):** when two sprint tickets touch the same file for the same configuration knob, one ticket owns the change and the other records the delta for post-merge re-size or re-decision. Here AUDI-1269 owned `guid_log_advertiser_id_dsc_id` (stages 5/16, 3400); AUDI-1270 sized stages 13/24 to 4100 but deferred to decision D1 (re-size only if spill persists after 1269 merges). Applied in the PR landing sequence: AUDI-1269 merged first, AUDI-1270 watches the ledger keys and acts if needed. No collision, no redundant edits.
+
 Related: [[reference_jira_conventions]] (sprint endpoints, board 1814), [[feedback_terse_chat_replies]].
