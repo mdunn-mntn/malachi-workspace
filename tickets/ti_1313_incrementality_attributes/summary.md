@@ -964,3 +964,90 @@ So PP is good value, not higher yield. The reply should say that rather than "lo
 `Frequency` renamed to **`Bids per household`**, matching its own first column and removing the collision
 with `Campaign frequency` (a different sheet, on the campaign's own average frequency). Kept sentence case
 rather than the requested Title Case, per the tab-name rule enforced in `mntn_xlsx._check_tab_name`.
+
+## 16. Kirsa and Matt call, 2026-09-03 (transcript `meetings/ti_1313_02_kirsa_matt_attribute_review_2026_09_03.txt`)
+
+34 minutes. This is the meeting that explains the whole ticket. Kirsa opened by saying the written summary
+had lost her, and by the end had accepted the lift-scale correction, named a methodology blocker, and given
+two concrete asks.
+
+### 16a. The scale correction landed
+
+Kirsa restated it herself: "if you're comparing high intent versus mid intent and there were a hundred base
+visits in mid intent, 400 in high intent, and they both cause eight extra incremental visits." Then: "there's
+not really actually much to say about it." **Settled**, and she now understands why the team uses cost per
+incremental visit.
+
+### 16b. ROOT CAUSE: ghost bids are never counted, so the holdout is not frequency capped
+
+Matt laid out the defect underneath every ghost-bid number MNTN produces. A real bid increments a counter that
+drives the frequency cap and pacing; **a ghost bid increments nothing**. So a held-back household keeps being
+bid on after its treated twin is capped, and pacing never slows for it: "you can get three holdout bids coming
+in before you get a real bid." The holdout is exactly 10% in the audience and stops being 10% only once it
+flows through the bidder.
+
+Above ~11% the holdout has accumulated highly active IPs the cap would have removed, which raises its baseline
+and drives measured lift negative. Below ~10% those IPs land in the first-day cohort and are dropped by the
+washout. Matt's control-negative testing agrees: over 11% goes immediately negative, below it centres on zero.
+
+Rogus refused to count ghost bids in Beeswax, fearing leakage into spend, budget and pacing. It exists on the
+MNTN bidder (Ryan Kleck built it for frequency caps) but that bidder runs essentially only Select, so it does
+not help this population. **Not retroactively fixable**, because the flaw is in the bidding mechanism.
+
+Kirsa's separate mechanism: even with identical capping, bidding the holdout as often as the treatment makes
+its bid-to-audience ratio ten times outsized. Matt partly accepted it but held that bidding less does not fix
+the bias, only the percentage: "the only solution that actually works is to track the holdout group on the
+bidder side, not just after the fact." Routed to `data_knowledge.md` and memory.
+
+### 16c. Matt's "50% holdout" is high, but the drift is real and now on the sheet
+
+Matt: "what should be 10% in the holdout can get up to like 50% in this bucket." Checked against the data.
+Pooled holdout share per bid-count band is 9.67% / 8.94% / 8.71% / **10.61%**. Per campaign in the 11+ band the
+median is 10.3%, but **33 of 86 exceed 11%**, the 95th percentile is 20.2% and the **maximum is 31.2%** (one
+4-10 band campaign reaches 45.7%). So 50% is not observed here; 31% is. The direction and the materiality are
+his, the ceiling is not. This is now four columns on the Bids per household sheet, which was his explicit ask:
+"the thing that's missing from here is the number of households in the treatment and the number in the holdout.
+If we had that breakdown, it would be very clear to you why you shouldn't trust this number."
+
+### 16d. Kirsa's exclusion ask is already exceeded, and following it literally would inflate the headline
+
+Kirsa: "can we exclude all campaign groups over 11%... I would block [under 7%] too, just to be safe." Matt,
+about his own pipelines, said "I don't think I'm excluding anything." **The workbook already blocks below 9%
+and at or above 11%**, which is stricter than what was asked.
+
+| Gate | Campaigns | Advertisers | Pooled lift |
+|---|---|---|---|
+| Current workbook, 9 to 11% | 190 | 130 | **+7.92%** [+6.43%, +9.44%] |
+| Kirsa and Matt's 7 to 11% | 426 | 294 | +10.69% [+9.56%, +11.83%] |
+| No band at all | 470 | 316 | +9.97% [+8.83%, +11.11%] |
+
+Loosening to 7-11% would add 236 campaigns and move the headline from +7.9% to +10.7%. That gain is the
+holdout-thinning artifact the Holdout depth check sheet exists to document, not a real effect. **Recommend
+keeping 9-11% and telling them it is already stricter.** This needs saying explicitly, because the ask was
+made in the belief that nothing was excluded.
+
+### 16e. Delivered against the two build asks
+
+1. **Cost beside lift on Ranked hypotheses** (Kirsa: "you can have both side by side just to see"). Added
+   `Cheapest setting`, `Cost per incremental visit there`, `Dearest cost per incremental visit` and
+   `Best lift setting is also cheapest`. **They disagree on 9 of 14 attributes**, which is the answer to her
+   question. Only visit attribution window, TV share, audience size and display multi-touch agree.
+2. **Household counts on Bids per household** (Matt's ask, 16c above).
+3. Tab rename to `Bids per household` was already done from her Slack message.
+
+A defect this surfaced: switching cost per incremental visit to a median made the single-bid band look like
+the *cheapest* setting at $6.33, because the median silently dropped the campaigns where that band netted
+negative. Cost is now blank wherever a band's pooled extra visits are not positive, so the cheapest bid-count
+band reads 4-10 at $8.20.
+
+### 16f. Open, and bigger than this ticket
+
+- **The ghost-bid defect blocks the incrementality reporting release.** Nick has the same stricter-gate
+  guidance for his dashboard.
+- Kirsa's stated concern for next week's presentation: "I am worried about presenting this data as absolute
+  fact to make decisions based upon... there's kind of this big asterisk we're going to have to put on the
+  data." A fix moves the measuring stick and every number changes.
+- Matt wants to investigate what made TART's ghost fraction so far off, as a route to a post-hoc correction
+  if the root cause cannot be fixed.
+- Matt to double-check what his standard pipelines exclude; he believed it was nothing, and thought the loose
+  bound was 15%.

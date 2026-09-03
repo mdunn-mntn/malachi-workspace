@@ -2410,6 +2410,57 @@ economics, which are real and separately useful: unscored prospecting delivery r
 ~$10.1-10.4 for every scored band** (2026-06-22 to 2026-08-31, funnel 1 / objective 1, one band per
 household on MAX score). That correction is just not transferable to the platform's bands.
 
+### ⚠ ROOT CAUSE: ghost bids are never counted, so the holdout is not frequency capped (Matt Brorby + Kirsa Haenebalcke, TI-1313, 2026-09-03)
+
+**This is the defect underneath every ghost-bid lift number MNTN produces.** The bidder increments a counter
+on a real bid, and that counter drives both the frequency cap and pacing. **A ghost bid increments nothing.**
+Consequences, in Matt's words:
+
+- A held-back household **keeps being bid on after its treated twin has been capped**. "The ghost bidding IP
+  does not know that, so it keeps adding bids."
+- **Pacing does not respond to ghost bids.** A real bid raises spend, which slows the next bid; a ghost bid
+  does not. "You can get three holdout bids coming in before you get a real bid."
+- So the holdout's share of households drifts off the 10% it was assigned. It is **exactly 10% in the audience
+  and only stops being 10% once it flows through the bidder.**
+
+**Why a high ghost fraction produces negative lift.** Above ~11%, the holdout has accumulated **highly active
+IPs that the frequency cap would otherwise have removed**. They show up constantly, raising the holdout
+baseline, so measured lift goes negative. Below ~10% those same IPs are caught in the first-day cohort and
+removed by the first-day washout (see `data_catalog.md` gotcha 2). Matt's control-negative testing: over 11%
+gives immediate negative lift; below it, results centre on zero as they should.
+
+**Empirically, inside TI-1313's 190-campaign population** (all of which pass a 9-11% campaign-level gate), the
+drift is still visible per bid-count band: pooled holdout share 9.67% (1 bid), 8.94% (2-3), 8.71% (4-10),
+**10.61% (11+)**. Per campaign in the 11+ band the median is 10.3% but **33 of 86 campaigns exceed 11%**, the
+95th percentile is 20.2% and the **maximum is 31.2%** (one 4-10 band campaign reaches 45.7%). Matt's recalled
+"can get up to like 50%" is high; 31% is the observed ceiling here, and the effect is material regardless.
+
+**Kirsa's separate mechanism, which Matt partly accepted.** Even with identical frequency capping, if the
+holdout is bid on as often as the treatment rather than at a tenth of the rate, its bid-to-audience ratio is
+ten times outsized and frequency runs high. Matt's counter: **bidding less on the holdout does not fix the
+bias**, it only lowers the percentage, because it filters across the board instead of selectively removing the
+highly active IPs. **"The only solution that actually works is to track the holdout group on the bidder side,
+not just after the fact."**
+
+**Why it is not fixed.** Rogus pushed back on counting ghost bids in **Beeswax**, worried that tracking bids
+would leak into spend, budget and pacing. It **is** implemented on the **MNTN (Mountain) bidder**, where Ryan
+Kleck built the counter for frequency caps, but that bidder runs essentially only Select campaigns, so it does
+not help PTV/Beeswax work (`partner_id = 8`). Note "frequency cap" is several different caps: sub-second,
+15-minute, and the advertiser-facing one (e.g. 2 per 7 days).
+
+**Not retroactively fixable.** The flaw is in the bidding mechanism, so no reanalysis of historical data
+repairs it. Matt does post-hoc rebalancing **within score bands** (adjusting when the holdout carries a higher
+share of High Intent than the treatment) but **not on bid count**.
+
+**Operating rules that follow.**
+1. **Gate the ghost fraction hard.** Matt's standard is block above 11% and below 7%. TI-1313 uses a tighter
+   9-11% band; loosening it to 7-11% adds 236 campaigns and moves pooled lift from **+7.9% to +10.7%**, which
+   is the thinning artifact, not a real gain. Prefer the tighter band and say why.
+2. **Never stratify on bid count.** It is the post-treatment split this defect creates (`data_catalog.md` 14).
+3. **This blocks the incrementality reporting release.** Nick has been given the same stricter-gate guidance
+   for his dashboard. Kirsa's position: any presentation of this data needs an explicit asterisk, because a
+   future fix will move the measuring stick and the numbers will change.
+
 ### Where the UI audience-size number lives (TI-1026, Nick Martin/Matt Brorby/Jordan Piepkow 2026-06-15)
 
 The "audience size" shown in the UI = the size of the audience_segment for the **stage-1 campaign**. Sources:

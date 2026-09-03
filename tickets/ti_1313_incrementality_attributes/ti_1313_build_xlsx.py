@@ -153,7 +153,9 @@ def summarize(df, by, label, order=None, min_k=5, extras=True, clustered=True):
             r["High end allowing for advertisers"] = np.expm1(hi) if np.isfinite(hi) else np.nan
         if extras:
             r["Spend"] = gp["scaled_spend"].sum()
-            r["Cost per incremental visit"] = gp["cost_per_incremental_visit"].median()
+            net_positive = (pa is not None and pa["est"] > 0) and gp["incremental_visits"].sum() > 0
+            r["Cost per incremental visit"] = (gp["cost_per_incremental_visit"].median()
+                                               if net_positive else np.nan)
         rows.append(r)
     out = pd.DataFrame(rows)
     if out.empty:
@@ -224,6 +226,14 @@ for _t in (freq, bands):
         _t["incremental_visits"] > 0, _t["scaled_spend"] / _t["incremental_visits"], np.nan)
 
 by_freq = summarize(freq, "fband", "Bids per household", order=FREQ_ORDER)
+freq["hh_share_holdout"] = freq["n_holdout"] / (freq["n_treatment"] + freq["n_holdout"])
+_hs = freq.groupby("fband", observed=True).apply(lambda g: pd.Series({
+    "Treated households": g["n_treatment"].sum(),
+    "Holdout households": g["n_holdout"].sum(),
+    "Holdout share of households": g["n_holdout"].sum() / (g["n_treatment"].sum() + g["n_holdout"].sum()),
+    "Campaigns above an 11% holdout": f"{int((g['hh_share_holdout'] > 0.11).sum())} of {len(g)}",
+}), include_groups=False).reset_index().rename(columns={"fband": "Bids per household"})
+by_freq = by_freq.merge(_hs, on="Bids per household", how="left")
 by_band = summarize(bands, "band", "Intent band", order=BAND_ORDER, min_k=4)
 by_creative = summarize(pop, "creative", "Creative length mix",
                         order=["15s only", "Mixed, 15s-led", "Mixed, 30s-led", "30s only"])
@@ -374,8 +384,15 @@ for name, tbl, fixed_n in RANKED_SRC:
         continue
     t = tbl.sort_values("Lift", ascending=False)
     best, worst = t.iloc[0], t.iloc[-1]
+    _c = t.dropna(subset=["Cost per incremental visit"]) if "Cost per incremental visit" in t else t.iloc[0:0]
+    _cheap = _c.loc[_c["Cost per incremental visit"].idxmin()] if len(_c) else None
     rank_rows.append({
         "Attribute": name,
+        "Cheapest setting": str(_cheap[t.columns[0]]) if _cheap is not None else "",
+        "Cost per incremental visit there": _cheap["Cost per incremental visit"] if _cheap is not None else np.nan,
+        "Dearest cost per incremental visit": _c["Cost per incremental visit"].max() if len(_c) else np.nan,
+        "Best lift setting is also cheapest": (
+            "Yes" if (_cheap is not None and str(_cheap[t.columns[0]]) == str(t.iloc[0][t.columns[0]])) else "No"),
         "Campaigns": int(fixed_n if fixed_n else t["Campaigns"].sum()),
         "Advertisers": RANKED_ADV.get(name, 0),
         "Number of settings": len(t),
@@ -412,9 +429,11 @@ ranked = (pd.DataFrame(rank_rows)
           .sort_values(["p value", "Gap"], ascending=[True, False])
           .reset_index(drop=True))
 RANK_ORDER = ["Attribute", "p value", "Survives testing every attribute",
-              "Best setting", "Best lift", "Worst setting", "Worst lift",
-              "Gap", "Best beats worst outright", "Campaigns", "Advertisers",
-              "Number of settings", "Campaigns in smallest setting"]
+              "Best setting", "Best lift", "Worst setting", "Worst lift", "Gap",
+              "Best beats worst outright",
+              "Cheapest setting", "Cost per incremental visit there",
+              "Dearest cost per incremental visit", "Best lift setting is also cheapest",
+              "Campaigns", "Advertisers", "Number of settings", "Campaigns in smallest setting"]
 ranked = ranked[RANK_ORDER]
 
 conv = pop[pop["conv_rate_holdout"] > 0].copy()
@@ -566,6 +585,8 @@ SUMF = {"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
 PAIRF = {"Campaigns serving both": FMT.INT,
          "Extra visits per 1,000 households against High Intent": FMT.NUM2,
          "Low end": FMT.NUM2, "High end": FMT.NUM2}
+FREQF = {**SUMF, "Treated households": FMT.INT, "Holdout households": FMT.INT,
+         "Holdout share of households": FMT.PCT1}
 
 wb = MntnWorkbook(
     title="Campaign incrementality by attribute",
@@ -581,7 +602,9 @@ wb.table(
     method=f"Ranked on a between-setting test, not the gap. The survives column applies a stricter {BONFERRONI:.4f} bar for having tested {len(rank_rows)}. Bids per household is decided after the auction, see the Bids per household tab.",
     formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap": FMT.PCT1,
              "Campaigns": FMT.INT, "Advertisers": FMT.INT, "Number of settings": FMT.INT,
-             "Campaigns in smallest setting": FMT.INT, "p value": "0.0000"},
+             "Campaigns in smallest setting": FMT.INT, "p value": "0.0000",
+             "Cost per incremental visit there": FMT.USD2,
+             "Dearest cost per incremental visit": FMT.USD2},
     rag={"p value": lambda v: "POS" if v < 0.05 else ("WARN" if v < 0.20 else None)},
     kind="headline",
     toc="Which attribute separates lift most, ranked",
@@ -589,9 +612,9 @@ wb.table(
 
 wb.table(
     "Bids per household", by_freq,
-    finding="A warning, not a result: bid count is decided after the auction, so these bands are not comparable groups",
-    method="The single-bid band reads negative, and withholding a bid cannot reduce visits, so that is sorting, not effect. Covers 119 of the 190 campaigns.",
-    formats=SUMF, signal={"Lift": {}}, kind="data",
+    finding="A warning, not a result: the holdout is not frequency capped, so it drifts off 10% exactly where the bids pile up",
+    method="Holdout bids are never counted, so a held-back household keeps being bid on after a treated one is capped. The 11+ band runs a 10.6% holdout against 8.7% at 4 to 10. Covers 119 of 190 campaigns.",
+    formats=FREQF, signal={"Lift": {}}, kind="data",
     toc="Lift at 1, 2 to 3, 4 to 10 and 11+ bids per household over the full window",
     query="ti_1313_bid_count_strata.sql")
 

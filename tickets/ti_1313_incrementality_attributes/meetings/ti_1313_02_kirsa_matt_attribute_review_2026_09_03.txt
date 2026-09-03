@@ -1,0 +1,373 @@
+[00:00] Whatever you want to do.
+[00:01] Cool.
+[00:01] Thank you.
+[00:02] Yeah.
+[00:03] Can you, I figured it would be easier to just talk through this because you lost me a little
+[00:09] bit on your last message.
+[00:11] Oh, yeah.
+[00:12] No, you're all good.
+[00:12] I should just post things in layman's terms because a lot of times I'll just take what
+[00:18] I'm working on with Claude and then it's kind of ambiguous.
+[00:22] ambiguous so i understand now why you guys are using cpiv um because what i basically what i
+[00:31] was saying is that everything's optimized towards the lift percentage but in terms of like in terms
+[00:36] of like the ranked hypotheses yeah so that's like yeah exactly and so basically i mean i'm already
+[00:43] kind of it wouldn't really change much but the my thought process was well if you're comparing
+[00:49] high intent versus mid intent and there were a hundred base visits in mid intent 400 and high
+[00:55] intent and they both cause eight extra incremental visits well yeah right so i now understand that so
+[01:03] there's not really actually much to say about it um oh so you were just saying you would rerun it
+[01:08] where the ranked hypotheses are ranked based on cpiv instead of lift percentage well you can have
+[01:14] both side by side just to see and so that's basically what i was going to rerun so yeah
+[01:19] that's all i was saying on that um but the rest of it and then there's a couple things that i know
+[01:24] matt said there's some arbitrary things like um with the frequency caps and certain stuff that
+[01:31] might be um over making the lift look like better yeah so what i'm trying to understand is
+[01:41] the
+[01:44] bids per household
+[01:50] I know you said ignore it
+[01:53] sorry but
+[01:55] it's interesting that it's
+[01:58] so
+[01:59] telling
+[02:01] where is that tab
+[02:04] it's the second tab
+[02:05] actually no that's not true that's the ranked hypothesis
+[02:08] the
+[02:09] there are a lot of tabs in this thing i know why am i not finding it
+[02:17] is it frequency cap it's almost towards the end
+[02:23] yeah it's probably frequency one of the earlier ones if you're talking about doesn't
+[02:28] no the cap wasn't it it was bids per household yeah
+[02:32] okay i don't know where it is maybe it went away it should be frequency like the second or third
+[02:44] time but that's the actual oh that's the bit okay got it got it got it can we rename i'm
+[02:50] gonna rename that bids per i don't have access let's rename it bids per house oh i can give you
+[02:55] i can give you access thank you yeah um okay so clearly that is impactful but that's not actually
+[03:01] a lever that we control. So how helpful it is, is potentially up for discussion. But
+[03:09] like I said, in my Slack message, if that is correlated with the size of the audience,
+[03:19] meaning the smaller the audience, the more bids per household we get,
+[03:23] then how come we're not seeing the same trend on audience size?
+[03:26] like does that make sense to you i guess there's other factors in play
+[03:34] depending on how many bids per household we go for yeah i'm just trying to think what that
+[03:43] look like so let's say we have a hundred thousand audience and then we have a six hundred thousand
+[03:49] audience you would ultimately if you have the larger audience you're going to get less bids
+[03:53] per household.
+[03:57] Yes.
+[04:02] But that doesn't seem
+[04:04] to correlate, right?
+[04:05] The audience
+[04:06] size.
+[04:13] Yeah.
+[04:15] Here's what I see.
+[04:17] Here's the combined thing.
+[04:18] Yeah, this is helpful.
+[04:21] This is the combined.
+[04:22] so larger audiences more bids so higher bids in the smaller audience dropped off
+[04:31] so bidding once increases as you go that makes sense to me and that's what you're saying
+[04:40] yeah yeah but then um on the audience size yeah we're not seeing the same
+[04:52] like why is the smaller audience
+[04:55] so the small so this is the thing that's what i'm saying like you have to ignore these
+[05:03] bits per household because the thing that's i think missing from here yeah is
+[05:12] the number of households in the treatment and the number of households in the
+[05:21] holdout. If we had that breakdown, it would be very clear to you why you shouldn't trust
+[05:27] this number. Because what should be 10% in the holdout can get up to like 50% in this
+[05:35] bucket. Because these 11 plus is not capped on the holdout side. So they're naturally
+[05:44] going to have more bids popping up because they're not tapped.
+[05:50] Okay.
+[05:51] So that follows to my next question, the depth check.
+[05:55] Okay.
+[05:57] Where was that one?
+[05:58] I don't even know where that is.
+[05:59] Depth.
+[06:00] Hold out depth check.
+[06:01] There we go.
+[06:04] Okay.
+[06:05] And this plays into the TART discussion.
+[06:09] Yes.
+[06:09] if uh how much we're holding out which is something that we're controlling for right
+[06:19] we're trying to go for 10 yeah has such a significant impact on the lift that we're seeing
+[06:28] why 10 why not eight
+[06:32] and like and and why why are it does it have such a significant impact so this is
+[06:41] there's for all of them universally we're holding out 10 percent
+[06:47] if you look at the audience breakdown it's exactly 10 percent almost
+[06:53] once it flows through the bidder okay that number changes and the only reason it changes is due to
+[07:05] the frequency cap the stuff that we don't track on the holdout stuff so it runs through all the
+[07:13] checks including frequency caps but these holdout households we we don't have a meter that ticks up
+[07:24] every time we see them come through for a bid like we do on the true on the exposed side
+[07:30] and so that's where these like the holdout post bid post bidder is different than the holdout
+[07:39] pre-bid and that's the issue when it starts to stray from the 10 you see it changing and that's
+[07:49] like starts to become a selection effect okay so so if i'm understanding correctly
+[07:54] the lower the holdout is in terms of households that we actually bid on yeah
+[08:01] the higher the frequency was to those households
+[08:05] I don't know if that is true. Because what's likely happening is there's a censoring
+[08:16] that's happening here, which is the highly active ones. Like, I can imagine that the
+[08:25] highly active ones get filtered out very quickly. And so there's fewer households left, instead
+[08:35] see them underrepresented. That makes sense. So there's like some... But like the overall
+[08:41] frequency is higher. If you're saying that there's very active households that are getting bid on a
+[08:47] ton, the overall frequency for the holdout is higher than what we're seeing on the...
+[08:54] That's what's likely happening in this last row, the over 11%. When you see the... So this is all
+[09:00] hypothesis right when you get to household share in the holdout that's higher than 10 like 11
+[09:07] percent or higher what that's telling me is that those are ips that are more active are showing up
+[09:15] more frequently across the board like across the audience and we're not able to catch them
+[09:22] using the filters that we do have in place to try and catch them and so in this one where the ghost
+[09:29] the ghost bidding fraction is over 11%. You see negative lift because the holdout group
+[09:35] has more highly active IPs in it that aren't frequency capped.
+[09:44] And they're showing up all the time. Whereas in the 10% or lower, what's likely happening is
+[09:54] those highly active IPs, we catch them in the first day or two. Because the way that this
+[10:02] measurement is working, it's looking at first bid. That's what puts you into the analysis.
+[10:10] You show up for a bid. And when that happens, you get thrown into this. And then we look forward
+[10:19] after that time to see if there's a visit or not within the window.
+[10:25] So things that show up for the first bid, we catch them and their timestamp based on that first bid.
+[10:31] So you can imagine the super highly active IPs, they might show up every single day,
+[10:36] but if they show up on the first day, they're thrown into that first day cohort.
+[10:42] And then what I do in my tables is we have that washout, which is like the first day,
+[10:49] throw out the first day's data because it's likely overrepresented in the holdout with
+[10:56] these highly active ones so we're throwing out a chunk okay first day where the highly active
+[11:04] ips are and then hopefully after that the ips that are showing up are less so these highly
+[11:11] active ones and we're just getting a clean sample which come which is true on the exposed side as
+[11:17] all the treatment group um but if your audience is composed of like highly active ips and they're
+[11:25] always coming in and constantly refreshing with these highly active ips then they fall into this
+[11:29] last group which is the over 11 and we constantly and we can't filter them out because every day
+[11:34] we're seeing new ips that are in this like super active range and it raises the baseline
+[11:43] there was the idea then that the 10 percent suggestion is the most accurate in terms of
+[11:55] the lift we're actually seeing so like the eight to nine percent is over
+[12:00] uh estimating our lift and the over 11 is underestimating our lift uh
+[12:07] it's hard to say that without kind of having that extra cross-section analysis i would say
+[12:18] okay because what i had seen in my like setup and the testing of this is um that basically once it
+[12:28] got over 11 then we see this immediate negative lift but below it was okay like i was seeing
+[12:35] that it was centered mostly on zero um and that was doing like the
+[12:43] control negative type of analysis which I don't have you know production environment where it was
+[12:51] like we really just split it and it's like pretend like this is a holdout but it's not a holdout and
+[12:56] you know I can explain further but go ahead yeah I think I'm like 60 percent understanding
+[13:05] sorry the root cause of all of this yeah is that when we set this up
+[13:12] we it's this we control everything as much as we can but these frequency caps are the things that
+[13:19] really leak in and cause the issues so so yeah are we are we solving for that are we going to
+[13:24] cap the bids the same way we're capping the bids on the treatment so this is the thing that like
+[13:29] when we talked with rogus initially he heavily pushed back and said we can't do it on beeswax
+[13:37] they can do it on the mountain bitter which we have implemented it on the mountain bitter side
+[13:42] but on mountain bitter we're basically only doing select campaigns so it's not super useful right
+[13:47] now um so there is a solution in place for mountain bitter and i think rogus is more open
+[13:56] to having a perfect solution
+[14:00] or more perfect solution on the mountain bidder side
+[14:03] as opposed to the beeswax side.
+[14:06] Unless this gets escalated to be big enough of an issue
+[14:09] that it basically blocks our ability
+[14:13] to launch the incrementality dashboard.
+[14:17] Yeah, I don't want to derail this.
+[14:19] I was just curious, Matt,
+[14:20] how would they implement that on there?
+[14:23] like how would it know how to change the frequency on the holdout so basically what happens is
+[14:34] because saying that you bid on something and you're tracking how many times you bid on something and
+[14:41] showed up for bids kind of starts to leak into spend and pacing things they were hesitant to
+[14:51] actually track that for the ghost bids because they worried it would affect the budget and pacing
+[14:58] and spend and all this stuff it would start to leak in if we weren't like super careful
+[15:02] and we wanted to get something in place relatively quickly so that was the reason why they didn't do
+[15:08] it they can do it more on the mountain bidder side because i think there's just more control
+[15:13] over all that stuff and it's more cleanly separated for them in the way that they want
+[15:18] to track that kind of stuff so when a household comes in say on the ghost bidding side i think
+[15:28] they feel better about incrementing some sort of a ticker that is keeping track of how often that
+[15:34] showed up so that we can block it in the same way that we do on the real bids and they do have that
+[15:42] in place ryan put that in place for part of the frequency caps because i think that i don't know
+[15:48] how many different frequency caps there are that we call frequency cap,
+[15:54] but it's like the sub second frequency cap,
+[15:57] the 15 minute frequency cap,
+[15:59] the frequency gap that we actually show they advertise it like two impressions
+[16:02] per day or something or per seven days. Right.
+[16:05] Like there's a bunch of different frequency caps.
+[16:08] So I know we don't have it a hundred percent implemented on the Mellon
+[16:11] bitter side, but we,
+[16:12] we can at least get more leverage there than I think in the beeswax side.
+[16:18] So, okay, I want to make sure.
+[16:24] So the problem, here's the problem to summarize it, is we kind of set these up, and then we cross our fingers and hope that it shakes out to be about 10% in the end, when we observe it.
+[16:35] And if it doesn't shake out to be 10% and we see it's over 11%, then we kind of just have to censor it in some way or do some additional non-standard pipeline analyses.
+[16:48] We have to go back to the visits table and do some analyses.
+[16:54] Can I share my screen and show you just like some very rough numbers?
+[16:59] I just want to make sure I'm understanding the methodology and how this plays into the frequency.
+[17:03] Okay.
+[17:05] So let's say we have a total audience of 1 million households.
+[17:08] Actually, let's make it 10 million because it's a better number.
+[17:12] Okay.
+[17:13] So we've got the treatment households is 9 million and the holdout households is 1 million.
+[17:22] Correct?
+[17:22] Okay.
+[17:23] So let's say we're trying to spend $10,000.
+[17:25] I just made up a CPM just to have it.
+[17:27] So the treatment, aka the campaign, is going to serve 833,000 impressions.
+[17:35] How many, is the bids also 10%?
+[17:44] Like how do we decide how many bids to do?
+[17:48] Right, on the holdout bids.
+[17:51] I understand how large the audience is, but like how do we know how many bids?
+[17:56] So what's controlling the bids is in the bidder logic,
+[18:00] there's like a waterfall and it's just checking a lot of the campaign parameters so it will follow
+[18:11] the pacing it will follow the pacing of the current campaign okay so on the treatment side
+[18:19] so is it basically then but it's not keeping track of how many bids it's actually done
+[18:25] so it's not keeping track of how many bids is actually done so it's not on the ghost bidding
+[18:31] side okay it's just assuming that households and ips make it through that whole bidding waterfall
+[18:43] at about the same rate on the treatment side and the holdout side well take an example with just
+[18:50] one ip yes two ips that's probably the best way to do it okay so you got one ip one is selected
+[18:57] for ghost bidding right and then another ip is selected to actually be bid on now the one that's
+[19:02] actually selected to be bid on it gets bid on once and the ghost ip gets bid on once and then let's
+[19:08] say that keeps incrementing up until uh the one that's uh in the actual campaign has a cap set on
+[19:16] it now the ghost bidding ip the associated one does not know that so it keeps adding bids
+[19:22] there's a set number of bids that we're trying to submit correct for the holdout yes but the
+[19:31] on the ghost no no no that's not true actually it's only true on the treatment side so how many
+[19:38] so we're just bidding free form as as often as we see those households it follows the live campaign
+[19:49] settings so that's what i'm saying so then there's a number it's it's 90
+[19:55] 10 in terms of how many bids we're submitting or are we trying to get
+[20:00] the same number of bids as we're seeing impressions right are we missing mixing up bids and households
+[20:06] because it's i'm talking about bids right so it passes so the but here's the issue
+[20:15] think about it like this way um a household comes in and at the current pacing
+[20:22] it's in the audience yada yada it's on the treatment side though like based on our hash
+[20:28] it passes everything on the bidder so we bid on it that then increments up something a counter
+[20:36] that says we have a bid the pacing may change because of that then because now we have a spend
+[20:44] we got an impression shortly after so now the spend has gone up so that affects the pacing right
+[20:50] so now when the next bid comes in we may not bid on it immediately because we just bid and got an
+[20:58] impression. So we don't want to overpace. That's like the thing. But on the holdout side, it comes
+[21:05] in. We would bid on it. Yes. Okay. Track that. Another one comes in. Yes, we would bid on that.
+[21:11] Okay. Track that. Another one comes in. Yes. But nothing's getting incremented. So the pacing
+[21:16] doesn't change. You can get like three household bids coming in possibly before you get a real bid
+[21:22] or holdout bid coming in before you get a real bid. And that can drive up the frequencies on
+[21:27] the holdout side is the issue i think there's potentially two issues if i'm understanding this
+[21:36] correctly issue one is what you're describing which is like we don't have the cap in place
+[21:43] so it's inherently going to be higher but i'm wondering if we're trying to get the same number
+[21:51] of bids on the holdout as the treatment, which it sounds like we are.
+[21:56] If anytime it's eligible to be bid on based on the pace of the treatment,
+[22:00] we're bidding on it in the holdout.
+[22:03] The bid or impression to audience size ratio is extremely outsized in the
+[22:11] holdout compared to the treatment,
+[22:14] which is going to drive frequency way up.
+[22:21] So instead of 10%, like this is the same ratio as this, but if these are the same
+[22:31] and the audience size is 10% of the size, the frequency is always going to be way higher.
+[22:38] Right. So that's what we see on the higher frequency ones. When you look at like that
+[22:43] bid per household table that we were looking at and you see the 11 plus,
+[22:47] instead of being a 10% holdout, it's like a 50% holdout because it's just a lot more
+[22:56] are getting through on that side, but the volume is low. The volume is low. So
+[23:02] maybe on the treatment side, it's a, it's a small fraction of the total number of bids.
+[23:10] and it's also a small fraction on the holdout side but comparatively that percentage is big
+[23:19] do we have the data on this of how many bids we're putting in the holdout versus the treatment
+[23:26] yeah that's what i'm saying we need to get is uh because i'm wondering if a potential solution if
+[23:33] The frequency capping is not an issue within beeswax.
+[23:36] Is it a potential solution to just bid less on the holdout because the audience is less?
+[23:46] Right.
+[23:47] Possibly, yeah.
+[23:49] Yeah.
+[23:49] Also being able to predictably do that, though.
+[23:53] Like.
+[23:54] I mean, it's a simple formula, right?
+[23:56] Like, we could just take the budget.
+[24:06] I know how many impressions I'm trying to serve on the treatment, roughly.
+[24:14] And then figure out what the win rate is.
+[24:19] so this is ideal impressions but let's say our win rates
+[24:25] 33 percent you know
+[24:31] or no it would be divided by three um
+[24:38] oh no times three yeah that's right so you would need to bid you know
+[24:46] that many times but like that's just very rough math yeah and what is the random that random hash
+[24:55] too i was just thinking about it could possibly have a um that holdout group could probably grab
+[25:02] a lot of like cellular ips or different things like that couldn't it matt just like coincidentally
+[25:09] where we i don't know if actually it would matter that much but like let's say we had a random hash
+[25:13] that did do that then it's also possible that would also affect it i think that's what you're
+[25:19] saying before is that the ones on the holdout group might have show up a lot uh yes and they
+[25:27] also but they also show up on the treatment side they just get caught based on the frequency caps
+[25:34] because we actually track how much how often they show up and then stop well yeah i think what i'm
+[25:40] saying is like we don't have counters on the holdout side we have counters on the treatment
+[25:44] side the frequency cap matters but i think it's also just like even with the same exact frequency
+[25:53] capping let's say that that already applied i think the same thing might be happening
+[25:58] if we're truly bidding as often on the holdout as we are on the treatment
+[26:03] instead of 10% as much.
+[26:09] Because I've run campaigns that have the exact same caps
+[26:13] and one campaign is trying to spend $50,000
+[26:18] on a 20 million household audience
+[26:22] and the other is trying to spend $200,000
+[26:24] on a 20 million household audience.
+[26:27] And the one that has more budget per household
+[26:31] in the audience that they're targeting
+[26:32] is going to have a higher frequency,
+[26:36] even with the exact same cap in place.
+[26:39] So unless we bid less
+[26:45] in the same ratio as the audience size,
+[26:49] I think we're still going to have a frequency issue.
+[26:54] But then the potential issue is fewer bids in the holdout.
+[26:58] Does that mean we lack statistical significance?
+[27:02] I think it's that there's no good way to, without actually tracking how often an IP is showing up on the holdout to then cap it, there's no good, you're just lowering the percentage.
+[27:23] but the bias is still there because you're not selectively censoring out the higher
+[27:34] higher frequency more active ips you're across the board kind of filtering and lowering the
+[27:41] percentage so i think both things need to happen and it just makes it problematic again where
+[27:46] you're like if it's 10 or 11 like if we see the holdout fraction go above 11 we know that's when
+[27:53] the lift gets a little dicey by doing this to make it 10 i think you would just see oh it's
+[27:59] like 10 and that the lift is now negative at 10 as opposed to above 11 i think that's what would
+[28:07] happen so like the only solution that actually works is to track the holdout group you actually
+[28:16] have to track the bids on the bidder side not just after the fact yeah that's the problem i can
+[28:25] i haven't sat down and thought about it for a while now but i'm sure there are post
+[28:30] treatment analyses things we can do to try and bring things back into alignment um which i do
+[28:38] on some of these things but not on the bid count i do it within like the score bands to see like oh
+[28:45] the holdout had a higher percentage of high intent than the treatment so when we combine
+[28:51] the numbers adjust for that so that the intent groups are balanced at least yeah um
+[28:59] yeah what filters are applied based on this data are we excluding anything over
+[29:10] a certain percentage in terms of the holdout or under yeah now like i can ask you on that
+[29:17] what sorry what my standard has been if the ghost fraction is higher than like 11 percent now i just
+[29:26] kind of block those ones and if it's below like seven percent i also block that so the question
+[29:34] In this data, what is excluded based on the ghost holdout percentage?
+[29:40] I don't think I'm excluding anything, but I can double check.
+[29:44] In my standard pipelines, it's much more loose.
+[29:48] So I think it goes up to 15% on the holdout.
+[29:52] Okay.
+[29:53] Yeah.
+[29:54] At a minimum, we absolutely need to block anything that we think is unreliable here.
+[30:01] Yeah.
+[30:02] so whatever you would suggest
+[30:05] I gave that to Nick as well
+[30:09] so he has it for his dashboard
+[30:11] that you need to be more
+[30:13] strict on the
+[30:15] ghost bid fraction
+[30:17] that 11%
+[30:18] can we exclude all campaign groups
+[30:21] over 11%
+[30:22] see what that
+[30:25] changes Malachi
+[30:26] yeah anything above 11%
+[30:29] yeah on the ghost
+[30:30] or 11 or higher do you want me to also block the seven percent lower or leave that
+[30:36] i would block it yeah just to be safe because then you get into a range where you're not going
+[30:44] to ask as many questions you're like okay we block the extremes um yeah that's what i'm doing
+[30:51] this is a blocker for the reporting release yeah yes yes and they're aware of it but it's just like
+[30:58] and they have so many other things going on.
+[31:00] It's still like this weird
+[31:01] situation.
+[31:05] They're just kind of waiting for Mountain Bitter
+[31:06] to come online and that hopefully
+[31:08] fixes everything.
+[31:11] If I had a dollar.
+[31:13] Yeah, exactly.
+[31:17] I'll protect it.
+[31:19] I don't know.
+[31:20] Alright, well I'll make those changes to it
+[31:22] and then refresh the sheet.
+[31:25] Okay.
+[31:27] Because yeah,
+[31:28] I mean, I feel like this is inherent to this whole conversation.
+[31:31] My concern is with this issue in the methodology, I am worried about presenting this data as, you know, absolute fact to make decisions based upon.
+[31:50] if it's kind of a question mark on what the impact of this frequency adjustment would be?
+[31:59] Obviously, we're doing what we can to exclude the ones where we know it's an issue,
+[32:03] but is it also possible that we make this frequency change?
+[32:06] And even the ones that are at 10% have a different frequency,
+[32:10] and those numbers are completely different once we do that.
+[32:15] So there's kind of like this big asterisk that we're going to have to put on the data
+[32:19] when we present it next week um maybe that'll escalate this issue to get fixed and be slacks
+[32:29] i don't know uh but yeah and if it were fixed it could never be retroactive to look at the
+[32:43] results of the experiment correct uh right because it's the bidding number of bids it's the mechanism
+[32:51] that does it yeah so there's ways that we this is why i'm saying there's ways we can
+[32:59] filter out data to bring it try to bring it back in line but you don't want to have to try and do
+[33:07] that for every campaign that's what i'm trying to figure out with this tart thing when i have
+[33:10] spare time like what happened there that caused theirs to be so off um because maybe that's
+[33:18] something that we can address if we can't address the actual root cause of all this
+[33:24] which is the frequency counts yeah which like yeah so so so it's kind of this weird catch-22
+[33:31] because we're trying to figure out this best targeting strategy and frequency strategies
+[33:37] and all these different strategies that drive the best incrementality.
+[33:40] Yeah.
+[33:42] Based on our data, but also based on the customer's incrementality tests.
+[33:47] And our data has this inherent flaw.
+[33:52] So it will change.
+[33:54] So we're going to move the measuring stick.
+[33:59] Yep.
+[34:03] So, yeah.
+[34:04] I don't know.
+[34:05] supposed to have a one-on-one right now with Allison sorry oh sorry thank you this is super
+[34:12] helpful Malachi let me know once you have those changes awesome no thanks everybody all right
+[34:16] thank you bye yeah bye
