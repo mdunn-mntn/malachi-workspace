@@ -1,0 +1,11 @@
+=== 2026-09-02 00:00:00 -> 2026-09-02 12:00:00 ===
++---------------------------+----------------------------------------+------+--------+------------+
+|            dag            |                  task                  | jobs | slot_h | tib_billed |
++---------------------------+----------------------------------------+------+--------+------------+
+| intent_score_threshold_v4 | population_histogram                   |    1 |  528.3 |      51.53 |
+| bos__spend                | flight_metrics_per2388-create          |   48 |  491.0 |     675.34 |
+|                           |                                        |  360 |  448.9 |      28.97 |
+| bos__spend                | campaign_summary_hourly-create         |   48 |  244.4 |        8.5 |
+| category_taxonomy         | prepare_categories-liveramp_categories |    1 |    7.4 |       1.29 |
+| category_taxonomy         | prepare_categories-copy_view           |    1 |    0.7 |       0.02 |
++---------------------------+----------------------------------------+------+--------+------------+

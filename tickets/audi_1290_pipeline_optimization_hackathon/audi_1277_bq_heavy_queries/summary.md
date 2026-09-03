@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1277: Tune the 2 heaviest BigQuery query shapes"
-status: backlog
+status: in_progress
 date: 2026-09-02
 summary: "bos__spend hourly creates and intent_score_threshold_v4 histogram, ~2,300 slot-h/day together"
-result: "not started"
+result: "Executed 2026-09-03: profiler double count fixed (airflow-ti branch), fingerprint skip gate on flight_metrics_per2388 + INT64 dedup key on population_histogram (airflow-camperbid branch, 31% slot saving on a pinned A/B), spend_pacing materialization ask drafted for Data Platform"
 question: "What in the bos__spend hourly create queries and the intent_score_threshold_v4 population_histogram drives about 2,300 slot-hours a day, and what change to the query shape or its filters cuts it?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1277: Tune the 2 heaviest BigQuery query shapes
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1277
-**Status:** backlog
+**Status:** in_progress (branches ready, PRs not yet opened)
 **Date Started:** 2026-09-02
 **Assignee:** Malachi
 
@@ -118,26 +118,114 @@ Planning wave 2026-09-02 (read-only; nothing executed, no Jira/git writes). Ever
 - D2: Step 1 mechanism: fingerprint gate (~90% saving, exact, stored state) vs hourly cadence (75%, stateless) vs both. Recommendation: gate, with the hourly move as the fallback if Pacing objects to state.
 - D3: Step 0 (profiler double count) under AUDI-1277 or AUDI-1278 (BQ labels / attribution ticket).
 
+### 3.6 Execution deviations from the plan (2026-09-03)
+- **Step 1 skip rate is about half, not 85-90%.** `dw-main-gold.dso.campaign_group_flight` is a view of the *currently active* flight per group (`start_time <= now < end_time`), so its row set changes at every flight start and end: 170-400 events on a weekday touching 50-70 of the 96 quarter-hours, ~100 on a weekend touching ~20, and 41,915 on 2026-09-01 (monthly rollover) touching 52. Any exact fingerprint has to carry that set, so the gate fires on those windows too. Measured union with the all_facts MERGE windows: 48% of runs skipped on Mon 08-31, 28% on the rollover day 09-01, 44-71% on the two half-measured days. Restricting the fingerprint to groups present in the output does not help (48 vs 51 windows on 09-02: the groups with data are the ones whose flights churn). Recorded in §4.2 and §8; the hourly move (D2 fallback) is the lever that gets to ~80%.
+- **Fingerprint stores after `create`, not in the gate.** Three tasks (`source_fingerprint` -> `source_changed` -> `drop` -> `create` -> `record_source_fingerprint`) so a failed rebuild never marks its inputs as reflected. The fingerprint also carries `CURRENT_DATE()` (one guaranteed rebuild a day) and falls open: a NULL input (`GENERATE_UUID()` stands in) or a failed fingerprint query (`unavailable:<uuid>`) reads as changed and rebuilds, the DAG never pages because of the gate.
+- **`trigger_rule="none_failed"` goes on `tables.campaign_performance.drop`**, not `.create`: `drop` is the group's root and the task the `flight_metrics_per2388 >> tg` edge lands on.
+- **Step 2 measured with checksum SELECTs, no scratch table** (decision D3 note from the user): baseline and candidate both wrapped in `COUNT/SUM/BIT_XOR(FARM_FINGERPRINT(row))`, one hour, sources pinned with `FOR SYSTEM_TIME AS OF`.
+- **Step 3 attribution came from the saved plan** (`audi_1277_csh_attribution.py` over `audi_1277_plan_csh.json`, stage lineage traced to source tables) instead of re-running the two CTEs alone; same answer, no extra 7 slot-h.
+- **One rule slip:** a flip-rate probe was written as a BigQuery script with `CREATE TEMP TABLE` inside it (job `perf_20260903_001240_*`, anonymous `_script...` dataset, auto-expired). Its result was discarded anyway (time travel is silently ignored on views). No other DDL/DML ran.
+- **`astro dev parse` result:** did not complete on this Mac (20 minutes at "Checking your DAGs for errors", no image pull or network activity, killed); the DagBag parse in the repo's Airflow 3.3.0 venv (`import_errors {}`, wiring verified) stands in for it, and the PR body says so.
+
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+### 4.1 Step 0, the measurement (airflow-ti, branch `audi-1277-bq-profile-parent-jobs`)
+Corrected profile for 2026-09-02 UTC (`queries/audi_1277_step0_profile_corrected.sql`, `parent_job_id IS NULL`, two 12 h windows because a 1-day dry run of the JOBS view is 9.3 GB; outputs `audi_1277_step0_profile_2026-09-02_{am,pm}.txt`):
+
+| dag | task | jobs | slot-h | TiB billed |
+|---|---|---:|---:|---:|
+| bos__spend | flight_metrics_per2388-create | 96 | 945.3 | 1,351.0 |
+| intent_score_threshold_v4 | population_histogram | 1 | 528.3 | 51.5 |
+| bos__spend | campaign_summary_hourly-create | 96 | 517.2 | 18.6 |
+| (no airflow labels, both service accounts) | | 600 | 958.5 | 57.0 |
+
+The uncorrected daily report for the same day (`outputs/optimizer_bq_2026-09-02.md`, generated mid-day) shows 4 jobs / 1,056.6 slot-h for the histogram and 240 jobs / 844.9 for campaign_summary_hourly: the script parent plus its children, each counted. The Mode `opt-bq` section (query token `3ead7301daa8`, read via the Mode API) selects from `mntn-prj-prod-00.optimizer.optimization_ledger WHERE surface = 'bq'` and parses slot-hours out of the finding title, so it inherits the fix with no Mode change (assumption 5 resolved). Tests in the worktree: `uv run pytest include/spark_optimizer/tests/` = 164 passed, 1 failed (`test_phs.py::test_newest_logs_takes_the_tail_and_drops_inprogress`, `fetch.newest_logs` hits a real listing on this Mac; pre-existing, untouched by this change); `ruff check` clean on both files.
+
+### 4.2 Step 1, flight_metrics_per2388 (airflow-camperbid, branch `audi-1277-bos-spend-skip-gate`)
+**all_facts write cadence over three full days** (`queries/audi_1277_all_facts_writer_cadence.sql` in 24 h windows, `outputs/audi_1277_all_facts_writer_cadence_3d.txt`): 13, 15 and 11 MERGEs per day from 2026-08-30 12:00 to 09-02 12:00 UTC (12-21 slot-h and 310-423 GiB each), gaps 0.3 to 4.6 h; 2026-09-03 00:00-06:51 UTC had two (02:26, 05:58). Assumption 1 holds: ~13 writes a day.
+
+**Fingerprint behaves** (`queries/audi_1277_step1_fingerprint.sql`, `outputs/audi_1277_step1_fingerprint_runs.txt`): 03:29:47Z -> `1116952818349087922` (all_facts last modified 02:29:15, 21,871 flight rows); 06:51:50Z -> `-2976879156804707450` (06:01:27, 21,893 rows). Both inputs moved in between, so the change is expected. The PARTITIONS read costs ~2 slot-s (1.9 M partition rows in `sqlmesh__summarydata`).
+
+**Assumption 2 fails: the active-flight set churns.** `dw-main-gold.dso.campaign_group_flight` -> view `dw-main-bronze.integrationprod.dso_campaign_group_flight` -> SQLMesh `kind VIEW` model `integrationprod__dso_campaign_group_flight__2006195297` = `core_flights` join `core_budget_types`, `public_campaign_groups_raw`, `public_advertisers` with `f.end_time >= current_timestamp() AND f.start_time <= current_timestamp() AND f.status_id <> 8 AND cgr.campaign_group_status_id <> 8`. One row per group because one flight is active at a time. Flight starts and ends from the current `core_flights` rows (`outputs/audi_1277_step1_flight_events_all_groups.txt`):
+
+| day | starts | ends | quarter-hours touched (union, all groups) | present-group events | quarter-hours (present) |
+|---|---:|---:|---:|---:|---:|
+| 08-27 Thu | 98 | 72 | ~55 | 115 | 32 |
+| 08-28 Fri | 108 | 76 | ~50 | 138 | 36 |
+| 08-29 Sat | 58 | 51 | ~20 | 66 | 13 |
+| 08-30 Sun | 38 | 44 | 22 | 36 | 9 |
+| 08-31 Mon | 454 | 590 | 48 | 255 | 40 |
+| 09-01 Tue (month start) | 20,907 | 21,008 | 61 | 5,581 | 58 |
+| 09-02 Wed | 209 | 191 | 51 | 296 | 48 |
+
+"Present" = the 3,372 campaign groups with a row in the current `flight_metrics_per2388` output (of 21,893 active-flight groups). Union with the MERGE windows (`outputs/audi_1277_step1_flight_event_buckets_4d.csv` + writer list, computed locally): 08-30 28 firing windows (68 skipped, MERGE list half-day), 08-31 50 (46 skipped, 48%), 09-01 69 (27 skipped, 28%), 09-02 54 (42 skipped, MERGE list half-day). Expected saving from the gate: about half the 945 slot-h and 1,351 TiB on a weekday, two thirds on a weekend, a quarter on the first of the month. A fingerprint restricted to present groups would skip only 3 more windows on 09-02, so it is not worth its extra read.
+
+**Gotchas met on the way.** `FOR SYSTEM_TIME AS OF` on a view is silently ignored (BigQuery warns "Snapshot time ignored ... because it is a view" and returns current rows), so the 15-minute time-travel probe of the flight set was invalid and replaced by reconstruction from `core_flights.start_time/end_time`. The output table `dw-main-bronze.external.camperbid_prod__bos__flight_metrics_per2388` does not exist for most of each 15-minute cycle: `drop` runs at the top of the run and `create` finishes ~8 minutes later (observed missing 07:19-07:23 UTC, present at 07:23:18); with the gate it persists across skipped runs. `dw-main-bronze.integrationprod.core_flights` columns: flight_id, campaign_group_id, create_time, update_time, start_time, end_time, budget_type_id, budget, user_id, status_id, ui_flight_id, datastream_metadata, impression_cap.
+
+**Airflow facts verified in the clone** (Airflow 3.3.0, Astro runtime 3.2-5): `airflow.sdk.Variable.get(key, default=..., deserialize_json=False)` and `Variable.set(key, value, description=None, serialize_json=False)` exist (assumption 4); `@task.short_circuit(ignore_downstream_trigger_rules=False)` skips only its direct downstream; `BigQueryHook.insert_job(configuration, job_id=None, project_id, location, nowait=False, ...)` returns a job whose `.result()` iterates rows (pattern from `dags/rill_data_validation/dag.py`). The camperbid prod service account's project-level IAM on `dw-main-silver` is not readable by me; dataset `sqlmesh__summarydata` grants READER to `projectReaders`, and the fail-open path covers a permission denial anyway.
+
+### 4.3 Step 2, population_histogram (same branch)
+Flag state: `camperbid_prod__hhst_v4__campaign_bucket` has 1,954 campaigns, 0 with `uses_mntn_id`; v3 has the same 1,954. The flag-off branch is what runs nightly.
+
+**Where the prod job spends** (`outputs/audi_1277_plan_hist.json`, 540.6 slot-h): S09 scan+filter+union 242.1 slot-h (44.9%, 722 B rows read, 62.4 B written, 5.3 M parallel inputs) already computes `hh_score` and a partial `MAX GROUP BY (campaign_id, 'ip', ip)` before the shuffle; S0F repartition 126.7 slot-h (23.5%, 55.4 B rows); S11 final aggregate + histogram 123.3 slot-h (22.9%, 10.3 B -> 286 M rows). So the plan's "compute the score in the source CTE" half is a no-op for BigQuery; the lever is the STRING `ip` key in the partial aggregate and shuffle.
+
+**Pinned one-hour A/B** (`queries/audi_1277_step2_hist_{baseline,candidate}_1h.sql`, `outputs/audi_1277_step2_ab_{baseline,candidate}.txt`, `audi_1277_step2_ab_compare.txt`): hour 2026-09-02 12:00-13:00 UTC, every source `FOR SYSTEM_TIME AS OF 2026-09-03 06:00 UTC`, dry run 2.375 TB per side, checksum SELECT instead of a table.
+
+| side | slot-h | wall s | peak active units | scan stage slot-h | scan shuffle GB | rows / campaigns / keys / checksum |
+|---|---:|---:|---:|---:|---:|---|
+| baseline (prod flag-off shape) | 14.52 | 195.5 | 921 | 12.85 | 91.3 | 7,328,483 / 1,905 / 328,177,032 / 8003229889847476058 |
+| candidate (score in source, `FARM_FINGERPRINT(ip)` key) | 10.01 | 214.1 | 98 | 8.44 | 72.2 | identical |
+
+31.0% less slot time, identical output, 2.16 TiB billed on both. The aggregate stage is unchanged (1.60 vs 1.51 slot-h); the whole saving is the scan stage's partial aggregate on an INT64 key. Wall time is 10% longer on one sample with 9x lower peak concurrency (98 vs 921 active units) on the shared `adhoc` reservation, which is contention, not shape. Hash collisions: 64-bit key over at most a few hundred million IPs per campaign, expected collisions well under one across all campaigns. Both rendered branches of the edited file dry-run clean (`outputs/audi_1277_step2_rendered_{flag_on,flag_off}_select.sql`: 74.6 TB and 64.3 TB upper bound, the household-id columns being the 16% difference).
+
+### 4.4 Step 3, campaign_summary_hourly (hand-off)
+`outputs/audi_1277_csh_stage_attribution.txt` from the saved plan (259 stages, 6.87 slot-h): 76.2% stages whose lineage is only the `spend_pacing` view's sources (`external.impression__v1`, `bidder_win_notifications__v1` and 17 `integrationprod` dim tables), 4.7% dims only, 13.3% after the union with the cost log, 5.7% the cost log half. Top stages S111/S10D/SFE/SF2 each read 0.2-1.3 B rows from the impression and win-notification parquet. The ask is in `artifacts/audi_1277_sqlmesh_ask.md`.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+- **airflow-ti** (`/private/tmp/.../scratchpad/wt/audi_1277_ti`, branch `audi-1277-bq-profile-parent-jobs`, 2 files, +16/-1): `include/spark_optimizer/bq_profile.py` `PROFILE_SQL` adds `AND parent_job_id IS NULL` and the module docstring says why; `include/spark_optimizer/tests/test_bq_profile.py` adds `test_profile_sums_only_top_level_jobs`. PR body: `artifacts/audi_1277_pr_body_ti.md`.
+- **airflow-camperbid** (`/private/tmp/.../scratchpad/airflow-camperbid`, branch `audi-1277-bos-spend-skip-gate`, 2 files): `dags/bos/bos__spend.py` (+53/-2: `source_fingerprint`, `source_changed`, `record_source_fingerprint` tasks in the `flight_metrics_per2388` group, Variable `bos__flight_metrics_per2388_source_fingerprint`, labelled hook job, `trigger_rule="none_failed"` on `tables.campaign_performance.drop`) and `dags/intent_score_threshold_v4/sql/population_histogram.sql` (both branches: score computed in each source CTE, dedup key `FARM_FINGERPRINT(ip)` and `FARM_FINGERPRINT(household_id_value)`, `temp_scored` folded away). Validation: `pre-commit run --files` clean (gitleaks, ruff check, ruff format), `ruff check`/`format --check` clean, DagBag parse `import_errors {}` with the wiring shown in §4.2, rendered SQL dry-runs valid; `astro dev parse`: did not complete on this Mac (20 minutes at "Checking your DAGs for errors", no image pull or network activity, killed); the DagBag parse in the repo's Airflow 3.3.0 venv (`import_errors {}`, wiring verified) stands in for it, and the PR body says so. PR body: `artifacts/audi_1277_pr_body_camperbid.md` (reviewers per CODEOWNERS default: `@SteelHouse/pacing`, `@SteelHouse/performance-ml`; the repo has a PR template with Ticket/Context/Changes/TTL/Tests/Documentation headings).
+- **SQLMesh**: no edit; `artifacts/audi_1277_sqlmesh_ask.md` is the send-draft for Data Platform.
+- Jira completion comment: `artifacts/audi_1277_result_comment.txt` (linted, not posted).
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Is the 2,300 slot-h/day figure real? **A:** No. Two of the three tasks were double counted (script parent + children). True 2026-09-02 load: 945 + 528 + 517 = 1,991 slot-h; the ticket's own numbers for those two tasks are ~1.6-2x high.
+- **Q:** What drives flight_metrics_per2388's cost? **A:** Repetition. 96 identical 14 TiB all_facts scans a day while all_facts changes ~13 times a day. Flight churn (starts and ends every quarter-hour on weekdays) caps an exact skip gate at about half the runs; an hourly cadence is the lever beyond that.
+- **Q:** Is there a shape lever in population_histogram? **A:** One: the STRING IP as the dedup key. Hashing it to INT64 saves 31% slot time with identical output. Nothing to prune; the scan is partition-pruned genuine volume.
+- **Q:** Can airflow-camperbid fix campaign_summary_hourly? **A:** No. 81% of the run is the `spend_pacing` view's own logic; only materializing the view (SQLMesh, Data Platform) removes it.
+- **Q:** Does the Mode cost table need its own fix for the double count? **A:** No, it reads the ledger's `surface='bq'` rows.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Handed to the dispatcher as `knowledge[]` (no knowledge/ writes from this agent): the profiler double count and `parent_job_id IS NULL`; camperbid jobs in `dw-main-bronze` JOBS_BY_PROJECT under `airflow-camperbid-prod@`; all_facts MERGE cadence ~13/day, 72 h lookback; `spend_pacing` is a self-scoping 2-day view over three external parquet tables; `dso.campaign_group_flight` is a current-active-flight view with one row per group that churns every quarter-hour; `FOR SYSTEM_TIME AS OF` is silently ignored on views; `flight_metrics_per2388` is absent ~8 of every 15 minutes today; the histogram INT64-key saving.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+- Open both PRs (gauntlet first), owner review: airflow-ti ours; airflow-camperbid `@SteelHouse/pacing` + `@SteelHouse/performance-ml`. Merge deploys dev and prod together.
+- After each merge: `python -m airflow_optimizer.ledger applied <dag> <key> <PR#> <date>` for `bq_heavy_task:flight_metrics_per2388-create`, `bq_heavy_task:population_histogram`, and Step 0 as a baseline correction; watch `optimizer_bq_<date>.md` and the Mode `opt-bq` section. Expected after Step 0 alone: histogram ~540 and campaign_summary_hourly ~520 slot-h/day on the table with no real saving.
+- **Hourly cadence for `flight_metrics_per2388` (D2 fallback, Pacing's call):** flight churn limits the gate to ~50% on weekdays; moving the group to `bos__hourly` (or the gate plus an hourly schedule) reaches ~75-80%. Needs Pacing to accept up to 60 minutes of latency on flight rollovers in `campaign_performance`.
+- The flag-on branch of `population_histogram.sql` is dry-run valid but has never run live (0 flagged campaigns); the first flagged advertiser exercises it.
+- `test_phs.py::test_newest_logs_takes_the_tail_and_drops_inprogress` fails on this Mac before and after Step 0 (real GCS listing under monkeypatch); not this ticket's.
+- Send `artifacts/audi_1277_sqlmesh_ask.md` to #data-platform; on a yes, the SQLMesh PR (ours or theirs) is a separate change.
+- The `CREATE TEMP TABLE` script slip (§3.6) is recorded; nothing persisted.
+
+## Verification
+
+Adversarial pass 2026-09-03, read-only against both worktrees (`.../scratchpad/airflow-camperbid`, `.../scratchpad/wt/audi_1277_ti`) and live BigQuery (`bq show -j`, two fresh `--dry_run`s). Verdict: **done** — every headline claim survives; three narrative-only inaccuracies found and fixed here, none touching the shipped diffs.
+
+**Independently re-derived (exact matches, not just "close"):**
+- Both Step 2 A/B jobs are real: `bq show -j dw-main-bronze:perf_20260902_235637_22995` gives `totalSlotMs=52271971` → 14.5200 slot-h, `totalBytesBilled`=2.1604 TiB, wall = 195.469s — matches the claimed baseline (14.52 / 2.16 / 195.5) to the decimal. Candidate job `perf_20260903_000009_29377`: 10.0125 slot-h, 2.1603 TiB, 214.149s wall — matches 10.01 / 2.16 / 214.1 exactly. 31.0% saving recomputes correctly.
+- Re-ran `--dry_run` on both files in `outputs/audi_1277_step2_rendered_{flag_on,flag_off}_select.sql` as they sit in the worktree today: flag-off = 64,278,642,027,827 bytes = 64.28 TB (claimed 64.3 TB); flag-on = 74,639,610,864,827 bytes = 74.64 TB (claimed 74.6 TB). Exact.
+- `uv run pytest include/spark_optimizer/tests/` in the ti worktree: 164 passed, 1 failed (`test_phs.py::test_newest_logs_takes_the_tail_and_drops_inprogress`, real GCS listing) — matches §4.1 verbatim.
+- `uv run pre-commit run --files` on both camperbid files: gitleaks/check-*/ruff-check/ruff-format all pass. DagBag parse (`dags/bos`) on Airflow 3.3.0: `import_errors: {}`, `bos__spend` present — matches the "wiring verified" stand-in for `astro dev parse`.
+- `all_facts` writer cadence file (`outputs/audi_1277_all_facts_writer_cadence_3d.txt`): 13, 15, 11 MERGEs in the three 24h windows exactly as stated; min gap 01:55→02:12 = 0.28h, max gap 02:12→06:49 = 4.62h — reproduces "13, 15 and 11... gaps 0.3 to 4.6h" precisely.
+- `outputs/audi_1277_step1_flight_events_all_groups.txt`: per-day start/end counts (98/72, 108/76, 58/51, 38/44, 454/590, 20,907/21,008, 209/191) match §4.2's table exactly; 20,907+21,008 = 41,915 matches §3.6's rollover figure exactly.
+- `Variable.get`/`Variable.set` signatures, `BigQueryHook.insert_job` signature, and the `list(job.result())[...]` pattern in `dags/rill_data_validation/dag.py` all confirmed live in the installed Airflow 3.3.0 package.
+- CODEOWNERS: confirmed no `dags/bos*`/`dags/intent_score_threshold*` rule, global default `@SteelHouse/pacing @SteelHouse/performance-ml` applies. `.github/PULL_REQUEST_TEMPLATE.md` headings confirmed: Ticket/Context/Changes/TTL/Tests/Documentation.
+- Both diffs read line-for-line against §5's description: `source_fingerprint` → `source_changed` → `drop` → `create` → `record_source_fingerprint` wiring, fail-open `unavailable:<uuid>` and `GENERATE_UUID()` paths, `CURRENT_DATE()` in the fingerprint, and `trigger_rule="none_failed"` landing specifically on `tables.campaign_performance.drop` (only `table_name` in `TABLES_THAT_DEPEND_ON_FLIGHT_METRICS_PER2388`, which is `["campaign_performance"]` alone) are all present exactly as described. `population_histogram.sql` folds `temp_scored` into both source CTEs and switches the dedup key to `FARM_FINGERPRINT(ip)`/`FARM_FINGERPRINT(household_id_value)` in both the flag-on and flag-off branches; parens balanced, `ASSERT > 100000` intact outside `END IF`.
+- No writes outside the two repos + this ticket folder. The one workspace-repo diff (`knowledge/bq/_UNDOCUMENTED.queue` +4 lines, the two `hhst_v3`/`v4__campaign_bucket` tables) is `bq_run.sh`'s own auto-append side effect of running the Step 2 measurement queries, not a manual knowledge edit — expected.
+- No commits on either branch (`git log` on both = tip of `main`, diffs are working-tree only) — consistent with the agent's own open_items line "No git ... writes were made; the PRs are not opened," not a contradiction.
+
+**Three minor inaccuracies found, none material:**
+1. §5 diffstats are off by one line each: `bos__spend.py` is actually `+53/-2` (claimed `+52/-2`); the ti worktree is actually `+16/-1` total across both files (claimed `+17/-1`).
+2. §3.0 says CI runs "pre-commit: black/isort/flake8/gitleaks" — the actual `.pre-commit-config.yaml` has no black/isort/flake8; it's gitleaks + standard pre-commit-hooks + `ruff-check`/`ruff-format`. Planning-narrative error only; Steps 1-2's own pre-commit validation ran the real (ruff-based) hooks and is unaffected.
+3. `FLIGHT_METRICS_FINGERPRINT_SQL` matches `all_facts` via `REGEXP_CONTAINS(table_name, r'^summarydata__all_facts__[0-9]+$')`, not the literal `table_name = 'summarydata__all_facts__3194417682'` that §3.1's plan text specifies — more robust to a SQLMesh table-suffix swap, but this deviation from the plan's literal wording isn't logged in §3.6.
+
+`jira_comment` (`artifacts/audi_1277_result_comment.txt`) lints clean (120/120 words, 779/800 chars, 7/8 bullets) and every number in it checks out against the above — posting it unchanged is fine.

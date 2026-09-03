@@ -1,0 +1,30 @@
+run_at_utc=2026-09-03T07:00:09Z side=candidate
++----------------+-----------+------------+---------------------+
+| histogram_rows | campaigns | keys_total |      checksum       |
++----------------+-----------+------------+---------------------+
+|        7328483 |      1905 |  328177032 | 8003229889847476058 |
++----------------+-----------+------------+---------------------+
+
+--- BQ Performance ---
+Bytes: 2212.129 GB processed / 2212.129 GB billed (tier 1)
+Time: 36045s slot / 214.1s wall / 206806ms exec
+Cache: false | Partitions: 2 | Stages: 15
+Reservation: dw-main-bronze:us-central1.adhoc
+  S00: Input: 138734 rows read → 1954 written | 1 workers | slot 51ms | shuffle 17586B
+  S01: Input: 193446 rows read → 1954 written | 1 workers | slot 49ms | shuffle 17586B
+  S02: Aggregate: 3908 rows read → 3908 written | 2 workers | slot 57ms | shuffle 35172B
+  S03: Aggregate: 3908 rows read → 1954 written | 1 workers | slot 43ms | shuffle 17586B
+  S04: Aggregate: 3908 rows read → 1954 written | 1 workers | slot 24ms | shuffle 17586B
+  S05: Coalesce: 1954 rows read → 1954 written | 100 workers | slot 1277ms | shuffle 17586B
+  S06: Output: 1954 rows read → 100 written | 100 workers | slot 1389ms | shuffle 21186B
+  S07: Coalesce: 1954 rows read → 1954 written | 100 workers | slot 1250ms | shuffle 17586B
+  S08: Output: 1954 rows read → 100 written | 100 workers | slot 1150ms | shuffle 21186B
+  S09: Join+: 27274322590 rows read → 2281514561 written | 246367 workers | slot 30368525ms | shuffle 77571495074B
+  S0A: Aggregate: 2281514561 rows read → 248956620 written | 1000 workers | slot 5452044ms | shuffle 8464525080B
+  S0B: Aggregate+: 248956620 rows read → 175059 written | 100 workers | slot 218712ms | shuffle 5077511B
+  S0C: Aggregate+: 175059 rows read → 11 written | 10 workers | slot 298ms | shuffle 255B
+  S0D: Aggregate+: 11 rows read → 1 written | 1 workers | slot 17ms | shuffle 36B
+  S0E: Output: 1 rows read → 1 written | 1 workers | slot 90ms | shuffle 33B
+Index: UNUSED — external.camperbid_prod__hhst_v3__campaign_bucket@1788415200000, external.camperbid_prod__hhst_v4__campaign_bucket@1788415200000, raw.bid_price_log@1788415200000, raw.bidder_bid_events@1788415200000
+Logged to: knowledge/bq_perf_log.jsonl
+----------------------

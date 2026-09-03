@@ -1,0 +1,10 @@
+Both fixes are branch-ready: bos__spend skips about half its flight_metrics rebuilds, population_histogram runs 31 percent cheaper, the profiler double count is fixed.
+
+*Findings*
+* flight_metrics_per2388 rebuilds an unchanged 14 TiB result 96 times a day (945 slot-hours); inputs change about 13 times a day plus each flight start and end, so an exact skip gate removes 45 to 70 percent of runs.
+* population_histogram: an INT64 dedup key cuts slot time 31 percent on a pinned one-hour A/B, identical output.
+* campaign_summary_hourly (517 slot-hours a day) is 81 percent the spend_pacing view; materialization ask drafted.
+
+*Next*
+* Open both PRs for Pacing and Performance ML review.
+* Move flight_metrics to the hourly DAG (75 percent) if Pacing accepts 60-minute freshness.

@@ -1,0 +1,9 @@
+Pinned A/B, flag-off branch, hour 2026-09-02 12:00-13:00 UTC, sources FOR SYSTEM_TIME AS OF 2026-09-03 06:00 UTC, checksum SELECT (no table written).
+Both sides: 7,328,483 histogram rows, 1,905 campaigns, 328,177,032 keys, checksum 8003229889847476058 (identical).
+== step2 baseline 1h pinned: job dw-main-bronze:perf_20260902_235637_22995 slot_h=14.52 wall_s=195.5 bytes_billed_TiB=2.16 peak_active_units=921 reservation=dw-main-bronze:us-central1.adhoc
+   S09: Join+         slot_h=12.85 (88.5%) read=27,274,322,590 written= 2,281,514,561 shuffle_GB=  91.3 inputs=246367
+   S0B: Aggregate     slot_h= 1.60 (11.0%) read= 2,281,514,561 written=   249,295,887 shuffle_GB=   7.9 inputs=1090
+== step2 candidate 1h pinned: job dw-main-bronze:perf_20260903_000009_29377 slot_h=10.01 wall_s=214.1 bytes_billed_TiB=2.16 peak_active_units=98 reservation=dw-main-bronze:us-central1.adhoc
+   S09: Join+         slot_h= 8.44 (84.3%) read=27,274,322,590 written= 2,281,514,561 shuffle_GB=  72.2 inputs=246367
+   S0A: Aggregate     slot_h= 1.51 (15.1%) read= 2,281,514,561 written=   248,956,620 shuffle_GB=   7.9 inputs=1000
+Saving: slot 14.52 -> 10.01 slot-h = 31.0%; wall 195.5 -> 214.1 s with peak active units 921 -> 98 (reservation contention, single sample each).
