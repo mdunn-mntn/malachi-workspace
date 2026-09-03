@@ -48,3 +48,7 @@ exclusion is visible in code. Opt-in is a two-line PR (append `"Attribution"` to
   [`../memory/reference_airflow_ti.md`](../memory/reference_airflow_ti.md) § DAG tags, alert routes,
   [`../memory/reference_slack_debugger_app.md`](../memory/reference_slack_debugger_app.md), ticket
   `tickets/audi_1290_pipeline_optimization_hackathon/audi_1280_debugger_tag_coverage_ci/summary.md` §8.
+
+## Superseded 2026-09-03
+
+**Reversed the same day by the user:** Audience Intelligence owns this airflow deployment and every DAG in it, the Attribution ones included, so there is no other team to opt in. `"Attribution"` was added to the watch list and `EXCLUDED_CONFIGS` is now empty (airflow-ti #1274, commit 16f4fd2); all 67 alerting DAGs are watched and the coverage test has no named exclusion. The original decision rested on reading `#monitor-attribution` as another team's channel, which is an inference from a channel name; ownership is institutional knowledge that outranks it.

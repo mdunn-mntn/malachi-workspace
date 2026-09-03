@@ -159,6 +159,9 @@ Three files on branch `audi-1280-debugger-tag-coverage-ci` (worktree `/private/t
 
 Deliverables in the ticket folder: `outputs/audi_1280_tag_audit.csv` + `.md` (the "before" evidence: `watched_at_main` column), `outputs/audi_1280_live_dags.json`, `outputs/audi_1280_live_variables.json`, `outputs/audi_1280_live_slack_channel_vars.txt`, `outputs/audi_1280_resolver_dump.json`, `artifacts/audi_1280_tag_audit.py`, `artifacts/audi_1280_live_dags_pull.py`, `artifacts/audi_1280_pr_body.md` (linted `--kind pr`), `artifacts/audi_1280_result_comment.txt` (linted `--kind completion`). No optimizer ledger key exists for this ticket, so the Mode cost dashboard does not measure it.
 
+
+**Reversal 2026-09-03 PT (user).** The D1 veto is withdrawn: Audience Intelligence owns this airflow deployment and every DAG in it, so the seven Attribution DAGs are ours and there is nobody to ask. `"Attribution"` is now on the watch list, `EXCLUDED_CONFIGS` is empty, and the coverage test passes with no named exclusion (159 tests, commit 16f4fd2 pushed to PR #1274). All 67 alerting DAGs are watched; the §8 hand-off question to the Attribution team is closed as not applicable.
+
 ## 6. Questions Answered
 - **Q:** Does every alerting DAG in airflow-ti carry a tag on the debugger's watch list?
   **A:** No. At `origin/main` 32 of 67 do not (TGT 22, ATTRIBUTION 7, TARGETING 3), all because the team tags `Targeting` and `Attribution` are not on `PAGING_TAGS`. With `"Targeting"` appended, 60 of 67 do; the remaining 7 are the Attribution team's and are excluded by decision.

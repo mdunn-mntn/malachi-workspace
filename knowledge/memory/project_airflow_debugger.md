@@ -526,3 +526,5 @@ section.)*
   (`hashed_email_*_signals`, `crm_match_rate`, `hhdsc_build`) gets a threaded reply in `#monitor-tpa`; rerun
   `artifacts/audi_1280_live_dags_pull.py` + `artifacts/audi_1280_tag_audit.py` under
   `tickets/audi_1290_pipeline_optimization_hackathon/audi_1280_debugger_tag_coverage_ci/` and overwrite the CSV.
+
+- **Ownership correction 2026-09-03 (supersedes the AUDI-1280 D1 veto):** the airflow-ti deployment and every DAG in it belong to Audience Intelligence, Attribution's seven included. `PAGING_TAGS` now carries `"Attribution"` and the coverage test has no exclusions, so all 67 alerting DAGs are in the debugger sweep. A route to another team's Slack channel is not evidence of another team's ownership.
