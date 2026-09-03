@@ -1,0 +1,10 @@
+Join-caused skew confirmed on all 4 DAGs; fix is a plan-time broadcast hint, PR ready.
+
+*Findings*
+* Every join is broadcast at runtime, so AQE skew handling cannot fire; the skew is the join's plan-time shuffle on advertiser_id or category_id (one advertiser is 30% of conversion_log).
+* ipdsc_42_monitor reads its 40 GB shuffle three times (CTE re-evaluated); one pass saves 6 to 12 min and 0.5 to 1.0 executor-hours per run.
+* Each feature-store DAG saves 8 to 18 s per run, under the ledger's 60 s floor.
+
+*Next*
+* Gauntlet and open the PR; no dev run (shared dev branch), first prod cron validates.
+* After merge, mark the three ipdsc_42_monitor skew findings applied in the optimizer ledger.

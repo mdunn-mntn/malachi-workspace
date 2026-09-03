@@ -1,0 +1,16 @@
+models/feature_store/feature_group_1_source/conv_log_ip_advertiser_id.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+models/feature_store/feature_group_1_source/conv_log_ip_advertiser_id.py:142:21: DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+models/feature_store/feature_group_1_source/guid_log_ip_advertiser_id.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+models/feature_store/feature_group_1_source/guid_log_ip_advertiser_id.py:46:21: DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+models/feature_store/feature_group_1_source/guid_log_ip_guid_advertiser_id.py:46:1: I001 [*] Import block is un-sorted or un-formatted
+models/feature_store/feature_group_1_source/guid_log_ip_guid_advertiser_id.py:89:21: DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+models/monitoring/ipdsc_42_monitor.py:15:1: UP035 `typing.Tuple` is deprecated, use `tuple` instead
+models/monitoring/ipdsc_42_monitor.py:45:1: I001 [*] Import block is un-sorted or un-formatted
+models/monitoring/ipdsc_42_monitor.py:222:75: UP006 [*] Use `tuple` instead of `Tuple` for type annotation
+models/monitoring/ipdsc_42_monitor.py:230:16: BLE001 Do not catch blind exception: `Exception`
+models/monitoring/ipdsc_42_monitor.py:236:16: BLE001 Do not catch blind exception: `Exception`
+models/monitoring/ipdsc_42_monitor.py:306:51: UP045 [*] Use `X | None` for type annotations
+models/monitoring/ipdsc_42_monitor.py:312:20: DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+models/monitoring/ipdsc_42_monitor.py:318:17: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+Found 14 errors.
+[*] 6 fixable with the `--fix` option.

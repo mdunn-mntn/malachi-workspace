@@ -1,0 +1,78 @@
+app_id=app-20260902014353086-0500 app_name=Populate guid_log_ip_guid_advertiser_id.GuidLogIpGuidAdvertiserId wall_s=144
+  spark.sql.adaptive.enabled=true
+  spark.sql.adaptive.skewJoin.enabled=<unset>
+  spark.sql.adaptive.skewJoin.skewedPartitionFactor=<unset>
+  spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes=<unset>
+  spark.sql.autoBroadcastJoinThreshold=192m
+  spark.sql.shuffle.partitions=1000
+  spark.sql.requireAllClusterKeysForDistribution=<unset>
+  spark.dynamicAllocation.initialExecutors=10
+  spark.dynamicAllocation.maxExecutors=20
+  spark.executor.instances=5
+
+== stages (ranked by max task) ==
+{"stage": 12, "job": 7, "exec_id": "0", "name": "save at NativeMethodAccessorImpl.java:0", "num_tasks": 8, "max_task_s": 32.7, "median_task_s": 30.3, "skew_x": 1.1, "data_skew_x": 1.0, "hot_partition_share": 0.127, "read_gb": 5.62, "shuffle_read_gb": 5.62, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 32.7, "scopes": "WriteFiles | Exchange", "operators": "WriteFiles || Exchange"}
+{"stage": 9, "job": 6, "exec_id": "0", "name": "save at NativeMethodAccessorImpl.java:0", "num_tasks": 189, "max_task_s": 26.9, "median_task_s": 4.2, "skew_x": 6.4, "data_skew_x": 9.3, "hot_partition_share": 0.043, "read_gb": 12.58, "shuffle_read_gb": 12.58, "shuffle_write_gb": 5.62, "fetch_wait_pct": 0.0, "stage_wall_s": 36.6, "scopes": "Exchange | AQEShuffleRead | WholeStageCodegen (6)", "operators": "Exchange || AQEShuffleRead || Project [2026-09-01 AS dt, ip, guid, advertiser_id, vertical_id, visits, first_visit_time, last_visit_time] || BroadcastHashJoin [advertiser_id], [cast(advertiser_id as bigint)], LeftOuter, BuildRight, false || HashAggregate(keys=[ip, guid, advertiser_id, 2026-09-01], functions=[count(1), min(time), max(time)]) || HashAggregate(keys=[ip, guid, advertiser_id, 2026-09-01 AS 2026-09-01], functions=[partial_count(1), partial_min(time), partial_max(time)]) || Project [advertiser_id, ip, guid, time] || BroadcastHashJoin [advertiser_id], [cast(advertiser_id as bigint)], Inner, BuildRight, false"}
+{"stage": 1, "job": 1, "exec_id": "0", "name": "save at NativeMethodAccessorImpl.java:0", "num_tasks": 1327, "max_task_s": 8.2, "median_task_s": 1.4, "skew_x": 5.8, "data_skew_x": 1.3, "hot_partition_share": 0.001, "read_gb": 12.18, "shuffle_read_gb": 0.0, "shuffle_write_gb": 12.58, "fetch_wait_pct": 0.0, "stage_wall_s": 57.7, "scopes": "Exchange | Scan parquet  | WholeStageCodegen (1)", "operators": "Exchange || Scan parquet  || Project [trim(lower(ip), None) AS ip, if ((trim(lower(guid), None) = )) null else trim(lower(guid), None) AS guid, advertiser_id, time] || Filter ((isnotnull(trim(lower(ip), None)) AND NOT (trim(lower(ip), None) = )) AND isnotnull(advertiser_id)) || ColumnarToRow"}
+{"stage": 3, "job": 3, "exec_id": "0", "name": "save at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 4.3, "median_task_s": 4.3, "skew_x": null, "data_skew_x": null, "hot_partition_share": null, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 57.9, "scopes": "Exchange | WholeStageCodegen (3)", "operators": "Exchange || HashAggregate(keys=[advertiser_id, vertical_id], functions=[]) || Scan JDBCRelation((\n                select\n                    advertiser_id,\n                    vertical_id\n                from fpa.advertiser_verticals\n                where type = 1\n            ) as subquery) [numPartitions=1] [advertiser_id,vertical_id] PushedFilters: [*IsNotNull(advertiser_id)], ReadSchema: struct<advertiser_id:int,vertical_id:int>"}
+{"stage": 2, "job": 2, "exec_id": "0", "name": "save at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 1.4, "median_task_s": 1.4, "skew_x": null, "data_skew_x": null, "hot_partition_share": null, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 55.0, "scopes": "Exchange | WholeStageCodegen (2)", "operators": "Exchange || HashAggregate(keys=[advertiser_id], functions=[]) || Scan JDBCRelation((SELECT DISTINCT advertiser_id\n             FROM public.advertisers\n             WHERE COALESCE(pixel_isolation, false) = false) AS subquery) [numPartitions=1] [advertiser_id] PushedFilters: [*IsNotNull(advertiser_id)], ReadSchema: struct<advertiser_id:int>"}
+{"stage": 0, "job": 0, "exec_id": null, "name": "parquet at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 1.3, "median_task_s": 1.3, "skew_x": null, "data_skew_x": null, "hot_partition_share": null, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 4.1, "scopes": "mapPartitions | parallelize", "operators": "mapPartitions || parallelize"}
+{"stage": 5, "job": 4, "exec_id": "0", "name": "$anonfun$withThreadLocalCaptured$1 at FutureTask.java:264", "num_tasks": 1, "max_task_s": 1.0, "median_task_s": 1.0, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 1.0, "scopes": "BroadcastExchange | AQEShuffleRead | WholeStageCodegen (4)", "operators": "BroadcastExchange || AQEShuffleRead || HashAggregate(keys=[advertiser_id], functions=[])"}
+{"stage": 7, "job": 5, "exec_id": "0", "name": "$anonfun$withThreadLocalCaptured$1 at FutureTask.java:264", "num_tasks": 1, "max_task_s": 0.5, "median_task_s": 0.5, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.5, "scopes": "BroadcastExchange | WholeStageCodegen (5) | AQEShuffleRead", "operators": "BroadcastExchange || HashAggregate(keys=[advertiser_id, vertical_id], functions=[]) || AQEShuffleRead"}
+
+== execution 0: save at NativeMethodAccessorImpl.java:0 ==
+  job 1 stages [1]; job 2 stages [2]; job 3 stages [3]; job 4 stages [4, 5]; job 5 stages [6, 7]; job 6 stages [8, 9]; job 7 stages [10, 11, 12]
+AdaptiveSparkPlan isFinalPlan=true
+  Execute InsertIntoHadoopFsRelationCommand gs://mntn-data-archive-prod/feature_store/feature_group_1_source/guid_log_ip_guid_advertiser_id/dt=2026-09-01, false, Parquet, [path=gs://mntn-data-archive-prod/feature_store/feature_group_1_source/guid_log_ip_guid_advertiser_id/dt=2026-09-01], Overwrite, [dt, ip, guid, advertiser_id, vertical_id, visits, first_visit_time, last_visit_time]
+    WriteFiles
+      ShuffleQueryStage 5
+        Exchange hashpartitioning(ip, 8), REPARTITION_BY_NUM, [plan_id=620]
+          WholeStageCodegen (6)
+            Project [2026-09-01 AS dt, ip, guid, advertiser_id, vertical_id, visits, first_visit_time, last_visit_time]
+              BroadcastHashJoin [advertiser_id], [cast(advertiser_id as bigint)], LeftOuter, BuildRight, false
+                HashAggregate(keys=[ip, guid, advertiser_id, 2026-09-01], functions=[count(1), min(time), max(time)])
+                  HashAggregate(keys=[ip, guid, advertiser_id, 2026-09-01 AS 2026-09-01], functions=[partial_count(1), partial_min(time), partial_max(time)])
+                    Project [advertiser_id, ip, guid, time]
+                      BroadcastHashJoin [advertiser_id], [cast(advertiser_id as bigint)], Inner, BuildRight, false
+                        InputAdapter
+                          AQEShuffleRead coalesced
+                            ShuffleQueryStage 0
+                              Exchange hashpartitioning(advertiser_id, 1000), ENSURE_REQUIREMENTS, [plan_id=224]
+                                WholeStageCodegen (1)
+                                  Project [trim(lower(ip), None) AS ip, if ((trim(lower(guid), None) = )) null else trim(lower(guid), None) AS guid, advertiser_id, time]
+                                    Filter ((isnotnull(trim(lower(ip), None)) AND NOT (trim(lower(ip), None) = )) AND isnotnull(advertiser_id))
+                                      ColumnarToRow
+                                        InputAdapter
+                                          FileScan parquet [guid,time,ip,advertiser_id,dt,hh] Batched: true, DataFilters: [isnotnull(trim(lower(ip), None)), NOT (trim(lower(ip), None) = ), isnotnull(advertiser_id)], Format: Parquet, Location: InMemoryFileIndex(24 paths)[gs://mntn-data-archive-prod/guid_log/dt=2026-09-01/hh=00, gs://mntn-data-archive-prod/guid_log/dt=2026-09-01/hh=01, gs://mntn-data-archive-prod/guid_log/dt=2026-09-01/hh=0
+                        InputAdapter
+                          BroadcastQueryStage 3
+                            BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=341]
+                              WholeStageCodegen (4)
+                                HashAggregate(keys=[advertiser_id], functions=[])
+                                  InputAdapter
+                                    AQEShuffleRead coalesced
+                                      ShuffleQueryStage 1
+                                        Exchange hashpartitioning(advertiser_id, 1000), ENSURE_REQUIREMENTS, [plan_id=237]
+                                          WholeStageCodegen (2)
+                                            HashAggregate(keys=[advertiser_id], functions=[])
+                                              Scan JDBCRelation((SELECT DISTINCT advertiser_id
+             FROM public.advertisers
+             WHERE COALESCE(pixel_isolation, false) = false) AS subquery) [numPartitions=1] [advertiser_id] PushedFilters: [*IsNotNull(advertiser_id)], ReadSchema: struct<advertiser_id:int>
+                InputAdapter
+                  BroadcastQueryStage 4
+                    BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=537]
+                      WholeStageCodegen (5)
+                        HashAggregate(keys=[advertiser_id, vertical_id], functions=[])
+                          InputAdapter
+                            AQEShuffleRead coalesced
+                              ShuffleQueryStage 2
+                                Exchange hashpartitioning(advertiser_id, vertical_id, 1000), ENSURE_REQUIREMENTS, [plan_id=251]
+                                  WholeStageCodegen (3)
+                                    HashAggregate(keys=[advertiser_id, vertical_id], functions=[])
+                                      Scan JDBCRelation((
+                select
+                    advertiser_id,
+                    vertical_id
+                from fpa.advertiser_verticals
+                where type = 1
+            ) as subquery) [numPartitions=1] [advertiser_id,vertical_id] PushedFilters: [*IsNotNull(advertiser_id)], ReadSchema: struct<advertiser_id:int,vertical_id:int>

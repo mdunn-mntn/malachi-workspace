@@ -1,0 +1,663 @@
+app_id=app-20260902042001249-0056 app_name=Populate ipdsc_42_monitor.IPDSC42Monitor wall_s=1331
+  spark.sql.adaptive.enabled=true
+  spark.sql.adaptive.skewJoin.enabled=<unset>
+  spark.sql.adaptive.skewJoin.skewedPartitionFactor=<unset>
+  spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes=<unset>
+  spark.sql.autoBroadcastJoinThreshold=163m
+  spark.sql.shuffle.partitions=128
+  spark.sql.requireAllClusterKeysForDistribution=<unset>
+  spark.dynamicAllocation.initialExecutors=<unset>
+  spark.dynamicAllocation.maxExecutors=1000
+  spark.executor.instances=2
+
+== stages (ranked by max task) ==
+{"stage": 26, "job": 14, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 117, "max_task_s": 268.6, "median_task_s": 48.3, "skew_x": 5.6, "data_skew_x": 6.2, "hot_partition_share": 0.041, "read_gb": 40.11, "shuffle_read_gb": 40.11, "shuffle_write_gb": 0.0, "fetch_wait_pct": 81.6, "stage_wall_s": 304.9, "scopes": "Exchange | WholeStageCodegen (15) | WholeStageCodegen (13) | WholeStageCodegen (17) | WholeStageCodegen (16) | Union | AQEShuffleRead | WholeStageCodegen (14)", "operators": "Exchange || Project [coalesce(category_id, category_id) AS data_source_category_id, coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference, CASE WHEN (coalesce(total_ips, 0) > 0) THEN (cast((coalesce(total_ips, 0) - coalesce(total_ips, 0)) as double) / cast(total_ips as double)) ELSE 0.0 END AS pct_change] || SortMergeJoin [category_id], [category_id], FullOuter || Sort [category_id ASC NULLS FIRST], false, 0 || HashAggregate(keys=[category_id], functions=[count(distinct ip)]) || HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)]) || HashAggregate(keys=[category_id, ip], functions=[]) || HashAggregate(keys=[category_id, ip], functions=[]) || BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false || Project [CASE WHEN (data_source_category_id = -1) THEN TOTAL ELSE cast(data_source_category_id as string) END AS data_source_category_id, coalesce(deal_id, TOTAL) AS deal_id, coalesce(deal_name, ALL DEALS) AS deal_name, coalesce(deal_type, TOTAL) AS deal_type, today_value, yesterday_value, difference, pct_change, data_source_category_id] || BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], LeftOuter, BuildRight, false || HashAggregate(keys=[], functions=[sum(today_value), sum(yesterday_value), sum(difference)]) || Union || AQEShuffleRead || Sort [category_id ASC NULLS FIRST], false, 0 || HashAggregate(keys=[category_id], functions=[count(distinct ip)]) || HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)]) || HashAggregate(keys=[category_id, ip], functions=[]) || HashAggregate(keys=[category_id, ip], functions=[]) || BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false"}
+{"stage": 18, "job": 12, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 116, "max_task_s": 261.4, "median_task_s": 32.7, "skew_x": 8.0, "data_skew_x": 6.2, "hot_partition_share": 0.041, "read_gb": 40.11, "shuffle_read_gb": 40.11, "shuffle_write_gb": 0.0, "fetch_wait_pct": 72.8, "stage_wall_s": 344.9, "scopes": "Exchange | AQEShuffleRead | WholeStageCodegen (11) | WholeStageCodegen (12) | WholeStageCodegen (10)", "operators": "Exchange || AQEShuffleRead || Sort [category_id ASC NULLS FIRST], false, 0 || HashAggregate(keys=[category_id], functions=[count(distinct ip)]) || HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)]) || HashAggregate(keys=[category_id, ip], functions=[]) || HashAggregate(keys=[category_id, ip], functions=[]) || BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false || HashAggregate(keys=[], functions=[partial_sum(today_value), partial_sum(yesterday_value), partial_sum(difference)]) || Project [coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference] || SortMergeJoin [category_id], [category_id], FullOuter || Sort [category_id ASC NULLS FIRST], false, 0 || HashAggregate(keys=[category_id], functions=[count(distinct ip)]) || HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)]) || HashAggregate(keys=[category_id, ip], functions=[]) || HashAggregate(keys=[category_id, ip], functions=[]) || BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false"}
+{"stage": 22, "job": 13, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 117, "max_task_s": 254.1, "median_task_s": 42.5, "skew_x": 6.0, "data_skew_x": 6.2, "hot_partition_share": 0.041, "read_gb": 40.11, "shuffle_read_gb": 40.11, "shuffle_write_gb": 0.0, "fetch_wait_pct": 79.9, "stage_wall_s": 313.4, "scopes": "Exchange | WholeStageCodegen (15) | WholeStageCodegen (17) | WholeStageCodegen (16) | Union | AQEShuffleRead | WholeStageCodegen (13) | WholeStageCodegen (14)", "operators": "Exchange || Project [coalesce(category_id, category_id) AS data_source_category_id, coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference, CASE WHEN (coalesce(total_ips, 0) > 0) THEN (cast((coalesce(total_ips, 0) - coalesce(total_ips, 0)) as double) / cast(total_ips as double)) ELSE 0.0 END AS pct_change] || SortMergeJoin [category_id], [category_id], FullOuter || Project [CASE WHEN (data_source_category_id = -1) THEN TOTAL ELSE cast(data_source_category_id as string) END AS data_source_category_id, coalesce(deal_id, TOTAL) AS deal_id, coalesce(deal_name, ALL DEALS) AS deal_name, coalesce(deal_type, TOTAL) AS deal_type, today_value, yesterday_value, difference, pct_change, data_source_category_id] || BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], LeftOuter, BuildRight, false || HashAggregate(keys=[], functions=[sum(today_value), sum(yesterday_value), sum(difference)]) || Union || AQEShuffleRead || Sort [category_id ASC NULLS FIRST], false, 0 || HashAggregate(keys=[category_id], functions=[count(distinct ip)]) || HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)]) || HashAggregate(keys=[category_id, ip], functions=[]) || HashAggregate(keys=[category_id, ip], functions=[]) || BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false || Sort [category_id ASC NULLS FIRST], false, 0 || HashAggregate(keys=[category_id], functions=[count(distinct ip)]) || HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)]) || HashAggregate(keys=[category_id, ip], functions=[]) || HashAggregate(keys=[category_id, ip], functions=[]) || BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false"}
+{"stage": 10, "job": 8, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 20, "max_task_s": 122.5, "median_task_s": 89.5, "skew_x": 1.4, "data_skew_x": 1.0, "hot_partition_share": 0.058, "read_gb": 2.32, "shuffle_read_gb": 0.0, "shuffle_write_gb": 19.91, "fetch_wait_pct": 0.0, "stage_wall_s": 335.7, "scopes": "Exchange | WholeStageCodegen (3) | Scan parquet ", "operators": "Exchange || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Scan parquet "}
+{"stage": 8, "job": 6, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 20, "max_task_s": 109.4, "median_task_s": 94.0, "skew_x": 1.2, "data_skew_x": 1.0, "hot_partition_share": 0.057, "read_gb": 2.35, "shuffle_read_gb": 0.0, "shuffle_write_gb": 20.2, "fetch_wait_pct": 0.0, "stage_wall_s": 208.3, "scopes": "Exchange | WholeStageCodegen (1) | Scan parquet ", "operators": "Exchange || HashAggregate(keys=[], functions=[partial_count(1)]) || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Scan parquet "}
+{"stage": 11, "job": 9, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 6.6, "median_task_s": 6.6, "skew_x": null, "data_skew_x": null, "hot_partition_share": null, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 289.9, "scopes": "Exchange | WholeStageCodegen (9)", "operators": "Exchange || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id,deal_id,deal_name,deal_type] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int,deal_id:string,deal_name:string,deal_type:string>"}
+{"stage": 9, "job": 7, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 4.0, "median_task_s": 4.0, "skew_x": null, "data_skew_x": null, "hot_partition_share": null, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 150.5, "scopes": "Exchange | WholeStageCodegen (2)", "operators": "Exchange || HashAggregate(keys=[], functions=[count(1)]) || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int> || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int> || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int> || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int>"}
+{"stage": 13, "job": 10, "exec_id": "5", "name": "$anonfun$withThreadLocalCaptured$1 at FutureTask.java:264", "num_tasks": 1, "max_task_s": 3.1, "median_task_s": 3.1, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.5, "stage_wall_s": 142.4, "scopes": "BroadcastExchange | AQEShuffleRead", "operators": "BroadcastExchange || AQEShuffleRead"}
+{"stage": 1, "job": 1, "exec_id": "0", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 20, "max_task_s": 2.9, "median_task_s": 0.6, "skew_x": 4.4, "data_skew_x": 2.0, "hot_partition_share": 0.077, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 3.3, "scopes": "Exchange | Scan parquet  | WholeStageCodegen (1)", "operators": "Exchange || Scan parquet  || HashAggregate(keys=[], functions=[partial_count(1)]) || ColumnarToRow"}
+{"stage": 52, "job": 19, "exec_id": "7", "name": "save at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 1.7, "median_task_s": 1.7, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 1.8, "scopes": "WriteFiles | WholeStageCodegen (18) | InMemoryTableScan | mapPartitionsInternal | WholeStageCodegen (1) | Exchange | Coalesce", "operators": "WriteFiles || Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change] || Sort [CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST], true, 0 || InMemoryTableScan || mapPartitionsInternal || Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change, 2026-09-01 AS dt] || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Exchange || Coalesce"}
+{"stage": 0, "job": 0, "exec_id": null, "name": "parquet at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 1.4, "median_task_s": 1.4, "skew_x": null, "data_skew_x": null, "hot_partition_share": null, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 6.8, "scopes": "mapPartitions | parallelize", "operators": "mapPartitions || parallelize"}
+{"stage": 5, "job": 4, "exec_id": "1", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 20, "max_task_s": 0.5, "median_task_s": 0.3, "skew_x": 1.3, "data_skew_x": 2.0, "hot_partition_share": 0.077, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.9, "scopes": "Exchange | Scan parquet  | WholeStageCodegen (1)", "operators": "Exchange || Scan parquet  || HashAggregate(keys=[], functions=[partial_count(1)]) || ColumnarToRow"}
+{"stage": 31, "job": 15, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 67, "max_task_s": 0.4, "median_task_s": 0.1, "skew_x": 6.0, "data_skew_x": 2.7, "hot_partition_share": 0.037, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.5, "scopes": "mapPartitionsInternal | WholeStageCodegen (18) | Exchange", "operators": "mapPartitionsInternal || Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change] || Sort [CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST], true, 0 || Exchange"}
+{"stage": 7, "job": 5, "exec_id": "1", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 0.3, "median_task_s": 0.3, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.3, "scopes": "mapPartitionsInternal | WholeStageCodegen (2) | Exchange", "operators": "mapPartitionsInternal || HashAggregate(keys=[], functions=[count(1)]) || Exchange"}
+{"stage": 3, "job": 2, "exec_id": "0", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 0.2, "median_task_s": 0.2, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.2, "scopes": "mapPartitionsInternal | WholeStageCodegen (2) | Exchange", "operators": "mapPartitionsInternal || HashAggregate(keys=[], functions=[count(1)]) || Exchange"}
+{"stage": 4, "job": 3, "exec_id": null, "name": "parquet at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 0.2, "median_task_s": 0.2, "skew_x": null, "data_skew_x": null, "hot_partition_share": null, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.2, "scopes": "mapPartitions | parallelize", "operators": "mapPartitions || parallelize"}
+{"stage": 36, "job": 16, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 67, "max_task_s": 0.2, "median_task_s": 0.0, "skew_x": 3.6, "data_skew_x": 1.1, "hot_partition_share": 0.017, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.3, "scopes": "Exchange | InMemoryTableScan | WholeStageCodegen (18) | mapPartitionsInternal | WholeStageCodegen (1)", "operators": "Exchange || InMemoryTableScan || Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change] || Sort [CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST], true, 0 || mapPartitionsInternal || HashAggregate(keys=[], functions=[partial_count(1)]) || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow"}
+{"stage": 15, "job": 11, "exec_id": "5", "name": "$anonfun$withThreadLocalCaptured$1 at FutureTask.java:264", "num_tasks": 1, "max_task_s": 0.1, "median_task_s": 0.1, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 3.1, "scopes": "BroadcastExchange | AQEShuffleRead", "operators": "BroadcastExchange || AQEShuffleRead"}
+{"stage": 42, "job": 17, "exec_id": "5", "name": "count at NativeMethodAccessorImpl.java:0", "num_tasks": 1, "max_task_s": 0.1, "median_task_s": 0.1, "skew_x": null, "data_skew_x": null, "hot_partition_share": 1.0, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.1, "scopes": "mapPartitionsInternal | WholeStageCodegen (2) | Exchange", "operators": "mapPartitionsInternal || HashAggregate(keys=[], functions=[count(1)]) || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int> || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int> || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int> || Scan JDBCRelation((\n    SELECT\n        private_marketplace_deal_id AS data_source_category_id,\n        partner_deal_id             AS deal_id,\n        name                        AS deal_name,\n        partnership_deal_type       AS deal_type\n    FROM core.private_marketplace_deals\n    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')\n) AS deal_data) [numPartitions=1] [data_source_category_id] PushedFilters: [*IsNotNull(data_source_category_id)], ReadSchema: struct<data_source_category_id:int> || Exchange"}
+{"stage": 47, "job": 18, "exec_id": "6", "name": "toPandas at /var/dataproc/tmp/srvls-batch-ddfcca47-7809-4cc5-b5a9-952358255f0d/ipdsc_42_monitor.py:263", "num_tasks": 67, "max_task_s": 0.1, "median_task_s": 0.0, "skew_x": 2.8, "data_skew_x": 1.1, "hot_partition_share": 0.017, "read_gb": 0.0, "shuffle_read_gb": 0.0, "shuffle_write_gb": 0.0, "fetch_wait_pct": 0.0, "stage_wall_s": 0.2, "scopes": "mapPartitionsInternal | WholeStageCodegen (18) | InMemoryTableScan | WholeStageCodegen (1) | Exchange", "operators": "mapPartitionsInternal || Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change] || Sort [CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST], true, 0 || InMemoryTableScan || Project [data_source_category_id AS DSC ID, deal_id AS Deal ID, deal_name AS Deal Name, deal_type AS Deal Type, format_number(today_value, 0) AS 2026-09-01 IPs, format_number(yesterday_value, 0) AS 2026-08-31 IPs, format_number(difference, 0) AS Difference, concat(format_number((pct_change * 100.0), 2), %) AS % Change] || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Filter isnotnull(category_id) || Generate explode(data_source_category_ids), [ip], false, [category_id] || Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids)) || ColumnarToRow || Exchange"}
+
+== execution 0: count at NativeMethodAccessorImpl.java:0 ==
+  job 1 stages [1]; job 2 stages [2, 3]
+AdaptiveSparkPlan isFinalPlan=true
+  WholeStageCodegen (2)
+    HashAggregate(keys=[], functions=[count(1)])
+      InputAdapter
+        ShuffleQueryStage 0
+          Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=23]
+            WholeStageCodegen (1)
+              HashAggregate(keys=[], functions=[partial_count(1)])
+                ColumnarToRow
+                  InputAdapter
+                    FileScan parquet [] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00000-9b349623-bbfd-440e-910d-2a48ba050098-c000.snappy.parquet, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00001-9b349
+
+== execution 1: count at NativeMethodAccessorImpl.java:0 ==
+  job 4 stages [5]; job 5 stages [6, 7]
+AdaptiveSparkPlan isFinalPlan=true
+  WholeStageCodegen (2)
+    HashAggregate(keys=[], functions=[count(1)])
+      InputAdapter
+        ShuffleQueryStage 0
+          Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=58]
+            WholeStageCodegen (1)
+              HashAggregate(keys=[], functions=[partial_count(1)])
+                ColumnarToRow
+                  InputAdapter
+                    FileScan parquet [] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00000-bab567a1-3d37-48d2-96c8-04e50a3b802c-c000.snappy.parquet, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00001-bab56
+
+== execution 2: createOrReplaceTempView at NativeMethodAccessorImpl.java:0 ==
+  
+Execute CreateViewCommand
+
+== execution 3: createOrReplaceTempView at NativeMethodAccessorImpl.java:0 ==
+  
+Execute CreateViewCommand
+
+== execution 4: createOrReplaceTempView at NativeMethodAccessorImpl.java:0 ==
+  
+Execute CreateViewCommand
+
+== execution 5: count at NativeMethodAccessorImpl.java:0 ==
+  job 6 stages [8]; job 7 stages [9]; job 8 stages [10]; job 9 stages [11]; job 10 stages [12, 13]; job 11 stages [14, 15]; job 12 stages [16, 17, 18]; job 13 stages [19, 20, 21, 22]; job 14 stages [23, 24, 25, 26]; job 15 stages [27, 28, 29, 30, 31]; job 16 stages [32, 33, 34, 35, 36]; job 17 stages [37, 38, 39, 40, 41, 42]
+AdaptiveSparkPlan isFinalPlan=true
+  WholeStageCodegen (2)
+    HashAggregate(keys=[], functions=[count(1)])
+      InputAdapter
+        ShuffleQueryStage 1
+          Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=2844]
+            WholeStageCodegen (1)
+              HashAggregate(keys=[], functions=[partial_count(1)])
+                InputAdapter
+                  TableCacheQueryStage 0
+                    InMemoryTableScan
+                      AdaptiveSparkPlan isFinalPlan=true
+                        WholeStageCodegen (18)
+                          Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change]
+                            Sort [CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST], true, 0
+                              InputAdapter
+                                ShuffleQueryStage 23
+                                  Exchange rangepartitioning(CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST, 128), ENSURE_REQUIREMENTS, [plan_id=2762]
+                                    WholeStageCodegen (17)
+                                      Project [CASE WHEN (data_source_category_id = -1) THEN TOTAL ELSE cast(data_source_category_id as string) END AS data_source_category_id, coalesce(deal_id, TOTAL) AS deal_id, coalesce(deal_name, ALL DEALS) AS deal_name, coalesce(deal_type, TOTAL) AS deal_type, today_value, yesterday_value, difference, pct_change, data_source_category_id]
+                                        BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], LeftOuter, BuildRight, false
+                                          InputAdapter
+                                            Union
+                                              WholeStageCodegen (15)
+                                                Project [coalesce(category_id, category_id) AS data_source_category_id, coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference, CASE WHEN (coalesce(total_ips, 0) > 0) THEN (cast((coalesce(total_ips, 0) - coalesce(total_ips, 0)) as double) / cast(total_ips as double)) ELSE 0.0 END AS pct_change]
+                                                  SortMergeJoin [category_id], [category_id], FullOuter
+                                                    InputAdapter
+                                                      WholeStageCodegen (13)
+                                                        Sort [category_id ASC NULLS FIRST], false, 0
+                                                          HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                            HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                              HashAggregate(keys=[category_id, ip], functions=[])
+                                                                HashAggregate(keys=[category_id, ip], functions=[])
+                                                                  BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                    InputAdapter
+                                                                      AQEShuffleRead coalesced
+                                                                        ShuffleQueryStage 0
+                                                                          Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                            WholeStageCodegen (1)
+                                                                              Filter isnotnull(category_id)
+                                                                                Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                  Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                    ColumnarToRow
+                                                                                      InputAdapter
+                                                                                        FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00000-9b349623-bbfd-440e-910d-2a48ba0500
+                                                                    InputAdapter
+                                                                      BroadcastQueryStage 14
+                                                                        BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                          AQEShuffleRead local
+                                                                            ShuffleQueryStage 1
+                                                                              Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                WholeStageCodegen (2)
+                                                                                  Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                                    InputAdapter
+                                                      WholeStageCodegen (14)
+                                                        Sort [category_id ASC NULLS FIRST], false, 0
+                                                          HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                            HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                              HashAggregate(keys=[category_id, ip], functions=[])
+                                                                HashAggregate(keys=[category_id, ip], functions=[])
+                                                                  BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                    InputAdapter
+                                                                      AQEShuffleRead coalesced
+                                                                        ShuffleQueryStage 2
+                                                                          Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                            WholeStageCodegen (3)
+                                                                              Filter isnotnull(category_id)
+                                                                                Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                  Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                    ColumnarToRow
+                                                                                      InputAdapter
+                                                                                        FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00000-bab567a1-3d37-48d2-96c8-04e50a3b80
+                                                                    InputAdapter
+                                                                      BroadcastQueryStage 16
+                                                                        ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                          BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                            AQEShuffleRead local
+                                                                              ShuffleQueryStage 1
+                                                                                Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                  WholeStageCodegen (2)
+                                                                                    Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                              WholeStageCodegen (16)
+                                                HashAggregate(keys=[], functions=[sum(today_value), sum(yesterday_value), sum(difference)])
+                                                  InputAdapter
+                                                    ShuffleQueryStage 22
+                                                      Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=2432]
+                                                        WholeStageCodegen (12)
+                                                          HashAggregate(keys=[], functions=[partial_sum(today_value), partial_sum(yesterday_value), partial_sum(difference)])
+                                                            Project [coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference]
+                                                              SortMergeJoin [category_id], [category_id], FullOuter
+                                                                InputAdapter
+                                                                  WholeStageCodegen (10)
+                                                                    Sort [category_id ASC NULLS FIRST], false, 0
+                                                                      HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                                        HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                                          HashAggregate(keys=[category_id, ip], functions=[])
+                                                                            HashAggregate(keys=[category_id, ip], functions=[])
+                                                                              BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                                InputAdapter
+                                                                                  AQEShuffleRead coalesced
+                                                                                    ShuffleQueryStage 6
+                                                                                      ReusedExchange [ip, category_id], Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                                        Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                                          WholeStageCodegen (1)
+                                                                                            Filter isnotnull(category_id)
+                                                                                              Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                                Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                                  ColumnarToRow
+                                                                                                    InputAdapter
+                                                                                                      FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00000-9b349623-bbfd-440e-910d-2a48ba0500
+                                                                                InputAdapter
+                                                                                  BroadcastQueryStage 18
+                                                                                    ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                      BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                        AQEShuffleRead local
+                                                                                          ShuffleQueryStage 1
+                                                                                            Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                              WholeStageCodegen (2)
+                                                                                                Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                                                InputAdapter
+                                                                  WholeStageCodegen (11)
+                                                                    Sort [category_id ASC NULLS FIRST], false, 0
+                                                                      HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                                        HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                                          HashAggregate(keys=[category_id, ip], functions=[])
+                                                                            HashAggregate(keys=[category_id, ip], functions=[])
+                                                                              BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                                InputAdapter
+                                                                                  AQEShuffleRead coalesced
+                                                                                    ShuffleQueryStage 10
+                                                                                      ReusedExchange [ip, category_id], Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                                        Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                                          WholeStageCodegen (3)
+                                                                                            Filter isnotnull(category_id)
+                                                                                              Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                                Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                                  ColumnarToRow
+                                                                                                    InputAdapter
+                                                                                                      FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00000-bab567a1-3d37-48d2-96c8-04e50a3b80
+                                                                                InputAdapter
+                                                                                  BroadcastQueryStage 20
+                                                                                    ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                      BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                        AQEShuffleRead local
+                                                                                          ShuffleQueryStage 1
+                                                                                            Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                              WholeStageCodegen (2)
+                                                                                                Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                          InputAdapter
+                                            BroadcastQueryStage 21
+                                              BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=1806]
+                                                AQEShuffleRead local
+                                                  ShuffleQueryStage 13
+                                                    Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=717]
+                                                      WholeStageCodegen (9)
+                                                        Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+
+== execution 6: toPandas at /var/dataproc/tmp/srvls-batch-ddfcca47-7809-4cc5-b5a9-952358255f0d/ipdsc_42_monitor.py:263 ==
+  job 18 stages [43, 44, 45, 46, 47]
+AdaptiveSparkPlan isFinalPlan=true
+  WholeStageCodegen (1)
+    Project [data_source_category_id AS DSC ID, deal_id AS Deal ID, deal_name AS Deal Name, deal_type AS Deal Type, format_number(today_value, 0) AS 2026-09-01 IPs, format_number(yesterday_value, 0) AS 2026-08-31 IPs, format_number(difference, 0) AS Difference, concat(format_number((pct_change * 100.0), 2), %) AS % Change]
+      InputAdapter
+        TableCacheQueryStage 0
+          InMemoryTableScan [data_source_category_id, deal_id, deal_name, deal_type, difference, pct_change, today_value, yesterday_value]
+            AdaptiveSparkPlan isFinalPlan=true
+              WholeStageCodegen (18)
+                Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change]
+                  Sort [CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST], true, 0
+                    InputAdapter
+                      ShuffleQueryStage 23
+                        Exchange rangepartitioning(CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST, 128), ENSURE_REQUIREMENTS, [plan_id=2762]
+                          WholeStageCodegen (17)
+                            Project [CASE WHEN (data_source_category_id = -1) THEN TOTAL ELSE cast(data_source_category_id as string) END AS data_source_category_id, coalesce(deal_id, TOTAL) AS deal_id, coalesce(deal_name, ALL DEALS) AS deal_name, coalesce(deal_type, TOTAL) AS deal_type, today_value, yesterday_value, difference, pct_change, data_source_category_id]
+                              BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], LeftOuter, BuildRight, false
+                                InputAdapter
+                                  Union
+                                    WholeStageCodegen (15)
+                                      Project [coalesce(category_id, category_id) AS data_source_category_id, coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference, CASE WHEN (coalesce(total_ips, 0) > 0) THEN (cast((coalesce(total_ips, 0) - coalesce(total_ips, 0)) as double) / cast(total_ips as double)) ELSE 0.0 END AS pct_change]
+                                        SortMergeJoin [category_id], [category_id], FullOuter
+                                          InputAdapter
+                                            WholeStageCodegen (13)
+                                              Sort [category_id ASC NULLS FIRST], false, 0
+                                                HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                  HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                    HashAggregate(keys=[category_id, ip], functions=[])
+                                                      HashAggregate(keys=[category_id, ip], functions=[])
+                                                        BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                          InputAdapter
+                                                            AQEShuffleRead coalesced
+                                                              ShuffleQueryStage 0
+                                                                Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                  WholeStageCodegen (1)
+                                                                    Filter isnotnull(category_id)
+                                                                      Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                        Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                          ColumnarToRow
+                                                                            InputAdapter
+                                                                              FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00000-9b349623-bbfd-440e-910d-2a48ba0500
+                                                          InputAdapter
+                                                            BroadcastQueryStage 14
+                                                              BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                AQEShuffleRead local
+                                                                  ShuffleQueryStage 1
+                                                                    Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                      WholeStageCodegen (2)
+                                                                        Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                          InputAdapter
+                                            WholeStageCodegen (14)
+                                              Sort [category_id ASC NULLS FIRST], false, 0
+                                                HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                  HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                    HashAggregate(keys=[category_id, ip], functions=[])
+                                                      HashAggregate(keys=[category_id, ip], functions=[])
+                                                        BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                          InputAdapter
+                                                            AQEShuffleRead coalesced
+                                                              ShuffleQueryStage 2
+                                                                Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                  WholeStageCodegen (3)
+                                                                    Filter isnotnull(category_id)
+                                                                      Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                        Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                          ColumnarToRow
+                                                                            InputAdapter
+                                                                              FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00000-bab567a1-3d37-48d2-96c8-04e50a3b80
+                                                          InputAdapter
+                                                            BroadcastQueryStage 16
+                                                              ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                  AQEShuffleRead local
+                                                                    ShuffleQueryStage 1
+                                                                      Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                        WholeStageCodegen (2)
+                                                                          Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                    WholeStageCodegen (16)
+                                      HashAggregate(keys=[], functions=[sum(today_value), sum(yesterday_value), sum(difference)])
+                                        InputAdapter
+                                          ShuffleQueryStage 22
+                                            Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=2432]
+                                              WholeStageCodegen (12)
+                                                HashAggregate(keys=[], functions=[partial_sum(today_value), partial_sum(yesterday_value), partial_sum(difference)])
+                                                  Project [coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference]
+                                                    SortMergeJoin [category_id], [category_id], FullOuter
+                                                      InputAdapter
+                                                        WholeStageCodegen (10)
+                                                          Sort [category_id ASC NULLS FIRST], false, 0
+                                                            HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                              HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                                HashAggregate(keys=[category_id, ip], functions=[])
+                                                                  HashAggregate(keys=[category_id, ip], functions=[])
+                                                                    BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                      InputAdapter
+                                                                        AQEShuffleRead coalesced
+                                                                          ShuffleQueryStage 6
+                                                                            ReusedExchange [ip, category_id], Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                              Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                                WholeStageCodegen (1)
+                                                                                  Filter isnotnull(category_id)
+                                                                                    Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                      Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                        ColumnarToRow
+                                                                                          InputAdapter
+                                                                                            FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00000-9b349623-bbfd-440e-910d-2a48ba0500
+                                                                      InputAdapter
+                                                                        BroadcastQueryStage 18
+                                                                          ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                            BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                              AQEShuffleRead local
+                                                                                ShuffleQueryStage 1
+                                                                                  Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                    WholeStageCodegen (2)
+                                                                                      Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                                      InputAdapter
+                                                        WholeStageCodegen (11)
+                                                          Sort [category_id ASC NULLS FIRST], false, 0
+                                                            HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                              HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                                HashAggregate(keys=[category_id, ip], functions=[])
+                                                                  HashAggregate(keys=[category_id, ip], functions=[])
+                                                                    BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                      InputAdapter
+                                                                        AQEShuffleRead coalesced
+                                                                          ShuffleQueryStage 10
+                                                                            ReusedExchange [ip, category_id], Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                              Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                                WholeStageCodegen (3)
+                                                                                  Filter isnotnull(category_id)
+                                                                                    Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                      Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                        ColumnarToRow
+                                                                                          InputAdapter
+                                                                                            FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00000-bab567a1-3d37-48d2-96c8-04e50a3b80
+                                                                      InputAdapter
+                                                                        BroadcastQueryStage 20
+                                                                          ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                            BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                              AQEShuffleRead local
+                                                                                ShuffleQueryStage 1
+                                                                                  Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                    WholeStageCodegen (2)
+                                                                                      Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                InputAdapter
+                                  BroadcastQueryStage 21
+                                    BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=1806]
+                                      AQEShuffleRead local
+                                        ShuffleQueryStage 13
+                                          Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=717]
+                                            WholeStageCodegen (9)
+                                              Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+
+== execution 7: save at NativeMethodAccessorImpl.java:0 ==
+  job 19 stages [48, 49, 50, 51, 52]
+AdaptiveSparkPlan isFinalPlan=true
+  Execute InsertIntoHadoopFsRelationCommand gs://household-scoring-prod/output/monitoring/ipdsc_42_monitor/dt=2026-09-01, false, Parquet, [path=gs://household-scoring-prod/output/monitoring/ipdsc_42_monitor/dt=2026-09-01], Overwrite, [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change, dt]
+    WriteFiles
+      Coalesce 1
+        WholeStageCodegen (1)
+          Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change, 2026-09-01 AS dt]
+            InputAdapter
+              TableCacheQueryStage 0
+                InMemoryTableScan [data_source_category_id, deal_id, deal_name, deal_type, difference, pct_change, today_value, yesterday_value]
+                  AdaptiveSparkPlan isFinalPlan=true
+                    WholeStageCodegen (18)
+                      Project [data_source_category_id, deal_id, deal_name, deal_type, today_value, yesterday_value, difference, pct_change]
+                        Sort [CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST], true, 0
+                          InputAdapter
+                            ShuffleQueryStage 23
+                              Exchange rangepartitioning(CASE WHEN (data_source_category_id = -1) THEN 0 ELSE 1 END ASC NULLS FIRST, today_value DESC NULLS LAST, 128), ENSURE_REQUIREMENTS, [plan_id=2762]
+                                WholeStageCodegen (17)
+                                  Project [CASE WHEN (data_source_category_id = -1) THEN TOTAL ELSE cast(data_source_category_id as string) END AS data_source_category_id, coalesce(deal_id, TOTAL) AS deal_id, coalesce(deal_name, ALL DEALS) AS deal_name, coalesce(deal_type, TOTAL) AS deal_type, today_value, yesterday_value, difference, pct_change, data_source_category_id]
+                                    BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], LeftOuter, BuildRight, false
+                                      InputAdapter
+                                        Union
+                                          WholeStageCodegen (15)
+                                            Project [coalesce(category_id, category_id) AS data_source_category_id, coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference, CASE WHEN (coalesce(total_ips, 0) > 0) THEN (cast((coalesce(total_ips, 0) - coalesce(total_ips, 0)) as double) / cast(total_ips as double)) ELSE 0.0 END AS pct_change]
+                                              SortMergeJoin [category_id], [category_id], FullOuter
+                                                InputAdapter
+                                                  WholeStageCodegen (13)
+                                                    Sort [category_id ASC NULLS FIRST], false, 0
+                                                      HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                        HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                          HashAggregate(keys=[category_id, ip], functions=[])
+                                                            HashAggregate(keys=[category_id, ip], functions=[])
+                                                              BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                InputAdapter
+                                                                  AQEShuffleRead coalesced
+                                                                    ShuffleQueryStage 0
+                                                                      Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                        WholeStageCodegen (1)
+                                                                          Filter isnotnull(category_id)
+                                                                            Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                              Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                ColumnarToRow
+                                                                                  InputAdapter
+                                                                                    FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00000-9b349623-bbfd-440e-910d-2a48ba0500
+                                                                InputAdapter
+                                                                  BroadcastQueryStage 14
+                                                                    BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                      AQEShuffleRead local
+                                                                        ShuffleQueryStage 1
+                                                                          Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                            WholeStageCodegen (2)
+                                                                              Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                                InputAdapter
+                                                  WholeStageCodegen (14)
+                                                    Sort [category_id ASC NULLS FIRST], false, 0
+                                                      HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                        HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                          HashAggregate(keys=[category_id, ip], functions=[])
+                                                            HashAggregate(keys=[category_id, ip], functions=[])
+                                                              BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                InputAdapter
+                                                                  AQEShuffleRead coalesced
+                                                                    ShuffleQueryStage 2
+                                                                      Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                        WholeStageCodegen (3)
+                                                                          Filter isnotnull(category_id)
+                                                                            Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                              Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                ColumnarToRow
+                                                                                  InputAdapter
+                                                                                    FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00000-bab567a1-3d37-48d2-96c8-04e50a3b80
+                                                                InputAdapter
+                                                                  BroadcastQueryStage 16
+                                                                    ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                      BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                        AQEShuffleRead local
+                                                                          ShuffleQueryStage 1
+                                                                            Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                              WholeStageCodegen (2)
+                                                                                Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                          WholeStageCodegen (16)
+                                            HashAggregate(keys=[], functions=[sum(today_value), sum(yesterday_value), sum(difference)])
+                                              InputAdapter
+                                                ShuffleQueryStage 22
+                                                  Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=2432]
+                                                    WholeStageCodegen (12)
+                                                      HashAggregate(keys=[], functions=[partial_sum(today_value), partial_sum(yesterday_value), partial_sum(difference)])
+                                                        Project [coalesce(total_ips, 0) AS today_value, coalesce(total_ips, 0) AS yesterday_value, (coalesce(total_ips, 0) - coalesce(total_ips, 0)) AS difference]
+                                                          SortMergeJoin [category_id], [category_id], FullOuter
+                                                            InputAdapter
+                                                              WholeStageCodegen (10)
+                                                                Sort [category_id ASC NULLS FIRST], false, 0
+                                                                  HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                                    HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                                      HashAggregate(keys=[category_id, ip], functions=[])
+                                                                        HashAggregate(keys=[category_id, ip], functions=[])
+                                                                          BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                            InputAdapter
+                                                                              AQEShuffleRead coalesced
+                                                                                ShuffleQueryStage 6
+                                                                                  ReusedExchange [ip, category_id], Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                                    Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=555]
+                                                                                      WholeStageCodegen (1)
+                                                                                        Filter isnotnull(category_id)
+                                                                                          Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                            Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                              ColumnarToRow
+                                                                                                InputAdapter
+                                                                                                  FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=42/part-00000-9b349623-bbfd-440e-910d-2a48ba0500
+                                                                            InputAdapter
+                                                                              BroadcastQueryStage 18
+                                                                                ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                  BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                    AQEShuffleRead local
+                                                                                      ShuffleQueryStage 1
+                                                                                        Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                          WholeStageCodegen (2)
+                                                                                            Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                                            InputAdapter
+                                                              WholeStageCodegen (11)
+                                                                Sort [category_id ASC NULLS FIRST], false, 0
+                                                                  HashAggregate(keys=[category_id], functions=[count(distinct ip)])
+                                                                    HashAggregate(keys=[category_id], functions=[partial_count(distinct ip)])
+                                                                      HashAggregate(keys=[category_id, ip], functions=[])
+                                                                        HashAggregate(keys=[category_id, ip], functions=[])
+                                                                          BroadcastHashJoin [category_id], [cast(data_source_category_id as bigint)], LeftSemi, BuildRight, false
+                                                                            InputAdapter
+                                                                              AQEShuffleRead coalesced
+                                                                                ShuffleQueryStage 10
+                                                                                  ReusedExchange [ip, category_id], Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                                    Exchange hashpartitioning(category_id, 128), ENSURE_REQUIREMENTS, [plan_id=593]
+                                                                                      WholeStageCodegen (3)
+                                                                                        Filter isnotnull(category_id)
+                                                                                          Generate explode(data_source_category_ids), [ip], false, [category_id]
+                                                                                            Filter ((size(data_source_category_ids, true) > 0) AND isnotnull(data_source_category_ids))
+                                                                                              ColumnarToRow
+                                                                                                InputAdapter
+                                                                                                  FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFileIndex(14 paths)[gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/_SUCCESS, gs://mntn-data-archive-prod/ipdsc/dt=2026-08-31/data_source_id=42/part-00000-bab567a1-3d37-48d2-96c8-04e50a3b80
+                                                                            InputAdapter
+                                                                              BroadcastQueryStage 20
+                                                                                ReusedExchange [data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                  BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=957]
+                                                                                    AQEShuffleRead local
+                                                                                      ShuffleQueryStage 1
+                                                                                        Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=570]
+                                                                                          WholeStageCodegen (2)
+                                                                                            Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
+                                      InputAdapter
+                                        BroadcastQueryStage 21
+                                          BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=1806]
+                                            AQEShuffleRead local
+                                              ShuffleQueryStage 13
+                                                Exchange hashpartitioning(cast(data_source_category_id as bigint), 128), ENSURE_REQUIREMENTS, [plan_id=717]
+                                                  WholeStageCodegen (9)
+                                                    Scan JDBCRelation((
+    SELECT
+        private_marketplace_deal_id AS data_source_category_id,
+        partner_deal_id             AS deal_id,
+        name                        AS deal_name,
+        partnership_deal_type       AS deal_type
+    FROM core.private_marketplace_deals
+    WHERE partnership_deal_type IN ('MNTN_SELECT', 'EXCLUSIVE')
+) AS deal_data) [numPartitions=1] [data_source_categor
