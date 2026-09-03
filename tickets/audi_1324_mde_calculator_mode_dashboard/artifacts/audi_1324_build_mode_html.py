@@ -11,7 +11,7 @@ QUERY_NAME = "Advertiser Prefill"
 
 BRIDGE = """/* Mode data bridge. window.datasets is [{name, content:[rows]}]; rows key off the SQL
    column aliases. Everything below this block is the standalone calculator unchanged. */
-(function () {
+window.__mdeHydrate = function () {
   var WANT = %r;
   var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
   var sets = window.datasets || [];
@@ -57,7 +57,33 @@ BRIDGE = """/* Mode data bridge. window.datasets is [{name, content:[rows]}]; ro
 
   var stamp = rows.length && rows[0].data_pull_date;
   window.DATA_PULL_DATE = stamp ? String(stamp).slice(0, 10) : 'refreshed weekly';
-})();""" % QUERY_NAME
+  return window.ADVERTISERS.length;
+};
+window.__mdeHydrate();""" % QUERY_NAME
+
+
+LAUNCHER = """
+/* Mode injects this layout after the document has loaded, and injects it twice, so
+   DOMContentLoaded has already fired and the boot has to be launched directly. Datasets
+   can also land after the HTML, hence the poll. */
+(function () {
+  if (window.__mdeStarted) return;
+  window.__mdeStarted = true;
+  var tries = 0;
+  function go() {
+    window.__mdeHydrate();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', __mdeBoot);
+    } else {
+      __mdeBoot();
+    }
+  }
+  (function wait() {
+    if (window.datasets && window.datasets.length) return go();
+    if (++tries > 40) return go();
+    setTimeout(wait, 100);
+  })();
+})();"""
 
 
 def main():
@@ -75,6 +101,21 @@ def main():
     html, n = re.subn(r'^window\.DATA_PULL_DATE = "[0-9-]+";$', "", html, count=1, flags=re.M)
     if n != 1:
         raise SystemExit("DATA_PULL_DATE anchor not found")
+
+    html, n = re.subn(
+        r"^document\.addEventListener\('DOMContentLoaded', \(\) => \{$",
+        "function __mdeBoot() {",
+        html,
+        count=1,
+        flags=re.M,
+    )
+    if n != 1:
+        raise SystemExit("DOMContentLoaded anchor not found")
+
+    tail = "});\n</script>"
+    if html.count(tail) != 1:
+        raise SystemExit(f"boot tail not unique ({html.count(tail)})")
+    html = html.replace(tail, "}\n" + LAUNCHER + "\n</script>")
 
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
