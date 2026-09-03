@@ -1,0 +1,10 @@
+32 of 67 alerting DAGs were invisible to the Airflow debugger. Branch audi-1280-debugger-tag-coverage-ci watches 25 of them and adds a CI check that blocks new misses.
+
+*Findings*
+* One cause: the team tags Targeting (25 DAGs) and Attribution (7) were not on the watch list. Targeting is added. Attribution stays out; its alerts land in that team's channel, so joining the sweep is their call.
+* Audit table: 78 source files vs 75 live DAGs, every tag matched.
+* The check runs on Python 3.12; one DAG file uses f-string syntax 3.11 rejects.
+
+*Next*
+* Open the PR, then confirm the next Targeting DAG failure gets a reply.
+* Ask the Attribution team whether their 7 DAGs join the sweep.
