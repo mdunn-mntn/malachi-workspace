@@ -1,0 +1,10 @@
+*Result:* branch ready for PR: ipdsc_ds_49 reads input in 64 MiB pieces (was 128), conv_log_derived_ip in 128 MiB (was 256); ipdsc_ds_67 dropped.
+
+*Findings*
+* ipdsc_ds_67 input is 160 files holding one 60 MiB row group each; a smaller read size yields empty tasks, not smaller ones (checked on Spark 3.5.3). Its two spill findings get marked will-not-fix on the ledger.
+* Dry-run compile clean, generated task config unchanged, 145 model tests pass.
+* conv_log_derived_ip input fell from 14.5 GiB to about 2.6 GiB per run after 2026-08-20, so its saving is small.
+
+*Next*
+* Open the PR, merge, stamp the ledger.
+* Read the first scheduled run's event log for task count and spill.

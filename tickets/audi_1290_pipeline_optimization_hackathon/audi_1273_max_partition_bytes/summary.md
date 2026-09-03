@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1273: Lower files.maxPartitionBytes on 3 map-side-spill DAGs"
-status: backlog
+status: in_progress
 date: 2026-09-02
 summary: "Read input in smaller pieces on 3 DAGs that spill while reading, not shuffling"
-result: "plan written 2026-09-02: ipdsc_ds_49 and conv_log_derived_ip edits executable as specified; ipdsc_ds_67 blocked, its 60 MiB single-row-group input files cannot be split by the knob, decision needed"
+result: "executed 2026-09-02: ipdsc_ds_49 maxPartitionBytes 64 MiB and conv_log_derived_ip 256 to 128 MiB edited on branch audi-1273-max-partition-bytes, dryrun clean, config unchanged, 145 model tests pass; ipdsc_ds_67 dropped (D1 Option A), its two spill keys go to wont_fix; conversion_log 08-20 volume drop flagged only (D2)"
 question: "Does lowering spark.sql.files.maxPartitionBytes on ipdsc_ds_49, conv_log_derived_ip and ipdsc_ds_67 remove their map-side spill?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1273: Lower files.maxPartitionBytes on 3 map-side-spill DAGs
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1273
-**Status:** backlog
+**Status:** in_progress (branch ready for PR; post-merge check pending)
 **Date Started:** 2026-09-02
 **Assignee:** Malachi
 
@@ -83,7 +83,7 @@ Work only inside the AUDI-1273 worktree the dispatcher creates; agents never run
 5. **Validate the diff shape.** `git diff --stat` shows exactly the edited files (2, or 3 under Option B), one or two changed lines each. `python3 -m py_compile` on each edited file. `git diff` must contain no comment lines and no whitespace-only hunks.
 6. **Regenerate and prove nothing else moved.** In the worktree: `uv sync --group models --group test` (first time only), then `MNTN_SDLC_ENV=dev python model_upload.py --dryrun`. Expect the console line `Skipping all models upload to 'dev' env`. Then `git diff --quiet dags/model_task_config.json dags/ipdsc_third_party_audience_builders.json && echo CONFIG_UNCHANGED`. Expected result: CONFIG_UNCHANGED (builder-only edits do not reach the generated task config). If the diff is NOT empty: inspect `git diff dags/model_task_config.json`; if the hunks are confined to the three model ids and reflect these edits (they should not be), include the file; if the hunks touch other models, main was already stale and the regeneration is someone else's change: stop, do not stage it, report the model ids in §8. `git status --porcelain` should list only the edited model files plus `dags/model_task_config.json` if regenerated; `dags/current_branch.json` and `utils_model/model_core/model_config.json` are generated scratch and must not be staged.
 7. **Run the model tests once**: `python -m pytest tests/models -q` after step 6 (the generated `model_config.json` from the dryrun is what the collection-time import needs). Record pass/fail counts in §4. A failure in `test_ipdsc_third_party_audience_builder.py` or another test that also fails on an untouched checkout of main is the pre-existing #1209 defect, not this PR; note it, do not fix it here.
-8. **Write the PR description** to `artifacts/audi_1273_pr_description.md` and lint it: `python3 .claude/scripts/lint_comms.py --kind pr --file <path>`. Shape: answer line ("Lower the input read size on two spill-at-read DAGs" plus the third DAG's disposition), What (the exact confs and files), Why (per DAG: input GiB / tasks / spill from the 08-05 logs above), Validation (dryrun clean, config unchanged, tests result, post-merge check in step 10). No `Co-Authored-By`; no comments in code; the dispatcher opens the PR on branch `AUDI-1273` after `/pr_gauntlet`.
+8. **Write the PR description** to `artifacts/audi_1273_pr_body.md` and lint it: `python3 .claude/scripts/lint_comms.py --kind pr --file <path>`. Shape: answer line ("Lower the input read size on two spill-at-read DAGs" plus the third DAG's disposition), What (the exact confs and files), Why (per DAG: input GiB / tasks / spill from the 08-05 logs above), Validation (dryrun clean, config unchanged, tests result, post-merge check in step 10). No `Co-Authored-By`; no comments in code; the dispatcher opens the PR on branch `AUDI-1273` after `/pr_gauntlet`.
 9. **Ledger stamp (dispatcher, after merge, same day).** For each shipped key run `python -m include.spark_optimizer.ledger applied <dag_id> <key> <PR#> <merge date>` against a fresh download of `gs://mntn-data-archive-prod/optimizer/optimization_ledger.jsonl` (`OPTIMIZER_LEDGER=<local path>`), then re-upload between sweeps. Keys: `ipdsc_ds_49 disk_spill:1`, `conv_log_derived_ip disk_spill:1`, and under Option B also `ipdsc_ds_67 disk_spill:3`, `ipdsc_ds_67 disk_spill:5`. Under Option A set those two to `wont_fix` with the note from step 4 instead.
 10. **Post-merge check (first scheduled prod run after deploy, T+1 to T+3 days; no manual trigger).** For each DAG: `gsutil ls -l gs://mntn-data-archive-prod/spark-events/ | grep <YYYY-MM-DD>T0[1-6]` to find that morning's logs, download with `gsutil -o "GSUtil:check_hashes=never" cp` into `outputs/eventlogs/` (delete after parsing), run `python3 artifacts/audi_1273_eventlog_probe.py --repo <airflow-ti checkout> <log>` and match `app_name` (`Populate ipdsc_ds_49.DS49`, `Populate conv_log_derived_ip.ConvLogDerivedIp`, `Populate ipdsc_ds_67.DS67`). Pass criteria: the `conf spark.sql.files.maxPartitionBytes` line shows the new value; `ipdsc_ds_49` stage 1 task count roughly doubles (583 to ~1,000-1,200 on similar input) with memory-spilled and disk-spilled at or near 0; `conv_log_derived_ip` stage 1 per-task input roughly halves and spill drops; under Option B `ipdsc_ds_67` stages 3/5 show shuffle write well under 81.6 GiB and no spill. Write the before/after table into §4 and §5, then let the ledger resolve the keys after three quiet sweeps (check with `gsutil cat <ledger> | grep <dag_id>`).
 11. **Close-out**: update §4-§8 of this file, hand `knowledge/` facts back through the dispatcher (the row-group rule, the conversion_log volume drop, the ds67 mechanism), self-review entry.
@@ -114,26 +114,107 @@ Work only inside the AUDI-1273 worktree the dispatcher creates; agents never run
 - **CI `model-unit-test` red for the pre-existing #1209 reason** (not a required check); do not chase it inside this PR.
 - **First prod run is the next cron** (no manual trigger), so verification lands 1-3 days after deploy; a regression shows up as spill still present or a slower stage, and the revert is the same one-line change.
 
+### 3.5 Execution wave 2026-09-02: what changed against the plan
+Executed steps 1-8 as written with two additions and two decisions applied; nothing in §3.0-§3.4 above is retracted.
+- **Step 7 (model tests) needed two environment settings the plan did not list.** On this Mac `tests/models` first returned 62 collection errors (`JAVA_GATEWAY_EXITED`: no Java on PATH; `/opt/homebrew/opt/openjdk@17` exists but is not linked), then 47 failures (`PYTHON_VERSION_MISMATCH`: the Spark worker resolved `/usr/bin/python3` = 3.9 while the driver was the 3.11 venv). With `JAVA_HOME=/opt/homebrew/opt/openjdk@17`, its `bin` on PATH, and `PYSPARK_PYTHON=PYSPARK_DRIVER_PYTHON=<worktree>/.venv/bin/python`, the suite is **145 passed, 0 failed in 25 s**. The 08-26 note about a pre-existing #1209 red suite did not reproduce; see §4.
+- **Dependency install:** `uv sync --python 3.11 --only-group models --only-group test` (CI's exact groups; `uv.lock` and `.venv` are git-ignored so nothing lands in the diff). The first `uv sync` without `--python` picked 3.12; the dryrun result was identical (config unchanged) on both.
+- **A3 was confirmed empirically, not assumed** (`outputs/audi_1273_split_probe_2026_09_02.txt`, script `artifacts/audi_1273_split_probe.py`): one DS4 file read locally under Spark 3.5.3 at 32, 64 and 128 MiB caps always yields one partition with all 1,318,363 rows and one with 0.
+- **D1 = Option A** (user): ipdsc_ds_67 dropped from the PR, no edit; the exact `wont_fix` ledger commands are in §5; the broadcast alternative is recorded in §8 as a backlog item for Alyson Lefkowitz, not implemented.
+- **D2 = flag only** (user): the conversion_log volume drop evidence is in §8; nothing opened; the dispatcher raises it.
+- **Resume 2026-09-02 (the first execute agent hit a session limit after step 8).** The second agent re-verified rather than redid: worktree still at base `825b07e`, `git diff` byte-matches §4.2 and §5 (2 files, +2/-1), `git diff --quiet dags/model_task_config.json dags/ipdsc_third_party_audience_builders.json` still exits 0 with the dryrun's generated `utils_model/model_core/model_config.json` and `dags/current_branch.json` present from 20:27, both lint runs re-pass. Two corrections landed in this file: the PR body moved to `artifacts/audi_1273_pr_body.md` (the dispatcher's expected path) and ruff was re-run with the ruff actually installed (§4.5). One clarification: the optimizer sweep runs at 09:00 UTC (`dags/spark_optimizer_daily.py:37`), not "after the 02:35 export DAG" as §5 first said; the ledger window in §5 now states the exact time.
+
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+Execute wave 2026-09-02, worktree `scratchpad/wt/audi_1273`, branch `audi-1273-max-partition-bytes`, base `825b07e30d1ac10dd4f8f387c8b14e916c3f3114` (= the plan's baseline, `git merge-base --is-ancestor` true).
+
+### 4.1 Anchors (step 1) all matched by content
+- `models/ipdsc/ipdsc_ds_49.py:42` `.config("spark.sql.shuffle.partitions", "1700")`, builder = lines 41-43, no `maxPartitionBytes`.
+- `models/feature_store/feature_group_2_derived/conv_log_derived_ip.py:58` `.config("spark.sql.files.maxPartitionBytes", "268435456")`; lines 59-60 openCostInBytes / parquet.block.size untouched.
+- `models/ipdsc/ipdsc_ds_67.py:30` bare `SparkSession.builder.appName(...)` then `.getOrCreate()` on 31; join at line 80 `ips.join(audience_upload_ids, on="data_source_category_id", how="inner")`; `F` imported at line 7. Not edited.
+
+### 4.2 The diff (steps 2-3, 5)
+```
+models/feature_store/feature_group_2_derived/conv_log_derived_ip.py | 2 +-   (line 58: "268435456" -> "134217728")
+models/ipdsc/ipdsc_ds_49.py                                         | 1 +    (new line 43: .config("spark.sql.files.maxPartitionBytes", "67108864"))
+```
+`python3 -m py_compile` clean on both. No comment lines, no whitespace-only hunks. `git status --porcelain` lists exactly these two files; `.venv`, `uv.lock`, `dags/current_branch.json`, `utils_model/model_core/model_config.json`, `__pycache__`, `.pytest_cache`, `.ruff_cache` are all git-ignored.
+
+### 4.3 Regeneration (step 6): CONFIG_UNCHANGED
+`MNTN_SDLC_ENV=dev .venv/bin/python model_upload.py --dryrun` printed `Compiling all models` then `Skipping all models upload to 'dev' env`; `git diff --quiet dags/model_task_config.json dags/ipdsc_third_party_audience_builders.json` exits 0. Run twice (Python 3.12.x venv, then the CI-matching 3.11.12 venv), same result. A2 holds: builder confs never reach the generated task config because `--dryrun` imports the module and runs the decorators without instantiating the class.
+
+### 4.4 Model tests (step 7): 145 passed once the local environment matched CI
+| run | env | result |
+|---|---|---|
+| 1 | no Java on PATH | 83 passed, 62 errors (`JAVA_GATEWAY_EXITED`) |
+| 2 | `JAVA_HOME=/opt/homebrew/opt/openjdk@17` (17.0.20) | 98 passed, 47 failed (`PYTHON_VERSION_MISMATCH`: worker `/usr/bin/python3` 3.9 vs driver 3.11) |
+| 2b | same, with the two edited files restored to HEAD content (`git show HEAD:<path> > <path>`, then the edits re-applied and `git diff` byte-compared to the saved diff) | 98 passed, 47 failed, **identical failure list** (`diff` of the sorted FAILED lines empty) |
+| 3 | plus `PYSPARK_PYTHON=PYSPARK_DRIVER_PYTHON=.venv/bin/python` | **145 passed in 25.20 s** |
+Run 2b proves the 47 were environmental, not from this diff; run 3 removes them entirely. The 47 were spread over `test_household_resolution.py` (17), `test_hh_prospecting.py` (12), `test_tpa_hh_export.py` (8), `test_tpa_metadata_info_map.py` (4), `test_tpa_mntn_id_export_model.py` (3), `test_export_tpa.py` (3): every test that starts a local SparkSession. The "#1209 pre-existing red" from the 08-26 handoff did not reproduce here; with the dryrun-generated `utils_model/model_core/model_config.json` present the collection-time import works. (A `git archive HEAD` copy in the scratchpad could not be used as the baseline: collection fails there with `git branch --show-current` exit 128 because the copy has no `.git`; `utils_model/model_core/context.py` shells out to git at import.)
+
+### 4.5 ruff (repo has no ruff config: no `ruff.toml`, no `[tool.ruff]` in `pyproject.toml`; run as a courtesy)
+Re-run 2026-09-02 on the resume with the Homebrew `ruff 0.16.1` at `/opt/homebrew/bin/ruff` (the earlier pass in this section used 0.12.0 and a narrower rule set). Both edited files and their `git show HEAD:` copies (saved to `scratchpad/ruff_base/`) return the **same five findings**, none on a changed line: `ipdsc_ds_49.py` I001 (import block order, lines 9-15); `conv_log_derived_ip.py` I001 (lines 14-22), DTZ007 x2 (naive `datetime.strptime` at lines 77 and 91), F841 (`output_date_col` assigned at line 94, never used). All pre-exist on main; not this PR's lines, left alone. `ruff check --show-settings` reports no settings path, so the rule set is ruff's resolution on this Mac, not a repo choice; CI does not run ruff on `models/**` (`.github/workflows/pr_model.yaml` runs only the dryrun and `tests/models`).
+
+### 4.6 Splittability of the ipdsc_ds_67 input, confirmed on Spark 3.5.3 (A3)
+`gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=4/part-00000-4a440464-db41-4b25-b73f-7f26941b3758-c000.snappy.parquet` (63,184,840 bytes, one row group) read with `master=local[2]`, AQE off, `openCostInBytes=4 MiB`, at `maxPartitionBytes` 32 / 64 / 128 MiB: every run gives 2 input partitions, partition 0 holds all 1,318,363 rows, partition 1 holds 0. (Under `local[2]` the split size is min(cap, file/2) = 30 MiB, so the cap value does not change the split count locally; in prod with a 32 MiB cap each 60 MiB file becomes splits [0,32) and [32,60.3), i.e. ~320 tasks of which ~160 read nothing.) The 32 MiB edit from the Jira description would add empty tasks and change no spill. File deleted after the probe.
+
+### 4.7 Live ledger state read 2026-09-02 (`gs://mntn-data-archive-prod/optimizer/optimization_ledger.jsonl`, 52 rows across the three DAGs)
+| dag | key | state | streak | impact | fix_pr |
+|---|---|---|---|---|---|
+| ipdsc_ds_49 | disk_spill:1 | chronic | 6 | medium | empty |
+| conv_log_derived_ip | disk_spill:1 | chronic | 6 | medium | empty |
+| ipdsc_ds_67 | disk_spill:3 | chronic | 8 | high | empty |
+| ipdsc_ds_67 | disk_spill:5 | chronic | 8 | high | empty |
+ipdsc_ds_67 also carries `shuffle_fetch_wait:13` (chronic 8), `shuffle_fetch_wait:18` (recurring 2), `shuffle_fetch_wait:37` (chronic 8), `skew:23` (chronic 8), `straggler:37` (chronic 8), `straggler:13` (resolved, stopped firing after 08-26); none of those are this ticket's. The optimizer DAG (`dags/spark_optimizer_daily.py`, `REPORT_PREFIX = gs://mntn-data-archive-prod/optimizer`, `LEDGER_NAME = optimization_ledger.jsonl`) restores the ledger from that GCS object each sweep, so a hand-edited copy re-uploaded between sweeps is what the next sweep replays. `wont_fix` is in `STICKY` (`include/spark_optimizer/ledger.py:37`) and survives replay (`ledger.py:177`).
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+**Code (branch `audi-1273-max-partition-bytes`, uncommitted in the worktree; the dispatcher commits, runs `/pr_gauntlet`, opens the PR):**
+- `models/ipdsc/ipdsc_ds_49.py`: `+ .config("spark.sql.files.maxPartitionBytes", "67108864")` after the shuffle.partitions line (64 MiB; platform default was 128 MiB).
+- `models/feature_store/feature_group_2_derived/conv_log_derived_ip.py`: `spark.sql.files.maxPartitionBytes` `268435456` -> `134217728` (256 -> 128 MiB).
+- `models/ipdsc/ipdsc_ds_67.py`: unchanged (D1 Option A).
+- PR description: `artifacts/audi_1273_pr_body.md` (lint `--kind pr`: 127 words / 793 chars / 8 bullets, OK; re-linted 2026-09-02 after the rename from `audi_1273_pr_description.md` to the path the dispatcher expects). Jira completion comment: `artifacts/audi_1273_result_comment.txt` (lint `--kind completion`: 114 words / 682 chars / 8 bullets, OK, re-linted same day).
+
+**Ledger commands for the dispatcher (run from an airflow-ti checkout with the `models` group installed, between two daily sweeps; `dags/spark_optimizer_daily.py:37` schedules the sweep at `0 9 * * *` with a `pendulum.datetime(2026, 8, 21)` start date, i.e. 09:00 UTC daily, `max_active_runs=1`; so any time after 09:00 UTC and before the next day's 09:00 UTC is safe, and a hand-edited copy uploaded in that window is what the next sweep replays):**
+```
+LEDGER_LOCAL=<scratchpad>/optimization_ledger.jsonl
+gsutil cp gs://mntn-data-archive-prod/optimizer/optimization_ledger.jsonl "$LEDGER_LOCAL"
+OPTIMIZER_LEDGER="$LEDGER_LOCAL" python -m include.spark_optimizer.ledger set ipdsc_ds_67 disk_spill:3 wont_fix "AUDI-1273: input is 160 x 60 MiB single-row-group parquet, spark.sql.files.maxPartitionBytes cannot split it (Spark 3.5.3 probe: 32 MiB cap gives one task with all rows and one with none); needs the DS4 writer to emit smaller row groups or a broadcast join, see AUDI-1273 summary section 8"
+OPTIMIZER_LEDGER="$LEDGER_LOCAL" python -m include.spark_optimizer.ledger set ipdsc_ds_67 disk_spill:5 wont_fix "AUDI-1273: input is 160 x 60 MiB single-row-group parquet, spark.sql.files.maxPartitionBytes cannot split it (Spark 3.5.3 probe: 32 MiB cap gives one task with all rows and one with none); needs the DS4 writer to emit smaller row groups or a broadcast join, see AUDI-1273 summary section 8"
+gsutil cp "$LEDGER_LOCAL" gs://mntn-data-archive-prod/optimizer/optimization_ledger.jsonl
+```
+The CLI shape is `set <dag_id> <key> <state> [note words...]` (`ledger.py:628-630`); `set_state` rejects any state outside `("owner_notified", "wont_fix")`, copies impact/title/owner/streak from the key's latest row, and stamps the latest row's date (no date argument). After the PR merges, on the same day, the two shipped keys get `python -m include.spark_optimizer.ledger applied ipdsc_ds_49 disk_spill:1 <PR#> <merge YYYY-MM-DD>` and `... applied conv_log_derived_ip disk_spill:1 <PR#> <merge date>` with the same download/re-upload wrap (§3.1 step 9).
+
+**Post-merge check (§3.1 step 10, unchanged):** first scheduled prod run after deploy (tpa_ipdsc_export at 02:35 UTC, feature_store_setup_model at 01:03 UTC), pull that morning's `gs://mntn-data-archive-prod/spark-events/app-*.zstd`, run `artifacts/audi_1273_eventlog_probe.py`, expect `conf spark.sql.files.maxPartitionBytes = 67108864` / `134217728`, ipdsc_ds_49 stage 1 tasks ~1,000-1,200 (from 583) with spill near 0, conv_log_derived_ip stage 1 per-task input halved. No manual trigger.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Does lowering `spark.sql.files.maxPartitionBytes` remove the map-side spill on the three DAGs?
+  **A:** It can on two of them and cannot on the third. ipdsc_ds_49 (716 files/day, median 13 MiB, one row group each) and conv_log_derived_ip (8 files/day, 9-11 MiB since 08-20) pack whole files into tasks, so a lower cap halves the per-task input (~82 -> ~45 MiB on ds49). ipdsc_ds_67 reads 160 files of 60 MiB with a single row group each, and Spark hands a row group to the split holding its midpoint, so a 32 MiB cap produces one full task and one empty task per file: no spill change (confirmed locally on Spark 3.5.3). Whether the spill actually reaches zero on the two edited DAGs is settled only by the first post-merge event log (A4).
+- **Q:** Does a builder-only `.config(...)` change alter `dags/model_task_config.json`?
+  **A:** No. `model_upload.py --dryrun` regenerated it byte-identical on Python 3.11 and 3.12; the generated config comes from the `@compute.dataproc_batch` decorator, not the SparkSession builder.
+- **Q:** Are the `tests/models` failures on a fresh checkout the #1209 defect?
+  **A:** Not on this machine. They were Java missing from PATH (62 errors) and then a Spark worker/driver Python minor-version mismatch (47 failures, identical with and without the edits). With openjdk 17 on PATH and `PYSPARK_PYTHON` pinned to the venv, 145/145 pass.
+- **Q:** What is the right fix for ipdsc_ds_67's spill?
+  **A:** Either broadcast the small Postgres side before the shuffle (`F.broadcast(audience_upload_ids)` at line 80; AQE already converts this join to `BroadcastHashJoin BuildRight` at runtime, but only after the 81.6 GiB map-side shuffle write in stages 3 and 5 has happened) or have the DS4 writer emit smaller row groups. Neither is in this PR (D1 Option A).
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+None written by this wave (knowledge/ masters are off-limits to the ticket agent). Facts handed to the dispatcher via `knowledge[]`: the parquet row-group / `maxPartitionBytes` splitting rule; the ipdsc_ds_67 spill mechanism (map-side shuffle write before AQE's broadcast conversion); the local `tests/models` environment requirements (Java 17 on PATH, `PYSPARK_PYTHON` pinned); the builder-conf vs generated-config rule; the conversion_log volume drop.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+1. **Dispatcher: commit the two files, `/pr_gauntlet`, open the PR** with `artifacts/audi_1273_pr_body.md`; post `artifacts/audi_1273_result_comment.txt` to AUDI-1273; correct the Jira description's third bullet (ipdsc_ds_67 32 MiB) to "dropped, input not splittable".
+2. **Dispatcher: run the two `wont_fix` ledger commands in §5** for `ipdsc_ds_67 disk_spill:3` and `disk_spill:5`; after merge, the two `applied` stamps.
+3. **Post-merge event-log check** (§5 / §3.1 step 10), T+1 to T+3 days after deploy; write the before/after table into §4 and §5. If ipdsc_ds_49 still spills at ~45 MiB per task, the next lever is executor memory (A4), not a lower cap.
+4. **Backlog item, owner Alyson Lefkowitz (ipdsc_ds_67 author, last commit 2026-08-04): broadcast the small join side in ipdsc_ds_67.** One-line change at `models/ipdsc/ipdsc_ds_67.py:80`: `ips.join(F.broadcast(audience_upload_ids), on="data_source_category_id", how="inner")` (`F` already imported). Mechanism from app-20260805053727558-0431: stages 3 and 5 each read the 10.6 GiB DS4 scan, explode `data_source_category_ids`, and write an 81.6 GiB sort-merge exchange (129 GiB memory / ~80 GiB disk spilled each) for the join against the `ui.audience_uploads` JDBC scan; AQE then rewrites the join to `BroadcastHashJoin ... BuildRight` with a `ReusedExchange`, i.e. the small side is broadcast anyway, after the shuffle cost is paid. The static hint moves the join into the scan task and drops non-matching rows before any shuffle. Expected win on the 09-02 sweep figures: two 81.6 GiB shuffle writes and ~150 GiB disk spill per run, ~9.4 executor-hours/day, and it would also address `shuffle_fetch_wait:13/37`, `skew:23`, `straggler:37` on the same stages. Size guard: AQE only broadcasts a side under the 10 MB adaptive threshold, so the runtime conversion in the log is the evidence the side is small today; the hint forces the broadcast regardless, so record the broadcast size from the plan metrics on the first run after the change. Second improvement in the same file: `upload_ips` is consumed twice (stages 3 and 5 re-read the scan); a `.cache()` or a single pass would halve the read. Not implemented here (D1 Option A). Suggested Jira shape: Task under AUDI-1290 if the hackathon window allows, else `improvements_backlog.md` row.
+5. **Flag for the user (D2, nothing opened): `gs://mntn-data-archive-prod/conversion_log/dt=<date>` volume fell ~6x on 2026-08-20.** Evidence (`outputs/audi_1273_input_parquet_probe_2026_09_02.txt`): 18-23 GiB/day on 08-18 and 08-19, 3-4 GiB/day from 08-20 onward with no recovery through 08-31; downstream `feature_store/feature_group_1_source/conv_log_ip/dt=<date>` fell from 500-750 MiB/day (62-93 MiB per file, 8 files) to 72-89 MiB/day (9-11 MiB per file); `conv_log_ip.py` has no commit since before 2026-08-01; the ledger shows `conv_log_derived_ip disk_spill:1` shrinking every sweep since 08-20 (6.3 -> 4.2 GiB disk on 09-02), which is the same drop seen from the optimizer's side. Consumers: the feature store (conv_log_derived_ip and everything downstream of feature group 2) and Fangorn. Either an intended upstream change or a loss. Proposed if the user wants it: a Spike under AUDI, "conversion_log volume drop 2026-08-20". Consequence for this ticket: the conv_log_derived_ip key may resolve on its own by ~2026-09-19 and be attributed to the PR (A5).
+6. **Self-review entry** (`self_review/self_review_2.md`) not written by this wave (file off-limits to the ticket agent); dispatcher adds it at close.
+7. **Local test recipe for airflow-ti `tests/models` on this Mac** (candidate for `knowledge/memory/project_airflow_optimizer.md` or the airflow-ti workflow memory): `uv sync --python 3.11 --only-group models --only-group test`, `MNTN_SDLC_ENV=dev .venv/bin/python model_upload.py --dryrun` (generates the git-ignored `utils_model/model_core/model_config.json` the tests import), then `JAVA_HOME=/opt/homebrew/opt/openjdk@17 PATH=$JAVA_HOME/bin:$PATH PYSPARK_PYTHON=$PWD/.venv/bin/python PYSPARK_DRIVER_PYTHON=$PWD/.venv/bin/python .venv/bin/python -m pytest tests/models -q`.
+
+## Verification
+Adversarial pass, 2026-09-02, read-only against worktree `scratchpad/wt/audi_1273` (airflow-ti) and this ticket's files. No defects found; every checked claim reproduced from source.
+- `git diff` byte-matches §4.2/§5 exactly: 2 files, +2/-1 (`ipdsc_ds_49.py` new line 43 `maxPartitionBytes=67108864`; `conv_log_derived_ip.py` line 58 `268435456`→`134217728`). `ipdsc_ds_67.py` untouched, confirmed not in diff. No files outside `models/**` touched; ticket-repo status shows only `summary.md` + the listed `artifacts/`/`outputs/` files, nothing else.
+- `dags/model_task_config.json` and `dags/ipdsc_third_party_audience_builders.json`: re-ran `git diff --quiet` in the worktree, CONFIG_UNCHANGED reproduced. Decorator on both edited models carries only `spark.dynamicAllocation.*` (checked source) — no builder/decorator conflict exists, so "builder wins" is moot here.
+- **Re-ran `tests/models` independently** (same env recipe as §3.5/item 7): **145 passed in 25.11s**, matching the claim exactly.
+- Line-number citations (§4.1, join/anchor lines) verified against actual source, exact: `ipdsc_ds_49.py:42` shuffle.partitions, `conv_log_derived_ip.py:58` maxPartitionBytes, `ipdsc_ds_67.py:30-31` bare builder, `:80` the join, `:7` `F` import; fleet precedent `bae_ip.py:48` and `fangorn_predictions_vertical.py:35` both confirmed.
+- Event-log numbers in §3.0/§4.2 cross-checked against `outputs/audi_1273_eventlog_probe_2026_08_05.txt` line by line (ds49 stage 1: 583 tasks/47.2 GiB/406.7 GiB mem spill/17.9 GiB disk spill; conv_log_derived_ip stage 1: 91/14.5/58.4/5.0; ds67 stages 3&5: 160/10.6/129.4|129.3/80.6|79.0) — all exact matches, no rounding drift.
+- Re-derived the ds67 non-splittability claim from `artifacts/audi_1273_split_probe.py` + `outputs/audi_1273_split_probe_2026_09_02.txt`: 32/64/128 MiB caps all give one partition with all 1,318,363 rows and one with 0 — matches §4.6/A3.
+- `include/spark_optimizer/ledger.py` read directly: `STICKY = ("owner_notified", "wont_fix")`, `set_state` raises outside those two, CLI argv shapes for `set` and `applied` match the commands in §5 exactly. DAG schedules verified from source: optimizer sweep `0 9 * * *` (`dags/spark_optimizer_daily.py:37`), `tpa_ipdsc_export` `35 2 * * *`, `feature_store_setup_model` `3 1 * * *`.
+- `artifacts/audi_1273_pr_body.md` and `artifacts/audi_1273_result_comment.txt` relinted (`lint_comms.py --kind pr` / `--kind completion`): both OK, word/char/bullet counts match §5 exactly (127/793/8 and 114/682/8).
+- Open items are accurate: every deferred action (commit, PR, Jira, ledger stamps, self-review) is genuinely dispatcher-scope, not a skipped step.
+**Verdict: state stays `done`.** `jira_comment` passed through unchanged (`artifacts/audi_1273_result_comment.txt`, already lint-clean).

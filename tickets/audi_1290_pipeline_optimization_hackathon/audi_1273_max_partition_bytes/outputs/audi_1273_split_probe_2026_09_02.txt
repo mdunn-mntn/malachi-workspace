@@ -1,0 +1,11 @@
+Local Spark 3.5.3 split probe, 2026-09-02 (artifacts/audi_1273_split_probe.py, master=local[2], openjdk 17.0.20, pyspark 3.5.3)
+Input: gs://mntn-data-archive-prod/ipdsc/dt=2026-09-01/data_source_id=4/part-00000-4a440464-db41-4b25-b73f-7f26941b3758-c000.snappy.parquet, 63184840 bytes, one row group (pyarrow footer)
+Each line: one SparkSession with spark.sql.files.maxPartitionBytes=<cap>, openCostInBytes=4 MiB, AQE off; rows counted per input partition via spark_partition_id().
+local[2] caps the split size at file_bytes/2 = ~30 MiB, so every run yields 2 splits; the point is which split gets the rows.
+
+cap=33554432 (32 MiB) input_partitions=2 partitions_with_rows=1 rows_per_partition={0: 1318363} total_rows=1318363
+cap=67108864 (64 MiB) input_partitions=2 partitions_with_rows=1 rows_per_partition={0: 1318363} total_rows=1318363
+cap=134217728 (128 MiB) input_partitions=2 partitions_with_rows=1 rows_per_partition={0: 1318363} total_rows=1318363
+
+=> The whole row group lands in partition 0 (the split holding the row group midpoint); the other split reads 0 rows.
+   A 32 MiB cap on 160 x 60 MiB single-row-group files therefore doubles the task count (half of them empty) and moves no data out of any task: no spill change.
