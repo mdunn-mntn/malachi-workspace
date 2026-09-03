@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [openai sdk pagination, openai python sdk, auto_paging_iter, SyncCursorPage, SyncCursorPage FileObject, client.files.list, files.list pagination, has_next_page, get_next_page, next_page_info, after cursor, AttributeError auto_paging_iter, list response auto fetch, cursor page, stripe idiom pagination, delete_all_storage_files, batch_cleanup crash, shopper_graph#297, shopper_graph#298, shopper_graph#299, shopper_graph#306, openai file cleanup pagination, files.list order, order asc, created_at desc default, limit 10000 cap, newest 10000 files window, oldest-first cleanup, age-based cleanup order, Total number of files to delete 0, file storage quota 2.5TB, exceeded your file storage quota, openai file cleanup order defect, deploy_openai_dockerhub_gcp]
+keywords: [openai sdk pagination, openai python sdk, auto_paging_iter, SyncCursorPage, SyncCursorPage FileObject, client.files.list, files.list pagination, has_next_page, get_next_page, next_page_info, after cursor, AttributeError auto_paging_iter, list response auto fetch, cursor page, stripe idiom pagination, delete_all_storage_files, batch_cleanup crash, shopper_graph#297, shopper_graph#298, shopper_graph#299, shopper_graph#305, shopper_graph#306, openai file cleanup pagination, files.list order, order asc, created_at desc default, limit 10000 cap, newest 10000 files window, oldest-first cleanup, age-based cleanup order, Total number of files to delete 0, file storage quota 2.5TB, exceeded your file storage quota, openai file cleanup order defect, deploy_openai_dockerhub_gcp, AUDI-1321, quota wall resolved, first green submit since 08-28, 1132 of 1132 deleted, batch_submit succeeded 57 minutes, kill criterion never triggered, storage was ours, zero-delete alarm, STORAGE_ALARM_MIN_FILES, zero delete looks like quiet day, silent no-op observability]
 domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-09-03
@@ -27,7 +27,8 @@ last_verified: 2026-09-03
   latest). The #297 crash was a **nonexistent method**, not a version regression, so pinning isn't required
   to fix it (optional hygiene only).
 
-**TRAP 2 (AUDI-1191, 2026-09-03) — ORDER, not pagination: `files.list` can only see the NEWEST 10,000 files.**
+**TRAP 2 (AUDI-1191 / AUDI-1321, 2026-09-03) — ORDER, not pagination: `files.list` can only see the NEWEST
+10,000 files. RESOLVED AND PROVEN, see the verdict at the end of this section.**
 Distinct from trap 1 above and additive to it: after `#298` the paging was correct, and the sweep still froze the
 pipeline for six days.
 
@@ -49,6 +50,21 @@ pipeline for six days.
 - **Rule:** for any age-based cleanup over a cursor-paged list API, sort **oldest-first** and stop at the cutoff.
   Newest-first plus a page cap degrades silently to a no-op exactly under load. Quota/storage context:
   [[reference_mntn_matched_batch_pipeline]].
+- **VERDICT — the fix cleared the wall, end to end (AUDI-1321, 2026-09-03).** `#306` deployed **15:50**; the
+  next cleanup deleted **1,132 of 1,132** with 0 skips; **`batch_submit` on submit logical 2026-09-02 then
+  SUCCEEDED at ~19:00 UTC after running ~57 minutes** — the **first green submit since 2026-08-28**, where every
+  prior attempt died in **~27 seconds** on the storage `400`. The 27s-vs-57min gap is the tell: the old failures
+  never got past the upload. **AUDI-1321's kill criterion never triggered** ("if it still 400s the storage is not
+  ours, escalate to Alyson for dashboard access") — deleting only the names our own sweep owns (`part-*` /
+  `batch_*`) cleared the 2.5TB, so the storage WAS ours and the list-order defect was the entire cause. No other
+  producer was holding it. **Do not reopen the shared-account hypothesis without new evidence.**
+- **Companion alarm (`shopper_graph#305`, merged 18:39 UTC + deployed 2026-09-03):** `delete_all_storage_files.py`
+  now **raises** when every eligible delete fails, and when it frees **nothing** while at least
+  `STORAGE_ALARM_MIN_FILES` (env, default **10,000**) files are still stored. Normal volume is a few hundred to
+  ~1,200 files/day so a quiet day stays silent. **The generalizable point: a sweep that deletes zero looks
+  IDENTICAL in the logs to a sweep with nothing to do** — which is why the 08-28 outage ran silent for six days
+  behind a green cleanup task. An operation whose success state and whose total-failure state emit the same
+  output has no observability, however green it looks.
 
 **Provenance (INC-007 / AUDI-1042, 2026-07-30):** the OpenAI file-cleanup rewrite `#297` replaced the proven
 `for file in client.files.list():` with `client.files.list().auto_paging_iter()` → every `batch_cleanup`

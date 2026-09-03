@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [bq job attribution, INFORMATION_SCHEMA, JOBS_BY_USER, JOBS_BY_ORGANIZATION, JOBS_BY_PROJECT, BigQueryInsertJobOperator, airflow-dag label, airflow-task label, airflow job_id prefix, python client no labels, dw-main-bronze billing, service account own jobs, bq_profile.py, AUDI-1241, spark-optimizer impersonation empty JOBS_BY_USER, OPTIMIZER_BQ_SAS, JOBS_BY_PROJECT user_email filter, bigquery.jobUser resourceViewer, mntn-devops 5160, airflow-ti 1247, AUDI-1278, airflow-ti 1278, bq job labels, bigQueryJobLabel, spark.datasource.bigquery prefix, SparkBigQueryConfig parseBigQueryLabels, spark-bigquery connector unlabeled jobs, anonymous dataset destination, UUID job id, materializationDataset deprecated, viewsEnabled query read, bos__spend connector reads, airflow-camperbid dag_utils google.py, run_dataproc_serverless properties, DataprocConfig asJson, camperbid handoff, get_df configuration labels, pandas_gbq labels, QueryJobConfig labels, airflow_job_labels, bq_job_labels.py, google_cloud_default get_df billing, optimizer_bq report unattributed row, unattributed 612 jobs 1110 slot-h, mode resourceViewer option, autotof kedro bq jobs, hhst campaign_bucket merge, decision 0007]
+keywords: [bq job attribution, INFORMATION_SCHEMA, JOBS_BY_USER, JOBS_BY_ORGANIZATION, JOBS_BY_PROJECT, BigQueryInsertJobOperator, airflow-dag label, airflow-task label, airflow job_id prefix, python client no labels, dw-main-bronze billing, service account own jobs, bq_profile.py, AUDI-1241, spark-optimizer impersonation empty JOBS_BY_USER, OPTIMIZER_BQ_SAS, JOBS_BY_PROJECT user_email filter, bigquery.jobUser resourceViewer, mntn-devops 5160, airflow-ti 1247, AUDI-1278, airflow-ti 1278, bq job labels, bigQueryJobLabel, spark.datasource.bigquery prefix, SparkBigQueryConfig parseBigQueryLabels, spark-bigquery connector unlabeled jobs, anonymous dataset destination, UUID job id, materializationDataset deprecated, viewsEnabled query read, bos__spend connector reads, airflow-camperbid dag_utils google.py, run_dataproc_serverless properties, DataprocConfig asJson, camperbid handoff, get_df configuration labels, pandas_gbq labels, QueryJobConfig labels, airflow_job_labels, bq_job_labels.py, google_cloud_default get_df billing, optimizer_bq report unattributed row, unattributed 612 jobs 1110 slot-h, mode resourceViewer option, autotof kedro bq jobs, hhst campaign_bucket merge, decision 0007, bq surface scoped by service account, not scoped by team, phs.TEAM label spark surface, SAS default two service accounts, airflow-camperbid-prod service account, camperbid 580, flight_metrics_per2388, why sweep sees another team, by design not a leak]
 domain: [data, infra]
 lifecycle: active
 last_verified: 2026-09-03
@@ -28,6 +28,15 @@ last_verified: 2026-09-03
   `resourceViewer` on `dw-main-bronze` (mntn-devops#5160, open).
 - **Access denied to `malachi@mountain.com`:** `JOBS_BY_ORGANIZATION` and
   `mntn-prj-prod-00:INFORMATION_SCHEMA.JOBS_BY_PROJECT`.
+- **THE OPTIMIZER'S BQ SURFACE IS SCOPED BY SERVICE ACCOUNT, NOT BY TEAM — by design, not a leak
+  (settled 2026-09-03, AUDI-1278/AUDI-1290).** `include/spark_optimizer/bq_profile.py` `SAS` defaults
+  to `airflow-ti-prod@mntn-prj-prod-00.iam.gserviceaccount.com` **and**
+  `airflow-camperbid-prod@mntn-prj-prod-00.iam.gserviceaccount.com` (override: env `OPTIMIZER_BQ_SAS`).
+  **The SPARK surface excludes other teams by team label (`phs.TEAM`); the BQ surface never did.** That
+  asymmetry is the whole answer to "why is the sweep looking at another team's jobs" — it is why the
+  sweep flagged the camperbid `bos__spend` / `flight_metrics_per2388` work and why that produced
+  **airflow-camperbid PR #580**. Malachi had raised this with two different teams; this closes it. If
+  you ever want the BQ surface team-scoped, the lever is `OPTIMIZER_BQ_SAS`, not a code change.
 
 **Verified 2026-09-02/03 (AUDI-1278, hackathon epic AUDI-1290; record in `tickets/audi_1290_pipeline_optimization_hackathon/audi_1278_bq_job_labels/summary.md`):**
 

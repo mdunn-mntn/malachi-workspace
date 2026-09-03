@@ -4,7 +4,7 @@ title: "AUDI-1275: Decide the safe straggler fix for GCS writers, apply to 13 DA
 status: in_progress
 date: 2026-09-02
 summary: "Speculation is safe where every writer discards the losing duplicate attempt; canary PR on site_network_hourly, 10 wait on 3 clean sweeps + Ryan, 2 owner-gated"
-result: "memo + Slack ask drafted 2026-09-02; canary PR #1271 open 2026-09-03 (reviewer Ryan Kleck); awaiting merge, 3 clean sweeps, Ryan answer"
+result: "memo + Slack ask drafted 2026-09-02; canary PR #1271 (branch audi-1275-straggler-gcs-writers, reviewer Ryan Kleck) MERGED 2026-09-03 20:20 UTC, squash b9428f4, deployed. Ryan's review caveat sets the kill criterion: with skew, speculation often just adds executors, so kill the canary if executor-hours rise while wall-clock stays flat. Still awaiting 3 clean sweeps; the 2 manifest-committer DAGs stay owner-gated."
 question: "Which straggler remedy is safe for Spark jobs that overwrite GCS output, and which of the 13 DAGs can take it now?"
 framing_state: locked
 ---
@@ -185,6 +185,16 @@ Routed by `/capture` on 2026-09-03 (write-only sweep; the dispatcher commits):
 - Nothing new for `mntn_business.md`, `experimentation.md`, the glossary, or the MEMORY.md hot tier.
 
 ## 8. Open Items / Follow-ups
+
+- **MERGED 2026-09-03 20:20 UTC — PR #1271 (branch `audi-1275-straggler-gcs-writers`), squash `b9428f4`, deployed.**
+  It was the last of the 11-PR merge train. Note the numbering offset: PR **#1271 is AUDI-1275**, not AUDI-1271.
+- **Ryan Kleck's review caveat, and the canary's kill criterion.** Recorded on the PR: **with skew, `spark.speculation`
+  often just adds executors**, because the duplicate attempts chase the same long tail rather than shortening it — a
+  speculative copy of a task that is slow *because it holds more data* is exactly as slow, and you pay for both
+  attempts. So the canary's kill criterion is: **kill it if executor-hours rise while wall-clock stays flat.** That is
+  the precise signature of speculation buying nothing, and both numbers are already on the ledger, so no new
+  instrumentation is needed to judge it. Add this to the post-merge watch in the bullet below: `speculative_tasks > 0`
+  proves speculation is FIRING, not that it is HELPING.
 - **Deviation from the planned §3 step 11:** only `site_network_hourly` was edited (user decision D1+D2 = canary); the 11-model edit list did not ship. §3 rewritten above to match.
 - **Waiting on the canary + Ryan (verdict "safe by source, wait"):** ipdsc_ds_47 (chronic `:2`, `:5`), aug_log_ip_vertical_id_hourly (`:7`, `:31`), fangorn_score_monitor (`:12`, `:15`), tpa_mntn_id_export (`:7`, `:8`), identity_targeted_signal (`:3` chronic, write-stage straggler on Iceberg). **No-op unless re-flagged (safe by class, no live key):** ipdsc_ds_42, ipdsc_ds_63, hhdsc_ds_19, advertiser_high, site_visit_signal_advertiser_id_dsc_id. **Owner-gated (manifest committer, Ryan's pin):** advertiser_join (`:3` chronic 7, 83.5 exec-h), prospecting_join (`:10` new).
 - Post-merge watch (human): bundle lag up to 12 h; `Compute batch:` line shows `'spark.speculation': 'true'`; `_SUCCESS` + 4-75 files + 0.2-0.7 GB per hour; event log `speculative_tasks > 0`, no `CommitDenied`/`FileAlreadyExists` failures; stamp `applied` on the 11 site_network_hourly keys present at merge; three sweeps.

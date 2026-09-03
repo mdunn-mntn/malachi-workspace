@@ -4,7 +4,7 @@ title: "AUDI-1279: OpenAI batch pipeline observability: dead-cohort alarm and st
 status: in_progress
 date: 2026-09-02
 summary: "shopper_graph: log per-batch status at every transition, alarm when 0 of N progress"
-result: "PR shopper_graph#305 open (2026-09-03 PT, reviewers theastrocat + alyson-mntn): per-batch status lines in batch_transition and batch_fetch, batch_fetch fails on a dead cohort (0 of N progressed, youngest >= 12 h); alarm shown firing in a staged run against the dev bucket; 16 unit tests; prod deploy waits on Brian's or Alyson's written OK"
+result: "shopper_graph#305 MERGED 2026-09-03 18:39 UTC (commit 85855ce) and DEPLOYED the same day: per-batch status lines in batch_transition and batch_fetch, batch_fetch fails on a dead cohort (0 of N progressed, youngest >= 12 h), plus the zero-delete storage alarm folded in for AUDI-1321 (raises when every eligible delete fails, and when the sweep frees nothing while >= STORAGE_ALARM_MIN_FILES files are still stored, default 10,000). Alarm shown firing in a staged run against the dev bucket; 16 unit tests."
 question: "Can the shopper_graph batch pipeline log every batch's OpenAI-side status and error at each transition check, and alarm when 0 of N batches have progressed N hours after submit?"
 framing_state: locked
 ---

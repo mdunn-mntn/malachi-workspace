@@ -1,12 +1,12 @@
 ---
 doc_type: epic
 title: "AUDI-1290: Pipeline Optimization Hackathon"
-status: backlog
+status: in_progress
 date: 2026-09-02
 summary: "Fall tech-debt hackathon: cut Spark and BQ waste found by the optimizer, close Aug alerting gaps"
-result: "not started"
+result: "12-PR merge train shipped 2026-09-03: all 11 airflow-ti PRs merged and each individually deployed, plus shopper_graph #305. Only airflow-camperbid #580 is left, blocked on that team (now Tony Chen's). Savings measured to date are ~$5, not the ~$900 once claimed — see §4."
 question: ""
-framing_state: draft
+framing_state: "skip: epic — framing is locked per child ticket (AUDI-1269..1281, 1316, 1317)"
 ---
 
 # AUDI-1290: Pipeline Optimization Hackathon
@@ -72,20 +72,97 @@ Per-ticket outcome, 2026-09-03:
 | AUDI-1280 | 32 of 67 alerting DAGs were unwatched; one tag fixes 25, CI blocks the next miss | airflow-ti #1274 |
 | AUDI-1281 | Regression guard flags a seeded 2x spill and fetch-wait on two pipelines | airflow-ti #1279 |
 
+### PR numbers, ticket numbers and worktree names are all OFFSET in this batch — resolve the branch, never the number
+
+The PR number does NOT match the AUDI number it implements. PR #1273 is AUDI-1269 on branch
+`audi-1269-shuffle-partitions-preverified`; PR #1271 is AUDI-1275; PR #1279 is AUDI-1281. Three different
+numbering spaces (Jira issue, GitHub PR, worktree/branch) drifted apart because the tickets were filed before
+the PRs were opened and the PRs did not open in ticket order.
+
+**Always resolve the worktree from `gh pr view <N> --json headRefName`, never from the PR number.** The first
+rebase attempt of the merge train merged main into the wrong branch — one that was already merged — because
+the number looked like it matched. Verified mapping, read from GitHub 2026-09-03:
+
+| PR | Ticket | Branch |
+|---|---|---|
+| #1270 | AUDI-1274 | `audi-1274-aqe-advisory-pivot` |
+| #1271 | AUDI-1275 | `audi-1275-straggler-gcs-writers` |
+| #1272 | AUDI-1273 | `audi-1273-max-partition-bytes` |
+| #1273 | AUDI-1269 | `audi-1269-shuffle-partitions-preverified` |
+| #1274 | AUDI-1280 | `audi-1280-debugger-tag-coverage-ci` |
+| #1275 | AUDI-1270 | `audi-1270-shuffle-partitions-verify-first` |
+| #1276 | AUDI-1276 | `audi-1276-join-skew` |
+| #1277 | AUDI-1277 | `audi-1277-bq-profile-parent-jobs` |
+| #1278 | AUDI-1278 | `audi-1278-bq-job-labels` |
+| #1279 | AUDI-1281 | `audi-1281-perf-regression-guard` |
+| #1281 | AUDI-1272 | `audi-1272-initial-executors-verify-first` |
+
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+
+### The 12-PR merge train shipped 2026-09-03
+
+All 11 airflow-ti PRs merged, each one individually deployed before the next merge. Ordered by merge time, with
+the squash commit on main:
+
+| Order | PR | Ticket | Merge commit | Merged (UTC) |
+|---|---|---|---|---|
+| 1 | #1277 | AUDI-1277 | `b836214` | 19:10 |
+| 2 | #1278 | AUDI-1278 | `fc51c0c` | 19:18 |
+| 3 | #1274 | AUDI-1280 | `4091d33` | 19:29 |
+| 4 | #1279 | AUDI-1281 | `090a58f` | 19:37 |
+| 5 | #1270 | AUDI-1274 | `ca3b9e4` | 19:44 |
+| 6 | #1272 | AUDI-1273 | `370f2bd` | 19:47 |
+| 7 | #1276 | AUDI-1276 | `fac8e94` | 19:50 |
+| 8 | #1273 | AUDI-1269 | `96b020e` | 19:56 |
+| 9 | #1275 | AUDI-1270 | `f58f756` | 20:04 |
+| 10 | #1281 | AUDI-1272 | `cd353d7` | 20:12 |
+| 11 | #1271 | AUDI-1275 | `b9428f4` | 20:20 |
+
+Plus **shopper_graph #305** (AUDI-1279, merged 18:39, commit `85855ce`, deployed same day).
+
+**Wait for a DEPLOYED status between merges.** Merging the next PR before the previous one's Astro build
+finished would leave a superseded-build gap where a merged change never reaches prod. Each Astro build took
+roughly **4 to 8 minutes** end to end, which is what paced the ~70-minute train.
+
+**Left over: airflow-camperbid #580** (AUDI-1277's skip gate plus the histogram dedup key), open and blocked on
+the owning team. Route it to **Tony Chen**, who owns the camperbid and pacing pipelines now.
+
+### Ryan Kleck's review caveat on speculation (AUDI-1275 / PR #1271)
+
+Recorded on the PR: **with skew, `spark.speculation` often just adds executors**, because the duplicate attempts
+chase the same long tail rather than shortening it. A speculative copy of a task that is slow because it holds
+more data is just as slow, and you pay for both.
+
+This is now the canary's **kill criterion**: kill it if executor-hours rise while wall-clock stays flat. That is
+the exact signature of speculation buying nothing, and it is measurable on the existing ledger without any new
+instrumentation.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+
+- **Q:** How much has the optimizer actually saved so far?
+  **A:** About **$5**, not the ~$900 that circulated earlier. The ledger shows **19.4 executor-hours** credited
+  to fangorn PR #1231 on **one observed day**, at the blended **$0.28/exec-h** rate. Mode's headline `$0` is a
+  rounding artifact of a real ~$5, not a broken ledger. The two spill findings from that same PR are still
+  `watching` — they never reached `resolved` — and are chronic again. Any doc implying ~$900 is wrong.
+- **Q:** Why did the sweep flag a camperbid job and open a PR against another team's repo?
+  **A:** By design. The optimizer's BigQuery surface is scoped by **service account**, not by team — see §7.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+
+- `knowledge/memory/reference_bq_job_attribution.md` — the BQ surface is scoped by SERVICE ACCOUNT, not team.
+  `include/spark_optimizer/bq_profile.py` `SAS` defaults to `airflow-ti-prod@mntn-prj-prod-00...` **plus**
+  `airflow-camperbid-prod@mntn-prj-prod-00...` (env `OPTIMIZER_BQ_SAS`). The Spark surface excludes other teams
+  by team label (`phs.TEAM`); the BQ surface never did. That is why the sweep flagged the camperbid
+  `bos__spend` / `flight_metrics_per2388` job and produced airflow-camperbid #580. Not a leak.
+- `knowledge/memory/reference_airflow_ti.md` — the actual merge order, the deploy-between-merges rule, the
+  PR/ticket/branch offset, and the red `spark-optimizer` CI job that #1277 fixed.
+- `knowledge/memory/project_airflow_optimizer.md` — merge train, honest savings number, speculation caveat.
+- `knowledge/mntn_business.md` — Tony Chen owns camperbid/pacing (Forrest Bajbek has left).
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+
+- **airflow-camperbid #580** — open, blocked on Tony Chen's team. His stated position: prioritize stability,
+  since those pipelines may be migrated away from anyway. Swapnil Patil also pulled in.
+- **AUDI-1275 canary** — watch `site_network_hourly` executor-hours vs wall-clock against Ryan's kill criterion.
+- **Fangorn spill re-fix** — #1231's spill half never held; the two findings are chronic again.
+- The AUDI-1275 manifest-committer pair (`advertiser_join` / `prospecting_join`) stays owner-gated pending Ryan.

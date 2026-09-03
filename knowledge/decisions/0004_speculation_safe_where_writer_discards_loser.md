@@ -5,7 +5,7 @@ summary: "spark.speculation=true is safe for a Spark application only when every
 status: accepted
 date: 2026-09-02
 last_verified: 2026-09-03
-keywords: [spark.speculation, straggler, GCS writer, FileOutputCommitter v2, OutputCommitCoordinator, CommitDeniedException, Iceberg SparkWrite, manifest committer, site_network_hourly, canary, PR 1271, audience_intent scoring, advertiser_join, prospecting_join, AUDI-1275, AUDI-1290]
+keywords: [spark.speculation, straggler, GCS writer, FileOutputCommitter v2, OutputCommitCoordinator, CommitDeniedException, Iceberg SparkWrite, manifest committer, site_network_hourly, canary, PR 1271, audience_intent scoring, advertiser_join, prospecting_join, AUDI-1275, AUDI-1290, ryan kleck speculation caveat, speculation adds executors under skew, canary kill criterion, executor-hours rise wall-clock flat, speculative_tasks fires not helps, merged b9428f4]
 supersedes: null
 tags: [spark, airflow-ti, optimizer]
 ---
@@ -44,6 +44,22 @@ three clean optimizer sweeps on the canary plus Ryan's answer to the Slack ask; 
   in the Slack draft); either removes the need for speculation there but touches his pipelines.
 - **Memo and ask only, no PR (the §0 fallback)** — not taken: a remedy was provable from source, and only a prod run
   turns the source reading into a prod fact.
+
+## Amendment 2026-09-03 — merged, plus Ryan Kleck's caveat, which becomes the canary's kill criterion
+
+The canary **merged 2026-09-03 20:20 UTC** (PR #1271, branch `audi-1275-straggler-gcs-writers`, squash `b9428f4`) and
+deployed. Note the numbering offset: **PR #1271 is AUDI-1275**, not AUDI-1271.
+
+Ryan's review added a caveat this decision did not carry, and it is about EFFICACY, not safety: **with skew,
+speculation often just adds executors**, because the duplicate attempts chase the same long tail rather than
+shortening it. A speculative copy of a task that is slow *because it holds more data* is exactly as slow, and both
+attempts are billed. Safety (does the writer discard the loser) and usefulness (does the tail shorten) are separate
+questions, and this decision only settled the first.
+
+**Kill criterion for the canary: kill it if executor-hours rise while wall-clock stays flat.** That is the exact
+signature of speculation buying nothing. Both numbers are already on the optimizer ledger, so nothing new needs
+instrumenting. Corollary for reading the post-merge watch: `speculative_tasks > 0` proves speculation is FIRING, not
+that it is HELPING.
 
 ## Consequences
 - Straggler recommendations on GCS writers are decided by writer class per application, not by the straggler stage;

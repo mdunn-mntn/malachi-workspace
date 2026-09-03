@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1321: OpenAI storage sweep could not see past the newest 10,000 files"
-status: backlog
+status: in_progress
 date: 2026-09-03
 summary: "The MNTN Matched keyword pipeline stalled 2026-08-28 on the OpenAI project's 2.5TB storage ceiling. Root cause: the nightly cleanup lists files newest-first and the API caps a page at 10,000, so on a heavy day every slot on that page is younger than the sweep's 48h delete floor and it frees nothing — exactly when churn is highest. Fix shipped in shopper_graph #306 (order=asc + explicit paging); the six blocked days still need backfilling. Split out of AUDI-1191, which caught it live."
-result: "not started — #306 merged and deployed 2026-09-03 (first live sweep deleted 1,132 of 1,132 with 0 skips, where every run since 08-29 deleted 0). Submit run for logical 2026-09-02 in flight as the quota test; backfill of dt=2026-08-27..09-01 pending its outcome."
+result: "Quota wall RESOLVED and proven 2026-09-03. #306 deployed 15:50; the next cleanup deleted 1,132 of 1,132 files with 0 skips (every run 08-29..09-03 had deleted 0), and batch_submit on submit logical 2026-09-02 then SUCCEEDED at ~19:00 UTC after ~57 minutes — the first green submit since 08-28, where every prior attempt died in ~27 seconds on a storage 400. The §0 kill criterion never triggered: the storage was ours and the list-order defect was the entire cause. shopper_graph #305 (merged + deployed same day) adds the zero-delete alarm. Remaining: backfill dt=2026-08-27..09-01 one day at a time."
 question: "Does a correctly ordered file sweep free enough of the OpenAI 2.5TB ceiling for batch_submit to run again, and how much of the 08-27 to 09-01 gap is worth recovering?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1321: OpenAI storage sweep could not see past the newest 10,000 files
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1321
-**Status:** backlog
+**Status:** in_progress
 **Date Started:** 2026-09-03
 **Assignee:** Malachi
 
@@ -61,6 +61,7 @@ the pipeline sat blocked until a human looked.
    confirm the sweep deletes a real set. **Done** — 1,132 of 1,132 deleted, 0 skips.
 3. Confirm `batch_submit` clears the quota on that same run. This is the discriminating test for §0's kill
    criterion: a 400 here means the storage is not ours and the ticket escalates instead of continuing.
+   **Done 2026-09-03** — it cleared. See §4.
 4. Backfill `dt=2026-08-27` alone — delete its partial receipts, clear submit, wait ~2h for the OpenAI
    batches, then clear fetch `dt=2026-08-28`. Record the wall-clock and dollar cost.
 5. Decide from step 4 whether the remaining five days (08-28 → 09-01) are worth replaying or are documented
@@ -78,25 +79,89 @@ the pipeline sat blocked until a human looked.
 fails on every backfilled fetch day regardless of correctness. Mark it success; do not rerun it.
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+### The quota wall is resolved, and the ordering defect was the whole cause (2026-09-03)
+
+Three observations, in the order they landed, each one a step of the discriminating test in §3:
+
+1. **The fix deployed at 15:50.** shopper_graph #306 (`order="asc"` plus explicit paging, breaking at the
+   first file inside the 48h retention window) merged 15:49:43 UTC and the image shipped via
+   `deploy_openai_dockerhub_gcp.yml` minutes later.
+2. **The next sweep deleted 1,132 of 1,132 eligible files with 0 skips.** Every `delete_all_storage_files.py`
+   run from 2026-08-29 through 2026-09-03 on the old image had logged `Total number of files to delete: 0`.
+   The count did not creep up; it went from nothing to the whole eligible set on the first run of the new
+   code, which is what an ordering defect predicts and what a genuinely-full shared account does not.
+3. **`batch_submit` on submit logical 2026-09-02 then SUCCEEDED at roughly 19:00 UTC after running about
+   57 minutes.** Every prior attempt since 2026-08-28 had died in about 27 seconds on
+   `400 ... exceeded your file storage quota. Projects are limited to 2.5TB`. This is the first green submit
+   since 08-28. The 27-seconds-versus-57-minutes gap is itself the tell: the old failures never got past the
+   upload, the new run did the work.
+
+**The §0 kill criterion never triggered.** §0 set the stop line as "if `batch_submit` still returns a storage
+400 after a sweep that provably deleted its full eligible set, the storage is not ours — escalate to Alyson
+for OpenAI dashboard visibility rather than chasing files this pipeline does not own." The sweep provably
+deleted its full eligible set and the submit went green on the same run, so the storage was ours and the
+list-order defect accounted for the entire outage. No escalation, no dashboard ask, and the assumption in
+§0's Approach (that the 2.5TB was held by files matching `part-*` / `batch_*`, the only names our sweep
+touches) is confirmed by the fact that deleting only those names cleared the ceiling.
+
+### A zero-delete sweep now alarms (shopper_graph #305, merged 18:39 UTC and deployed 2026-09-03)
+
+`delete_all_storage_files.py` gained two raises: one when every eligible delete fails, and one when the sweep
+frees nothing while at least `STORAGE_ALARM_MIN_FILES` (default 10,000) files are still stored. Normal daily
+volume is a few hundred to about 1,200 files, so a genuinely quiet day stays silent and only the failure mode
+that caused this outage trips the alarm.
+
+**Why the threshold is a file count and not bytes:** the sweep already lists files and counts them, so the
+count is free; bytes would need a second pass. 10,000 is the API's own page cap, which is the exact number at
+which the old defect became total.
+
+**This is the part worth carrying forward.** A sweep that deletes zero files is byte-for-byte
+indistinguishable in the logs from a sweep with nothing to do. That is why the 2026-08-28 outage ran silent
+for six days with a green cleanup task every single day. An operation whose success state and whose total
+failure state emit the same output has no observability at all, however green it looks.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+
+- **shopper_graph #306** (merged 2026-09-03 15:49:43 UTC, deployed 15:50): `delete_all_storage_files.py` lists
+  `order="asc"` with explicit paging and breaks at the first file inside the 48h retention window. Ascending
+  is also faster in steady state — page one starts at the oldest file and the loop exits at the cutoff,
+  usually in one API call, where descending had to page past every young file to reach the old ones.
+- **shopper_graph #305** (merged 2026-09-03 18:39:11 UTC, commit `85855ce`, deployed same day): the
+  zero-delete alarm described in §4, shipped on AUDI-1279's observability PR rather than a separate one so the
+  OpenAI pipeline had a single observability change to review.
+- **Validated in prod the same day:** 1,132 of 1,132 deleted, `batch_submit` green on submit logical
+  2026-09-02.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+
+- **Q:** Does a correctly ordered file sweep free enough of the OpenAI 2.5TB ceiling for `batch_submit` to run
+  again?
+  **A:** Yes, on the first run. One sweep on the new image deleted 1,132 of 1,132 eligible files and
+  `batch_submit` succeeded about 57 minutes later, after six days of ~27-second storage 400s.
+- **Q:** Is the storage ceiling ours to manage, or a shared-account problem needing OpenAI dashboard access?
+  **A:** Ours. The §0 kill criterion never triggered. Deleting only the files our own sweep owns
+  (`part-*` / `batch_*`) cleared the ceiling, so no other producer was holding the 2.5TB.
+- **Q:** Can this failure mode recur silently?
+  **A:** No longer. #305 raises on a zero-delete sweep while at least `STORAGE_ALARM_MIN_FILES` (default
+  10,000) files are still stored, and on every-eligible-delete-failing.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+
+- `knowledge/memory/reference_openai_sdk_pagination.md` — the trap-2 section marked RESOLVED with the green
+  submit as the proof, and the general rule for age-based cleanups over cursor-paged list APIs.
+- `knowledge/memory/reference_mntn_matched_batch_pipeline.md` — #305 moved from OPEN/not-deployed to merged
+  and deployed; the zero-delete alarm recorded; the "no further submit clears until OpenAI storage is freed"
+  blocker cleared.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+
+- **Backfill `dt=2026-08-27..09-01`, one day at a time** (§3 steps 4-5). All five partial partitions still
+  hold `was_submitted=False` receipts with live OpenAI batch ids, so each day's receipts must be deleted
+  AGAIN before its re-run or the double-submission guard trips. `dt=2026-09-01` has no receipts at all.
+- **Price 08-27 before committing to the remaining five** — §0 leaves open whether a recovered day is still
+  useful downstream.
+- `batch_test.test_product_categorization` will false-fail on every backfilled fetch day (wall-clock `max_dt`).
+  Mark it success; do not rerun.
+- **AUDI-1301 (backlog)** — dedicated OpenAI project, audit logging, and a permissions group; unchanged by
+  this ticket.

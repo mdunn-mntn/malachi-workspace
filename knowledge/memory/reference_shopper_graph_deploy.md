@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py, ti_argocd_logs, pod logs GCS, VERTICAL_HANDLER COMPLETE, SCRAPING FAILED, VALIDATION PASSED, AUTOPILOT_FROM_URL 429, pr_openai.yml, Dockerfile.test, openai CI no pandas, importorskip pandas, isort flake8 mypy pytest openai, get_s3_bucket f-string, env staging prefix, mntn-data-archive-dev write, staged test dev bucket, github environments dev prod protection_rules, custom_branch_policies, workflow_dispatch no reviewer, deploy_openai_dockerhub_gcp id 192234555, self-merge contradiction, mdunn-mntn merged own PRs, branch protection main, AUDI-1279, shopper_graph#305]
+keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py, ti_argocd_logs, pod logs GCS, VERTICAL_HANDLER COMPLETE, SCRAPING FAILED, VALIDATION PASSED, AUTOPILOT_FROM_URL 429, pr_openai.yml, Dockerfile.test, openai CI no pandas, importorskip pandas, isort flake8 mypy pytest openai, get_s3_bucket f-string, env staging prefix, mntn-data-archive-dev write, staged test dev bucket, github environments dev prod protection_rules, custom_branch_policies, workflow_dispatch no reviewer, deploy_openai_dockerhub_gcp id 192234555, self-merge contradiction, mdunn-mntn merged own PRs, branch protection main, AUDI-1279, shopper_graph#305, shopper_graph#306, patch.dict sys.modules trap, sys.modules stub removed on exit, second copy of module imported, patch never reaches class under test, to_parquet call_count 0, gcsfs missing test image, repo openai dir shadows sdk, namespace package shadowing, openai_wrapper batch_fetcher import, openai_wrapper batch_transitioner import, eef911c]
 domain: [repos, infra, routing-people]
 lifecycle: active
 last_verified: 2026-09-03
@@ -99,6 +99,29 @@ after a Dockerfile change). So: parsing/alarm logic lives in a stdlib-only modul
 regular site-packages package beats a namespace dir in the import scan). `openai/` and `openai/openai_wrapper/` have no
 `__init__.py`; the runtime imports `openai_wrapper.*` with `/app` as cwd.
 
+### Importing the wrappers under test: two stubs, and ONE way to install them (learned by breaking CI, PR #305, commit `eef911c`)
+
+To import `openai_wrapper.batch_fetcher` / `batch_transitioner` in a unit test, **two things must be stubbed**:
+1. **The repo's own `openai/` directory shadows the installed `openai` SDK.**
+2. **`gcsfs` is absent from the test image.**
+
+**CONTRADICTION, appended not overwritten.** The paragraph above says `sys.path.insert(0, <repo>/openai)` does NOT shadow the
+installed SDK — evidence: reasoning about the import scan (a regular site-packages package beats a namespace dir),
+verified 2026-09-03. The new claim is that the repo `openai/` DOES shadow it — evidence: CI actually broke on PR #305,
+2026-09-03, which is the stronger evidence class. **Reconciling hypothesis:** the two describe different sys.path entries.
+Inserting `<repo>/openai` puts the wrapper modules on the path and leaves `import openai` resolving to site-packages, as the
+old line says; but when **`<repo>` itself** is on sys.path (pytest rootdir insertion, or `/app` as cwd), the directory
+`<repo>/openai/` becomes an implicit **namespace package literally named `openai`** and wins. **Settling check:** print
+`openai.__file__` / `openai.__path__` under the exact CI invocation (`python -m pytest ... tests/unit` from `/app`) and see
+which one binds.
+
+**CRITICAL GOTCHA — do NOT install the stubs via `patch.dict(sys.modules, ...)`.** On context exit `patch.dict` RESTORES the
+dict to its prior contents, which **REMOVES the newly imported wrapper modules from `sys.modules`** (they were not there when
+the patch started). A later `patch("openai_wrapper.batch_base.OpenAI", ...)` then re-imports a **SECOND copy** of the module,
+so the patch lands on a class the code under test never uses. **Symptom: `to_parquet.call_count == 0`** with no error and no
+obvious cause. Install the stubs **once, at module scope, and only when the real import or its attribute genuinely fails** —
+never inside a context manager whose exit undoes the import side effects.
+
 ## Staging the batch runner without prod access (verified 2026-09-03, AUDI-1279)
 `batch_base.get_s3_bucket()` is the plain f-string `f"mntn-data-archive-{env}"`, so **`env=dev/shopper_graph/audi_1279_staging`
 points every `gs://{bucket}/shopper_graph/...` path at a prefix inside the dev bucket with no code change.**
@@ -128,7 +151,11 @@ only with Brian McAdams' or Alyson Lefkowitz's written OK; a deploy after 09:00Z
   airflow-side durable follow-ups (direct `batch_fetch` alerting / DAG-dependency hardening).
 - A **new OpenAI quota-increase ticket** (from Alyson) may land on Malachi; Victor had a prior ticket for
   it. Distinct from the file-hygiene fix (AUDI-1042 — Malachi's, **In Progress + P1-Critical**, cleanup
-  fix shipped via **#298** 2026-07-30 after #297 regressed, storage-drop validation pending — INC-007 / IMP-013).
+  fix shipped via **#298** 2026-07-30 after #297 regressed — INC-007 / IMP-013). **Storage-drop validation is no
+  longer pending: it landed 2026-09-03 under AUDI-1321** — `#306` made the sweep list oldest-first, the first run on
+  the new image deleted 1,132 of 1,132 files, and `batch_submit` went green for the first time since 08-28. `#305`
+  (merged + deployed the same day) added the zero-delete alarm. See [[reference_openai_sdk_pagination]],
+  [[reference_mntn_matched_batch_pipeline]].
 
 See [[reference_airflow_ti]] (our model-repo deploy flow — a different, GCS→bundle path),
 [[reference_oncall_runbook]] (INC-006 fetch bug #296, INC-007 quota AUDI-1042),

@@ -2,8 +2,8 @@
 doc_type: glossary
 title: Glossary — MNTN terms, acronyms & concepts → where the authority lives
 summary: "business term / acronym / concept → one-line definition + pointer to the authoritative doc or data_knowledge.md section. Load this instead of grepping 465 KB of prose."
-last_verified: 2026-07-19
-keywords: [glossary, terms, acronyms, definitions, VV, HHST, HI, PP, MM, RTC, DS, BUK, funnel_level, holdout, attribution, waypoint, fangorn, ghost-bid, unattributed bq jobs, airflow-dag label]
+last_verified: 2026-09-03
+keywords: [glossary, terms, acronyms, definitions, VV, HHST, HI, PP, MM, RTC, DS, BUK, funnel_level, holdout, attribution, waypoint, fangorn, ghost-bid, unattributed bq jobs, airflow-dag label, dead cohort, zero-delete sweep, superseded build gap, optimizer bq surface scope]
 ---
 
 # Glossary
@@ -80,6 +80,9 @@ For a table's schema/grain/cost, start at [`bq/_CATALOG_INDEX.md`](bq/_CATALOG_I
 - **BQ job location** — must be us-central1 (slot reservation); dataset-less/external-table queries default to US = on-demand $. → `data_catalog.md`, `.claude/CLAUDE.md` § BigQuery
 - **Unattributed BQ jobs (optimizer)** — fleet-SA jobs (`airflow-ti-prod@`, `airflow-camperbid-prod@`) in `dw-main-bronze.region-us-central1.INFORMATION_SCHEMA.JOBS_BY_PROJECT` whose `labels` carry no `airflow-dag`: python-client and Spark-BigQuery-connector submits, never the operator's. Lives only in the daily `optimizer_bq_<date>.md` report, not the ledger or Mode. → MEMORY `reference_bq_job_attribution`, `data_knowledge.md` § BigQuery Behavioral Gotchas
 - **Dead cohort (OpenAI batch)** — a day's `openai_batch_submissions/dt=` receipts where 0 of N batches ever progressed (`was_submitted` all False; live status outside in_progress/finalizing/completed with 0 completed requests). After shopper_graph#305 `batch_fetch` fails with `DeadCohortError` once the youngest receipt is ≥ 12 h old (`DEAD_COHORT_MIN_AGE_HOURS`). → `data_catalog.md` § shopper_graph/openai_batch_submissions, MEMORY `reference_mntn_matched_batch_pipeline`, decision 0006
+- **Zero-delete sweep (OpenAI cleanup)** — a `delete_all_storage_files.py` run that frees nothing. It is indistinguishable in the logs from a quiet day, which is why the 2026-08-28 quota outage ran silent for six days. Since shopper_graph#305 the script RAISES when it frees nothing while ≥ `STORAGE_ALARM_MIN_FILES` (default 10,000) files are still stored, and when every eligible delete fails. Normal volume is a few hundred to ~1,200 files/day. → MEMORY `reference_openai_sdk_pagination`, `reference_mntn_matched_batch_pipeline`, ticket AUDI-1321
+- **Superseded-build gap (Astro)** — merging the next PR before the previous one's Astro build reaches DEPLOYED can supersede that build, so a merged change never reaches prod while main and GitHub both look correct. Land a multi-PR batch serially, one merge per DEPLOYED (~4-8 min per airflow-ti build). → MEMORY `reference_airflow_ti`, decision 0008
+- **Optimizer BQ surface scope** — the optimizer's BigQuery surface is scoped by **service account** (`OPTIMIZER_BQ_SAS`, default `airflow-ti-prod@` + `airflow-camperbid-prod@`), NOT by team; the Spark surface excludes other teams by team label (`phs.TEAM`) but the BQ surface never did. That is why the sweep flags other teams' BQ jobs — by design. → MEMORY `reference_bq_job_attribution`, `project_airflow_optimizer`
 
 ## Where to go next
 | I need… | open |

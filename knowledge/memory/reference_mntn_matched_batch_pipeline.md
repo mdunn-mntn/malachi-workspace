@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp_reporting, keyword_ddp not blocked by batch_test, wait_for_product_categorization, ExternalTaskSensor product_categorization, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49, partial receipts partition, rerun submits quota failed, receipts rewritten new batch ids, object count not cohort size, AUDI-1279, shopper_graph#305, DeadCohortError, dead cohort alarm, batch_status.py, DEAD_COHORT_MIN_AGE_HOURS, retrieve_error, per-batch status line, cohort summary line, assert_cohort_alive, retrieve_batch, PYTHONUNBUFFERED, Batch.status literal, request_counts, openai 3.7.0, pandas 3 str dtype, unpinned image, monitor-emr, JobTeamConfig.ML, severity 5 no pagerduty, shopper_graph#306, order asc cleanup, files.list 10000 cap, cleanup deletes nothing, 404 No such File object race, cleanup race two dags, Total number of files to delete 0, quota root cause list order, delete receipts again partial]
+keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp_reporting, keyword_ddp not blocked by batch_test, wait_for_product_categorization, ExternalTaskSensor product_categorization, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49, partial receipts partition, rerun submits quota failed, receipts rewritten new batch ids, object count not cohort size, AUDI-1279, shopper_graph#305, DeadCohortError, dead cohort alarm, batch_status.py, DEAD_COHORT_MIN_AGE_HOURS, retrieve_error, per-batch status line, cohort summary line, assert_cohort_alive, retrieve_batch, PYTHONUNBUFFERED, Batch.status literal, request_counts, openai 3.7.0, pandas 3 str dtype, unpinned image, monitor-emr, JobTeamConfig.ML, severity 5 no pagerduty, shopper_graph#306, order asc cleanup, files.list 10000 cap, cleanup deletes nothing, 404 No such File object race, cleanup race two dags, Total number of files to delete 0, quota root cause list order, delete receipts again partial, AUDI-1321, quota wall closed, first green submit since 08-28, batch_submit 57 minutes, 1132 of 1132 deleted, storage was ours, kill criterion never triggered, zero-delete alarm, STORAGE_ALARM_MIN_FILES, shopper_graph 305 merged deployed, 85855ce]
 domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-09-03
@@ -179,8 +179,8 @@ via `deploy_openai_dockerhub_gcp.yml`.
   All three listed partitions stop at 05:41:12-13Z (one process, killed or finished together).
 - **Rules that follow:** a `dt=` object count is not a cohort size; a partial partition trips the double-submission guard, so
   re-running a day needs its receipts deleted AGAIN; no further submit clears until OpenAI storage is freed —
-  **RESOLVED 2026-09-03 by the `order="asc"` cleanup fix `shopper_graph#306`, NOT by a dashboard bulk-delete** (storage-economics
-  section above) — then ONE day at a time. The scheduled fetch for `yesterday=2026-09-01` finds no prefix (today: `FileNotFoundError` in
+  **RESOLVED AND PROVEN 2026-09-03 by the `order="asc"` cleanup fix `shopper_graph#306`, NOT by a dashboard bulk-delete**
+  (storage-economics section above; proof in the AUDI-1321 section at the end of this file) — then ONE day at a time. The scheduled fetch for `yesterday=2026-09-01` finds no prefix (today: `FileNotFoundError` in
   `get_batch_ids`; after #305 `assert_cohort_alive` returns first and `get_batch_ids` still raises).
 - **Recovery state to resume from:** all five partial partitions (`dt=08-27` 742 rows, `08-28` 791, `08-29` 653, `08-30` 510,
   `08-31` 733, every row `was_submitted=False`) hold NEW batch ids that are live at OpenAI, so **their receipts must be deleted
@@ -192,15 +192,21 @@ via `deploy_openai_dockerhub_gcp.yml`.
   `ExternalTaskSensor` targets **`batch_post.product_categorization`** (upstream of `batch_test`, so a red `batch_test` never
   blocks it — clear the sensor independently).
 
-## 2026-09-03 — AUDI-1279: per-batch status lines + a dead-cohort alarm (shopper_graph#305, OPEN, not deployed)
-Extends "the parquet flags are the only automated visibility" (appended, not overwritten): once #305 is deployed the pod logs
-become the second signal; the flags stay the only key-free, dashboard-free one. Ticket:
+## 2026-09-03 — AUDI-1279: per-batch status lines + a dead-cohort alarm (shopper_graph#305, MERGED 18:39 UTC, commit `85855ce`, DEPLOYED same day)
+Extends "the parquet flags are the only automated visibility" (appended, not overwritten): **#305 is deployed as of
+2026-09-03**, so the pod logs ARE now the second signal; the flags stay the only key-free, dashboard-free one. Ticket:
 `tickets/audi_1290_pipeline_optimization_hackathon/audi_1279_openai_batch_observability/summary.md`; decision
 `knowledge/decisions/0006_dead_cohort_alarm_is_batch_fetch_failure.md`.
 - **What ships:** new `openai/openai_wrapper/batch_status.py` (stdlib only); `batch_base.retrieve_batch(batch_id)` returns the
   Batch or the exception; `batch_transitioner` prints one line per unflagged receipt and now flags `was_submitted` on `finalizing`
   too (was `in_progress`/`completed` only); `batch_fetcher.assert_cohort_alive()` runs before `get_batch_ids()` in
   `fetch_results.py`; `openai/Dockerfile` gets `ENV PYTHONUNBUFFERED=1`; `tests/unit/test_openai.py` 0 -> 16 tests.
+  **Plus the zero-delete storage alarm (added to #305 rather than a separate PR, so the pipeline had one observability
+  change to review):** `delete_all_storage_files.py` raises when EVERY eligible delete fails, and when it frees
+  **nothing** while at least `STORAGE_ALARM_MIN_FILES` (env, default **10,000**) files are still stored. Normal volume is
+  a few hundred to ~1,200 files/day, so a quiet day stays silent; the guard is straight-line script code with no import
+  surface, so it carries no unit test. Rationale: a sweep that deletes zero is indistinguishable in the logs from a quiet
+  day, which is exactly why the 08-28 outage stayed silent for six days. See [[reference_openai_sdk_pagination]].
 - **Log shape:** `batch=<id> file=<s3_filename> status=<status> submitted_utc=<iso> age_h=<x.x> counts=<completed>/<failed>/<total>
   error=<code>: <message>` per receipt, then `cohort dt=<D>: n=<N> in_progress=.. finalizing=.. completed=.. validating=.. failed=..
   expired=.. cancelling=.. cancelled=.. retrieve_error=.. other=.. flagged_now=..`. A `retrieve` exception is logged as
@@ -226,3 +232,25 @@ become the second signal; the flags stay the only key-free, dashboard-free one. 
   3.0.5, pyarrow 25.0.1, gcsfs 2026.8.0; pandas 3 reads the receipts' string columns as `str` dtype (2.x: `object`), `.query()`
   unchanged. A future SDK field rename degrades to `retrieve_error` lines plus a dead-cohort alarm, not a crash. Staging recipe,
   CI limits and deploy gates: [[reference_shopper_graph_deploy]].
+
+## 2026-09-03 (evening) — AUDI-1321: the six-day quota wall is CLOSED, proven by a green submit
+
+The blocker every section above defers to ("no further submit clears until OpenAI storage is freed") is cleared. Sequence:
+- **15:50** — `shopper_graph#306` (`order="asc"` + explicit paging) deployed.
+- **Next cleanup** — deleted **1,132 of 1,132** eligible files, **0 skips**. Every run 2026-08-29 → 09-03 on the old image had
+  logged `Total number of files to delete: 0`. It went from nothing to the entire eligible set on the first run of the new code.
+- **~19:00 UTC** — **`batch_submit` on submit logical 2026-09-02 SUCCEEDED after running ~57 minutes.** First green submit since
+  **2026-08-28**. Every prior attempt died in **~27 seconds** on `400 ... exceeded your file storage quota`; the runtime gap is
+  the tell, since the old failures never got past the upload.
+- **18:39** — `shopper_graph#305` merged (commit `85855ce`) and deployed, adding the zero-delete alarm described above.
+
+**AUDI-1321's kill criterion never triggered.** It read: "if it still 400s after a sweep that provably deleted its full eligible
+set, the storage is not ours — escalate to Alyson for OpenAI dashboard access." The sweep provably deleted its full set and the
+submit went green on the same run, so **the storage WAS ours and the list-order defect accounted for the entire outage**.
+Deleting only the names our own sweep touches (`part-*` / `batch_*`) cleared the 2.5TB, which also confirms no other producer was
+holding it. Do not reopen the shared-account hypothesis without new evidence.
+
+**Still open:** backfill `dt=2026-08-27..09-01` one day at a time per the per-day order above; all five partial partitions still
+hold `was_submitted=False` receipts with LIVE batch ids, so each day's receipts must be deleted AGAIN before its re-run or the
+double-submission guard trips. `dt=2026-09-01` has no receipts at all. Ticket:
+`tickets/audi_1321_openai_storage_quota_unblock/summary.md`. Trap detail: [[reference_openai_sdk_pagination]].

@@ -549,7 +549,8 @@ All three yes → valid ghost-bid candidate for that campaign. All three fields 
 | **@SteelHouse/rtb (fcap crate owners)** | Own the `rtb-campaign-service` frequency-cap crate — the fcap knob. Authors/maintainers: **snowsignal (Jane Lewis, crate author)**, **rogusdev (Chris Rogus)**, **RockyGitHub (Chris Davidoff)**. Route any per-household fcap / cap-arm feature request here (AUDI-1173: cap arms need NEW bidder code, `CampaignModel` has no per-household cap field). NOT jtang (audience-tools), NOT Zach/Jordan (audience-tools / `campaign.rs` routing). |
 | **Bryce Wagg** | TPM/Scrum Master for TGT Infrastructure squad. Runs standups, manages sprint workflow, Jira hygiene. Updated Jira workflow (2026-04-07): developer field auto-assigned on move to in-progress, must go through in-review → ready-for-deployment → done. |
 | **Rogus** | Engineering leadership. Announced Engineering Levels & Skills Rubric (2026-04-06). Driving Q2 shift to output-driven delivery. |
-| **Forrest** | Involved in continuous scoring POC/MVP timeline discussions. |
+| **Forrest Bajbek** | Was involved in continuous scoring POC/MVP timeline discussions and owned the camperbid/pacing pipelines. **HAS LEFT THE TEAM (confirmed 2026-09-03).** Route his former pipelines to Tony Chen. |
+| **Tony Chen** | **Owns the camperbid / pacing pipelines now** (2026-09-03, taking over from Forrest Bajbek). Route every camperbid pipeline question to him. His stated position on airflow-camperbid PR #580 (AUDI-1277's `flight_metrics_per2388` skip gate + `population_histogram` dedup key): **prioritize stability, since those pipelines may be migrated away from anyway** — so expect a high bar on any optimization PR against them and lead with the risk, not the savings. **Swapnil Patil** is also pulled in on #580. |
 | **Michelle** | Former GPM for targeting. Departed ~March 2026. Presented beta BUK campaign performance results |
 | **Richard** | Provided critical feedback on BUK experiment results ("numbers are bullshit" — size confounding) |
 | **Mike** | Sees value in BUK but needs clearer performance signal |
@@ -614,7 +615,8 @@ VVs / 19% of conversions on HHID (Jun 1-15).
 - **Audience Platform** (serving/membership): Jaime Mutale (audience-services RFD), Daniel Hartnett
   (MembershipDB AP-5385), **Zach Schoenberger** (SoT resolver + MID membership DB), Mike Dolt (infra budget).
 - **Bidder** (dual auction + cache blend, f-cap reset, BID-3356); **Pacing** (Swapnil Patil, HHST deprecation
-  PER-6688); **Measurement** (Nate Gardner; VV→Conversion + offline HHID match still to scope).
+  PER-6688; **the camperbid/pacing PIPELINES are Tony Chen's as of 2026-09-03**, taking over from Forrest
+  Bajbek, who has left); **Measurement** (Nate Gardner; VV→Conversion + offline HHID match still to scope).
 
 **Governing docs (TAR Confluence):** MNTN ID PRD (ID-327); RFDs — Feature-Store Data Path/IPDSC (Opt 1,
 Sean), Fangorn-Like Incrementality Uplift Model (Opt 2 draft, Matt), Audience-Services (Opt 1, Jaime),
