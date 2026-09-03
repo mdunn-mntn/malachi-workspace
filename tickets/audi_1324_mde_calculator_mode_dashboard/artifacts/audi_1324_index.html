@@ -540,18 +540,18 @@
         <div class="num-grid">
           <div class="num-group">
             <label class="num-lbl">BASELINE RATE %</label>
-            <input type="number" class="num-inp" id="inp-base" value="2.639" min="0.001" max="50" step="0.01">
+            <input type="number" class="num-inp" id="inp-base" value="2.561" min="0.001" max="50" step="0.01">
           </div>
           <div class="num-group">
             <label class="num-lbl">CPM ($)</label>
-            <input type="number" class="num-inp" id="inp-cpm" value="26.62" min="1" step="0.01">
+            <input type="number" class="num-inp" id="inp-cpm" value="26.6" min="1" step="0.01">
           </div>
         </div>
 
         <div class="num-grid">
           <div class="num-group">
             <label class="num-lbl">IMPS / IP</label>
-            <input type="number" class="num-inp" id="inp-imps" value="3.43" min="0.1" step="0.1">
+            <input type="number" class="num-inp" id="inp-imps" value="3.58" min="0.1" step="0.1">
           </div>
           <div class="num-group">
             <label class="num-lbl">ALPHA (α)</label>
@@ -682,13 +682,18 @@ window.__mdeHydrate = function () {
       pCvr: num(r.p_cvr),
       typical: num(r.typical_active_month_spend),
       maxMo: num(r.max_month_spend),
-      months: num(r.active_months_count)
+      months: num(r.active_months_count),
+      live: String(r.is_delivering).toLowerCase() === 'true',
+      lastDay: String(r.last_active_day || '').slice(0, 10),
+      daysOff: num(r.days_since_active)
     };
   }).filter(function (a) { return a.id && a.name; })
     .sort(function (a, b) { return b.spend30 - a.spend30; });
 
+  var live = window.ADVERTISERS.filter(function (a) { return a.live; });
+  var pool = live.length ? live : window.ADVERTISERS;
   var median = function (key) {
-    var v = window.ADVERTISERS.map(function (a) { return a[key]; })
+    var v = pool.map(function (a) { return a[key]; })
       .filter(function (x) { return x > 0; }).sort(function (a, b) { return a - b; });
     if (!v.length) return 0;
     var m = Math.floor(v.length / 2);
@@ -818,9 +823,9 @@ const S = {
   durationWk    : 8,        // 8-week default (cap 52)
   holdoutFrac   : 0.10,
   targetMdeRel  : 0.05,
-  baselineRate  : 0.026389999999999997,
-  cpm           : 26.62,
-  impsPerIp     : 3.43,
+  baselineRate  : 0.02561,
+  cpm           : 26.6,
+  impsPerIp     : 3.58,
   alpha         : 0.05,
   power         : 0.80,
   vrMode        : 'raw',
@@ -1129,8 +1134,8 @@ function renderAdvResults(result) {
     : `<div class="adv-item" style="cursor:default;opacity:0.7;background:var(--panel-2);"><span class="adv-item-name">${total} match${total===1?'':'es'}</span></div>`;
   box.innerHTML = hint + items.map(a =>
     `<div class="adv-item" data-id="${a.id}">
-       <span class="adv-item-name">${a.name}</span>
-       <span class="adv-item-meta">${a.id} · ${fmtBudget(a.spend30)}/30d</span>
+       <span class="adv-item-name">${a.name}${a.live ? '' : ' · LAPSED'}</span>
+       <span class="adv-item-meta">${a.id} · ${fmtBudget(a.spend30)}${a.live ? '/30d' : ' last active ' + a.lastDay}</span>
      </div>`).join('');
   box.classList.add('open');
   box.querySelectorAll('.adv-item').forEach(el => {
@@ -1173,7 +1178,9 @@ function renderAdvLoaded() {
   const a = S.advertiser;
   const box = document.getElementById('adv-loaded');
   if (!a) { box.classList.remove('on'); return; }
-  document.getElementById('adv-loaded-name').textContent = `${a.name} · ${a.id}`;
+  document.getElementById('adv-loaded-name').textContent = a.live
+    ? `${a.name} · ${a.id}`
+    : `${a.name} · ${a.id} · LAPSED ${a.daysOff}d (last active ${a.lastDay})`;
   document.getElementById('adv-stat-spend').textContent   = fmtBudget(a.spend30);
   document.getElementById('adv-stat-typical').textContent = fmtBudget(a.typical) + ` (${a.months}mo)`;
   document.getElementById('adv-stat-cpm').textContent     = '$' + a.cpm.toFixed(2);

@@ -37,13 +37,18 @@ window.__mdeHydrate = function () {
       pCvr: num(r.p_cvr),
       typical: num(r.typical_active_month_spend),
       maxMo: num(r.max_month_spend),
-      months: num(r.active_months_count)
+      months: num(r.active_months_count),
+      live: String(r.is_delivering).toLowerCase() === 'true',
+      lastDay: String(r.last_active_day || '').slice(0, 10),
+      daysOff: num(r.days_since_active)
     };
   }).filter(function (a) { return a.id && a.name; })
     .sort(function (a, b) { return b.spend30 - a.spend30; });
 
+  var live = window.ADVERTISERS.filter(function (a) { return a.live; });
+  var pool = live.length ? live : window.ADVERTISERS;
   var median = function (key) {
-    var v = window.ADVERTISERS.map(function (a) { return a[key]; })
+    var v = pool.map(function (a) { return a[key]; })
       .filter(function (x) { return x > 0; }).sort(function (a, b) { return a - b; });
     if (!v.length) return 0;
     var m = Math.floor(v.length / 2);

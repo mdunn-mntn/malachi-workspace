@@ -203,6 +203,28 @@ setOutcome = function(o) {
         "drop the setOutcome wrapper that shadows the fixed base",
     )
 
+    html = sub(
+        html,
+        """    `<div class="adv-item" data-id="${a.id}">
+       <span class="adv-item-name">${a.name}</span>
+       <span class="adv-item-meta">${a.id} \u00b7 ${fmtBudget(a.spend30)}/30d</span>
+     </div>`).join('');""",
+        """    `<div class="adv-item" data-id="${a.id}">
+       <span class="adv-item-name">${a.name}${a.live ? '' : ' \u00b7 LAPSED'}</span>
+       <span class="adv-item-meta">${a.id} \u00b7 ${fmtBudget(a.spend30)}${a.live ? '/30d' : ' last active ' + a.lastDay}</span>
+     </div>`).join('');""",
+        "picker flags lapsed advertisers",
+    )
+
+    html = sub(
+        html,
+        "  document.getElementById('adv-loaded-name').textContent = `${a.name} \u00b7 ${a.id}`;",
+        "  document.getElementById('adv-loaded-name').textContent = a.live\n"
+        "    ? `${a.name} \u00b7 ${a.id}`\n"
+        "    : `${a.name} \u00b7 ${a.id} \u00b7 LAPSED ${a.daysOff}d (last active ${a.lastDay})`;",
+        "loaded pane names the lapsed window",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 TICKET = Path(__file__).resolve().parents[1]
-CSV_PATH = TICKET / "outputs" / "audi_1213_prefill_metrics.csv"
+CSV_PATH = TICKET / "outputs" / "audi_1213_prefill_metrics_365d.csv"
 JSON_PATH = TICKET / "outputs" / "audi_1213_prefill_compact.json"
 
 
@@ -29,11 +29,16 @@ def to_record(row):
         "typical": round(float(row["typical_active_month_spend"]), 2),
         "maxMo": round(float(row["max_month_spend"]), 2),
         "months": int(row["active_months_count"]),
+        "live": row["is_delivering"].strip().lower() == "true",
+        "lastDay": row["last_active_day"][:10],
+        "daysOff": int(row["days_since_active"]),
     }
 
 
 def cohort_defaults(records):
-    positive = lambda key: [r[key] for r in records if r[key] > 0]
+    """Medians over delivering advertisers only, so CLEAR reflects a live account."""
+    live = [r for r in records if r["live"]] or records
+    positive = lambda key: [r[key] for r in live if r[key] > 0]
     return {
         "cpm": round(statistics.median(positive("cpm")), 2),
         "impsIp": round(statistics.median(positive("impsIp")), 2),
@@ -48,7 +53,8 @@ def main():
     cohort = cohort_defaults(records)
     payload = {"cohort": cohort, "advertisers": records}
     JSON_PATH.write_text(json.dumps(payload, separators=(",", ":")))
-    print(f"advertisers {len(records)}")
+    live = sum(1 for r in records if r["live"])
+    print(f"advertisers {len(records)} ({live} delivering, {len(records) - live} lapsed)")
     print(f"cohort {cohort}")
     print(f"json {JSON_PATH.stat().st_size / 1024:.0f} KB")
     top = records[:5]

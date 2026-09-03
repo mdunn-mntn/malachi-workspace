@@ -215,3 +215,53 @@ re-measurement. The lapsed build needs a decision first: rate windows anchored p
 their own last-active day mean scanning `cost_impression_log` across 365 days rather than 30, and
 the 30-day scan alone dry-runs at 471.7 GB. That cost lands on every scheduled run, so the cohort
 cut is a cost decision, not just a query change.
+
+## Lapsed cohort added, 2026-09-03 (365-day lookback)
+
+Decision: full 365 days, confirmed by Malachi and Edgar von Trotha. Edgar's reason is the one that
+settles it, and it is not a cost argument: every LiftLab test he builds uses at least a 365-day
+lookback to account for seasonality, so a shorter window would put our screening on a different
+footing from the tests it feeds. Malachi's version: some major clients run for one or two months a
+year.
+
+**Cohort sizing that informed the cut** (`sum_by_advertiser_by_day`, 0.097 GB):
+
+| Bucket | Advertisers | 365d spend | Over $100k |
+|---|---:|---:|---:|
+| delivering (0-30d) | 1,868 | $385.6M | 516 |
+| lapsed 31-90d | 568 | $36.7M | 74 |
+| lapsed 91-180d | 701 | $37.1M | 96 |
+| lapsed 181-365d | 1,288 | $38.2M | 88 |
+
+The 181-365d bucket is the one a shorter cut would have thrown away, and it is the largest by
+advertiser count with 88 six-figure accounts in it. Dry-run scan by cut: 90d 0.72 TB · 180d 1.47 TB
+· 365d 3.12 TB, against 0.47 TB for the delivering-only query.
+
+**Correction to a number quoted in Slack:** the 365-day version was described as "roughly 12x the
+data". It is not. Actual billed 2,908 GB against 472 GB, so **6.2x**, and 53s wall / 47,852 slot-sec
+on the reservation. The 12x came from scaling 30 days to 365 linearly, which ignores that
+`ui_conversions` and `sum_by_advertiser_by_day` are small and that the delivering query also carried
+a separate 56-day reach scan.
+
+**Query shape.** `queries/audi_1324_advertiser_prefill.sql` now resolves each advertiser's
+`last_active_day` from `sum_by_advertiser_by_day`, then windows that advertiser's rates on their own
+last 30 delivering days rather than on a fixed calendar window. A lapsed advertiser is therefore
+measured on how it actually performed while running, not on its silence. `is_delivering`,
+`last_active_day` and `days_since_active` are carried through to the UI. The monthly-spend pattern
+looks back 730 days but is capped at each advertiser's `last_active_day`, so a lapsed budget anchors
+on their exit run-rate.
+
+**Cohort medians now come from delivering advertisers only** (1,857 of 4,387), so the CLEAR button
+still describes a live account rather than being dragged by dormant ones: CPM 26.60 · imps/IP 3.58 ·
+IVR 2.561% · CVR 0.082%. These differ slightly from the delivering-only run earlier the same day
+(26.62 / 3.43 / 2.639% / 0.086%) because each advertiser's window is now their own last 30
+delivering days instead of the trailing calendar 30.
+
+**UI.** The picker appends `· LAPSED` to the name and shows `last active <date>` in place of
+`/30d`; the loaded pane reads `LAPSED 201d (last active 2026-02-14)`. Verified in the jsdom harness
+with one delivering and one lapsed advertiser: labels render, cohort medians resolve to the
+delivering advertiser's values, no console errors.
+
+**Live:** Mode run `e2073005c2f1` returned 4,387 rows (1,857 delivering, 2,530 lapsed), 180s
+end to end. Largest lapsed accounts: Absher Land Service $633k (180d), LifeMD $535k (221d),
+UnitedHealthcare $322k (231d). Gist republished from the same build.
