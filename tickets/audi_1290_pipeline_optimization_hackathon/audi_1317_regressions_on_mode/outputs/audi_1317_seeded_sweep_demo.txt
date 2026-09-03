@@ -1,0 +1,36 @@
+[sweep] databricks report empty: no warehouse configured (DATABRICKS_WAREHOUSE)
+[sweep] live rate unavailable (hermetic); using the configured rate
+
+=== sweep 2026-09-02 (window 84 rows, disk spill x0.4) ===
+scanned 2  findings 10  regressions 3  ledger rows 8
+  new       streak 1  intent_score_map  regression_disk_spill:2
+            stage 2 disk spill 1319.9 GiB is 2.4x its 30-day median of 541.1 GiB; the run used 145 executor-hours
+  new       streak 1  intent_score_map  regression_disk_spill:3
+            stage 3 disk spill 4262.0 GiB is 3.2x its 30-day median of 1347.4 GiB; the run used 145 executor-hours
+  new       streak 1  intent_score_map  regression_disk_spill:6
+            stage 6 disk spill 3988.2 GiB is 2.2x its 30-day median of 1780.1 GiB; the run used 145 executor-hours
+  digest| *Regressed vs its own 30-day baseline*
+  digest| - *HIGH* `intent_score_map` — stage 3 disk spill 4262.0 GiB is 3.2x its 30-day median of 1347.4 GiB; the run used 145 executor-hours
+  digest| - *HIGH* `intent_score_map` — stage 2 disk spill 1319.9 GiB is 2.4x its 30-day median of 541.1 GiB; the run used 145 executor-hours
+  digest| - *HIGH* `intent_score_map` — stage 6 disk spill 3988.2 GiB is 2.2x its 30-day median of 1780.1 GiB; the run used 145 executor-hours
+[sweep] databricks report empty: no warehouse configured (DATABRICKS_WAREHOUSE)
+[sweep] live rate unavailable (hermetic); using the configured rate
+
+=== sweep 2026-09-03 (window 84 rows, disk spill x1.0) ===
+scanned 2  findings 10  regressions 0  ledger rows 5
+[sweep] databricks report empty: no warehouse configured (DATABRICKS_WAREHOUSE)
+[sweep] live rate unavailable (hermetic); using the configured rate
+
+=== sweep 2026-09-04 (window 84 rows, disk spill x1.0) ===
+scanned 2  findings 10  regressions 0  ledger rows 5
+[sweep] databricks report empty: no warehouse configured (DATABRICKS_WAREHOUSE)
+[sweep] live rate unavailable (hermetic); using the configured rate
+
+=== sweep 2026-09-05 (window 84 rows, disk spill x1.0) ===
+scanned 2  findings 10  regressions 0  ledger rows 8
+  resolved  streak 0  intent_score_map  regression_disk_spill:2
+            stage 2 disk spill 1319.9 GiB is 2.4x its 30-day median of 541.1 GiB; the run used 145 executor-hours
+  resolved  streak 0  intent_score_map  regression_disk_spill:3
+            stage 3 disk spill 4262.0 GiB is 3.2x its 30-day median of 1347.4 GiB; the run used 145 executor-hours
+  resolved  streak 0  intent_score_map  regression_disk_spill:6
+            stage 6 disk spill 3988.2 GiB is 2.2x its 30-day median of 1780.1 GiB; the run used 145 executor-hours

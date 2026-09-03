@@ -1,0 +1,11 @@
+157 objects, 1433 MiB
+batch 1: 45/45 logs, 597 rows, 1 unparsed, 50s
+batch 2: 31/31 logs, 884 rows, 5 unparsed, 31s
+batch 3: 10/10 logs, 999 rows, 6 unparsed, 23s
+batch 4: 12/12 logs, 1164 rows, 9 unparsed, 30s
+batch 5: 10/10 logs, 1304 rows, 11 unparsed, 23s
+batch 6: 10/10 logs, 1462 rows, 13 unparsed, 23s
+batch 7: 10/10 logs, 1639 rows, 14 unparsed, 28s
+batch 8: 14/14 logs, 1801 rows, 17 unparsed, 35s
+batch 9: 15/15 logs, 1961 rows, 18 unparsed, 24s
+done: 1961 rows, 18 unparsed

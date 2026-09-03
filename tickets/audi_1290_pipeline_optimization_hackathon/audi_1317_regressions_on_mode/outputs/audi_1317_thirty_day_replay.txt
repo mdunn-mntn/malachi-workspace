@@ -1,0 +1,28 @@
+
+=== intent_score_map: 94 rows, 19 runs, 2026-08-16..2026-09-02 ===
+as of         window  gated  REGR  keys
+2026-08-16         0      0     0  
+2026-08-17         1      0     0  
+2026-08-18         2      0     0  
+2026-08-19         3      0     0  
+2026-08-20         4      0     0  
+2026-08-21         5     10     0  
+2026-08-22         6     10     0  
+2026-08-23         7     10     0  
+2026-08-24         8     10     0  
+2026-08-25         9     10     0  
+2026-08-26        10     10     0  
+2026-08-27        11     10     0  
+2026-08-28        12     10     0  
+2026-08-29        13     10     0  
+2026-08-30        14     10     0  
+2026-08-31        15     10     0  
+2026-09-01        16     10     0  
+2026-09-02        17     10     0  
+18 run-days judged, 130 gated (stage, metric) pairs, 0 regressions
+
+=== site_network_hourly: 159 rows, 6 runs, 2026-09-01..2026-09-02 ===
+as of         window  gated  REGR  keys
+2026-09-01         2      0     0  
+2026-09-02         5     28     0  
+2 run-days judged, 28 gated (stage, metric) pairs, 0 regressions

@@ -1,0 +1,10 @@
+The daily sweep now publishes performance regressions: each lands in the finding ledger under its own key, so it reaches the digest and the Mode cost dashboard the morning it happens.
+
+*Findings*
+* Four real sweeps over real event logs wrote three regression keys, carried the digest line, and resolved all three on schedule.
+* No new credential or table: the dashboard reads the ledger, so publishing is minting a well-shaped finding.
+* Not noisy. 278 gated checks over 100 real run-days, one a full fleet day, produced zero regressions, so it ships ungated.
+
+*Next*
+* Open the PR against branch audi-1281-perf-regression-guard (#1279), not main.
+* Add the validated query to Mode report e81786de8403 once the code merges.
