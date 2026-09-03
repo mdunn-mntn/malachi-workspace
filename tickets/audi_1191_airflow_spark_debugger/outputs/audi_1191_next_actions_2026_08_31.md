@@ -216,3 +216,8 @@ airflow-dag/airflow-task labels to python-client BQ jobs, (c) per-DAG event logg
 - Wildcard prefix support for dated app names added to coverage.resolve (commit 3d87c6f, PR #1260); the TPA entry goes live when #1260 deploys, the exact entries work on current prod code at next pod restart.
 - Open question: flagged apps' event logs vanish from gs://mntn-data-archive-prod/spark-events within hours (backlog app ids from 09-01 and 09-02 both 404 while same-hour neighbors persist). Did not block: launchers verified from source instead.
 - Local Slack posting: ~/.zshrc SLACK_BOT_TOKEN is dead (account_inactive, decommissioned bot). Live token: keychain `security find-generic-password -s slack_bot_token -w`.
+
+## Addendum 2026-09-02 (night) — the two "unanswered" monitor-tpa alerts explained
+
+- **audience_intent_conversions_scoring_14day_lookback (terminal 01:11:19Z):** diagnosed within 11 seconds, both cascade tasks, posted as digest parents in #airflow-debugger. It could not thread under the monitor-tpa alert because prod SLACK_ALERT_CHANNEL held only C08CURMGNMQ (alerts-tpa-pipeline); the C067ZM2EC5S comma-list recorded on 2026-08-10 was not on the prod deployment. FIXED: var now "C08CURMGNMQ,C067ZM2EC5S"; replies thread into monitor-tpa from the next cycle.
+- **bottom_up_keywords_pipeline_run/training_pipeline (terminal 16:26:54Z, manual run):** skipped BY DESIGN. triggered_by=ui and pull._person_triggered drops human-triggered runs (rationale in code: the person who reran is already hands-on). Tags pass (ml_training in PAGING_TAGS). Instant trigger fired at 16:26:54 and the cycle correctly found 0 scheduler-owned candidates. Decision open: keep the skip (recommended, the rerunner was watching) or widen to diagnose UI runs too.
