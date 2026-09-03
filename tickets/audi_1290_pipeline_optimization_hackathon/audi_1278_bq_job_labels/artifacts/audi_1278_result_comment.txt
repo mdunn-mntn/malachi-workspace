@@ -1,0 +1,12 @@
+*Completed: 2026-09-03*
+
+The unattributed BigQuery cost is camperbid Spark jobs, not python-client jobs. The airflow-ti PR labels our 150 jobs a day; the 1,100 slot-hours need a two-line airflow-camperbid change, hand-off drafted.
+
+h3. Key Findings
+* *camperbid:* 1,106 of 1,110 slot-hours a day are Spark connector reads, 97% from bos__spend. The connector submits the query, so Airflow never labels it.
+* *airflow-ti:* 147 unlabeled jobs a day at 3.9 slot-hours. The PR labels all 8 call sites.
+* *Measurement:* Mode skips the unattributed bucket by design; the daily optimizer report is the before and after.
+
+h3. Next
+* Send the camperbid hand-off to the pacing and performance-ml owners.
+* Record the after numbers 7 days after each merge.
