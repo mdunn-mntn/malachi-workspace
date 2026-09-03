@@ -1,0 +1,12 @@
+*Completed: 2026-09-02*
+
+Speculation is safe where every writer discards the losing duplicate attempt; applied to one canary (site_network_hourly), the other 12 wait.
+
+h3. Findings
+* *Committer per job:* 10 models use Hadoop's file committer v2 with Spark's commit coordinator, 1 uses Iceberg; both abort the duplicate. advertiser_join and prospecting_join use the manifest committer (Ryan's pin).
+* *Precedent:* audience_intent scoring batches have run speculation on that committer since Aug 2025, 38 clean runs last week.
+* *Nov 2025 incident:* the FileNotFound fixes were in the manifest committer's rename phase, a week after speculation was off.
+
+h3. Next
+* PR on site_network_hourly, Ryan Kleck reviewing; 3 clean sweeps before the next 10.
+* Slack questions for Ryan drafted, user sends.
