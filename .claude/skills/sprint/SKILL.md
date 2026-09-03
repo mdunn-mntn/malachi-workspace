@@ -28,12 +28,12 @@ The fan-out runs through the **Workflow tool** (deterministic, background, per-a
 `/workflows`, forced-schema returns). Loose background `Agent` calls are the fallback when the
 user wants to converse with a single ticket's agent mid-flight via `SendMessage`.
 
-**Two waves, one gate between them.** Wave 1 plans every ticket in parallel and posts each plan to
-Jira; you approve; wave 2 executes every approved plan in parallel. Execution agents are fresh — they
+**Two waves, one gate between them.** Wave 1 plans every ticket in parallel and writes each plan to
+its `summary.md` §3 (plans stay local, never in Jira); you approve; wave 2 executes every approved plan in parallel. Execution agents are fresh — they
 inherit the distilled plan, not the research transcript, which is where the context saving comes from.
 
 **Args:** `/sprint` = both waves with the gate between. `/sprint plan` = wave 1 only, stop after the
-plans are posted. `/sprint execute` = wave 2 from already-posted plans. `/sprint --next` = the next
+plans are committed. `/sprint execute` = wave 2 from already-written plans. `/sprint --next` = the next
 sprint. `/sprint AUDI-1191 AUDI-1313` = only those keys. `/sprint --dry` = triage table, no agents.
 
 ---
@@ -99,7 +99,7 @@ Each plan agent writes `## 3. Plan of Action` in its own `summary.md` and return
 ```javascript
 const PLAN = {
   type: 'object',
-  required: ['key', 'feasible', 'steps', 'jira_comment'],
+  required: ['key', 'feasible', 'steps'],
   properties: {
     key: { type: 'string' },
     feasible: { enum: ['yes', 'needs-decision', 'blocked'] },
@@ -110,7 +110,6 @@ const PLAN = {
     deliverable: { type: 'string' },                          // the artifact + the bar that closes it
     effort: { type: 'string' },                               // half-day | 1d | 2-3d | week+
     decisions: { type: 'array', items: { type: 'string' } },  // forks only the user can settle
-    jira_comment: { type: 'string' },                         // wiki markup, lint_comms --kind comment
   },
 }
 ```
@@ -130,12 +129,13 @@ Plan-agent prompt, on top of the constitution below (same write-scope and git/Ji
 Barrier here, deliberately: the user reads all plans before any execution starts.
 
 1. Commit each `summary.md` §3 (`git add <folder>`, one commit per ticket).
-2. Post each `jira_comment` via `curl` REST v2 — the dispatcher posts, never an agent.
+2. Nothing goes to Jira at this stage. Plans live in `summary.md` §3 only (user's call
+   2026-09-02); the ticket's Jira comment comes once at landing with the result.
 3. Print one table: `key · feasible · effort · deliverable · decisions`.
 4. One `AskUserQuestion` round covering every `decisions` entry across all tickets, plus go/no-go
    on which tickets execute now.
 
-`/sprint plan` stops here. `/sprint execute` resumes from posted plans, skipping Step 3.
+`/sprint plan` stops here. `/sprint execute` resumes from the committed §3 plans, skipping Step 3.
 
 ## Step 5 — Execute wave (parallel, background)
 

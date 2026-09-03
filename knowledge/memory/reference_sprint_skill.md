@@ -22,8 +22,8 @@ without one massive context window."
 | Command | Does |
 |---|---|
 | `/sprint` | Both waves, approval gate between |
-| `/sprint plan` | Wave 1 only — research, write §3 Plan of Action, post plans to Jira, stop |
-| `/sprint execute` | Wave 2 from already-posted plans |
+| `/sprint plan` | Wave 1 only — research, write §3 Plan of Action, commit, stop |
+| `/sprint execute` | Wave 2 from already-written §3 plans |
 | `/sprint --dry` | Triage table only, no agents |
 | `/sprint --next` | Target the next sprint instead of the active one |
 | `/sprint AUDI-1191 AUDI-1313` | Only those keys |
@@ -45,7 +45,8 @@ the other is which sprint.
    §3 Plan of Action, returning a schema (`steps`, `sources`, `assumptions`, `risks`,
    `deliverable`, `effort`, `decisions`). It verifies the plan is *runnable*; producing the answer
    is out of scope.
-4. **Step 4 gate (barrier, dispatcher):** commits each §3, posts each plan to Jira, prints the
+4. **Step 4 gate (barrier, dispatcher):** commits each §3 (plans stay local, never posted to
+   Jira; user's call 2026-09-02, the one Jira comment per ticket comes at landing), prints the
    table, batches every `decisions` entry into one question round.
 5. **Step 5 execute wave (parallel):** **fresh** agents, not the plan agents. They inherit the
    distilled plan and the user's answers, not the research transcript. That handoff is where the
