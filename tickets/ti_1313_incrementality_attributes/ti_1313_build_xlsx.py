@@ -244,14 +244,14 @@ for name, tbl, fixed_n in RANKED_SRC:
     rank_rows.append({
         "Attribute": name,
         "Campaigns": int(fixed_n if fixed_n else t["Campaigns"].sum()),
-        "Settings compared": len(t),
-        "Campaigns in the thinnest setting": int(t["Campaigns"].min()),
+        "Number of settings": len(t),
+        "Campaigns in smallest setting": int(t["Campaigns"].min()),
         "Best setting": str(best[t.columns[0]]),
         "Best lift": best["Lift"],
         "Worst setting": str(worst[t.columns[0]]),
         "Worst lift": worst["Lift"],
-        "Gap, best minus worst": best["Lift"] - worst["Lift"],
-        "Best and worst do not overlap": bool(best["Low end"] > worst["High end"]),
+        "Gap": best["Lift"] - worst["Lift"],
+        "Best beats worst outright": "Yes" if best["Low end"] > worst["High end"] else "No",
     })
 def between_q(tbl):
     """Cochran Q across an attribute's levels, on the log scale, with its p-value."""
@@ -269,18 +269,13 @@ def between_q(tbl):
 for row, (_, tbl, _fx) in zip(rank_rows, RANKED_SRC):
     q, pv = between_q(tbl)
     row["p value"] = pv
-    row["Real difference?"] = ("Yes, strong" if pv < 0.01 else
-                               "Yes" if pv < 0.05 else
-                               "Too close to call" if pv < 0.20 else "No")
 
 ranked = (pd.DataFrame(rank_rows)
-          .sort_values(["p value", "Gap, best minus worst"],
-                       ascending=[True, False])
+          .sort_values(["p value", "Gap"], ascending=[True, False])
           .reset_index(drop=True))
-RANK_ORDER = ["Attribute", "Real difference?", "p value",
-              "Best setting", "Best lift", "Worst setting", "Worst lift", "Gap, best minus worst",
-              "Best and worst do not overlap", "Campaigns", "Settings compared",
-              "Campaigns in the thinnest setting"]
+RANK_ORDER = ["Attribute", "p value", "Best setting", "Best lift", "Worst setting", "Worst lift",
+              "Gap", "Best beats worst outright", "Campaigns", "Number of settings",
+              "Campaigns in smallest setting"]
 ranked = ranked[RANK_ORDER]
 
 conv = pop[pop["conv_rate_holdout"] > 0].copy()
@@ -298,7 +293,7 @@ for name, tbl_col, order in [("Creative length mix", "creative", None),
             "Typical conversion lift": g["conv_rel_itt"].median(),
             "Clearly above zero": clears,
             "% with a clear effect": g["conv_significant_95"].fillna(False).mean(),
-            "Baseline conv rate": g["conv_rate_holdout"].median(),
+            "Baseline conversion rate": g["conv_rate_holdout"].median(),
             "Incremental conversions": (g["incremental_conversions"].sum()
                                         if clears and g["incremental_conversions"].sum() > 0 else np.nan),
             "Cost per incremental conversion": (g["scaled_spend"].sum() / g["incremental_conversions"].sum()
@@ -385,16 +380,16 @@ detail = base[[
     "rate_holdout": "Holdout visit rate", "rate_treatment": "Treated visit rate",
     "incremental_visits": "Incremental visits", "prospecting_spend": "Prospecting media spend",
     "cost_per_incremental_visit": "Cost per incremental visit", "conv_rel_itt": "Conversion lift",
-    "conv_p_value": "Conv p value", "conv_significant_95": "Conv significant",
-    "conv_rate_holdout": "Baseline conv rate", "incremental_conversions": "Incremental conversions",
+    "conv_p_value": "Conversion p value", "conv_significant_95": "Conversion significant",
+    "conv_rate_holdout": "Baseline conversion rate", "incremental_conversions": "Incremental conversions",
     "cost_per_incremental_conversion": "Cost per incremental conversion",
     "scaled_spend": "Spend on measured households",
     "attributed_visits": "Attributed visits", "attributed_conversions": "Attributed conversions",
     "attributed_ivr": "Attributed IVR",
     "attributed_cpa_total_spend": "Attributed CPA on total spend",
-    "attributed_per_incremental_conv": "Attributed per incremental conv",
-    "pct_attributed_visits_incremental": "% attr visits incremental",
-    "pct_attributed_conv_incremental": "% attr conversions incremental",
+    "attributed_per_incremental_conv": "Attributed per incremental conversion",
+    "pct_attributed_visits_incremental": "% of attributed visits incremental",
+    "pct_attributed_conv_incremental": "% of attributed conversions incremental",
     "creative_length_mix": "Creative length", "share_15s": "Share 15s", "n_creatives": "Creatives",
     "audience_size": "Audience size", "pct_audience_reached": "Reached as % of audience",
     "impressions_per_audience_member": "Impressions per audience member",
@@ -438,19 +433,17 @@ wb = MntnWorkbook(
 wb.table(
     "Ranked hypotheses", ranked,
     finding="Attributes ranked by how sure we are that their settings really differ in lift",
-    method="Ranked on a between-setting test, not on the gap, because an attribute with more settings shows a wider gap by chance alone. Read the gap only where the p value clears 0.05.",
-    formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap, best minus worst": FMT.PCT1,
-             "Campaigns": FMT.INT, "Settings compared": FMT.INT,
-             "Campaigns in the thinnest setting": FMT.INT,
-             "p value": "0.0000"},
-    rag={"Real difference?": lambda v: {"Yes, strong": "POS", "Yes": "POS",
-                                        "Too close to call": "WARN"}.get(v)},
+    method="Ranked on a between-setting test, not on the gap, because an attribute with more settings shows a wider gap by chance alone. Check the last column before trusting a gap.",
+    formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap": FMT.PCT1,
+             "Campaigns": FMT.INT, "Number of settings": FMT.INT,
+             "Campaigns in smallest setting": FMT.INT, "p value": "0.0000"},
+    rag={"p value": lambda v: "POS" if v < 0.05 else ("WARN" if v < 0.20 else None)},
     kind="headline",
     toc="Which attribute separates lift most, ranked",
     query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "By frequency", by_freq,
+    "Frequency", by_freq,
     finding="Pooled visit lift by how many times a household was bid on across the whole 71 day window",
     method="Bids counted once over the whole 22 Jun to 31 Aug window, not per week. Households are not randomised into these bands. Spend is split across bands by each band's share of bids.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -458,7 +451,7 @@ wb.table(
     query="ti_1313_bid_count_strata.sql")
 
 wb.table(
-    "By creative length", by_creative,
+    "Creative length", by_creative,
     finding="Pooled visit lift by the mix of 15 and 30 second creative delivered",
     method="Impression-weighted over prospecting delivery. Nearly half of campaigns run both lengths, so a clean 15 against 30 split is not available in the data.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -466,7 +459,7 @@ wb.table(
     query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "By geography", by_geo,
+    "Geography", by_geo,
     finding="Pooled visit lift by the geographic targeting the advertiser chose",
     method="From stored targeting rather than delivered footprint, so it is the advertiser's choice and not an outcome of pacing. Class order is radius, zip, city, state, DMA.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -474,7 +467,7 @@ wb.table(
     query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "By intent band", by_band,
+    "Intent band", by_band,
     finding="Pooled visit lift and cost per incremental visit by the intent band the household was scored into",
     method="From the platform's score-band strata; a campaign appears in every band it delivered to. Spend is split across bands by each band's share of bids, so it assumes a flat cost per bid in a campaign.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -482,7 +475,7 @@ wb.table(
     query="ti_1313_score_band_strata.sql")
 
 wb.table(
-    "By vertical", by_vertical,
+    "Vertical", by_vertical,
     finding="Pooled visit lift by advertiser vertical",
     method="Advertisers pick their own vertical, so this compares populations rather than a setting. Verticals under 5 campaigns are dropped.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -490,7 +483,7 @@ wb.table(
     query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "By campaign frequency", by_freq_q,
+    "Campaign frequency", by_freq_q,
     finding="Pooled visit lift by the campaign's own average frequency over the whole 71 day window",
     method="Quartiles on prospecting impressions divided by households reached, both counted once over the whole window. The bid-count sheet instead splits households inside a campaign.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -498,7 +491,7 @@ wb.table(
     query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "By audience size", by_aud,
+    "Audience size", by_aud,
     finding="Lift does not run with audience size: the second quartile reads highest, the smallest quartile lowest",
     method=f"Quartiles on the targetable audience behind the prospecting campaigns, median across delivered days. Rank correlation with lift is {rho_lift:+.2f} (p = {p_lift:.2f}), so this is a quartile gap, not a trend.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -532,7 +525,7 @@ if not conv_tbl.empty:
         finding=f"Conversion lift for the {n_conv:,} campaign groups whose holdout recorded conversions",
         method="Medians of per-campaign values, because conversion counts are thin. Baseline is the median holdout conversion rate. Counts and cost are blank where the group measured no net incremental conversions.",
         formats={"Typical conversion lift": FMT.PCT1, "% with a clear effect": FMT.PCT0,
-                 "Baseline conv rate": FMT.PCT2, "Incremental conversions": FMT.INT,
+                 "Baseline conversion rate": FMT.PCT2, "Incremental conversions": FMT.INT,
                  "Cost per incremental conversion": FMT.USD2, "Campaigns": FMT.INT},
         signal={"Typical conversion lift": {}}, kind="data",
         toc="Conversion lift and cost per incremental conversion",
@@ -553,7 +546,7 @@ if not infl_tbl.empty:
         query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "By audience score", pd.concat([
+    "Audience score", pd.concat([
         by_hi.rename(columns={"Share of scored households at High Intent": "Setting"}).assign(Attribute="High-intent share of scored households"),
         by_score.rename(columns={"Average household score": "Setting"}).assign(Attribute="Average household score"),
     ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Lift", "Low end", "High end",
@@ -566,7 +559,7 @@ wb.table(
     query="ti_1313_campaign_base.sql")
 
 wb.table(
-    "By device and window", pd.concat([
+    "Device and window", pd.concat([
         by_tv.rename(columns={"Share of spend on TV screens": "Setting"}).assign(Attribute="TV share of spend"),
         by_vv.rename(columns={"Visit attribution window": "Setting"}).assign(Attribute="Visit attribution window"),
         by_tenure.rename(columns={"Advertiser tenure": "Setting"}).assign(Attribute="Advertiser tenure"),
@@ -581,7 +574,7 @@ wb.table(
 
 if not by_fcap.empty:
     wb.table(
-        "By frequency cap", by_fcap,
+        "Frequency cap", by_fcap,
         finding="Pooled visit lift by the campaign's household frequency cap",
         method="The operating cap, read per prospecting campaign. Caps under 5 campaigns are dropped, so this covers the common settings rather than every one.",
         formats=SUMF, signal={"Lift": {}}, kind="data",
@@ -634,12 +627,12 @@ wb.table(
              "Holdout visit rate": FMT.PCT2, "Treated visit rate": FMT.PCT2,
              "Incremental visits": FMT.INT, "Prospecting media spend": FMT.USD0,
              "Spend on measured households": FMT.USD0, "Cost per incremental visit": FMT.USD2,
-             "Conversion lift": FMT.PCT1, "Conv p value": FMT.NUM2, "Baseline conv rate": FMT.PCT2,
+             "Conversion lift": FMT.PCT1, "Conversion p value": FMT.NUM2, "Baseline conversion rate": FMT.PCT2,
              "Incremental conversions": FMT.NUM1, "Cost per incremental conversion": FMT.USD2,
              "Attributed visits": FMT.INT, "Attributed conversions": FMT.INT,
              "Attributed IVR": FMT.PCT2, "Attributed CPA on total spend": FMT.USD2,
-             "Attributed per incremental conv": FMT.MULT, "% attr visits incremental": FMT.PCT0,
-             "% attr conversions incremental": FMT.PCT0, "Share 15s": FMT.PCT0,
+             "Attributed per incremental conversion": FMT.MULT, "% of attributed visits incremental": FMT.PCT0,
+             "% of attributed conversions incremental": FMT.PCT0, "Share 15s": FMT.PCT0,
              "Creatives": FMT.INT, "DMAs delivered": FMT.INT, "Days delivered": FMT.INT,
              "Impressions": FMT.INT, "Households reached": FMT.INT,
              "Audience size": FMT.INT, "Reached as % of audience": FMT.PCT1,

@@ -120,6 +120,15 @@ Two failure modes caught in review on AUDI-1210 (2026-08-19), both of which pass
 - **Never label a derived group by its ordinal position.** `Smallest fifth / Second fifth / Fourth fifth / Largest fifth` tells the reader nothing about what the group *is*, and "fourth fifth" is actively hard to parse. Carry the actual range instead. Same rule for score bands, spend tiers and date buckets.
 - **A range carries its unit, in the header or in the value — never neither.** The first fix above produced `Under 25K · 350K to 1.4M · Over 1.4M`, and the immediate question back was *"over 1.4M what?"*. Landed as header **Compared to sites with** + values **`Under 25K visits` … `Over 1.4M visits`**. Put the unit once where it reads naturally: on the header when every value shares it and repetition would be noise, on the values when the header is already carrying a different job.
 
+Three more failure modes caught on AUDI-1313 (2026-09-02), all of which had shipped to a reviewer:
+
+- **Statistical notation is not a column name.** `Pooled lift`, `CI low`, `CI high`, `% significant`, `Heterogeneity` all passed review because they are correct. They are correct and unreadable. Say what the cell holds: **Lift · Low end · High end · % with a clear effect · Campaigns disagree**. "Pooled" and "random-effects" are method, and method belongs in the subtitle or the Read me, never in a header. A term the reader's own field uses is fine (`p value` stayed, this audience reads p-values) — the test is whether THIS reader knows it, not whether it is jargon in the abstract.
+- **The worst header is one that could be a name or a number.** `Smallest level` sat next to `Best level`, which holds a level's NAME, so it read as one, and it held a COUNT of campaigns. `Settings compared` had the same defect one column over. If a header's neighbours hold names, a count needs the noun in the header: **Campaigns in smallest setting**, **Number of settings**. This is the single most expensive naming mistake because the reader does not know they misread it.
+- **Never state a yes/no as a negative.** `Best and worst do not overlap` with values TRUE/FALSE makes TRUE mean "did not", which every reader has to unpick. Flip to the positive claim and use Yes/No, not TRUE/FALSE: **Best beats worst outright**.
+- **Do not abbreviate to save four characters.** `Cost per inc visit`, `Conv p value`, `% attr visits incremental`, `Baseline conv rate`. The column is as wide as its widest value anyway, so the abbreviation buys nothing and costs a beat of decoding.
+- **Do not paint the column you told the reader to ignore.** The ranked sheet's subtitle said to rank on the between-setting test, and the heat fill sat on the raw gap. That is lie factor: colour is the strongest signal on the sheet and it pointed at the wrong column. Paint the column the sheet is actually sorted on.
+- **A plain-language verdict column beside its own statistic is redundant.** A `Real difference?` column reading Yes/No next to the p value it was derived from is two columns doing one job, and it oversells: it said "Yes, strong" on a row whose smallest setting held 5 campaigns. Colour the statistic instead and let the sample-size column do its work.
+
 Five tests before shipping, all cheap:
 1. Read each header aloud with no other context. If "what would this cell contain?" is a guess, rename it.
 2. Read one cell value aloud on its own. If it prompts "…of what?", the unit is missing.
@@ -127,7 +136,17 @@ Five tests before shipping, all cheap:
 4. For any column holding a rank, percentile, index or score: can you replace it with the raw number plus its benchmark in the next column? If yes, do that.
 5. Read one full row aloud as a sentence. If you have to jump columns or do mental arithmetic to reach the point, the columns are in the wrong order or one of them is doing too much.
 
-**Partly enforced.** `MntnWorkbook.table()` raises on ordinal-position group labels (`fourth fifth`, `third quintile`, `2nd decile`) and on placeholder headers (`Reading`, `Value`, `Status`, `Category`, `Group`, `Type`, `Rank`, `Score`, `Band`, `Tier`, `Metric`, `Result`, `Flag`, `Notes`). Tests 2, 4 and 5 are on you — no check can see that `Over 1.4M` is missing a noun, or that a percentile would read better as a benchmark.
+**Partly enforced.** `MntnWorkbook.table()` raises on ordinal-position group labels (`fourth fifth`, `third quintile`, `2nd decile`), on placeholder headers (`Reading`, `Value`, `Status`, `Category`, `Group`, `Type`, `Rank`, `Score`, `Band`, `Tier`, `Metric`, `Result`, `Flag`, `Notes`), on statistical notation (`CI low`, `Heterogeneity`, `Pooled lift`, `% significant`, `SE`, `ITT`, `CPIV`, …), on abbreviated headers (`inc`, `conv`, `attr`, `pct`, `freq`, `imps`, `num`), and on a negated header over a yes/no column. That last set was added on AUDI-1313 and immediately caught six more headers in the same workbook that manual review had passed twice. Tests 2, 4 and 5 are on you — no check can see that `Over 1.4M` is missing a noun, or that a percentile would read better as a benchmark.
+
+### Never break a word across lines (HARD)
+
+A cell that wraps `Peak Performanc / e` is a defect, not a cosmetic nit. Column width is sized to the widest of the header's longest word and the **data's** longest word, so nothing splits. Caught on AUDI-1313 (2026-09-02) after the width logic had been "fixed" once already: it protected header words only, and it tested `dtype == object` to decide whether a column held text. A pandas **Categorical** or **bool** column is text on the sheet and is neither, so it fell through to the numeric branch, got sized from three digits, and split `Performance`. Test `pd.api.types.is_numeric_dtype`, never `== object`.
+
+The first column is bold, so the same character count needs about three more width units. The one exemption is a **machine identifier** — a token containing `_`, or longer than the 38-char cap. Those cannot fit any sane column and are allowed to wrap; the rule protects words a person reads, not database keys.
+
+### Tab names: sentence case, and never a "By " prefix (HARD)
+
+`By intent band` → **Intent band**. The workbook already announces its subject, so every tab repeating "By" adds a word to eleven tabs and says nothing. Sentence case throughout, first letter only: `Campaign Detail` → **Campaign detail**. Both are checked in `_new_sheet()` and refuse the build.
 
 ### Tab title + method subtitle caps (HARD — the build refuses to write the file)
 

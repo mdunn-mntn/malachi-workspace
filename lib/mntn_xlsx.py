@@ -129,6 +129,20 @@ class _Fmt:
 
 FMT = _Fmt()
 
+
+def _longest_real_word(text: str, cap: int) -> int:
+    """Longest word a reader would object to seeing split. Machine identifiers are exempt: a token with
+    an underscore or one longer than the column cap cannot fit any sane width and has to wrap."""
+    words = [t for t in text.split() if "_" not in t and len(t) <= cap]
+    return max([len(t) for t in words] or [0])
+
+
+def _is_boolish(series: pd.Series) -> bool:
+    """True when a column holds only yes/no style values, whatever dtype pandas gave it."""
+    vals = {str(v).strip().lower() for v in series.dropna().unique()[:50]}
+    return bool(vals) and vals <= {"true", "false", "yes", "no", "y", "n", "1", "0"}
+
+
 # Tab color by role, so the tab strip itself is a color-coded legend. Distinct MNTN brand hues:
 # a dark anchor for the cover, bright greens/blues for content, muted greys for the appendix.
 # NOTE: apply with a leading "FF" (opaque) — a bare 6-hex string makes openpyxl store alpha 00
@@ -281,7 +295,24 @@ class MntnWorkbook:
         p.category = "Analysis deliverable"
 
     # -- internal sheet scaffolding -----------------------------------------
+    def _check_tab_name(self, name: str) -> None:
+        """Tab names are noun phrases in sentence case: no 'By ' prefix, no Title Case."""
+        if re.match(r"^by\s+", name, re.I):
+            self._issue(
+                name,
+                f"tab name {name!r} starts with 'By ' — the sheet already sits in a workbook about one "
+                f"subject, so name it for the thing itself (e.g. 'By intent band' -> 'Intent band')",
+            )
+        words = name.split()
+        if len(words) > 1 and sum(1 for w in words[1:] if w[:1].isupper() and not w.isupper()) > 0:
+            self._issue(
+                name,
+                f"tab name {name!r} is Title Case — capitalise the first letter only "
+                f"(e.g. 'Campaign Detail' -> 'Campaign detail')",
+            )
+
     def _new_sheet(self, name: str, role: str) -> Worksheet:
+        self._check_tab_name(name)
         ws = self.wb.create_sheet(name[:31])  # Excel 31-char tab limit
         ws.sheet_view.showGridLines = False
         ws.sheet_properties.tabColor = "FF" + TAB.get(
@@ -537,6 +568,38 @@ class MntnWorkbook:
             "level",
         }
     )
+    _JARGON_HEADERS = frozenset(
+        {
+            "ci low",
+            "ci high",
+            "ci lower",
+            "ci upper",
+            "heterogeneity",
+            "i2",
+            "i-squared",
+            "pooled lift",
+            "pooled effect",
+            "point estimate",
+            "std err",
+            "stderr",
+            "se",
+            "n",
+            "% significant",
+            "pct significant",
+            "sig",
+            "cpiv",
+            "cpa",
+            "aov",
+            "itt",
+            "att",
+            "lift clears zero",
+        }
+    )
+    _ABBREV_HEADER = re.compile(r"\b(?:inc|conv|impr|imps|freq|attr|pct|num|qty|avg\.)\b", re.I)
+    _NEGATED_HEADER = re.compile(
+        r"\b(?:do(?:es)?\s+not|did\s+not|is\s+not|are\s+not|no[nt]-?)\b", re.I
+    )
+
     _ORDINAL_LABEL = re.compile(
         r"\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth"
         r"|smallest|largest|lowest|highest|top|bottom|\d+(?:st|nd|rd|th))\s+"
@@ -552,6 +615,26 @@ class MntnWorkbook:
                     sheet,
                     f"column header {col!r} is too generic to read on its own — name it as the "
                     f"question the number answers (e.g. 'Reading' -> 'Tracking history')",
+                )
+        for col in df.columns:
+            low = str(col).strip().lower()
+            if low in self._JARGON_HEADERS:
+                self._issue(
+                    sheet,
+                    f"column header {col!r} is statistical notation, not a name a reader can use — "
+                    f"say what the cell holds (e.g. 'CI low' -> 'Low end', 'Pooled lift' -> 'Lift')",
+                )
+            if self._ABBREV_HEADER.search(low):
+                self._issue(
+                    sheet,
+                    f"column header {col!r} abbreviates a word to save a few characters — spell it out "
+                    f"(e.g. 'Cost per inc visit' -> 'Cost per incremental visit')",
+                )
+            if self._NEGATED_HEADER.search(low) and _is_boolish(df[col]):
+                self._issue(
+                    sheet,
+                    f"column header {col!r} states a yes/no as a negative, so TRUE means the thing did "
+                    f"NOT happen — flip it to the positive claim (e.g. 'Best beats worst outright')",
                 )
         for col in df.columns:
             series = df[col]
@@ -648,8 +731,16 @@ class MntnWorkbook:
                 header = str(col)
                 longest_word = max([len(x) for x in header.split()] or [len(header)])
                 cd = df[col].dropna()
-                if df[col].dtype == object:
-                    data_w = int(cd.astype(str).map(len).head(200).max()) if len(cd) else 0
+                data_word = 0
+                # a Categorical/bool column is text on the sheet but is neither object nor numeric
+                if not pd.api.types.is_numeric_dtype(df[col]):
+                    strs = cd.astype(str).head(200)
+                    data_w = int(strs.map(len).max()) if len(strs) else 0
+                    data_word = (
+                        int(strs.map(lambda x: _longest_real_word(x, cap)).max())
+                        if len(strs)
+                        else 0
+                    )
                 else:
                     # numbers are display-FORMATTED (%, $, commas) — never measure the raw float repr
                     # (str(0.00189)="0.00189372…"). Estimate from magnitude + room for separators/symbol.
@@ -661,8 +752,14 @@ class MntnWorkbook:
                     )
                     int_digits = len(f"{int(mx):,}") if (pd.notna(mx) and mx >= 1) else 3
                     data_w = int_digits + 5
-                # header word must fit (never break mid-word); data fits up to cap (wraps beyond); floor 10
-                need = max(longest_word + filter_pad, min(data_w, cap) + 2, 10)
+                # bold first column needs more width units for the same character count
+                bold_pad = 3 if j == 1 else 0
+                need = max(
+                    longest_word + filter_pad,
+                    data_word + 2 + bold_pad,
+                    min(data_w, cap) + 2,
+                    10,
+                )
                 w = min(need, cap)
             ws.column_dimensions[get_column_letter(j)].width = w
             final[col] = w

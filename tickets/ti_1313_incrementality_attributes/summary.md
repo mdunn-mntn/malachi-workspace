@@ -638,3 +638,58 @@ terms. Fixed: new plain-language **Real difference?** column (Yes strong / Yes /
 0.01 and 0.05) sits second with the traffic-light fill, the p-value follows it as a percentage, and the
 supporting counts move to the right-hand end. The p value keeps its name: it was briefly spelled out as "chance of seeing this gap if nothing differs" and the user pulled that back, this audience reads p-values. Read me gained entries for "Low end and High end" and
 "% with a clear effect".
+
+### 12e. The naming rule is now enforced, not remembered (2026-09-02)
+
+The rename in 12d was still a one-off, and a second read of the ranked sheet found three more defects that
+the same rule should have caught. All three are now written into
+`documentation/docs/xlsx_deliverable_standard.md` and, where cheap, checked by `lib/mntn_xlsx.py`.
+
+**Remaining defects on the ranked sheet:**
+
+1. **`Settings compared` had the same defect as `Smallest level`.** Both sat beside `Best setting`, which
+   holds a NAME, and both held a COUNT. Renaming one and leaving its neighbour is not a fix. Now
+   `Number of settings` and `Campaigns in smallest setting`.
+2. **`Best and worst do not overlap` was a negated boolean over TRUE/FALSE**, so TRUE meant the thing did
+   NOT happen. Now `Best beats worst outright`, valued Yes/No.
+3. **`Real difference?` was dropped entirely.** It restated the p value sitting next to it, and it oversold:
+   it read "Yes, strong" on Vertical, whose smallest setting holds 5 campaigns. The traffic light moved onto
+   the p value itself, which is the column the sheet is sorted on. `Gap, best minus worst` shortened to `Gap`.
+
+**New hard build checks in `MntnWorkbook.table()`** (a violation refuses to write the file, same as the
+existing placeholder-header and ordinal-label checks):
+
+- `_JARGON_HEADERS` — statistical notation as a header (`CI low`, `Heterogeneity`, `Pooled lift`,
+  `% significant`, `SE`, `ITT`, `CPIV`, `AOV`, …).
+- `_ABBREV_HEADER` — a header abbreviating a word (`inc`, `conv`, `attr`, `pct`, `freq`, `imps`, `num`).
+- `_NEGATED_HEADER` — a negated header over a yes/no column.
+
+**The check paid for itself on the first run: it caught six more headers in this same workbook** that two
+manual review passes had let through, all on Conversion outcomes and Campaign detail
+(`Baseline conv rate`, `Conv p value`, `Conv significant`, `Attributed per incremental conv`,
+`% attr visits incremental`, `% attr conversions incremental`).
+
+**The rule, stated generally.** A header names what the cell holds, in words this reader already uses.
+Method (`pooled`, `random-effects`) belongs in the subtitle. A term the audience's own field uses is fine,
+which is why `p value` stayed after being briefly spelled out. The worst header is one that could be read
+as either a name or a number, because the reader never learns they misread it.
+
+### 12f. Word breaks and tab names (2026-09-02)
+
+**A cell wrapped `Peak Performanc / e` on the intent band sheet.** The width logic already claimed to
+prevent this and had been fixed once before, but it protected only the HEADER's longest word and it decided
+"is this column text?" with `df[col].dtype == object`. `bands["band"]` is a pandas **Categorical**, which is
+text on the sheet and is neither object nor numeric, so it fell through to the numeric branch, got sized
+from three digits, and came out 13 wide against an 11-character bold word. Two fixes: test
+`pd.api.types.is_numeric_dtype` instead of `== object`, and fold the DATA's longest word into the width
+alongside the header's, with three extra units for the bold first column. Column A on that sheet went 13 to
+18. A sweep of all 22 sheets now finds no remaining break.
+
+Machine identifiers are exempt: a campaign group named `acquisition_conversion_leads_CTV_M…` is 80
+characters with no space and cannot fit any sane column. `_longest_real_word()` skips tokens containing an
+underscore or longer than the 38-character cap, so the rule protects words a person reads, not database keys.
+
+**Tab names drop the "By " prefix and use sentence case.** Eleven tabs read "By frequency", "By intent
+band", "By vertical". The workbook already says what it is about, so the prefix was a word repeated eleven
+times to say nothing. Now `Frequency`, `Intent band`, `Vertical`. Both rules are checked in `_new_sheet()`
+and refuse the build, and both are written into `documentation/docs/xlsx_deliverable_standard.md`.
