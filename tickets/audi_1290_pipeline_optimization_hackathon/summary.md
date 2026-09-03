@@ -47,16 +47,30 @@ Children:
 Tickets grouped by change type, not by DAG: the same config change across many DAGs is one ticket. Optimization tickets (1269-1276) are airflow-ti model config PRs; 1277-1278 are BigQuery; 1279 is shopper_graph; 1280-1281 are debugger/optimizer tooling. Every optimization ticket closes on 'PR merged; optimizer ledger shows the finding resolved'.
 
 ## 3. Plan of Action
-Numbered steps of the approach taken. Updated as the plan evolves.
-1. Step one
-2. Step two
-3. ...
+1. `/sprint --next` pulled the 13 issues, scaffolded the epic and child folders, and locked §0 Framing on all 13 in one batched gate (2026-09-02).
+2. Plan wave: one agent per ticket wrote §3 Plan of Action and returned its open decisions. Plans stay in `summary.md`; nothing is posted to Jira at that stage (user's call 2026-09-02).
+3. Execute wave: fresh agents per ticket, then an adversarial verifier per result. Two waves were cut off by session limits and one agent hung; each was re-dispatched from its partial worktree and ticket state.
+4. Landing (dispatcher only, serial per ticket): commit the ticket folder, post the Jira comment, transition to In Progress, commit the code branch, run `/pr_gauntlet`, open the PR, record it, then `/capture` scoped to that ticket.
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+Per-ticket outcome, 2026-09-03:
+
+| Ticket | Result | PR |
+|---|---|---|
+| AUDI-1269 | 6 of 9 spill DAGs resized; 2 pulled by the per-DAG gate, 1 dropped for driver out-of-memory history | airflow-ti #1273 |
+| AUDI-1270 | 1 of 15 is shuffle-side (vertical_size_monitor 128 to 600); 9 handed to the AUDI-1273 mechanism | airflow-ti #1275 |
+| AUDI-1271 | Spec refuted on its own kill criterion: the change costs about 17 DCU-hours a run to save 0.1 executor-hours | none, closed with no change |
+| AUDI-1272 | 2 of 10 confirmed (advertiser_mid 90, ipdsc_42_monitor 7); 8 unchanged | airflow-ti #1281 |
+| AUDI-1273 | 2 of 3 shipped; ipdsc_ds_67 dropped, its input files cannot be split | airflow-ti #1272 |
+| AUDI-1274 | Both pivot models cap the adaptive merge at 16 MiB | airflow-ti #1270 |
+| AUDI-1275 | Speculation proven safe for 11 of 13 writers; canary on site_network_hourly, owner ask drafted | airflow-ti #1271 |
+| AUDI-1276 | Skew is a plan-time shuffle from a stats-less JDBC join; broadcast hints plus one-pass monitor SQL | airflow-ti #1276 |
+| AUDI-1277 | Profiler double-count fixed, skip gate halves the heaviest rebuild, histogram 31% cheaper | airflow-ti #1277, camperbid #580 |
+| AUDI-1278 | The unattributed third of BigQuery spend is four camperbid Spark scripts; airflow-ti labels shipped | airflow-ti #1278 |
+| AUDI-1279 | Per-batch OpenAI status lines and a dead-cohort alarm | shopper_graph #305 |
+| AUDI-1280 | 32 of 67 alerting DAGs were unwatched; one tag fixes 25, CI blocks the next miss | airflow-ti #1274 |
+| AUDI-1281 | Regression guard flags a seeded 2x spill and fetch-wait on two pipelines | airflow-ti #1279 |
 
 ## 5. Solution
 What was done to resolve the issue:
