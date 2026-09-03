@@ -1,0 +1,107 @@
+
+=== Populate ipdsc_ds_49.DS49 app-20260805041408174-0229 dur=7.2min stages=4
+  conf spark.sql.files.maxPartitionBytes = None
+  conf spark.sql.files.openCostInBytes = None
+  conf spark.sql.shuffle.partitions = 1700
+  conf spark.executor.memory = 9600m
+  conf spark.executor.cores = 4
+  conf spark.dynamicAllocation.initialExecutors = None
+  conf spark.dynamicAllocation.maxExecutors = 180
+  stage  tasks  input_GiB  shuf_read_GiB  shuf_write_GiB  mem_spill_GiB  disk_spill_GiB  name
+      1    583       47.2            0.0            71.2          406.7            17.9  save at NativeMethodAccessorImpl.java:0
+      3   1700        0.0           71.2             3.2            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+  plan:
+    +- FileScan parquet [ip,site_publisher_id,dt,hh] Batched: true, DataFilters: [isnotnull(ip), NOT (ip = 0.0.0.0), NOT EndsWith(ip, .0)], Format: Parquet, Location: InMemoryFileIndex(7 paths)[gs://mntn-data-archive-prod/ip
+
+=== Populate conv_log_derived_ip.ConvLogDerivedIp app-20260805012514130-0370 dur=2.6min stages=4
+  conf spark.sql.files.maxPartitionBytes = 268435456
+  conf spark.sql.files.openCostInBytes = 8388608
+  conf spark.sql.shuffle.partitions = 1000
+  conf spark.executor.memory = 9600m
+  conf spark.executor.cores = 4
+  conf spark.dynamicAllocation.initialExecutors = 10
+  conf spark.dynamicAllocation.maxExecutors = 20
+  stage  tasks  input_GiB  shuf_read_GiB  shuf_write_GiB  mem_spill_GiB  disk_spill_GiB  name
+      1     91       14.5            0.0            20.6           58.4             5.0  save at NativeMethodAccessorImpl.java:0
+      3    500        0.0           20.6             3.3            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+  plan:
+    +- FileScan parquet [ip,conversion_count,usd_order_amount,max_order_amount,conversion_time_max,order_id_hll,advertiser_id_hll,dt] Batched: true, DataFilters: [isnotnull(ip), NOT (trim(ip, None) = )], Format: Parquet, Loc
+
+=== Populate ipdsc_ds_67.DS67 app-20260805053727558-0431 dur=10.6min stages=17
+  conf spark.sql.files.maxPartitionBytes = None
+  conf spark.sql.files.openCostInBytes = None
+  conf spark.sql.shuffle.partitions = 1000
+  conf spark.executor.memory = 9600m
+  conf spark.executor.cores = 4
+  conf spark.dynamicAllocation.initialExecutors = None
+  conf spark.dynamicAllocation.maxExecutors = 1000
+  stage  tasks  input_GiB  shuf_read_GiB  shuf_write_GiB  mem_spill_GiB  disk_spill_GiB  name
+      3    160       10.6            0.0            81.6          129.4            80.6  save at NativeMethodAccessorImpl.java:0
+      4      1        0.0            0.0             0.0            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+      5    160       10.6            0.0            81.6          129.3            79.0  save at NativeMethodAccessorImpl.java:0
+      6     39        3.3            0.0             9.2            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+      7     39        3.3            0.0             4.2            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+     11    400        0.0            4.2             3.4            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+     13    800        0.0           81.6             0.0            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+     18    156        0.0            9.2             0.0            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+     23   1000        0.0            3.4             4.6            6.5             0.3  save at NativeMethodAccessorImpl.java:0
+     29    125        0.0            4.6             0.1            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+     37    803        0.0           81.7             0.0            0.0             0.0  save at NativeMethodAccessorImpl.java:0
+  plan:
+    :        :     +- Generate explode(data_source_category_ids), false, [data_source_category_id]
+    :           +- Relation [advertiser_id,audience_upload_id] JDBCRelation((
+    :              :                 :     :     +- Generate explode(data_source_category_ids), false, [data_source_category_id]
+    :              :                 :        +- Relation [advertiser_id,audience_upload_id] JDBCRelation((
+    :     :  +- Generate explode(data_source_category_ids), [1], false, [data_source_category_id]
+    :        :     :     :  +- Generate explode(data_source_category_ids), [1], false, [data_source_category_id]
+    :        :     :           +- Relation [advertiser_id,audience_upload_id] JDBCRelation((
+    :  +- SortMergeJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner
+    :     :        +- Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :     :              +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemoryFil
+    :              +- Scan JDBCRelation((
+    +- SortMergeJoin [search_grid_lat, search_grid_lon], [cast(grid_lat as bigint), cast(grid_lon as bigint)], Inner, (((ASIN(SQRT((POWER(SIN((RADIANS(cast((cand_lat - ego_lat) as double)) / 2.0)), 2.0) + ((COS(RADIANS(cast(
+    :           :  +- SortMergeJoin [ip], [ip], Inner
+    :           :     :        +- SortMergeJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner
+    :           :     :           :        +- Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :           :     :           :              +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids), isnotnull(ip)],
+    :           :     :                    +- Scan JDBCRelation((
+    :           :              +- FileScan parquet [ip,latitude,longitude] Batched: true, DataFilters: [isnotnull(ip), isnotnull(latitude), isnotnull(longitude)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[gs://mn
+    :           +- BroadcastExchange IdentityBroadcastMode, [plan_id=435]
+    +- FileScan parquet [ip,latitude,longitude] Batched: true, DataFilters: [isnotnull(latitude), isnotnull(longitude), isnotnull(cast(FLOOR((cast(latitude as double) / 0.07246376811594203)) as int)), isnotnull(cast(FLOOR((c
+    :     :           +- *(1) Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :     :                    +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMem
+    :                 +- *(2) Scan JDBCRelation((
+    :           :     :           :           +- *(3) Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :           :     :           :                    +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids), isnotnull
+    :           :                    +- FileScan parquet [ip,latitude,longitude] Batched: true, DataFilters: [isnotnull(ip), isnotnull(latitude), isnotnull(longitude)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[g
+    :              +- BroadcastExchange IdentityBroadcastMode, [plan_id=671]
+    :  +- BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner, BuildRight, false
+    :     :        +- *(1) Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :     :                 +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids)], Format: Parquet, Location: InMemory
+    :        +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[1, int, true] as bigint)),false), [plan_id=1106]
+    :                       +- *(2) Scan JDBCRelation((
+    :           :     :        +- BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner, BuildRight, false
+    :           :     :           :        +- *(3) Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :           :     :           :                 +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids), isnotnull(ip
+    :           :     :              +- ReusedExchange [advertiser_id, data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[1, int, true] as bigint)),false), [plan_id=1106]
+    :           :     :           +- *(8) BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner, BuildRight, false
+    :           :     :              :           +- *(3) Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :           :     :              :                    +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids), isnotn
+    :           :     :                 +- ReusedExchange [advertiser_id, data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[1, int, true] as bigint)),false), [plan_id=1106]
+    :           :  +- BroadcastHashJoin [ip], [ip], Inner, BuildLeft, false
+    :           :     :  +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, string, true]),false), [plan_id=2314]
+    :           :     :                 +- *(8) BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner, BuildRight, false
+    :           :     :                    :           +- *(3) Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :           :     :                    :                    +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids), 
+    :           :     :                       +- ReusedExchange [advertiser_id, data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[1, int, true] as bigint)),false), [plan_id=1106]
+    :           :                 +- FileScan parquet [ip,latitude,longitude] Batched: true, DataFilters: [isnotnull(ip), isnotnull(latitude), isnotnull(longitude)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[gs:/
+    :              :  +- *(9) BroadcastHashJoin [ip], [ip], Inner, BuildLeft, false
+    :              :     :  +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, string, true]),false), [plan_id=2314]
+    :              :     :                 +- *(8) BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner, BuildRight, false
+    :              :     :                    :           +- *(3) Generate explode(data_source_category_ids), [ip], false, [data_source_category_id]
+    :              :     :                    :                    +- FileScan parquet [ip,data_source_category_ids] Batched: true, DataFilters: [(size(data_source_category_ids, true) > 0), isnotnull(data_source_category_ids
+    :              :     :                       +- ReusedExchange [advertiser_id, data_source_category_id], BroadcastExchange HashedRelationBroadcastMode(List(cast(input[1, int, true] as bigint)),false), [plan_id=1106]
+    :              :                    +- FileScan parquet [ip,latitude,longitude] Batched: true, DataFilters: [isnotnull(ip), isnotnull(latitude), isnotnull(longitude)], Format: Parquet, Location: InMemoryFileIndex(1 paths
+    :                 +- BroadcastExchange IdentityBroadcastMode, [plan_id=671]
+    +- *(12) SortMergeJoin [search_grid_lat, search_grid_lon], [cast(grid_lat as bigint), cast(grid_lon as bigint)], Inner, (((ASIN(SQRT((POWER(SIN((RADIANS(cast((cand_lat - ego_lat) as double)) / 2.0)), 2.0) + ((COS(RADIANS
+    :  +- *(14) BroadcastHashJoin [data_source_category_id], [cast(data_source_category_id as bigint)], Inner, BuildRight, false

@@ -1,0 +1,23 @@
+Input parquet layout probe, 2026-09-02 (pyarrow 14.0.2 footer read; files downloaded then deleted)
+
+ipdsc_ds_67 stage 3/5 input: gs://mntn-data-archive-prod/ipdsc/dt=<date>/data_source_id=4/
+  dt=2026-08-05: 160 files, median 67 MiB, total 10.6 GiB (matches the 08-05 event log: stage 3 = 160 tasks, 10.6 GiB input)
+  dt=2026-08-31: 162 files, min/median/max 60 MiB, total 9 GiB
+  part-00000 dt=2026-08-31: 60.1 MiB, 1,317,299 rows, ONE row group (68.9 MiB uncompressed), writer parquet-mr 1.13.1-dataproc-1.0.8
+  part-00099 dt=2026-08-31: 60.3 MiB, 1,317,279 rows, ONE row group; schema ip:string, data_source_category_ids:list<int64>
+  => a 32 MiB split cap cannot divide these files: Spark assigns a parquet row group to the split holding its midpoint,
+     so the [0,32 MiB) task reads the whole 60 MiB row group and the [32,60) task reads zero rows.
+
+ipdsc_ds_49 stage 1 input: gs://mntn-data-archive-prod/ipdsc_site_network/site_network_hourly/dt=<date>/hh=<hh>/
+  dt=2026-08-31: 716 files, median 13 MiB, max 26 MiB, total 7 GiB per day (7 days read per run = ~49 GiB)
+  hh=12 part-00000: 14.6 MiB, 1,259,242 rows, ONE row group (23.1 MiB uncompressed)
+  => files are smaller than both the current 128 MiB cap and the proposed 64 MiB cap; the cap changes how many whole
+     files pack into one task, so no row-group splitting is needed and the knob works.
+
+conv_log_derived_ip stage 1 input: gs://mntn-data-archive-prod/feature_store/feature_group_1_source/conv_log_ip/dt=<date>/
+  8 files per day (repartition(8,"ip") in conv_log_ip). Per-day total 500-750 MiB (62-93 MiB files) through 2026-08-19,
+  then 72-89 MiB per day (9-11 MiB files) from 2026-08-20 onward.
+  part-00000 dt=2026-08-31: 10.1 MiB, 260,562 rows, ONE row group (24.0 MiB uncompressed)
+  => files are below both the current 256 MiB cap and the proposed 128 MiB cap; whole-file packing, the knob works.
+  Upstream cause of the 08-20 drop: gs://mntn-data-archive-prod/conversion_log/dt=<date> fell from 18-23 GiB/day
+  (08-18, 08-19) to 3-4 GiB/day (08-20 onward); conv_log_ip.py itself has no commit since before 2026-08-01.
