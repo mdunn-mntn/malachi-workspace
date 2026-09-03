@@ -1,0 +1,2 @@
+Regression guard: intent_score_map run eventlog_v2_batch-42e88a22-6f13-4282-9910-34d2e097ea4e dated 2026-09-02 vs 1 run in the 30 days before.
+No baseline: 1 run in the window, 5 needed.

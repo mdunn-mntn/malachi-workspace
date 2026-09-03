@@ -1,0 +1,85 @@
+Regression guard: site_network_hourly run app-20260902145137894-0461.zstd dated 2026-09-02 vs 5 runs in the 30 days before.
+Seeded: stage 9 fetch_wait_ratio set to 2.00x the median (135.5%).
+stage   tasks  metric                 latest       median   ratio    threshold   n    cv match  verdict
+    9    1649  fetch_wait_ratio       135.5%        67.8%   2.00x       135.5%   5  0.32 id     REGRESSION
+   19    1834  fetch_wait_ratio         0.0%         0.1%   0.02x         0.2%   5  2.20 id     ok (adaptive threshold: cv 2.20 > 0.5)
+   15   10578  fetch_wait_ratio         0.0%         0.0%   0.00x         0.0%   5  2.24 id     ok (adaptive threshold: cv 2.24 > 0.5)
+    0       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    1       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    2       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    3       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    4       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    5    9842  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    6      56  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    7       0  disk_spill            0.0 GiB            -       -            -   3     - id     no baseline (3 runs < 5)
+    8      44  disk_spill            0.0 GiB            -       -            -   3     - id     no baseline (3 runs < 5)
+    9    1649  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+   10       1  disk_spill            0.0 GiB            -       -            -   4     - id     no baseline (4 runs < 5)
+   11       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+   12       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+   13       1  disk_spill            0.0 GiB            -       -            -   2     - id     no baseline (2 runs < 5)
+   14       1  disk_spill            0.0 GiB            -       -            -   2     - id     no baseline (2 runs < 5)
+   15   10578  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+   16    9584  disk_spill            0.0 GiB            -       -            -   1     - id     no baseline (1 runs < 5)
+   17       0  disk_spill            0.0 GiB            -       -            -   1     - id     no baseline (1 runs < 5)
+   18       0  disk_spill            0.0 GiB            -       -            -   1     - id     no baseline (1 runs < 5)
+   19    1834  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+   20       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+   21   10578  disk_spill            0.0 GiB            -       -            -   4     - id     no baseline (4 runs < 5)
+   22    9584  disk_spill            0.0 GiB            -       -            -   4     - id     no baseline (4 runs < 5)
+   23    6463  disk_spill            0.0 GiB            -       -            -   3     - id     no baseline (3 runs < 5)
+   24    4482  disk_spill            0.0 GiB            -       -            -   3     - id     no baseline (3 runs < 5)
+   25    1833  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   5  0.00 id     ok
+    0       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+    1       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+    2       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+    3       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+    4       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+    5    9842  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+    6      56  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+    7       0  fetch_wait_ratio         0.0%            -       -            -   3     - id     no baseline (3 runs < 5)
+    8      44  fetch_wait_ratio         0.0%            -       -            -   3     - id     no baseline (3 runs < 5)
+   10       1  fetch_wait_ratio         0.0%            -       -            -   4     - id     no baseline (4 runs < 5)
+   11       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+   12       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+   13       1  fetch_wait_ratio         0.0%            -       -            -   2     - id     no baseline (2 runs < 5)
+   14       1  fetch_wait_ratio         0.0%            -       -            -   2     - id     no baseline (2 runs < 5)
+   16    9584  fetch_wait_ratio         0.0%            -       -            -   1     - id     no baseline (1 runs < 5)
+   17       0  fetch_wait_ratio         0.0%            -       -            -   1     - id     no baseline (1 runs < 5)
+   18       0  fetch_wait_ratio         0.0%            -       -            -   1     - id     no baseline (1 runs < 5)
+   20       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+   21   10578  fetch_wait_ratio         0.0%            -       -            -   4     - id     no baseline (4 runs < 5)
+   22    9584  fetch_wait_ratio         0.0%            -       -            -   4     - id     no baseline (4 runs < 5)
+   23    6463  fetch_wait_ratio         0.0%            -       -            -   3     - id     no baseline (3 runs < 5)
+   24    4482  fetch_wait_ratio         0.0%            -       -            -   3     - id     no baseline (3 runs < 5)
+   25    1833  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   5  0.00 id     ok
+Match: 'tasks' = same operation and task count in prior runs; 'id' = same stage number only.
+Context (never gated):
+  stage 0   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 1   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 2   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 3   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 4   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 5   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 3.05 h (median 2.54 h)
+  stage 6   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.05 h (median 0.06 h)
+  stage 7   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 8   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.01 h (median 0.01 h)
+  stage 9   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.03 h (median 2.82 h)
+  stage 10  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 11  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.10 h)
+  stage 12  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 1.86 h)
+  stage 13  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.55 h)
+  stage 14  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.94 h)
+  stage 15  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 1.84 h (median 6.30 h)
+  stage 16  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 4.01 h (median 4.22 h)
+  stage 17  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 18  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.31 h)
+  stage 19  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 6.95 h (median 0.03 h)
+  stage 20  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 21  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 1.91 h (median 0.00 h)
+  stage 22  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 4.42 h (median 0.00 h)
+  stage 23  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 3.40 h (median 0.00 h)
+  stage 24  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 2.56 h (median 0.00 h)
+  stage 25  mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.57 h)
+  run executor-hours 676.4 h (median 237.9 h)
+Result: 1 regression.

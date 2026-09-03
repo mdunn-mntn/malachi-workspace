@@ -1,0 +1,22 @@
+Regression guard: intent_score_map run eventlog_v2_batch-42e88a22-6f13-4282-9910-34d2e097ea4e dated 2026-09-02 vs 1 run in the 30 days before.
+Seeded: stage 6 disk_spill set to 2.00x the median (7939.2 GiB).
+stage   tasks  metric                 latest       median   ratio    threshold   n    cv match  verdict
+    6    4915  disk_spill         7939.2 GiB   3969.6 GiB   2.00x   7939.2 GiB   1  0.00 tasks  REGRESSION
+    3   30000  disk_spill         4262.0 GiB   4108.9 GiB   1.04x   8217.8 GiB   1  0.00 tasks  ok
+    2   14000  disk_spill         1319.9 GiB   1314.1 GiB   1.00x   2628.1 GiB   1  0.00 tasks  ok
+    6    4915  fetch_wait_ratio         0.0%         0.0%   0.11x         0.1%   1  0.00 tasks  ok
+    0       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   1  0.00 id     ok
+    1       1  disk_spill            0.0 GiB      0.0 GiB     n/a      0.0 GiB   1  0.00 id     ok
+    0       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   1  0.00 id     ok
+    1       1  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   1  0.00 id     ok
+    2   14000  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   1  0.00 tasks  ok
+    3   30000  fetch_wait_ratio         0.0%         0.0%     n/a         0.0%   1  0.00 tasks  ok
+Match: 'tasks' = same operation and task count in prior runs; 'id' = same stage number only.
+Context (never gated):
+  stage 0   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 1   mem_spill 0.0 GiB (median 0.0 GiB); run_time_ms 0.00 h (median 0.00 h)
+  stage 2   mem_spill 11758.1 GiB (median 12250.8 GiB); run_time_ms 149.60 h (median 148.14 h)
+  stage 3   mem_spill 27244.5 GiB (median 26556.4 GiB); run_time_ms 396.31 h (median 362.12 h)
+  stage 6   mem_spill 38991.8 GiB (median 38936.1 GiB); run_time_ms 437.14 h (median 408.85 h)
+  run executor-hours 145.4 h (median 138.3 h)
+Result: 1 regression.

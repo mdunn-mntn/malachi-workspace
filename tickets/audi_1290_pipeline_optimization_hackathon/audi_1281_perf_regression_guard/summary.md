@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1281: Perf-regression guard POC from optimizer metrics"
-status: backlog
+status: in_progress
 date: 2026-09-02
 summary: "CI check that fails when a model's spill or fetch-wait doubles vs its 30-day optimizer baseline"
-result: "not started"
+result: "POC built and demonstrated: guard flags seeded 2x regressions on intent_score_map (spill) and site_network_hourly (fetch-wait), passes both real runs; PR body drafted, awaiting dispatcher commit + gauntlet"
 question: "Can a CI check compare a model's latest spill and shuffle-fetch-wait against its own 30-day baseline from optimizer metrics and fail on a 2x regression?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1281: Perf-regression guard POC from optimizer metrics
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1281
-**Status:** backlog
+**Status:** in_progress (code complete in the worktree, PR not yet opened)
 **Date Started:** 2026-09-02
 **Assignee:** Malachi
 
@@ -41,6 +41,15 @@ Jira description (verbatim, links to airflow-ti main):
 
 ## 3. Plan of Action
 Planning wave, written 2026-09-02. Nothing below has been executed; every "verified" fact was checked read-only today (commands and numbers in §3.6). The execute agent works in the dispatcher's worktree of `SteelHouse/airflow-ti` on branch `AUDI-1281`; the dispatcher commits, runs the gauntlet, opens the PR. Repo owner for every file touched: Malachi (the `include/spark_optimizer/` package and `dags/spark_optimizer_daily.py` are AUDI-1194 deliverables, PMO rep Bryce Wagg). No hand-off is needed; no file outside that package and that DAG is edited.
+
+**Executed 2026-09-02/03 (resumed after a session cut).** Steps 1-9 below were carried out; deviations from the plan as written, each forced by what execution showed:
+- **Stage identity is not `stage_id` (step 6, §3.1 "Baseline and rule").** Spark assigns stage ids in submission order and `intent_score_map` submits its two big shuffles concurrently, so ids 2 and 3 swap between runs (4 of 18 complete runs). An id-keyed 2x rule fires falsely on every swap day (stage 2 at ~3,400 GiB vs a ~1,350 GiB median = 2.5x). The guard now matches a stage to prior runs by (stage name, task count) when that names exactly one stage per run, and falls back to the stage id otherwise (needed for `site_network_hourly`, whose task counts follow the data). Detail in §4.2.
+- **Runs without an `ApplicationEnd` are excluded** from both the window and the run under test (the 08-19 killed run has 4 partial stages and 44 executor-hours). Not in the plan; found in the backfill.
+- **Rows carry five extra fields** (`name`, `app_name`, `duration_ms`, `start_ts`, `sweep_date`) beyond the step-2 list; `name` and `num_tasks` are the identity key above, `duration_ms` is the completeness marker. Retention on the sweep-persisted file is 45 days (30-day window plus slack), not unbounded.
+- **Backfill scope (step 8): 19 of 31 rolling dirs, not 31.** All 31 sum to 710 MiB in GCS, over the 700 MB download cap once the six `site_network_hourly` logs (211 MiB) are counted. Downloaded: 18 dirs dated 2026-08-16..09-02 plus the 08-19 second dir, and 6 flat logs; 687 MB total, in batches under 200 MB, deleted after parsing except the two newest ISM dirs (46 MB, kept for the local-sweep check).
+- **`site_network_hourly` stage 9 added as the live fetch-wait demonstration** (user decision D2), from the 6 flat logs the 09-02 ledger and backlog name as that job.
+- **Two main-branch defects fixed in the same branch** because CI on `include/spark_optimizer/**` is red without them (run 33671712726 on PR 1264's branch failed at Lint; the Test step never ran): the `ruff.toml` per-file-ignores glob `tests/*.py` does not resolve from the repo root (CI's invocation) and flags 5 test annotations, changed to `**/tests/*.py`; and `test_phs.py::test_newest_logs_takes_the_tail_and_drops_inprogress` still mocked the gsutil listing that PR 1264 replaced with the GCS JSON API. Memory `reference_airflow_ti` says to bundle exactly this kind of fix.
+- **Step 10/11 (PR, capture) belong to the dispatcher**; the PR body is drafted at `artifacts/audi_1281_pr_body.md` (linted, kind pr) and the Jira result comment at `artifacts/audi_1281_result_comment.txt` (linted, kind completion).
 
 ### 3.1 Design decisions the plan rests on
 - **Pipeline: `intent_score_map`** (task `intent_score_map` in `dags/audience_intent/audience_intent.py`, daily `8 0 * * *` UTC, model `models/audience_intent/intent_score_map.py`, `spark.sql.shuffle.partitions=4915`). Chosen over `fangorn_score_monitor` because (a) it writes rolling `eventlog_v2_batch-<uuid>/` dirs to `gs://mntn-data-archive-prod/spark-events/`, and there are exactly 31 such dirs in the whole archive, one per day 2026-08-05..2026-09-02 (two parsed today both carry `app_name = Populate intent_score_map.IntentScoreMap`), so the 30-day history is enumerable with one `gsutil ls`, ~21 MiB per run (~650 MB total); (b) it spills to disk chronically on stages 2, 3 and 6 with stable stage ids across runs (ledger keys `disk_spill:2/3/6` on all 9 ledger runs; two runs parsed today agree: stage 2 ~1315 GiB, stage 3 4109/4262 GiB, stage 6 3970/3988 GiB); (c) fangorn's flat `app-*.zstd` logs cannot be told apart from ~150 other logs a day without parsing them all. Caveat: `fetch_wait_ms` is 0 on every intent_score_map stage, so the fetch-wait half of the guard is exercised only by the seeded fixture (see §3.5 for the live fetch-wait option).
@@ -91,25 +100,117 @@ Planning wave, written 2026-09-02. Nothing below has been executed; every "verif
 - Local tooling: Python 3.11.12, pytest 8.3.5, ruff 0.16.1 (CI pins `>=0.16,<0.17`), `zstandard` module absent, `zstd` CLI 1.5.7 present; `pytest --co` collects 164 tests.
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+### 4.1 Backfill (2026-09-02 23:55-23:57 PT, `audi_1281_backfill.py`, log `outputs/audi_1281_backfill_log.txt`)
+- Source `gs://mntn-data-archive-prod/spark-events/`. 31 `eventlog_v2_batch-*` rolling dirs exist (08-05..09-02, all `Populate intent_score_map.IntentScoreMap`); `gsutil du` sums them to 710.1 MiB. Downloaded 19 (dated 2026-08-16..09-02; 08-19 has two, `4081d8ab` at 06:24 UTC and `7e1cf930` at 07:59 UTC) = 196 + 127 + 117 + 25 MB, plus six `site_network_hourly` flat logs (`app-20260901135143132-0605`, `-145138851-0633`, `-205120829-0863`, `app-20260902005143827-0954`, `-115131178-0350`, `-145137894-0461`; 16-49 MiB each) = 92 + 130 MB. Total 687 MB, under the 700 MB cap; nothing over 200 MB was ever on disk at once; everything deleted after parsing except the two newest ISM dirs (46 MB, gitignored under `outputs/eventlogs/`).
+- Parse cost with the `zstd` CLI fallback (no `zstandard` module installed, none added): 8 ISM dirs in 14 s, 3 SNH logs in 6-9 s. The whole backfill ran in 2 min 16 s.
+- Per-stage rows: `outputs/audi_1281_stage_metrics_intent_score_map.jsonl` (94 rows, 19 runs, 5 stages each except the killed run's 4) and `outputs/audi_1281_stage_metrics_site_network_hourly.jsonl` (159 rows, 6 runs, 23-30 stages each). Row size 500-550 bytes.
+- `intent_score_map` per run (date, app, executor-hours, wall, disk spill in GiB by stage id with task count):
+
+| date | dir | exec_h | wall | stage 2 | stage 3 | stage 6 |
+|---|---|---|---|---|---|---|
+| 08-16 | 4651e5fa | 209.4 | 56m | 3327 / 40000 | 1426 / 14000 | 4401 / 4915 |
+| 08-17 | 4c03c747 | 156.7 | 44m | 3366 / 40000 | 1342 / 14000 | 4285 / 4915 |
+| 08-18 | 48a1d47b | 152.7 | 46m | 1401 / 14000 | 3315 / 40000 | 4338 / 4915 |
+| 08-19 | 4081d8ab | 44.1 | none (no ApplicationEnd) | 3324 / 40000 | 1 / 8 | absent |
+| 08-19 | 7e1cf930 | 151.2 | 60m | 1391 / 14000 | 3331 / 40000 | 4447 / 4915 |
+| 08-20 | 28680ccd | 156.8 | 47m | 1497 / 14000 | 3357 / 40000 | 4633 / 4915 |
+| 08-21 | 59987a51 | 154.8 | 43m | 1424 / 14000 | 3371 / 40000 | 4450 / 4915 |
+| 08-22 | 1dd66711 | 159.5 | 44m | 1353 / 14000 | 3507 / 40000 | 4465 / 4915 |
+| 08-23 | 31f80375 | 157.9 | 44m | 1236 / 14000 | 3416 / 40000 | 4462 / 4915 |
+| 08-24 | ddbb2b71 | 157.4 | 44m | 872 / 14000 | 3369 / 40000 | 4428 / 4915 |
+| 08-25 | cac4f267 | 154.7 | 43m | 850 / 14000 | 3369 / 40000 | 4435 / 4915 |
+| 08-26 | 06dfd454 | 159.5 | 45m | 3385 / 40000 | 1209 / 14000 | 4452 / 4915 |
+| 08-27 | 46993523 | 155.3 | 45m | 1321 / 14000 | 3376 / 40000 | 4443 / 4915 |
+| 08-28 | 51a2d5eb | 157.2 | 44m | 1371 / 14000 | 3374 / 40000 | 4434 / 4915 |
+| 08-29 | 6403612f | 160.0 | 44m | 1386 / 14000 | 3518 / 40000 | 4465 / 4915 |
+| 08-30 | b0e8d3ca | 157.4 | 44m | 3510 / 40000 | 1310 / 14000 | 4476 / 4915 |
+| 08-31 | 66cd15cd | 158.2 | 44m | 959 / 14000 | 3510 / 40000 | 4488 / 4915 |
+| 09-01 | 8f1a450a | 138.3 | 43m | 1314 / 14000 | 4109 / 30000 | 3970 / 4915 |
+| 09-02 | 42e88a22 | 145.4 | 45m | 1320 / 14000 | 4262 / 30000 | 3988 / 4915 |
+
+- Stages 0 and 1 are one-task `load at NativeMethodAccessorImpl.java:0` stages with no spill. Fetch-wait is 0.0% on every ISM stage in every run (the 08-19 run shows 4% on stage 6, the only nonzero). Memory spill (context only) on 09-02: stage 2 11,758 GiB, stage 3 27,245 GiB, stage 6 38,992 GiB.
+
+### 4.2 Stage identity: `stage_id` is not stable on `intent_score_map` (the finding that changed the design)
+- The three shuffle stages all carry the same Spark stage name, `$anonfun$withThreadLocalCaptured$2 at CompletableFuture.java:1768` (the model triggers its actions from a thread pool), so the name cannot tell them apart. What does: their task counts, 40,000 / 14,000 / 4,915 (`spark.sql.shuffle.partitions`).
+- The 40,000-task stage and the 14,000-task stage take ids 2 and 3 in either order: the 40,000-task one is id 2 on 08-16, 08-17, 08-26 and 08-30 (4 of 18 complete runs), id 3 on the other 14. Concurrent submission from the thread pool decides the order.
+- Consequence for an id-keyed rule: stage 2's window is bimodal (median 1,379 GiB, CV 0.54, n=18 by id), stage 3's too (median 3,370, CV 0.32). On any swap day stage 2 lands at ~3,400 GiB = 2.5x its id-keyed median, a false regression, and stage 3 at ~1,300 GiB = 0.4x, a false improvement. Keyed by task count the same numbers are: 40,000-task stage median 3,370 GiB CV 0.02 (n=14 as of 08-30), 14,000-task stage median 1,343 GiB CV 0.15 (n=17), 4,915-task stage median 4,447 GiB CV 0.03 (n=17).
+- The 40,000-task stage became a 30,000-task stage on 2026-09-01 (a change in the model or its config between the 08-31 and 09-01 runs; not investigated here, and not AUDI-1269, which is still open) and its spill rose from ~3,370 to 4,109 / 4,262 GiB. Under the task-count key that stage has only one prior run, so the guard falls back to the id key for it (`match = id`, n=17, bimodal, CV 0.32) and reports 1.27x. This is the honest state: two runs is not a baseline for the new partitioning.
+- `site_network_hourly` is the opposite case: 6 distinct stage names across 23-30 stages per run (`parquet at`, `isEmpty at`, `javaToPython at`, `save at`, `$anonfun$withThreadLocalCaptured$1 at`, and empty for skipped stages), task counts follow the hour's data (stage 9: 210, 1,668, 1,759, 272, 996, 1,649 tasks; shuffle read 0.1-37.6 GiB), and the id set differs between runs (two runs have ids 0-25 contiguous, four skip to 29/35/39). Stage 9 keeps its id and its name (`javaToPython`, empty on one run) in all six, and the ledger already keys its finding `shuffle_fetch_wait:9`, so the id fallback is what carries this pipeline.
+- Rule implemented (`regression_guard.lookup`): match by (name, task count) when that key names exactly one stage per run in the window and has >= `--min-runs` runs; otherwise match by stage id. The report prints the match kind per line (`tasks` or `id`) and a legend. Neither key survives a code change that renames or repartitions a stage; that stage then reads "no baseline" (or falls back to id) until 5 runs accumulate, which is the right behaviour for a regime change (§8 on AUDI-1269).
+
+### 4.3 Guard results (all outputs in `outputs/`, exit codes recorded)
+- `intent_score_map`, real, as of 09-02 (`audi_1281_guard_intent_score_map_real.txt`, exit 0): run `42e88a22` vs 17 runs in the 30 days before, 1 run with no ApplicationEnd ignored. Stage 3 (30,000 tasks, id match) 4,262.0 GiB vs median 3,368.6 = 1.27x, threshold 6,737.2; stage 2 (14,000, tasks match) 1,319.9 vs 1,342.5 = 0.98x; stage 6 (4,915, tasks match) 3,988.2 vs 4,447.2 = 0.90x; fetch-wait 0.0% everywhere (stage 6's adaptive line is CV 3.61 on values of 0.0x% and is gated by the 5% floor). Executor-hours 145.4 vs median 157.2. **0 regressions.**
+- Seeded stage 3 disk spill 2.0x (`..._seeded_stage3.txt`, **exit 1**): 6,737.2 GiB, REGRESSION. Seeded stage 6 2.0x (`..._seeded_stage6.txt`, **exit 1**): 8,894.4 GiB, REGRESSION. Seeded stage 6 1.5x (`..._seeded_stage6_1_5x.txt`, **exit 0**): 6,670.8 GiB, ok.
+- `--as-of 2026-08-30`, a swap day (`..._as_of_2026_08_30.txt`, exit 0): stage 2 (40,000 tasks) 3,509.6 vs 3,369.8 = 1.04x matched by tasks (n=14, CV 0.02). Keyed by id this run would have been 3,509.6 / ~1,379 = 2.5x and a false failure.
+- `site_network_hourly`, real, as of 09-02 14:51 UTC (`audi_1281_guard_site_network_hourly_real.txt`, exit 0): run `app-20260902145137894-0461` vs 5 runs. Stage 9 fetch-wait 56.3% vs median 67.8% (window 68 / 82 / 42 / 80 / 42%) = 0.83x, CV 0.32, id match; stages 19 and 15 show adaptive lines on medians of 0.1% and 0.0% (CV 2.2, floor-gated); disk spill 0 everywhere. Executor-hours 676.4 vs median 237.9 (per-run range 36.7-1,111.4 h, wall 16-144 min: this job's cost varies 30x hour to hour, which is why exec_h stays context, never gated). **0 regressions.**
+- Seeded stage 9 fetch-wait 2.0x (`..._seeded_stage9.txt`, **exit 1**): 135.5%, REGRESSION (a synthetic value; a real ratio cannot exceed 100%).
+- `--from-logs outputs/eventlogs/batch1 --metrics-out ...` on the two kept dirs (`audi_1281_guard_from_logs_two_runs.txt`, **exit 2**): "No baseline: 1 run in the window, 5 needed"; the same with `--min-runs 1 --seed stage=6,...,factor=2.0` (`..._from_logs_seeded_min_runs_1.txt`, exit 1): 7,939.2 GiB REGRESSION; the merged metrics file holds 10 rows.
+- Hermetic local sweep on the two kept dirs (`python -m include.spark_optimizer.sweep <dir> <dir> --date 2026-09-02 --outdir ... --ledger ...`, run with an empty HOME so no GCS/BQ/Databricks credential is reachable): exit 0, "2 jobs scanned, 10 findings", BQ and billing surfaces degrade with a printed reason, `optimizer_stage_metrics.jsonl` holds 10 rows (5 stages x 2 runs), `dag_id = intent_score_map`, dates 09-01 and 09-02, `sweep_date` 09-02.
+
+### 4.4 Framing kill-criterion (CV > 0.5) answered
+- On the gated metric with a matched identity the CVs are 0.02 (40,000-task stage), 0.15 (14,000-task stage), 0.03 (4,915-task stage) on ISM and 0.32 (stage 9 fetch-wait, 5 runs) on SNH: all under 0.5, so the fixed 2x threshold stands. The only CV over 0.5 on a real spill stage (0.54, ISM stage 2 keyed by id) is the identity artefact of §4.2, not run-to-run noise, and disappears under the task-count key. The adaptive branch (median + 3 MAD when CV > 0.5) is implemented and exercised by the tests and by the zero-median fetch-wait lines, where it is harmless because the absolute floors gate.
+
+### 4.5 Ledger vs event log (planning claims, now confirmed on data)
+- The ledger's `exec_h` for `intent_score_map` on the 09-02 sweep is 283.7 = 138.3 (09-01 run) + 145.4 (09-02 run): a per-sweep-day sum across every log the sweep read, not a per-run number. Per-run executor-hours from the event log are 138-160 h (209.4 on 08-16; 44.1 for the killed 08-19 run).
+- The ledger carries spill only inside finding titles and only when `disk_spill >= 2 GiB or mem_spill >= 32 GiB` fires; `site_network_hourly`'s 41 ledger rows name 17 app ids across 6 sweep dates, none with the per-run fetch-wait number as a field. The event-log rows are the uncensored grain the guard needs.
+
+### 4.6 Validation (worktree, 2026-09-03)
+- `ruff check --config include/spark_optimizer/ruff.toml include/spark_optimizer/`: clean (from the repo root, the CI invocation).
+- `python -m pytest include/spark_optimizer/tests/ -q`: **189 passed** (main: 164 collected, 163 pass, 1 stale failure; this branch adds 25 tests: 6 stage-metrics, 17 guard, 1 pipeline, 1 sweep, and repairs 1).
+- `python -m compileall -q dags/spark_optimizer_daily.py include/spark_optimizer/`: ok.
+- `lint_comments.py` on every touched file: the only blocks flagged are the pre-existing ones in `dags/spark_optimizer_daily.py` (8 blocks, none mine); no comment line was added anywhere in this branch (`git diff | grep '^+.*#'` is empty; the two new modules have zero comments).
+- Not done, by rule: no `model_run.py`, no DAG trigger, no Jira write, no git write.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+Branch `audi-1281-perf-regression-guard` in the dispatcher's worktree of `SteelHouse/airflow-ti` (base `825b07e`). Files:
+- `include/spark_optimizer/stage_metrics.py` (new, 93 lines): `STAGE_METRICS = "optimizer_stage_metrics.jsonl"`, `stage_fields`, `rows_for`, `read`, `append` (replaces a re-read run's rows, 45-day retention, atomic rewrite), `RETENTION_DAYS = 45`, `NAME_CHARS = 80`.
+- `include/spark_optimizer/regression_guard.py` (new, 315 lines): the CLI and the rule (`FLOORS`, `CV_LIMIT`, `MAD_SIGMAS`, `lookup`, `judge`, `check`, `seed`, `evaluate`, `render`, `rows_from_logs`, `main`), exit codes 0/1/2.
+- `include/spark_optimizer/crawl.py`: `JobReport` gains `app_start_ts`, `duration_ms`, `stages` (a list of plain dicts from `stage_metrics.stage_fields`, so the report stays picklable and small).
+- `include/spark_optimizer/sweep.py`: after `known` is resolved and before `ledger_mod.record`, append every scored report's rows to `<outdir>/optimizer_stage_metrics.jsonl` keyed by `ledger._dag_id(r, known)`; the path joins the first `publish([...])` list and the returned dict as `stage_metrics`; a failure prints and skips, never sinks the sweep.
+- `dags/spark_optimizer_daily.py`: one `fetch.fetch_optional` for the metrics file next to the ledger restore, same absent-vs-unreadable semantics.
+- `include/spark_optimizer/ruff.toml`: per-file-ignores glob `**/tests/*.py`.
+- Tests: `tests/test_stage_metrics.py` (new), `tests/test_regression_guard.py` (new), `tests/test_pipeline.py` (+1), `tests/test_sweep.py` (+1, `_report` gains `stages`), `tests/test_phs.py` (listing mock moved to the JSON API shape).
+- Ticket tooling: `audi_1281_backfill.py` (download in batches under a byte budget, parse with the branch's modules, delete), outputs listed in §4.
+- No model config changed, so `dags/model_task_config.json` is untouched and `model_upload.py --dryrun` was not needed. Release Type: omit (library plus one optional fetch in our own DAG).
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Can a CI check compare a model's latest spill and shuffle-fetch-wait against its own 30-day baseline from optimizer metrics and fail on a 2x regression?
+  **A:** Yes, with two amendments the data forced. (1) The baseline must come from per-run, per-stage event-log rows, not the ledger (censored, per-sweep-day sums); the sweep now persists those rows. (2) "Per stage" cannot mean "per Spark stage id" on `intent_score_map`: ids swap between runs, so the guard matches by operation and task count first and by id second. With that, the seeded 2x fails (exit 1) and 1.5x passes on both pipelines, and both real 09-02 runs pass.
+- **Q:** Is run-to-run noise on the gated metrics above 50% CV (the kill criterion)?
+  **A:** No. 0.02 / 0.15 / 0.03 on the three ISM spill stages (17 runs) and 0.32 on SNH stage 9 fetch-wait (5 runs). The fixed 2x is right; the adaptive branch stays as a guard rail.
+- **Q:** Does `intent_score_map` have a live fetch-wait signal?
+  **A:** No: 0.0% on every stage in all 19 runs. `site_network_hourly` stage 9 (42-82% of task time waiting on shuffle fetch, median 68%) is the live fetch-wait demonstration.
+- **Q:** Does the archive hold 30 days of `intent_score_map` history?
+  **A:** 29 days (08-05..09-02, 31 rolling dirs, one per day plus two retry days). The POC used the newest 19 under the download cap.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+None written by this agent (knowledge masters are off-limits in the sprint fan-out). Facts handed to the dispatcher for routing: (a) Spark stage ids are submission order and swap between runs for concurrently submitted stages; `intent_score_map`'s 40,000/14,000-task shuffles do this on ~1 in 4 runs, and all three shuffles share one stage name; (b) the ledger's `exec_h` is a per-sweep-day sum across a DAG's logs (283.7 = 138.3 + 145.4 on 09-02) and its spill/fetch-wait live only in titles, gated by the detector thresholds; (c) `intent_score_map`'s biggest shuffle went from 40,000 to 30,000 tasks on 2026-09-01 and its spill from ~3,370 to ~4,200 GiB; (d) `site_network_hourly` task counts and stage-id sets vary per run, stage 9 keeps id and name; (e) the optimizer CI workflow was red on main after PR 1264 (lint glob), and the JSON-API rewrite left one stale test; (f) `gsutil du -s` on a dir path with a trailing slash reports 0, use the bare prefix; (g) zsh does not word-split a command held in a string variable, use a function or array.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+- **Where the live gate runs (D1: this POC ships neither).** (a) Sweep-side: `spark_optimizer_daily` runs the guard on every DAG it has >= 5 runs for and adds a "Regression: <dag> stage N <metric> 2.3x its 30-day median" line to the digest and a `regression` ledger key; no new credentials, catches a regression the morning after it lands, cannot block a merge. (b) PR-side: a GitHub workflow on PRs touching `models/<pipeline>.py` authenticates through the existing workload-identity provider (`deploy_gcs.yaml` uses `projects/411678625229/locations/global/workloadIdentityPools/github-actions/providers/github`), reads `gs://mntn-data-archive-prod/optimizer/optimizer_stage_metrics.jsonl`, and runs the guard on the pipeline's newest run; blocks the merge, but judges the run *before* the PR's change, so it is a "do not merge onto a regressed pipeline" gate, not a "this PR regresses" gate; a true pre-merge test needs a dev run of the model, which no CI does today. Recommendation: (a) first, it is ours to ship; (b) only if the hackathon wants a blocking check.
+- **First prod metrics file** appears after the first 09:00 UTC sweep post-merge; check `gsutil ls gs://mntn-data-archive-prod/optimizer/optimizer_stage_metrics.jsonl`. History starts then; the backfilled files in this ticket are local only (the sweep cannot read them).
+- **File growth.** ~346 logs/day x ~15 stages x ~520 B = ~2.7 MB/day, ~120 MB at 45-day retention, re-read and rewritten by every sweep and round-tripped to GCS once a day. Acceptable for the POC; if it pinches, drop `name` (the longest field) or gzip the object.
+- **AUDI-1269 (shuffle.partitions 4915 -> 40960) changes the 4,915-task stage's task count**, so under the task-count key that stage starts a new baseline (no baseline for 5 runs, then fresh), which is the correct behaviour for a regime change; the `applied_date` reset from §3.5 is not needed for it. The 30,000-task stage (since 09-01) has 2 runs under its new count and is id-matched until 5 accumulate.
+- **`site_network_hourly` window is 5 runs, the minimum**; a real baseline wants a day of logs (~17 runs, ~600 MB). The sweep-persisted file supplies that from the first day after merge.
+- **The stale-test and lint-glob fixes** ride in this PR (CI is red on main without them); call them out in the PR body so the reviewer does not read them as scope creep.
+- **Seeded fetch-wait can exceed 100%** (a synthetic value); a `--seed` cap at 1.0 for ratios is cosmetic and was not added.
+- **Ticket close-out** (dispatcher): commit the worktree, gauntlet, open the PR with `artifacts/audi_1281_pr_body.md`, post `artifacts/audi_1281_result_comment.txt`, `/capture` the §7 facts, self-review entry (Speed: resumed and finished in one session; Craft: the identity finding; Adaptability: the cap forced a 19-run window).
+
+## Verification (adversarial, read-only, 2026-09-03)
+Checked §3/§4/§5 against the worktree diff (`.../wt/audi_1281`, base `825b07e`, branch `audi-1281-perf-regression-guard`) and the checked-in `outputs/`/`artifacts/`.
+
+Reproduced independently, all match:
+- `git diff --stat`: 11 files, exactly §5's list (7 modified, 4 new); nothing outside `include/spark_optimizer/` and `dags/spark_optimizer_daily.py`; `dags/model_task_config.json` absent from the diff.
+- `pytest include/spark_optimizer/tests/ -q`: **189 passed** (164 main + 25 new: 6/17/1/1 by file, matches the claimed breakdown).
+- `ruff check --config include/spark_optimizer/ruff.toml include/spark_optimizer/`: clean. Reverting the glob to `tests/*.py` reproduces the claimed 5 `ANN` errors from the repo root; `**/tests/*.py` fixes it.
+- Reverting `test_phs.py`'s mock to the old gsutil-text listing fails against current `fetch.newest_logs` (invalid-JSON error) — the "stale mock" claim is real, not cosmetic.
+- `regression_guard.py` re-run against the checked-in metrics files with `--as-of 2026-09-02`, `--seed stage=3,factor=2.0`, `--seed stage=6,factor=2.0`, `--seed stage=6,factor=1.5`, `--as-of 2026-08-30`, the `site_network_hourly` real run, and `--seed stage=9,metric=fetch_wait_ratio,factor=2.0`: every stdout is **byte-identical** to the corresponding `outputs/audi_1281_guard_*.txt`; exit codes match (0/1/1/0/0/0/1). Same for the `--from-logs --min-runs 1 --seed stage=6,factor=2.0` case (7,939.2 GiB REGRESSION, merged file 10 rows).
+- Hermetic sweep on `outputs/eventlogs/batch1`'s two kept dirs with an empty `HOME`: "2 jobs scanned, 10 findings", 10 rows (5 stages x 2 runs), `dag_id=intent_score_map`, exit 0 — matches §4.3.
+- CVs recomputed directly from `outputs/audi_1281_stage_metrics_intent_score_map.jsonl` by (name, task-count): 0.021 / 0.149 / 0.038 on the 40k/14k/4,915-task stages — matches §4.2's 0.02/0.15/0.03.
+- `lint_comments.py`: 8 pre-existing blocks, all in `dags/spark_optimizer_daily.py`, none elsewhere; `--staged` on the worktree shows nothing (confirms the commit-gate blind spot the open items note). Zero `#` comment lines anywhere in the diff or the two new modules.
+- `lint_comms.py --kind pr` on `artifacts/audi_1281_pr_body.md` and `--kind completion` on `artifacts/audi_1281_result_comment.txt`: both OK under cap; every number in both was checked against the verified results above and is correct.
+
+**Defect found:** §3's deviation bullet says rows carry "three extra fields (`name`, `app_name`, `duration_ms`)" beyond the step-2 key list. A live row (`stage_metrics.rows_for`, checked against `outputs/audi_1281_stage_metrics_intent_score_map.jsonl`) actually carries **18 keys, five extra**: those three plus `start_ts` and `sweep_date` (13 planned keys + 5 = 18). `start_ts` backs `latest_run`'s tie-break and `run_date`'s fallback; `sweep_date` is written but read by no guard logic. No functional consequence — every guard number above reproduced exactly — but the plan-vs-code record undercounts the schema change by two fields; worth a one-line fix before the PR ships since a reviewer diffing the plan against `stage_metrics.py` will hit the same gap.
+
+**Verdict:** every numeric result, exit code, test count, and file-level claim in §4/§5 reproduces exactly from source. The one claim that does not survive is §3's own field count for the row schema it built. `artifacts/audi_1281_result_comment.txt` is unaffected by this and is accurate as written.

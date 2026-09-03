@@ -1,0 +1,10 @@
+POC done: the guard fails on a seeded 2x spill regression in intent_score_map and a seeded 2x fetch-wait regression in site_network_hourly; both real runs pass.
+
+*Findings*
+* intent_score_map, 17 runs: stage spill medians 1,343 / 3,369 / 4,447 GiB vary 2 to 15 percent run to run, so a fixed 2x rule holds; 09-02 peaks at 1.27x.
+* Spark renumbers stages between runs (ids 2 and 3 swap on 4 of 18 days), so stages match by operation and task count first.
+* site_network_hourly stage 9 waits 42 to 82 percent of task time on shuffle fetch, median 68.
+
+*Next*
+* Review the PR; the sweep persists per-stage metrics after merge.
+* Decide the live gate: digest or PR check.
