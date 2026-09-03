@@ -517,7 +517,7 @@ infl_tbl = (pd.DataFrame(infl_rows)
 gates = []
 for lab, sub in [("Everything that passes power and quality", base),
                  ("Plus 75% days live", base[base["meets_75pct_days_live"]]),
-                 ("Plus holdout validity band", base[base["in_validity_band"]]),
+                 ("Plus holdout share 7 to under 11%", base[base["in_validity_band"]]),
                  ("Both filters (this workbook)", base[base["primary"]])]:
     p = pool(sub)
     if p is None:
@@ -528,10 +528,9 @@ for lab, sub in [("Everything that passes power and quality", base),
                   "Campaigns disagree": p["i2"]})
 gate_tbl = pd.DataFrame(gates)
 
-base["gf_bin"] = pd.cut(base["ghost_frac"], bins=[0, 0.08, 0.09, 0.10, 0.11, 1.0],
-                        labels=["Under 8%", "8 to 9%", "9 to 10%", "10 to 11%", "Over 11%"])
-sens = summarize(base, "gf_bin", "Holdout share of households",
-                 order=["Under 8%", "8 to 9%", "9 to 10%", "10 to 11%", "Over 11%"])
+GF_BINS = ["Under 7%", "7 to 8%", "8 to 9%", "9 to 10%", "10 to 11%", "11% and over"]
+base["gf_bin"] = pd.cut(base["ghost_frac"], bins=[0, 0.07, 0.08, 0.09, 0.10, 0.11, 1.0], labels=GF_BINS)
+sens = summarize(base, "gf_bin", "Holdout share of households", order=GF_BINS)
 
 base["In this workbook"] = base["primary"]
 detail = base[[
@@ -794,8 +793,8 @@ wb.table(
         "Lift, powered and in band": windows["lift_powered_in_band"]})[
         ["Window", "Powered", "Powered and in band", "Holdout share",
          "Lift, all campaigns", "Lift, powered", "Lift, powered and in band"]],
-    finding="The three windows agree once the quality gates are applied, so the workbook uses the widest",
-    method="Ungated, lift climbs as the window moves later and the holdout thins. Gated, it does not. The full span is used because it keeps twice the campaigns, not because it is less biased.",
+    finding="The three windows do not agree, and the gates do not reconcile them, so the window is a real choice",
+    method="Lift roughly doubles from the shortest window to the trailing 30 days, gated or not, while the holdout thins. The full span is used because it keeps the most campaigns.",
     formats={"Powered": FMT.INT, "Powered and in band": FMT.INT, "Holdout share": FMT.PCT2,
              "Lift, all campaigns": FMT.PCT1, "Lift, powered": FMT.PCT1,
              "Lift, powered and in band": FMT.PCT1},
@@ -806,7 +805,7 @@ wb.table(
 wb.table(
     "Population choices", gate_tbl,
     finding="What each population filter costs, and what it does to the headline",
-    method="The workbook uses the last row. The holdout band matters most: measured lift climbs as the holdout thins, which is an artifact of the estimator rather than a real effect.",
+    method="The workbook uses the last row. The holdout band matters most, and which band is least biased is not settled: see the Holdout depth check tab.",
     formats={"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
              "% with a clear effect": FMT.PCT0, "Campaigns disagree": FMT.PCT0, "Campaigns": FMT.INT},
     signal={"Lift": {}}, kind="detail",
@@ -815,8 +814,8 @@ wb.table(
 
 wb.table(
     "Holdout depth check", sens,
-    finding="Measured lift climbs as the holdout thins, which is why the band filter exists",
-    method="Every campaign on the validated bidder leg, binned on the share of households held back. The estimator is documented as reliable only between 9 and 11%.",
+    finding="Lift falls away above a 9% holdout and turns negative past 11%, but it does not simply climb as the holdout thins",
+    method="Every campaign on the validated bidder leg, binned on the share of households held back. Baseline visit rate falls across these rows too, so read the visits column beside the lift.",
     formats=SUMF, signal={"Lift": {}}, kind="detail",
     toc="The gradient behind the holdout band filter",
     query="ti_1313_campaign_base.sql")
@@ -868,7 +867,7 @@ wb.glossary(
         ("Campaigns disagree", "Share of variation between campaigns that is real disagreement, not sampling noise. Above roughly 75% the pooled number is the centre of a wide spread."),
         ("Attributed against incremental", "Attributed counts every visit or conversion reporting credits to the ads. Incremental counts only what the holdout says the ads caused."),
         ("Reported per real one", "How many reported conversions stand behind one genuine one. Blank wherever conversion lift does not clear zero, because the ratio is unbounded there."),
-        ("Holdout share", "Share of a campaign's households held back. The estimator is documented as reliable only between 9 and 11%, and measured lift climbs as it thins."),
+        ("Holdout share", "Share of a campaign's households held back, designed to be 10%. This workbook keeps 7% to under 11%. Past 11% measured lift turns negative, because an uncapped holdout collects the most active households."),
         ("Who is in this", f"{n_pop:,} campaign groups across {n_adv:,} advertisers: 100+ holdout visits, full quality gate, validated bidder leg, holdout inside the band, live at least 75% of days, and no internal or test account."),
         ("Days live", "Distinct days the group delivered prospecting impressions in the window. Measured from delivery, not config dates, so a mid-window pause is caught."),
         ("One bidder leg only", "MNTN runs two bidders. The second has no trustworthy holdout, so it is excluded. That removes almost every Select campaign, and no product comparison is possible here."),

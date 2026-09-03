@@ -1167,3 +1167,22 @@ that most of the +1.7pp move is baseline composition.
   exception. Routed to `experimentation.md`.
 - Matt's takeaways now stand as: 1 unresolved and gate-dependent, 2 contradicted on corrected labels,
   3 real but half-size and on the relative scale, 4 not supported.
+
+### 17f. Stale claims the gate change broke, found on a sweep
+
+Three sheets still asserted things the re-pulled data no longer supports. All corrected.
+
+- **Holdout depth check** said "measured lift climbs as the holdout thins." It does not. Re-binned finer:
+  under 7% +13.04%, 7-8% +10.40%, 8-9% **+14.79%**, 9-10% +7.91%, 10-11% −0.63%, 11%+ −7.22%. The peak is in
+  the middle, and baseline visit rate falls from 1.78% to 1.14% across the same rows, so much of the shape is
+  the baseline. New finding line says lift falls away above 9% and turns negative past 11%, without claiming a
+  monotone thinning gradient.
+- **Window sensitivity** said "the three windows agree once the quality gates are applied." They no longer do:
+  gated lift is 6.98% / 10.93% / 13.37% across the three windows while the holdout thins 9.77% to 8.79%. The
+  sheet now says the window is a real choice and the full span is used for campaign count, not neutrality.
+- **Read me and Population choices** both described a "documented reliable 9 to 11%" band. Replaced with the
+  band the workbook actually uses and the reason the top of it matters.
+
+`ti_1313_fcap_stability.sql` deleted: it was the intermediate step that established `update_time` is a refresh
+stamp rather than an edit marker, and it is superseded by `ti_1313_fcap_in_window.sql`. The finding it produced
+is recorded in `data_catalog.md` (18).
