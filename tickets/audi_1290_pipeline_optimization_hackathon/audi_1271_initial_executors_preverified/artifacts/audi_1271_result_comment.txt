@@ -1,0 +1,12 @@
+*Completed: 2026-09-02*
+
+Diff ready: initialExecutors 100 to 200 on aug_log_ip_vertical_id_hourly, config regenerated. Adds cost, removes no wait; merge needs a yes.
+
+h3. Key Findings
+* *Fleet cut before the first shuffle:* the driver's runtime pip install outlasts the 60 s idle timeout in 12 of 20 runs; the map stage starts on 50 executors either way.
+* *Cost vs saving:* 100 extra idle executors for 60 s add 1.7 executor-hours (17 DCU-hours, 12% per run); stage 11 wait is 0.03 to 0.13.
+* *Real lever:* that prologue idles the fleet 1 to 38 minutes, 44% of the job's executor-hours.
+
+h3. Next
+* Decide: merge for the ledger record, or close with no change.
+* site_network_hourly dropped (17 min prologue).

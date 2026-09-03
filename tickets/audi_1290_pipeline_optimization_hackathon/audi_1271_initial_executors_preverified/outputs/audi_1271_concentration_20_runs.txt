@@ -1,0 +1,241 @@
+# shuffle concentration, 20 aug_log_ip_vertical_id_hourly runs 2026-08-31..09-03 (audi_1194_shuffle_concentration.py; 'executors live' here is adds-only)
+
+app-20260831001639240-0024.zstd  (100 executors registered)
+  stage 11: 895 tasks, 32% fetch wait, 8,626,283 blocks @ 1510 B, 100 executors live at start
+      fed by stage 7: 9640 tasks -> 12.1 GiB over 100 executors, 90% on 83, hottest holds 1.6%; 100 executors live when it started
+  stage 14: 666 tasks, 0% fetch wait, 596,068 blocks @ 1250 B, 100 executors live at start
+      fed by stage 7: 9640 tasks -> 12.1 GiB over 100 executors, 90% on 83, hottest holds 1.6%; 100 executors live when it started
+  stage 18: 500 tasks, 0% fetch wait, 333,000 blocks @ 1779 B, 100 executors live at start
+      fed by stage 7: 9640 tasks -> 12.1 GiB over 100 executors, 90% on 83, hottest holds 1.6%; 100 executors live when it started
+  stage 35: 898 tasks, 44% fetch wait, 8,879,114 blocks @ 1496 B, 100 executors live at start
+      fed by stage 31: 9890 tasks -> 12.4 GiB over 100 executors, 90% on 86, hottest holds 1.4%; 100 executors live when it started
+  stage 38: 666 tasks, 0% fetch wait, 598,066 blocks @ 1236 B, 100 executors live at start
+      fed by stage 31: 9890 tasks -> 12.4 GiB over 100 executors, 90% on 86, hottest holds 1.4%; 100 executors live when it started
+  stage 42: 500 tasks, 0% fetch wait, 333,000 blocks @ 1766 B, 100 executors live at start
+      fed by stage 31: 9890 tasks -> 12.4 GiB over 100 executors, 90% on 86, hottest holds 1.4%; 100 executors live when it started
+
+app-20260831041632940-0428.zstd  (247 executors registered)
+  stage 11: 667 tasks, 33% fetch wait, 6,541,396 blocks @ 1862 B, 129 executors live at start
+      fed by stage 7: 9808 tasks -> 11.3 GiB over 79 executors, 90% on 67, hottest holds 2.1%; 100 executors live when it started
+  stage 14: 571 tasks, 0% fetch wait, 380,857 blocks @ 1677 B, 129 executors live at start
+      fed by stage 7: 9808 tasks -> 11.3 GiB over 79 executors, 90% on 67, hottest holds 2.1%; 100 executors live when it started
+  stage 18: 466 tasks, 0% fetch wait, 266,086 blocks @ 1973 B, 129 executors live at start
+      fed by stage 7: 9808 tasks -> 11.3 GiB over 79 executors, 90% on 67, hottest holds 2.1%; 100 executors live when it started
+  stage 35: 2000 tasks, 18% fetch wait, 18,918,324 blocks @ 588 B, 247 executors live at start
+      fed by stage 31: 9604 tasks -> 10.4 GiB over 197 executors, 90% on 81, hottest holds 1.5%; 129 executors live when it started
+  stage 38: 652 tasks, 0% fetch wait, 1,298,189 blocks @ 545 B, 247 executors live at start
+      fed by stage 35: 2000 tasks -> 0.7 GiB over 197 executors, 90% on 172, hottest holds 0.8%; 247 executors live when it started
+  stage 42: 444 tasks, 0% fetch wait, 289,488 blocks @ 1729 B, 247 executors live at start
+      fed by stage 35: 2000 tasks -> 0.7 GiB over 197 executors, 90% on 172, hottest holds 0.8%; 247 executors live when it started
+
+app-20260831081653391-0033.zstd  (166 executors registered)
+  stage 11: 899 tasks, 27% fetch wait, 7,752,852 blocks @ 892 B, 119 executors live at start
+      fed by stage 7: 8682 tasks -> 6.4 GiB over 100 executors, 90% on 80, hottest holds 1.7%; 100 executors live when it started
+  stage 14: 287 tasks, 0% fetch wait, 258,009 blocks @ 1242 B, 119 executors live at start
+      fed by stage 7: 8682 tasks -> 6.4 GiB over 100 executors, 90% on 80, hottest holds 1.7%; 100 executors live when it started
+  stage 35: 1334 tasks, 10% fetch wait, 10,515,866 blocks @ 531 B, 166 executors live at start
+      fed by stage 33: 8206 tasks -> 5.2 GiB over 146 executors, 90% on 97, hottest holds 1.3%; 119 executors live when it started
+  stage 38: 245 tasks, 0% fetch wait, 326,663 blocks @ 809 B, 166 executors live at start
+      fed by stage 35: 1334 tasks -> 0.2 GiB over 146 executors, 90% on 130, hottest holds 1.1%; 166 executors live when it started
+
+app-20260831121731541-0293.zstd  (100 executors registered)
+  stage 11: 895 tasks, 31% fetch wait, 7,532,013 blocks @ 757 B, 100 executors live at start
+      fed by stage 7: 8498 tasks -> 5.3 GiB over 100 executors, 90% on 82, hottest holds 1.7%; 97 executors live when it started
+  stage 14: 250 tasks, 0% fetch wait, 223,732 blocks @ 1229 B, 100 executors live at start
+      fed by stage 7: 8498 tasks -> 5.3 GiB over 100 executors, 90% on 82, hottest holds 1.7%; 97 executors live when it started
+  stage 35: 897 tasks, 46% fetch wait, 7,895,007 blocks @ 997 B, 100 executors live at start
+      fed by stage 31: 8820 tasks -> 7.3 GiB over 100 executors, 90% on 85, hottest holds 1.4%; 100 executors live when it started
+  stage 38: 363 tasks, 0% fetch wait, 325,609 blocks @ 1244 B, 100 executors live at start
+      fed by stage 31: 8820 tasks -> 7.3 GiB over 100 executors, 90% on 85, hottest holds 1.4%; 100 executors live when it started
+
+app-20260831161653202-0062.zstd  (226 executors registered)
+  stage 11: 894 tasks, 34% fetch wait, 9,210,196 blocks @ 1485 B, 126 executors live at start
+      fed by stage 7: 10304 tasks -> 12.7 GiB over 100 executors, 90% on 82, hottest holds 1.3%; 100 executors live when it started
+  stage 14: 572 tasks, 0% fetch wait, 511,367 blocks @ 1357 B, 126 executors live at start
+      fed by stage 7: 10304 tasks -> 12.7 GiB over 100 executors, 90% on 82, hottest holds 1.3%; 100 executors live when it started
+  stage 18: 500 tasks, 0% fetch wait, 286,000 blocks @ 1886 B, 126 executors live at start
+      fed by stage 7: 10304 tasks -> 12.7 GiB over 100 executors, 90% on 82, hottest holds 1.3%; 100 executors live when it started
+  stage 35: 2000 tasks, 0% fetch wait, 20,943,275 blocks @ 685 B, 226 executors live at start
+      fed by stage 33: 10522 tasks -> 13.4 GiB over 200 executors, 90% on 141, hottest holds 0.9%; 126 executors live when it started
+  stage 38: 779 tasks, 0% fetch wait, 1,552,263 blocks @ 546 B, 226 executors live at start
+      fed by stage 35: 2000 tasks -> 0.8 GiB over 200 executors, 90% on 175, hottest holds 0.8%; 226 executors live when it started
+  stage 42: 571 tasks, 0% fetch wait, 444,809 blocks @ 1383 B, 226 executors live at start
+      fed by stage 35: 2000 tasks -> 0.8 GiB over 200 executors, 90% on 175, hottest holds 0.8%; 226 executors live when it started
+
+app-20260831201702899-0001.zstd  (150 executors registered)
+  stage 11: 894 tasks, 37% fetch wait, 9,891,612 blocks @ 1514 B, 150 executors live at start
+      fed by stage 7: 11066 tasks -> 14.0 GiB over 100 executors, 90% on 87, hottest holds 1.7%; 100 executors live when it started
+  stage 14: 666 tasks, 0% fetch wait, 595,403 blocks @ 1258 B, 150 executors live at start
+      fed by stage 7: 11066 tasks -> 14.0 GiB over 100 executors, 90% on 87, hottest holds 1.7%; 100 executors live when it started
+  stage 18: 549 tasks, 0% fetch wait, 365,634 blocks @ 1645 B, 150 executors live at start
+      fed by stage 7: 11066 tasks -> 14.0 GiB over 100 executors, 90% on 87, hottest holds 1.7%; 100 executors live when it started
+  stage 35: 896 tasks, 29% fetch wait, 9,815,144 blocks @ 1527 B, 150 executors live at start
+      fed by stage 31: 10956 tasks -> 14.0 GiB over 100 executors, 90% on 86, hottest holds 1.3%; 150 executors live when it started
+  stage 38: 666 tasks, 0% fetch wait, 596,711 blocks @ 1282 B, 150 executors live at start
+      fed by stage 31: 10956 tasks -> 14.0 GiB over 100 executors, 90% on 86, hottest holds 1.3%; 150 executors live when it started
+  stage 42: 571 tasks, 0% fetch wait, 380,286 blocks @ 1612 B, 150 executors live at start
+      fed by stage 31: 10956 tasks -> 14.0 GiB over 100 executors, 90% on 86, hottest holds 1.3%; 150 executors live when it started
+
+app-20260901001713889-0211.zstd  (200 executors registered)
+  stage 11: 899 tasks, 41% fetch wait, 9,635,279 blocks @ 1505 B, 100 executors live at start
+      fed by stage 7: 10720 tasks -> 13.5 GiB over 100 executors, 90% on 88, hottest holds 1.4%; 100 executors live when it started
+  stage 14: 666 tasks, 0% fetch wait, 598,734 blocks @ 1277 B, 100 executors live at start
+      fed by stage 7: 10720 tasks -> 13.5 GiB over 100 executors, 90% on 88, hottest holds 1.4%; 100 executors live when it started
+  stage 18: 571 tasks, 0% fetch wait, 380,286 blocks @ 1597 B, 100 executors live at start
+      fed by stage 7: 10720 tasks -> 13.5 GiB over 100 executors, 90% on 88, hottest holds 1.4%; 100 executors live when it started
+  stage 35: 2000 tasks, 10% fetch wait, 20,904,582 blocks @ 677 B, 200 executors live at start
+      fed by stage 31: 10534 tasks -> 13.2 GiB over 200 executors, 90% on 113, hottest holds 1.0%; 100 executors live when it started
+  stage 38: 800 tasks, 0% fetch wait, 1,594,578 blocks @ 551 B, 200 executors live at start
+      fed by stage 35: 2000 tasks -> 0.8 GiB over 200 executors, 90% on 175, hottest holds 0.8%; 200 executors live when it started
+  stage 42: 571 tasks, 0% fetch wait, 456,800 blocks @ 1383 B, 200 executors live at start
+      fed by stage 35: 2000 tasks -> 0.8 GiB over 200 executors, 90% on 175, hottest holds 0.8%; 200 executors live when it started
+
+app-20260901041654394-0829.zstd  (176 executors registered)
+  stage 11: 892 tasks, 33% fetch wait, 9,020,298 blocks @ 1404 B, 100 executors live at start
+      fed by stage 7: 10114 tasks -> 11.8 GiB over 100 executors, 90% on 85, hottest holds 1.6%; 100 executors live when it started
+  stage 14: 589 tasks, 0% fetch wait, 525,387 blocks @ 1329 B, 100 executors live at start
+      fed by stage 7: 10114 tasks -> 11.8 GiB over 100 executors, 90% on 85, hottest holds 1.6%; 100 executors live when it started
+  stage 18: 500 tasks, 0% fetch wait, 294,500 blocks @ 1843 B, 100 executors live at start
+      fed by stage 7: 10114 tasks -> 11.8 GiB over 100 executors, 90% on 85, hottest holds 1.6%; 100 executors live when it started
+  stage 35: 2000 tasks, 32% fetch wait, 19,730,245 blocks @ 598 B, 176 executors live at start
+      fed by stage 33: 10014 tasks -> 11.0 GiB over 176 executors, 90% on 111, hottest holds 1.2%; 100 executors live when it started
+  stage 38: 666 tasks, 0% fetch wait, 1,326,706 blocks @ 551 B, 176 executors live at start
+      fed by stage 35: 2000 tasks -> 0.7 GiB over 176 executors, 90% on 152, hottest holds 0.8%; 176 executors live when it started
+  stage 42: 444 tasks, 0% fetch wait, 295,704 blocks @ 1750 B, 176 executors live at start
+      fed by stage 35: 2000 tasks -> 0.7 GiB over 176 executors, 90% on 152, hottest holds 0.8%; 176 executors live when it started
+
+app-20260901081633173-0638.zstd  (126 executors registered)
+  stage 11: 423 tasks, 32% fetch wait, 3,732,263 blocks @ 1873 B, 100 executors live at start
+      fed by stage 7: 8830 tasks -> 6.5 GiB over 50 executors, 90% on 42, hottest holds 2.7%; 100 executors live when it started
+  stage 14: 254 tasks, 0% fetch wait, 107,429 blocks @ 2603 B, 100 executors live at start
+      fed by stage 7: 8830 tasks -> 6.5 GiB over 50 executors, 90% on 42, hottest holds 2.7%; 100 executors live when it started
+  stage 35: 667 tasks, 17% fetch wait, 5,546,861 blocks @ 1004 B, 126 executors live at start
+      fed by stage 33: 8356 tasks -> 5.2 GiB over 76 executors, 90% on 58, hottest holds 2.1%; 100 executors live when it started
+  stage 38: 222 tasks, 0% fetch wait, 148,074 blocks @ 1618 B, 126 executors live at start
+      fed by stage 33: 8356 tasks -> 5.2 GiB over 76 executors, 90% on 58, hottest holds 2.1%; 100 executors live when it started
+
+app-20260901121620141-0437.zstd  (100 executors registered)
+  stage 11: 897 tasks, 33% fetch wait, 7,484,784 blocks @ 781 B, 100 executors live at start
+      fed by stage 7: 8404 tasks -> 5.4 GiB over 100 executors, 90% on 79, hottest holds 1.9%; 11 executors live when it started
+  stage 14: 251 tasks, 0% fetch wait, 225,143 blocks @ 1232 B, 100 executors live at start
+      fed by stage 7: 8404 tasks -> 5.4 GiB over 100 executors, 90% on 79, hottest holds 1.9%; 11 executors live when it started
+  stage 35: 893 tasks, 23% fetch wait, 7,552,710 blocks @ 1033 B, 100 executors live at start
+      fed by stage 33: 8470 tasks -> 7.3 GiB over 100 executors, 90% on 87, hottest holds 1.1%; 100 executors live when it started
+  stage 38: 363 tasks, 0% fetch wait, 324,158 blocks @ 1242 B, 100 executors live at start
+      fed by stage 33: 8470 tasks -> 7.3 GiB over 100 executors, 90% on 87, hottest holds 1.1%; 100 executors live when it started
+
+app-20260901161824751-0133.zstd  (140 executors registered)
+  stage 11: 573 tasks, 32% fetch wait, 2,970,913 blocks @ 2515 B, 120 executors live at start
+      fed by stage 7: 5186 tasks -> 7.0 GiB over 71 executors, 90% on 53, hottest holds 2.4%; 99 executors live when it started
+  stage 14: 500 tasks, 0% fetch wait, 286,500 blocks @ 1916 B, 120 executors live at start
+      fed by stage 7: 5186 tasks -> 7.0 GiB over 71 executors, 90% on 53, hottest holds 2.4%; 99 executors live when it started
+  stage 35: 800 tasks, 25% fetch wait, 5,637,795 blocks @ 1762 B, 140 executors live at start
+      fed by stage 31: 7048 tasks -> 9.2 GiB over 91 executors, 90% on 69, hottest holds 1.7%; 120 executors live when it started
+  stage 38: 571 tasks, 0% fetch wait, 456,800 blocks @ 1413 B, 140 executors live at start
+      fed by stage 31: 7048 tasks -> 9.2 GiB over 91 executors, 90% on 69, hottest holds 1.7%; 120 executors live when it started
+  stage 42: 444 tasks, 0% fetch wait, 253,524 blocks @ 2027 B, 140 executors live at start
+      fed by stage 31: 7048 tasks -> 9.2 GiB over 91 executors, 90% on 69, hottest holds 1.7%; 120 executors live when it started
+
+app-20260901201622161-0599.zstd  (127 executors registered)
+  stage 11: 667 tasks, 43% fetch wait, 7,080,610 blocks @ 1928 B, 127 executors live at start
+      fed by stage 7: 10616 tasks -> 12.7 GiB over 77 executors, 90% on 47, hottest holds 2.1%; 100 executors live when it started
+  stage 14: 571 tasks, 0% fetch wait, 380,857 blocks @ 1799 B, 127 executors live at start
+      fed by stage 7: 10616 tasks -> 12.7 GiB over 77 executors, 90% on 47, hottest holds 2.1%; 100 executors live when it started
+  stage 18: 500 tasks, 0% fetch wait, 285,500 blocks @ 1961 B, 127 executors live at start
+      fed by stage 7: 10616 tasks -> 12.7 GiB over 77 executors, 90% on 47, hottest holds 2.1%; 100 executors live when it started
+  stage 35: 667 tasks, 39% fetch wait, 6,660,959 blocks @ 1973 B, 127 executors live at start
+      fed by stage 33: 9988 tasks -> 12.2 GiB over 77 executors, 90% on 69, hottest holds 1.4%; 127 executors live when it started
+  stage 38: 571 tasks, 0% fetch wait, 380,857 blocks @ 1801 B, 127 executors live at start
+      fed by stage 33: 9988 tasks -> 12.2 GiB over 77 executors, 90% on 69, hottest holds 1.4%; 127 executors live when it started
+  stage 42: 500 tasks, 0% fetch wait, 285,500 blocks @ 1959 B, 127 executors live at start
+      fed by stage 33: 9988 tasks -> 12.2 GiB over 77 executors, 90% on 69, hottest holds 1.4%; 127 executors live when it started
+
+app-20260902001647856-0186.zstd  (243 executors registered)
+  stage 11: 896 tasks, 43% fetch wait, 8,732,420 blocks @ 1469 B, 148 executors live at start
+      fed by stage 7: 9748 tasks -> 11.9 GiB over 100 executors, 90% on 87, hottest holds 1.4%; 98 executors live when it started
+  stage 14: 666 tasks, 0% fetch wait, 596,736 blocks @ 1241 B, 148 executors live at start
+      fed by stage 7: 9748 tasks -> 11.9 GiB over 100 executors, 90% on 87, hottest holds 1.4%; 98 executors live when it started
+  stage 18: 500 tasks, 0% fetch wait, 333,000 blocks @ 1769 B, 148 executors live at start
+      fed by stage 7: 9748 tasks -> 11.9 GiB over 100 executors, 90% on 87, hottest holds 1.4%; 98 executors live when it started
+  stage 35: 2000 tasks, 6% fetch wait, 18,796,984 blocks @ 650 B, 243 executors live at start
+      fed by stage 31: 9494 tasks -> 11.4 GiB over 195 executors, 90% on 131, hottest holds 0.9%; 148 executors live when it started
+  stage 38: 786 tasks, 0% fetch wait, 1,565,932 blocks @ 542 B, 243 executors live at start
+      fed by stage 35: 2000 tasks -> 0.8 GiB over 195 executors, 90% on 170, hottest holds 0.8%; 243 executors live when it started
+  stage 42: 571 tasks, 0% fetch wait, 448,806 blocks @ 1355 B, 243 executors live at start
+      fed by stage 35: 2000 tasks -> 0.8 GiB over 195 executors, 90% on 170, hottest holds 0.8%; 243 executors live when it started
+
+app-20260902041644665-0744.zstd  (150 executors registered)
+  stage 11: 895 tasks, 32% fetch wait, 8,693,943 blocks @ 1320 B, 150 executors live at start
+      fed by stage 7: 9718 tasks -> 10.7 GiB over 100 executors, 90% on 85, hottest holds 1.3%; 100 executors live when it started
+  stage 14: 571 tasks, 0% fetch wait, 511,045 blocks @ 1345 B, 150 executors live at start
+      fed by stage 7: 9718 tasks -> 10.7 GiB over 100 executors, 90% on 85, hottest holds 1.3%; 100 executors live when it started
+  stage 18: 499 tasks, 0% fetch wait, 284,929 blocks @ 1858 B, 150 executors live at start
+      fed by stage 7: 9718 tasks -> 10.7 GiB over 100 executors, 90% on 85, hottest holds 1.3%; 100 executors live when it started
+  stage 35: 895 tasks, 12% fetch wait, 8,665,376 blocks @ 1234 B, 150 executors live at start
+      fed by stage 33: 9688 tasks -> 10.0 GiB over 100 executors, 90% on 88, hottest holds 1.4%; 150 executors live when it started
+  stage 38: 571 tasks, 0% fetch wait, 511,022 blocks @ 1224 B, 150 executors live at start
+      fed by stage 33: 9688 tasks -> 10.0 GiB over 100 executors, 90% on 88, hottest holds 1.4%; 150 executors live when it started
+  stage 42: 444 tasks, 0% fetch wait, 253,524 blocks @ 1932 B, 150 executors live at start
+      fed by stage 33: 9688 tasks -> 10.0 GiB over 100 executors, 90% on 88, hottest holds 1.4%; 150 executors live when it started
+
+app-20260902081636494-0732.zstd  (198 executors registered)
+  stage 11: 895 tasks, 29% fetch wait, 8,461,527 blocks @ 798 B, 100 executors live at start
+      fed by stage 7: 9552 tasks -> 6.3 GiB over 100 executors, 90% on 85, hottest holds 1.5%; 100 executors live when it started
+  stage 14: 285 tasks, 0% fetch wait, 255,055 blocks @ 1240 B, 100 executors live at start
+      fed by stage 7: 9552 tasks -> 6.3 GiB over 100 executors, 90% on 85, hottest holds 1.5%; 100 executors live when it started
+  stage 35: 2000 tasks, 6% fetch wait, 16,138,775 blocks @ 338 B, 198 executors live at start
+      fed by stage 31: 9048 tasks -> 5.1 GiB over 198 executors, 90% on 95, hottest holds 1.2%; 100 executors live when it started
+  stage 38: 247 tasks, 0% fetch wait, 490,136 blocks @ 541 B, 198 executors live at start
+      fed by stage 35: 2000 tasks -> 0.2 GiB over 198 executors, 90% on 173, hottest holds 0.8%; 198 executors live when it started
+
+app-20260902121622990-0053.zstd  (114 executors registered)
+  stage 11: 571 tasks, 31% fetch wait, 5,252,283 blocks @ 1098 B, 114 executors live at start
+      fed by stage 7: 9216 tasks -> 5.4 GiB over 65 executors, 90% on 56, hottest holds 2.3%; 99 executors live when it started
+  stage 14: 246 tasks, 0% fetch wait, 140,466 blocks @ 1881 B, 114 executors live at start
+      fed by stage 7: 9216 tasks -> 5.4 GiB over 65 executors, 90% on 56, hottest holds 2.3%; 99 executors live when it started
+  stage 35: 572 tasks, 36% fetch wait, 5,434,381 blocks @ 1404 B, 114 executors live at start
+      fed by stage 33: 9504 tasks -> 7.1 GiB over 65 executors, 90% on 58, hottest holds 2.0%; 114 executors live when it started
+  stage 38: 333 tasks, 0% fetch wait, 190,476 blocks @ 1972 B, 114 executors live at start
+      fed by stage 33: 9504 tasks -> 7.1 GiB over 65 executors, 90% on 58, hottest holds 2.0%; 114 executors live when it started
+
+app-20260902161701528-0710.zstd  (124 executors registered)
+  stage 11: 891 tasks, 35% fetch wait, 9,311,643 blocks @ 1334 B, 100 executors live at start
+      fed by stage 7: 10454 tasks -> 11.6 GiB over 100 executors, 90% on 85, hottest holds 1.6%; 100 executors live when it started
+  stage 14: 571 tasks, 0% fetch wait, 508,760 blocks @ 1316 B, 100 executors live at start
+      fed by stage 7: 10454 tasks -> 11.6 GiB over 100 executors, 90% on 85, hottest holds 1.6%; 100 executors live when it started
+  stage 18: 444 tasks, 0% fetch wait, 253,524 blocks @ 2055 B, 100 executors live at start
+      fed by stage 7: 10454 tasks -> 11.6 GiB over 100 executors, 90% on 85, hottest holds 1.6%; 100 executors live when it started
+  stage 35: 667 tasks, 36% fetch wait, 7,071,939 blocks @ 1835 B, 124 executors live at start
+      fed by stage 31: 10604 tasks -> 12.1 GiB over 74 executors, 90% on 59, hottest holds 2.3%; 100 executors live when it started
+  stage 38: 571 tasks, 0% fetch wait, 380,857 blocks @ 1718 B, 124 executors live at start
+      fed by stage 31: 10604 tasks -> 12.1 GiB over 74 executors, 90% on 59, hottest holds 2.3%; 100 executors live when it started
+  stage 42: 500 tasks, 0% fetch wait, 285,500 blocks @ 1888 B, 124 executors live at start
+      fed by stage 31: 10604 tasks -> 12.1 GiB over 74 executors, 90% on 59, hottest holds 2.3%; 100 executors live when it started
+
+app-20260902201636950-0790.zstd  (122 executors registered)
+  stage 11: 665 tasks, 47% fetch wait, 7,222,555 blocks @ 1826 B, 122 executors live at start
+      fed by stage 7: 10862 tasks -> 12.3 GiB over 72 executors, 90% on 62, hottest holds 2.0%; 100 executors live when it started
+  stage 14: 571 tasks, 0% fetch wait, 379,702 blocks @ 1769 B, 122 executors live at start
+      fed by stage 7: 10862 tasks -> 12.3 GiB over 72 executors, 90% on 62, hottest holds 2.0%; 100 executors live when it started
+  stage 18: 500 tasks, 0% fetch wait, 285,500 blocks @ 1931 B, 122 executors live at start
+      fed by stage 7: 10862 tasks -> 12.3 GiB over 72 executors, 90% on 62, hottest holds 2.0%; 100 executors live when it started
+
+app-20260903011646859-0707.zstd  (125 executors registered)
+  stage 11: 667 tasks, 53% fetch wait, 6,189,427 blocks @ 1924 B, 125 executors live at start
+      fed by stage 7: 9280 tasks -> 11.1 GiB over 75 executors, 90% on 65, hottest holds 1.8%; 100 executors live when it started
+  stage 14: 571 tasks, 0% fetch wait, 380,857 blocks @ 1728 B, 125 executors live at start
+      fed by stage 7: 9280 tasks -> 11.1 GiB over 75 executors, 90% on 65, hottest holds 1.8%; 100 executors live when it started
+  stage 18: 500 tasks, 0% fetch wait, 285,500 blocks @ 1886 B, 125 executors live at start
+      fed by stage 7: 9280 tasks -> 11.1 GiB over 75 executors, 90% on 65, hottest holds 1.8%; 100 executors live when it started
+
+app-20260903021630713-0138.zstd  (124 executors registered)
+  stage 11: 423 tasks, 36% fetch wait, 3,925,327 blocks @ 3034 B, 100 executors live at start
+      fed by stage 7: 9280 tasks -> 11.1 GiB over 50 executors, 90% on 45, hottest holds 2.1%; 100 executors live when it started
+  stage 14: 423 tasks, 0% fetch wait, 178,929 blocks @ 3348 B, 100 executors live at start
+      fed by stage 7: 9280 tasks -> 11.1 GiB over 50 executors, 90% on 45, hottest holds 2.1%; 100 executors live when it started
+  stage 35: 667 tasks, 29% fetch wait, 6,258,960 blocks @ 1906 B, 124 executors live at start
+      fed by stage 33: 9386 tasks -> 11.1 GiB over 74 executors, 90% on 63, hottest holds 1.6%; 100 executors live when it started
+  stage 38: 571 tasks, 0% fetch wait, 380,857 blocks @ 1708 B, 124 executors live at start
+      fed by stage 33: 9386 tasks -> 11.1 GiB over 74 executors, 90% on 63, hottest holds 1.6%; 100 executors live when it started
+  stage 42: 500 tasks, 0% fetch wait, 285,500 blocks @ 1871 B, 124 executors live at start
+      fed by stage 33: 9386 tasks -> 11.1 GiB over 74 executors, 90% on 63, hottest holds 1.6%; 100 executors live when it started

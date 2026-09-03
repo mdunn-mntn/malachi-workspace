@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1271: Raise initialExecutors on 2 pre-verified fetch-wait DAGs"
-status: backlog
+status: in_progress
 date: 2026-09-02
 summary: "Raise dynamicAllocation.initialExecutors to 200 on two hourly DAGs stalled on shuffle-fetch wait"
-result: "not started"
+result: "Diff ready on aug_log only (initialExecutors 200, config regenerated); 20-run profile says it adds ~1.7 executor-hours (~17 DCU-h, +12%) per run for 0.03-0.13 executor-hours of stage 11 wait; merge awaits the user's call"
 question: "Does raising spark.dynamicAllocation.initialExecutors to 200 on aug_log_ip_vertical_id_hourly and site_network_hourly remove the shuffle-fetch wait on stage 11 and stage 9 without raising DCU-hours per run?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1271: Raise initialExecutors on 2 pre-verified fetch-wait DAGs
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1271
-**Status:** backlog
+**Status:** in_progress (diff ready in the AUDI-1271 worktree, PR not opened; user decides merge vs no-change close, see §5)
 **Date Started:** 2026-09-02
 **Assignee:** Malachi
 
@@ -119,8 +119,17 @@ Consequence: `initialExecutors` is a dead knob on both jobs as written. Raising 
 2. **site_network specifically:** its prologue is ~17 min at 2 executors, so no sane idle timeout keeps 200 executors alive to stage 5 without paying 200 x 17 min = ~57 executor-hours of idle per run on a job whose median run holds 241. Either drop site_network from this PR (aug_log-only) pending a look at what the driver does for 17 minutes, or accept the spec'd no-op for the ledger record. The 08-26 memo already puts stage 9's wait at ~0.3% of the job's executor-hours.
 3. **Reviewer:** rkleck-mntn authored both models; site_network is ours since PR #1232. Whether Ryan reviews or the PR merges on the hackathon flow is the dispatcher's call.
 
+### 3.5 As executed (2026-09-02 execute wave, two agents; the second resumed after a session cut)
+The plan above is kept as written; these are the deltas between it and what actually happened.
+- Step 1 ran as planned (§4.1).
+- Step 2 ran on aug_log only, 20 runs (§4.2). site_network_hourly was DROPPED from the PR by the user (decision 2) on the planning evidence (17-min driver prologue at 2 executors; stage 9 wait ~0.3% of the job's executor-hours), so no site_network logs beyond the planning run 0517 were profiled. Download deviated: `gsutil -o "GSUtil:check_hashes=never" -m cp -I` stalled at 0-byte `.gstmp` files twice (both agents), replaced by one GCS JSON API `alt=media` request per object (`artifacts/audi_1271_fetch_log.sh`, `xargs -P 6`), 19 objects in ~40 s. The per-run table came from a purpose-built profiler (`artifacts/audi_1271_run_profile.py`) rather than the two AUDI-1194 tools, because the timeline tool's live count and the concentration tool's fetch-wait share had to land in one CSV row per run; the AUDI-1194 tools were still run for the record (`outputs/audi_1271_concentration_20_runs.txt`, the three `_timeline_` pairs).
+- Decision rule outcome: trim confirmed on 12 of 20 runs (11 to minExecutors, 1 to 11 executors), so the user's pre-answered decision 1 applied: (b) stage 11 fetch-wait executor-hours < (a) idle cost of holding 200 through the prologue in every run (§4.3), therefore the spec alone shipped, no `executorIdleTimeout` line.
+- Step 3 edited one decorator line (aug_log L72), step 4 regenerated the config (one line), step 5 passed except that `tests/dags/` has 8 pre-existing Java-gateway failures on this Mac (§4.4). No `model_run.py`, no DAG edit, no trigger.
+- Step 6: PR body written to `artifacts/audi_1271_pr_body.md` (lint `--kind pr` clean), reviewer Ryan Kleck (decision 3). NOT handed to the dispatcher as a plain "open it": §4.3 shows the change raises DCU-h per run by construction, which is §0's kill criterion, so the merge is returned to the user as a decision (§5, §8).
+- Steps 7-9 not started (they follow a merge).
+
 ### 3.4 Risks
-- R1. The spec'd change is a no-op on both DAGs if A1 holds; the PR then costs a review cycle and the ledger shows `fix_not_working` after the grace window. Bounded, reversible, but the hackathon savings line for this ticket would be zero.
+- R1. The spec'd change is a no-op on both DAGs if A1 holds; the PR then costs a review cycle and the ledger shows `fix_not_working` after the grace window. Bounded, reversible, but the hackathon savings line for this ticket would be zero. **Realised 2026-09-02 (§4.3): not a no-op, a net cost of ~1.7 executor-hours per run.**
 - R2. DCU-h can rise: 200 executors from t0 instead of 100 / 50, held for the 60-s idle window at minimum (+ the whole prologue under option B). Both jobs already run at 18-42% utilization today (2-8% on heavy runs per the ledger). §0's kill criterion covers it; step 8 measures it.
 - R3. Run-size variance: site_network 3.5 to 618 DCU-h per run within one day; aug_log 89 to 708. Single-run before/after comparisons mislead; use 7-day windows, mean and median, and the step-2 per-stage signature.
 - R4. The `aug_log_rollup` label is shared by two DAGs; a cost read that forgets the batch-name filter double counts.
@@ -129,25 +138,95 @@ Consequence: `initialExecutors` is a dead knob on both jobs as written. Raising 
 - R7. The site_network stage 9 wait is 0.28% of executor-hours (08-26 memo): even a working fix saves little on that job; the money there is the idle fleet (AUDI-1194 QUEUE #1, PR #1232 shuffleTracking.timeout 300s already merged).
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+Execute wave, 2026-09-02 (PDT evening; the event logs and batches below are stamped in UTC, so "today" spans 2026-09-02 and the first hours of 2026-09-03 UTC). User decisions applied: Decision 2 dropped site_network_hourly from the PR (§8 carries the driver-prologue question); Decision 3 named Ryan Kleck as reviewer.
+
+### 4.1 Step 1: DCU baseline, 7 full UTC days 2026-08-26 to 2026-09-01 (before any change)
+Source: `gcloud dataproc batches list --project=mntn-prj-prod-00 --region=us-central1 --filter='labels.job_type=<label> AND state=SUCCEEDED AND create_time>"2026-08-26T00:00:00Z"' --limit=500`, raw pulls in `outputs/audi_1271_batches_{aug_log,site_network}_raw.csv` (195 rows each: 8 days x 24 + 3 hours of 2026-09-03), window cut in `outputs/audi_1271_dcu_baseline_{aug_log,site_network}.csv`. aug_log rows kept only if the batch name starts `aug-log-ip-ver-id-hou-` (the `aug_log_rollup` label is shared with aug_log_ip_hourly; §3.0). DCU-h = milliDcuSeconds / 3.6e6.
+
+| DAG | n runs | mean DCU-h | median DCU-h | min | max | 7-day sum |
+|---|---|---|---|---|---|---|
+| aug_log_ip_vertical_id_hourly | 168 | 162.5 | 108.6 | 38.1 | 674.4 | 27,307 |
+| site_network_hourly (dropped from PR, recorded for the epic) | 168 | 552.7 | 282.1 | 99.9 | 4,130.3 | 92,846 |
+
+Every hour ran (168 = 7 x 24) and no aug_log run in the window was under 20 DCU-h, so the "skipped hour" runs seen in the 40-100 KiB event logs still bill at least 38 DCU-h (the fleet is provisioned before the model decides there is nothing to do). Post-merge comparison (§3.1 step 8) uses this table: same 7-day shape, mean and median, never single runs.
+
+`gcloud dataproc batches list` does not return rows in time order; sort on createTime before windowing.
+
+### 4.2 Step 2: idle-trim profile, 20 aug_log_ip_vertical_id_hourly runs (2026-08-31 00:16 to 2026-09-03 02:16 UTC)
+
+**Selection.** `gsutil ls -l gs://mntn-data-archive-prod/spark-events/` (`outputs/audi_1271_spark_events_listing_raw.csv`) matched to the `aug_log_rollup` batches by a 6-minute createTime window (`artifacts/audi_1271_match_logs.py` -> `outputs/audi_1271_log_manifest_aug_log.csv`, 162 rows). The shared label means every hour has two candidate logs (aug_log_ip_hourly at ~5 MiB, aug_log_ip_vertical_id_hourly at 6-15 MiB); the App Name in the first 256 KiB settles it (`artifacts/audi_1271_identify_log.sh` -> `outputs/audi_1271_log_identity_aug_log.csv`, 160 rows; the full list of 74 vertical_id logs is `outputs/audi_1271_vertical_id_logs_all.txt`). Sampled every fourth hour plus the two most recent: 20 runs (`outputs/audi_1271_vertical_id_logs_selected.txt`), all `Populate aug_log_ip_vertical_id_hourly.AugLogIpVerticalIdHourly`, 6.3-15.3 MiB each, 246 MiB total, deleted after parsing.
+
+**Download.** `gsutil -m cp -I` allocated 0-byte `.gstmp` files and sat at 0 B/s (twice; the first agent's session ended on it). `artifacts/audi_1271_fetch_log.sh` (one `curl ... storage/v1/b/<bucket>/o/<object>?alt=media` per object with a `gcloud auth print-access-token` bearer, `xargs -P 6`) fetched 19 objects in ~40 s; `zstd -t` clean on all 20. Same failure class as memory `reference_gcloud_storage_over_gsutil`.
+
+**Profiler.** `artifacts/audi_1271_run_profile.py` (one row per log; `airflow_optimizer.eventlog._read_events`): fleet registered at fixed offsets (live = added and not yet removed, so removals count), first removal, map stage = first stage with >= 1,000 tasks (stage 7 in all 20), reduce stage = first later stage with shuffle read and >= 100 tasks (stage 11 in all 20), prologue = app start to map-stage submit, fetch wait as `Fetch Wait Time` summed over the stage's tasks (ms) converted to core-hours and to executor-hours at 8 cores, map-output concentration from `Shuffle Bytes Written` by executor, registered and busy executor-hours. Output `outputs/audi_1271_idle_trim_aug_log.csv`. Batch DCU-h joined from the manifest.
+
+| log (UTC start) | prologue s | reg. +60 s | reg. at map submit | first removal s | map output on N executors (90% on) | stage 11 wait % | stage 11 wait exec-h | registered exec-h | busy exec-h | batch DCU-h |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 08-31 00:16 (0024) | 60.7 | 100 | 100 | none | 100 (83) | 32.2 | 0.066 | 10.45 | 3.18 | 124.7 |
+| 08-31 04:16 (0428) | 223.0 | 100 | 50 | 71.8 | 79 (67) | 32.8 | 0.051 | 10.90 | 3.77 | 105.7 |
+| 08-31 08:16 (0033) | 72.4 | 100 | 100 | 74.0 | 100 (80) | 26.5 | 0.058 | 8.65 | 3.21 | 75.5 |
+| 08-31 12:17 (0293) | 63.6 | 97 | 97 | none | 100 (82) | 31.2 | 0.073 | 5.27 | 2.83 | 50.7 |
+| 08-31 16:16 (0062) | 76.1 | 100 | 100 | 77.2 | 100 (82) | 33.8 | 0.073 | 9.12 | 4.85 | 87.1 |
+| 08-31 20:17 (0001) | 98.6 | 100 | 50 | 72.4 | 100 (87) | 36.8 | 0.085 | 7.91 | 3.50 | 123.7 |
+| 09-01 00:17 (0211) | 61.4 | 100 | 100 | none | 100 (88) | 41.1 | 0.105 | 8.34 | 4.84 | 74.7 |
+| 09-01 04:16 (0829) | 68.9 | 100 | 100 | none | 100 (85) | 32.8 | 0.087 | 7.44 | 4.21 | 66.7 |
+| 09-01 08:16 (0638) | 155.1 | 100 | 50 | 72.0 | 50 (42) | 31.8 | 0.029 | 7.14 | 2.21 | 82.1 |
+| 09-01 12:16 (0437) | 39.4 | 100 | 11 | none | 100 (79) | 33.0 | 0.064 | 8.41 | 2.75 | 68.3 |
+| 09-01 16:18 (0133) | 225.6 | 95 | 50 | 72.6 | 71 (53) | 31.6 | 0.028 | 6.82 | 2.13 | 76.6 |
+| 09-01 20:16 (0599) | 449.0 | 100 | 50 | 73.2 | 77 (47) | 43.1 | 0.087 | 10.92 | 3.14 | 137.8 |
+| 09-02 00:16 (0186) | 166.8 | 98 | 50 | 73.2 | 100 (87) | 42.6 | 0.102 | 9.56 | 4.33 | 96.6 |
+| 09-02 04:16 (0744) | 92.4 | 100 | 50 | 73.1 | 100 (85) | 31.8 | 0.075 | 11.83 | 3.19 | 139.0 |
+| 09-02 08:16 (0732) | 63.7 | 100 | 100 | none | 100 (85) | 29.0 | 0.065 | 7.15 | 3.62 | 65.1 |
+| 09-02 12:16 (0053) | 925.6 | 99 | 50 | 71.7 | 65 (56) | 31.1 | 0.039 | 17.28 | 2.35 | 199.6 |
+| 09-02 16:16 (0710) | 58.0 | 100 | 100 | 260.0 | 100 (85) | 34.9 | 0.089 | 16.76 | 3.64 | 191.4 |
+| 09-02 20:16 (0790) | 2305.6 | 100 | 50 | 72.1 | 72 (62) | 46.8 | 0.100 | 55.26 | 1.85 | 545.5 |
+| 09-03 01:16 (0707) | 1959.2 | 100 | 50 | 72.2 | 75 (65) | 53.3 | 0.126 | 29.86 | 1.73 | 360.5 |
+| 09-03 02:16 (0138) | 157.6 | 100 | 50 | 71.8 | 50 (45) | 35.7 | 0.037 | 6.12 | 2.58 | 88.9 |
+
+**What the 20 runs say (A1, A2, A3, A6 from §3.2 resolved):**
+- **A2 confirmed, the idle timeout is the 60 s default.** `spark.dynamicAllocation.executorIdleTimeout` is unset in the live `SparkListenerEnvironmentUpdate` (also unset: `cachedExecutorIdleTimeout`, `schedulerBacklogTimeout`, `shuffleTracking.timeout`; set: `executorAllocationRatio` 0.3, `shuffleTracking.enabled` true, `spark.executor.instances` 50). The initial fleet of 100 registers 11-73 s after app start (95-100 live at +60 s in all 20) and the first removal lands 71.7-77.2 s after app start in 13 of the 14 runs that removed before the map stage: 60 s after the fleet came up, to the second. Removal reason on every one: `Command exited with code 0`, the idle-timeout path.
+- **A1 confirmed, the trim beats the map stage in 12 of 20 runs.** Map stage 7 was submitted with 50 executors live in 11 runs (prologue 92-2,306 s), with 11 live in 1 run (0437: prologue 39 s, the fleet was still registering), and with the intact 97-100 in 8 runs (prologue 58-76 s). The boundary is the prologue length: under ~77 s the fleet survives, over it the fleet is at minExecutors when the map runs. With initialExecutors=200 the same 60 s clock applies, so the 200 would survive to the map stage in the same 8 of 20.
+- **A3 confirmed, 200 executors are attainable on this job:** peak registered hit 200 in runs 0062 and 0211, 195-198 in 0186, 0428, 0732. No quota question.
+- **Stage 11 waits regardless of how many executors held the map output.** Fetch wait 26.5-53.3% of stage 11 run time (median 32.9%) in all 20 runs. When the map ran on the intact fleet (8 runs, output over 100 executors, 90% on 79-88 of them) the wait averaged 32.7%; when cut to 50 (12 runs, output over 50-100 executors) 37.5%. Doubling the shuffle servers from 50 to 100 moved the wait by ~5 points, so 100 -> 200 buys a few points at most. Stage 35 (the second-pass reduce of stage 33) waits 0-46% across the same runs (`outputs/audi_1271_concentration_20_runs.txt`).
+- **In executor-hours, stage 11's wait is 0.028-0.126 per run (mean 0.072, median 0.073).** The stage is 8-15 s long on 50-100 executors; even removing it entirely is worth under 0.2 executor-hours per run.
+- **Utilization:** registered 5.3-55.3 executor-hours per run (mean 12.76, median 8.88), busy 1.7-4.9 (mean 3.20), so 75% of registered executor-hours are idle; the prologue alone holds 113.3 of the 255.2 registered executor-hours across the 20 runs (44%).
+
+**Cost model, from the same 20 runs.** Batch `milliDcuSeconds` against registered executor-hours fits `DCU-h = 7.3 + 10.24 x executor-hours` (R^2 0.970, n = 20); the simple ratio runs 8.1-15.6 DCU-h per executor-hour (median 10.7). Executor shape in the environment: 8 cores, `spark.executor.memory` 19200m + `memoryOverhead` 7680m; driver 4 cores, 9600m + 3840m. Batch DCU-h in the sample: mean 138.0, median 92.7 (the 7-day baseline in §4.1 is mean 162.5, median 108.6).
+
+### 4.3 Decision 1 arithmetic (user's rule: ship 200 plus an idle timeout only if (b) exceeds (a))
+- **(a) idle cost of holding 200 executors through the prologue:** gross `200 x prologue / 3600` = 2.2-128.1 executor-hours per run (median 5.3, mean 20.3); incremental over the fleet already held today (100 for 60 s, then 50) = 1.9-95.3 (median 3.3, mean 14.7).
+- **(b) executor-hours lost to fetch wait on stage 11:** 0.028-0.126 per run (mean 0.072).
+- (b) is below (a) in every one of the 20 runs, by 45x at the medians on the incremental basis and 200x at the means. **Rule outcome: ship initialExecutors=200 alone, no `executorIdleTimeout`.** An idle timeout sized to the prologue would have to be 77 s to cover 8 runs, 5 min to cover 16, 39 min to cover all 20; every one of those holds 200 idle executors longer than the whole stage 11 wait is worth.
+- **What the spec alone is expected to do, from the same numbers:** every run holds 100 more executors for the ~60 s until the idle trim: +1.67 executor-hours, +17.1 DCU-h per run at the fitted marginal rate, +12.4% of the sample mean run and +18.4% of its median (+10.5% / +15.7% against the §4.1 7-day baseline), about +2,870 DCU-h over a 168-run week. In the 8 short-prologue runs the extra 100 also run the map stage (9,280 tasks over 1,600 slots instead of 800), which conserves the map work and spreads the shuffle output over 200 executors instead of 100; the only expected effect on stage 11 is a few points off a wait worth 0.03-0.13 executor-hours. In the 12 long-prologue runs the extra 100 are trimmed before any task runs: pure cost. **So the change breaches §0's kill criterion (DCU-h per run must not rise) by construction, before the day-7 measurement.** This is the fact returned to the user with the diff.
+
+### 4.4 The prologue is the cost, and it is the driver's runtime pip install (new finding, handed to §8)
+`model()` (model file L119-124) calls `_ensure_tldextract_on_executors` (L21-40) before any Spark job: `subprocess.check_call([python, "-m", "pip", "install", "--quiet", "--target", tmpdir, "tldextract"])`, zip, `sc.addPyFile`. First task launch ranges 23 s to 2,286 s after app start across the 20 runs. The three longest prologues are the three heaviest batches in the sample: run 0790 (57.2-min app, first task at 2,286 s, all Spark work done in the last 2.5 min, 53.4 of 55.3 registered executor-hours idle, 545.5 DCU-h), run 0707 (34.2 min, first task at 1,939 s, 28.1 of 29.9 idle, 360.5 DCU-h), run 0053 (18.9 min, first task at 908 s, 14.9 of 17.3 idle, 199.6 DCU-h). Timeline reports: `outputs/audi_1271_aug_log_{0790,0707,0053}_timeline_report.md`. The event log cannot show what the driver waits on (no task is running); the candidates are PyPI reachability and pip retries from the serverless driver, and SparkSession creation. The batch's driver output (`gcloud storage cat` of the batch `driveroutput` URI, memory `reference_dataproc_eventlog_profiling`) settles it. Fix shape if confirmed: ship tldextract inside `utils_model.zip` or as a wheel on `ti_resources`, which removes the runtime install and the 50-executor idle floor during it. site_network_hourly's 17-min prologue (§3.0) is the same shape on a different model and is likewise open.
+
+### 4.5 Steps 3-5: the code change and its checks
+- Worktree `wt/audi_1271` (branch `audi-1271-initial-executors-preverified` off airflow-ti `825b07e`): `models/feature_store/feature_group_1_source/aug_log_ip_vertical_id_hourly.py` L72 `"100"` -> `"200"`. site_network_hourly untouched (decision 2). No comment added.
+- `MNTN_SDLC_ENV=dev uv run python model_upload.py --dryrun` completed in the worktree venv (models group plus the extras from `documentation/docs/airflow_ti_workflow.md`, all already installed): `dags/model_task_config.json` L357 `"100"` -> `"200"`, nothing else; `dags/ipdsc_third_party_audience_builders.json` unchanged. `git diff --stat`: 2 files, 2 insertions, 2 deletions. Config read-back: aug_log initial 200 / max 200 / min 50, site_network initial 50.
+- `uv run pytest tests/dags/`: 39 passed, 2 skipped, 2 failed, 6 errors; all 8 are `PySparkRuntimeError: [JAVA_GATEWAY_EXITED]` in `test_crm_match_rate_ds63.py`, `test_crm_match_rate_ip.py`, `test_tpa_ipdsc_export.py` (no Java runtime on this Mac: `java -version` -> "Unable to locate a Java Runtime"); none import the changed model. CI's `model-unit-test` job runs `tests/models`, not these.
+- `ruff check` (0.16.1) on the model file: 7 findings (F401, I001, DTZ007 x2, BLE001 x3), byte-identical on the HEAD version of the file, none on L72.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+- **Code:** one decorator line in `aug_log_ip_vertical_id_hourly.py` (initialExecutors 100 -> 200) plus the regenerated `dags/model_task_config.json`, in worktree `wt/audi_1271`, uncommitted (execute agents do not touch git). PR body ready at `artifacts/audi_1271_pr_body.md` (lint `--kind pr` clean), reviewer Ryan Kleck. Result comment at `artifacts/audi_1271_result_comment.txt` (lint `--kind completion` clean).
+- **Not shipped:** site_network_hourly (user decision 2). No `executorIdleTimeout` (decision 1 rule, §4.3).
+- **The merge is the user's call, returned with the numbers:** the change is expected to add ~1.7 executor-hours (~17 DCU-h, +12%) per run and remove at most 0.03-0.13 executor-hours of stage 11 wait; it fails §0's kill criterion before it runs. Two honest outcomes: (1) merge for the ledger record (`ledger applied` on `shuffle_fetch_wait:11`, expect `fix_not_working` plus a measured cost rise at day 7, then revert), or (2) close without merging, mark the finding as measured-and-rejected, and spend the hackathon effort on the prologue (§4.4), which is 44% of the job's executor-hours.
+- **Ledger:** not stamped (follows a merge).
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q (§0):** Does raising initialExecutors to 200 on aug_log_ip_vertical_id_hourly (and site_network_hourly) remove the shuffle-fetch wait on stage 11 (and stage 9) without raising DCU-h per run?
+  **A:** No, on the pre-merge evidence. aug_log: the initial fleet is cut to minExecutors 60 s after it registers, before the map stage, in 12 of 20 runs; where it survives (8 of 20) stage 11 still waits ~33% with the map output already spread over 100 executors, so 200 buys a few points on a stage worth 0.03-0.13 executor-hours; the extra 100 executors cost ~1.7 executor-hours (~17 DCU-h, +12%) per run in every run. site_network: dropped by the user before execution (17-min prologue, stage 9 wait ~0.3% of the job).
+- **Q:** Is `executorIdleTimeout` at the 60 s default on aug_log? **A:** Yes, unset in the live environment; removals land 71.7-77.2 s after app start, 60 s after the fleet registers.
+- **Q:** Can the job get 200 executors? **A:** Yes, peak registered 200 in 2 of 20 runs, 195-198 in 3 more.
+- **Q:** Where does aug_log's cost go? **A:** 75% of registered executor-hours are idle; the driver prologue (runtime `pip install tldextract`) holds 44% of them, and in the three heaviest runs it is 90%+ of the run.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Nothing written to `knowledge/` by the execute agent (off-limits by the dispatch rules); the durable facts are returned in the dispatcher hand-off for routing: the 60 s idle trim before the map stage (12 of 20 runs), the DCU-h per executor-hour fit for 8-core serverless executors (10.24 marginal, 8.1-15.6 ratio), the runtime pip-install prologue as the aug_log cost driver, the shared `aug_log_rollup` label, the JSON API download as the only reliable bulk spark-events fetch on this Mac, and the concentration tool's adds-only live count.
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+1. **User decision (blocks the PR):** merge the initialExecutors=200 diff for the ledger record knowing it adds ~17 DCU-h per run, or close no-change. §5 has both paths.
+2. **aug_log driver prologue (the real lever):** `pip install tldextract` at runtime idles 50-100 executors for 23 s to 38 min per run (§4.4); confirm the wait from the batch driver output, then bundle tldextract in `utils_model.zip` or a wheel on `ti_resources`. Sized at 113 of 255 registered executor-hours across 20 runs (44%), which at the fitted rate is ~58 DCU-h per run average. Candidate for its own hackathon ticket.
+3. **site_network_hourly driver prologue:** 17 min at 2 executors before stage 1 in the planning run 0517 (§3.0); what the driver does for 17 minutes is unread. Same driver-output check. Dropped from this PR by decision 2.
+4. **Stage 11 mechanism:** the wait persists at ~33% with the map output on 100 executors, so "few shuffle servers" is at most part of it; the cold-first-read hypothesis from AUDI-1194 (a second reducer of the same output waits ~0%) is the open alternative. Not worth chasing for 0.03-0.13 executor-hours per run.
+5. **Steps 7-9 of §3.1** (ledger stamp, day-1/day-7 measurement, close) run only after a merge.
