@@ -75,6 +75,12 @@ instead (attribution layer) — this table over-counts vs the UI (e.g. Avon raw 
 | conversion_source_id | INT64 | YES |  |  |
 <!-- AUTO:SCHEMA END -->
 
+## Observed Facts
+
+<!-- OBSERVED:FACTS START -->
+- **Advertiser concentration (2026-09-02, AUDI-1276):** top two advertisers hold ~57% of daily rows. Advertiser 36206 = 2,285,605 rows = 29.6% of 7,724,509 day (conversion_log date 2026-09-02); advertiser 66701 = 2,109,880 = 27.3%; third place 42999 = 3.9%. A shuffle keyed on `advertiser_id` on this day puts 31% of the stage in one partition (measured from `conv_log_ip_advertiser_id` prod event log `app-20260903010456361-0990` stage 13).
+<!-- OBSERVED:FACTS END -->
+
 ## Column meanings (only the non-obvious ones)
 - **`order_amt` (NUMERIC) — the conversion value to use; LOCAL currency (see `order_curr`).** Born from the
   `shoamt` pixel GET param, **digit-extracted** by the ingest parser *upstream of bronze* (`shoamt=1`→1;

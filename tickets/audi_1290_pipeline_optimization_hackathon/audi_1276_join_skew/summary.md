@@ -178,7 +178,7 @@ Final plan of execution 5 (`out.count()` in `analyze_ipdsc_changes`) in `outputs
 **PR:** https://github.com/SteelHouse/airflow-ti/pull/1276 (opened 2026-09-03 PT; fast tier re-run after an infrastructure error, 0 findings; reviewer Ryan Kleck)
 
 
-### 5.1 Code changes (branch `audi-1276-join-skew`, worktree `scratchpad/wt/audi_1276`, uncommitted; the dispatcher commits, gauntlets and opens the PR)
+### 5.1 Code changes (branch `audi-1276-join-skew`, PR #1276 open with reviewer Ryan Kleck; committed and gauntleted 2026-09-03 PT)
 - `models/feature_store/feature_group_1_source/conv_log_ip_advertiser_id.py`, `guid_log_ip_advertiser_id.py`, `guid_log_ip_guid_advertiser_id.py`: `.join(valid_advertisers_df, "advertiser_id", "inner")` -> `.join(F.broadcast(valid_advertisers_df), ...)` and `.join(advertiser_verticals_df, on="advertiser_id", how="left")` -> `.join(F.broadcast(advertiser_verticals_df), ...)`. Two lines per file, nothing else.
 - `models/monitoring/ipdsc_42_monitor.py`: `IPDSC42_COMPARE_SQL` split into `IPDSC42_BY_CATEGORY_SQL` (today/yesterday explode, `/*+ BROADCAST(dd) */` on both deal joins, count-distinct by category, FULL OUTER JOIN into the per-category comparison rows) and `IPDSC42_COMPARE_SQL` (`total_row`, `all_rows`, deal-name projection and ORDER BY over a temp view named `comparison`). `analyze_ipdsc_changes` runs the first SQL, `.cache()`s it, logs `comparison.count()` ("DS42 categories compared"), registers the view, then runs the second SQL with the existing `out.cache()` and row-count log. Email, HTML, write path, `spark.sql.maxPlanStringLength` untouched. Decorator untouched, so `dags/model_task_config.json` is unchanged and no bundle redeploy is needed for the change to take effect (model `.py` files are read live from GCS on the next run after merge).
 - PR body: `artifacts/audi_1276_pr_body.md` (lint `--kind pr` pass). It states that dev-deployment validation was not run and why.
@@ -196,8 +196,8 @@ The three feature-store DAGs together: about 0.6 min of wall and 0.1 executor-ho
 Not claimed: with the hint, the remaining monitor pass pre-aggregates (category_id, ip) before its shuffle, so the shuffle write may shrink below 40 GB; and the `shuffle_fetch_wait:18/22/26` ledger keys resolve on their own when the two reads disappear.
 
 ### 5.3 What was not done
-- No dev deployment run, no `model_run.py`, no DAG trigger (D2, D3). No Jira write, no Slack, no git write by this agent.
-- No `knowledge/` edit (off-limits to this agent): facts handed to the dispatcher (§7).
+- No dev deployment run, no `model_run.py`, no DAG trigger (D2, D3; user decision). Execute agent does not run `model_run.py`; dev validation is the first prod cron after merge.
+- Dispatcher handled: git commit, gauntlet, PR open, Jira comment, status transition.
 
 ## 6. Questions Answered
 - **Q:** For each DAG, is the skewed stage a join?
