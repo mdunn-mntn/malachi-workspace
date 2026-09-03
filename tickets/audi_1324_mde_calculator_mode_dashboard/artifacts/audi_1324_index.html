@@ -365,6 +365,10 @@
       display: none;
     }
 #mde .adv-loaded.on { display: block; }
+#mde .adv-lapsed { display: none; margin: 6px 0 8px; padding: 6px 8px; border-left: 3px solid var(--amber);
+                  background: rgba(200, 120, 20, 0.08); font-family: var(--ui); font-size: 10px;
+                  letter-spacing: 0.06em; color: var(--amber); line-height: 1.45; }
+#mde .adv-lapsed.on { display: block; }
 #mde .adv-loaded-name {
       font-size: 11px;
       font-weight: 600;
@@ -460,6 +464,7 @@
         </div>
         <div id="adv-loaded" class="adv-loaded">
           <div class="adv-loaded-name" id="adv-loaded-name">—</div>
+          <div class="adv-lapsed" id="adv-lapsed" hidden></div>
           <div class="adv-loaded-stats">
             <div>30d spend <span id="adv-stat-spend">—</span></div>
             <div>typical/mo <span id="adv-stat-typical">—</span></div>
@@ -1178,9 +1183,13 @@ function renderAdvLoaded() {
   const a = S.advertiser;
   const box = document.getElementById('adv-loaded');
   if (!a) { box.classList.remove('on'); return; }
-  document.getElementById('adv-loaded-name').textContent = a.live
-    ? `${a.name} · ${a.id}`
-    : `${a.name} · ${a.id} · LAPSED ${a.daysOff}d (last active ${a.lastDay})`;
+  document.getElementById('adv-loaded-name').textContent = `${a.name} · ${a.id}`;
+  const lapsed = document.getElementById('adv-lapsed');
+  lapsed.textContent = a.live
+    ? ''
+    : `NOT CURRENTLY ACTIVE · last delivered ${a.lastDay}, ${a.daysOff} days ago. Rates below are from that advertiser's final 30 delivering days.`;
+  lapsed.classList.toggle('on', !a.live);
+  lapsed.hidden = a.live;
   document.getElementById('adv-stat-spend').textContent   = fmtBudget(a.spend30);
   document.getElementById('adv-stat-typical').textContent = fmtBudget(a.typical) + ` (${a.months}mo)`;
   document.getElementById('adv-stat-cpm').textContent     = '$' + a.cpm.toFixed(2);

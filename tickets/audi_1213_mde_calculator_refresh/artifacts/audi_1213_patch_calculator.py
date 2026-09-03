@@ -225,6 +225,42 @@ setOutcome = function(o) {
         "loaded pane names the lapsed window",
     )
 
+    html = sub(
+        html,
+        """        <div id="adv-loaded" class="adv-loaded">
+          <div class="adv-loaded-name" id="adv-loaded-name">\u2014</div>""",
+        """        <div id="adv-loaded" class="adv-loaded">
+          <div class="adv-loaded-name" id="adv-loaded-name">\u2014</div>
+          <div class="adv-lapsed" id="adv-lapsed" hidden></div>""",
+        "lapsed banner element",
+    )
+
+    html = sub(
+        html,
+        "    .adv-loaded.on { display: block; }",
+        """    .adv-loaded.on { display: block; }
+    .adv-lapsed { display: none; margin: 6px 0 8px; padding: 6px 8px; border-left: 3px solid var(--amber);
+                  background: rgba(200, 120, 20, 0.08); font-family: var(--ui); font-size: 10px;
+                  letter-spacing: 0.06em; color: var(--amber); line-height: 1.45; }
+    .adv-lapsed.on { display: block; }""",
+        "lapsed banner style",
+    )
+
+    html = sub(
+        html,
+        """  document.getElementById('adv-loaded-name').textContent = a.live
+    ? `${a.name} \u00b7 ${a.id}`
+    : `${a.name} \u00b7 ${a.id} \u00b7 LAPSED ${a.daysOff}d (last active ${a.lastDay})`;""",
+        """  document.getElementById('adv-loaded-name').textContent = `${a.name} \u00b7 ${a.id}`;
+  const lapsed = document.getElementById('adv-lapsed');
+  lapsed.textContent = a.live
+    ? ''
+    : `NOT CURRENTLY ACTIVE \u00b7 last delivered ${a.lastDay}, ${a.daysOff} days ago. Rates below are from that advertiser's final 30 delivering days.`;
+  lapsed.classList.toggle('on', !a.live);
+  lapsed.hidden = a.live;""",
+        "lapsed banner rendering",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:
