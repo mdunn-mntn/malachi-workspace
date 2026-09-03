@@ -221,3 +221,10 @@ airflow-dag/airflow-task labels to python-client BQ jobs, (c) per-DAG event logg
 
 - **audience_intent_conversions_scoring_14day_lookback (terminal 01:11:19Z):** diagnosed within 11 seconds, both cascade tasks, posted as digest parents in #airflow-debugger. It could not thread under the monitor-tpa alert because prod SLACK_ALERT_CHANNEL held only C08CURMGNMQ (alerts-tpa-pipeline); the C067ZM2EC5S comma-list recorded on 2026-08-10 was not on the prod deployment. FIXED: var now "C08CURMGNMQ,C067ZM2EC5S"; replies thread into monitor-tpa from the next cycle.
 - **bottom_up_keywords_pipeline_run/training_pipeline (terminal 16:26:54Z, manual run):** skipped BY DESIGN. triggered_by=ui and pull._person_triggered drops human-triggered runs (rationale in code: the person who reran is already hands-on). Tags pass (ml_training in PAGING_TAGS). Instant trigger fired at 16:26:54 and the cycle correctly found 0 scheduler-owned candidates. Decision open: keep the skip (recommended, the rerunner was watching) or widen to diagnose UI runs too.
+
+## Dead-cohort recovery EXECUTED 2026-09-02 night (user-authorized; OpenAI org fix confirmed by Alyson)
+
+Scope: dt=2026-08-27..2026-09-01, all six 0/N was_submitted (08-30/31/09-01 re-verified from parquet before deleting). Steps done: receipts deleted for all six days; submit runs cleared from batch_cleanup_1 with downstream (7 tasks each), re-running serialized. REMAINING (next session or later tonight):
+1. When each submit succeeds and its OpenAI batch completes (~2h, Alyson's manual batch took that), clear fetch logical D+1 from batch_transition: fetch runs 08-28, 08-29, 08-30, 08-31, 09-01 map to dt=08-27..31. Tomorrow's scheduled fetch (logical 09-02, runs 09-03 09:00 UTC) covers dt=09-01 on its own.
+2. Then clear keyword_ddp wait_for_product_categorization.
+3. batch_test max_dt will FALSE-FAIL on every backfilled fetch day (wall-clock skew) - mark test_product_categorization success, do not rerun (memory reference_mntn_matched_batch_pipeline).
