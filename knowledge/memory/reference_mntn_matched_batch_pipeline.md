@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp not blocked by batch_test, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49, partial receipts partition, rerun submits quota failed, receipts rewritten new batch ids, object count not cohort size, AUDI-1279, shopper_graph#305, DeadCohortError, dead cohort alarm, batch_status.py, DEAD_COHORT_MIN_AGE_HOURS, retrieve_error, per-batch status line, cohort summary line, assert_cohort_alive, retrieve_batch, PYTHONUNBUFFERED, Batch.status literal, request_counts, openai 3.7.0, pandas 3 str dtype, unpinned image, monitor-emr, JobTeamConfig.ML, severity 5 no pagerduty]
+keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp_reporting, keyword_ddp not blocked by batch_test, wait_for_product_categorization, ExternalTaskSensor product_categorization, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49, partial receipts partition, rerun submits quota failed, receipts rewritten new batch ids, object count not cohort size, AUDI-1279, shopper_graph#305, DeadCohortError, dead cohort alarm, batch_status.py, DEAD_COHORT_MIN_AGE_HOURS, retrieve_error, per-batch status line, cohort summary line, assert_cohort_alive, retrieve_batch, PYTHONUNBUFFERED, Batch.status literal, request_counts, openai 3.7.0, pandas 3 str dtype, unpinned image, monitor-emr, JobTeamConfig.ML, severity 5 no pagerduty, shopper_graph#306, order asc cleanup, files.list 10000 cap, cleanup deletes nothing, 404 No such File object race, cleanup race two dags, Total number of files to delete 0, quota root cause list order, delete receipts again partial]
 domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-09-03
@@ -57,7 +57,7 @@ is therefore the ONLY visibility:
 2. Clear submit run logical `<D>` from `batch_cleanup_1` WITH downstream.
 3. Wait up to 24h for the new batches to complete.
 4. Clear fetch logical `<D+1>` from `batch_transition`.
-5. Clear `keyword_ddp` `wait_for_product_categorization`.
+5. Clear `keyword_ddp_reporting` `wait_for_product_categorization`.
 
 ## `get_files_without_batch` "Inconsistent state" = a double-submission guard, not flakiness
 `ValueError: Inconsistent state between openai_batch_submissions and openai_batch_input_formatted`
@@ -71,6 +71,10 @@ from `batch_submit`).
 Same `openai_batch_runner` image, same `delete_all_storage_files.py`, same env — a pre-run cleanup (frees
 OpenAI file-storage quota headroom before submitting) and a post-run sweep. They run in BOTH DAGs, so the
 cleanup script executes **~4×/day** total.
+- **`Skipped file-xxx: 404 No such File object` during cleanup = the two DAGs RACING, not flakiness (verified
+  2026-09-03).** Submit and fetch both schedule `0 9 * * *`, so their `batch_cleanup` tasks list and delete the
+  same file ids concurrently; the loser 404s on a file the winner already deleted. Benign, self-limiting, and
+  NOT worth fixing — don't chase it again.
 
 ## `batch_test` = the dbt DQ gate on `product_categorization` — mechanics + two failure red-herrings
 `batch_post >> [batch_test, batch_cleanup_2]` (fetch DAG; `batch_test` is a leaf parallel with `batch_cleanup_2`).
@@ -89,7 +93,7 @@ built from `openai_batch_results_joined` + `mntn_matched_taxonomy`.
   (`>= date_sub(current_date, 5)`), so they're backfill-robust. **Diagnostic:** `max_dt` failing ALONE while
   `record_count` / `dsc_id__*` / `product_category_and_key` PASS ⇒ data is fine — **mark
   `test_product_categorization` SUCCESS, do NOT re-run** (fails every time once UTC > target date+2). A red
-  `batch_test` is also **cosmetic to `keyword_ddp`**: its `wait_for_product_categorization` sensor targets
+  `batch_test` is also **cosmetic to `keyword_ddp_reporting`**: its `wait_for_product_categorization` sensor targets
   `batch_post.product_categorization` (UPSTREAM of batch_test), so clear the sensor independently. Durable fix =
   key it off the pod's `yesterday`/`run_date` env var → **IMP-016**.
 - **SMTP `Errno 99` RED-HERRING:** a failed task's log TAIL showing `OSError: [Errno 99] Cannot assign requested
@@ -106,6 +110,20 @@ and tips over on heavier days → the `client.files.create` **`400` fails interm
 self-clears the next as old files expire). A WORKING 48h cleanup holds only ~150 GiB. **Diagnostic tell:**
 intermittent quota `400`s + storage pinned near 2.5 TB ⇒ the cleanup isn't deleting (a code bug), NOT that
 daily volume is huge. (INC-007 / AUDI-1042; the abort/regression bugs in [[reference_openai_sdk_pagination]].)
+
+- **UPDATE 2026-09-03 (AUDI-1191; appended, the expiry-plateau account above is INCOMPLETE, not wrong).** The
+  30-day expiry explains why the quota failed INTERMITTENTLY; it does not explain the six-day PERMANENT wall.
+  The mechanism is the cleanup's **LIST ORDER**: `GET /v1/files` caps `limit` at 10,000 (also the default) and
+  returns `created_at desc`, so the sweep only ever sees the NEWEST 10,000 files. It deletes only files older
+  than 48h, so once >10,000 files were younger than 48h (the outage retry storm plus the 09-03 backfill's
+  **3,429+ inputs uploaded in ~2h**) the entire visible page was ineligible and every sweep freed nothing.
+  **Evidence (task logs):** 08-25..27 runs found 13/14/28/131/181/357/788/1170 files; every run 08-29 → 09-03
+  logged `Total number of files to delete: 0` while `batch_submit` hit `400 ... exceeded your file storage
+  quota. Projects are limited to 2.5TB`. **Fixed** by listing `order="asc"` with explicit paging and breaking at
+  the retention cutoff (`shopper_graph#306`, MERGED; deployed `deploy_openai_dockerhub_gcp.yml` run
+  `33775001798`); the first sweep on the new image deleted **1,132 of 1,132** files, 0 skips. Both evidence
+  trails stand: expiry sets the plateau, order decides whether the sweep can ever cut into it. Full trap:
+  [[reference_openai_sdk_pagination]].
 
 ## `image_pull_policy=Always` → a task's image depends on WHEN its pod ran vs deploy times
 Because `MntnKubePodOperator` pulls `image_pull_policy=Always`, two tasks in the same DAG run can run
@@ -148,7 +166,7 @@ via `deploy_openai_dockerhub_gcp.yml`.
 - **Remaining steps live in
   `tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_actions_2026_08_31.md`:**
   clear fetch logical D+1 from `batch_transition` after each batch completes; clear
-  `keyword_ddp` `wait_for_product_categorization`; expect `max_dt` FALSE-FAILS on the
+  `keyword_ddp_reporting` `wait_for_product_categorization`; expect `max_dt` FALSE-FAILS on the
   backfilled fetch days (mark `test_product_categorization` success, do not rerun — the
   `batch_test` section above).
 
@@ -160,9 +178,19 @@ via `deploy_openai_dockerhub_gcp.yml`.
   `openai_input_file_id` and `batch_submit_time` 2026-09-03 04:4x-05:41; dt=09-01 prefix ABSENT; alive dt=08-26 untouched at 1113.
   All three listed partitions stop at 05:41:12-13Z (one process, killed or finished together).
 - **Rules that follow:** a `dt=` object count is not a cohort size; a partial partition trips the double-submission guard, so
-  re-running a day needs its receipts deleted AGAIN; no further submit clears until OpenAI storage is freed (Alyson / dashboard),
-  then ONE day at a time. The scheduled fetch for `yesterday=2026-09-01` finds no prefix (today: `FileNotFoundError` in
+  re-running a day needs its receipts deleted AGAIN; no further submit clears until OpenAI storage is freed —
+  **RESOLVED 2026-09-03 by the `order="asc"` cleanup fix `shopper_graph#306`, NOT by a dashboard bulk-delete** (storage-economics
+  section above) — then ONE day at a time. The scheduled fetch for `yesterday=2026-09-01` finds no prefix (today: `FileNotFoundError` in
   `get_batch_ids`; after #305 `assert_cohort_alive` returns first and `get_batch_ids` still raises).
+- **Recovery state to resume from:** all five partial partitions (`dt=08-27` 742 rows, `08-28` 791, `08-29` 653, `08-30` 510,
+  `08-31` 733, every row `was_submitted=False`) hold NEW batch ids that are live at OpenAI, so **their receipts must be deleted
+  AGAIN before any re-run**; `dt=2026-09-01` has no receipts at all, which is why fetch logical 09-02 fails `FileNotFoundError ...
+  openai_batch_submissions/dt=2026-09-01` — expected, and it self-heals once submit 09-01 succeeds. **Per-day order:** delete
+  receipts `dt=D` → clear submit `D` → wait ~2h for the batches → clear fetch `D+1` → clear `keyword_ddp_reporting`
+  `wait_for_product_categorization`.
+- **The downstream consumer DAG is `keyword_ddp_reporting`** (`dags/machine_learning/keyword_ddp_reporting.py`); its
+  `ExternalTaskSensor` targets **`batch_post.product_categorization`** (upstream of `batch_test`, so a red `batch_test` never
+  blocks it — clear the sensor independently).
 
 ## 2026-09-03 — AUDI-1279: per-batch status lines + a dead-cohort alarm (shopper_graph#305, OPEN, not deployed)
 Extends "the parquet flags are the only automated visibility" (appended, not overwritten): once #305 is deployed the pod logs
