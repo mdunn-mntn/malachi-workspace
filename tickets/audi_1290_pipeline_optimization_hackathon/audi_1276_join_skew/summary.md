@@ -175,6 +175,8 @@ Final plan of execution 5 (`out.count()` in `analyze_ipdsc_changes`) in `outputs
 - The optimizer ledger cannot show the feature-store fix landing: their slowest task is 16 to 37 s, under the 60 s floor (`SKEW_MIN_TASK_MS`), so they never entered the ledger and `mark_applied` will raise "no ledger history".
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/airflow-ti/pull/1276 (opened 2026-09-03 PT; fast tier re-run after an infrastructure error, 0 findings; reviewer Ryan Kleck)
+
 
 ### 5.1 Code changes (branch `audi-1276-join-skew`, worktree `scratchpad/wt/audi_1276`, uncommitted; the dispatcher commits, gauntlets and opens the PR)
 - `models/feature_store/feature_group_1_source/conv_log_ip_advertiser_id.py`, `guid_log_ip_advertiser_id.py`, `guid_log_ip_guid_advertiser_id.py`: `.join(valid_advertisers_df, "advertiser_id", "inner")` -> `.join(F.broadcast(valid_advertisers_df), ...)` and `.join(advertiser_verticals_df, on="advertiser_id", how="left")` -> `.join(F.broadcast(advertiser_verticals_df), ...)`. Two lines per file, nothing else.
