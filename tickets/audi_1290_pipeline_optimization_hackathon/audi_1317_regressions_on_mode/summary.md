@@ -137,6 +137,17 @@ Branch `audi-1317-publish-regressions` in `SteelHouse/airflow-ti`, stacked on `a
   **A:** A figure a regex can read. The live BigQuery card uses `REGEXP_EXTRACT(title, r'used ([0-9,]+) slot-hours')`; the regression title ends `; the run used 145 executor-hours` and the new card reads it with `used ([0-9,]+) executor-hours`, plus `is ([0-9.]+)x its` for the ratio.
 
 ## 7. Data Documentation Updates
+Handed back to the dispatcher for `knowledge/` routing:
+- **The Mode cost dashboard parses numbers out of ledger `title` text with a regex** (`used ([0-9,]+) slot-hours` in query `3ead7301daa8`). Any new detector that wants a number on the dashboard must put it in the title in that shape. Report `e81786de8403` holds six queries.
+- **`ledger.record()` may be called at most once per (date, surface).** Its `classify` → `_mark_resolved` path resolves every key of that surface the call did not report, so a second same-surface call is a resolution pass over the first call's output. New Spark-surface findings fold into the sweep's existing call.
+- **A Report handed to `ledger.record()` contributes its `exec_h` to the DAG's day total**, which is the input to the savings math; a report that is not a measurement must carry `exec_h=0.0`.
+- **`gsutil -m cp` wedges on `gs://mntn-data-archive-prod/spark-events` from a Mac too**, not just Astro pods: zero-byte `.gstmp` parts, no progress, no error. Use `include/spark_optimizer/fetch.py::download` (gcloud token + GCS JSON API `alt=media`).
+- **`bq_run.sh` cannot take a `.sql` file whose first line is a `--` comment**: the bq CLI parses the leading `--` as a flag (`Unknown command line flag`). Use a `/* */` header.
+- **`nohup python3` resolves to `/usr/bin/python3` (3.9)** on this Mac because `python3` is a shell alias; `datetime.UTC` then raises. Use `/opt/homebrew/opt/python@3.11/bin/python3.11`.
+- **Regression guard mechanism:** the daily sweep runs the guard over every profiled DAG, mints findings with detector `regression_<metric>` and stage-scoped keys (e.g., `regression_disk_spill:3`), and folds them into the existing one `ledger.record()` call, so replay (new→recurring→chronic→resolved at RESOLVE_SWEEPS=3) and dedup are untouched. Regression titles end `; the run used 145 executor-hours` for the Mode card to regex-extract. Fleet noise floor: 278 gated (stage, metric) judgements over 100 real run-days = 0 regressions fired, ships ungated.
+- [[project_airflow_optimizer]], [[reference_mode_api]].
+
+## 7. Data Documentation Updates
 Handed back to the dispatcher for `knowledge/` (this agent may not write the masters):
 - **The Mode cost dashboard parses numbers out of ledger `title` text with a regex** (`used ([0-9,]+) slot-hours` in query `3ead7301daa8`). Any new detector that wants a number on the dashboard must put it in the title in that shape. Report `e81786de8403` holds six queries: `3ead7301daa8`, `5a66e5fad18c`, `6fdc8ae9ccf7`, `513a4a7a4a71`, `183d18f86de6`, `a167f6ad0146`.
 - **`ledger.record` may be called at most once per (date, surface).** Its `classify` -> `_mark_resolved` path resolves every key of that surface the call did not report, so a second same-surface call is a resolution pass over the first call's output. New Spark-surface findings fold into the sweep's existing call.

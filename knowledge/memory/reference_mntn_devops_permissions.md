@@ -58,3 +58,11 @@ which `malachi@mountain.com` does not have, so bucket bindings can only be manif
 
 Supersedes the Terragrunt-unit shape recorded above for anything new. See
 [[reference_gcs_iam_creator_vs_user]] for the role choices themselves, which did not change.
+
+## Medallion layer roles (org 104640274931)
+
+**Org custom roles:** `medallion_bronze_reader`, `medallion_silver_reader`, `medallion_gold_reader` (defined in `terragrunt/gcp/resources/mntn/dplat/modules/dw-medallion-layer/iam.tf` lines 19-43) carry **broad read/write access**, not table-scoped:
+- Reader roles include: `bigquery.jobs.create`, `bigquery.jobs.get`, `bigquery.jobs.list`, `bigquery.jobs.listAll`, `bigquery.tables.getData`, `bigquery.reservations.use` plus storage and cloud-sql reads.
+- Writer roles add: `bigquery.tables.create`, `bigquery.tables.delete`, `bigquery.datasets.update` plus storage and cloud-sql writes.
+
+These are bound to layer projects (e.g., `medallion_bronze_reader` on `dw-main-bronze`) and to service accounts that need layer-wide read/write access (e.g., `mode-analytics@dw-main-bronze` holds `medallion_bronze_reader` to query `INFORMATION_SCHEMA.JOBS_BY_PROJECT`). **Not table-scoped by role definition.**

@@ -222,6 +222,16 @@ Apply only on a 403. `artifacts/audi_1316_pr_body.md` is its PR body, written an
   reconciling with the daily report at roughly 604 jobs/day and 982 slot-h/day.
 
 ## 7. Data Documentation Updates
+Handed back to the dispatcher for `knowledge/` routing:
+- `medallion_bronze_reader` (org 104640274931) **includes `bigquery.jobs.listAll`, `bigquery.jobs.create`, `bigquery.jobs.get`, `bigquery.jobs.list`** plus `bigquery.tables.getData` and `bigquery.reservations.use` — it is a broad read role, not a table-scoped role. Defined in mntn-devops `terragrunt/gcp/resources/mntn/dplat/modules/dw-medallion-layer/iam.tf:19-43`.
+- **Correction, appended not overwritten:** `reference_bq_job_attribution`, `reference_mode_api`, and decision 0007 recorded that a Mode `JOBS_BY_PROJECT` query "would need `bigquery.jobs.listAll` via a mntn-devops PR". That is refuted by live project policy + role permission list, a better evidence class than terraform-inference-only. Residual risk: the org role definition itself is unreadable (`PERMISSION_DENIED` for `malachi@mountain.com`), so terraform-vs-live drift would show as a 403; the standby grant exists for that case.
+- `mode-analytics@dw-main-bronze` has **no binding in the `mntn-prj-prod-00` project policy**; reads `optimizer.optimization_ledger` through a dataset-level READER ACL. The Mode connection's job project is therefore dw-main-bronze, not mntn-prj-prod-00.
+- **`INFORMATION_SCHEMA.JOBS_BY_PROJECT` dry-run estimates over-state the scan by ~27x** (4.86 GB est vs 0.178 GB billed for one day). The estimate scales with the window, so multi-day queries trip the 5 GB abort gate while costing cents. Validate with single-day runs and extrapolate.
+- Crossplane managed-resources convention: `base/<project>/iam/<identity>/`, where the project is the one **that owns the identity**, not necessarily the target project (AUDI-1241 `spark-optimizer` is owned by mntn-prj-prod-00 so goes under `base/mntn-prj-prod-00/iam/`; `mode-analytics` is owned by dw-main-bronze so goes under `base/dw-main-bronze/iam/`). File naming is per-base: `base/dw-main-bronze/iam/*` uses `bigquery-permissions.yaml`; `base/mntn-prj-prod-00/iam/spark-optimizer` uses `bq-profile-access.yaml`.
+- AUDI-1241 `bq-profile-access.yaml` is merged to mntn-devops origin/main and both grants live in the project policy.
+- [[reference_bq_job_attribution]], [[reference_mode_api]], [[reference_mntn_devops_permissions]], decision 0007.
+
+## 7. Data Documentation Updates
 Handed back to the dispatcher for routing; not written to `knowledge/` masters from this ticket.
 - `medallion_bronze_reader` / `medallion_<layer>_reader` (org 104640274931), the custom role bound to
   `mode-analytics@dw-main-bronze` and to the medallion layer projects, **already includes

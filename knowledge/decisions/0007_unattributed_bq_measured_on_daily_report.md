@@ -58,3 +58,7 @@ open a PR in their repo. D3: airflow-ti labels go on all 8 python-client sites i
   [`../memory/reference_mode_api.md`](../memory/reference_mode_api.md), [`../data_knowledge.md`](../data_knowledge.md)
   § BigQuery Behavioral Gotchas, ticket `tickets/audi_1290_pipeline_optimization_hackathon/audi_1278_bq_job_labels/summary.md`
   §5 / §8.
+
+## Superseded Note (2026-09-03, AUDI-1316)
+
+Alternative A ("a Mode query over JOBS_BY_PROJECT") is **now available with no new grant**. `mode-analytics@dw-main-bronze` already holds `bigquery.jobs.listAll` and `bigquery.jobs.create` via its `medallion_bronze_reader` role, confirmed by live project policy + role permission list. The query is written, validated (0.178 GB per day), and ready for paste into report `e81786de8403`. This does NOT affect the D1/D2/D3 decisions on the unattributed bucket's measurement surface or the camperbid hand-off — those stand.
