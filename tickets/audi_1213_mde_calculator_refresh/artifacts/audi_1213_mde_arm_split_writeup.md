@@ -54,6 +54,17 @@ $100,000/mo, 2 months, CPM $25, 3.5 imps/IP, 10% holdout, baseline 10.7%:
 Ratio 1.054093, exactly `1/sqrt(0.9)`. The ratio is baseline-independent, so any `p` works
 as an assertion.
 
+## Second bug: the "Impressions" stat is a household count
+
+`premier-ui src/app/scenes/Testing/ExperimentBuilder/ForecastSidebar/index.tsx` renders:
+
+```tsx
+{ label: 'Impressions', value: result ? formatCount(result.totalIps) : '--' }
+```
+
+`totalIps` is an IP count. Impressions are `totalIps * impressionsPerIp`. Anyone backing a CPM
+out of that stat is off by the imps/IP factor. Either multiply, or relabel it to Households.
+
 ## Two knock-ons
 
 `HoldoutSection`'s households-withheld estimate reads `totalIps * holdout`. Under the fix

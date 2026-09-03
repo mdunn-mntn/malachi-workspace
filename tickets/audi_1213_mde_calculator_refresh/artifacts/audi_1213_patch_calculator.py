@@ -50,6 +50,13 @@ def main():
 
     html = sub(
         html,
+        'window.DATA_PULL_DATE = "2026-06-04";',
+        f'window.DATA_PULL_DATE = "{RUN_DATE}";',
+        "header data-pull date",
+    )
+
+    html = sub(
+        html,
         "Generated 2026-06-04 by ti_xxx_advertiser_prefill_metrics.sql. */",
         f"Generated {RUN_DATE} by incr_75_advertiser_metrics.sql (AUDI-1213 refresh).\n"
         "   Spend is advertiser-facing (media + data + platform), not media cost. */",
