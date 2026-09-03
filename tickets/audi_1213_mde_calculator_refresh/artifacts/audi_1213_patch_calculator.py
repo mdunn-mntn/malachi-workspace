@@ -173,6 +173,36 @@ def main():
         "budget tile names the active variance-reduction mode",
     )
 
+    html = sub(
+        html,
+        "// Required spend \u2192 N_total = (z\u00b7\u03c3\u00b7varR / mde_abs)\u00b2 / (h\u00b7(1\u2212h)); totalSpend covers full N_total reach",
+        "// Required spend \u2192 N_total = (z\u00b7\u03c3\u00b7varR / mde_abs)\u00b2 / (h\u00b7(1\u2212h)); only the treated arm is served, so only it is billed",
+        "spendRequired comment matches the fixed code",
+    )
+
+    html = sub(
+        html,
+        """// Wrap the existing setOutcome so it pulls advertiser-specific baseline when one is loaded
+const _origSetOutcome = setOutcome;
+setOutcome = function(o) {
+  S.currentOutcome = o;
+  if (S.advertiser) {
+    const baselinePct = (o === 'cvr' ? S.advertiser.pCvr : S.advertiser.pVisit) * 100;
+    document.getElementById('inp-base').value = baselinePct.toFixed(3);
+    S.baselineRate = baselinePct / 100;
+    document.getElementById('btn-ivr').classList.toggle('on', o === 'ivr');
+    document.getElementById('btn-cvr').classList.toggle('on', o === 'cvr');
+    update();
+  } else {
+    _origSetOutcome(o);
+  }
+};
+
+""",
+        "",
+        "drop the setOutcome wrapper that shadows the fixed base",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:

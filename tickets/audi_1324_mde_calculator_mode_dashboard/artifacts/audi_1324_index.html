@@ -763,7 +763,7 @@ function computeMDE(monthlyBudget, durationWk, holdoutFrac, p, alpha, power, var
   return { totalSpend, totalIps, nTreated, nControl, mdeRel };
 }
 
-// Required spend → N_total = (z·σ·varR / mde_abs)² / (h·(1−h)); totalSpend covers full N_total reach
+// Required spend → N_total = (z·σ·varR / mde_abs)² / (h·(1−h)); only the treated arm is served, so only it is billed
 function spendRequired(targetMdeRel, holdoutFrac, p, alpha, power, varR, cpm, impsPerIp, durationWk) {
   if (targetMdeRel <= 0 || p <= 0) return { totalSpend: Infinity, monthlySpend: Infinity };
   const z = zFactor(alpha, power);
@@ -1202,22 +1202,6 @@ function setBudgetBasis(mode) {
   applyBudgetBasis();
   update();
 }
-
-// Wrap the existing setOutcome so it pulls advertiser-specific baseline when one is loaded
-const _origSetOutcome = setOutcome;
-setOutcome = function(o) {
-  S.currentOutcome = o;
-  if (S.advertiser) {
-    const baselinePct = (o === 'cvr' ? S.advertiser.pCvr : S.advertiser.pVisit) * 100;
-    document.getElementById('inp-base').value = baselinePct.toFixed(3);
-    S.baselineRate = baselinePct / 100;
-    document.getElementById('btn-ivr').classList.toggle('on', o === 'ivr');
-    document.getElementById('btn-cvr').classList.toggle('on', o === 'cvr');
-    update();
-  } else {
-    _origSetOutcome(o);
-  }
-};
 
 function initAdvertiserPicker() {
   const ref = document.getElementById('hd-data-ref');

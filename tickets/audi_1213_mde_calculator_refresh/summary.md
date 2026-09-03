@@ -171,3 +171,47 @@ calculator defects fixed, live in Mode report `9a5afa55ca99` and on the original
 
 **Open:** the 2,546 lapsed advertisers, the weekly schedule and publish/share (both Mode UI actions
 the user owns), and the `VR_STACK` 0.595 re-measurement.
+
+## Mode delivery closed out, 2026-09-03
+
+Everything reachable from the API is done. Report `9a5afa55ca99` ("MDE Calculator") carries the
+query, the layout and a successful run of 1,859 advertisers, and the layout is byte-identical to
+`tickets/audi_1324_mde_calculator_mode_dashboard/artifacts/audi_1324_index.html`.
+
+**Two Mode defects found and fixed after first deploy, both from the fragment conversion:**
+
+1. **Nothing rendered and no control responded.** The first push was a whole HTML document. Mode
+   injects the layout into its own page, so the doctype/html/head/body wrappers meant none of the
+   scripts executed. Fix: emit a fragment (CDN tags, scoped style, markup under `div#mde`, scripts),
+   and call the boot directly rather than waiting on `DOMContentLoaded`, which has already fired by
+   the time Mode injects.
+2. **The CSS reset never applied.** The scoper mapped the bare universal selector to `#mde` itself,
+   so `* { box-sizing: border-box; margin: 0; padding: 0 }` became `#mde { ... }` and nothing inside
+   inherited the reset. Fix: `*` scopes to `#mde *`; duplicate selectors inside one rule collapse.
+
+Also hardened: the launcher now waits for `window.Chart` as well as `window.datasets` (booting on
+datasets alone could beat the Chart.js CDN, and `initChart` throwing killed the whole render), and
+`initChart()` is wrapped so a chart failure no longer stops the numbers.
+
+**Code cleanups from the verification sweep:** the `spendRequired` header comment still described
+the pre-fix behaviour ("totalSpend covers full N_total reach") and is corrected; the
+`_origSetOutcome` monkey-patch wrapper was removed, since its advertiser branch duplicated the fixed
+base function line for line and would silently shadow any future edit to it.
+
+**Regression harness:** `jsdom` reproduction of Mode's injection (innerHTML then re-created script
+tags) under both Chart.js load orders, plus a round-trip parity grid over h in {0.05, 0.10, 0.20,
+0.50} and p in {0.0006, 0.0058, 0.02, 0.107, 0.30}. Max relative error on
+`spendRequired(computeMDE(budget)) == budget` is 5.82e-16 in both builds.
+
+**Cannot be done from the API, both need the Mode UI:**
+- The weekly schedule. `POST /reports/<token>/schedules` rejects every cron format tried
+  (`0 6 * * 1`, 6-field, `@weekly`, named day) with "Cronline must be formatted as a cron string"
+  on a member API key. Treat schedule creation as UI-only.
+- Publishing and sharing. `published_at` is null, `public` false, `run_privately` true, and there is
+  no `/publish` endpoint (404), so nobody outside the owning account can open the report yet.
+
+**Still open on this ticket:** the 2,546 lapsed advertisers and the `VR_STACK` 0.595
+re-measurement. The lapsed build needs a decision first: rate windows anchored per advertiser on
+their own last-active day mean scanning `cost_impression_log` across 365 days rather than 30, and
+the 30-day scan alone dry-runs at 471.7 GB. That cost lands on every scheduled run, so the cohort
+cut is a cost decision, not just a query change.
