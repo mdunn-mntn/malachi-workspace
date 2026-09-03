@@ -1,0 +1,21 @@
+# shuffle concentration, 2026-09-03 runs (audi_1194_shuffle_concentration.py)
+
+app-20260903021630713-0138.zstd  (124 executors registered)
+  stage 11: 423 tasks, 36% fetch wait, 3,925,327 blocks @ 3034 B, 100 executors live at start
+      fed by stage 7: 9280 tasks -> 11.1 GiB over 50 executors, 90% on 45, hottest holds 2.1%; 100 executors live when it started
+  stage 14: 423 tasks, 0% fetch wait, 178,929 blocks @ 3348 B, 100 executors live at start
+      fed by stage 7: 9280 tasks -> 11.1 GiB over 50 executors, 90% on 45, hottest holds 2.1%; 100 executors live when it started
+  stage 35: 667 tasks, 29% fetch wait, 6,258,960 blocks @ 1906 B, 124 executors live at start
+      fed by stage 33: 9386 tasks -> 11.1 GiB over 74 executors, 90% on 63, hottest holds 1.6%; 100 executors live when it started
+  stage 38: 571 tasks, 0% fetch wait, 380,857 blocks @ 1708 B, 124 executors live at start
+      fed by stage 33: 9386 tasks -> 11.1 GiB over 74 executors, 90% on 63, hottest holds 1.6%; 100 executors live when it started
+  stage 42: 500 tasks, 0% fetch wait, 285,500 blocks @ 1871 B, 124 executors live at start
+      fed by stage 33: 9386 tasks -> 11.1 GiB over 74 executors, 90% on 63, hottest holds 1.6%; 100 executors live when it started
+
+app-20260903005130592-0517.zstd  (431 executors registered)
+  stage 9: 388 tasks, 80% fetch wait, 4,648,320 blocks @ 1639 B, 373 executors live at start
+      fed by stage 5: 7802 tasks -> 14.6 GiB over 185 executors, 90% on 58, hottest holds 25.6%; 50 executors live when it started
+  stage 15: 292 tasks, 0% fetch wait, 3,339,052 blocks @ 1722 B, 373 executors live at start
+      fed by stage 5: 7802 tasks -> 14.6 GiB over 185 executors, 90% on 58, hottest holds 25.6%; 50 executors live when it started
+  stage 27: 11 tasks, 0% fetch wait, 34,532,625 blocks @ 717 B, 431 executors live at start
+      fed by stage 23: 4098 tasks -> 7.6 GiB over 78 executors, 90% on 50, hottest holds 11.6%; 373 executors live when it started
