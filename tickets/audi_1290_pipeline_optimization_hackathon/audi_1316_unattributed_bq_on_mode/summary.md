@@ -205,6 +205,9 @@ on dw-main-bronze for `mode-analytics@dw-main-bronze`, sync-wave 3, `deletionPol
 spark-optimizer resource. Header carries the repo path it would take and the kustomization line it needs.
 Apply only on a 403. `artifacts/audi_1316_pr_body.md` is its PR body, written and linted, unopened.
 
+
+**Shipped to Mode 2026-09-03 PT (dispatcher, over the API).** Query `Unowned BigQuery jobs by day` created on report `e81786de8403` (token `f513b6ed7755`, data source 48787), layout section `opt-unowned` added under the per-task cost table with a caption saying the number is attribution and not waste, and run `e8247eba208f` succeeded with rows. That run is the discriminating test §4 named for the one unreadable fact: `medallion_bronze_reader` really does carry `bigquery.jobs.listAll`, so `artifacts/audi_1316_standby_grant.yaml` stays unused and the Objective is met. Follow-up polish in the same session: the day column renders as a plain date and rows under one slot-hour are dropped, so the section reads as the airflow-camperbid story it is.
+
 ## 6. Questions Answered
 - **Q:** Which principal does Mode query dw-main-bronze as?
   **A:** `mode-analytics@dw-main-bronze.iam.gserviceaccount.com`, via BigQuery data source `48787`, which
