@@ -1,0 +1,12 @@
+*Completed: 2026-09-02*
+
+1 of 15 DAGs gets the raise: vertical_size_monitor 128 to 600 (branch audi-1270). guid_log_advertiser_id_dsc_id is shuffle-side too (owned by AUDI-1269); 13 others are not.
+
+h3. Key Findings
+* 10 DAGs spill while map tasks read input (9) or BigQuery (ipdsc_ds_47), a stage the partition count does not govern; stage figures handed to AUDI-1273.
+* guid_log_advertiser_id_dsc_id: 870 GiB read, 1 TiB in memory. AUDI-1269 sets 3400; 256 MiB per task needs 4100.
+* ipdsc_ds_14, guid_log_pivot_household_id_vertical_id, aug_log_ip: under 2 GiB spill in each of the last 3 runs.
+
+h3. Next
+* First post-merge run (00:05 UTC): stages 11 and 17 at 600 tasks, zero spill.
+* Raise guid_log_advertiser_id_dsc_id to 4100 after AUDI-1269 merges if spill persists.

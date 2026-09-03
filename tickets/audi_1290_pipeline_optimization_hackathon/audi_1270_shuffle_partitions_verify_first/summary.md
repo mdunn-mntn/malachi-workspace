@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1270: Verify event logs then raise shuffle.partitions on 15 spill DAGs"
-status: backlog
+status: in_progress
 date: 2026-09-02
 summary: "Per DAG confirm shuffle-side spill in the event log, then size partitions to ~256 MiB per task"
-result: "not started"
+result: "executed 2026-09-02: 1 of 15 DAGs is shuffle-side and edited (vertical_size_monitor 128 -> 600, decorator + builder, config regenerated, dryrun clean, 145 model tests pass); guid_log_advertiser_id_dsc_id is shuffle-side but owned by AUDI-1269 (3400; in-memory sizing says 4100, §8); 11 DAGs spill on the map side while reading input (AUDI-1273 mechanism), ipdsc_ds_47 spills on its BigQuery read stage (code), ipdsc_ds_14 / guid_log_pivot_household_id_vertical_id / aug_log_ip no longer spill above the 2 GiB floor"
 question: "For each of the 15 DAGs, is the spilling stage's spill shuffle-side, and what partition count puts about 256 MiB per task in memory?"
 framing_state: locked
 ---
@@ -101,8 +101,8 @@ Both spilling stages read files (`input_bytes` > 0) and read no shuffle (`shuffl
 4. **Verdict per DAG** (one row per spilling stage, written to `outputs/audi_1270_verdict_table.csv` and mirrored in §4):
    - R1 spill side: `shuffle_read_bytes > 0` = shuffle-side (the stage's tasks are reducers); `shuffle_read_bytes == 0` and `input_bytes > 0` = input-side -> §8 for the AUDI-1273 mechanism (`spark.sql.files.maxPartitionBytes`), record `input_bytes`, `num_tasks`, and `shuffle_write_bytes / input_bytes` (map expansion) for that ticket. No config change here.
    - R2 the knob owns the stage: `num_tasks == effective spark.sql.shuffle.partitions` -> yes. `num_tasks` smaller with AQE coalescing on (AQE is on by default on this runtime; fangorn's log shows `adaptive.enabled=true` with nothing set in the model) -> AQE re-coalesced, §8 for the AUDI-1274 mechanism (`advisoryPartitionSizeInBytes`). `num_tasks` equal to a `repartition(N)` / `coalesce(N)` constant in the model -> the code constant is the lever, see decision D2.
-   - R3 target (only rows passing R1 and R2): `ceil(shuffle_read_bytes / 256 MiB)`, rounded up to the next 100; several spilling stages in one app -> the max; never lower an existing value; the monitors' stages 10 and 11 carry identical bytes (same shuffle recomputed) and get one value.
-   - R4 memory check: per-task in-memory today = `mem_spill / num_tasks`; after = that x `num_tasks / target`; execution memory per task ~ `executor.memory x 0.6 / executor.cores` (both from `spark_props`; ipdsc_ds_* run the 9600m default). Record both; if "after" still exceeds execution memory the ticket's own rule applies (executor memory only if spill persists) and it goes in §8, not in this PR.
+   - R3 target (only rows passing R1 and R2), **as executed (rewritten 2026-09-02, see §3.7)**: `max(ceil(shuffle_read_bytes / 256 MiB), ceil(mem_spill / 256 MiB))`, each rounded up to the next 100, never below the current value; several spilling stages in one app -> the max. The planning-wave formula used shuffle bytes alone; execution showed vertical_size_monitor already sits at 200 MiB of shuffle bytes per partition and still spills because the rows expand 5.3x in memory, so the in-memory figure (the ledger's "in-memory at spill time", `mem_spill`) is the one the ticket question actually names. Then check the value against adaptive coalescing: partitions merge only while two neighbours fit in the 64 MiB advisory, so a raised count sticks as long as `shuffle_read_bytes / target >= 32 MiB` (empirical in §4.3).
+   - R4 memory check: per-task in-memory today = `mem_spill / num_tasks`; after = `mem_spill / target`; execution memory per task ~ `executor.memory x 0.6 / executor.cores` (both from `spark_props`; ipdsc_ds_* run the 9600m default). Record both. Execution showed the nominal budget is not discriminating on its own (vertical_size_monitor spills at 1.06 GiB per task against a nominal 1.2 GiB because `vertical_compare_df.cache()` can hold half the unified pool), so "after" must clear the worst-case half-pool budget (`executor.memory x 0.3 / cores`) too; if it does not, the ticket's own rule applies (executor memory only if spill persists) and it goes in §8, not in this PR.
    - R5 driver check (INC-018, memory `reference_airflow_ti`): map-status memory scales with map tasks x reduce partitions and tipped a 9600m driver at 5000 partitions. Any DAG whose target exceeds 5000 while `driver.memory` is unset or 9600m goes to decision D3 before it is written.
    - Columns: dag, model_file, log_app_id, stage, stage_tasks, input_gib, shuffle_read_gib, shuffle_write_gib, mem_spill_gib, disk_spill_gib, effective_partitions, config_site (builder / decorator / both / none), aqe_coalesce, repartition_constant, spill_side, knob_owns_stage, target_partitions, per_task_after_mib, exec_mem_per_task_mib, driver_mem, verdict (change / 1273 / 1274 / code / no_spill / conflict_1269).
 5. **Confirm "current" against the file before editing.** For every DAG marked `change`, the log's effective value must equal the value at the file line in the table (or the runtime default where the file sets none). A mismatch means the model changed after the log; re-pull the newest log and re-run step 4 for that DAG.
@@ -154,26 +154,135 @@ Both spilling stages read files (`input_bytes` > 0) and read no shuffle (`shuffl
 - Precedent: airflow-ti PR 1231 (`ddf55a9`), PR 1198 (driver memory), memory `reference_airflow_ti` (duplicate-setting trap, bundle redeploy, INC-018, PR 1169 event-log injection), `project_airflow_optimizer.md` (2026-08-26 corpus validation, 2026-09-02 vanishing logs), `feedback_airflow_prod_safety`.
 - Sibling framings: `../audi_1269_shuffle_partitions_preverified/summary.md`, `../audi_1272_initial_executors_verify_first/summary.md`, `../audi_1275_straggler_gcs_writers/summary.md`.
 
+### 3.7 Execution wave 2026-09-02: what changed against the plan
+A first execute agent was cut off by a session limit after downloading 17 logs (the `.gstmp` files in `outputs/eventlogs/` were complete: `zstd -t` passed on all 17, sizes matched the ledger listing; renamed in place, not re-downloaded). This wave ran steps 1-7 as written with these deviations:
+- **R3 rewritten** (text in §3.2 step 4 updated): target uses `max(shuffle_read, mem_spill) / 256 MiB`, not shuffle bytes alone. Reason in §4.4: the only `change` DAG sits at 200 MiB of shuffle bytes per partition and spills anyway; the bytes-only formula would have produced 200 (a rounding artefact of "next 100" over 103) and left the stage at 0.68 GiB in memory per task, inside the range that spills today.
+- **R4 extended** with the half-pool worst case for models that cache (the vertical_size_monitor model caches `vertical_compare_df` at L282).
+- **Step 2's fallback was needed for all three ledger-less DAGs**; `artifacts/audi_1270_archive_scan.sh` did the listing + app-name read (241 objects over 15 hour-prefixes, 0 unreadable). Their 3 newest runs each were downloaded and parsed (8 more logs; 31 total, 112 MB, largest 15 MB, nothing near the 200 MB delete threshold).
+- **Step 7.6 needed the CI-equivalent environment** exactly as the AUDI-1273 wave found (`JAVA_HOME=/opt/homebrew/opt/openjdk@17`, `PYSPARK_PYTHON=PYSPARK_DRIVER_PYTHON=.venv/bin/python`): without it 83 passed / 62 errors (`JAVA_GATEWAY_EXITED`), with it 145 passed in 22.8 s.
+- Decision D2 produced no §8 rows: none of the 21 spilling stages is governed by a code constant (the constants in the table all sit on non-spilling write stages).
+- macOS has no `timeout` binary; long commands ran unwrapped.
+
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+### 4.1 Inputs (steps 1-2)
+- Ledger snapshot re-pulled 2026-09-02 23:45 PT: `outputs/audi_1270_prod_ledger_snapshot_2026_09_02.jsonl`, 1,352 rows, dates 08-21..09-02 (same row count as the planning snapshot; the 09-02 sweep was already in it).
+- Event logs: 31 files in `outputs/eventlogs/` (gitignored), all 23 ledger app ids for the 12 DAGs with live rows plus the 8 located by the archive scan. Every ledger app id listed in §3.1 still existed (A1 holds). App names verified from each file's `SparkListenerApplicationStart`, all 31 match the expected model (`outputs/audi_1270_spark_props.csv`, column `app_name`).
+- Archive scan (`outputs/audi_1270_archive_scan_2026_09_02.tsv`, 241 objects, hours 01-05 UTC on 08-31, 09-01, 09-02): ipdsc_ds_14 runs at 03:23-03:55 UTC (`app-20260902032301606-0535`, `app-20260901035336630-0765`, `app-20260831035522861-0782`, 133-137 KB each); guid_log_pivot_household_id_vertical_id at 01:38-01:45 UTC (`app-20260902013834083-0011`, `app-20260901014548961-0929`, `app-20260831013827557-0910`, ~7 MB each); aug_log_ip at 01:41-01:45 UTC (`app-20260902014437530-0436`, `app-20260901014112861-0343`, plus the ledger's `app-20260831014555966-0069`, ~410 KB each). All three DAGs still run daily (A6 holds).
+
+### 4.2 Parse (step 3)
+`artifacts/audi_1270_stage_verdict.py` wraps `include.spark_optimizer.eventlog.parse_eventlog` (run from the worktree root with `PYTHONPATH=<worktree>`; the parser shells out to `/opt/homebrew/bin/zstd`). Outputs: `outputs/audi_1270_stage_metrics.csv` (every stage with spill or shuffle bytes over 1 GiB, 31 logs, 150 rows) and `outputs/audi_1270_spark_props.csv` (effective config per run). Effective `spark.sql.shuffle.partitions` per DAG matched the file in every case (step 5): the four models that set nothing (ipdsc_ds_13, ipdsc_ds_14, ipdsc_ds_17, guid_log_advertiser_id_dsc_id) all show 1000, confirming the Dataproc Serverless runtime default (A2 holds). `spark.sql.adaptive.enabled=true` on all 31 runs; `coalescePartitions.enabled` is explicitly true on the four monitors and unset (runtime default true) elsewhere; no run sets `advisoryPartitionSizeInBytes` (64 MiB default).
+
+### 4.3 Verdict table (step 4), newest log per DAG; mirrored from `outputs/audi_1270_verdict_table.csv`
+Exec MiB = `executor.memory x 0.6 / cores`, the nominal per-task execution budget. In-memory per task today = `mem_spill / tasks`.
+
+| DAG | log | stage | tasks | input GiB | shuffle read GiB | shuffle write GiB | mem spill GiB | disk spill GiB | partitions (site) | spill side | knob owns stage | target | in-mem/task today -> after | exec MiB | driver | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| fangorn_prospecting_scoring | `app-20260902052706684-0585` | 13 | 2048 | 64.7 | 0 | 2526.5 | 11684.5 | 4969.9 | 2000 (builder) | input | n/a | | 5.7 GiB | 3072 | 20G | 1273 |
+| fangorn_prospecting_scoring | same | 14 | 21 | 0.7 | 0 | 25.9 | 15.2 | 3.1 | 2000 | input | n/a | | 0.7 GiB | 3072 | 20G | 1273 |
+| ipdsc_ds_17 | `app-20260902023710023-0850` | 4 | 100 | 17.9 | 0 | 16.3 | 504.4 | 32.9 | 1000 (runtime default) | input | n/a | | 5.0 GiB | 1440 | 9600m | 1273 |
+| ipdsc_46_monitor | `app-20260901035249765-0966` | 10, 11 | 20 | 2.2 | 0 | 12.7 / 12.8 | 91.3 / 92.1 | 11.0 / 11.0 | 128 (both) | input | n/a | | 4.6 GiB | 1229 | 16g | 1273 |
+| ipdsc_14_monitor | `app-20260901040209977-0949` | 10, 11 | 14 | 1.6 / 1.7 | 0 | 7.9 / 8.0 | 65.2 / 65.6 | 6.8 / 6.8 | 128 (both) | input | n/a | | 4.7 GiB | 1229 | 16g | 1273 |
+| ipdsc_49_monitor | `app-20260902030147786-0337` | 10, 11 | 13 | 1.3 | 0 | 7.4 / 6.8 | 51.2 / 45.6 | 6.4 / 5.8 | 128 (both) | input | n/a | | 3.9 GiB | 1229 | 16g | 1273 |
+| ipdsc_ds_13 | `app-20260902042740802-0974` | 1 | 248 | 25.0 | 0 | 42.2 | 219.0 | 32.4 | 1000 (runtime default) | input | n/a | | 0.9 GiB | 1440 | 9600m | 1273 |
+| ipdsc_ds_14 | `app-20260902032301606-0535` | 1 (largest) | 100 | 7.0 | 0 | 4.1 | 0 | 0 | 1000 (runtime default) | input | n/a | | 0 | 1440 | 9600m | no_spill |
+| ipdsc_ds_47 | `app-20260902030204550-0576` | 5 | 1952 | 0 | 0 | 248.4 | 681.9 | 44.3 | 5000 (decorator) | source (BigQuery read) | n/a | | 0.35 GiB | 1440 | 9600m | code |
+| fangorn_predictions_vertical | `app-20260901212244494-0601` | 2 | 717 | 127.7 | 0 | 278.6 | 736.2 | 268.7 | 32768 (builder) | input | n/a | | 1.0 GiB | 1440 | 9600m | 1273 |
+| fangorn_household_predictions_vertical | `app-20260901213237664-0623` | 1 | 9 | 3.3 | 0 | 3.8 | 8.0 | 3.6 | 32768 (builder) | input | n/a | | 0.9 GiB | 1440 | 9600m | 1273 |
+| **vertical_size_monitor** | `app-20260902011415369-0939` | 11, 17 | 128 | 0 | 25.6 | 0 | 136.0 / 136.0 | 16.3 / 16.3 | 128 (both) | **shuffle** | **yes** (128 = setting) | **600** | 1.06 GiB -> 232 MiB | 1229 (614 half-pool) | 16g | **change** |
+| aug_log_ip | `app-20260902014437530-0436` | 1 | 205 | 22.1 | 0 | 35.7 | 30.1 | 0.7 | 2000 (builder) | input | n/a | | 0.15 GiB | 1440 | 9600m | no_spill (under the 2 GiB floor) |
+| guid_log_advertiser_id_dsc_id | `app-20260902010550610-0067` | 13 | 1000 | 0 | 870.3 | 0.5 | 1007.9 | 351.4 | 1000 (runtime default) | shuffle | yes (1000 = setting) | 4100 | 1.0 GiB -> 252 MiB | 1440 | 9600m | conflict_1269 |
+| guid_log_advertiser_id_dsc_id | same | 24 | 1000 | 0 | 870.3 | 0.5 | 907.6 | 316.2 | 1000 | shuffle | yes | 3700 | 0.9 GiB -> 251 MiB | 1440 | 9600m | conflict_1269 |
+| guid_log_pivot_household_id_vertical_id | `app-20260902013834083-0011` | 1 (largest) | 750 | 13.7 | 0 | 17.7 | 0 | 0 | 8000 (decorator) | input | n/a | | 0 | 1440 | 9600m | no_spill |
+| advertiser_join | `app-20260901060920436-0979` | 3 | 4798 | 390.2 | 0 | 2413.8 | 13215.8 | 2493.0 | 28000 (builder) | input | n/a | | 2.75 GiB | 3686 | 28G | 1273 |
+
+Cross-run stability (second log per DAG, `outputs/audi_1270_stage_metrics.csv`): every spilling stage above has the same task count, the same side and bytes within 10% in the previous run (fangorn_prospecting_scoring 08-26/09-01/09-02, ipdsc_ds_17 08-26/09-02, ipdsc_ds_13 08-31/09-02, ipdsc_ds_47 08-27/09-02, fangorn_*_vertical 08-26/09-01, advertiser_join 08-27/09-01, guid_log_advertiser_id_dsc_id 08-27/09-02, vertical_size_monitor 08-27/09-02). A4 (stage ids move): vertical_size_monitor's first spilling stage is id 13 in the 08-27 log and id 11 in the 09-02 log with an identical profile (128 tasks, 25.6 GiB read, 136.0 GiB memory, 16.3 GiB disk); stage 17 is stable. A5 (monitor stages 10/11 are the same shuffle twice): confirmed by bytes on all three monitors, moot for the knob because both are map-side.
+
+**Adaptive coalescing, measured on this runtime (governs whether a raised count sticks):**
+- ipdsc_ds_17 stage 6: setting 1000, 16.3 GiB read -> 334 tasks. 16.7 MiB per original partition, merged in threes (50 MiB <= 64 MiB advisory; four would be 67 MiB). 1000 / 3 = 334 exactly.
+- ipdsc_ds_47 stage 7: setting 5000, 248.4 GiB -> 5000 tasks (51 MiB each; a pair is 102 MiB > 64 MiB, so nothing merges).
+- fangorn_prospecting_scoring stage 15: setting 2000, 2545.6 GiB -> 2000 tasks (1.3 GiB each).
+- ipdsc_ds_13 stage 3: setting 1000, 42.2 GiB -> 1000 tasks (43 MiB each, pairs exceed 64 MiB).
+- Rule that fits all four: partitions merge only while two neighbours fit in 64 MiB, so a count sticks while `shuffle bytes / count >= 32 MiB`. For vertical_size_monitor (25.6 GiB) that is any count up to ~819; 600 gives 44 MiB per task.
+- fangorn_predictions_vertical stage 4 is the exception: setting 32768, 278.6 GiB -> 997 tasks (286 MiB each), i.e. neither the setting nor the 64 MiB advisory. The stage is an Iceberg `overwritePartitions` write; the Iceberg write path sizes that shuffle itself (its own advisory partition size, default the 512 MiB target file size). Unverified mechanism, recorded because it means `spark.sql.shuffle.partitions` does not reach the Iceberg writers' reducer stage at all.
+
+### 4.4 Why vertical_size_monitor gets 600, not the bytes-formula 200
+- Stage 11 (and the identical stage 17): 128 tasks read 25.6 GiB of shuffle (200 MiB per task, already under the 256 MiB rule of thumb) yet spill 136.0 GiB of in-memory data (1.06 GiB per task) and 16.3 GiB to disk. The in-memory representation is 5.3x the compressed shuffle bytes and the spill files compress 8.3x (136.0 / 16.3), consistent with wide string rows.
+- Peak execution memory per task (`Peak Execution Memory`, max over tasks) is 0.8 GiB, so a task got about 0.8 GiB before its first spill; the nominal budget is 1,229 MiB (8g x 0.6 / 4 cores) but the model caches `vertical_compare_df` (L282) and storage can hold half the unified pool, leaving 614 MiB per task in the worst case.
+- Bytes formula: ceil(25.6 GiB / 256 MiB) = 103 -> next 100 = 200 -> 0.68 GiB in memory per task: above the 614 MiB worst-case budget, inside the range that spills today.
+- In-memory formula (the ticket question): ceil(136.0 GiB / 256 MiB) = 544 -> 600 -> 232 MiB in memory per task, 44 MiB of shuffle per task (sticks under adaptive coalescing, §4.3), 2.6x under the worst-case budget. 600 tasks over 49-89 executors x 4 cores = 2-3 waves.
+- Side effects checked: stages 15, 19, 21 (128 tasks, 17.7-19.4 GiB read, no spill) drop to 30-33 MiB per partition and will coalesce in pairs to roughly 300; the write stays `coalesce(1)` (L375); driver is 16g + 4g overhead with 600 x 248 map tasks of map status, far under the INC-018 shape.
+
+### 4.5 The 12 non-shuffle spills (why they leave this ticket)
+Every one has `shuffle_read_bytes = 0` on the spilling stage: the tasks are the map side of an exchange, buffering and sorting their own shuffle output (`shuffle_write_bytes` is the stage's output). The reducer stage that consumes each of these shuffles was checked and does not spill: fangorn_prospecting_scoring stage 15 (2000 tasks, 2545.6 GiB read, 0 spill), ipdsc_ds_17 stage 6 (334, 16.3 GiB), the monitors' stages 20/25 (128 tasks, 7-13 GiB, 0 spill), ipdsc_ds_13 stage 3 (1000, 42.2 GiB), ipdsc_ds_47 stage 7 (5000, 248.4 GiB), fangorn_predictions_vertical stage 4 (997, 278.6 GiB), fangorn_household stage 3 (11, 3.8 GiB), advertiser_join stage 5 (14000, 2413.8 GiB). Raising `spark.sql.shuffle.partitions` changes only those reducer stages. Per-stage hand-off figures are in §8.
+- ipdsc_ds_47 differs from the other 11: its spilling stage has `input_bytes = 0` too. The model reads `dw-main-silver.identity.crm_audience` through the BigQuery connector (`read_model("bigquery_data.BQ")`, `models/ipdsc/ipdsc_ds_47.py`), whose read streams report no Hadoop input metrics; 1952 tasks = read streams, and the spill happens in the map-side partial aggregation of `groupBy("ip").agg(collect_set(...))`. Neither `spark.sql.shuffle.partitions` nor `spark.sql.files.maxPartitionBytes` reaches that stage.
+
+### 4.6 Validation of the edit (steps 6-7)
+- Edit: `models/monitoring/vertical_size_monitor.py` L202 (decorator) and L234 (builder) `"128"` -> `"600"`; `grep -n shuffle.partitions` shows exactly those two lines. Log value (128) matched both sites before the edit (step 5).
+- `MNTN_SDLC_ENV=dev uv run python model_upload.py --dryrun` on the clean worktree first: `Compiling all models` / `Skipping all models upload to 'dev' env`, `git status` empty (baseline: the JSON on main is current). After the edit: the same two lines plus `dags/model_task_config.json` with one hunk, `vertical_size_monitor.batch.runtime_config.properties["spark.sql.shuffle.partitions"]` 128 -> 600; `dags/ipdsc_third_party_audience_builders.json` unchanged.
+- `uv run ruff check models/monitoring/vertical_size_monitor.py` (ruff 0.16.1): 6 findings (UP035, I001, UP006, UP045, DTZ007, DTZ005), identical count on `git show HEAD:` content, none on lines 202/234; the repo has no ruff config and CI does not lint models. Left alone.
+- `JAVA_HOME=/opt/homebrew/opt/openjdk@17 PYSPARK_PYTHON=.venv/bin/python PYSPARK_DRIVER_PYTHON=.venv/bin/python uv run python -m pytest tests/models -q`: 145 passed in 22.84 s.
+- `git diff --stat`: `dags/model_task_config.json` (1 line) and `models/monitoring/vertical_size_monitor.py` (2 lines). Matches the verdict table's single `change` row.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+- Branch `audi-1270-shuffle-partitions-verify-first` (worktree `scratchpad/wt/audi_1270`, base main `825b07e`): `models/monitoring/vertical_size_monitor.py` decorator L202 and builder L234 `spark.sql.shuffle.partitions` 128 -> 600; `dags/model_task_config.json` regenerated (one line). Uncommitted; the dispatcher commits, runs the gauntlet and opens the PR.
+- PR body: `artifacts/audi_1270_pr_body.md` (lint `--kind pr` OK, 128 words / 835 chars). Result comment: `artifacts/audi_1270_result_comment.txt` (lint `--kind completion` OK).
+- Verdict table: `outputs/audi_1270_verdict_table.csv` (21 rows, one per spilling stage, every DAG represented). Builder: `artifacts/audi_1270_build_verdict.py`; parser wrapper: `artifacts/audi_1270_stage_verdict.py`; archive name scan: `artifacts/audi_1270_archive_scan.sh`.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** For each of the 15 DAGs, is the spilling stage's spill shuffle-side?
+  **A:** Two are: vertical_size_monitor (stages 11/17, 128 tasks read 25.6 GiB) and guid_log_advertiser_id_dsc_id (stages 13/24, 1000 tasks read 870.3 GiB). Eleven spill on the map side while reading files (fangorn_prospecting_scoring, ipdsc_ds_17, ipdsc_46/14/49_monitor, ipdsc_ds_13, fangorn_predictions_vertical, fangorn_household_predictions_vertical, advertiser_join, plus aug_log_ip under the floor), ipdsc_ds_47 spills on its BigQuery read stage, and ipdsc_ds_14 / guid_log_pivot_household_id_vertical_id do not spill in their last three runs.
+- **Q:** What partition count puts about 256 MiB per task in memory?
+  **A:** vertical_size_monitor 600 (136.0 GiB in memory / 256 MiB = 544 -> 600, 232 MiB per task); guid_log_advertiser_id_dsc_id 4100 (1007.9 GiB / 256 MiB = 4032 -> 4100, 252 MiB per task) versus AUDI-1269's 3400 (303 MiB per task).
+- **Q:** Does the Dataproc Serverless runtime default `spark.sql.shuffle.partitions` to 200?
+  **A:** No, 1000: seen on all four models that set nothing (ipdsc_ds_13, ipdsc_ds_14, ipdsc_ds_17, guid_log_advertiser_id_dsc_id), 9 runs.
+- **Q:** When does adaptive coalescing undo a raised count?
+  **A:** Only while two neighbouring partitions fit in the 64 MiB advisory: 1000 -> 334 at 16.7 MiB each (ipdsc_ds_17), unchanged at 43 MiB (ipdsc_ds_13) and 51 MiB (ipdsc_ds_47). A count sticks while shuffle bytes / count >= 32 MiB.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+Nothing written to `knowledge/` by this wave (off-limits to the execute agent). Facts handed to the dispatcher for routing: the 1000 runtime default (4 more DAGs), the 32 MiB coalescing threshold, `memoryBytesSpilled` as the in-memory sizing input and its 5x gap from shuffle bytes on string-heavy stages, the Iceberg writer reducer stage ignoring `spark.sql.shuffle.partitions`, the BigQuery connector read stage reporting zero input bytes, the `.gstmp` gsutil temp files being complete, and the `tests/models` environment recipe (JAVA_HOME + PYSPARK_PYTHON).
 
 ## 8. Open Items / Follow-ups
-Anything not resolved, handed off, or deferred.
+1. **guid_log_advertiser_id_dsc_id (D1).** AUDI-1269 inserts `.config("spark.sql.shuffle.partitions", "3400")` in the builder. This ticket's stages 13 and 24 (1000 tasks, 870.3 GiB read, 1007.9 / 907.6 GiB in memory, 351.4 / 316.2 GiB to disk) size to 4100 by the in-memory rule (3500 by shuffle bytes). At 3400 each task holds 303 MiB in memory and 262 MiB of shuffle, well under the 1,440 MiB nominal budget, so 3400 is expected to stop the spill. After 1269 merges: if `disk_spill:13` / `disk_spill:24` persist in the ledger, change that one builder line to 4100 (sticks under coalescing: 217 MiB per partition; driver 9600m with 5576 map tasks stays under the 5000 cap of D3).
+2. **AUDI-1273 hand-off (11 map-side stages).** Columns: input GiB / tasks = MiB per task today; shuffle write / input = expansion; in-memory per task at spill; current `files.maxPartitionBytes`.
+   - fangorn_prospecting_scoring st13: 64.7 GiB / 2048 = 32 MiB per task; 39x; 5.7 GiB; default 128 MiB. Tasks already read one 32 MiB file each, so a lower `maxPartitionBytes` only helps if the parquet row groups are smaller than the files. st14: 0.7 GiB / 21 tasks, 37x, 0.7 GiB.
+   - ipdsc_ds_17 st4: 17.9 GiB / 100 = 183 MiB per task (above the 128 MiB default, so the input is not being split: check whether the source is splittable); 0.9x; 5.0 GiB.
+   - ipdsc_46_monitor st10/11: 2.2 GiB / 20 = 113 MiB; 5.8x; 4.6 GiB. ipdsc_14_monitor st10/11: 1.6 GiB / 14 = 117 MiB; 4.9x; 4.7 GiB. ipdsc_49_monitor st10/11: 1.3 GiB / 13 = 102 MiB; 5.7x; 3.9 GiB. All three: executor 8g, default 128 MiB.
+   - ipdsc_ds_13 st1: 25.0 GiB / 248 = 103 MiB; 1.7x; 0.9 GiB; default 128 MiB.
+   - fangorn_predictions_vertical st2: 127.7 GiB / 717 = 182 MiB; 2.2x; 1.0 GiB; **512 MiB set at L35** (the direct 1273 case: 128 MiB would give ~2,900 tasks). fangorn_household_predictions_vertical st1: 3.3 GiB / 9 = 375 MiB; 1.2x; 0.9 GiB; 512 MiB set at L35.
+   - advertiser_join st3: 390.2 GiB / 4798 = 83 MiB; 6.2x; 2.75 GiB against 3,686 MiB nominal; default 128 MiB; task skew 11.0x (AUDI-1275).
+   - aug_log_ip st1: 22.1 GiB / 205 = 110 MiB; 1.6x; 0.15 GiB; 0.7-1.3 GiB disk in the last three runs, under the 2 GiB floor, no action.
+3. **ipdsc_ds_47 (code).** Spill is in the map-side partial `collect_set` aggregation over the BigQuery read (1952 read streams, 681.9 GiB in memory, 44.3 GiB disk, skew 5.9x). Levers are in the model (read parallelism or the aggregation), not in either config knob; straggler side belongs to AUDI-1275.
+4. **Post-merge verification for vertical_size_monitor** (dispatcher / next wave): the builder value applies on the first run after the `.py` syncs to `ti_resources_v2/main`, the decorator value after the bundle is adopted (tens of minutes to 12 h, memory `reference_airflow_ti`). Check the next event log (`Populate vertical_size_monitor.VerticalSizeMonitor`, 00:05 UTC schedule, `dags/create_ip_vertical_assocations.py`): `spark_props` 600, the two 25.6 GiB reducer stages at 600 tasks, `mem_spill = disk_spill = 0`. Then `python -m include.spark_optimizer.ledger applied vertical_size_monitor disk_spill:11 <PR#> <date>` and the same for `disk_spill:17`. AUDI-1272 edits the same model file (initialExecutors); whichever lands second rebases and re-runs the dryrun.
+5. **No-spill DAGs:** ipdsc_ds_14 and guid_log_pivot_household_id_vertical_id spilled nothing in their last three runs; nothing to change, nothing to stamp (no ledger keys).
+6. **D2:** no entries; no spilling stage is governed by a code constant.
+
+## Verification (adversarial, 2026-09-03)
+
+Checked `git diff` in the worktree (`scratchpad/wt/audi_1270`) against §3.2/§5/§8, re-derived the target math independently, and re-ran (not just re-read) the tests and lint.
+
+**Diff matches the claim exactly.** `git diff --stat` on the worktree touches only `models/monitoring/vertical_size_monitor.py` (L202 decorator + L234 builder, both `128`→`600`, no comment added) and `dags/model_task_config.json` (one property, `128`→`600`, no stray hunks). `grep -n shuffle.partitions` on the model file shows exactly those two lines. No writes outside the airflow-ti worktree and this ticket folder; `outputs/*.csv`/`*.tsv` are gitignored as claimed, the ledger `.jsonl` is unchanged from the planning-wave commit (byte-identical re-pull, consistent with "same row count" in §4.1).
+
+**Target math re-derived from the verdict table, independent of the agent's arithmetic (all confirmed):**
+- vertical_size_monitor: ceil(25.6 GiB shuffle_read / 256 MiB)=103, ceil(136.0 GiB mem_spill / 256 MiB)=544 → max → next 100 = **600**.
+- guid_log_advertiser_id_dsc_id st13: ceil(1007.9 GiB / 256 MiB)=4032 → **4100**; st24: ceil(907.6 GiB / 256 MiB)=3631 → **3700**. At 3400 (AUDI-1269's value): 870.3 GiB / 3400 = 262 MiB shuffle/task, 1007.9 GiB / 3400 = 303 MiB in-memory/task — matches §8 item 1.
+- Half-pool worst case 8g×0.3/4 cores = 614 MiB; nominal 8g×0.6/4 = 1229 MiB — both match §4.3/§4.4.
+
+**Re-ran, not just re-read, in the worktree:**
+- `tests/models` with the CI-equivalent env (`JAVA_HOME=/opt/homebrew/opt/openjdk@17`, `PYSPARK_PYTHON`/`PYSPARK_DRIVER_PYTHON=.venv/bin/python`): **145 passed in 22.58s**, and `--collect-only` independently counts 145 — matches the claimed 145/22.84s.
+- `ruff check models/monitoring/vertical_size_monitor.py` on the worktree and on `git show HEAD:` content: **identical 6 findings** (UP035, I001, UP006, UP045, DTZ007, DTZ005), none on lines 202 or 234 — matches.
+
+**Defect 1 — the DAG/stage count in every prose surface is wrong, and contradicts this ticket's own verdict table.** `outputs/audi_1270_verdict_table.csv` (21 rows, source of truth per §5) actually has **9 unique DAGs / 13 stage-rows** with verdict `1273`, confirmed programmatically:
+```
+Counter({'1273': 13, 'no_spill': 3, 'change': 2, 'conflict_1269': 2, 'code': 1})   # 21 rows total
+9 unique DAGs carry verdict=1273: advertiser_join, fangorn_household_predictions_vertical,
+fangorn_predictions_vertical, fangorn_prospecting_scoring, ipdsc_14_monitor, ipdsc_46_monitor,
+ipdsc_49_monitor, ipdsc_ds_13, ipdsc_ds_17
+```
+15 DAGs = 1 change + 1 conflict_1269 + 3 no_spill + 1 code + **9** 1273 (not 11). But the frontmatter `result:` field, §6 Q&A ("Eleven spill on the map side..."), §8 item 2 header ("AUDI-1273 hand-off (11 map-side stages)"), `artifacts/audi_1270_result_comment.txt`, and `artifacts/audi_1270_pr_body.md` all assert **11** (or 12 counting ipdsc_ds_47). The draft result comment's own count doesn't even close: 12 (input/BigQuery) + 1 (guid_log_advertiser_id_dsc_id) + 1 (vertical_size_monitor) + 3 (no_spill) = 17 ≠ 15 DAGs — an internal arithmetic error independent of how "11" was meant to be read.
+
+**Defect 2 — the draft jira comment self-contradicts in three consecutive sentences.** Its opening line, "1 of 15 DAGs gets the raise... The other 14 do not spill on the shuffle-read side," is immediately contradicted by its own next bullet: "guid_log_advertiser_id_dsc_id is shuffle-side (870 GiB read, 1 TiB in memory)." One DAG is claimed both shuffle-side and not-shuffle-side two lines apart.
+
+Both defects are reporting-only — the verdict table, the config change, the target math, and the §8 hand-off data rows are all correct and independently re-derived above; no re-analysis is needed, only the prose counts and the draft comment/PR body wording. `artifacts/audi_1270_pr_body.md` carries the same wrong "12" ("Of the other 14 DAGs, 12 spill while reading input or BigQuery") and needs the same fix before the dispatcher opens the PR. Corrected `jira_comment` (lints `--kind completion` OK, 116 words / 775 chars / 6 bullets) is in the dispatcher handoff.
+
+**Verdict: `partial`.** The code change is correct, tested, and safe to ship; the ticket's own count and the draft PR/Jira text are not and must be fixed first.
