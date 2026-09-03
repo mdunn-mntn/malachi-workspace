@@ -306,10 +306,9 @@ setOutcome = function(o) {
         Stack: CUPED(0.934) × ghost-ad(0.75) × stratified(0.85) = 0.595 · Source: AUDI-884 / Lewis-Rao (2015 QJE)
       </div>""",
         """      <div class="stack-note">
-        Source: AUDI-884 / Lewis-Rao (2015 QJE). Variance reduction is not applied: measured 1.00
-        against 421 ghost-bid tests on 2026-09-03, so the pipeline gives no reduction to claim.
+        Source: AUDI-884 / Lewis-Rao (2015 QJE)
       </div>""",
-        "footer states why there is no stack",
+        "footer drops the stack line",
     )
 
     html = sub(

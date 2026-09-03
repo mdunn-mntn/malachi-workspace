@@ -309,8 +309,8 @@ post-stack hero entirely and show RAW only.
 the VARIANCE REDUCTION control and `setVR`, the POST-STACK MDE hero and its CI line, the dashed
 post-stack chart series and its CI band, the second position marker, the legend entry, and the
 `VR_STACK` constant with `S.vrMode`. `spendRequired` and `computeMDE` are now called with
-`var_reduction = 1.0` at every call site. The footer says why: "Variance reduction is not applied:
-measured 1.00 against 421 ghost-bid tests on 2026-09-03, so the pipeline gives no reduction to
-claim." Round-trip parity unchanged at 5.82e-16; jsdom harness clean.
+`var_reduction = 1.0` at every call site. The footer keeps only the source citation; a first
+draft explained the absence there and Malachi cut it, since a chart footnote is the wrong place to
+argue a methodology point. Round-trip parity unchanged at 5.82e-16; jsdom harness clean.
 
 Anyone holding a post-stack figure from before today is holding a number 1.68x too small.
