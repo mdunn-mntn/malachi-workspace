@@ -105,3 +105,7 @@ on-call/*.html
 
 # AUDI-1074: raw Proxima vendor drop (extensionless Trino file names dodge the *.parquet blanket)
 tickets/audi_1074_proxima_data_analysis/outputs/
+
+# Spark event logs pulled for analysis (multi-MB binaries, re-downloadable from GCS)
+*.zstd
+**/outputs/eventlogs/
