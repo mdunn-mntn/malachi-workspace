@@ -1,0 +1,10 @@
+Checked 10 DAGs on 22 event logs: 2 get a higher starting executor count (advertiser_mid 90, ipdsc_42_monitor 7), 8 get no change.
+
+*Findings*
+* Serverless delivers the scale-up 100 to 160 s after the first backlog; in that window advertiser_mid maps on 25 of 90 executors and the monitor on 2 to 3 of 7.
+* 6 DAGs already spread map output over the full fleet; the wait has another cause, 54 to 118 executor-hours per run on tpa_mntn_id_export.
+* ipdsc_ds_46 and vertical_size_monitor fail the cost rule: booting the extra executors costs more than the wait.
+
+*Next*
+* Merge the PR; the ledger measures from the first run after deploy.
+* fangorn household lookback verdict handed to the model owner.

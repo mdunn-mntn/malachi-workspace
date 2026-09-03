@@ -1,0 +1,196 @@
+
+app-20260901055634611-0510.zstd  Populate advertiser_mid.AdvertiserMid  start 2026-09-01T05:56:31  11.2 min
+  env: initial=- min=25 max=90 instances=25 cores=4 idle=(default 60s) start_count=25
+  fleet: +60s 25, +90s 25, first task 13.0s, first removal none, peak 90, registered 12.59 exec-h
+  stage 8: 5000 tasks, 46.3% wait = 0.058 exec-h, 2,000,000 blocks @ 3221 B, 25 live at submit
+      fed by stage 3 (parent_twin, 1 parents with output): 400 tasks -> 6.0 GiB on 25 executors, 90% on 22, hottest 5.0%; live at map submit 25 (first task 25, peak during map 25), map submit at 31.6s, removal before map 0
+      target 90 (+65): idle window 31.6s -> 0.571 exec-h, cost/wait 9.8x, class server_count
+  stage 9: 5000 tasks, 75.9% wait = 0.099 exec-h, 2,000,000 blocks @ 3221 B, 25 live at submit
+      fed by stage 3 (parent_twin, 1 parents with output): 400 tasks -> 6.0 GiB on 25 executors, 90% on 22, hottest 5.0%; live at map submit 25 (first task 25, peak during map 25), map submit at 31.6s, removal before map 0
+      target 90 (+65): idle window 31.6s -> 0.571 exec-h, cost/wait 5.8x, class server_count
+  stage 19: 8000 tasks, 37.1% wait = 1.193 exec-h, 39,583,120 blocks @ 203 B, 25 live at submit
+      fed by stage 15 (parent_twin, 1 parents with output): 5000 tasks -> 7.47 GiB on 25 executors, 90% on 22, hottest 5.1%; live at map submit 25 (first task 25, peak during map 25), map submit at 105.5s, removal before map 0
+      target 90 (+65): idle window 105.5s -> 1.905 exec-h, cost/wait 1.6x, class server_count
+  stage 24: 3000 tasks, 71.7% wait = 5.392 exec-h, 24,000,000 blocks @ 25533 B, 75 live at submit
+      fed by stage 19 (parent_twin, 1 parents with output): 8000 tasks -> 570.7 GiB on 75 executors, 90% on 60, hottest 1.98%; live at map submit 25 (first task 25, peak during map 75), map submit at 125.6s, removal before map 0
+      target 90 (+65): idle window 125.6s -> 2.268 exec-h, cost/wait 0.4x, class spread
+
+app-20260902051541259-0571.zstd  Populate advertiser_mid.AdvertiserMid  start 2026-09-02T05:15:38  9.4 min
+  env: initial=- min=25 max=90 instances=25 cores=4 idle=(default 60s) start_count=25
+  fleet: +60s 25, +90s 25, first task 9.6s, first removal none, peak 90, registered 11.48 exec-h
+  stage 8: 5000 tasks, 45.8% wait = 0.057 exec-h, 2,000,000 blocks @ 3238 B, 25 live at submit
+      fed by stage 3 (parent_twin, 1 parents with output): 400 tasks -> 6.03 GiB on 25 executors, 90% on 22, hottest 5.0%; live at map submit 25 (first task 25, peak during map 25), map submit at 23.1s, removal before map 0
+      target 90 (+65): idle window 23.1s -> 0.417 exec-h, cost/wait 7.3x, class server_count
+  stage 9: 5000 tasks, 40.0% wait = 0.027 exec-h, 2,000,000 blocks @ 3238 B, 25 live at submit
+      fed by stage 3 (parent_twin, 1 parents with output): 400 tasks -> 6.03 GiB on 25 executors, 90% on 22, hottest 5.0%; live at map submit 25 (first task 25, peak during map 25), map submit at 23.1s, removal before map 0
+      target 90 (+65): idle window 23.1s -> 0.417 exec-h, cost/wait 15.4x, class server_count
+  stage 19: 8000 tasks, 52.0% wait = 1.76 exec-h, 39,593,076 blocks @ 203 B, 25 live at submit
+      fed by stage 15 (parent_twin, 1 parents with output): 5000 tasks -> 7.5 GiB on 25 executors, 90% on 22, hottest 5.94%; live at map submit 25 (first task 25, peak during map 25), map submit at 82.5s, removal before map 0
+      target 90 (+65): idle window 82.5s -> 1.49 exec-h, cost/wait 0.8x, class server_count
+  stage 24: 3000 tasks, 75.6% wait = 5.188 exec-h, 24,000,000 blocks @ 26635 B, 90 live at submit
+      fed by stage 19 (parent_twin, 1 parents with output): 8000 tasks -> 595.34 GiB on 90 executors, 90% on 78, hottest 1.9%; live at map submit 25 (first task 25, peak during map 90), map submit at 99.8s, removal before map 0
+      target 90 (+65): idle window 99.8s -> 1.802 exec-h, cost/wait 0.3x, class spread
+
+app-20260901035806681-0636.zstd  Populate ipdsc_42_monitor.IPDSC42Monitor  start 2026-09-01T03:58:03  13.5 min
+  env: initial=- min=2 max=1000 instances=2 cores=4 idle=(default 60s) start_count=2
+  fleet: +60s 2, +90s 2, first task 12.1s, first removal none, peak 6, registered 1.05 exec-h
+  stage 18: 116 tasks, 27.7% wait = 0.039 exec-h, 4,682 blocks @ 8501450 B, 4 live at submit
+      fed by stage 8 (parent_twin, 2 parents with output): 20 tasks -> 18.54 GiB on 4 executors, 90% on 3, hottest 40.41%; live at map submit 2 (first task 2, peak during map 4), map submit at 25.6s, removal before map 0
+      target 6 (+4): idle window 25.6s -> 0.028 exec-h, cost/wait 0.7x, class concentrated
+  stage 22: 117 tasks, 64.8% wait = 0.168 exec-h, 4,801 blocks @ 8290730 B, 4 live at submit
+      fed by stage 8 (parent_twin, 3 parents with output): 20 tasks -> 18.54 GiB on 4 executors, 90% on 3, hottest 40.41%; live at map submit 2 (first task 2, peak during map 4), map submit at 25.6s, removal before map 0
+      target 6 (+4): idle window 25.6s -> 0.028 exec-h, cost/wait 0.2x, class concentrated
+  stage 26: 117 tasks, 66.6% wait = 0.173 exec-h, 4,807 blocks @ 8280382 B, 6 live at submit
+      fed by stage 8 (parent_twin, 3 parents with output): 20 tasks -> 18.54 GiB on 4 executors, 90% on 3, hottest 40.41%; live at map submit 2 (first task 2, peak during map 4), map submit at 25.6s, removal before map 0
+      target 6 (+4): idle window 25.6s -> 0.028 exec-h, cost/wait 0.2x, class concentrated
+
+app-20260902042001249-0056.zstd  Populate ipdsc_42_monitor.IPDSC42Monitor  start 2026-09-02T04:19:59  22.2 min
+  env: initial=- min=2 max=1000 instances=2 cores=4 idle=(default 60s) start_count=2
+  fleet: +60s 2, +90s 2, first task 11.3s, first removal none, peak 7, registered 2.06 exec-h
+  stage 18: 116 tasks, 72.8% wait = 0.306 exec-h, 4,688 blocks @ 8555458 B, 3 live at submit
+      fed by stage 8 (parent_twin, 2 parents with output): 20 tasks -> 18.81 GiB on 3 executors, 90% on 3, hottest 42.15%; live at map submit 2 (first task 2, peak during map 3), map submit at 23.0s, removal before map 0
+      target 7 (+5): idle window 23.0s -> 0.032 exec-h, cost/wait 0.1x, class concentrated
+  stage 22: 117 tasks, 79.9% wait = 0.413 exec-h, 4,811 blocks @ 8336727 B, 7 live at submit
+      fed by stage 8 (parent_twin, 3 parents with output): 20 tasks -> 18.81 GiB on 3 executors, 90% on 3, hottest 42.15%; live at map submit 2 (first task 2, peak during map 3), map submit at 23.0s, removal before map 0
+      target 7 (+5): idle window 23.0s -> 0.032 exec-h, cost/wait 0.1x, class concentrated
+  stage 26: 117 tasks, 81.6% wait = 0.414 exec-h, 4,804 blocks @ 8348875 B, 7 live at submit
+      fed by stage 8 (parent_twin, 3 parents with output): 20 tasks -> 18.81 GiB on 3 executors, 90% on 3, hottest 42.15%; live at map submit 2 (first task 2, peak during map 3), map submit at 23.0s, removal before map 0
+      target 7 (+5): idle window 23.0s -> 0.032 exec-h, cost/wait 0.1x, class concentrated
+
+app-20260901073519357-0662.zstd  Populate tpa_export_enrich.TpaExportEnrich  start 2026-09-01T07:35:16  59.8 min
+  env: initial=- min=10 max=120 instances=10 cores=4 idle=(default 60s) start_count=10
+  fleet: +60s 10, +90s 10, first task 10.5s, first removal none, peak 120, registered 114.67 exec-h
+  stage 6: 8000 tasks, 74.9% wait = 70.181 exec-h, 27,173,585 blocks @ 148732 B, 120 live at submit
+      fed by stage 3 (parent_twin, 2 parents with output): 15474 tasks -> 3286.24 GiB on 120 executors, 90% on 101, hottest 1.15%; live at map submit 10 (first task 106, peak during map 120), map submit at 23.7s, removal before map 0
+      target 120 (+110): idle window 23.7s -> 0.724 exec-h, cost/wait 0.0x, class spread
+
+app-20260902082207698-0515.zstd  Populate tpa_export_enrich.TpaExportEnrich  start 2026-09-02T08:22:04  53.6 min
+  env: initial=- min=10 max=120 instances=10 cores=4 idle=(default 60s) start_count=10
+  fleet: +60s 10, +90s 10, first task 11.1s, first removal none, peak 120, registered 103.88 exec-h
+  stage 6: 8000 tasks, 66.3% wait = 53.281 exec-h, 27,923,907 blocks @ 170507 B, 120 live at submit
+      fed by stage 3 (parent_twin, 2 parents with output): 15685 tasks -> 3328.45 GiB on 120 executors, 90% on 106, hottest 1.09%; live at map submit 10 (first task 120, peak during map 120), map submit at 24.1s, removal before map 0
+      target 120 (+110): idle window 24.1s -> 0.736 exec-h, cost/wait 0.0x, class spread
+
+app-20260901083658620-0891.zstd  Populate tpa_mntn_id_export.TpaMntnIdExport  start 2026-09-01T08:36:56  44.3 min
+  env: initial=- min=10 max=150 instances=10 cores=4 idle=(default 60s) start_count=10
+  fleet: +60s 10, +90s 10, first task 9.4s, first removal none, peak 150, registered 103.47 exec-h
+  stage 7: 8000 tasks, 84.6% wait = 2.577 exec-h, 45,297,414 blocks @ 779 B, 150 live at submit
+      fed by stage 6 (parent, 1 parents with output): 5664 tasks -> 32.86 GiB on 150 executors, 90% on 109, hottest 3.96%; live at map submit 10 (first task 10, peak during map 150), map submit at 52.3s, removal before map 0
+      target 150 (+140): idle window 52.3s -> 2.034 exec-h, cost/wait 0.8x, class spread
+  stage 9: 8000 tasks, 94.1% wait = 40.201 exec-h, 63,874,927 blocks @ 45315 B, 150 live at submit
+      fed by stage 8 (parent, 2 parents with output): 46314 tasks -> 2665.88 GiB on 150 executors, 90% on 131, hottest 0.96%; live at map submit 10 (first task 150, peak during map 150), map submit at 52.7s, removal before map 0
+      target 150 (+140): idle window 52.7s -> 2.049 exec-h, cost/wait 0.1x, class spread
+  stage 10: 8000 tasks, 62.6% wait = 13.873 exec-h, 58,143,176 blocks @ 38077 B, 150 live at submit
+      fed by stage 9 (parent, 1 parents with output): 8000 tasks -> 2061.88 GiB on 150 executors, 90% on 133, hottest 0.98%; live at map submit 150 (first task 150, peak during map 150), map submit at 977.5s, removal before map 0
+      target 150 (+140): idle window 977.5s -> 38.014 exec-h, cost/wait 2.7x, class spread
+
+app-20260902091759702-0256.zstd  Populate tpa_mntn_id_export.TpaMntnIdExport  start 2026-09-02T09:17:56  70.9 min
+  env: initial=- min=10 max=150 instances=10 cores=4 idle=(default 60s) start_count=10
+  fleet: +60s 10, +90s 10, first task 11.1s, first removal none, peak 150, registered 172.29 exec-h
+  stage 8: 8000 tasks, 82.6% wait = 2.556 exec-h, 45,297,414 blocks @ 779 B, 150 live at submit
+      fed by stage 6 (parent, 1 parents with output): 5664 tasks -> 32.86 GiB on 150 executors, 90% on 121, hottest 2.07%; live at map submit 10 (first task 10, peak during map 150), map submit at 60.5s, removal before map 0
+      target 150 (+140): idle window 60.5s -> 2.353 exec-h, cost/wait 0.9x, class spread
+  stage 9: 8000 tasks, 95.2% wait = 51.082 exec-h, 63,890,927 blocks @ 45871 B, 150 live at submit
+      fed by stage 7 (parent, 2 parents with output): 59497 tasks -> 2699.68 GiB on 150 executors, 90% on 132, hottest 0.95%; live at map submit 10 (first task 10, peak during map 150), map submit at 60.3s, removal before map 0
+      target 150 (+140): idle window 60.3s -> 2.345 exec-h, cost/wait 0.0x, class spread
+  stage 10: 8000 tasks, 89.2% wait = 66.074 exec-h, 58,198,586 blocks @ 38449 B, 150 live at submit
+      fed by stage 9 (parent, 1 parents with output): 8000 tasks -> 2083.99 GiB on 150 executors, 90% on 133, hottest 1.94%; live at map submit 150 (first task 150, peak during map 150), map submit at 1018.8s, removal before map 0
+      target 150 (+140): idle window 1018.8s -> 39.62 exec-h, cost/wait 0.6x, class spread
+  stage 11: 1000 tasks, 35.9% wait = 0.107 exec-h, 8,000 blocks @ 2618911 B, 150 live at submit
+      fed by stage 10 (parent, 1 parents with output): 8000 tasks -> 19.51 GiB on 150 executors, 90% on 134, hottest 4.27%; live at map submit 150 (first task 150, peak during map 150), map submit at 2372.7s, removal before map 0
+      target 150 (+140): idle window 2372.7s -> 92.272 exec-h, cost/wait 862.4x, class spread
+
+app-20260901212248899-0756.zstd  audience_intent_scoring_staging_ds46  start 2026-09-01T21:22:46  63.1 min
+  env: initial=- min=30 max=180 instances=30 cores=4 idle=600s start_count=30
+  fleet: +60s 30, +90s 30, first task 14.0s, first removal none, peak 180, registered 181.14 exec-h
+  stage 20: 8192 tasks, 50.0% wait = 65.095 exec-h, 83,730,432 blocks @ 53849 B, 180 live at submit
+      fed by stage 15 (parent_twin, 1 parents with output): 10221 tasks -> 4199.12 GiB on 180 executors, 90% on 160, hottest 0.71%; live at map submit 30 (first task 30, peak during map 180), map submit at 63.1s, removal before map 0
+      target 180 (+150): idle window 63.1s -> 2.629 exec-h, cost/wait 0.0x, class spread
+  stage 23: 997 tasks, 25.3% wait = 2.509 exec-h, 8,167,424 blocks @ 42472 B, 180 live at submit
+      fed by stage 20 (parent_twin, 1 parents with output): 8192 tasks -> 323.06 GiB on 180 executors, 90% on 161, hottest 0.68%; live at map submit 180 (first task 180, peak during map 180), map submit at 788.8s, removal before map 0
+      target 180 (+150): idle window 788.8s -> 32.867 exec-h, cost/wait 13.1x, class spread
+
+app-20260826000057091-0058.zstd  audience_intent_scoring_staging_ds46  start 2026-08-26T00:00:53  75.7 min
+  env: initial=- min=30 max=180 instances=30 cores=4 idle=600s start_count=30
+  fleet: +60s 30, +90s 30, first task 14.6s, first removal none, peak 180, registered 217.83 exec-h
+  stage 20: 8192 tasks, 59.4% wait = 93.892 exec-h, 85,262,336 blocks @ 55839 B, 180 live at submit
+      fed by stage 15 (parent_twin, 1 parents with output): 10408 tasks -> 4434.0 GiB on 180 executors, 90% on 159, hottest 0.85%; live at map submit 30 (first task 30, peak during map 180), map submit at 73.0s, removal before map 0
+      target 180 (+150): idle window 73.0s -> 3.042 exec-h, cost/wait 0.0x, class spread
+  stage 23: 991 tasks, 40.2% wait = 4.112 exec-h, 8,118,272 blocks @ 43977 B, 180 live at submit
+      fed by stage 20 (parent_twin, 1 parents with output): 8192 tasks -> 332.5 GiB on 180 executors, 90% on 162, hottest 0.68%; live at map submit 180 (first task 180, peak during map 180), map submit at 791.2s, removal before map 0
+      target 180 (+150): idle window 791.2s -> 32.967 exec-h, cost/wait 8.0x, class spread
+
+app-20260901213302742-0181.zstd  audience_intent_scoring_staging_ds46  start 2026-09-01T21:32:59  8.3 min
+  env: initial=- min=30 max=180 instances=30 cores=4 idle=600s start_count=30
+  fleet: +60s 30, +90s 30, first task 13.0s, first removal none, peak 161, registered 15.43 exec-h
+  stage 9: 1000 tasks, 47.6% wait = 1.79 exec-h, 61,399,603 blocks @ 283 B, 161 live at submit
+      fed by stage 6 (parent_twin, 1 parents with output): 92246 tasks -> 10.19 GiB on 160 executors, 90% on 26, hottest 5.07%; live at map submit 30 (first task 30, peak during map 161), map submit at 81.6s, removal before map 0
+      target 180 (+150): idle window 81.6s -> 3.4 exec-h, cost/wait 1.9x, class concentrated
+
+app-20260826003036565-0444.zstd  audience_intent_scoring_staging_ds46  start 2026-08-26T00:30:34  27.0 min
+  env: initial=- min=30 max=180 instances=30 cores=4 idle=600s start_count=30
+  fleet: +60s 30, +90s 30, first task 13.2s, first removal none, peak 180, registered 70.41 exec-h
+  stage 8: 92246 tasks, 69.2% wait = 21.139 exec-h, 214,378,742 blocks @ 5841 B, 142 live at submit
+      fed by stage 3 (parent_twin, 1 parents with output): 2324 tasks -> 1166.1 GiB on 142 executors, 90% on 121, hottest 1.48%; live at map submit 29 (first task 29, peak during map 142), map submit at 27.0s, removal before map 0
+      target 180 (+150): idle window 27.0s -> 1.125 exec-h, cost/wait 0.1x, class server_count
+  stage 11: 992 tasks, 75.8% wait = 15.932 exec-h, 59,820,323 blocks @ 3662 B, 180 live at submit
+      fed by stage 8 (parent_twin, 1 parents with output): 92246 tasks -> 203.99 GiB on 180 executors, 90% on 155, hottest 0.62%; live at map submit 142 (first task 142, peak during map 180), map submit at 306.1s, removal before map 0
+      target 180 (+150): idle window 306.1s -> 12.754 exec-h, cost/wait 0.8x, class spread
+
+app-20260826040949342-0431.zstd  Populate ipdsc_ds_46.DS46  start 2026-08-26T04:09:45  4.2 min
+  env: initial=- min=4 max=180 instances=4 cores=4 idle=(default 60s) start_count=4
+  fleet: +60s 4, +90s 4, first task 14.5s, first removal none, peak 81, registered 1.81 exec-h
+  stage 3: 340 tasks, 51.0% wait = 0.143 exec-h, 696,320 blocks @ 14270 B, 81 live at submit
+      fed by stage 1 (parent_twin, 1 parents with output): 2048 tasks -> 9.25 GiB on 81 executors, 90% on 56, hottest 19.34%; live at map submit 1 (first task 1, peak during map 81), map submit at 20.1s, removal before map 0
+      target 81 (+77): idle window 20.1s -> 0.43 exec-h, cost/wait 3.0x, class concentrated
+
+app-20260902041933916-0926.zstd  Populate ipdsc_ds_46.DS46  start 2026-09-02T04:19:31  3.0 min
+  env: initial=- min=4 max=180 instances=4 cores=4 idle=(default 60s) start_count=4
+  fleet: +60s 4, +90s 4, first task 12.6s, first removal none, peak 99, registered 1.9 exec-h
+  stage 3: 425 tasks, 53.8% wait = 0.16 exec-h, 870,400 blocks @ 11223 B, 99 live at submit
+      fed by stage 1 (parent_twin, 1 parents with output): 2048 tasks -> 9.1 GiB on 99 executors, 90% on 61, hottest 13.48%; live at map submit 4 (first task 4, peak during map 99), map submit at 16.8s, removal before map 0
+      target 99 (+95): idle window 16.8s -> 0.443 exec-h, cost/wait 2.8x, class concentrated
+
+app-20260901171645146-0764.zstd  Populate aug_log_ip_hourly.AugLogIpHourly  start 2026-09-01T17:16:42  44.7 min
+  env: initial=100 min=50 max=200 instances=50 cores=8 idle=(default 60s) start_count=100
+  fleet: +60s 100, +90s 100, first task 27.5s, first removal 315.2s (Command exited with code 0) -> 50, peak 100, registered 42.54 exec-h
+  stage 12: 1000 tasks, 23.1% wait = 0.067 exec-h, 5,270,570 blocks @ 11312 B, 74 live at submit
+      fed by stage 10 (parent_twin, 1 parents with output): 5271 tasks -> 55.52 GiB on 74 executors, 90% on 61, hottest 1.99%; live at map submit 50 (first task 50, peak during map 74), map submit at 2482.5s, removal before map 1
+      target 100 (+0): idle window 315.2s -> 0.0 exec-h, cost/wait 0.0x, class server_count
+
+app-20260902161713255-0505.zstd  Populate aug_log_ip_hourly.AugLogIpHourly  start 2026-09-02T16:17:10  14.9 min
+  env: initial=100 min=50 max=200 instances=50 cores=8 idle=(default 60s) start_count=100
+  no stage over the fetch-wait floor
+
+app-20260826010837114-0307.zstd  Populate vertical_size_monitor.VerticalSizeMonitor  start 2026-08-26T01:08:34  5.2 min
+  env: initial=- min=2 max=1000 instances=2 cores=4 idle=(default 60s) start_count=2
+  no stage over the fetch-wait floor
+
+app-20260902011415369-0939.zstd  Populate vertical_size_monitor.VerticalSizeMonitor  start 2026-09-02T01:14:12  6.0 min
+  env: initial=- min=2 max=1000 instances=2 cores=4 idle=(default 60s) start_count=2
+  fleet: +60s 2, +90s 2, first task 12.8s, first removal none, peak 49, registered 3.12 exec-h
+  stage 15: 128 tasks, 52.8% wait = 0.124 exec-h, 31,744 blocks @ 657383 B, 37 live at submit
+      fed by stage 5 (parent_twin, 1 parents with output): 248 tasks -> 19.43 GiB on 36 executors, 90% on 31, hottest 4.25%; live at map submit 2 (first task 35, peak during map 37), map submit at 25.4s, removal before map 0
+      target 49 (+47): idle window 25.4s -> 0.332 exec-h, cost/wait 2.7x, class server_count
+
+app-20260902011537309-0445.zstd  Populate guid_log_derived_household_id_vertical_id.GuidLogDerivedHouseholdId  start 2026-09-02T01:15:34  13.5 min
+  env: initial=10 min=5 max=20 instances=5 cores=4 idle=(default 60s) start_count=10
+  no stage over the fetch-wait floor
+
+app-20260903012147346-0864.zstd  Populate guid_log_derived_household_id_vertical_id.GuidLogDerivedHouseholdId  start 2026-09-03T01:21:44  12.7 min
+  env: initial=10 min=5 max=20 instances=5 cores=4 idle=(default 60s) start_count=10
+  no stage over the fetch-wait floor
+
+app-20260824014400982-0069.zstd  Populate site_visit_signal_derived_advertiser_id_dsc_id.SiteVisitSignalDerivedAdvertiserIdDscId  start 2026-08-24T01:43:58  4.1 min
+  env: initial=100 min=50 max=200 instances=50 cores=4 idle=(default 60s) start_count=100
+  fleet: +60s 100, +90s 100, first task 11.8s, first removal none, peak 100, registered 6.45 exec-h
+  stage 19: 500 tasks, 45.7% wait = 0.037 exec-h, 120,000 blocks @ 18142 B, 100 live at submit
+      fed by stage 17 (parent_twin, 1 parents with output): 471 tasks -> 2.03 GiB on 100 executors, 90% on 85, hottest 1.28%; live at map submit 100 (first task 100, peak during map 100), map submit at 65.6s, removal before map 0
+      target 100 (+0): idle window 65.6s -> 0.0 exec-h, cost/wait 0.0x, class spread
+  stage 20: 500 tasks, 42.5% wait = 0.018 exec-h, 120,000 blocks @ 18142 B, 100 live at submit
+      fed by stage 17 (parent_twin, 1 parents with output): 471 tasks -> 2.03 GiB on 100 executors, 90% on 85, hottest 1.28%; live at map submit 100 (first task 100, peak during map 100), map submit at 65.6s, removal before map 0
+      target 100 (+0): idle window 65.6s -> 0.0 exec-h, cost/wait 0.0x, class spread
+
+app-20260902014754984-0379.zstd  Populate site_visit_signal_derived_advertiser_id_dsc_id.SiteVisitSignalDerivedAdvertiserIdDscId  start 2026-09-02T01:47:52  4.0 min
+  env: initial=100 min=50 max=200 instances=50 cores=4 idle=(default 60s) start_count=100
+  no stage over the fetch-wait floor

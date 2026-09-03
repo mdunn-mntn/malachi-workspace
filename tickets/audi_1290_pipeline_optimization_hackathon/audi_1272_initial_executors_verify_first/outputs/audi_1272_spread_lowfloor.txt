@@ -1,0 +1,26 @@
+
+app-20260902011537309-0445.zstd  Populate guid_log_derived_household_id_vertical_id.GuidLogDerivedHouseholdId  start 2026-09-02T01:15:34  13.5 min
+  env: initial=10 min=5 max=20 instances=5 cores=4 idle=(default 60s) start_count=10
+  no stage over the fetch-wait floor
+
+app-20260903012147346-0864.zstd  Populate guid_log_derived_household_id_vertical_id.GuidLogDerivedHouseholdId  start 2026-09-03T01:21:44  12.7 min
+  env: initial=10 min=5 max=20 instances=5 cores=4 idle=(default 60s) start_count=10
+  fleet: +60s 10, +90s 10, first task 10.7s, first removal none, peak 20, registered 3.81 exec-h
+  stage 50: 1000 tasks, 15.5% wait = 0.037 exec-h, 1,000,000 blocks @ 35258 B, 20 live at submit
+      fed by stage 42 (parent_twin, 1 parents with output): 1000 tasks -> 32.84 GiB on 20 executors, 90% on 18, hottest 7.7%; live at map submit 20 (first task 20, peak during map 20), map submit at 583.1s, removal before map 0
+      target 20 (+10): idle window 583.1s -> 1.62 exec-h, cost/wait 43.8x, class spread
+
+app-20260902161713255-0505.zstd  Populate aug_log_ip_hourly.AugLogIpHourly  start 2026-09-02T16:17:10  14.9 min
+  env: initial=100 min=50 max=200 instances=50 cores=8 idle=(default 60s) start_count=100
+  fleet: +60s 100, +90s 100, first task 17.4s, first removal none, peak 100, registered 24.48 exec-h
+  stage 12: 1000 tasks, 13.2% wait = 0.032 exec-h, 5,301,969 blocks @ 10977 B, 100 live at submit
+      fed by stage 10 (parent_twin, 1 parents with output): 5302 tasks -> 54.2 GiB on 100 executors, 90% on 87, hottest 1.33%; live at map submit 100 (first task 100, peak during map 100), map submit at 766.2s, removal before map 0
+      target 100 (+0): idle window 766.2s -> 0.0 exec-h, cost/wait 0.0x, class spread
+
+app-20260826010837114-0307.zstd  Populate vertical_size_monitor.VerticalSizeMonitor  start 2026-08-26T01:08:34  5.2 min
+  env: initial=- min=2 max=1000 instances=2 cores=4 idle=(default 60s) start_count=2
+  no stage over the fetch-wait floor
+
+app-20260902014754984-0379.zstd  Populate site_visit_signal_derived_advertiser_id_dsc_id.SiteVisitSignalDerivedAdvertiserIdDscId  start 2026-09-02T01:47:52  4.0 min
+  env: initial=100 min=50 max=200 instances=50 cores=4 idle=(default 60s) start_count=100
+  no stage over the fetch-wait floor

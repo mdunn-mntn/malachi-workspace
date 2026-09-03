@@ -1,0 +1,92 @@
+
+app-20260901055634611-0510.zstd
+  live executors: 0s=0 10s=0 20s=24 30s=25 40s=25 50s=25 60s=25 70s=25 80s=25 90s=25 100s=25 110s=25 120s=25 130s=25 140s=25 150s=25 160s=25 170s=39 180s=52 190s=61 200s=68
+  executor adds: first 12.6s, 10th 14.0s, last 348.5s, total 90, removals 0
+  stage 0: 2001 tasks, submit 10.0s (live 0), first task 13.0s (live 2), end 23.1s (live 25), shuffle write 0.00 GiB
+  stage 1: 1 tasks, submit 23.7s (live 25), first task 23.8s (live 25), end 25.0s (live 25), shuffle write 0.00 GiB
+  stage 2: 1 tasks, submit 27.0s (live 25), first task 27.0s (live 25), end 27.9s (live 25), shuffle write 0.00 GiB
+  stage 3: 400 tasks, submit 31.6s (live 25), first task 31.7s (live 25), end 57.6s (live 25), shuffle write 6.00 GiB
+  stage 4: 1 tasks, submit 32.0s (live 25), first task 51.6s (live 25), end 52.7s (live 25), shuffle write 0.00 GiB
+  stage 6: 8000 tasks, submit 53.2s (live 25), first task 53.2s (live 25), end 62.1s (live 25), shuffle write 0.00 GiB
+  stage 8: 5000 tasks, submit 58.5s (live 25), first task 62.0s (live 25), end 81.1s (live 25), shuffle write 3.68 GiB
+  stage 9: 5000 tasks, submit 58.7s (live 25), first task 80.5s (live 25), end 100.3s (live 25), shuffle write 0.01 GiB
+  stage 12: 8000 tasks, submit 101.1s (live 25), first task 101.1s (live 25), end 105.0s (live 25), shuffle write 0.00 GiB
+  stage 15: 5000 tasks, submit 105.5s (live 25), first task 105.5s (live 25), end 124.8s (live 25), shuffle write 7.47 GiB
+  stage 19: 8000 tasks, submit 125.6s (live 25), first task 125.6s (live 25), end 332.3s (live 75), shuffle write 570.70 GiB
+
+app-20260902051541259-0571.zstd
+  live executors: 0s=0 10s=9 20s=25 30s=25 40s=25 50s=25 60s=25 70s=25 80s=25 90s=25 100s=25 110s=25 120s=25 130s=30 140s=59 150s=87 160s=90 170s=90 180s=90 190s=90 200s=90
+  executor adds: first 9.4s, 10th 10.2s, last 151.8s, total 90, removals 0
+  stage 0: 2001 tasks, submit 7.7s (live 0), first task 9.6s (live 1), end 15.7s (live 25), shuffle write 0.00 GiB
+  stage 1: 1 tasks, submit 16.3s (live 25), first task 16.3s (live 25), end 17.1s (live 25), shuffle write 0.00 GiB
+  stage 2: 1 tasks, submit 18.8s (live 25), first task 18.8s (live 25), end 20.0s (live 25), shuffle write 0.00 GiB
+  stage 3: 400 tasks, submit 23.1s (live 25), first task 23.2s (live 25), end 44.6s (live 25), shuffle write 6.03 GiB
+  stage 4: 1 tasks, submit 23.3s (live 25), first task 39.0s (live 25), end 40.1s (live 25), shuffle write 0.00 GiB
+  stage 6: 8000 tasks, submit 40.5s (live 25), first task 40.6s (live 25), end 48.6s (live 25), shuffle write 0.00 GiB
+  stage 8: 5000 tasks, submit 45.2s (live 25), first task 48.5s (live 25), end 67.4s (live 25), shuffle write 3.70 GiB
+  stage 9: 5000 tasks, submit 45.5s (live 25), first task 67.1s (live 25), end 77.7s (live 25), shuffle write 0.01 GiB
+  stage 12: 8000 tasks, submit 78.5s (live 25), first task 78.5s (live 25), end 82.1s (live 25), shuffle write 0.00 GiB
+  stage 15: 5000 tasks, submit 82.5s (live 25), first task 82.5s (live 25), end 98.9s (live 25), shuffle write 7.50 GiB
+  stage 19: 8000 tasks, submit 99.8s (live 25), first task 99.8s (live 25), end 266.2s (live 90), shuffle write 595.34 GiB
+
+app-20260826040949342-0431.zstd
+  live executors: 0s=0 10s=0 20s=1 30s=1 40s=2 50s=4 60s=4 70s=4 80s=4 90s=4 100s=4 110s=4 120s=4 130s=4 140s=4 150s=4 160s=4 170s=4 180s=31 190s=81 200s=81
+  executor adds: first 11.0s, 10th 178.3s, last 185.0s, total 81, removals 0
+  stage 0: 1 tasks, submit 14.3s (live 1), first task 14.5s (live 1), end 17.7s (live 1), shuffle write 0.00 GiB
+  stage 1: 2048 tasks, submit 20.1s (live 1), first task 20.2s (live 1), end 204.1s (live 81), shuffle write 9.25 GiB
+
+app-20260902041933916-0926.zstd
+  live executors: 0s=0 10s=3 20s=4 30s=4 40s=4 50s=4 60s=4 70s=4 80s=4 90s=4 100s=4 110s=10 120s=98 130s=99 140s=99 150s=99 160s=99 170s=99 180s=99 190s=99 200s=99
+  executor adds: first 9.3s, 10th 109.9s, last 120.1s, total 99, removals 0
+  stage 0: 1 tasks, submit 10.0s (live 3), first task 12.6s (live 4), end 15.5s (live 4), shuffle write 0.00 GiB
+  stage 1: 2048 tasks, submit 16.8s (live 4), first task 16.9s (live 4), end 135.3s (live 99), shuffle write 9.10 GiB
+  stage 3: 425 tasks, submit 135.5s (live 99), first task 135.5s (live 99), end 149.3s (live 99), shuffle write 5.94 GiB
+  stage 6: 13 tasks, submit 149.6s (live 99), first task 149.6s (live 99), end 179.5s (live 99), shuffle write 0.00 GiB
+
+app-20260901035806681-0636.zstd
+  live executors: 0s=0 10s=0 20s=2 30s=2 40s=2 50s=2 60s=2 70s=2 80s=2 90s=2 100s=2 110s=3 120s=4 130s=4 140s=4 150s=4 160s=4 170s=4 180s=4 190s=4 200s=4
+  executor adds: first 10.2s, 10th -s, last 438.2s, total 6, removals 0
+  stage 0: 1 tasks, submit 7.2s (live 0), first task 12.1s (live 2), end 13.9s (live 2), shuffle write 0.00 GiB
+  stage 1: 20 tasks, submit 16.4s (live 2), first task 16.4s (live 2), end 19.9s (live 2), shuffle write 0.00 GiB
+  stage 3: 1 tasks, submit 20.0s (live 2), first task 20.1s (live 2), end 20.3s (live 2), shuffle write 0.00 GiB
+  stage 4: 1 tasks, submit 21.0s (live 2), first task 21.0s (live 2), end 21.3s (live 2), shuffle write 0.00 GiB
+  stage 5: 20 tasks, submit 21.4s (live 2), first task 21.4s (live 2), end 22.6s (live 2), shuffle write 0.00 GiB
+  stage 7: 1 tasks, submit 22.6s (live 2), first task 22.6s (live 2), end 22.9s (live 2), shuffle write 0.00 GiB
+  stage 8: 20 tasks, submit 25.6s (live 2), first task 25.7s (live 2), end 216.7s (live 4), shuffle write 18.54 GiB
+  stage 9: 1 tasks, submit 25.7s (live 2), first task 113.1s (live 4), end 115.3s (live 4), shuffle write 0.00 GiB
+  stage 10: 20 tasks, submit 25.8s (live 2), first task 113.3s (live 4), end 284.3s (live 4), shuffle write 18.53 GiB
+  stage 11: 1 tasks, submit 25.9s (live 2), first task 236.7s (live 4), end 236.8s (live 4), shuffle write 0.00 GiB
+  stage 13: 1 tasks, submit 115.4s (live 4), first task 236.8s (live 4), end 238.7s (live 4), shuffle write 0.00 GiB
+
+app-20260902042001249-0056.zstd
+  live executors: 0s=0 10s=1 20s=2 30s=2 40s=2 50s=2 60s=2 70s=2 80s=2 90s=2 100s=2 110s=2 120s=2 130s=3 140s=3 150s=3 160s=3 170s=3 180s=3 190s=3 200s=3
+  executor adds: first 9.8s, 10th -s, last 447.1s, total 7, removals 0
+  stage 0: 1 tasks, submit 5.9s (live 0), first task 11.3s (live 2), end 12.8s (live 2), shuffle write 0.00 GiB
+  stage 1: 20 tasks, submit 14.9s (live 2), first task 15.0s (live 2), end 18.3s (live 2), shuffle write 0.00 GiB
+  stage 3: 1 tasks, submit 18.4s (live 2), first task 18.4s (live 2), end 18.6s (live 2), shuffle write 0.00 GiB
+  stage 4: 1 tasks, submit 19.1s (live 2), first task 19.1s (live 2), end 19.3s (live 2), shuffle write 0.00 GiB
+  stage 5: 20 tasks, submit 19.5s (live 2), first task 19.5s (live 2), end 20.4s (live 2), shuffle write 0.00 GiB
+  stage 7: 1 tasks, submit 20.4s (live 2), first task 20.5s (live 2), end 20.7s (live 2), shuffle write 0.00 GiB
+  stage 8: 20 tasks, submit 23.0s (live 2), first task 23.0s (live 2), end 231.2s (live 3), shuffle write 18.81 GiB
+  stage 9: 1 tasks, submit 23.0s (live 2), first task 169.6s (live 3), end 173.6s (live 3), shuffle write 0.00 GiB
+  stage 10: 20 tasks, submit 23.1s (live 2), first task 173.6s (live 3), end 358.8s (live 3), shuffle write 18.54 GiB
+  stage 11: 1 tasks, submit 23.2s (live 2), first task 306.4s (live 3), end 313.1s (live 3), shuffle write 0.00 GiB
+  stage 13: 1 tasks, submit 173.7s (live 3), first task 313.1s (live 3), end 316.2s (live 3), shuffle write 0.00 GiB
+
+app-20260902011415369-0939.zstd
+  live executors: 0s=0 10s=0 20s=2 30s=2 40s=2 50s=2 60s=2 70s=2 80s=2 90s=2 100s=7 110s=27 120s=34 130s=36 140s=36 150s=37 160s=37 170s=37 180s=37 190s=37 200s=38
+  executor adds: first 10.7s, 10th 101.4s, last 217.9s, total 49, removals 0
+  stage 0: 251 tasks, submit 8.9s (live 0), first task 12.8s (live 2), end 17.4s (live 2), shuffle write 0.00 GiB
+  stage 1: 1 tasks, submit 17.6s (live 2), first task 17.7s (live 2), end 19.0s (live 2), shuffle write 0.00 GiB
+  stage 2: 250 tasks, submit 19.3s (live 2), first task 19.4s (live 2), end 21.6s (live 2), shuffle write 0.00 GiB
+  stage 3: 1 tasks, submit 21.7s (live 2), first task 21.7s (live 2), end 21.9s (live 2), shuffle write 0.00 GiB
+  stage 4: 248 tasks, submit 25.3s (live 2), first task 25.3s (live 2), end 144.1s (live 36), shuffle write 25.58 GiB
+  stage 5: 248 tasks, submit 25.4s (live 2), first task 123.1s (live 35), end 173.0s (live 37), shuffle write 19.43 GiB
+  stage 6: 2 tasks, submit 25.5s (live 2), first task 146.3s (live 36), end 148.1s (live 37), shuffle write 0.00 GiB
+  stage 7: 247 tasks, submit 25.6s (live 2), first task 146.3s (live 36), end 186.5s (live 37), shuffle write 25.56 GiB
+  stage 8: 247 tasks, submit 25.7s (live 2), first task 170.0s (live 37), end 208.6s (live 39), shuffle write 19.41 GiB
+  stage 9: 248 tasks, submit 25.8s (live 2), first task 192.5s (live 37), end 225.9s (live 49), shuffle write 17.78 GiB
+  stage 11: 128 tasks, submit 144.3s (live 36), first task 209.7s (live 40), end 303.4s (live 49), shuffle write 0.00 GiB
+  stage 13: 1 tasks, submit 148.2s (live 37), first task 218.0s (live 49), end 218.2s (live 49), shuffle write 0.00 GiB
+  stage 15: 128 tasks, submit 173.1s (live 37), first task 218.0s (live 49), end 284.1s (live 49), shuffle write 0.00 GiB
+  stage 17: 128 tasks, submit 186.5s (live 37), first task 260.4s (live 49), end 345.7s (live 49), shuffle write 0.00 GiB
