@@ -4,7 +4,7 @@ title: "AUDI-1275: Decide the safe straggler fix for GCS writers, apply to 13 DA
 status: in_progress
 date: 2026-09-02
 summary: "Speculation is safe where every writer discards the losing duplicate attempt; canary PR on site_network_hourly, 10 wait on 3 clean sweeps + Ryan, 2 owner-gated"
-result: "memo + Slack ask + canary PR drafted 2026-09-02; awaiting PR merge, 3 sweeps, Ryan answer"
+result: "memo + Slack ask drafted 2026-09-02; canary PR #1271 open 2026-09-03 (reviewer Ryan Kleck); awaiting merge, 3 clean sweeps, Ryan answer"
 question: "Which straggler remedy is safe for Spark jobs that overwrite GCS output, and which of the 13 DAGs can take it now?"
 framing_state: locked
 ---
@@ -83,8 +83,8 @@ Working rule from §0: speculation is application-wide, so a DAG is changeable o
 **Phase A: evidence per DAG** — DONE (previous execute agent, resumed): live ledger downloaded; 16 model logs + 2 PHS logs fetched and parsed with `artifacts/audi_1275_eventlog_props.py` into `outputs/audi_1275_app_props.csv` and `outputs/audi_1275_stage_evidence.csv` (PHS pair under `outputs/phs/`); the 13 models grepped for task-side side effects (none); committer semantics pinned from source at v3.5.3 / rel/release-3.3.5 / apache-iceberg-1.10.2; `audience_intent` batches listed from the API (`outputs/audi_1275_audience_intent_batches_all.csv`, 7-day retention); commits 64afca4 / 009e99a / 5fbeb38 / a3352d9 / 6afc07f read; Confluence "TI On Call Playbook" NOT searched (no Confluence access from this agent); `on-call/oncall_runbook.md` grepped (no Nov-2025 speculation incident recorded there; it predates the runbook).
 **Phase B: decision memo** — DONE: `outputs/audi_1275_decision_memo.md` (rule, source quotes, prod config, Nov-2025 git record, 13 verdicts, remedy spec, canary expectations, contradiction record, post-merge checklist).
 **Phase C: Slack ask** — DONE: `artifacts/audi_1275_slack_ask_ryan.md` (three numbered asks, lint `--kind comment` OK 74 words / 480 chars). The user sends it; the agent never did.
-**Phase D: PR on branch `audi-1275-straggler-gcs-writers`** — DONE in the worktree (dispatcher commits, runs the gauntlet, opens the PR): `models/bidstream_hourly/site_network_hourly.py` +1 line (`"spark.speculation": "true"` in `runtime_properties`), `dags/model_task_config.json` regenerated (+1 line, the same key under `site_network_hourly.batch.runtime_config.properties`). PR body `artifacts/audi_1275_pr_body.md` (lint `--kind pr` OK 128 words / 894 chars), reviewer rkleck-mntn, no Release Type.
-**Phase E: write-backs** — this file (§4-§8), result comment `artifacts/audi_1275_result_comment.txt` (lint `--kind completion` OK 118 words / 796 chars). Knowledge facts handed to the dispatcher (§7). Self-review entry after the PR merges.
+**Phase D: PR on branch `audi-1275-straggler-gcs-writers`** — DONE in the worktree (dispatcher commits, runs the gauntlet, opens the PR): `models/bidstream_hourly/site_network_hourly.py` +1 line (`"spark.speculation": "true"` in `runtime_properties`), `dags/model_task_config.json` regenerated (+1 line, the same key under `site_network_hourly.batch.runtime_config.properties`). PR body `artifacts/audi_1275_pr_body.md` (lint `--kind pr` OK 128 words / 894 chars), reviewer rkleck-mntn, no Release Type. Opened 2026-09-03 PT as https://github.com/SteelHouse/airflow-ti/pull/1271 (gauntlet fast tier, 1 finding refuted, 0 confirmed); ticket folder committed, Jira comment posted, status In Progress.
+**Phase E: write-backs** — this file (§4-§8), result comment `artifacts/audi_1275_result_comment.txt` (lint `--kind completion` OK 118 words / 796 chars). Knowledge routed by `/capture` on 2026-09-03 (§7). Self-review entry written 2026-09-03 with the outcome marked open; amend at close.
 
 ### 3.3 Assumptions, resolved
 - A1 (each "default v2" model really runs FileOutputCommitter v2 with no manifest factory): CONFIRMED from each model's own event log for 9 of the 10 (advertiser_high and ipdsc_ds_63 have no ledger app id, source only).
@@ -173,14 +173,16 @@ From `outputs/audi_1275_stage_evidence.csv` (`output_bytes > 0` marks a write st
   **A:** Not necessarily. site_network_hourly's long runs are FetchFailed storms from scale-down shuffle loss; speculation addresses slow tasks on live executors. The canary is the safety test first.
 
 ## 7. Data Documentation Updates
-Handed to the dispatcher for `knowledge/` (this agent writes only the ticket folder and the worktree):
-- Dataproc Serverless 2.3 injects `spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version=2` on every batch; no manifest committer factory by default (18 logs).
-- Spark 3.5.3 `OutputCommitCoordinator` denies every attempt after the first per partition for any Hadoop `OutputCommitter`, including the manifest committer; Iceberg 1.10.2 opts out of the coordinator (`useCommitCoordinator=false`) and relies on task abort deleting files.
-- `audience_intent` scoring batches run `spark.speculation=true` on FileOutputCommitter v2 to GCS since 2025-08-15; speculative attempts fire (hundreds per run) and end `TaskKilled`.
-- The Nov 2025 "ManifestCommitter race" was a `FileNotFoundException` in the job-commit rename phase, fixed by `manifest.committer.io.threads=1` + `validate.output=false` after speculation was already off (commits 5fbeb38, a3352d9).
-- `gcloud dataproc batches list/describe` need `--project mntn-prj-prod-00` (default `dw-main-silver` is denied); property keys in `describe --format=json` are prefixed `spark:`; list retention is about 7 days.
-- site_network_hourly: long runs are `FetchFailed` storms from scale-down shuffle loss (up to 116 stage re-submits), the model swallows failed hour writes, and a v2 stage re-attempt can leave task-committed files without `_SUCCESS` (`dt=2026-09-02/hh=05`).
-- Event log parsing: a `.zstd.inprogress` log (driver never closed it) still parses with `include.spark_optimizer.eventlog._read_events` up to the last complete event.
+Routed by `/capture` on 2026-09-03 (write-only sweep; the dispatcher commits):
+- `knowledge/memory/reference_dataproc_eventlog_profiling.md`: contradiction appended under the 2026-08-27 "speculation unsafe on every GCS writer" line (both claims kept with evidence, reconciling hypothesis = a one-committer incident generalized to all writers, settling check = first post-merge site_network_hourly log with `Task Info.Speculative=true` attempts + clean `_SUCCESS`, plus Ryan's account); facts 1-5 (Dataproc injects FileOutputCommitter v2 and no manifest factory; `OutputCommitCoordinator` denies every attempt after the first for any Hadoop committer; Iceberg 1.10.2 opts out of the coordinator and deletes aborted attempts' files; audience_intent scoring batches run speculation on v2 since 2025-08-15, 366 / 88 attempts all `TaskKilled`; the Nov 2025 pin's incident was the manifest committer's rename phase, fixed after speculation was off); the FetchFailed-storm-vs-straggler discriminator; the straggler detector's thresholds and fetch-wait blind spot; `.zstd.inprogress` logs still parse.
+- `knowledge/memory/project_airflow_optimizer.md`: dated contradiction pointer on the 2026-08-27 `ipdsc_ds_35` gauntlet revert; new 2026-09-03 section (decision, canary PR #1271, what the canary can show, the 11 ledger keys to stamp).
+- `knowledge/memory/reference_airflow_ti.md`: contradiction pointer on the "speculation pinned on every GCS writer" bullet; the Nov 2025 pin's git record (64afca4 / 009e99a / 5fbeb38 / a3352d9 / 6afc07f); `gcloud dataproc batches` needs `--project mntn-prj-prod-00 --region us-central1` (default `dw-main-silver` PERMISSION_DENIED, ~7-day retention, `labels.airflow-dag-id` / `labels.job_type` / `labels.airflow-task-id`, `spark:` key prefix in describe); dryrun re-verified, pytest-without-Java and ruff pre-existing findings merged into the AUDI-1273 / AUDI-1274 lines.
+- `knowledge/data_catalog.md`: new § `ipdsc_site_network/site_network_hourly` (path, writer, two hours per run, `_SUCCESS` marker, 7-day volume band, consumer).
+- `knowledge/data_knowledge.md`: § augmentor_log TTL and Archives, new bullet "site_network_hourly SUCCEEDS with a missing or partial hour" (swallowed exception, FetchFailed storms, partial partition without `_SUCCESS`, not caused by speculation).
+- `knowledge/decisions/0004_speculation_safe_where_writer_discards_loser.md`: the writer-class rule and the canary decision (accepted 2026-09-02).
+- `improvements_backlog.md`: IMP-104, site_network_hourly FetchFailed storms + swallowed hour writes.
+- `self_review/self_review_2.md`: AUDI-1275 entry (outcome marked open until merge + sweeps).
+- Nothing new for `mntn_business.md`, `experimentation.md`, the glossary, or the MEMORY.md hot tier.
 
 ## 8. Open Items / Follow-ups
 - **Deviation from the planned §3 step 11:** only `site_network_hourly` was edited (user decision D1+D2 = canary); the 11-model edit list did not ship. §3 rewritten above to match.
@@ -188,8 +190,8 @@ Handed to the dispatcher for `knowledge/` (this agent writes only the ticket fol
 - Post-merge watch (human): bundle lag up to 12 h; `Compute batch:` line shows `'spark.speculation': 'true'`; `_SUCCESS` + 4-75 files + 0.2-0.7 GB per hour; event log `speculative_tasks > 0`, no `CommitDenied`/`FileAlreadyExists` failures; stamp `applied` on the 11 site_network_hourly keys present at merge; three sweeps.
 - Ryan's answers to the three asks decide the second PR (10 models) and the manifest pair.
 - Not done: Confluence "TI On Call Playbook" search for the Nov-2025 incident; the gcs-connector version string (planning wave read 3.1.16, execution logs show the unversioned basename).
-- site_network_hourly's FetchFailed storms (scale-down shuffle loss, swallowed failed writes) are a separate defect worth their own row in `improvements_backlog.md`; not opened here.
-- Self-review entry after the PR merges.
+- site_network_hourly's FetchFailed storms (scale-down shuffle loss, swallowed failed writes) are a separate defect, logged 2026-09-03 as `improvements_backlog.md` IMP-104 (speculation cannot repair a lost shuffle, so it is outside this ticket).
+- Self-review entry written 2026-09-03 (`self_review/self_review_2.md`, outcome marked open); amend the outcome line at close.
 
 ## Verification (adversarial check, 2026-09-03)
 **Verdict: partial.** Diff, artifacts, config precedence, ruff, and lint claims all reproduce exactly from source; one number in §4.6 contradicts the file it cites.

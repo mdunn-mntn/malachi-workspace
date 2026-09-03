@@ -224,6 +224,16 @@ per file) from 2026-08-20** with no recovery through 08-31. This tracks a ~6x dr
 
 ---
 
+## ipdsc_site_network/site_network_hourly (parquet, hourly)
+- **Type:** Parquet at `gs://mntn-data-archive-prod/ipdsc_site_network/site_network_hourly/dt=<YYYY-MM-DD>/hh=<HH>/`
+- **Source repo:** [airflow-ti `models/bidstream_hourly/site_network_hourly.py`](https://github.com/SteelHouse/airflow-ti/blob/main/models/bidstream_hourly/site_network_hourly.py), launcher DAG `site_network_hourly` (TPA_EXPORT, ours since airflow-ti #1232, 2026-08-27)
+- **Writer (verified 2026-09-02, AUDI-1275, four event logs):** `df.write.format("parquet").mode("overwrite")` through `utils_model/base_model/writer.py:30`, `coalesce(target_partitions)`, Dataproc's injected FileOutputCommitter v2. One run writes TWO hour partitions (hour-2 and hour-1), so every hour is written twice by consecutive runs and the next run repairs a bad hour. `_SUCCESS` per `hh=` dir is the only completeness marker; the batch state is not one (see gotcha).
+- **Volume (GCS baseline 2026-08-27 to 2026-09-02):** 167 hour partitions, 166 with `_SUCCESS`; 4-75 files (typically 30-37) and 0.204-0.621 GB per hour; 612-782 files and 7.8-11.7 GB per day; files ~13 MiB median, 26 MiB max, one parquet row group each (AUDI-1273). `dt=2026-08-31/hh=18` absent; `dt=2026-09-02/hh=05` 29 files and no `_SUCCESS` (partial).
+- **Consumers:** `ipdsc_ds_49` reads 7 days of it (~49 GiB).
+- **Gotcha:** the batch SUCCEEDS with a missing or partial hour (swallowed per-hour exception, FetchFailed storms from scale-down shuffle loss): `data_knowledge.md` § augmentor_log TTL and Archives, the `site_network_hourly` bullets; backlog IMP-104. Canary for `spark.speculation=true` from airflow-ti #1271 (2026-09-03).
+
+---
+
 ## feature_store/feature_group_2_derived/conv_log_derived_ip (parquet, daily)
 - **Type:** Parquet at `gs://mntn-data-archive-prod/feature_store/feature_group_2_derived/conv_log_derived_ip/dt=YYYY-MM-DD/`
 - **Monthly snapshot:** `gs://mntn-data-archive-prod/feature_store/feature_group_2_derived_monthly/conv_log_derived_ip/dt=YYYY-MM-01/` (fires on day 15 of each month with `run_date = first of month`; forever-retained)
