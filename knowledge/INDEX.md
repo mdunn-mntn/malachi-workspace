@@ -360,7 +360,7 @@ For a term or symptom, start at `_ROUTING.md`; for tables by domain, `bq/_TOPICS
 - [Optimization playbook](bq/optimization_playbook.md) — the fast-first->scale workflow + the cross-cutting BQ speed rules + how to attribute which join took longest  ·  _verified 2026-07-27_
 
 ## Glossary
-- [Glossary — MNTN terms, acronyms & concepts → where the authority lives](glossary.md) — business term / acronym / concept → one-line definition + pointer to the authoritative doc or data_knowledge.md section. Load this instead of grepping 465 KB of prose.  ·  _verified 2026-07-19_
+- [Glossary — MNTN terms, acronyms & concepts → where the authority lives](glossary.md) — business term / acronym / concept → one-line definition + pointer to the authoritative doc or data_knowledge.md section. Load this instead of grepping 465 KB of prose.  ·  _verified 2026-09-03_
 
 ## Decisions
 - [0001 — Model Match (MM) component taxonomy: DS19 / DS13 / DS46](decisions/0001_mm_component_taxonomy.md) — MM = DS19 (Core) + one PP slot (DS13 = PP v1, DS46 = PP v2); counting MM as DS19 alone undercounts ~7.6%  ·  _verified 2026-07-19_

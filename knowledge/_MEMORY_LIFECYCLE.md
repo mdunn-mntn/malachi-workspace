@@ -234,7 +234,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-09-02 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-09-02 | [doc](memory/reference_fangorn_inference_dataproc.md) |
-| reference_sprint_skill | reference | 2026-09-02 | [doc](memory/reference_sprint_skill.md) |
 | reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |
 | reference_xlsx_master_format | reference | 2026-09-02 | [doc](memory/reference_xlsx_master_format.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-09-03 | [doc](memory/reference_airflow_ti.md) |
@@ -253,3 +252,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_openai_sdk_pagination | reference | 2026-09-03 | [doc](memory/reference_openai_sdk_pagination.md) |
 | reference_shopper_graph_deploy | reference | 2026-09-03 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_slack_debugger_app | reference | 2026-09-03 | [doc](memory/reference_slack_debugger_app.md) |
+| reference_sprint_skill | reference | 2026-09-03 | [doc](memory/reference_sprint_skill.md) |

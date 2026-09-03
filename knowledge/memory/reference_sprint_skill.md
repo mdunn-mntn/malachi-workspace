@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [sprint skill, /sprint, sprint_pull.sh, parallel tickets, work the sprint, plan wave, execute wave, one agent per ticket, ticket-agent constitution, board 1814 sprint, dispatcher lands serially, fresh context handoff, sprint waves of 6, framing gate blocks autonomy, plan agents overran scope, plan wave wrote findings, session limit cutoff, RESUME notes, resume from partial worktree, re-dispatch execute wave, plans never posted to Jira, sprint 8649 first run]
+keywords: [sprint skill, /sprint, sprint_pull.sh, parallel tickets, work the sprint, plan wave, execute wave, one agent per ticket, ticket-agent constitution, board 1814 sprint, dispatcher lands serially, fresh context handoff, sprint waves of 6, framing gate blocks autonomy, plan agents overran scope, plan wave wrote findings, session limit cutoff, RESUME notes, resume from partial worktree, re-dispatch execute wave, plans never posted to Jira, sprint 8649 first run, capture fidelity, write as you go, knowledge array schema, agent context discarded, structured knowledge return]
 domain: [workflow, jira-process]
 lifecycle: active
-last_verified: 2026-09-02
+last_verified: 2026-09-03
 ---
 # reference_sprint_skill
 
@@ -119,6 +119,14 @@ DAG/DDL/prod changes, a subagent budget. Agents delegate breadth to `Explore` su
   dispatcher records per-ticket state before dispatch so the re-dispatch list is mechanical.
 - **Plans are never posted to Jira** (user's call 2026-09-02, already in Step 4 above): one Jira comment
   per ticket, at landing, with the result.
+
+**Capture fidelity (2026-09-03):** an agent's context is deleted on return, so `summary.md` plus the
+returned `knowledge[]` are the whole record and there is no follow-up question to ask it. Both prompts
+now carry a write-as-you-go clause (SQL and what it returned, assumptions held and broken, approaches
+abandoned, how each reported number was derived, unanswered questions) and a pre-return "what do I know
+that this file does not say?" re-read. `knowledge[]` is structured (`fact`, `evidence`, `kind`, `doc`),
+required on the PLAN schema as well as RESULT, and explicitly includes disproven claims. Step 4 pools
+plan-wave knowledge and commits §4; Step 6 seeds `/capture <KEY>` with both waves' entries.
 
 **Cross-ticket ownership rule (AUDI-1269/1270, 2026-09-03):** when two sprint tickets touch the same file for the same configuration knob, one ticket owns the change and the other records the delta for post-merge re-size or re-decision. Here AUDI-1269 owned `guid_log_advertiser_id_dsc_id` (stages 5/16, 3400); AUDI-1270 sized stages 13/24 to 4100 but deferred to decision D1 (re-size only if spill persists after 1269 merges). Applied in the PR landing sequence: AUDI-1269 merged first, AUDI-1270 watches the ledger keys and acts if needed. No collision, no redundant edits.
 
