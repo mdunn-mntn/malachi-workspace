@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [triggered_by, manual__, run_type, TriggerDagRunOperator, dag_run_id prefix, tpa_mntn_id_export, schedule=None, airflow REST v2, dagRuns, rest_api, AUDI-1191]
+keywords: [triggered_by, manual__, run_type, TriggerDagRunOperator, dag_run_id prefix, tpa_mntn_id_export, schedule=None, airflow REST v2, dagRuns, rest_api, AUDI-1191, PR 1268, person_triggered removed, run origin filter removed]
 domain: [infra, repos]
 lifecycle: active
-last_verified: 2026-08-26
+last_verified: 2026-09-02
 ---
 **A `manual__` run id does NOT mean a person started the run.** `TriggerDagRunOperator` produces the identical prefix, so any DAG triggered by another DAG has `manual__<iso>` run ids for every run it ever has. In airflow-ti, `tpa_mntn_id_export` has `schedule=None` and is fired only from `tpa_ipdsc_export`'s `TriggerDagRunOperator` (no `trigger_run_id`), so **filtering out `manual__` drops that entire paging DAG's failures.** Verified 2026-08-26 while building the AUDI-1191 sweep filter; the adversarial reviewer caught it before it shipped.
 
@@ -17,5 +17,7 @@ last_verified: 2026-08-26
 Live example, `tpa_mntn_id_export`: `{'dag_run_id': 'manual__2026-08-26T06:09:41.779147+00:00', 'run_type': 'manual', 'triggered_by': 'operator', 'state': 'success'}`. Note `run_type` is `manual` here too, so **`run_type` is no better a discriminator than the prefix.**
 
 **Cost:** one extra `GET` per run. Do the lookup AFTER the failure filter and cache by `(dag_id, run_id)` — then only a run that actually failed costs a call. Keep a run whose lookup fails, because dropping a failure on a failed lookup loses the incident.
+
+**2026-09-02 update (mechanics unchanged): the debugger no longer FILTERS on run origin.** PR #1268 removed `pull._person_triggered`, its `triggered_by` lookup, and `_RUN_ORIGIN_CACHE` from both candidate paths after a human-triggered failure (`bottom_up_keywords_pipeline_run`/`training_pipeline`, `triggered_by=ui`) sat unanswered on 2026-09-02 — human-triggered runs are diagnosed like any other. Everything above about `triggered_by`/`manual__` stays true; use it for attribution, not filtering.
 
 Related: [[project_airflow_debugger]], [[reference_airflow_ti]], [[reference_airflow_log_puller]].

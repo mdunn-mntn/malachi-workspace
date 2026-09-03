@@ -209,7 +209,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_bottom_up_keywords_pipeline | reference | 2026-08-25 | [doc](memory/reference_bottom_up_keywords_pipeline.md) |
 | reference_ghost_bid_lift_register | reference | 2026-08-25 | [doc](memory/reference_ghost_bid_lift_register.md) |
 | feedback_validated_is_not_correct | feedback | 2026-08-26 | [doc](memory/feedback_validated_is_not_correct.md) |
-| reference_airflow_run_origin | reference | 2026-08-26 | [doc](memory/reference_airflow_run_origin.md) |
 | reference_databricks_billing_cost | reference | 2026-08-26 | [doc](memory/reference_databricks_billing_cost.md) |
 | reference_spark_eventlog_cost_units | reference | 2026-08-26 | [doc](memory/reference_spark_eventlog_cost_units.md) |
 | feedback_pasted_reference_means_install | feedback | 2026-08-27 | [doc](memory/feedback_pasted_reference_means_install.md) |
@@ -224,7 +223,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_bq_job_attribution | reference | 2026-08-28 | [doc](memory/reference_bq_job_attribution.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-08-31 | [doc](memory/reference_airflow_ti.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-08-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
-| reference_mntn_matched_batch_pipeline | reference | 2026-08-31 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
@@ -240,11 +238,13 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | project_airflow_debugger | project | 2026-09-02 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-02 | [doc](memory/project_airflow_optimizer.md) |
 | project_fangorn_on_mntn_id | project | 2026-09-02 | [doc](memory/project_fangorn_on_mntn_id.md) |
+| reference_airflow_run_origin | reference | 2026-09-02 | [doc](memory/reference_airflow_run_origin.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-02 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_databricks_system_schema_grants | reference | 2026-09-02 | [doc](memory/reference_databricks_system_schema_grants.md) |
 | reference_drive_mount_xlsx_delivery | reference | 2026-09-02 | [doc](memory/reference_drive_mount_xlsx_delivery.md) |
 | reference_fangorn_inference_dataproc | reference | 2026-09-02 | [doc](memory/reference_fangorn_inference_dataproc.md) |
 | reference_gcloud_storage_over_gsutil | reference | 2026-09-02 | [doc](memory/reference_gcloud_storage_over_gsutil.md) |
+| reference_mntn_matched_batch_pipeline | reference | 2026-09-02 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_slack_debugger_app | reference | 2026-09-02 | [doc](memory/reference_slack_debugger_app.md) |
 | reference_sprint_skill | reference | 2026-09-02 | [doc](memory/reference_sprint_skill.md) |
 | reference_workflow_kit_porting | reference | 2026-09-02 | [doc](memory/reference_workflow_kit_porting.md) |
