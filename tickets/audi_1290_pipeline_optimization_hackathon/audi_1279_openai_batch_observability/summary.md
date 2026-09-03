@@ -137,6 +137,8 @@ Seed (`outputs/audi_1279_staged_seed.txt`): 3 receipts `batch_audi1279_dead_{1,2
 `gcloud -q storage rm -r gs://mntn-data-archive-dev/shopper_graph/audi_1279_staging/` at 07:14Z after the runs (seed partition + `probe.txt`); `gcloud storage ls gs://mntn-data-archive-dev/shopper_graph/` afterwards matches no objects. (`gsutil -m rm -r` hung for 2 min first and was killed; the `gcloud storage` form is the one that works on this Mac, as memory `reference_gcloud_storage_over_gsutil` says for `cp`.) Nothing else was written outside the ticket folder and the worktree.
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/shopper_graph/pull/305 (opened 2026-09-03 PT; medium tier: 3 findings confirmed and fixed (missing receipts partition, None error fields, invalid threshold env), re-run of the repo's isort, flake8, mypy and 16 unit tests green; the fixer's unrelated reformatting was dropped; reviewers theastrocat and alyson-mntn)
+
 Branch `audi-1279-openai-batch-observability` in the worktree (uncommitted; the dispatcher commits, runs the gauntlet and opens the PR). Diff vs main `e2f3800`: 6 files changed + 1 added.
 
 | File | Change |
