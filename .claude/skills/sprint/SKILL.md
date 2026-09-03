@@ -28,6 +28,11 @@ The fan-out runs through the **Workflow tool** (deterministic, background, per-a
 `/workflows`, forced-schema returns). Loose background `Agent` calls are the fallback when the
 user wants to converse with a single ticket's agent mid-flight via `SendMessage`.
 
+**Nothing survives but the files.** An agent's context is deleted when it returns, and no one can
+ask it a follow-up. `summary.md` and the returned `knowledge[]` are the entire record of what it
+learned. Every agent prompt therefore carries a write-as-you-go clause, and the dispatcher pools
+every wave's `knowledge[]` into `/capture` at landing.
+
 **Two waves, one gate between them.** Wave 1 plans every ticket in parallel and writes each plan to
 its `summary.md` §3 (plans stay local, never in Jira); you approve; wave 2 executes every approved plan in parallel. Execution agents are fresh — they
 inherit the distilled plan, not the research transcript, which is where the context saving comes from.
@@ -97,6 +102,16 @@ subagents (`model: 'haiku'`) so the reading happens in contexts that are thrown 
 Each plan agent writes `## 3. Plan of Action` in its own `summary.md` and returns:
 
 ```javascript
+const KNOWLEDGE = {                                   // one entry per durable fact, confirmed OR disproven
+  type: 'object',
+  required: ['fact', 'evidence'],
+  properties: {
+    fact: { type: 'string' },                         // stated so a future session can act on it cold
+    evidence: { type: 'string' },                     // the query, file:line, or person that settles it
+    kind: { enum: ['schema', 'join_key', 'gotcha', 'business_rule', 'method', 'disproven', 'workflow'] },
+    doc: { type: 'string' },                          // suggested home under knowledge/, '' if unsure
+  },
+}
 const PLAN = {
   type: 'object',
   required: ['key', 'feasible', 'steps'],
@@ -110,6 +125,7 @@ const PLAN = {
     deliverable: { type: 'string' },                          // the artifact + the bar that closes it
     effort: { type: 'string' },                               // half-day | 1d | 2-3d | week+
     decisions: { type: 'array', items: { type: 'string' } },  // forks only the user can settle
+    knowledge: { type: 'array', items: KNOWLEDGE },           // everything the research proved, incl. dead ends
   },
 }
 ```
@@ -123,12 +139,19 @@ Plan-agent prompt, on top of the constitution below (same write-scope and git/Ji
 > schema and cardinality checks are in scope; producing the answer is not. Write §3 Plan of Action
 > to `summary.md` and return the schema. If a fork genuinely needs the user, put it in `decisions`
 > rather than picking one.
+>
+> **Write down everything you establish on the way, as you establish it** — schemas checked, row
+> counts, cardinality, tables ruled out and why, prior art that already answers part of this. §3
+> carries the plan; anything you actually proved goes in §4 under a `Plan-wave findings` heading,
+> and every durable fact also comes back in `knowledge[]`. Your context is discarded at the gate;
+> if it is not in the file or the array, it did not happen and the execute agent pays for it twice.
 
 ## Step 4 — Post plans and gate (dispatcher, serial)
 
 Barrier here, deliberately: the user reads all plans before any execution starts.
 
-1. Commit each `summary.md` §3 (`git add <folder>`, one commit per ticket).
+1. Commit each `summary.md` §3, plus §4 where the plan agent already proved things there (normal,
+   not an overrun). Pool every plan `knowledge[]` entry, keyed by ticket, and hold it for Step 6.
 2. Nothing goes to Jira at this stage. Plans live in `summary.md` §3 only (user's call
    2026-09-02); the ticket's Jira comment comes once at landing with the result.
 3. Print one table: `key · feasible · effort · deliverable · decisions`.
@@ -159,6 +182,16 @@ export const meta = {
   description: 'Execute each approved sprint-ticket plan in its own agent',
   phases: [{ title: 'Execute' }, { title: 'Verify' }],
 }
+const KNOWLEDGE = {                                   // identical to Step 3's object
+  type: 'object',
+  required: ['fact', 'evidence'],
+  properties: {
+    fact: { type: 'string' },
+    evidence: { type: 'string' },
+    kind: { enum: ['schema', 'join_key', 'gotcha', 'business_rule', 'method', 'disproven', 'workflow'] },
+    doc: { type: 'string' },
+  },
+}
 const RESULT = {
   type: 'object',
   required: ['key', 'state', 'headline', 'files', 'jira_comment'],
@@ -168,7 +201,7 @@ const RESULT = {
     headline: { type: 'string' },              // the answer, one line, <= 90 chars
     files: { type: 'array', items: { type: 'string' } },
     open_items: { type: 'array', items: { type: 'string' } },
-    knowledge: { type: 'array', items: { type: 'string' } },  // facts for /capture to route
+    knowledge: { type: 'array', items: KNOWLEDGE },  // facts for /capture to route; see Step 3
     jira_comment: { type: 'string' },
     blocked_on: { type: 'string' },
   },
@@ -201,6 +234,21 @@ dispatch per global §12 via `.claude/scripts/stall_monitor.sh`, never a hand-ro
 > terseness rules do not apply to it. Deliverables go to `<folder>/outputs/` and `artifacts/`;
 > default deliverable is a branded `.xlsx` via `lib/mntn_xlsx.py`.
 >
+> **Your context is deleted the moment you return, and nobody can ask you a follow-up.**
+> `summary.md` and `knowledge[]` are the only things that outlive you, so write as you go, never at
+> the end: the SQL of every query that ran and what it returned, every assumption that held and
+> every one that broke, every table or approach you tried and abandoned and why, every number in
+> your deliverable and how it was derived, every question the ticket raised that you did not
+> answer. A fact you verified and did not write down is a fact the next session pays for again.
+> Before you return, re-read `summary.md` and answer "what do I know that this file does not say?"
+> — write that first, then return.
+>
+> Hand every durable fact back in `knowledge[]` with the evidence that settles it: schema facts,
+> join keys, gotchas, business rules, method lessons, and **anything you disproved** — a disproven
+> assumption is worth more than a confirmed one, so do not filter for tidiness. Ticket-specific
+> findings go in `summary.md`; facts that outlive the ticket go in `knowledge[]`; both when both
+> apply. Never edit the `knowledge/` masters yourself.
+>
 > **You may not:** run `git add`, `commit`, or `push`; write anything to Jira; touch any file
 > outside `<folder>/` (the `knowledge/` masters, `MEMORY.md`, `CLAUDE.md`, and other tickets are
 > all off-limits — hand facts back in `knowledge[]` and the dispatcher routes them); create a PR;
@@ -213,7 +261,8 @@ dispatch per global §12 via `.claude/scripts/stall_monitor.sh`, never a hand-ro
 > Return the schema and nothing else. Your `headline` is the one line a director reads; your
 > `jira_comment` must pass `python3 .claude/scripts/lint_comms.py --kind comment`.
 
-Work prompt adds: *"§3 Plan of Action is approved — execute it. The user's answers to the open
+Work prompt adds: *"§3 Plan of Action is approved — execute it. §4 may already hold what the plan
+agent proved; verify and extend it, do not re-derive it. The user's answers to the open
 decisions are: <answers>. Deviate from the plan only when execution proves a step wrong; when you
 do, rewrite §3 to match what you actually did and say so in `open_items`."*
 
@@ -227,7 +276,8 @@ Agents produced files; only the dispatcher writes history. In order, per returne
 1. `git add <folder>` → `git commit -m "<KEY>: <headline>"` → `git push origin main`. **Never
    `git add .`** — other sessions share this tree (global §2).
 2. Post the agent's `jira_comment` via `curl` REST v2, and transition status if the ticket closed.
-3. Run **`/capture <KEY>`** for that ticket, seeded with its `knowledge[]` array — scoped to one
+3. Run **`/capture <KEY>`** for that ticket, seeded with **both** its plan-wave and execute-wave
+   `knowledge[]` entries (Step 4 pooled the first set) — scoped to one
    ticket, so its findings route to that `summary.md` §7 and the right `knowledge/` doc, and its
    self-review entry gets written while it is distinct. One ticket at a time, never concurrent:
    `/capture` writes the shared `knowledge/` masters and `MEMORY.md`.
@@ -244,9 +294,13 @@ Agents produced files; only the dispatcher writes history. In order, per returne
   atomic in practice; the file is still shared state, so only the dispatcher commits it, once.
 - **`/capture` from N agents would fight over `knowledge/` and `MEMORY.md`.** It runs once, at the
   end, in the dispatcher, over the pooled `knowledge[]` returns.
-- **A plan agent that starts executing** burns the wave and defeats the fresh-context handoff. The
-  line is: verify the plan is runnable, do not produce the answer. Enforced in its prompt, checked
-  at Step 4 — a plan whose ticket already has §4 findings means the agent overran.
+- **A plan agent that starts executing** is the norm, not the exception (sprint 8649: most of them).
+  Do not fight it at the gate — commit its §4, pool its `knowledge[]`, and tell the execute agent to
+  verify and extend rather than re-derive. The handoff still saves context: the execute agent starts
+  from distilled §3/§4, not the research transcript.
+- **A discarded transcript is silent data loss.** Whatever an agent learned and did not write to
+  `summary.md` or return in `knowledge[]` is gone, and unlike a chat there is nobody left to ask.
+  Both prompts carry the write-as-you-go clause and the pre-return re-read for exactly this.
 - **A hung agent sends no notification.** Stall-detect actively; re-dispatch the unfinished ticket
   rather than waiting (global §12).
 - **A Done-looking ticket may be half-done.** Trust `summary.md`, not the Jira status.
