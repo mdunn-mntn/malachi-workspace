@@ -151,6 +151,8 @@ Per submitter: camperbid 3,260 jobs / 7,741.8 slot-h / 429.74 TiB (466 jobs/day,
 - Dev deployment run (step 4b) was not attempted: the execute agent may not trigger DAGs or deploy, so validation is the unit tests plus the first post-merge daily report.
 
 ## 5. Solution
+**PR:** https://github.com/SteelHouse/airflow-ti/pull/1278 (opened 2026-09-03 PT; medium tier: 6 findings, 3 refuted, 1 confirmed style item (a docstring) whose auto-fix was dropped together with an unrelated 22-file reformat; the PR's own docstrings are already one line)
+
 **airflow-ti branch `audi-1278-bq-job-labels`** (worktree of main `825b07e`; the dispatcher commits, runs the gauntlet and opens the PR with `artifacts/audi_1278_pr_body.md`, linted `--kind pr`):
 - `include/util/bq_job_labels.py` (new): `airflow_job_labels(context=None) -> dict[str, str]`; reads `get_current_context()` when no context is passed, accepts either `ti` or `task_instance` in the context, returns `{"airflow-dag": dag_id.lower(), "airflow-task": task_id.lower().replace(".", "-")}` when both match `^[\w-]{0,63}$`, else `{}`; `{}` outside a task.
 - `dags/attribution/url_pattern_pipeline.py`: `run_query_to_destination(..., labels=None)` and `iter_destination_rows(..., labels=None)`; `labels = airflow_job_labels()` resolved inside the body at run time; `labels=labels` on all three `QueryJobConfig` constructions (script branch, destination branch, paging query). Callers in the two DAG files untouched.
