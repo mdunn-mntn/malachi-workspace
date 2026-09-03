@@ -1,0 +1,80 @@
+---
+doc_type: ticket
+title: "AUDI-1270: Verify event logs then raise shuffle.partitions on 15 spill DAGs"
+status: backlog
+date: 2026-09-02
+summary: "Per DAG confirm shuffle-side spill in the event log, then size partitions to ~256 MiB per task"
+result: "not started"
+question: ""
+framing_state: draft
+---
+
+# AUDI-1270: Verify event logs then raise shuffle.partitions on 15 spill DAGs
+
+**Jira:** https://mntn.atlassian.net/browse/AUDI-1270
+**Status:** backlog
+**Date Started:** 2026-09-02
+**Assignee:** Malachi
+
+---
+## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
+The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
+- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
+- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
+- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
+- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
+- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+
+## 1. Introduction
+Child of epic AUDI-1290 (Pipeline Optimization Hackathon, sprint 8649, 2026-09-07 to 2026-09-21). Source finding: the 2026-08-27 full-corpus optimizer sweep (AUDI-1194), spec in `tickets/audi_1194_optimizer_efficiency_crawler/outputs/audi_1194_hackathon_ticket_drafts.md`.
+
+Same disk-overflow fix as AUDI-1269 for 15 more jobs, but each needs a short check of its Spark event log first to confirm the right knob.
+
+## 2. The Problem
+Jira description (verbatim, links to airflow-ti main):
+
+**Why:** overflow (spill) can happen while shuffling data or while reading input; each has a different fix. The event log shows which one a job has.
+
+**Task:** per DAG open the spilling stage in the event log, confirm the spill is shuffle-side, then set the partition count so each task holds about 256 MiB in memory:
+- [fangorn_prospecting_scoring](https://github.com/SteelHouse/airflow-ti/blob/main/models/audience_intent/fangorn_prospecting_scoring.py)
+- [ipdsc_ds_17](https://github.com/SteelHouse/airflow-ti/blob/main/models/ipdsc/ipdsc_ds_17.py)
+- [ipdsc_46_monitor](https://github.com/SteelHouse/airflow-ti/blob/main/models/monitoring/ipdsc_46_monitor.py), [ipdsc_14_monitor](https://github.com/SteelHouse/airflow-ti/blob/main/models/monitoring/ipdsc_14_monitor.py), [ipdsc_49_monitor](https://github.com/SteelHouse/airflow-ti/blob/main/models/monitoring/ipdsc_49_monitor.py)
+- [ipdsc_ds_13](https://github.com/SteelHouse/airflow-ti/blob/main/models/ipdsc/ipdsc_ds_13.py), [ipdsc_ds_14](https://github.com/SteelHouse/airflow-ti/blob/main/models/ipdsc/ipdsc_ds_14.py), [ipdsc_ds_47](https://github.com/SteelHouse/airflow-ti/blob/main/models/ipdsc/ipdsc_ds_47.py)
+- [fangorn_predictions_vertical](https://github.com/SteelHouse/airflow-ti/blob/main/models/machine_learning/fangorn_predictions_vertical.py), [fangorn_household_predictions_vertical](https://github.com/SteelHouse/airflow-ti/blob/main/models/machine_learning/fangorn_household_predictions_vertical.py)
+- [vertical_size_monitor](https://github.com/SteelHouse/airflow-ti/blob/main/models/monitoring/vertical_size_monitor.py)
+- [aug_log_ip](https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_1_source/aug_log_ip.py)
+- [guid_log_advertiser_id_dsc_id](https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_1_source/guid_log_advertiser_id_dsc_id.py) (stage 13; its stage-1 fix is in AUDI-1269)
+- [guid_log_pivot_household_id_vertical_id](https://github.com/SteelHouse/airflow-ti/blob/main/models/feature_store/feature_group_3_pivoted/guid_log_pivot_household_id_vertical_id.py)
+- [advertiser_join](https://github.com/SteelHouse/airflow-ti/blob/main/models/audience_intent/advertiser_join.py)
+
+**Done-when:** PR merged; optimizer ledger shows the finding resolved (savings auto-measure).
+
+## 3. Plan of Action
+Numbered steps of the approach taken. Updated as the plan evolves.
+1. Step one
+2. Step two
+3. ...
+
+## 4. Investigation & Findings
+What was discovered during analysis. Include:
+- Key queries run (reference files in `queries/`)
+- Data samples and results (reference files in `outputs/`)
+- Unexpected findings or gotchas
+
+## 5. Solution
+What was done to resolve the issue:
+- Code changes (PRs, commits)
+- Configuration changes
+- Recommendations made
+- Dashboards/reports created
+
+## 6. Questions Answered
+Specific questions that were resolved during this ticket:
+- **Q:** {question}
+  **A:** {answer}
+
+## 7. Data Documentation Updates
+What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+
+## 8. Open Items / Follow-ups
+Anything not resolved, handed off, or deferred.
