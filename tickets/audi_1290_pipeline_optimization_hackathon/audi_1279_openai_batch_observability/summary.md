@@ -5,8 +5,8 @@ status: backlog
 date: 2026-09-02
 summary: "shopper_graph: log per-batch status at every transition, alarm when 0 of N progress"
 result: "not started"
-question: ""
-framing_state: draft
+question: "Can the shopper_graph batch pipeline log every batch's OpenAI-side status and error at each transition check, and alarm when 0 of N batches have progressed N hours after submit?"
+framing_state: locked
 ---
 
 # AUDI-1279: OpenAI batch pipeline observability: dead-cohort alarm and status logging
@@ -17,13 +17,13 @@ framing_state: draft
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+## 0. Framing
+Locked 2026-09-02 via /sprint batched gate (user answers: work all 13; branch + gauntlet + PR per ticket; 1275 drafts the owner ask and executes the safe subset; agents may request the PHS PAM grant).
+- **Question (the unknown):** Can the shopper_graph batch pipeline log every batch's OpenAI-side status and error at each transition check, and alarm when 0 of N batches have progressed N hours after submit?
+- **Goal (why / the decision):** The Aug 27-30 outage ran for days unseen; this pages on day one. Bryce's fall hackathon epic AUDI-1290 (cost-reduction lever, sprint 8649); savings auto-measure on the optimizer ledger and the Mode cost dashboard.
+- **Objective (done-when):** One shopper_graph PR merged touching batch_transitioner.py and batch_fetcher.py; a staged test shows the alarm firing and per-batch statuses in Airflow logs.
+- **Approach (how):** Read both wrappers and the existing alerting path in shopper_graph and its airflow-ti DAG; unit test with a mocked OpenAI client for the dead-cohort case; stage in the dev environment, never prod.
+- **What would change the answer:** If OpenAI-side status is not reachable from the fetcher the alarm falls back to Airflow-side timing only, and the ticket says so.
 
 ## 1. Introduction
 Child of epic AUDI-1290 (Pipeline Optimization Hackathon, sprint 8649, 2026-09-07 to 2026-09-21). Source finding: the 2026-08-27 full-corpus optimizer sweep (AUDI-1194), spec in `tickets/audi_1194_optimizer_efficiency_crawler/outputs/audi_1194_hackathon_ticket_drafts.md`.

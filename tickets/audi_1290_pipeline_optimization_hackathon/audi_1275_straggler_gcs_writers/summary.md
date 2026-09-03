@@ -5,8 +5,8 @@ status: backlog
 date: 2026-09-02
 summary: "Speculation is unsafe on GCS writers; settle a safe straggler remedy then apply to 13 DAGs"
 result: "not started"
-question: ""
-framing_state: draft
+question: "Which straggler remedy is safe for Spark jobs that overwrite GCS output, and which of the 13 DAGs can take it now?"
+framing_state: locked
 ---
 
 # AUDI-1275: Decide the safe straggler fix for GCS writers, apply to 13 DAGs
@@ -17,13 +17,13 @@ framing_state: draft
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+## 0. Framing
+Locked 2026-09-02 via /sprint batched gate (user answers: work all 13; branch + gauntlet + PR per ticket; 1275 drafts the owner ask and executes the safe subset; agents may request the PHS PAM grant).
+- **Question (the unknown):** Which straggler remedy is safe for Spark jobs that overwrite GCS output, and which of the 13 DAGs can take it now?
+- **Goal (why / the decision):** Speculation was proposed and refuted twice as unsafe for GCS writers; the answer unblocks 13 straggler findings. Bryce's fall hackathon epic AUDI-1290 (cost-reduction lever, sprint 8649); savings auto-measure on the optimizer ledger and the Mode cost dashboard.
+- **Objective (done-when):** A decision memo in outputs/ (committer guarantees per writer path, safe remedy, per-DAG verdict), a Slack ask drafted for Ryan Kleck in artifacts/ for the user to send, and one PR (branch AUDI-1275) applying the remedy only to DAGs whose safety is proven from source; the rest wait on the owner's answer.
+- **Approach (how):** For each DAG read the writer path (format, mode, committer, GCS connector version) on airflow-ti main; check Spark and GCS-connector committer semantics (FileOutputCommitter v1/v2, Dataproc GCS committer, task-attempt isolation); from the event log confirm whether the straggler is in a write stage; user's decision 2026-09-02: draft the ask, execute the safe subset.
+- **What would change the answer:** A DAG whose writer is not idempotent under duplicate task attempts is never changed without the owner's word; if no remedy is provably safe the deliverable is the memo and the ask alone.
 
 ## 1. Introduction
 Child of epic AUDI-1290 (Pipeline Optimization Hackathon, sprint 8649, 2026-09-07 to 2026-09-21). Source finding: the 2026-08-27 full-corpus optimizer sweep (AUDI-1194), spec in `tickets/audi_1194_optimizer_efficiency_crawler/outputs/audi_1194_hackathon_ticket_drafts.md`.

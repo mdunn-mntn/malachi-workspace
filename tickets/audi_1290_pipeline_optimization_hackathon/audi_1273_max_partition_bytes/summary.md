@@ -5,8 +5,8 @@ status: backlog
 date: 2026-09-02
 summary: "Read input in smaller pieces on 3 DAGs that spill while reading, not shuffling"
 result: "not started"
-question: ""
-framing_state: draft
+question: "Does lowering spark.sql.files.maxPartitionBytes on ipdsc_ds_49, conv_log_derived_ip and ipdsc_ds_67 remove their map-side spill?"
+framing_state: locked
 ---
 
 # AUDI-1273: Lower files.maxPartitionBytes on 3 map-side-spill DAGs
@@ -17,13 +17,13 @@ framing_state: draft
 **Assignee:** Malachi
 
 ---
-## 0. Framing  ← agree this via /frame BEFORE work starts; set `framing_state: locked` when done
-The agreed question, why it matters, and how we plan to answer it. Locked before `status: in_progress`.
-- **Question (the unknown):** {the single, falsifiable question — a stranger could tell whether it's been answered}
-- **Goal (why / the decision):** {the decision or outcome the answer serves + who's waiting on it + north-star tie}
-- **Objective (done-when):** {the concrete deliverable + the bar that closes it — binary: it exists and clears the bar, or it doesn't}
-- **Approach (how):** {data sources, method/protocol, and the key assumptions to resolve empirically first}
-- **What would change the answer:** {the smallest result that flips the conclusion — the kill criteria that keep scope honest}
+## 0. Framing
+Locked 2026-09-02 via /sprint batched gate (user answers: work all 13; branch + gauntlet + PR per ticket; 1275 drafts the owner ask and executes the safe subset; agents may request the PHS PAM grant).
+- **Question (the unknown):** Does lowering spark.sql.files.maxPartitionBytes on ipdsc_ds_49, conv_log_derived_ip and ipdsc_ds_67 remove their map-side spill?
+- **Goal (why / the decision):** Bryce's fall hackathon epic AUDI-1290 (cost-reduction lever, sprint 8649); savings auto-measure on the optimizer ledger and the Mode cost dashboard.
+- **Objective (done-when):** One PR (branch AUDI-1273) merged setting 64 MiB, 128 MiB and 32 MiB respectively in each builder; the ledger marks the three spill findings resolved.
+- **Approach (how):** Confirm current builder config on main (conv_log_derived_ip already overrides to 256 MiB), apply the three values, run model_upload.py --dryrun; confirm from the 08-27 sweep that the spill is in the input-read stage.
+- **What would change the answer:** The spilling stage is a shuffle stage after all (1269/1270 mechanism), or the input is not splittable so the knob does nothing.
 
 ## 1. Introduction
 Child of epic AUDI-1290 (Pipeline Optimization Hackathon, sprint 8649, 2026-09-07 to 2026-09-21). Source finding: the 2026-08-27 full-corpus optimizer sweep (AUDI-1194), spec in `tickets/audi_1194_optimizer_efficiency_crawler/outputs/audi_1194_hackathon_ticket_drafts.md`.
