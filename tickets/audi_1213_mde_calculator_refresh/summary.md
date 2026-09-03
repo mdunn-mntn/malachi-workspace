@@ -304,3 +304,13 @@ understated by 1/0.595 = 1.68x, and every post-stack budget by 2.82x.
 Changing it moves numbers people have already been quoted, so it needs Malachi's call. Options: set
 `VR_STACK` to 1.0 and keep the toggle as a no-op placeholder, or remove the toggle and the
 post-stack hero entirely and show RAW only.
+
+**Toggle removed 2026-09-03** (Malachi's call, after the refutation above). Gone from both builds:
+the VARIANCE REDUCTION control and `setVR`, the POST-STACK MDE hero and its CI line, the dashed
+post-stack chart series and its CI band, the second position marker, the legend entry, and the
+`VR_STACK` constant with `S.vrMode`. `spendRequired` and `computeMDE` are now called with
+`var_reduction = 1.0` at every call site. The footer says why: "Variance reduction is not applied:
+measured 1.00 against 421 ghost-bid tests on 2026-09-03, so the pipeline gives no reduction to
+claim." Round-trip parity unchanged at 5.82e-16; jsdom harness clean.
+
+Anyone holding a post-stack figure from before today is holding a number 1.68x too small.

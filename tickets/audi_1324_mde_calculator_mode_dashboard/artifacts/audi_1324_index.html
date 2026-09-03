@@ -572,15 +572,6 @@
         </div>
       </div>
 
-      <!-- Variance reduction -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-head">VARIANCE REDUCTION</div>
-        <div class="toggle-row">
-          <button class="tog-btn on" id="btn-raw" onclick="setVR('raw')">NONE (RAW)</button>
-          <button class="tog-btn" id="btn-stack" onclick="setVR('stack')">FULL STACK</button>
-        </div>
-      </div>
-
     </aside>
 
     <!-- ── OUTPUT ── -->
@@ -595,14 +586,6 @@
           <div class="hero-ci" id="ci-raw">95% CI ±—</div>
         </div>
 
-        <div class="v-sep"></div>
-
-        <div class="hero-block">
-          <div class="hero-lbl">POST-STACK MDE</div>
-          <div class="hero-num-sm" id="h-stk">—</div>
-          <div class="tier-pill" id="tp-stk">—</div>
-          <div class="hero-ci" id="ci-stk">95% CI ±—</div>
-        </div>
 
         <div class="req-block">
           <div class="req-label">BUDGET FOR TARGET MDE</div>
@@ -641,7 +624,6 @@
         <span class="chart-title">MDE vs MONTHLY BUDGET — CURRENT POSITION MARKED</span>
         <div class="chart-legend">
           <div class="legend-item"><div class="legend-line"></div>RAW</div>
-          <div class="legend-item"><div class="legend-line dashed"></div>POST-STACK</div>
           <div class="legend-item"><div class="legend-ci"></div>95% CI</div>
         </div>
       </div>
@@ -649,7 +631,8 @@
         <canvas id="chart"></canvas>
       </div>
       <div class="stack-note">
-        Stack: CUPED(0.934) × ghost-ad(0.75) × stratified(0.85) = 0.595 · Source: AUDI-884 / Lewis-Rao (2015 QJE)
+        Source: AUDI-884 / Lewis-Rao (2015 QJE). Variance reduction is not applied: measured 1.00
+        against 421 ghost-bid tests on 2026-09-03, so the pipeline gives no reduction to claim.
       </div>
 
     </main>
@@ -821,7 +804,6 @@ const budgetToSlider = b => ((Math.log10(Math.max(b, 10000)) - L_MIN) / (L_MAX -
 /* ═══════════════════════════════════════════════════════
    STATE
    ═══════════════════════════════════════════════════════ */
-const VR_STACK = 0.595; // CUPED(0.934) × ghost-ad(0.75) × stratified(0.85)
 
 const S = {
   monthlyBudget : 200000,
@@ -833,7 +815,6 @@ const S = {
   impsPerIp     : 3.58,
   alpha         : 0.05,
   power         : 0.80,
-  vrMode        : 'raw',
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -848,26 +829,21 @@ function ciFactor() {
 
 function curvePts() {
   const N = 90, cf = ciFactor();
-  const rawPts = [], stkPts = [], rawCiHi = [], rawCiLo = [], stkCiHi = [], stkCiLo = [];
+  const rawPts = [], rawCiHi = [], rawCiLo = [];
   for (let i = 0; i <= N; i++) {
     const spend = Math.pow(10, L_MIN + (i / N) * (Math.log10(1e7) - L_MIN));
-    const r = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0,      S.cpm, S.impsPerIp);
-    const k = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, VR_STACK, S.cpm, S.impsPerIp);
+    const r = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0, S.cpm, S.impsPerIp);
     const rawMde = Math.min(r.mdeRel * 100, 35);
-    const stkMde = Math.min(k.mdeRel * 100, 35);
     rawPts.push({ x: spend, y: rawMde });
-    stkPts.push({ x: spend, y: stkMde });
     rawCiHi.push({ x: spend, y: Math.min(rawMde * (1 + cf), 35) });
     rawCiLo.push({ x: spend, y: Math.max(rawMde * (1 - cf), 0) });
-    stkCiHi.push({ x: spend, y: Math.min(stkMde * (1 + cf), 35) });
-    stkCiLo.push({ x: spend, y: Math.max(stkMde * (1 - cf), 0) });
   }
-  return { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo };
+  return { rawPts, rawCiHi, rawCiLo };
 }
 
 function initChart() {
   const ctx = document.getElementById('chart').getContext('2d');
-  const { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo } = curvePts();
+  const { rawPts, rawCiHi, rawCiLo } = curvePts();
 
   const tierPlugin = {
     beforeDraw(ch) {
@@ -915,12 +891,10 @@ function initChart() {
         c.stroke(); c.restore();
       }
 
-      // Dots + CI whiskers at current budget (raw & stack)
-      const rawR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0,      S.cpm, S.impsPerIp);
-      const stkR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, VR_STACK, S.cpm, S.impsPerIp);
+      // Dot + CI whisker at current budget
+      const rawR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0, S.cpm, S.impsPerIp);
       const cf = ciFactor();
-      [[rawR.mdeRel * 100, 'rgba(0,112,168,0.55)', 'rgba(0,112,168,1)'],
-       [stkR.mdeRel * 100, 'rgba(0,112,168,0.22)', 'rgba(0,112,168,0.4)']].forEach(([mde100, whiskerCol, dotCol]) => {
+      [[rawR.mdeRel * 100, 'rgba(0,112,168,0.55)', 'rgba(0,112,168,1)']].forEach(([mde100, whiskerCol, dotCol]) => {
         const mde = Math.min(mde100, 35);
         const yMid = ys.getPixelForValue(mde);
         const yHi  = ys.getPixelForValue(Math.min(mde * (1 + cf), 35));
@@ -956,12 +930,6 @@ function initChart() {
         { label: '_rawCiLo', data: rawCiLo, borderWidth: 0, borderColor: 'transparent', pointRadius: 0, tension: 0.35, fill: false },
         // index 2: raw MDE main line
         { label: 'Raw MDE',  data: rawPts, borderColor: 'rgba(0,112,168,0.85)', borderWidth: 2, pointRadius: 0, tension: 0.35, fill: false },
-        // index 3: stack CI upper — fills to index 4
-        { label: '_stkCiHi', data: stkCiHi, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'rgba(0,112,168,0.04)', pointRadius: 0, tension: 0.35, fill: '+1' },
-        // index 4: stack CI lower
-        { label: '_stkCiLo', data: stkCiLo, borderWidth: 0, borderColor: 'transparent', pointRadius: 0, tension: 0.35, fill: false },
-        // index 5: stack MDE main line
-        { label: 'Post-Stack MDE', data: stkPts, borderColor: 'rgba(0,112,168,0.35)', borderWidth: 2, borderDash: [6,4], pointRadius: 0, tension: 0.35, fill: false },
       ]
     },
     options: {
@@ -1022,19 +990,15 @@ function update() {
           targetMdeRel: T, baselineRate: p, alpha: a, power: pw,
           cpm, impsPerIp } = S;
 
-  const raw = computeMDE(B, W, H, p, a, pw, 1.0,      cpm, impsPerIp);
-  const stk = computeMDE(B, W, H, p, a, pw, VR_STACK,  cpm, impsPerIp);
-  const reqVR = S.vrMode === 'stack' ? VR_STACK : 1.0;
-  const req = spendRequired(T, H, p, a, pw, reqVR, cpm, impsPerIp, W);
+  const raw = computeMDE(B, W, H, p, a, pw, 1.0, cpm, impsPerIp);
+  const req = spendRequired(T, H, p, a, pw, 1.0, cpm, impsPerIp, W);
 
   setHero('h-raw', 'tp-raw', raw.mdeRel, tier(raw.mdeRel), 'hero-num');
-  setHero('h-stk', 'tp-stk', stk.mdeRel, tier(stk.mdeRel), 'hero-num-sm');
 
   const zAlpha = normPPF(1 - a / 2);
   const ciFactor = zAlpha / (zAlpha + normPPF(pw));
   const ciPct = v => isFinite(v) ? '95% CI ±' + fmtPct(v * ciFactor) : '95% CI ±—';
   document.getElementById('ci-raw').textContent = ciPct(raw.mdeRel);
-  document.getElementById('ci-stk').textContent = ciPct(stk.mdeRel);
 
   document.getElementById('req-total').textContent = fmtBudget(req.totalSpend);
   // Hide /mo run-rate for sub-month tests: it exceeds total budget and confuses
@@ -1048,8 +1012,7 @@ function update() {
   } else {
     monthlyEl.style.display = 'none';
   }
-  const vrLabel = S.vrMode === 'stack' ? 'full stack' : 'no variance reduction';
-  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''} · ${vrLabel}`;
+  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''}`;
 
   document.getElementById('sc-spend').textContent     = fmtBudget(raw.totalSpend);
   document.getElementById('sc-spend-s').textContent   = `${W} wk · ${fmtBudget(B)}/mo`;
@@ -1063,13 +1026,10 @@ function update() {
   document.getElementById('sc-thresh').textContent = fmtPct(ref.mdeRel);
 
   if (chart) {
-    const { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo } = curvePts();
+    const { rawPts, rawCiHi, rawCiLo } = curvePts();
     chart.data.datasets[0].data = rawCiHi;
     chart.data.datasets[1].data = rawCiLo;
     chart.data.datasets[2].data = rawPts;
-    chart.data.datasets[3].data = stkCiHi;
-    chart.data.datasets[4].data = stkCiLo;
-    chart.data.datasets[5].data = stkPts;
     chart.update('none');
   }
 }
@@ -1096,13 +1056,6 @@ function setOutcome(o) {
   S.baselineRate = pct / 100;
   document.getElementById('btn-ivr').classList.toggle('on', o === 'ivr');
   document.getElementById('btn-cvr').classList.toggle('on', o === 'cvr');
-  update();
-}
-
-function setVR(mode) {
-  S.vrMode = mode;
-  document.getElementById('btn-raw').classList.toggle('on', mode === 'raw');
-  document.getElementById('btn-stack').classList.toggle('on', mode === 'stack');
   update();
 }
 

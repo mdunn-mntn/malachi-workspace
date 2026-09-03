@@ -261,6 +261,190 @@ setOutcome = function(o) {
         "lapsed banner rendering",
     )
 
+    html = sub(
+        html,
+        """      <!-- Variance reduction -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-head">VARIANCE REDUCTION</div>
+        <div class="toggle-row">
+          <button class="tog-btn on" id="btn-raw" onclick="setVR('raw')">NONE (RAW)</button>
+          <button class="tog-btn" id="btn-stack" onclick="setVR('stack')">FULL STACK</button>
+        </div>
+      </div>
+
+""",
+        "",
+        "remove the variance-reduction control",
+    )
+
+    html = sub(
+        html,
+        """        <div class="v-sep"></div>
+
+        <div class="hero-block">
+          <div class="hero-lbl">POST-STACK MDE</div>
+          <div class="hero-num-sm" id="h-stk">—</div>
+          <div class="tier-pill" id="tp-stk">—</div>
+          <div class="hero-ci" id="ci-stk">95% CI ±—</div>
+        </div>
+""",
+        "",
+        "remove the post-stack hero",
+    )
+
+    html = sub(
+        html,
+        """          <div class="legend-item"><div class="legend-line dashed"></div>POST-STACK</div>
+""",
+        "",
+        "remove the post-stack legend entry",
+    )
+
+    html = sub(
+        html,
+        """      <div class="stack-note">
+        Stack: CUPED(0.934) × ghost-ad(0.75) × stratified(0.85) = 0.595 · Source: AUDI-884 / Lewis-Rao (2015 QJE)
+      </div>""",
+        """      <div class="stack-note">
+        Source: AUDI-884 / Lewis-Rao (2015 QJE). Variance reduction is not applied: measured 1.00
+        against 421 ghost-bid tests on 2026-09-03, so the pipeline gives no reduction to claim.
+      </div>""",
+        "footer states why there is no stack",
+    )
+
+    html = sub(
+        html,
+        "const VR_STACK = 0.595; // CUPED(0.934) × ghost-ad(0.75) × stratified(0.85)\n",
+        "",
+        "drop VR_STACK",
+    )
+
+    html = sub(html, "  vrMode        : 'raw',\n", "", "drop vrMode state")
+
+    html = sub(
+        html,
+        """  const rawPts = [], stkPts = [], rawCiHi = [], rawCiLo = [], stkCiHi = [], stkCiLo = [];
+  for (let i = 0; i <= N; i++) {
+    const spend = Math.pow(10, L_MIN + (i / N) * (Math.log10(1e7) - L_MIN));
+    const r = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0,      S.cpm, S.impsPerIp);
+    const k = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, VR_STACK, S.cpm, S.impsPerIp);
+    const rawMde = Math.min(r.mdeRel * 100, 35);
+    const stkMde = Math.min(k.mdeRel * 100, 35);
+    rawPts.push({ x: spend, y: rawMde });
+    stkPts.push({ x: spend, y: stkMde });
+    rawCiHi.push({ x: spend, y: Math.min(rawMde * (1 + cf), 35) });
+    rawCiLo.push({ x: spend, y: Math.max(rawMde * (1 - cf), 0) });
+    stkCiHi.push({ x: spend, y: Math.min(stkMde * (1 + cf), 35) });
+    stkCiLo.push({ x: spend, y: Math.max(stkMde * (1 - cf), 0) });
+  }
+  return { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo };""",
+        """  const rawPts = [], rawCiHi = [], rawCiLo = [];
+  for (let i = 0; i <= N; i++) {
+    const spend = Math.pow(10, L_MIN + (i / N) * (Math.log10(1e7) - L_MIN));
+    const r = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0, S.cpm, S.impsPerIp);
+    const rawMde = Math.min(r.mdeRel * 100, 35);
+    rawPts.push({ x: spend, y: rawMde });
+    rawCiHi.push({ x: spend, y: Math.min(rawMde * (1 + cf), 35) });
+    rawCiLo.push({ x: spend, y: Math.max(rawMde * (1 - cf), 0) });
+  }
+  return { rawPts, rawCiHi, rawCiLo };""",
+        "curvePts drops the stack series",
+    )
+
+    html = sub(
+        html,
+        """        // index 3: stack CI upper — fills to index 4
+        { label: '_stkCiHi', data: stkCiHi, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'rgba(0,112,168,0.04)', pointRadius: 0, tension: 0.35, fill: '+1' },
+        // index 4: stack CI lower
+        { label: '_stkCiLo', data: stkCiLo, borderWidth: 0, borderColor: 'transparent', pointRadius: 0, tension: 0.35, fill: false },
+        // index 5: stack MDE main line
+        { label: 'Post-Stack MDE', data: stkPts, borderColor: 'rgba(0,112,168,0.35)', borderWidth: 2, borderDash: [6,4], pointRadius: 0, tension: 0.35, fill: false },
+""",
+        "",
+        "chart drops the stack datasets",
+    )
+
+    html = sub(
+        html,
+        """  const raw = computeMDE(B, W, H, p, a, pw, 1.0,      cpm, impsPerIp);
+  const stk = computeMDE(B, W, H, p, a, pw, VR_STACK,  cpm, impsPerIp);
+  const reqVR = S.vrMode === 'stack' ? VR_STACK : 1.0;
+  const req = spendRequired(T, H, p, a, pw, reqVR, cpm, impsPerIp, W);
+
+  setHero('h-raw', 'tp-raw', raw.mdeRel, tier(raw.mdeRel), 'hero-num');
+  setHero('h-stk', 'tp-stk', stk.mdeRel, tier(stk.mdeRel), 'hero-num-sm');""",
+        """  const raw = computeMDE(B, W, H, p, a, pw, 1.0, cpm, impsPerIp);
+  const req = spendRequired(T, H, p, a, pw, 1.0, cpm, impsPerIp, W);
+
+  setHero('h-raw', 'tp-raw', raw.mdeRel, tier(raw.mdeRel), 'hero-num');""",
+        "update drops the stack hero",
+    )
+
+    html = sub(html, "  document.getElementById('ci-stk').textContent = ciPct(stk.mdeRel);\n", "", "drop the stack CI line")
+
+    html = sub(
+        html,
+        """  const vrLabel = S.vrMode === 'stack' ? 'full stack' : 'no variance reduction';
+  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''} · ${vrLabel}`;""",
+        "  document.getElementById('req-detail').textContent = `for ${(T*100).toFixed(1)}% target · ${W} week${W!==1?'s':''}`;",
+        "budget tile drops the variance label",
+    )
+
+    html = sub(
+        html,
+        """    const { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo } = curvePts();""",
+        "    const { rawPts, rawCiHi, rawCiLo } = curvePts();",
+        "update drops the stack destructure",
+    )
+
+    html = sub(
+        html,
+        """    chart.data.datasets[3].data = stkCiHi;
+    chart.data.datasets[4].data = stkCiLo;
+    chart.data.datasets[5].data = stkPts;
+""",
+        "",
+        "chart update drops the stack series",
+    )
+
+    html = sub(
+        html,
+        """function setVR(mode) {
+  S.vrMode = mode;
+  document.getElementById('btn-raw').classList.toggle('on', mode === 'raw');
+  document.getElementById('btn-stack').classList.toggle('on', mode === 'stack');
+  update();
+}
+
+""",
+        "",
+        "drop setVR",
+    )
+
+    html = sub(
+        html,
+        """  const ctx = document.getElementById('chart').getContext('2d');
+  const { rawPts, stkPts, rawCiHi, rawCiLo, stkCiHi, stkCiLo } = curvePts();""",
+        """  const ctx = document.getElementById('chart').getContext('2d');
+  const { rawPts, rawCiHi, rawCiLo } = curvePts();""",
+        "initChart drops the stack destructure",
+    )
+
+    html = sub(
+        html,
+        """      // Dots + CI whiskers at current budget (raw & stack)
+      const rawR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0,      S.cpm, S.impsPerIp);
+      const stkR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, VR_STACK, S.cpm, S.impsPerIp);
+      const cf = ciFactor();
+      [[rawR.mdeRel * 100, 'rgba(0,112,168,0.55)', 'rgba(0,112,168,1)'],
+       [stkR.mdeRel * 100, 'rgba(0,112,168,0.22)', 'rgba(0,112,168,0.4)']].forEach(([mde100, whiskerCol, dotCol]) => {""",
+        """      // Dot + CI whisker at current budget
+      const rawR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0, S.cpm, S.impsPerIp);
+      const cf = ciFactor();
+      [[rawR.mdeRel * 100, 'rgba(0,112,168,0.55)', 'rgba(0,112,168,1)']].forEach(([mde100, whiskerCol, dotCol]) => {""",
+        "chart marker drops the stack dot",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:
