@@ -1,0 +1,41 @@
+stage 53: save at NativeMethodAccessorImpl.java:0  tasks 12000  parents []
+  call site: org.apache.spark.sql.DataFrameWriter.save(DataFrameWriter.scala:243)
+  rdd    180 MapPartitionsRDD             parts   12000 scope Exchange
+  rdd    178 MapPartitionsRDD             parts   12000 scope Scan parquet 
+  rdd    177 FileScanRDD                  parts   12000 scope Scan parquet 
+  rdd    179 MapPartitionsRDD             parts   12000 scope WholeStageCodegen (18)
+  tasks seen 12000: 12000 read input, 0 read shuffle; shuffle read per task min/median/p99/max = 0/0/0/0 MiB
+stage 57: save at NativeMethodAccessorImpl.java:0  tasks 88251  parents [54, 55, 56]
+  call site: org.apache.spark.sql.DataFrameWriter.save(DataFrameWriter.scala:243)
+  rdd    203 MapPartitionsRDD             parts   88251 scope Exchange
+  rdd    182 MapPartitionsRDD             parts   20000 scope WholeStageCodegen (19)
+  rdd    197 MapPartitionsRDD             parts   12000 scope WholeStageCodegen (26)
+  rdd    195 FileScanRDD                  parts   12000 scope Scan parquet 
+  rdd    191 MapPartitionsRDD             parts   20000 scope WholeStageCodegen (24)
+  rdd    185 ZippedPartitionsRDD2         parts   20000 scope WholeStageCodegen (21)
+  rdd    198 FileScanRDD                  parts    6251 scope Scan parquet 
+  rdd    200 MapPartitionsRDD             parts    6251 scope WholeStageCodegen (27)
+  rdd    186 MapPartitionsRDD             parts   20000 scope WholeStageCodegen (21)
+  rdd    194 MapPartitionsRDD             parts   30000 scope WholeStageCodegen (25)
+  rdd    188 MapPartitionsRDD             parts   20000 scope WholeStageCodegen (22)
+  rdd    184 MapPartitionsRDD             parts   20000 scope WholeStageCodegen (20)
+  tasks seen 88251: 48251 read input, 40000 read shuffle; shuffle read per task min/median/p99/max = 0/0/312/312 MiB
+stage 62: save at NativeMethodAccessorImpl.java:0  tasks 20000  parents [61]
+  call site: org.apache.spark.sql.DataFrameWriter.save(DataFrameWriter.scala:243)
+  rdd    207 MapPartitionsRDD             parts   20000 scope WriteFiles
+  rdd    205 MapPartitionsRDD             parts   20000 scope WholeStageCodegen (29)
+  rdd    204 ShuffledRowRDD               parts   20000 scope Exchange
+  rdd    206 CoalescedRDD                 parts   20000 scope Coalesce
+  tasks seen 20000: 0 read input, 20000 read shuffle; shuffle read per task min/median/p99/max = 438/438/438/439 MiB
+sql exec 0: 2 AQE shuffle-read lines
+    :     :                       +- AQEShuffleRead coalesced
+    +- AQEShuffleRead coalesced
+sql exec 1: 2 AQE shuffle-read lines
+    :     :                       +- AQEShuffleRead coalesced
+    :              +- AQEShuffleRead coalesced
+sql exec 2: 4 AQE shuffle-read lines
+    :              :        :                       +- AQEShuffleRead coalesced
+    :              :              +- AQEShuffleRead coalesced
+    +- AQEShuffleRead coalesced
+    :  +- AQEShuffleRead coalesced
+exit 0

@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1269: Raise shuffle.partitions on 10 pre-verified spill DAGs"
-status: backlog
+status: in_progress
 date: 2026-09-02
-summary: "Config-only: raise spark.sql.shuffle.partitions on 9 spilling DAGs, values pre-verified 08-27"
-result: "plan written 2026-09-02: 8 DAGs ready for one config-only PR, household monitor held for a decision"
+summary: "Config-only: raise spark.sql.shuffle.partitions on the spilling DAGs whose latest prod event log passes the gate"
+result: "executed 2026-09-02: 6 of 9 DAGs edited in the worktree and config regenerated, PR body linted; intent_score_map and prospecting_join pulled by the event-log gate, household monitor dropped by decision 1"
 question: "Does raising spark.sql.shuffle.partitions to the 08-27 sweep's computed value on the 9 named DAGs stop their shuffle-side spill without changing outputs or failing the run?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1269: Raise shuffle.partitions on 10 pre-verified spill DAGs
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1269
-**Status:** backlog
+**Status:** in_progress (PR pending with the dispatcher)
 **Date Started:** 2026-09-02
 **Assignee:** Malachi
 
@@ -52,6 +52,8 @@ Decorator changes need `dags/model_task_config.json` regenerated. intent_score_h
 
 ## 3. Plan of Action
 Planning wave 2026-09-02 (read-only; nothing edited in airflow-ti, nothing posted to Jira). Execute wave runs in the dispatcher's worktree `/private/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/67074af2-5859-4b02-9a41-1fb172083596/scratchpad/wt/audi_1269`, branch `audi-1269-shuffle-partitions-preverified`, based on main `825b07e` (2026-09-02 17:14, PR #1265). All paths below are relative to that worktree unless stated. The executor edits files only; the dispatcher commits, runs the gauntlet, opens the PR, stamps the ledger.
+
+**Executed 2026-09-02** (two execute passes; the first was cut by a session limit after downloading the 8 logs, running the gate and editing 6 files, the second verified all of it and finished). §3.1-3.4 ran as written; no step deviated. The §3.2 gate pulled `intent_score_map` (c: blocks 4.9 / 5.8 KiB at 40960) and `prospecting_join` (b: no spill, per task under 512 MiB; c: blocks 0.6-2.4 KiB), decision 1 dropped `household_score_distribution_monitor`, so §3.3 items 1, 8 and 9 were not applied. Results in §4.1, edits in §5.
 
 ### 3.0 What the plan rests on (verified this wave, airflow-ti main 825b07e)
 
@@ -151,28 +153,89 @@ Planning wave 2026-09-02, all read-only. Files: `outputs/app-20260901064219458-0
 - **No PHS grant needed**: every DAG in this ticket runs through `ModelPysparkBatchOperator`, whose batch spec sets `spark.eventLog.dir = gs://mntn-data-archive-prod/spark-events` (`include/models/operators.py` L318). The PHS temp bucket and `gcloud dataproc batches list` both answered under the current grant anyway.
 - **Ledger provenance path**: `airflow_optimizer.ledger.mark_applied` refuses a key with no history (`ValueError: no ledger history for <dag>/<key>`), so only keys in the §3.0 table can be stamped.
 
+### 4.1 Execution wave 2026-09-02: the §3.2 gate on all 8 logs
+Gate output: `outputs/audi_1269_stage_check_seven_dags.txt` and `outputs/audi_1269_stage_check_prospecting_join.txt` (`artifacts/audi_1269_stage_check.py`); the stage anatomy probe for prospecting_join: `outputs/audi_1269_stage_probe_prospecting_join.txt` (`artifacts/audi_1269_stage_probe.py`). The stage check was rewritten during execution to read the reducer's live partition count from the stage's `ShuffledRowRDD` "Number of Partitions" instead of its task count, because prospecting_join stage 57 runs 88,251 tasks on a 20,000-partition shuffle (a union with two parquet scans, 48,251 scan tasks + 2 x 20,000 shuffle-reading tasks) and the third-party builder's stage 9 has a partial retry after 8 fetch failures; metrics are summed over all attempts of a stage. The second pass re-ran the check on ipdsc_ds_2 (identical output) and re-derived gate (e) by hand.
+
+| DAG | reducer stage(s) today | shuffle read GiB | disk spill GiB (memory spill) | fetch wait | target (x) | per task at target, compressed / in memory | smallest block at target (map tasks) | driver map-status bitmap (e) | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| intent_score_map | 6: 4915 LIVE | 9,468 | 3,988 (38,992) | 0% | 40960 (8.3x) | 237 MiB / ~1,211 MiB | 4.9 KiB (14,000) and 5.8 KiB (30,000) | 215 MiB of 19456m | FAIL (c) |
+| ipdsc_ds_2 | 3: 2048 LIVE | 640 | 218 (2,297) | 54% | 8192 (4.0x) | 80 / ~367 | 13.8 KiB (5,944) | 5.8 MiB of 9600m | PASS |
+| advertiser_score_distribution_monitor | 3: 128 LIVE | 193 | 0 (0) | 0% | 916 (7.2x) | 216 / 216 | 15.8 KiB (14,000) | 1.5 MiB of 16g | PASS on size (1.5 GiB per task today) |
+| conversion_log_advertiser_id_dsc_id | 13, 24: 1000 LIVE | 888 each | 321 / 301 (911 / 856) | 80% / 86% | 3508 (3.5x) | 259 / ~525 | 47.6 KiB (5,576) | 4.7 MiB of 9600m | PASS |
+| site_visit_signal_advertiser_id_dsc_id | 7, 12: 1000 LIVE | 995 each | 795 / 814 (2,966 / 3,036) | 68% / 48% | 3392 (3.4x) | 300 / ~1,200 | 25.6 KiB (1,640) | 5.8 MiB of 9600m | PASS |
+| guid_log_advertiser_id_dsc_id | 13, 24: 1000 LIVE | 870 each | 351 / 316 (1,008 / 908) | 83% / 81% | 3400 (3.4x) | 262 / ~566 | 47.6 KiB (5,576) | 4.5 MiB of 9600m | PASS |
+| ipdsc_third_party_audience_builder | 9: 512 LIVE (+1 retry, 8 fetch failures) | 398 | 333 (544) | 94% | 2240 (4.4x) | 182 / ~431 | 29.6 KiB (5,664) | 1.6 MiB of 9600m | PASS; stage 9 is a reducer, so `disk_spill:9` is this fix's key |
+| prospecting_join | 57: 20000 LIVE (88,251 tasks, union with scans); 62: 20000 LIVE | 11,213 / 8,558 | 0 / 0 (0 / 0) | 0% / 2% | 42988 (2.1x) | today 287 (p99 312) and 438; at target 267 / 204 | 0.6 KiB (10,385), 1.9 KiB (12,000), 2.4 KiB (88,251) | 693 MiB of 28G | FAIL (b) and (c) |
+
+Gate (d) holds on all 8: `spark.sql.adaptive.advisoryPartitionSizeInBytes` and `spark.sql.adaptive.coalescePartitions.initialPartitionNum` are unset in every log and every per-task figure at target is above 64 MiB. Gate (e) is the sum of feeder map tasks x target / 8 bytes; nothing approaches 1 GiB. Executors: 9600m x 4 cores on the six feature-store / ipdsc DAGs, 8g x 4 on the advertiser monitor, 19G x 8 on intent_score_map, 48G x 8 on prospecting_join.
+
+- **intent_score_map fails on block size.** Reducer stage 6 carries the largest spill in the ticket (3,988 GiB disk, 38,992 GiB memory on 9,468 GiB read) and the knob is live, but 40960 partitions against the 14,000-task and 30,000-task map stages gives 4.9 and 5.8 KiB blocks, under the 8 KiB floor of §3.2 (c); today's blocks are 41 and 49 KiB. Map stages 2 and 3 also spill 1,320 and 4,262 GiB to disk (the ledger's `disk_spill:2` / `:3`, map-side, the AUDI-1273 mechanism). Pulled from the PR; the value is not re-derived here (AUDI-1270). For that re-derivation: a 4x raise (19660) projects ~10-12 KiB blocks and ~490 MiB compressed per task, a candidate not a decision.
+- **prospecting_join no longer spills, and the ledger's self-resolution was legitimate.** The 09-01 run (`app-20260901055729824-0243`, 100 MB log) shows stage 57 reading 11,213 GiB (10.95 TiB) through 20,000 live shuffle partitions with 0 spill and 0% fetch wait (per-task compressed read p99 312 MiB) and stage 62 reading 8,558 GiB over 20,000 tasks at 438 MiB per task, 0 spill, 2% fetch wait, on 48G x 8-core executors. Neither reducer meets gate (b) and the feeders already write 0.6-2.4 KiB blocks at 20000 (stages 31, 41, 53, 57), so 42988 fails (c) too. The planning-wave hypothesis (stage id moved) is wrong: `airflow_optimizer/optimizations.py` L280-282 fires `shuffle_partition_sizing` only when a stage writes >= 50 GiB at >= 512 MiB per configured partition, and stage 57 wrote 8,558 GiB / 20000 = 438 MiB in the 09-01 run against ~556 MiB (10.6 TiB / 20000) in the 08-27 corpus. The 42988 was sized from a shuffle that has since shrunk by ~2.2 TiB. The 352.5 exec-h cost of the 09-01 run is not a partition-count problem (AUDI-1275 straggler key). Pulled from the PR. AQE coalesced 8 small shuffle reads across the run's 3 SQL executions; none is a gated reducer.
+- **Six pass, and the edits were re-verified line by line** against §3.3 (value, surface, insertion point). `dags/model_task_config.json` has md5 `84ea730d5565a31a3be54e6c2328ed8a` before and after a fresh `MNTN_SDLC_ENV=dev uv run python model_upload.py --dryrun` ("Compiling all models" / "Skipping all models upload to 'dev' env"), so the 3-hunk config diff (916, 8192, 2240) is generator output; `dags/ipdsc_third_party_audience_builders.json` came back unchanged (md5 `1715ad8c8f86e5c11aee426654caa2fa`). In the regenerated config the feature-store trio has no `spark.sql.shuffle.partitions` key (builder-only) and intent_score_map 4915, prospecting_join 20000, household 512 are untouched.
+- **ruff is pre-existing noise, not a regression.** `uv run ruff check` on the 6 edited files: 18 findings, the same 18 on the `HEAD` versions (2 / 2 / 2 / 1 / 2 / 9 per file: I001 import order, DTZ007 naive datetimes, UP0xx typing), none on an edited line; `ruff format --check` fails on all 6 on main already. The repo has no ruff config and `.github/workflows/pr_model.yaml` runs only `model_upload.py --dryrun`, an artifact-diff check ("Generated model artifacts need to be regenerated"), and `pytest tests/models`. No reformatting done; it would bury a 10-line diff.
+- **Risks kept, not gate failures.** site_visit_signal's reducers project ~1.2 GiB in memory per task at 3392 (4x expansion on 9600m executors: (9600 - 300) x 0.6 / 4 cores = ~1.36 GiB of unified memory per task at Spark defaults), so some spill can remain; the third-party builder already lost 8 tasks to fetch failures at 512 partitions and 2240 multiplies fetch requests 4.4x (an AUDI-1272 mechanism, not a revert trigger); the feature-store trio's 80-88% fetch wait gets 3.4-3.5x more requests at 25-48 KiB blocks.
+
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+Executed 2026-09-02 in the dispatcher's worktree (branch `audi-1269-shuffle-partitions-preverified`, base `825b07e`). Nothing committed, pushed, or posted by the execute agent; the dispatcher commits, runs the gauntlet, opens the PR and stamps the ledger.
+- **Edited, 7 files (10 insertions, 7 deletions):** `models/ipdsc/ipdsc_ds_2.py` L12 2048 -> 8192; `models/ipdsc/third_party_audience_builders/ipdsc_third_party_audience_builder.py` L29 512 -> 2240; `models/monitoring/advertiser_score_distribution_monitor.py` L81 and L110 128 -> 916; `models/feature_store/feature_group_1_source/conversion_log_advertiser_id_dsc_id.py` new L46, `site_visit_signal_advertiser_id_dsc_id.py` new L74, `guid_log_advertiser_id_dsc_id.py` new L47, each `.config("spark.sql.shuffle.partitions", "<3508 | 3392 | 3400>")` after the `spark.sql.parquet.block.size` line and before `.getOrCreate()`; `dags/model_task_config.json` regenerated (3 hunks). No comments added anywhere.
+- **Not edited:** `intent_score_map.py` (gate c), `prospecting_join.py` (gate b and c), `household_score_distribution_monitor.py` (decision 1). All three still carry their main values (4915, 20000, 512).
+- **Hand-off artifacts:** PR body `artifacts/audi_1269_pr_body.md` (`lint_comms.py --kind pr` clean); Jira result comment `artifacts/audi_1269_result_comment.txt` (`--kind completion` clean). Commit subject for the dispatcher: `AUDI-1269: raise shuffle.partitions on 6 spill DAGs`. Release Type: Backend.
+- **Ledger keys to stamp `applied` on merge (six DAGs, from §3.0):** ipdsc_ds_2 `disk_spill:3`; advertiser_score_distribution_monitor `shuffle_partition_sizing:1`; conversion_log_advertiser_id_dsc_id `disk_spill:13`, `disk_spill:24`, `shuffle_partition_sizing:5`, `shuffle_partition_sizing:16`; site_visit_signal_advertiser_id_dsc_id `disk_spill:7`, `disk_spill:12`, `shuffle_partition_sizing:4`, `shuffle_partition_sizing:9`; guid_log_advertiser_id_dsc_id `disk_spill:13`, `disk_spill:24`, `shuffle_partition_sizing:5`, `shuffle_partition_sizing:16`; ipdsc_third_party_audience_builder `shuffle_partition_sizing:5`, `disk_spill:9`. Nothing for intent_score_map, prospecting_join, or the household monitor.
+- **Event logs:** all 8 in `outputs/` (7 `.zstd` files plus the `eventlog_v2_batch-42e88a22...` rolling directory for intent_score_map). `*.zstd` is gitignored (`.gitignore` L110), so the logs never commit; only the three `.txt` gate outputs and the empty `appstatus_*` marker do. Largest is 100 MB (prospecting_join), under the 200 MB delete rule, kept. Re-download from `gs://mntn-data-archive-prod/spark-events/<object>` using the §3.0 table.
 
 ## 6. Questions Answered
-Specific questions that were resolved during this ticket:
-- **Q:** {question}
-  **A:** {answer}
+- **Q:** Does raising the count on the 9 named DAGs stop their shuffle-side spill without changing outputs or failing the run?
+  **A:** Open until the post-merge sweeps (§3.5). What the gate settled: on 6 of 9 the knob is live (reducer runs the configured count, no AQE coalescing) and the target keeps blocks at 13.8-47.6 KiB and per-task reads at 80-300 MiB compressed, so the change can only reduce reducer spill. The other 3 cannot be answered by this change: intent_score_map's 40960 breaks the block-size floor, prospecting_join no longer spills, the household monitor has no history to measure against.
+- **Q:** Is the sweep's 42988 for prospecting_join still valid?
+  **A:** No. It was sized from a ~10.6 TiB shuffle; the 09-01 run writes 8,558 GiB on that stage (438 MiB per partition, under the sweep's 512 MiB trigger) and neither reducer spills.
+- **Q:** Is third-party builder stage 9 a reducer, so that `disk_spill:9` belongs to this fix?
+  **A:** Yes: ShuffledRowRDD with 512 partitions reading 398 GiB, 333 GiB disk spill, 94% fetch wait, one partial retry after 8 fetch failures.
+- **Q:** Do the other five reducers (beyond the three opened in planning) run at the configured count today?
+  **A:** Yes, all five (site_visit_signal 7/12, guid_log 13/24, third-party builder 9, intent_score_map 6, prospecting_join 57/62) are LIVE; the only coalescing seen is on small downstream shuffles (ipdsc_ds_2 stage 6 to 48 partitions, 8 AQE reads in prospecting_join).
+- **Q:** Does `model_upload.py --dryrun` compile in the worktree?
+  **A:** Yes, `MNTN_SDLC_ENV=dev uv run python model_upload.py --dryrun` with the existing `.venv`; the config file md5 is identical before and after, so the diff is generator output.
 
 ## 7. Data Documentation Updates
-What new knowledge was added to `data_catalog.md` or `data_knowledge.md` as a result of this ticket.
+None written by the execute agent (`knowledge/` is off-limits under the sprint worktree protocol). Facts handed to the dispatcher for routing via the `knowledge[]` return:
+- Spark event log: a reducer's live partition count is the `ShuffledRowRDD` "Number of Partitions" in `SparkListenerStageSubmitted` RDD Info, not the stage's task count (a union with a scan inflates it, a fetch-failure retry shrinks it). prospecting_join stage 57: 88,251 tasks on a 20,000-partition shuffle.
+- Dataproc Serverless runtime default `spark.sql.shuffle.partitions` = 1000 when a model sets nothing (the feature-store trio's event logs).
+- The sweep's `shuffle_partition_sizing` fires only at >= 50 GiB written and >= 512 MiB per configured partition (`airflow_optimizer/optimizations.py` L280-282); a shuffle that shrinks below that resolves the key with no fix merged (prospecting_join 2026-09-02).
+- The 08-27 sweep's `want = write / 256 MiB` ignores shuffle block size; at 8x (intent_score_map 40960) blocks fall to ~5 KiB.
+- Workspace `.gitignore` L110 ignores `*.zstd`, so event logs in `outputs/` never commit.
+- airflow-ti CI on model PRs (`pr_model.yaml`) runs only the dryrun, an artifact-diff check, and `pytest tests/models`; no ruff, and the 6 edited files already fail `ruff format --check` on main.
+- `household_score_distribution_monitor` owner question (Ryan): value cut 1024 -> 256 -> 512 after driver MapOutputTracker OOM; driver at the standard-tier ceiling.
 
 ## 8. Open Items / Follow-ups
-**Decisions for the user (planning wave 2026-09-02):**
-1. `household_score_distribution_monitor`: drop from AUDI-1269 (recommended) or apply 8896. The owner reverted 1024 -> 256 -> 512 after driver out-of-memory failures (§4), the driver sits at the standard-tier ceiling, and the DAG has no ledger history so the outcome cannot be measured. If dropped, log it as an owner question (Ryan) under AUDI-1270 or the AUDI-1275 owner ask; if applied, the PR needs the §3.2 (e) driver check written into its body and the owner tagged as reviewer.
-2. Dev validation: none (recommended; precedent #1231 was config-only with dryrun + CI + gauntlet, and the first prod execution is the next scheduled run per the prod-safety rule) or one `model_run.py` dev run of ipdsc_ds_2 (~27 exec-h per run at prod scale, ~$8 at $0.278/exec-h; prospecting_join would be ~350 exec-h, ~$100).
+**Decisions (answered by the user 2026-09-02, before execution):**
+1. `household_score_distribution_monitor`: DROPPED from this PR. Owner question below.
+2. Dev validation: none (precedent #1231: dryrun + CI + gauntlet).
 
-**Assumptions the execute wave resolves first (§3.2):** the other five reducers run at the configured count today (verified for 3 of 8); prospecting_join's 10.6 TiB shuffle still exists in the 09-01 log; third-party builder stage 9 is a reducer; the dryrun compiles in the worktree with the `models` group.
+**Owner question for Ryan (route under AUDI-1270 or the AUDI-1275 owner ask):** `household_score_distribution_monitor` was cut 1024 -> 256 (commit `e55c5ff`, TI-863, "very high shuffle.partition counts OOM the driver") and then set to 512 (`cb0d9f3`) with the driver moved to 22g + 6g on the standard tier, its ceiling. The 08-27 sweep asks for 8896 from a single run. Is a higher count acceptable on a premium-tier driver, or is the reducer spill accepted as the cost of a stable driver? Nothing can be stamped or measured until the DAG has ledger history (zero rows since 2026-08-21).
+
+**Pulled by the §3.2 gate (AUDI-1270 re-derives; this ticket does not re-size):**
+- `intent_score_map`: 40960 gives 4.9 / 5.8 KiB shuffle blocks (floor 8 KiB). The spill is real (3,988 GiB disk on the reducer, plus 1,320 / 4,262 GiB map-side on stages 2 / 3) and the knob is live, so a smaller raise (4x = 19660, ~10-12 KiB blocks, ~490 MiB per task) plus the map-side lever (AUDI-1273) is the shape of the fix.
+- `prospecting_join`: no reducer spill on 09-01, 287-438 MiB per task, feeders already at 0.6-2.4 KiB blocks; the ledger key resolved legitimately (shuffle shrank below the 512 MiB per-partition trigger). Nothing to apply.
+
+**Assumptions listed in planning, now resolved (§4.1, §6):** all eight reducers run at the configured count; prospecting_join's big shuffle exists (stage 57, 10.95 TiB read) but no longer spills; third-party builder stage 9 is a reducer; the dryrun compiles in the worktree.
+
+**Post-merge checks for the dispatcher (§3.5):** builder values (feature-store trio) apply on the next run after the `.py` syncs; decorator values (ipdsc_ds_2, third-party builder, advertiser monitor) need the Astro bundle redeploy; confirm via the `Compute batch:` log line and the next sweep's reducer task count (8192 / 2240 / 916 / 3508 / 3392 / 3400). `outputs/` holds 164-168 MB of gitignored event logs; leave them.
 
 **Cross-ticket:** AUDI-1270 lists `guid_log_advertiser_id_dsc_id` stage 13 (disk spill): same file, same knob, this ticket sets it, 1270 must not re-edit. AUDI-1275 lists `prospecting_join` straggler (separate key). AUDI-1272 lists `site_visit_signal_derived_advertiser_id_dsc_id` (a different, derived DAG).
 
-**Risks carried into execution:** the feature-store trio's reducers already wait 80-88% on fetch with evenly spread map output, so 3.5x more partitions means 3.5x more fetch requests (blocks stay ~48 KiB; watch `shuffle_fetch_wait:13/24`, an AUDI-1272 mechanism, not a revert trigger); spill may not clear even at 256 MiB compressed per task because in-memory expansion is 3-18x on 9600m / 4-core executors (#1231 outcome); decorator values only land after the Astro bundle redeploys, so `ipdsc_ds_2` and the third-party builder run the old value until then; flagged apps' event logs have vanished from `spark-events` within hours, so download all 8 first.
+**Risks carried into merge:** the feature-store trio's reducers already wait 48-88% on fetch with evenly spread map output, so 3.4-3.5x more partitions means that many more fetch requests (blocks stay 25-48 KiB; watch `shuffle_fetch_wait:13/24`, an AUDI-1272 mechanism, not a revert trigger); site_visit_signal projects ~1.2 GiB in memory per task against ~1.36 GiB of unified memory per core, so some spill can remain (#1231 outcome: sizing keys resolve, spill keys may not); the third-party builder already had 8 fetch failures at 512; decorator values only land after the Astro bundle redeploys, so `ipdsc_ds_2`, the third-party builder and the advertiser monitor run the old value until then; a spill key still firing after the grace window is `fix_not_working` and moves to the executor-memory lever (AUDI-1270), not a higher count.
+
+## Verification
+
+Adversarial pass 2026-09-02 against §0 Objective and §3 Plan, worktree `/private/tmp/claude-501/-Users-malachi-Developer-work-mntn-workspace/67074af2-5859-4b02-9a41-1fb172083596/scratchpad/wt/audi_1269`, read-only (`git diff`, no git writes).
+
+**Diff, line for line — all confirmed against §3.3 and §5.** `git diff --stat`: exactly 7 files, 10 insertions / 7 deletions, matching §5 verbatim. Every changed line in the 6 model files matches §3.3's file/line/value/surface spec exactly (`ipdsc_ds_2.py` L12 2048->8192; `ipdsc_third_party_audience_builder.py` L29 512->2240; `advertiser_score_distribution_monitor.py` L81+L110 128->916; the three feature-store inserts land at the claimed post-`parquet.block.size`, pre-`getOrCreate()` position with the claimed values 3508/3392/3400). No comment lines added. `intent_score_map.py` (4915), `prospecting_join.py` (20000), `household_score_distribution_monitor.py` (512) confirmed untouched at the claimed line numbers. No untracked or extraneous files in the worktree; no writes outside `models/`+`dags/` in the worktree or outside the ticket folder in this repo.
+
+**`model_task_config.json` regeneration reproduced independently, not just diffed.** Ran `MNTN_SDLC_ENV=dev uv run python model_upload.py --dryrun` fresh in the worktree (existing `.venv`, no `uv sync` needed): output byte-identical to the working-tree file both before and after (md5 `84ea730d5565a31a3be54e6c2328ed8a`, matching §4.1's claim), all 3 hunks land on the correct DAG keys (`advertiser_score_distribution_monitor`->916, `ipdsc_ds_2`->8192, `ipdsc_third_party_audience_builder`->2240, confirmed by walking the JSON structure, not just grep), the feature-store trio has no `spark.sql.shuffle.partitions` key post-regen, and `dags/ipdsc_third_party_audience_builders.json` came back byte-identical. The regenerated config is not stale or hand-edited.
+
+**Gate table (§4.1) re-derived from the actual event logs for all 8 DAGs**, not sampled — ran `artifacts/audi_1269_stage_check.py` against every log in `outputs/` (including the `intent_score_map` rolling directory) with the exact target values from §3.3. Every field in every row of the §4.1 table (reducer stage id, live/coalesced status, shuffle read GiB, disk/memory spill GiB, fetch wait %, per-task MiB at target, block KiB at target) reproduced to the reported precision, including the two FAIL rows: `intent_score_map` genuinely blocks at 4.9/5.8 KiB (under the 8 KiB floor) with 3,988 GiB reducer spill plus 1,320/4,262 GiB map-side spill on stages 2/3; `prospecting_join` genuinely spills 0 on both reducers (11,213/8,558 GiB read) with blocks at 0.6-2.4 KiB. The gate correctly pulled both. `household_score_distribution_monitor`'s owner-question narrative checked against `git log`: commit `e55c5ff` (1024->256, driver 40g->48g, the quoted "very high shuffle.partition counts (e.g. 1024) OOM the driver" comment) and `cb0d9f3` (256->512, driver 22g/6g) both verified verbatim in the airflow-ti history.
+
+**Ruff and lint claims reproduced exactly.** `uv run ruff check` on the 6 edited files: 18 findings total, per-file split 2/2/2/1/2/9 (conversion_log/guid_log/site_visit_signal/ipdsc_ds_2/third_party_builder/advertiser_monitor) — identical count and split on the `HEAD` versions of the same files, confirming pre-existing noise, not a regression. `lint_comms.py --kind pr` on `audi_1269_pr_body.md` and `--kind completion` on `audi_1269_result_comment.txt` both pass clean, as claimed. The ledger key list in §5 (16 keys across 6 DAGs) matches §3.0's per-DAG table with no additions or omissions.
+
+**One defect: the "290 MB" `outputs/` figure is wrong.** §8 ("Post-merge checks...") and the executor's own open_items both state `outputs/` holds 290 MB of gitignored event logs. Measured directly (`find outputs -type f`, summed): 164-168 MB (7 top-level `.zstd` + 3-part rolling dir + 3 `.txt` + 1 empty marker, largest still 100 MB as claimed). Off by ~77%. Does not affect the diff, the gate verdicts, the ledger keys, or either hand-off artifact (`audi_1269_pr_body.md` / `audi_1269_result_comment.txt` never state a total); it is a stale or miscomputed housekeeping number, not a technical defect. `state` downgraded to `partial` on this ticket's own rule (every claim must survive); the fix is a one-line correction in §8 to the measured figure (~165 MB) before merge.
+
+**Verdict:** the diff matches §5 exactly, the gate table matches the event logs exactly, the config regeneration is genuinely reproducible, and no step in §3.1-3.4 was skipped or misrecorded. The only miss is a cosmetic byte-count in a post-merge checklist line.

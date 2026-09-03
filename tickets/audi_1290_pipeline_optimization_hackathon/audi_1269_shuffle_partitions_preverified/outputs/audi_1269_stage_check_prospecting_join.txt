@@ -1,0 +1,26 @@
+Populate prospecting_join.ProspectingJoin  (app-20260901055729824-0243.zstd)
+  spark.sql.shuffle.partitions = 20000
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = None
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 28G
+  spark.executor.memory = 48G
+  spark.executor.cores = 8
+  target = 42988 (2.1x)
+  stage  23 tasks   6251 in    755.7 GiB  shuffle write   4863.2 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~19.0 KiB at target (6251 map tasks x 42988)
+  stage  31 tasks  12000 in   1008.7 GiB  shuffle write    912.3 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~1.9 KiB at target (12000 map tasks x 42988)
+  stage  39 tasks   6251 in    755.7 GiB  shuffle write   4893.1 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~19.1 KiB at target (6251 map tasks x 42988)
+  stage  41 tasks  10385 in   1278.5 GiB  shuffle write    236.9 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~0.6 KiB at target (10385 map tasks x 42988)
+  stage  53 tasks  12000 in   1405.4 GiB  shuffle write   1189.7 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~2.4 KiB at target (12000 map tasks x 42988)
+  stage  57 tasks  88251 in   5731.6 GiB  shuffle write   8557.6 read  11212.8  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~2.4 KiB at target (88251 map tasks x 42988)
+        reducer LIVE, 88251 tasks (union with a scan); at target: 267 MiB compressed/task, ~267 MiB in memory
+  stage  62 tasks  20000 in      0.0 GiB  shuffle write      0.0 read   8557.6  spill disk     0.0 mem        0  fetch wait 2%
+        reducer LIVE; at target: 204 MiB compressed/task, ~204 MiB in memory
+exit 0

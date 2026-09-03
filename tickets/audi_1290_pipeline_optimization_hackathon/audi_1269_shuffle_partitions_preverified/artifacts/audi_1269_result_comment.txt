@@ -1,0 +1,10 @@
+PR ready: shuffle partition counts raised on 6 of the 9 jobs, config only; 3 left out.
+
+*Findings*
+* Latest prod runs confirm the 6: reduce stages spill 218 to 814 GiB to disk at the configured count; the new counts put each task at 80 to 300 MiB compressed.
+* intent_score_map left out: 40960 cuts shuffle blocks to 5 KiB (floor 8 KiB). prospecting_join left out: its 09-01 run spills nothing.
+* household_score_distribution_monitor left out: the owner cut it to 512 after driver out-of-memory and it has no run history to measure.
+
+*Next*
+* Review and open the PR; mark the 6 findings applied on merge.
+* intent_score_map (new value) and the household monitor (owner answer) go to AUDI-1270.

@@ -1,0 +1,128 @@
+=================== outputs/eventlog_v2_batch-42e88a22-6f13-4282-9910-34d2e097ea4e -> 40960
+Populate intent_score_map.IntentScoreMap  (eventlog_v2_batch-42e88a22-6f13-4282-9910-34d2e097ea4e)
+  spark.sql.shuffle.partitions = 4915
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = true
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 19456m
+  spark.executor.memory = 19G
+  spark.executor.cores = 8
+  target = 40960 (8.3x)
+  stage   2 tasks  14000 in   1412.2 GiB  shuffle write   2677.0 read      0.0  spill disk  1319.9 mem    11758  fetch wait 0%
+        map stage: blocks ~4.9 KiB at target (14000 map tasks x 40960)
+  stage   3 tasks  30000 in   3080.3 GiB  shuffle write   6791.2 read      0.0  spill disk  4262.0 mem    27244  fetch wait 0%
+        map stage: blocks ~5.8 KiB at target (30000 map tasks x 40960)
+  stage   6 tasks   4915 in      0.0 GiB  shuffle write      0.0 read   9468.1  spill disk  3988.2 mem    38992  fetch wait 0%
+        reducer LIVE; at target: 237 MiB compressed/task, ~1211 MiB in memory
+=================== outputs/app-20260902023719347-0832.zstd -> 8192
+Populate ipdsc_ds_2.DS2  (app-20260902023719347-0832.zstd)
+  spark.sql.shuffle.partitions = 2048
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = None
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 9600m
+  spark.executor.memory = 9600m
+  spark.executor.cores = 4
+  target = 8192 (4.0x)
+  stage   1 tasks   5944 in    453.5 GiB  shuffle write    640.4 read      0.0  spill disk    49.3 mem     1953  fetch wait 0%
+        map stage: blocks ~13.8 KiB at target (5944 map tasks x 8192)
+  stage   3 tasks   2048 in      0.0 GiB  shuffle write     32.8 read    640.4  spill disk   218.4 mem     2297  fetch wait 54%
+        map stage: blocks ~2.0 KiB at target (2048 map tasks x 8192)
+        reducer LIVE; at target: 80 MiB compressed/task, ~367 MiB in memory
+  stage   6 tasks     48 in      0.0 GiB  shuffle write      0.0 read     32.8  spill disk     0.0 mem        0  fetch wait 0%
+        reducer COALESCED to 48 (config 2048); at target: 4 MiB compressed/task, ~4 MiB in memory
+=================== outputs/app-20260901064219458-0291.zstd -> 916
+Populate advertiser_score_distribution_monitor.AdvertiserScoreDistributionMonitor  (app-20260901064219458-0291.zstd)
+  spark.sql.shuffle.partitions = 128
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = true
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 16g
+  spark.executor.memory = 8g
+  spark.executor.cores = 4
+  target = 916 (7.2x)
+  stage   1 tasks  14000 in    188.5 GiB  shuffle write    193.0 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~15.8 KiB at target (14000 map tasks x 916)
+  stage   3 tasks    128 in      0.0 GiB  shuffle write      0.0 read    193.0  spill disk     0.0 mem        0  fetch wait 0%
+        reducer LIVE; at target: 216 MiB compressed/task, ~216 MiB in memory
+=================== outputs/app-20260902010835809-0344.zstd -> 3508
+Populate conversion_log_advertiser_id_dsc_id.ConversionLogAdvertiserIdDscId  (app-20260902010835809-0344.zstd)
+  spark.sql.shuffle.partitions = 1000
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = None
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 9600m
+  spark.executor.memory = 9600m
+  spark.executor.cores = 4
+  target = 3508 (3.5x)
+  stage   5 tasks   5576 in    777.9 GiB  shuffle write    887.9 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~47.6 KiB at target (5576 map tasks x 3508)
+  stage  13 tasks   1000 in      0.0 GiB  shuffle write      0.0 read    888.0  spill disk   320.9 mem      911  fetch wait 80%
+        reducer LIVE; at target: 259 MiB compressed/task, ~525 MiB in memory
+  stage  16 tasks   5576 in    777.9 GiB  shuffle write    887.9 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~47.6 KiB at target (5576 map tasks x 3508)
+  stage  24 tasks   1000 in      0.0 GiB  shuffle write      0.0 read    888.0  spill disk   300.6 mem      856  fetch wait 86%
+        reducer LIVE; at target: 259 MiB compressed/task, ~509 MiB in memory
+=================== outputs/app-20260902011816262-0253.zstd -> 3392
+Populate site_visit_signal_advertiser_id_dsc_id.SiteVisitSignalAdvertiserIdDscId  (app-20260902011816262-0253.zstd)
+  spark.sql.shuffle.partitions = 1000
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = None
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 9600m
+  spark.executor.memory = 9600m
+  spark.executor.cores = 4
+  target = 3392 (3.4x)
+  stage   3 tasks   1640 in    101.4 GiB  shuffle write    136.0 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~25.6 KiB at target (1640 map tasks x 3392)
+  stage   4 tasks   5576 in    777.9 GiB  shuffle write    858.9 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~47.6 KiB at target (5576 map tasks x 3392)
+  stage   7 tasks   1000 in      0.0 GiB  shuffle write      2.3 read    994.9  spill disk   794.8 mem     2966  fetch wait 68%
+        reducer LIVE; at target: 300 MiB compressed/task, ~1196 MiB in memory
+  stage   8 tasks   1640 in    101.4 GiB  shuffle write    136.0 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~25.6 KiB at target (1640 map tasks x 3392)
+  stage   9 tasks   5576 in    777.9 GiB  shuffle write    858.9 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~47.6 KiB at target (5576 map tasks x 3392)
+  stage  12 tasks   1000 in      0.0 GiB  shuffle write      2.3 read    994.9  spill disk   813.8 mem     3036  fetch wait 48%
+        reducer LIVE; at target: 300 MiB compressed/task, ~1217 MiB in memory
+=================== outputs/app-20260902010550610-0067.zstd -> 3400
+Populate guid_log_advertiser_id_dsc_id.GuidLogAdvertiserIdDscId  (app-20260902010550610-0067.zstd)
+  spark.sql.shuffle.partitions = 1000
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = None
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 9600m
+  spark.executor.memory = 9600m
+  spark.executor.cores = 4
+  target = 3400 (3.4x)
+  stage   5 tasks   5576 in    777.9 GiB  shuffle write    860.8 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~47.6 KiB at target (5576 map tasks x 3400)
+  stage  13 tasks   1000 in      0.0 GiB  shuffle write      0.5 read    870.3  spill disk   351.4 mem     1008  fetch wait 83%
+        reducer LIVE; at target: 262 MiB compressed/task, ~566 MiB in memory
+  stage  16 tasks   5576 in    777.9 GiB  shuffle write    860.8 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~47.6 KiB at target (5576 map tasks x 3400)
+  stage  24 tasks   1000 in      0.0 GiB  shuffle write      0.5 read    870.3  spill disk   316.2 mem      908  fetch wait 81%
+        reducer LIVE; at target: 262 MiB compressed/task, ~535 MiB in memory
+=================== outputs/app-20260902033021528-0731.zstd -> 2240
+Populate ipdsc_third_party_audience_builder.IpdscThirdPartyAudienceBuilder  (app-20260902033021528-0731.zstd)
+  spark.sql.shuffle.partitions = 512
+  spark.sql.adaptive.enabled = true
+  spark.sql.adaptive.coalescePartitions.enabled = None
+  spark.sql.adaptive.advisoryPartitionSizeInBytes = None
+  spark.sql.adaptive.coalescePartitions.initialPartitionNum = None
+  spark.driver.memory = 9600m
+  spark.executor.memory = 9600m
+  spark.executor.cores = 4
+  target = 2240 (4.4x)
+  stage   5 tasks   5664 in    485.2 GiB  shuffle write    358.2 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~29.6 KiB at target (5664 map tasks x 2240)
+  stage   7 tasks    324 in     28.5 GiB  shuffle write     21.0 read      0.0  spill disk     0.0 mem        0  fetch wait 0%
+        map stage: blocks ~30.4 KiB at target (324 map tasks x 2240)
+  stage   9 tasks    512 (+1 retry, 8 fetch failures) in      0.0 GiB  shuffle write      1.2 read    398.3  spill disk   333.2 mem      544  fetch wait 94%
+        reducer LIVE; at target: 182 MiB compressed/task, ~431 MiB in memory
