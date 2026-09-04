@@ -127,8 +127,12 @@ messages. My first draft was flagged as "too generalized," the second as not dir
   used the short form first, write it out.
 - **Say what the thing does, do not coin a noun for it.** "display runners" was rewritten to **"campaigns
   using display ads"**. Same failure as "pre-flip" and "propagated in": I compress a phrase into a label
-  nobody uses. Spell out the phrase, even when it is longer. Also plainify device and platform taxonomy
-  values: `SET_TOP_BOX` and `CONNECTED_TV` became **"streaming and cable boxes"** and **"smart TVs"**, since
-  a reader should not have to know the column's enum to read the sentence.
+  nobody uses. Spell out the phrase, even when it is longer. **"off-TV video" was flagged the same way on
+  2026-09-04: "quit calling it off-TV, nobody uses that term."** A hyphenated negation of a category is a
+  coined term even when it is obvious what it means. Say the thing itself: **"video on phones and tablets"**.
+  Also plainify device and platform taxonomy values: `SET_TOP_BOX` and `CONNECTED_TV` became **"streaming
+  devices like Roku and Fire TV"** and **"smart TVs"**, since a reader should not have to know the column's
+  enum to read the sentence. (Not "cable boxes" -- that gloss was wrong and was caught: `SET_TOP_BOX` is 83%
+  Roku OS, and MNTN does not run linear TV.)
 - **Confirm the correct half plainly.** She was right that significance keyed on lift. "You're right, it was
   only testing lift. I've changed it." No hedging, no explaining the bootstrap that replaced it.
