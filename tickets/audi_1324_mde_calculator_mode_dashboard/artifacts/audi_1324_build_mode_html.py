@@ -73,8 +73,12 @@ LAUNCHER = """
    DOMContentLoaded has already fired and the boot has to be launched directly. Datasets
    can also land after the HTML, hence the poll. */
 (function () {
-  if (window.__mdeStarted) return;
-  window.__mdeStarted = true;
+  // Mode re-injects this layout, replacing the DOM with fresh placeholder markup. A
+  // window-level once-guard would leave that second copy unbooted and showing dashes,
+  // so the guard lives on the root element instead.
+  var root = document.getElementById('mde');
+  if (!root || root.dataset.mdeBooted) return;
+  root.dataset.mdeBooted = '1';
   var tries = 0;
   function go() {
     window.__mdeHydrate();
@@ -164,6 +168,29 @@ def to_fragment(html, scope):
     return f'{head_keep}\n<div id="{scope[1:]}">\n{markup}\n</div>\n{tail_scripts}\n'
 
 
+APP_PREFIX = """/* Mode re-injects this layout into the same window, so a bare top-level `const`
+   throws "already declared" on the second pass and kills the whole script. Everything
+   lives in an IIFE; only the handlers the inline onclick attributes name are exported. */
+(function () {
+"""
+
+APP_SUFFIX = """
+window.setOutcome = setOutcome;
+window.setBudgetBasis = setBudgetBasis;
+})();
+"""
+
+
+def wrap_app_script(html):
+    """Make the app script safe to execute more than once in one window."""
+    blocks = list(re.finditer(r"<script(?![^>]*\ssrc=)[^>]*>(.*?)</script>", html, re.S))
+    if not blocks:
+        raise SystemExit("no inline script found")
+    app = max(blocks, key=lambda m: len(m.group(1)))
+    body = app.group(1)
+    return html[: app.start(1)] + APP_PREFIX + body + APP_SUFFIX + html[app.end(1) :]
+
+
 def main():
     html = SRC.read_text()
     html, n = re.subn(
@@ -204,6 +231,8 @@ def main():
     if html.count(tail) != 1:
         raise SystemExit(f"boot tail not unique ({html.count(tail)})")
     html = html.replace(tail, "}\n" + LAUNCHER + "\n</script>")
+
+    html = wrap_app_script(html)
 
     html = to_fragment(html, SCOPE)
 

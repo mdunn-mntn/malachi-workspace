@@ -444,6 +444,13 @@ setOutcome = function(o) {
         "chart marker drops the stack dot",
     )
 
+    html = sub(
+        html,
+        "grid-template-columns: auto 1px auto auto;",
+        "grid-template-columns: auto auto;",
+        "hero grid matches its two remaining blocks",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:

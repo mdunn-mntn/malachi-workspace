@@ -192,7 +192,7 @@
     }
 #mde .hero {
       display: grid;
-      grid-template-columns: auto 1px auto auto;
+      grid-template-columns: auto auto;
       justify-content: space-between;
       gap: 0 24px;
       align-items: start;
@@ -699,7 +699,11 @@ window.__mdeHydrate = function () {
 };
 window.__mdeHydrate();
 
-</script><script>
+</script><script>/* Mode re-injects this layout into the same window, so a bare top-level `const`
+   throws "already declared" on the second pass and kills the whole script. Everything
+   lives in an IIFE; only the handlers the inline onclick attributes name are exported. */
+(function () {
+
 /* ═══════════════════════════════════════════════════════
    MDE MATH — ported from ti_884_mde_calculator.py
    Lewis-Rao (2015 QJE) power analysis
@@ -1267,8 +1271,12 @@ function __mdeBoot() {
    DOMContentLoaded has already fired and the boot has to be launched directly. Datasets
    can also land after the HTML, hence the poll. */
 (function () {
-  if (window.__mdeStarted) return;
-  window.__mdeStarted = true;
+  // Mode re-injects this layout, replacing the DOM with fresh placeholder markup. A
+  // window-level once-guard would leave that second copy unbooted and showing dashes,
+  // so the guard lives on the root element instead.
+  var root = document.getElementById('mde');
+  if (!root || root.dataset.mdeBooted) return;
+  root.dataset.mdeBooted = '1';
   var tries = 0;
   function go() {
     window.__mdeHydrate();
@@ -1283,5 +1291,9 @@ function __mdeBoot() {
     if (++tries > 60) return go();
     setTimeout(wait, 100);
   })();
+})();
+
+window.setOutcome = setOutcome;
+window.setBudgetBasis = setBudgetBasis;
 })();
 </script>

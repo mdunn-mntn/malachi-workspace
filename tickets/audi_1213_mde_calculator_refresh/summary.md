@@ -314,3 +314,29 @@ draft explained the absence there and Malachi cut it, since a chart footnote is 
 argue a methodology point. Round-trip parity unchanged at 5.82e-16; jsdom harness clean.
 
 Anyone holding a post-stack figure from before today is holding a number 1.68x too small.
+
+## Two defects from the toggle removal, found and fixed 2026-09-03 (post-close)
+
+1. **The hero grid still reserved four columns for two blocks.** `.hero` kept
+   `grid-template-columns: auto 1px auto auto` after the POST-STACK block and its `v-sep` came out,
+   so BUDGET FOR TARGET MDE landed in the 1px column and wrapped one word per line. Now
+   `auto auto`.
+2. **Mode re-injects the layout into the same window, and the whole script died on the second
+   pass.** Every top-level `const` (`WEEKS_PER_MONTH`, `S`, `L_MIN`, and the rest) threw
+   "Identifier has already been declared", which killed the script before any guard ran: the second
+   copy of the markup rendered as placeholder dashes with every control inert. The earlier
+   element-level `mdeBooted` guard could not help, because the failure happens at parse time before
+   the guard is reached.
+
+   Fix: `wrap_app_script()` in the Mode builder wraps the app script in an IIFE, so re-execution
+   redeclares nothing at window scope, and re-exports only the two functions the inline `onclick`
+   attributes name (`setOutcome`, `setBudgetBasis`). This is the same defect class as the first
+   Mode failure: both are consequences of Mode injecting a fragment into a live page rather than
+   loading a document, and neither is visible in a file that renders correctly on its own.
+
+**Regression coverage added.** The jsdom harness now injects the fragment TWICE into one window and
+asserts the second copy still renders, which is the case that was failing. Also exercises the real
+user path (focus the search box, type, mousedown a result row) instead of calling internals, since
+the IIFE correctly makes those private: picker shows `UnitedHealthcare · LAPSED`, selection prefills
+baseline 2.900 / CPM 22.90 / imps-per-IP 5.80, the lapsed banner renders, and the CVR toggle pulls
+that advertiser's own 0.040% rather than the cohort default.
