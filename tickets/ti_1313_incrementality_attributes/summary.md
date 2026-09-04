@@ -1235,7 +1235,11 @@ and retargeting, and in this cohort that is mostly **CTV** ($1,804,164 of `objec
 approximate. The excluded spend is $5,092,523: stage 2 is $1,945,567 CTV and $1,601,044 display, stage 3 is
 $932,652 CTV and $612,723 display, so **57% of what the tab excludes is CTV**. The $1.8M figure cited above
 is the `objective_id = 1` miscoding count from §9d and is the wrong number for this claim. So the share is
-93% because
+**Device split across every stage, verified 2026-09-04** (`spend_facts`, cohort groups, window, media
+spend): stage 1 TV $11,054,270 and mobile or tablet $833,438 (7.0%); all stages together TV $12,089,429,
+mobile or tablet $1,198,889 (8.8%) and desktop $324,026. Adding stages 2 and 3 moves the mobile and tablet
+share by under 2 points, so the low figure is not an artefact of the prospecting-only denominator. Raised by
+Kirsa, who expected more mobile and tablet spend. So the share is 93% because
 prospecting is a CTV product, not because off-TV video was filtered out. The Read me glossary was always
 correct on this ("Display multi-touch sits outside this denominator") and needs no change.
 
