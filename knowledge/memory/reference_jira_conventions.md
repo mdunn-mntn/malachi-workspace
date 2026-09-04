@@ -283,6 +283,14 @@ Every ticket description, every time:
   was deleted on main 2026-08-26 (PR 1209), so it was dropped from two tickets, not linked.
 - The 400-char description cap yields to this standard (user call 2026-08-31): a linked,
   laymen-readable description may run long; the BLUF line still has to carry the ticket alone.
+- **CONTRADICTED 2026-09-04.** Malachi, seeing AUDI-1326..1329 filed at ~2,000 chars each under
+  that exception: "Why are the tickets so wordy? Don't we have a limit on size?" All four were
+  rewritten to ~400 chars and the exception should be treated as retired. Both statements are his,
+  five days apart; the later one is the live rule. **Default to the 400/60/4 cap.** The links
+  survive the trim: what runs long is prose, not URLs. Note the structural conflict the cap has
+  with the BLUF / *Why:* / *Task:* / *Done-when:* shape — `lint_comms.py` counts each of those
+  three labels as a bullet, so the mandated structure alone spends 3 of the 4-bullet budget and
+  a Task list of separate bullets cannot fit. Run the Task items as one sentence, not a list.
 - Initiative/hackathon batches: parent all tickets to one Epic (Epic create needs
   customfield_10528 Epic Name + customfield_16455/16456 Feature-Audit/Monitor Required
   Yes/No options; re-parent via POST /rest/agile/1.0/epic/<KEY>/issue) and put the shared
