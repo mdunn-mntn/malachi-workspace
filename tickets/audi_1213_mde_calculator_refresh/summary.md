@@ -349,15 +349,16 @@ failure, so a partial boot does not poison the next injection with a half-built 
 from "per-advertiser prefill", which named the mechanism, to "smallest lift a test can detect",
 which names the question the tool answers.
 
-## Root cause of the recurring blank render: Mode APPENDS the layout, 2026-09-03
+## Root cause of the recurring blank render: Mode re-renders WITHOUT executing scripts, 2026-09-03
 
 Three separate fixes were shipped for "the page is blank after a refresh" before the actual cause
 was found, and each was a real but insufficient defect: the whole-document wrapper, the top-level
 `const` redeclaration, and the missing CSS reset. The reason the first two looked like fixes is that
 they are genuinely broken code paths; the reason the page still went blank is this.
 
-**Mode appends a re-injected layout rather than replacing the previous one.** After a Refresh the
-document holds TWO `#mde` elements. Duplicate ids mean `document.getElementById` resolves to the
+**Superseded within the hour by the actual cause, below. Kept because the append behaviour is real
+and its fix stands.** Mode can append a re-injected layout rather than replacing the previous one,
+and the document then holds TWO `#mde` elements. Duplicate ids mean `document.getElementById` resolves to the
 FIRST, stale copy for every lookup in the app, including the launcher's own boot guard, which the
 first copy already carries. The launcher therefore returns early, the visible second copy is never
 booted, and the user sees the static placeholder markup with dead controls.
@@ -371,3 +372,23 @@ is what makes the ordinary `getElementById` calls throughout the file safe again
 model of Mode rather than Mode. It now appends into a wrapper div, which is what the platform does,
 and asserts the surviving root count is 1 and the live copy renders. A test that encodes the same
 assumption as the code cannot fail the way the code fails.
+
+**THE ACTUAL CAUSE, found after three wrong fixes: Mode re-renders the report body by ASSIGNING
+HTML, and scripts inserted that way never execute.** So a Refresh swaps in fresh placeholder markup
+and no JavaScript runs at all. Every JS-side fix shipped before this one was unreachable code in
+that state, which is exactly why three plausible fixes each tested clean and changed nothing the
+user could see. The fix is a watchdog installed on the first execution, which outlives the markup:
+`if (!window.__mdeWatchdog) window.__mdeWatchdog = setInterval(boot, 400)`, where `boot()` finds any
+root lacking the booted flag, re-hydrates from the current `window.datasets`, and boots it. Verified
+in the harness by re-rendering WITHOUT re-creating any script tag: the page reads dashes immediately
+after the swap and is filled within one watchdog tick.
+
+The harness had two wrong halves, not one. It replaced instead of appending, and it hand-recreated
+every script so they would run. Both encoded my model of Mode rather than Mode. It now runs three
+cases: first load with scripts executing, a re-render that appends, and a re-render where scripts are
+never re-created.
+
+**Also fixed after the close:** at a small holdout the confidence ribbon spans most of the plot and
+was painting over the dashed tier boundaries, so the bands read as broken at a 2% holdout. Boundaries
+and labels moved to `afterDatasetsDraw` and the ribbon dropped to 0.06 alpha. Title settled at
+"smallest estimated lift a test can detect": it is a forecast from prior performance, not a promise.

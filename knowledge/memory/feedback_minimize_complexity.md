@@ -6,10 +6,10 @@ metadata:
   type: feedback
   originSessionId: fc59db3f-b426-4cbe-9c11-c2bd5011531f
 doc_type: memory
-keywords: [minimize_complexity, simple deliverable, no invented terms, fewer columns, one value frame, audi-1148, platform evidence tab, lean deliverable, xlsx notes]
+keywords: [minimize_complexity, simple deliverable, no invented terms, fewer columns, one value frame, audi-1148, platform evidence tab, lean deliverable, xlsx notes, footnote carries a citation, forecast title says estimated, caveat banner not appended clause, chart footnote, tool title naming]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-07-22
+last_verified: 2026-09-03
 ---
 Keep every deliverable **as simple as possible**. New terms, extra columns, second "lenses", and long
 explanation cells all add complexity the user doesn't want. Default to the leanest version that still makes
@@ -57,3 +57,11 @@ The test: would the reader have to open a Python file to know what this word mea
 **2. An annotation carries FACT ONLY — never interpretation.** A Note, caption, label, footnote, or sub-line is exactly one of three things: **composition** ("36,965 visiting of 285,909 served IPs"), a **benchmark** ("cohort median $27.54"), or a **unit qualifier** ("both arms, 10% holdout"). If the label already says it, the annotation is empty. Interpretation moves to the section that has room to justify it (Method & caveats, the analysis body). Cut on sight: *"the defensible number"*, *"the direct power cross-check denominator"*, *"they ramped up before pausing"*, *"their exit run-rate"*, *"worth knowing"*.
 
 Both are now in global `CLAUDE.md` §9 Delete-on-sight. Enforcement for the xlsx surface: [[reference_xlsx_subtitle_caps]].
+
+## Three label decisions on the MDE calculator (2026-09-03, AUDI-1213): the same rules applied to a tool UI
+
+**A footnote carries a CITATION, not an argument.** A methodology argument written into a chart footnote was cut: it belongs in the ticket and the knowledge doc, where it can be justified and kept current. This is rule 2 above read one level up: an annotation may carry composition, a benchmark, a unit qualifier, or the source, and nothing else.
+
+**A forecast title says ESTIMATED, and names the question rather than the mechanism.** Landed as "mde calculator · estimated smallest lift a test can detect", replacing "per-advertiser prefill". "Prefill" described how the tool works; the reader wants what the number is, plus the word that stops a forecast being read as a measurement.
+
+**A caveat that changes how a number should be read gets its own VISIBLE flag, not a clause appended to something else.** Selecting a lapsed advertiser now raises an amber banner reading "NOT CURRENTLY ACTIVE · last delivered <date>, <n> days ago". A note tacked onto an existing line is missable; if the caveat governs the whole reading, it gets its own slot at the point of selection.

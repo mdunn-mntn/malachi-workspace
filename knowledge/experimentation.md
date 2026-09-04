@@ -1,5 +1,5 @@
 # Experimentation & Causal Inference — Knowledge Base
-Last updated: 2026-09-02 | Started from TI-748 (Media Plan Causal Impact)
+Last updated: 2026-09-03 | Started from TI-748 (Media Plan Causal Impact)
 
 This is a living document. Add to it every time we learn something new about experimental design, covariate selection, test methodology, or edge cases at MNTN.
 
@@ -568,7 +568,7 @@ CUPED (Deng, Xu, Kohavi, Walker 2013) reduces variance on the post-period estima
 3. **CUPED only on a properly-randomized sub-comparison** — apply within the random Tier 2, not across Tier 2 vs Tier 5
 
 **Lewis-Rao 2015 stack components are upstream design choices, not retrofits:**
-- CUPED × stratified randomization × ghost-ad = 0.595 σ ratio = 2.83× effective N (per `documentation/docs/feature_rollout_experimental_design.md`)
+- CUPED × stratified randomization × ghost-ad = 0.595 σ ratio = 2.83× effective N (per `documentation/docs/feature_rollout_experimental_design.md`), a **design-time** claim for an advertiser-randomized rollout with a continuous outcome. Measured on the ghost-bid pipeline it delivers 1.0, so never carry 0.595 into a ghost-bid MDE (VR_STACK block below, 2026-09-03).
 - None of the three components retrofit cleanly onto a non-randomized rollout
 - For the NEXT major TI release, design CUPED + stratification + permanent randomized holdout in from the start
 
@@ -1344,7 +1344,7 @@ Reusable funnel for "which advertisers should we run a lift study on?" — fork 
 
 ### Screening a LAPSED advertiser — and why "estimate spend from VR/CR" is the wrong instrument (2026-08-11)
 
-Al Beretta asked for "a quick heuristic on spend based on Visit and Conversion rate" so a churned advertiser could be screened. Four durable lessons.
+Al Beretta asked for "a quick heuristic on spend based on Visit and Conversion rate" so a churned advertiser could be screened. Five durable lessons (the fifth added 2026-09-03).
 
 **1. Rates cannot predict spend. Required spend is the answerable question.** Visit rate and conversion rate are **ratios** — scale-free by construction — so they carry almost no information about how much an advertiser spends. Measured on the 1,566 INCR-75 advertisers with `spend_30d > $1,000` and `IVR > 0`: OLS on `log(spend_30d)` gives R² = **0.045** on `log(IVR)`, **0.098** on `log(CVR)`, **0.100** on both (Pearson r +0.21 / +0.31). Within a single IVR decile, spend spans **15–66x** p10→p90 while the median moves only ~3x across the entire IVR range. **What the rates DO determine is the inverse: the spend a test would require** — `spend_required(p, target_mde_rel, cpm, imps_per_ip)` in `ti_884_mde_calculator.py`, which already produced INCR-75's `budget_for_mde_ivr_*` columns. When someone asks to predict spend from performance rates, redirect to required-spend; don't fit the regression. Evidence: `tickets/audi_1204_lapsed_advertiser_test_eligibility/artifacts/audi_1204_vr_cr_spend_check.py`.
 
@@ -1353,6 +1353,21 @@ Al Beretta asked for "a quick heuristic on spend based on Visit and Conversion r
 **3. A lapsed advertiser structurally caps at Mid tier.** INCR-75's final tier is POWER × CONFIRMED-LIFT; `confirmed +` requires ≥20 holdout visits at p<.05 from a **live** ghost-bid holdout. A non-delivering advertiser generates no bids, so no measured lift exists and none can be produced. Best achievable is **Mid**, on the a-priori power gate alone. State this before anyone sets a customer expectation on "top-tier candidate".
 
 **4. Re-windowing the screen onto a lapsed advertiser is cheap, and the blocker people assume is imaginary.** All three metric inputs retain years: `cost_impression_log` (no TTL, floor 2023-10-01), `clickpass_log`, `ui_conversions`. The `incr_75_advertiser_metrics.sql` header comment claiming a "90-day TTL" was **wrong** and was the only thing making the ask look expensive. Two real constraints instead: (a) the 12-month spend CTE reads `agg__daily_sum_by_campaign`, **frozen at 2026-04-30** — swap to `summarydata.sum_by_advertiser_by_day` (2024-01-01+); (b) **BigQuery cannot prune partitions on a date derived from a subquery**, so resolving "last active day" and pulling metrics in one statement scanned 39.5 GB vs **5.5 GB** when split into two steps with the window substituted as a literal. Fork validated against INCR-75 for BoggBag at the same window: `cpm`/`imps_per_ip`/`p_visit`/`p_cvr` reproduce within **0.21%** (volume columns +1.6–2.9% from a partial trailing day plus conversion attribution backfill). Canonical: `tickets/audi_1204_lapsed_advertiser_test_eligibility/`.
+
+**5. Window a lapsed advertiser on its own last delivering days, not on a trailing calendar window (2026-09-03, AUDI-1213).** A trailing calendar 30 days measures a lapsed account mostly on silence: no impressions in the window, so CPM, imps/IP, IVR and CVR come back undefined or computed off a partial tail. Windowing each advertiser on **its own last 30 delivering days** measures it on how it actually ran, which is the input a required-spend estimate needs. This is a definitional change to the metric, not a data refresh: cohort medians move under it even for advertisers that never lapsed, so a median computed this way is not comparable to one computed on a fixed calendar window.
+
+**Lookback = 365 days, settled on seasonality.** Edgar von Trotha's argument decided the cut: every LiftLab test he builds uses at least a 365-day lookback, so a shorter screening window would put the screen on a different footing from the tests it feeds. Bucket sizing behind the cut (2026-09-03):
+
+| Recency bucket | Advertisers | 12-month spend |
+|---|---:|---:|
+| Delivering | 1,868 | $385.6M |
+| Lapsed 31-90d | 568 | $36.7M |
+| Lapsed 91-180d | 701 | $37.1M |
+| Lapsed 181-365d | 1,288 | $38.2M |
+
+The 181-365d bucket carries 88 six-figure accounts. Sizing counts and the shipped cohort differ by a few advertisers per bucket (sizing 1,868 delivering; shipped 4,387 = 1,857 delivering + 2,530 lapsed); the shipped counts are the cohort.
+
+**Scan cost does not scale linearly with the lookback.** Dry-run by cut: 90d **0.72 TB**, 180d **1.47 TB**, 365d **3.12 TB**, against the **471.7 GB** dry-run estimate for the delivering-only 30-day query. Billed, the 365-day cut came in at **2,908 GB** against that 30-day baseline, i.e. **6.2x**, not the ~12x quoted before the dry runs. That estimate scaled 30 days linearly and ignored that two of the four source tables are small and that the delivering query carried a separate 56-day reach scan. Dry-run each candidate cut before quoting a multiple.
 
 ### Triangulation Architecture — The End-State Pattern
 
@@ -1766,7 +1781,7 @@ Per advertiser, exactly two windows, both anchored on that advertiser's **last a
 1. **56 days of delivery** for the rate and reach inputs (baseline rate, CPM, imps/IP, distinct IPs). 56 rather than 30 because the horizon is 8 weeks and a direct `distinct_ips_56d` removes the linear extrapolation, which overstates reach 1.25-1.32x (measured 56d/30d distinct-IP growth is 1.393 median, against a linear comparator of 1.839).
 2. **12 months** for the typical-active-month budget basis.
 
-**Deeper history only decides who appears in the picker, never what is computed for them.** So the floor is the recency cut plus 12 months behind it. Against the silver 2024-01-01 floor that makes a **365-day recency cut** the widest one served losslessly: all 4,409 advertisers (1,863 delivering + 2,546 lapsed) keep both windows whole, earliest day needed 2024-08-20. At a 730-day cut, 396 of 5,739 need history from before the floor and their budget basis silently computes on a truncated window. Detail: `tickets/audi_1213_mde_calculator_refresh/outputs/audi_1213_history_floor_options.md`.
+**Deeper history only decides who appears in the picker, never what is computed for them.** So the floor is the recency cut plus 12 months behind it. Against the silver 2024-01-01 floor that makes a **365-day recency cut** the widest one served losslessly: all 4,409 advertisers (1,863 delivering + 2,546 lapsed) keep both windows whole, earliest day needed 2024-08-20. The cut shipped 2026-09-03 at a slightly different count, 4,387 (1,857 delivering + 2,530 lapsed); the shipped counts are the cohort. At a 730-day cut, 396 of 5,739 need history from before the floor and their budget basis silently computes on a truncated window. Detail: `tickets/audi_1213_mde_calculator_refresh/outputs/audi_1213_history_floor_options.md`.
 
 ### Size the test against the CI floor of the prior, not its point estimate
 
@@ -1788,7 +1803,7 @@ Corollary on quoting a prior: an entry-cohort read and a full-window IVW read of
 **Workflow** (TI-917 implementation):
 1. Pull per-IP revenue per advertiser via `SUM(order_amt) GROUP BY (advertiser_id, ip)` over the window. Only filter to advertiser-served IPs (the treated arm) for σ — assume σ_treated ≈ σ_control under H0.
 2. Aggregate to per-advertiser μ + σ.
-3. Plug into `mde_continuous`. Use the canonical post-stack `var_reduction=0.595`.
+3. Plug into `mde_continuous`. Use `var_reduction=1.0` (superseded 2026-09-03: the post-stack 0.595 is refuted end to end, VR_STACK block below).
 4. Convert relative MDE to per-IP dollars and to iROAS: min iROAS = (mde_abs × n_treated) / monthly_spend.
 
 Reference: `tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/artifacts/ti_917_run_revenue_mde.py`. Output CSV (`ti_917_revenue_mde_per_advertiser.csv`) ships per-advertiser tier labels.
@@ -1802,6 +1817,8 @@ For the TI-884 top-50 cohort, post-stack tier counts:
 | Visits  | 46 | 1 | 1 | 2 |
 | CVR     | 8  | 12 | 28 | 2 |
 | **Revenue / iROAS** | **2** | **7** | **23** | **18** |
+
+**These counts were computed post-stack at 0.595, superseded 2026-09-03** (VR_STACK block below). At the defensible `var_reduction=1.0` every MDE behind this table is 1.68x larger, so the well-powered counts are optimistic. The ordering across outcomes is unaffected: the factor is uniform.
 
 **Two binding constraints make iROAS the hardest outcome:**
 
@@ -1835,18 +1852,20 @@ Target 5% relative MDE, $25 CPM, 10 imps/IP, 10% holdout. Both columns (raw and 
 | 5% IVR | $149k | $53k | high-rate advertisers |
 | 10% IVR | $71k | $25k | very-high-rate (e.g. WGU) |
 
-**Adjustment rule (linear):** for an advertiser with non-default CPM or imps/IP, multiply the table value by `(advertiser_cpm / 25) × (advertiser_imps_per_ip / 10)`. Example: 1% IVR, $35 CPM, 15 imps/IP, post-stack → $275k × 1.4 × 1.5 = ~$578k.
+**The post-stack column is superseded 2026-09-03.** 0.595 is refuted (VR_STACK block below), so read the raw column only; every post-stack figure in this table is 2.82x too cheap.
+
+**Adjustment rule (linear):** for an advertiser with non-default CPM or imps/IP, multiply the table value by `(advertiser_cpm / 25) × (advertiser_imps_per_ip / 10)`. Example: 1% IVR, $35 CPM, 15 imps/IP, raw → $777k × 1.4 × 1.5 = ~$1.63M.
 
 ### When to use which method
 
 - **Forward direction** (`mde_binomial` / `mde_continuous`): given an advertiser's current sample size and rate, what's the smallest lift we can detect today? This is the screening-rule check.
 - **Inverse direction** (`spend_required` / `n_required_binomial`): given a target MDE we want to promise, what's the minimum spend? This is the "should we recruit this advertiser into TI-885 / a new pilot?" check.
 
-Both directions live in the same calculator file. The variance-reduction stack (post-stack `var_reduction=0.595`) is canonical and should be used as the default post-stack value across all calls.
+Both directions live in the same calculator file. Use `var_reduction=1.0` on every call (superseded 2026-09-03: the post-stack 0.595 stack is refuted end to end, VR_STACK block below).
 
 **See also:** [TI-917 combined deck](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/artifacts/ti_917_combined_deck_standalone.html); [revenue MDE per advertiser](../tickets/ber_2250_incrementality_overhaul/ti_917_combined_loom/outputs/ti_917_revenue_mde_per_advertiser.csv).
 
-**Regression anchor for the MDE engine (TI-884).** The two-proportion binomial calculator is self-tested against a Lewis-Rao hand calc: at `p=0.05`, `N=10,000`, no variance reduction, it returns `MDE_rel = 17.27%`. Keep this as a fixed unit-test anchor — any refactor of `mde_binomial` that shifts this number has changed the math. Cross-validated against Lauren's three completed lift tests: every reported lift landed 4.7×–8.2× *below* its own MDE, i.e. statistically indistinguishable from zero — GLD (reported +0.67% vs 3.12% raw / 1.86% post-stack MDE), Ownerly (+0.72% vs 5.92% / 3.53%), Boll & Branch (+1.00%, paused/no traffic, 88.4% / 52.6% MDE). The lesson these three make concrete: a reported point lift is meaningless without the MDE beside it — under-powered tests routinely produce small "positive" numbers that the design could never have detected.
+**Regression anchor for the MDE engine (TI-884).** The two-proportion binomial calculator is self-tested against a Lewis-Rao hand calc: at `p=0.05`, `N=10,000`, no variance reduction, it returns `MDE_rel = 17.27%`. Keep this as a fixed unit-test anchor — any refactor of `mde_binomial` that shifts this number has changed the math. Cross-validated against Lauren's three completed lift tests: every reported lift landed 4.7×–8.2× *below* its own MDE, i.e. statistically indistinguishable from zero — GLD (reported +0.67% vs 3.12% raw / 1.86% post-stack MDE), Ownerly (+0.72% vs 5.92% / 3.53%), Boll & Branch (+1.00%, paused/no traffic, 88.4% / 52.6% MDE). **The second figure in each pair is post-stack at 0.595 and is superseded 2026-09-03 (VR_STACK block below); read the raw figure only.** The lesson these three make concrete: a reported point lift is meaningless without the MDE beside it — under-powered tests routinely produce small "positive" numbers that the design could never have detected.
 
 <!-- ti_1019: 2026-06-24 -->
 ### Canonical MDE baseline-rate definition — and the `graph.visits` numerator trap
@@ -1870,7 +1889,7 @@ Numerator is distinct visiting/converting IPs **intersected with served IPs** (L
 
 Each visiting IP fires ~2.9 visit events. For the full derivation of why this is anticonservative (inflated p → smaller σ → reported MDE ~2.16× too optimistic), see the "Corollary for MDE / power-calc baselines" note above (under the "same unit of analysis" rule).
 
-**Superseded, kept as the record of the ask, not as current guidance. Items (1) and (2) are dead: `usersReached` is the wrong grain (disproved 2026-06-24, next paragraph) and the baseline moved off it 2026-08-25 onto ChAPI per-IP-user rates (confirmed from code 2026-09-03, block below). Items (3)-(5) are untouched by that move.** **Premier-UI / gary-ql matching (Chris Franz PR #4445, `Advertiser.mdeInputs`).** The customer wizard historically used `conversions / first_party_audience` — wrong denominator *and* sparse numerator (WGU 2.2% vs our 10.3%). To match the team tool: (1) keep `usersReached` (distinct served IPs) as the denominator — cross-check via imps/IP (WGU 24.7 ≈ our 22.5 confirms same grain); (2) numerator = distinct served IPs that visited, **not** `graph.visits`; (3) default to IVR, gate CVR behind a power warning (usually underpowered — the "$2M wall"); (4) keep numerator/denominator at the same grain (don't mix IP and household — cf. TI-1044, 2.83% same-IP overlap); (5) reconcile `var_reduction` (resolver uses 1.0/raw; standalone shows raw + 0.595 post-stack — show raw-only in the UI and label it).
+**Superseded, kept as the record of the ask, not as current guidance. Items (1) and (2) are dead: `usersReached` is the wrong grain (disproved 2026-06-24, next paragraph) and the baseline moved off it 2026-08-25 onto ChAPI per-IP-user rates (confirmed from code 2026-09-03, block below). Items (3)-(4) are untouched by that move; (5) is closed, see the item itself.** **Premier-UI / gary-ql matching (Chris Franz PR #4445, `Advertiser.mdeInputs`).** The customer wizard historically used `conversions / first_party_audience` — wrong denominator *and* sparse numerator (WGU 2.2% vs our 10.3%). To match the team tool: (1) keep `usersReached` (distinct served IPs) as the denominator — cross-check via imps/IP (WGU 24.7 ≈ our 22.5 confirms same grain); (2) numerator = distinct served IPs that visited, **not** `graph.visits`; (3) default to IVR, gate CVR behind a power warning (usually underpowered — the "$2M wall"); (4) keep numerator/denominator at the same grain (don't mix IP and household — cf. TI-1044, 2.83% same-IP overlap); (5) reconcile `var_reduction` (resolver uses 1.0/raw; standalone showed raw + 0.595 post-stack — show raw-only in the UI and label it) — **CLOSED 2026-09-03: 0.595 is refuted and the post-stack toggle, hero, chart series and constant were removed from both standalone builds, so every surface is raw at 1.0** (VR_STACK block below).
 
 **Premier-UI source update (2026-06-24): the R2/graph columns are at a DIFFERENT IP grain than our calculator.** What R2 can actually pull is `graph.sitevisitors`/`graph.usersreached` = `summarydata.all_facts.site_visitors`/`uniques`. **`uniques` (= `graph.usersreached`) is built from the SAME served `cost_impression_log` our calculator uses, but with a channel-conditional key — NOT `device_ip`, NOT a different table** (verified from the SQLMesh model + BQ reconstruction; see data_catalog `impression_facts`/`all_facts` entries). `uniques` = `HLL_COUNT.INIT(CASE WHEN channel_id=8 OR objective_id IN (5,6) THEN ip ELSE guid END)`: CTV/video counted by `ip`, display counted by `guid` (cookie). For WGU trailing-30d: `site_visitors/uniques` = 1.90M/32.1M = **5.92%** vs our `count(distinct ip)` per-served-IP IVR = **10.70%**. The 2× is **display counted by cookie/guid (~18.4M, ~2.4× IP fan-out), not a different/broader universe** (CTV leg = 14.06M ip ≈ served CTV ip). So `graph.usersreached` mixes IP + cookie namespaces and over-counts display — wrong denominator for a per-IP baseline. So `sitevisitors/uniques` does **not** match the team tool; shipping it would roughly halve the baseline and ~double the reported MDE. Note `(2)` above (the `graph.visits` event-count trap) is moot if they use `site_visitors` (already distinct), but the **IP-field grain** problem replaces it. Also likely internally grain-mismatched: numerators are ~equal (1.90M ≈ 1.94M) while denominators differ 2×, so `site_visitors` appears resolved-IP-grained while `uniques` is raw-device_ip — confirm how `site_visitors` is keyed. **RESOLVED 2026-06-24 — the experiment unit is the resolved `ip`, so our calculator is correct.** Applied the production holdout hash (`MD5(advertiser_id:ip)` → bucket, 0–99 = holdout; canonical BQ port in `ti_837_augmentor_holdout_bucket_verification.sql`) to WGU's *served* IPs in `cost_impression_log`: **0 of 2,356,886 served IPs landed in holdout buckets** (≈10% expected if the holdout used a different field; chance of 0 if uniform ≈ `0.9^2.36M` ≈ 0). Since `MD5(aid:resolved_ip)` ⟂ `MD5(aid:device_ip)`, this proves holdout + serving suppression run on the resolved `ip`; `clickpass_log` (VV attribution) keys on the same resolved `ip`. So the MDE baseline denominator must be the resolved served-`ip` count (15.7M → 10.70%); `graph.uniques` (raw `device_ip`, 32M → 5.92%) is the wrong grain and understates ~2×. **Implication for the UI fix:** R2's graph table gives the right numerator (`site_visitors`, resolved-IP) but NOT the right denominator (`uniques` is device_ip), so the baseline must be sourced from the `cost_impression_log` grain (our calculator) or data-eng must add a resolved-IP served-unique to the reporting table. **Zach Schoenberger (authority) confirmed the mechanism:** holdout and VV are two separate sides — holdout = targeting (done on the IP in the targeting system = the served event-log `ip`); VV = attribution (no md5; matches event-log `ip` to guid-log `ip`). Both operate on the resolved event-log `ip`; neither uses `device_ip`.
 
@@ -1878,7 +1897,7 @@ Each visiting IP fires ~2.9 visit events. For the full derivation of why this is
 
 - **Baseline source moved, so the 2026-06-24 note above is superseded (kept for the disproof, not as current state).** The tab no longer reads the FPA `totalConversionRate` (WGU 2.2%) or `graph.usersreached`. It now reads ChAPI per-IP-user rates over trailing 30d: `Graph.IPUserSiteVisitorRate` for a visits goal, `Graph.IPUserConversionRate` for conversions, selected by `goal_metric`. Same *grain* as our per-served-IP rate at last, but a different source over a different window, so the two do not reconcile to the digit. `getAudienceFpaReportTotalsByAdvertiserId` is now dead code.
 - **Defaults deleted.** `DEFAULT_CPM = 24.84` and `DEFAULT_IMPRESSIONS_PER_IP = 1.5` are gone; CPM and imps/IP come live per advertiser from ChAPI and the tab refuses to forecast when either is missing or non-positive. `DEFAULT_COHORT_IVR = 0.0215` survives as dead code. The standalone gist's own cohort defaults were refreshed 2026-09-03; the June set ($24.84 CPM, 3.5 imps/IP, IVR 2.15%, CVR 0.054%) is the OLD one, table below.
-- **`DEFAULT_VAR_REDUCTION = 1`.** The tab is raw everywhere it executes. The standalone shows raw *and* a 0.595 post-stack figure side by side. `var_reduction` multiplies SE linearly, so quoting the standalone's post-stack number against a tab number differs 1/0.595 = **1.68x** with nothing wrong on either surface. (The 0.595 stack is itself unsupported by the only measurement anyone took; re-measurement is queued in AUDI-1213.)
+- **`DEFAULT_VAR_REDUCTION = 1`.** The tab is raw everywhere it executes. The standalone showed raw *and* a 0.595 post-stack figure side by side, so quoting a standalone post-stack number against a tab number differed 1/0.595 = **1.68x** with nothing wrong on either surface. **Closed 2026-09-03:** the post-stack toggle, hero number, chart series and the `VR_STACK` constant were removed from both builds after the refutation below, so every surface is now raw and the 1.68x gap is gone.
 - **Alpha and power are hardcoded** (`Z_ALPHA_2 = 1.96`, `Z_BETA = 0.84`) and `MdeInputs` carries no alpha/power field, so neither the wizard hook nor the resolver gives the user any control. The standalone exposes both.
 - **The tab reproduces the gist's arm-split defect (NEW, settled 2026-09-03).** `computeMde` derives `totalIps = (monthlyBudget * durationMonths / cpm) * 1000 / impressionsPerIp`, then `nTreated = totalIps * (1 - holdoutPercent)` and `nControl = totalIps * holdoutPercent` — i.e. the spend-derived IP pool is treated as treated **plus** control, charging the never-served holdout for impressions. Under the `ti_884_mde_calculator.py` convention (`spend_required`: `impressions = n_total * (1 - h) * imps_per_ip`, holdout unserved) the spend buys the *treated* arm and the holdout is an additional `n_t*h/(1-h)` unserved IPs. Ratio of the variance terms is `1/(1-h)`, so the tab's forecast MDE is **1/sqrt(1-h) = 1.0541x high at h=0.10**. Reproduced numerically: at a 1M-IP pool, p=0.02, h=0.10, tab 6.5370% vs ti_884 6.2016%, ratio 1.054093. This is the same 1.0541x that `ti_xxx_mde_calculator_prefill.html` `computeMDE` produced, i.e. the exact code eng was warned not to port (AUDI-1213 §8, 2026-08-24). **Direction correction (2026-09-03): the error is PESSIMISTIC, not optimistic.** A forecast MDE 1.0541x high at h=0.10 (11.8% high at h=0.20) makes a test look harder to power than it is; fixing it makes tests look EASIER to power and cheaper to run. Correct form: `nTreated` = the spend-derived pool, `nControl = nTreated * h/(1-h)`. Fixed in the standalone 2026-09-03; still live in the tab, filed for eng as **AUDI-1323** (writeup: `tickets/audi_1213_mde_calculator_refresh/artifacts/audi_1213_mde_arm_split_writeup.md`).
 - **The ForecastSidebar's `Impressions` stat is an IP count, not impressions (NEW, 2026-09-03).** `premier-ui src/app/scenes/Testing/ExperimentBuilder/ForecastSidebar/index.tsx` renders `{ label: 'Impressions', value: formatCount(result.totalIps) }`. `totalIps` is an IP/household count; impressions = `totalIps * impressionsPerIp`. Anyone backing a CPM or a delivery estimate out of that displayed stat is wrong by the imps/IP factor. As of 2026-09-03 the AUDI-1323 writeup covers the arm split only, not this label.
@@ -1888,14 +1907,16 @@ Each visiting IP fires ~2.9 visit events. For the full derivation of why this is
 
 **Standalone cohort defaults refreshed; the arm split, its `spendRequired` mirror, and the `setOutcome` toggle all fixed in the standalone, shipped 2026-09-03 (AUDI-1213). The tab-side arm split and the ForecastSidebar label are still live.** Re-ran `tickets/incr_75_eligible_advertisers/queries/incr_75_advertiser_metrics.sql` (dry-run estimate 471.7 GB, us-central1 reservation) over **1,859 delivering advertisers**, trailing 30d ending 2026-09-03, no >$1k spend floor. CPM is now the **advertiser-facing** basis (media + data + platform), not `media_cost`. WGU's CPM moving 4.607 → 9.224 is that basis change, not a rate move. The medians below are the CLEAR-button defaults in `ti_xxx_mde_calculator_prefill.html`:
 
-| Standalone default | June cohort (879 advertisers, >$1k floor) | 2026-09-03 (1,859 advertisers, no floor) |
-|---|---:|---:|
-| CPM | $24.84 | $26.62 |
-| Impressions per IP | 3.5 | 3.43 |
-| IVR | 2.15% | 2.639% |
-| CVR | 0.054% | 0.086% |
+| Standalone default | June cohort (879 advertisers, >$1k floor) | 2026-09-03 trailing-30d run (1,859 delivering, superseded) | 2026-09-03 shipped, 365-day cohort (4,387 advertisers, medians over delivering only) |
+|---|---:|---:|---:|
+| CPM | $24.84 | $26.62 | **$26.60** |
+| Impressions per IP | 3.5 | 3.43 | **3.58** |
+| IVR | 2.15% | 2.639% | **2.561%** |
+| CVR | 0.054% | 0.086% | **0.082%** |
 
-The arm split and its `spendRequired` mirror (1.1111x) are now **correct and verified** in the standalone, together with the `setOutcome` defect: checked with node against `ti_884_mde_calculator.py`, `mdeRel` agrees to **<1e-11** across h=0.10/0.20 and p=0.0058/0.107/0.1183, and `spendRequired(computeMDE(budget)) == budget` to **<1e-9**. Republished to the SAME gist under the ORIGINAL filename so previously shared links stay valid (`gh gist edit <id> -f ti_xxx_mde_calculator_prefill.html <local path>`); live copy verified byte-identical to the local build. Exposure widened 879 → 1,859 named delivering advertisers now carrying advertiser-facing spend; still no lapsed/churned accounts. Build artifacts: `tickets/audi_1213_mde_calculator_refresh/artifacts/audi_1213_build_prefill.py`, `audi_1213_patch_calculator.py`, `audi_1213_mde_calculator.html`. Still open on AUDI-1213: the 2,546 lapsed cohort, the Mode port, the VR_STACK 0.595 re-measurement.
+**The shipped defaults are the third column (2026-09-03, AUDI-1213).** The cohort is 4,387 advertisers (1,857 delivering + 2,530 lapsed) at a 365-day recency cut, 2,908 GB billed, 53s wall. The medians are taken over **delivering advertisers only**, so the CLEAR-button defaults describe a live account rather than the blended cohort. **Why they moved off the middle column: each advertiser is now windowed on its own last 30 DELIVERING days instead of the trailing calendar 30. That is a definitional change to the metric, not drift.** The same advertiser returns a different CPM/imps-per-IP/rate under the two windows. Do not read 3.43 → 3.58 or 2.639% → 2.561% as a market move. Methodology: "Window a lapsed advertiser on its own last delivering days" in the LAPSED-advertiser screening section above.
+
+The arm split and its `spendRequired` mirror (1.1111x) are now **correct and verified** in the standalone, together with the `setOutcome` defect: checked with node against `ti_884_mde_calculator.py`, `mdeRel` agrees to **<1e-11** across h=0.10/0.20 and p=0.0058/0.107/0.1183, and `spendRequired(computeMDE(budget)) == budget` to **<1e-9**. Republished to the SAME gist under the ORIGINAL filename so previously shared links stay valid (`gh gist edit <id> -f ti_xxx_mde_calculator_prefill.html <local path>`); live copy verified byte-identical to the local build. Exposure widened 879 → 1,859 named delivering advertisers now carrying advertiser-facing spend; lapsed/churned accounts landed later the same day with the 365-day cohort (below). Build artifacts: `tickets/audi_1213_mde_calculator_refresh/artifacts/audi_1213_build_prefill.py`, `audi_1213_patch_calculator.py`, `audi_1213_mde_calculator.html`. All three items open at that point closed the same day: the lapsed cohort shipped at a 365-day cut (below), the Mode port shipped, and VR_STACK 0.595 was re-measured and refuted (block below). AUDI-1213 closed 2026-09-03.
 
 **VR_STACK 0.595 is REFUTED end to end, measured 2026-09-03 (AUDI-1213).** The MDE calculator's
 "FULL STACK" toggle multiplies the standard error by 0.595, documented as CUPED(0.934) x
@@ -1939,6 +1960,13 @@ right that 0.595 is wrong, but 0.794 is not supported either: nothing in the lin
 at all. **Every post-stack MDE ever published from this tool is understated by `1/0.595 = 1.68x`, and
 every post-stack budget understated by 2.82x.** SQL and the reproduction scripts are committed under
 `tickets/audi_1213_mde_calculator_refresh/`.
+
+**Actioned 2026-09-03, not just documented.** The FULL STACK toggle, the post-stack hero number, its
+chart series, its marker and the `VR_STACK` constant were removed from **both builds** of the
+calculator (the standalone and the Mode report), so neither surface can emit a post-stack figure.
+The consequence outlives the removal and is what a future reader needs: **every post-stack MDE
+published before 2026-09-03 is understated 1.68x and every post-stack budget 2.82x.** Re-quote
+anything already sent.
 
 **Deeper caveat (applies to both tools equally; methodology, not a matching issue):** this served-arm clickpass IVR is the *observed* visit rate among the exposed — fine as a screening magnitude, but it is **not** the holdout/unexposed baseline an incrementality test measures lift against. VV-attributed (clickpass) visits are structurally ~0 for never-served holdout IPs, so the true control-arm rate is far below the served-arm rate. For an honest incrementality estimand the binomial `p` should be the holdout's **total-traffic** visit rate (guid_log), where holdout ≈ served (TI-835 showed ~0% total-traffic lift). Worth formalizing before the customer-facing forecast is final.
 

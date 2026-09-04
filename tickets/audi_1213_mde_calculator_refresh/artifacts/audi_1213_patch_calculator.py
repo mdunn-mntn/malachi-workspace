@@ -619,7 +619,7 @@ setOutcome = function(o) {
     afterDatasetsDraw(ch) {
       const { ctx: c, chartArea: a, scales } = ch;
       if (!a) return;
-      const ys = scales.y;
+      const xs = scales.x, ys = scales.y;
 
       [ [5, 'rgba(18,122,72,0.55)'], [10, 'rgba(168,88,0,0.55)'] ].forEach(([v, col]) => {
         const py = ys.getPixelForValue(v);
