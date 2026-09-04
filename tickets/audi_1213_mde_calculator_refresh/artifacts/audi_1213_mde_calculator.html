@@ -900,8 +900,8 @@ function initChart() {
         c.save();
         c.fillStyle = col;
         c.font = "600 13px 'Overpass Mono', monospace";
-        c.textAlign = 'left';
-        c.fillText(txt, a.left + 12, ys.getPixelForValue(y) + 4);
+        c.textAlign = 'right';
+        c.fillText(txt, a.right - 16, ys.getPixelForValue(y) + 4);
         c.restore();
       });
 

@@ -549,8 +549,8 @@ setOutcome = function(o) {
         c.textAlign = 'right';
         c.fillText(txt, a.right - 6, ys.getPixelForValue(y) + 4);""",
         """        c.font = "600 13px 'Overpass Mono', monospace";
-        c.textAlign = 'left';
-        c.fillText(txt, a.left + 12, ys.getPixelForValue(y) + 4);""",
+        c.textAlign = 'right';
+        c.fillText(txt, a.right - 16, ys.getPixelForValue(y) + 4);""",
         "tier band labels readable and off the plot edge",
     )
 
