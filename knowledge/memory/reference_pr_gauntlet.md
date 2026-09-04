@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [pr_gauntlet, PR gauntlet, gauntlet tiers, fast medium thorough, FIXED_UNVERIFIED, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072, haiku default, gauntlet model, linked worktree marker, git rev-parse git-dir, worktrees pr_gauntlet_pass, marker before gh pr create separate command]
+keywords: [pr_gauntlet, PR gauntlet, gauntlet tiers, fast medium thorough, FIXED_UNVERIFIED, adversarial PR review, pr-gauntlet-skeptic, pr-gauntlet-stylist, pr-gauntlet-refuter, gh pr create blocked, pr_gauntlet_reminder.sh, pr_gauntlet_pass marker, PR_GAUNTLET_SKIP, gauntlet verdicts, FAIL_MAX_ROUNDS, THRASH arbiter, IMP-072, haiku default, gauntlet model, linked worktree marker, git rev-parse git-dir, worktrees pr_gauntlet_pass, marker before gh pr create separate command, gauntlet ERROR verdict, StructuredOutput missing, re-dispatch stateless, long description review surface, lint description before gauntlet, E501 ignored ruff.toml, tell reviewers the ignore list]
 domain: [workflow, repos]
 lifecycle: active
 last_verified: 2026-08-31
@@ -98,3 +98,23 @@ separate, earlier command; writing it inside the same compound command as the cr
 **Auto-fix + reformat must be reviewed as two changes (AUDI-1269, 2026-09-03).** A fixer that both applies a finding and reformats a file introduces two independent sources of change. When the finding is disproven (the builder config applies at session start, not Dataproc batch — the mechanism was wrong) and the reformat is unrelated to the proof, revert the WHOLE fix commit and amend only the PR description instead. The description now carries the clarification ("builder values apply at getOrCreate, not at batch launch") so the fact survives even though the wrong fix is gone. Rule: **run a fixer's full diff through the gauntlet; if a finding is refuted, check whether the reformat and the finding are dependent** (loosely coupled reformat can stay; tightly coupled cannot). This applies to any auto-fix, not just the gauntlet.
 
 **`ruff format` reformats whole files even though CI runs only `ruff check` (AUDI-1317, 2026-09-03).** The mechanical gate runs `ruff format`, which reformats every touched file even though the target repo's CI runs only `ruff check`. On AUDI-1317 that produced a 200-line reformat of one file whose only real change was two docstrings; the reformat was reverted in a later commit and only the substantive fixes shipped. **When reviewing a diff with a large reformat, use `git diff -w` (ignore whitespace changes) and compare the parsed syntax tree** (`black --diff`, `ast.parse()`) rather than trusting a line count. The substantive change may be tiny.
+
+**A long `description` arg becomes review surface (AUDI-1326, 2026-09-04).** I passed the ticket's
+full prose as the workflow's `description`, and both reviewers filed findings against the
+description's word count rather than the code, burning a slot in two separate rounds. The fixer
+correctly rejected it as out of scope. **Pass a description already linted to the PR cap
+(`lint_comms.py --kind pr`), or a two-line summary.** The description is what the reviewers read as
+the PR, so an unlinted one is a real finding they are right to file.
+
+**`ERROR` is infrastructure, and re-dispatch is cheap (AUDI-1326, 2026-09-04).** Round 2 returned
+`ERROR: a reviewer failed twice; convergence cannot be certified` because a subagent finished
+without calling `StructuredOutput`. Round 1's findings and fixes were still real and already on
+disk. **Commit the fixer's work, then re-dispatch from scratch** — the loop is stateless between
+runs, and the second run reviews the now-fixed tree, which is what you want anyway. The re-run cost
+5 agents against the first run's 8.
+
+**Tell the reviewers which lint rules the target repo actually ignores (2026-09-04).** The stylist
+filed four line-length findings against a package whose own `ruff.toml` lists `E501` in `ignore`.
+All were refuted, but the round was spent. Naming the ignore list in the description prevented a
+repeat on the re-run.
+

@@ -233,8 +233,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_slack_reply_voice | feedback | 2026-09-03 | [doc](memory/feedback_slack_reply_voice.md) |
 | feedback_test_must_not_share_code_assumption | feedback | 2026-09-03 | [doc](memory/feedback_test_must_not_share_code_assumption.md) |
 | feedback_verify_agent_findings_before_relaying | feedback | 2026-09-03 | [doc](memory/feedback_verify_agent_findings_before_relaying.md) |
-| project_airflow_debugger | project | 2026-09-03 | [doc](memory/project_airflow_debugger.md) |
-| project_airflow_optimizer | project | 2026-09-03 | [doc](memory/project_airflow_optimizer.md) |
 | project_backlog_gate_pings | project | 2026-09-03 | [doc](memory/project_backlog_gate_pings.md) |
 | project_incrementality_experiment | project | 2026-09-03 | [doc](memory/project_incrementality_experiment.md) |
 | reference_bq_job_attribution | reference | 2026-09-03 | [doc](memory/reference_bq_job_attribution.md) |
@@ -254,6 +252,8 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | airflow-ti-repo-and-deployment | reference | 2026-09-04 | [doc](memory/reference_airflow_ti.md) |
 | feedback_check_which_dbt_assertion_failed | feedback | 2026-09-04 | [doc](memory/feedback_check_which_dbt_assertion_failed.md) |
 | feedback_shared_worktree_commits | feedback | 2026-09-04 | [doc](memory/feedback_shared_worktree_commits.md) |
+| project_airflow_debugger | project | 2026-09-04 | [doc](memory/project_airflow_debugger.md) |
+| project_airflow_optimizer | project | 2026-09-04 | [doc](memory/project_airflow_optimizer.md) |
 | reference_astro_deploy_mechanics | reference | 2026-09-04 | [doc](memory/reference_astro_deploy_mechanics.md) |
 | reference_geo_vs_ip_holdout_power | reference | 2026-09-04 | [doc](memory/reference_geo_vs_ip_holdout_power.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-09-04 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
