@@ -259,7 +259,7 @@ by_vertical = summarize(pop, "vertical_name", "Vertical")
 by_freq_q = summarize(pop, "freq_bucket", "Average frequency", order=FREQ_Q_LABELS)
 by_hi = summarize(pop, "hi_bucket", "Share of scored households at High Intent")
 by_score = summarize(pop, "score_bucket", "Average household score")
-by_tv = summarize(pop, "tv_bucket", "Share of spend on TV screens")
+by_tv = summarize(pop, "tv_bucket", "Share of media spend on TV screens")
 by_tenure = summarize(pop, "tenure_bucket", "Advertiser tenure",
                       order=["Under 1 year", "1 to 2 years", "2 to 4 years", "Over 4 years"])
 by_vv = summarize(pop, "vv_level", "Visit attribution window")
@@ -388,7 +388,7 @@ RANKED_ADV = {
     "Creative length mix": _adv_n(pop, "creative"), "Geographic targeting": _adv_n(pop, "geo"),
     "Vertical": _adv_n(pop, "vertical_name"), "Average frequency": _adv_n(pop, "freq_bucket"),
     "High-intent share": _adv_n(pop, "hi_bucket"), "Average household score": _adv_n(pop, "score_bucket"),
-    "TV share of spend": _adv_n(pop, "tv_bucket"), "Advertiser tenure": _adv_n(pop, "tenure_bucket"),
+    "TV share of media spend": _adv_n(pop, "tv_bucket"), "Advertiser tenure": _adv_n(pop, "tenure_bucket"),
     "Visit attribution window": _adv_n(pop, "vv_level"), "Frequency cap": _adv_n(pop, "fcap_level"),
     "Display multi-touch": _adv_n(pop, "display_flag"), "Audience size": _adv_n(pop, "aud_bucket"),
 }
@@ -399,7 +399,7 @@ RANKED_SRC = [
     ("Creative length mix", by_creative, None), ("Geographic targeting", by_geo, None),
     ("Vertical", by_vertical, None), ("Average frequency", by_freq_q, None),
     ("High-intent share", by_hi, None), ("Average household score", by_score, None),
-    ("TV share of spend", by_tv, None), ("Advertiser tenure", by_tenure, None),
+    ("TV share of media spend", by_tv, None), ("Advertiser tenure", by_tenure, None),
     ("Visit attribution window", by_vv, None), ("Frequency cap", by_fcap, None),
     ("Display multi-touch", by_display, None), ("Audience size", by_aud, None),
 ]
@@ -484,7 +484,7 @@ COST_SRC = {
     "Creative length mix": (pop, "creative"), "Geographic targeting": (pop, "geo"),
     "Vertical": (pop, "vertical_name"), "Average frequency": (pop, "freq_bucket"),
     "High-intent share": (pop, "hi_bucket"), "Average household score": (pop, "score_bucket"),
-    "TV share of spend": (pop, "tv_bucket"), "Advertiser tenure": (pop, "tenure_bucket"),
+    "TV share of media spend": (pop, "tv_bucket"), "Advertiser tenure": (pop, "tenure_bucket"),
     "Visit attribution window": (pop, "vv_level"), "Frequency cap": (pop, "fcap_level"),
     "Display multi-touch": (pop, "display_flag"), "Audience size": (pop, "aud_bucket"),
 }
@@ -633,7 +633,7 @@ detail = base[[
     "avg_household_score": "Avg household score", "pct_households_unscored": "% households unscored",
     "pct_hh_high_intent": "% High Intent", "pct_hh_peak": "% Peak Performance",
     "pct_hh_mid": "% Mid Intent", "pct_hh_max_reach": "% Max Reach",
-    "pct_spend_tv": "% spend TV", "pct_spend_display": "% spend Display",
+    "pct_spend_tv": "% media spend TV", "pct_spend_display": "% spend Display",
     "runs_display": "Runs display", "fcap_setting": "Frequency cap",
     "advertiser_tenure_months": "Tenure months", "vv_attribution_window_days": "Visit window days",
     "live_advertiser": "Live advertiser",
@@ -812,14 +812,14 @@ wb.table(
 
 wb.table(
     "Device and window", pd.concat([
-        by_tv.rename(columns={"Share of spend on TV screens": "Setting"}).assign(Attribute="TV share of spend"),
+        by_tv.rename(columns={"Share of media spend on TV screens": "Setting"}).assign(Attribute="TV share of media spend"),
         by_vv.rename(columns={"Visit attribution window": "Setting"}).assign(Attribute="Visit attribution window"),
         by_tenure.rename(columns={"Advertiser tenure": "Setting"}).assign(Attribute="Advertiser tenure"),
     ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Lift", "Low end", "High end",
                            "% with a clear effect", "Campaigns disagree", "Incremental visits", "Spend",
                            "Cost per incremental visit"]],
     finding="Pooled visit lift by screen, attribution window and advertiser tenure",
-    method="TV share is spend-weighted from the device dimension. Mobile and tablet is its exact complement, so it is not shown separately. Attribution window is the advertiser's visit lookback.",
+    method="TV share is weighted by media spend, the only spend carrying a device. Mobile and tablet is its exact complement. Attribution window is the advertiser's visit lookback.",
     formats=SUMF, signal={"Lift": {}}, kind="data",
     toc="Lift by TV share, attribution window and tenure",
     query="ti_1313_campaign_base.sql")
@@ -894,7 +894,7 @@ wb.table(
              "% spend stage 3": FMT.PCT0, "% spend Desktop": FMT.PCT2,
              "Avg household score": FMT.INT, "% households unscored": FMT.PCT0,
              "% High Intent": FMT.PCT0, "% Peak Performance": FMT.PCT0, "% Mid Intent": FMT.PCT0,
-             "% Max Reach": FMT.PCT0, "% spend TV": FMT.PCT0, "% spend Display": FMT.PCT0,
+             "% Max Reach": FMT.PCT0, "% media spend TV": FMT.PCT0, "% spend Display": FMT.PCT0,
              "Tenure months": FMT.INT, "Visit window days": FMT.INT,
              "Avg frequency": FMT.NUM1, "Multi-touch spend": FMT.PCT0, "Budget": FMT.USD0,
              "Treated households": FMT.INT, "Holdout households": FMT.INT,
@@ -937,7 +937,7 @@ wb.glossary(
         ("Why the bid-count sheet is a warning", "Bid count is decided after the auction, so winning an impression changes which band a household lands in. The single-bid band reads negative, and withholding a bid cannot reduce visits."),
         ("Testing many attributes", "Fourteen attributes were tested on the same campaigns, so roughly one would clear the usual 0.05 bar by chance. The ranked sheet marks which ones survive a stricter bar that accounts for that."),
         ("Cost spread on the ranked sheet", "How many times dearer the worst setting is than the best, with the low end from resampling advertisers. Both settings are chosen after seeing the data, so treat a low end near 1 as no separation."),
-        ("Share of spend on TV screens", "The device the impression served to, not the ad format, over prospecting delivery only: 93% of that spend reaches a TV device and 7% a phone or tablet. Display multi-touch sits outside this denominator."),
+        ("Share of media spend on TV screens", "The device the impression served to, not the ad format, over prospecting media spend only: 93% reaches a TV device, 7% a phone or tablet. Data and platform spend carry no device, and display is not counted."),
         ("Frequency is over the whole window", "Both frequency sheets count over the full 22 Jun to 31 Aug span, not per week or per month. 11+ bids means 11 or more across ten weeks."),
         ("Everything else", "Every other attribute the ticket names is a column on Campaign detail, and those with enough spread are cut on a sheet and ranked."),
     ], max_entries=27)
