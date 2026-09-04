@@ -652,11 +652,38 @@ setOutcome = function(o) {
         html,
         """    .adv-loaded-stats {
       display: grid;
-      grid-template-columns: 1fr 1fr;""",
+      grid-template-columns: 1fr 1fr;
+      gap: 5px 12px;
+      font-size: 11px;
+      color: var(--t2);
+    }
+    .adv-loaded-stats span {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-size: 10px;
+    }""",
         """    .adv-loaded-stats {
       display: grid;
-      grid-template-columns: auto 1fr;""",
-        "stats grid gives the right column the slack the longer label needs",
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--t2);
+    }
+    .adv-loaded-stats > div {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .adv-loaded-stats span {
+      font-family: var(--mono);
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: none;
+    }""",
+        "stats stack the value under its label so a long label cannot wrap mid-phrase",
     )
 
     html = sub(

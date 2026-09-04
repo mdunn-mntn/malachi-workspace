@@ -379,15 +379,24 @@
     }
 #mde .adv-loaded-stats {
       display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 5px 12px;
-      font-size: 11px;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       color: var(--t2);
+    }
+#mde .adv-loaded-stats > div {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
     }
 #mde .adv-loaded-stats span {
       font-family: var(--mono);
       color: var(--accent);
-      font-size: 10px;
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: none;
     }
 #mde .adv-clear {
       margin-top: 6px;
