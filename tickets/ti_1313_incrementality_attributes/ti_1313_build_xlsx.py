@@ -145,7 +145,7 @@ def summarize(df, by, label, order=None, min_k=5, extras=True, clustered=True):
              "Extra visits per 1,000 households": pa["est"] * 1000 if pa else np.nan,
              "Baseline visit rate": gp["rate_holdout"].median(),
              "% with a clear effect": gp["significant_95"].mean(),
-             "Campaigns disagree": p["i2"],
+             "Variation across campaigns": p["i2"],
              "Incremental visits": gp["incremental_visits"].sum()}
         if clustered:
             lo, hi = boot_adv(gp, lambda d: pool(d))
@@ -326,7 +326,7 @@ def _pair_row(label, sub):
         "Low end": np.expm1(lo), "High end": np.expm1(hi),
         "Campaigns where this band lifted less": f"{int((sub['dr'] < 0).sum())} of {len(sub)}",
         "Visit gap per 1,000 households": ab["est"] * 1000,
-        "Of which is the lower baseline alone": mech["est"] * 1000,
+        "Share from the lower baseline": mech["est"] * 1000,
     }
 
 
@@ -415,7 +415,7 @@ for name, tbl, fixed_n in RANKED_SRC:
         "Attribute": name,
         "Cheapest setting": str(_cheap[t.columns[0]]) if _cheap is not None else "",
         "Cost per incremental visit there": _cheap["Cost per incremental visit"] if _cheap is not None else np.nan,
-        "Dearest cost per incremental visit": _c["Cost per incremental visit"].max() if len(_c) else np.nan,
+        "Highest cost per incremental visit": _c["Cost per incremental visit"].max() if len(_c) else np.nan,
         "Best lift setting is also cheapest": (
             "Yes" if (_cheap is not None and str(_cheap[t.columns[0]]) == str(t.iloc[0][t.columns[0]])) else "No"),
         "Campaigns": int(fixed_n if fixed_n else t["Campaigns"].sum()),
@@ -426,8 +426,8 @@ for name, tbl, fixed_n in RANKED_SRC:
         "Best lift": best["Lift"],
         "Worst setting": str(worst[t.columns[0]]),
         "Worst lift": worst["Lift"],
-        "Gap": best["Lift"] - worst["Lift"],
-        "Best beats worst outright": "Yes" if best["Low end"] > worst["High end"] else "No",
+        "Gap between best and worst": best["Lift"] - worst["Lift"],
+        "Best clearly beats worst": "Yes" if best["Low end"] > worst["High end"] else "No",
     })
 def between_q(tbl):
     """Cochran Q across an attribute's levels, on the log scale, with its p-value."""
@@ -491,23 +491,23 @@ COST_SRC = {
 for row in rank_rows:
     src = COST_SRC.get(row["Attribute"])
     o, lo = cost_spread(*src) if src else (np.nan, np.nan)
-    row["Dearest costs this many times more"] = o
-    row["Low end of that spread"] = lo
+    row["Highest costs this many times more"] = o
+    row["Low end of that multiple"] = lo
 
 BONFERRONI = 0.05 / len(rank_rows)
 for row in rank_rows:
-    row["Survives testing every attribute"] = "Yes" if row["Lift p value"] < BONFERRONI else "No"
+    row["Holds after testing all attributes"] = "Yes" if row["Lift p value"] < BONFERRONI else "No"
 
 ranked = (pd.DataFrame(rank_rows)
-          .sort_values(["Low end of that spread", "Lift p value"], ascending=[False, True])
+          .sort_values(["Low end of that multiple", "Lift p value"], ascending=[False, True])
           .reset_index(drop=True))
 RANK_ORDER = ["Attribute", "Cheapest setting",
-              "Cost per incremental visit there", "Dearest cost per incremental visit",
-              "Dearest costs this many times more", "Low end of that spread",
+              "Cost per incremental visit there", "Highest cost per incremental visit",
+              "Highest costs this many times more", "Low end of that multiple",
               "Best lift setting is also cheapest",
-              "Lift p value", "Survives testing every attribute",
-              "Best setting", "Best lift", "Worst setting", "Worst lift", "Gap",
-              "Best beats worst outright",
+              "Lift p value", "Holds after testing all attributes",
+              "Best setting", "Best lift", "Worst setting", "Worst lift", "Gap between best and worst",
+              "Best clearly beats worst",
               "Campaigns", "Advertisers", "Number of settings", "Campaigns in smallest setting"]
 ranked = ranked[RANK_ORDER]
 
@@ -556,7 +556,7 @@ for name, col in [("Creative length mix", "creative"), ("Geographic targeting", 
             "Attributed conversions": att_conv,
             "Incremental conversions": att_conv * share if estimable else np.nan,
             "% attributed that is incremental": share if estimable else np.nan,
-            "Reported per real one": 1.0 / share if estimable else np.nan,
+            "Reported per incremental conversion": 1.0 / share if estimable else np.nan,
             "Attributed CPA": spend / att_conv,
             "Incremental CPA": spend / (att_conv * share) if estimable else np.nan,
         })
@@ -575,7 +575,7 @@ for lab, sub in [("Everything that passes power and quality", base),
     gates.append({"Population": lab, "Campaigns": p["k"], "Lift": p["lift"],
                   "Low end": p["lo"], "High end": p["hi"],
                   "% with a clear effect": sub[p["mask"]]["significant_95"].mean(),
-                  "Campaigns disagree": p["i2"]})
+                  "Variation across campaigns": p["i2"]})
 gate_tbl = pd.DataFrame(gates)
 
 GF_BINS = ["Under 7%", "7 to 8%", "8 to 9%", "9 to 10%", "10 to 11%", "11% and over"]
@@ -604,7 +604,7 @@ detail = base[[
     "avg_frequency", "pct_spend_multitouch", "budget",
     "n_treatment", "n_holdout", "vis_treatment", "vis_holdout",
 ]].rename(columns={
-    "campaign_group_id": "CG id", "campaign_group_name": "Campaign group",
+    "campaign_group_id": "Campaign group id", "campaign_group_name": "Campaign group",
     "advertiser_name": "Advertiser", "vertical_name": "Vertical",
     "in_validity_band": "Holdout in band", "meets_75pct_days_live": "75% days live",
     "ghost_frac": "Holdout share", "days_delivered": "Days delivered",
@@ -617,20 +617,20 @@ detail = base[[
     "cost_per_incremental_conversion": "Cost per incremental conversion",
     "scaled_spend": "Spend on measured households",
     "attributed_visits": "Attributed visits", "attributed_conversions": "Attributed conversions",
-    "attributed_ivr": "Attributed IVR",
+    "attributed_ivr": "Attributed visits per impression",
     "attributed_cpa_total_spend": "Attributed CPA on total spend",
     "attributed_per_incremental_conv": "Attributed per incremental conversion",
     "pct_attributed_visits_incremental": "% of attributed visits incremental",
     "pct_attributed_conv_incremental": "% of attributed conversions incremental",
-    "creative_length_mix": "Creative length", "share_15s": "Share 15s", "n_creatives": "Creatives",
+    "creative_length_mix": "Creative length", "share_15s": "Share of 15 second creatives", "n_creatives": "Creatives",
     "audience_size": "Audience size", "pct_audience_reached": "Reached as % of audience",
     "impressions_per_audience_member": "Impressions per audience member",
     "prospecting_impressions": "Impressions", "prospecting_ips": "Households reached",
-    "households_delivered": "Households scored basis", "monthly_muv": "Advertiser MUVs",
-    "advertiser_aov": "Advertiser AOV", "avg_hhst": "Avg score threshold",
+    "households_delivered": "Households with a score", "monthly_muv": "Advertiser monthly unique visitors",
+    "advertiser_aov": "Advertiser AOV", "avg_hhst": "Average score threshold",
     "pct_spend_stage2": "% spend stage 2", "pct_spend_stage3": "% spend stage 3",
     "pct_spend_desktop": "% spend Desktop",
-    "avg_household_score": "Avg household score", "pct_households_unscored": "% households unscored",
+    "avg_household_score": "Average household score", "pct_households_unscored": "% households unscored",
     "pct_hh_high_intent": "% High Intent", "pct_hh_peak": "% Peak Performance",
     "pct_hh_mid": "% Mid Intent", "pct_hh_max_reach": "% Max Reach",
     "pct_spend_tv": "% media spend TV", "pct_spend_display": "% spend Display",
@@ -639,7 +639,7 @@ detail = base[[
     "live_advertiser": "Live advertiser",
     "geo_targeting_class": "Geo targeting", "n_dma_delivered": "DMAs delivered",
     "crm_file_excluded": "Excludes customer file", "mt_display_access_enrolled": "Multi-touch access",
-    "avg_frequency": "Avg frequency", "pct_spend_multitouch": "Multi-touch spend", "budget": "Budget",
+    "avg_frequency": "Average frequency", "pct_spend_multitouch": "Multi-touch spend", "budget": "Budget",
     "n_treatment": "Treated households", "n_holdout": "Holdout households",
     "vis_treatment": "Treated visits", "vis_holdout": "Holdout visits",
 }).sort_values("Incremental visits", ascending=False)
@@ -653,13 +653,13 @@ head = pool(pop)
 SUMF = {"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
         "Low end allowing for advertisers": FMT.PCT1, "High end allowing for advertisers": FMT.PCT1,
         "Extra visits per 1,000 households": FMT.NUM2, "Baseline visit rate": FMT.PCT2,
-        "% with a clear effect": FMT.PCT0, "Campaigns disagree": FMT.PCT0, "Campaigns": FMT.INT,
+        "% with a clear effect": FMT.PCT0, "Variation across campaigns": FMT.PCT0, "Campaigns": FMT.INT,
         "Advertisers": FMT.INT,
         "Incremental visits": FMT.INT, "Spend": FMT.USD0, "Cost per incremental visit": FMT.USD2}
 PAIRF = {"Campaigns serving both": FMT.INT, "Lift gap against High Intent": FMT.PCT1,
          "Low end": FMT.PCT1, "High end": FMT.PCT1,
          "Visit gap per 1,000 households": FMT.NUM2,
-         "Of which is the lower baseline alone": FMT.NUM2}
+         "Share from the lower baseline": FMT.NUM2}
 FREQF = {**SUMF, "Treated households": FMT.INT, "Holdout households": FMT.INT,
          "Holdout share of households": FMT.PCT1}
 
@@ -675,12 +675,12 @@ wb.table(
     "Ranked hypotheses", ranked,
     finding="Ranked on cost per incremental visit, which is the metric to optimise, with the lift test kept beside it",
     method=f"Cost spread is cheapest against dearest setting, low end from resampling advertisers. That pair is data-picked, so the low end runs optimistic. Lift p value keeps a {BONFERRONI:.4f} bar.",
-    formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap": FMT.PCT1,
+    formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap between best and worst": FMT.PCT1,
              "Campaigns": FMT.INT, "Advertisers": FMT.INT, "Number of settings": FMT.INT,
              "Campaigns in smallest setting": FMT.INT, "Lift p value": "0.0000",
-             "Dearest costs this many times more": FMT.MULT, "Low end of that spread": FMT.MULT,
+             "Highest costs this many times more": FMT.MULT, "Low end of that multiple": FMT.MULT,
              "Cost per incremental visit there": FMT.USD2,
-             "Dearest cost per incremental visit": FMT.USD2},
+             "Highest cost per incremental visit": FMT.USD2},
     rag={"Lift p value": lambda v: "POS" if v < 0.05 else ("WARN" if v < 0.20 else None)},
     kind="headline",
     toc="Which attribute separates lift most, ranked",
@@ -791,7 +791,7 @@ if not infl_tbl.empty:
         formats={"Conversion lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
                  "Attributed conversions": FMT.INT,
                  "Incremental conversions": FMT.INT, "% attributed that is incremental": FMT.PCT0,
-                 "Reported per real one": FMT.MULT, "Attributed CPA": FMT.USD2,
+                 "Reported per incremental conversion": FMT.MULT, "Attributed CPA": FMT.USD2,
                  "Incremental CPA": FMT.USD2, "Campaigns": FMT.INT},
         kind="data",
         toc="Where attributed and incremental cost can be compared, and where they cannot",
@@ -802,7 +802,7 @@ wb.table(
         by_hi.rename(columns={"Share of scored households at High Intent": "Setting"}).assign(Attribute="High-intent share of scored households"),
         by_score.rename(columns={"Average household score": "Setting"}).assign(Attribute="Average household score"),
     ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Lift", "Low end", "High end",
-                           "% with a clear effect", "Campaigns disagree", "Incremental visits", "Spend",
+                           "% with a clear effect", "Variation across campaigns", "Incremental visits", "Spend",
                            "Cost per incremental visit"]],
     finding="Pooled visit lift by what the campaign's scored audience looked like",
     method="Quartiles on scored households only, one score per household. Campaigns with no scored household are excluded rather than tie-broken into a band, and their unscored share ships on Campaign detail.",
@@ -816,7 +816,7 @@ wb.table(
         by_vv.rename(columns={"Visit attribution window": "Setting"}).assign(Attribute="Visit attribution window"),
         by_tenure.rename(columns={"Advertiser tenure": "Setting"}).assign(Attribute="Advertiser tenure"),
     ], ignore_index=True)[["Attribute", "Setting", "Campaigns", "Lift", "Low end", "High end",
-                           "% with a clear effect", "Campaigns disagree", "Incremental visits", "Spend",
+                           "% with a clear effect", "Variation across campaigns", "Incremental visits", "Spend",
                            "Cost per incremental visit"]],
     finding="Pooled visit lift by screen, attribution window and advertiser tenure",
     method="TV share is weighted by media spend, the only spend carrying a device. Mobile and tablet is its exact complement. Attribution window is the advertiser's visit lookback.",
@@ -836,17 +836,17 @@ if not by_fcap.empty:
 wb.table(
     "Window sensitivity", windows.assign(**{
         "Window": windows["window_label"],
-        "Powered": windows["powered_campaign_groups"],
-        "Powered and in band": windows["powered_and_in_band"],
+        "Groups with 100+ holdout visits": windows["powered_campaign_groups"],
+        "Also in the 7 to 11% band": windows["powered_and_in_band"],
         "Holdout share": windows["ghost_frac_powered"],
         "Lift, all campaigns": windows["lift_all"],
         "Lift, powered": windows["lift_powered"],
         "Lift, powered and in band": windows["lift_powered_in_band"]})[
-        ["Window", "Powered", "Powered and in band", "Holdout share",
+        ["Window", "Groups with 100+ holdout visits", "Also in the 7 to 11% band", "Holdout share",
          "Lift, all campaigns", "Lift, powered", "Lift, powered and in band"]],
     finding="The three windows do not agree, and the gates do not reconcile them, so the window is a real choice",
     method="Lift roughly doubles from the shortest window to the trailing 30 days, gated or not, while the holdout thins. The full span is used because it keeps the most campaigns.",
-    formats={"Powered": FMT.INT, "Powered and in band": FMT.INT, "Holdout share": FMT.PCT2,
+    formats={"Groups with 100+ holdout visits": FMT.INT, "Also in the 7 to 11% band": FMT.INT, "Holdout share": FMT.PCT2,
              "Lift, all campaigns": FMT.PCT1, "Lift, powered": FMT.PCT1,
              "Lift, powered and in band": FMT.PCT1},
     signal={"Lift, powered and in band": {}}, kind="detail",
@@ -858,7 +858,7 @@ wb.table(
     finding="What each population filter costs, and what it does to the headline",
     method="The workbook uses the last row. The holdout band matters most, and which band is least biased is not settled: see the Holdout depth check tab.",
     formats={"Lift": FMT.PCT1, "Low end": FMT.PCT1, "High end": FMT.PCT1,
-             "% with a clear effect": FMT.PCT0, "Campaigns disagree": FMT.PCT0, "Campaigns": FMT.INT},
+             "% with a clear effect": FMT.PCT0, "Variation across campaigns": FMT.PCT0, "Campaigns": FMT.INT},
     signal={"Lift": {}}, kind="detail",
     toc="Headline lift under each combination of filters",
     query="ti_1313_campaign_base.sql")
@@ -882,21 +882,21 @@ wb.table(
              "Conversion lift": FMT.PCT1, "Conversion p value": FMT.NUM2, "Baseline conversion rate": FMT.PCT2,
              "Incremental conversions": FMT.NUM1, "Cost per incremental conversion": FMT.USD2,
              "Attributed visits": FMT.INT, "Attributed conversions": FMT.INT,
-             "Attributed IVR": FMT.PCT2, "Attributed CPA on total spend": FMT.USD2,
+             "Attributed visits per impression": FMT.PCT2, "Attributed CPA on total spend": FMT.USD2,
              "Attributed per incremental conversion": FMT.MULT, "% of attributed visits incremental": FMT.PCT0,
-             "% of attributed conversions incremental": FMT.PCT0, "Share 15s": FMT.PCT0,
+             "% of attributed conversions incremental": FMT.PCT0, "Share of 15 second creatives": FMT.PCT0,
              "Creatives": FMT.INT, "DMAs delivered": FMT.INT, "Days delivered": FMT.INT,
              "Impressions": FMT.INT, "Households reached": FMT.INT,
              "Audience size": FMT.INT, "Reached as % of audience": FMT.PCT1,
              "Impressions per audience member": FMT.NUM2,
-             "Households scored basis": FMT.INT, "Advertiser AOV": FMT.USD2,
-             "Avg score threshold": FMT.INT, "% spend stage 2": FMT.PCT0,
+             "Households with a score": FMT.INT, "Advertiser AOV": FMT.USD2,
+             "Average score threshold": FMT.INT, "% spend stage 2": FMT.PCT0,
              "% spend stage 3": FMT.PCT0, "% spend Desktop": FMT.PCT2,
-             "Avg household score": FMT.INT, "% households unscored": FMT.PCT0,
+             "Average household score": FMT.INT, "% households unscored": FMT.PCT0,
              "% High Intent": FMT.PCT0, "% Peak Performance": FMT.PCT0, "% Mid Intent": FMT.PCT0,
              "% Max Reach": FMT.PCT0, "% media spend TV": FMT.PCT0, "% spend Display": FMT.PCT0,
              "Tenure months": FMT.INT, "Visit window days": FMT.INT,
-             "Avg frequency": FMT.NUM1, "Multi-touch spend": FMT.PCT0, "Budget": FMT.USD0,
+             "Average frequency": FMT.NUM1, "Multi-touch spend": FMT.PCT0, "Budget": FMT.USD0,
              "Treated households": FMT.INT, "Holdout households": FMT.INT,
              "Treated visits": FMT.INT, "Holdout visits": FMT.INT},
     signal={"Visit lift": {"sig": "Significant"}}, kind="data",
@@ -915,9 +915,9 @@ wb.glossary(
         ("Allowing for advertisers", "A wider range built by resampling advertisers, not campaigns. One advertiser stamps the same settings across several campaigns, so campaigns are not independent. This is the honest range."),
         ("Low end and High end", "The range the true lift is very likely to sit in. A range that stays above zero means the effect is real; one that crosses zero means we cannot rule out no effect at all."),
         ("% with a clear effect", "Share of the campaigns in that row whose own result was strong enough to stand on its own. The rest may still be real, just too small to prove one at a time."),
-        ("Campaigns disagree", "Share of variation between campaigns that is real disagreement, not sampling noise. Above roughly 75% the pooled number is the centre of a wide spread."),
+        ("Variation across campaigns", "Share of variation between campaigns that is real disagreement, not sampling noise. Above roughly 75% the pooled number is the centre of a wide spread."),
         ("Attributed against incremental", "Attributed counts every visit or conversion reporting credits to the ads. Incremental counts only what the holdout says the ads caused."),
-        ("Reported per real one", "How many reported conversions stand behind one genuine one. Blank wherever conversion lift does not clear zero, because the ratio is unbounded there."),
+        ("Reported per incremental conversion", "How many reported conversions stand behind one genuine one. Blank wherever conversion lift does not clear zero, because the ratio is unbounded there."),
         ("Holdout share", "Share of a campaign's households held back, designed to be 10%. This workbook keeps 7% to under 11%. Past 11% measured lift turns negative, because an uncapped holdout collects the most active households."),
         ("Who is in this", f"{n_pop:,} campaign groups across {n_adv:,} advertisers: 100+ holdout visits, full quality gate, validated bidder leg, holdout inside the band, live at least 75% of days, and no internal or test account."),
         ("Days live", "Distinct days the group delivered prospecting impressions in the window. Measured from delivery, not config dates, so a mid-window pause is caught."),
