@@ -853,6 +853,31 @@ wb.table(
     toc="Why the workbook uses the full span, not the trailing 30 days",
     query="ti_1313_window_sensitivity.sql")
 
+mp = base[base["in_validity_band"] & base["live_advertiser"].fillna(False)].copy()
+mp["Media plan"] = np.where(mp["media_plan_enabled"], "Has a media plan", "No media plan")
+mp["Days delivered"] = pd.cut(mp["days_delivered"], [0, 15, 30, 50, 71],
+                              labels=["1 to 15", "16 to 30", "31 to 50", "51 to 71"])
+_mp_rows = []
+for (_band, _flag), _g in mp.groupby(["Days delivered", "Media plan"], observed=True):
+    _p = pool(_g)
+    if _p is None or _p["k"] < 3:
+        continue
+    _mp_rows.append({"Days delivered": _band, "Media plan": _flag, "Campaigns": _p["k"],
+                     "Advertisers": _g[_p["mask"]]["advertiser_id"].nunique(),
+                     "Lift": _p["lift"], "Low end": _p["lo"], "High end": _p["hi"]})
+by_mp = pd.DataFrame(_mp_rows).sort_values(["Days delivered", "Media plan"])
+_mp_in_workbook = int(pop["media_plan_enabled"].sum())
+
+wb.table(
+    "Media plan", by_mp,
+    finding=f"Media plan is not testable here. Only {_mp_in_workbook} of {len(pop):,} campaigns have one and the wider comparison flips direction",
+    method=f"Relaxing the 75% days live filter reaches {int(mp['media_plan_enabled'].sum())} campaigns with a plan. Those ran a median 20 days against 71, so rows are banded by days delivered. The direction flips between bands.",
+    formats={"Campaigns": FMT.INT, "Advertisers": FMT.INT, "Lift": FMT.PCT1,
+             "Low end": FMT.PCT1, "High end": FMT.PCT1},
+    kind="detail",
+    toc="Why media plan has no result yet",
+    query="ti_1313_campaign_base.sql")
+
 wb.table(
     "Population choices", gate_tbl,
     finding="What each population filter costs, and what it does to the headline",

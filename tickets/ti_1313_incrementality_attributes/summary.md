@@ -1324,3 +1324,33 @@ describes one, and delete the describing.**
 Two of these superseded guidance I had written earlier the same day. "Name the broken assumption" became
 "delete the frame and state the fact", because naming it was still a frame. That is worth remembering: a
 correction to my own voice rule can itself be too clever.
+
+
+### 19. Media plan (Kirsa for Edgar, 2026-09-04)
+
+**Asked for as an attribute; it cannot carry a result in this cohort, and the workbook now says so on its own
+tab rather than omitting it.**
+
+`dw-main-silver.core.media_plan` is keyed on `campaign_group_id` and was already joined into the base query,
+so the column existed all along. It never became a tab because `summarize()` drops any level under five
+campaigns. **Only 3 of the 433 campaign groups in this workbook have a media plan.** Querying the table
+directly for the cohort returns 5 groups (3 at `media_plan_status_id = 3`, 2 at 8), so the count is 3 to 5
+depending on whether inactive plans count.
+
+**What removes them is delivery length, not the holdout.** Of the 60 media plan groups in the full pull, 52
+are inside the 7 to 11% validity band and 57 have a live advertiser, but only **3 meet the 75% days live
+filter**. Media plan campaigns are new, so they have not run a full 22 Jun to 31 Aug window.
+
+**Relaxing that filter reaches 49 campaigns and still does not settle it.** Pooled, media plan is +2.26%
+[-2.11%, +6.82%] against +10.77% [+9.74%, +11.82%], but the two arms differ on delivery: a median of 20 days
+against 71. Banded by days delivered the direction flips, which is what noise looks like:
+
+| Days delivered | Has a media plan | No media plan |
+|---|---|---|
+| 1 to 15 | +7.1% [+0.3%, +14.4%], k=15 | +2.3% [-1.4%, +6.3%], k=34 |
+| 16 to 30 | -2.3% [-8.5%, +4.4%], k=22 | +21.1% [+15.0%, +27.5%], k=58 |
+| 31 to 50 | +12.5% [+0.7%, +25.6%], k=9 | +12.8% [+9.6%, +16.1%], k=82 |
+| 51 to 71 | -16.5% [-20.5%, -12.3%], k=3 | +9.9% [+8.8%, +11.0%], k=435 |
+
+**What would settle it:** re-run once media plan campaigns have a full window of delivery. The band is
+growing, so a later window should clear the five-campaign floor without relaxing anything.
