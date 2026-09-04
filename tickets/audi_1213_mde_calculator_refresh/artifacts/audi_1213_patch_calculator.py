@@ -643,6 +643,24 @@ setOutcome = function(o) {
 
     html = sub(
         html,
+        '<div>cvr rate <span id="adv-stat-pcvr">\u2014</span></div>',
+        '<div>conversion rate <span id="adv-stat-pcvr">\u2014</span></div>',
+        "loaded pane says conversion rate, not cvr rate",
+    )
+
+    html = sub(
+        html,
+        """    .adv-loaded-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;""",
+        """    .adv-loaded-stats {
+      display: grid;
+      grid-template-columns: auto 1fr;""",
+        "stats grid gives the right column the slack the longer label needs",
+    )
+
+    html = sub(
+        html,
         """       <span class="adv-item-meta">${a.id} \u00b7 ${fmtBudget(a.spend30)}${a.live ? '/30d' : ' last active ' + a.lastDay}</span>""",
         """       <span class="adv-item-meta">${a.id} \u00b7 ${fmtBudget(a.spend30)}${a.live ? '/30d' : ''}</span>""",
         "picker row drops the last-active date so the name is not squeezed out",
