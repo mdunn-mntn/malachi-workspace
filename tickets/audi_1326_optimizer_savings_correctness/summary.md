@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1326: Fix the optimizer savings figure and the retry that mass-resolves findings"
-status: backlog
+status: in_progress
 date: 2026-09-04
 summary: "Gate the savings estimate, fix the retry grace window, fix digest buckets"
-result: "not started"
+result: "PR 1286 open, gauntlet PASS"
 question: "Can the optimizer's savings figure and resolution rule be made to say only what the data supports, so a retried sweep changes nothing and no dollar figure appears without evidence?"
 framing_state: locked
 ---
@@ -108,11 +108,51 @@ Open questions carried into the PR description, not resolved here:
 - Whether the applied date itself should count as a before-day. Today `d < applied_date` excludes it.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+PR [SteelHouse/airflow-ti#1286](https://github.com/SteelHouse/airflow-ti/pull/1286), branch
+`audi-1326-ledger-savings-correctness`, 5 commits, 7 files, 1,456 lines (437 product, the rest tests).
+
+| Commit | What |
+|---|---|
+| `b75e2ac` | `_history`/`latest`/`set_state`/`mark_applied` order by date, not file position; `mark_applied` stops copying `exec_h`; `savings` skips applied rows; dead DCU columns dropped |
+| `3959eac` | `classify` reads only sweeps strictly before the sweep date; a same-day `wont_fix` stays visible; `fix_pr` comes from the newest row that has one |
+| `14fc9d2` | `savings` requires 3 sweep-days each side and a 90% interval clear of zero, else publishes the reason; the series takes the fuller reading per dag-day; watch rows keep a cleared job accruing after-days, killable with `OPTIMIZER_WATCH_ROWS=0` |
+| `810490f` | `delta()` buckets `recurring` and falls back to `chronic` for any unmapped state; digest rows name the shipped PR, dated from the `app_id` run day |
+| `798903c` | Gauntlet fixes: `_run_date` rejects a short `app_id` rather than formatting `1234-56-7`; `_mark_resolved` respects a human decision dated on the sweep day |
+
+**Verification.** Repo CI reproduced locally: ruff clean against the package's own `ruff.toml`, 242
+tests, `compileall` OK. Full suite including the debugger: 524 passed. 44 new test functions; copying
+them onto clean `origin/main` gives 46 failures, so they genuinely fail before.
+
+**Gauntlet.** Two runs at `thorough`. Run 1 errored in round 2 (a reviewer returned no structured
+output) but round 1 was real: 3 findings, 2 confirmed and fixed, 1 rejected as out of scope. Run 2
+returned PASS on a clean round: skeptic 0, stylist 3, all 3 refuted. I re-checked both refuted code
+findings by hand and the refutations hold.
+
+**Real-ledger replay, origin/main vs the branch.**
+
+| | main | branch |
+|---|---|---|
+| Resolved on 2026-09-03 | 28, every one after only 2 quiet sweeps | 0 |
+| Forward replay, all 11 sweep dates | 327 resolved, 41 premature | 297, zero premature |
+| Retry of one sweep | 82 phantom `resolved` rows on attempt 2 | identical both attempts |
+| `delta()` buckets | 135 of 186, 51 dropped | 186 of 186 |
+| Savings headline | "115 hours all-time ... ~$32 ... est. $1,676/yr" | "No measured savings to report" plus the reason |
+
+## 6. Questions Answered
+- **Q:** Did the sweep write the 60 applied rows?
+  **A:** Yes. All 60 manifest `(dag, key)` pairs match 60 ledger rows with `applied_date=2026-09-03`,
+  zero drift either way, zero `manifest row skipped` lines. Only 50 carry state `applied` because
+  `record()` rewrites the same-day row and takes the detector's state; attribution survives.
+- **Q:** Is the grace-window defect theoretical or live?
+  **A:** Live and already fired. `apply_manifest` writes rows dated the sweep day before `record()`,
+  which is enough on its own; no retry was needed. 28 keys on 2026-09-03.
+- **Q:** What is the minimum evidence a savings claim needs?
+  **A:** 3 sweep-days each side plus a 90% interval clear of zero, derived from the ledger's own
+  per-DAG daily spread rather than picked. `fangorn_score_monitor` ranges 592-954 executor-hours with
+  nothing changed, so a mean over one reading cannot separate a fix from a quiet day.
+- **Q:** Does the fix stall resolution?
+  **A:** No. Forward replay resolves 297 against main's 327; the 30-row gap is the premature ones and
+  the rest slide one sweep later.
 
 ## 6. Questions Answered
 Specific questions that were resolved during this ticket:

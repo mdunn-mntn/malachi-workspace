@@ -5,7 +5,7 @@ Prior work, newest first. `result` = the blessed one-line answer (skip re-readin
 
 | date | ticket | summary | status | result | doc |
 |------|--------|---------|--------|--------|-----|
-| 2026-09-04 | AUDI-1326: Fix the optimizer savings figure and the retry that mass-resolves findings | Gate the savings estimate, fix the retry grace window, fix digest buckets | backlog | not started | [doc](audi_1326_optimizer_savings_correctness/summary.md) |
+| 2026-09-04 | AUDI-1326: Fix the optimizer savings figure and the retry that mass-resolves findings | Gate the savings estimate, fix the retry grace window, fix digest buckets | in_progress | PR 1286 open, gauntlet PASS | [doc](audi_1326_optimizer_savings_correctness/summary.md) |
 | 2026-09-04 | AUDI-1327: Pin the debugger replies to real logs, then fix the downstream-cause parser | Real-log fixture corpus per signature class, then fix ordering, collapsed stacks, db_unreachable | backlog | not started | [doc](audi_1327_debugger_real_log_corpus/summary.md) |
 | 2026-09-04 | AUDI-1328: Measure whether the optimizer recommendations actually work | Score the 60 fixes shipped 2026-09-03 by detector and signature class | backlog | not started | [doc](audi_1328_recommendation_validation/summary.md) |
 | 2026-09-04 | AUDI-1329: Measure detector and fleet coverage | Detector taxonomy gaps plus what fraction of the fleet is ever scanned | backlog | not started | [doc](audi_1329_coverage_measurement/summary.md) |
