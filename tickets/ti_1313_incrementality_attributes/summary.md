@@ -1227,7 +1227,13 @@ confirms they are unrelated: **correlation between the two is −0.021**, median
 denominator. That is wrong on both halves. The 7% mobile and tablet share **inside** prospecting already is
 OTT video on a phone or tablet screen and is counted (§9d). What the denominator excludes is stage 2, stage 3
 and retargeting, and in this cohort that is mostly **CTV** ($1,804,164 of `objective_id = 1` sitting at
-`funnel_level` 2 and 3, §9d) plus display on the 171 groups that run any. So the share is 93% because
+`funnel_level` 2 and 3, §9d) plus display on the 171 groups that run any. **Channel split, verified
+2026-09-04** (`sum_by_campaign_by_day` joined to `public.campaigns`, cohort groups, window): prospecting is
+**$29,309,489 and 100% `channel_id = 8`** with zero display, so "prospecting is CTV" is exact, not
+approximate. The excluded spend is $5,092,523: stage 2 is $1,945,567 CTV and $1,601,044 display, stage 3 is
+$932,652 CTV and $612,723 display, so **57% of what the tab excludes is CTV**. The $1.8M figure cited above
+is the `objective_id = 1` miscoding count from §9d and is the wrong number for this claim. So the share is
+93% because
 prospecting is a CTV product, not because off-TV video was filtered out. The Read me glossary was always
 correct on this ("Display multi-touch sits outside this denominator") and needs no change.
 
