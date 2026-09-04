@@ -25,4 +25,13 @@ The pattern: I verify thoroughly when asked and under-verify when volunteering.
 3. **Re-run before concluding absence.** A single 0-row federated/external result is not evidence of missing data. See [[reference_prospecting_intent_query_rules]].
 4. **Never type a number from memory into prose** — read it off the dataframe. A hand-guessed "33.1M" shipped in a tab title that the tab's own table contradicted at 51.3M.
 
+5. **Campaign structure is a lookup, not a recollection (2026-09-04, TI-1313).** I wrote "the excluded spend
+   is mostly CTV" and "off-TV video isn't in this data" into a summary and two Slack drafts without opening
+   [[reference_mntn_campaign_stages]] or running a `channel_id` split, and both were wrong in a way one
+   30-second query settled: stage 1 is 100% `channel_id = 8`, every display dollar is stage 2 or 3. The
+   user's reaction was the cost: *"I'm surprised you don't understand the context after all this time."*
+   **Before any sentence about stages, channels, objectives or funnel levels reaches a deliverable, read the
+   stage memory and confirm the number.** Related: the vocabulary half is [[feedback_slack_reply_voice]] --
+   do not coin a term for a thing MNTN already names ("off-TV" for non-CTV, "display runners", "cable boxes").
+
 Related: [[feedback_hold_evidenced_verdict]] is the other half of this — don't fold to hedged pushback either. Pushback is a hypothesis; test it, then follow the evidence wherever it lands, including into retracting my own claim. [[feedback_contradictions_are_appended]]
