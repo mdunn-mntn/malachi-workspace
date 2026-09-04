@@ -75,6 +75,14 @@ python3 .claude/scripts/lint_comms.py --kind pr --file <description draft>   # w
 grep -rnE 'Path\.home\(\)|/Users/|Developer/work|@mountain\.com|\.databrickscfg|\.zshrc' <files>
 ```
 
+**Outside this workspace, also run the target repo's OWN CI gate.** The workspace linters do not
+know another repo's rules, and the reviewers do not run them either. Read its PR workflow
+(`.github/workflows/pr_*.y*ml`) and run what that job runs, against the same paths. Missing this
+cost a red `build-and-test` on shopper_graph #308 (2026-09-04): its CI runs
+`mypy --ignore-missing-imports --follow-imports=skip --namespace-packages --explicit-package-bases
+--disallow-untyped-defs openai` and `flake8 --ignore=E501,W503 openai`, and the gauntlet's own
+fixer had added type hints that mypy then rejected.
+
 Binary/compressed fixtures in the diff get decompressed and grepped too (`zstd -dc | grep`).
 Fix mechanical failures directly (they are deterministic), re-run to green, then proceed.
 
