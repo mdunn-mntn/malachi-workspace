@@ -479,6 +479,70 @@ setOutcome = function(o) {
         "title says what the tool answers",
     )
 
+    html = sub(
+        html,
+        "grid-template-columns: auto auto;\n      justify-content: space-between;",
+        "grid-template-columns: auto auto;\n      justify-content: start;",
+        "hero blocks sit alongside each other",
+    )
+
+    html = sub(
+        html,
+        "      gap: 0 24px;",
+        "      gap: 0 56px;",
+        "hero gap replaces the space-between push",
+    )
+
+    for old, new, label in [
+        ("font: { family: \"'Overpass Mono', monospace\", size: 9 },",
+         "font: { family: \"'Overpass Mono', monospace\", size: 12 },",
+         "chart tick size"),
+        ("color: 'rgba(78,104,120,0.6)', font: { family: \"'Overpass Mono', monospace\", size: 8 } },",
+         "color: 'rgba(78,104,120,0.75)', font: { family: \"'Overpass Mono', monospace\", size: 11 } },",
+         "chart axis-title size"),
+    ]:
+        if html.count(old) != 2:
+            raise SystemExit(f"{label}: expected 2 occurrences, got {html.count(old)}")
+        html = html.replace(old, new)
+        EDITS.append(f"{label} (x2)")
+
+    html = sub(
+        html,
+        "          titleFont: { family: \"'Overpass Mono', monospace\", size: 10 },\n          bodyFont:  { family: \"'Overpass Mono', monospace\", size: 11 },",
+        "          titleFont: { family: \"'Overpass Mono', monospace\", size: 12 },\n          bodyFont:  { family: \"'Overpass Mono', monospace\", size: 13 },",
+        "tooltip font size",
+    )
+
+    SCALE = [
+        (".chart-title", 8, 11),
+        (".legend-item", 9, 11),
+        (".hero-lbl", 8, 11),
+        (".req-label", 8, 11),
+        (".req-detail", 9, 11),
+        (".req-monthly", 15, 18),
+        (".stat-lbl", 8, 11),
+        (".stat-sub", 9, 11),
+        (".stat-val", 17, 20),
+        (".tier-pill", 8, 11),
+        (".hero-ci", 9, 12),
+        (".ctrl-section-head", 8, 10),
+        (".sl-lbl", 9, 11),
+        (".num-lbl", 8, 11),
+        (".tog-btn", 9, 11),
+        (".basis-btn", 8, 11),
+        (".adv-item-name", 11, 13),
+        (".adv-item-meta", 9, 11),
+        (".adv-loaded-stats", 9, 11),
+    ]
+    for sel, old_px, new_px in SCALE:
+        pat = re.compile(
+            r"(\." + re.escape(sel.lstrip('.')) + r"\b[^{}]*\{[^{}]*?font-size:\s*)" + str(old_px) + r"px",
+            re.S,
+        )
+        html, n = pat.subn(lambda m: m.group(1) + f"{new_px}px", html, count=1)
+        if n:
+            EDITS.append(f"scale {sel} {old_px}px -> {new_px}px")
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:

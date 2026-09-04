@@ -122,7 +122,7 @@
     .ctrl-section { display: flex; flex-direction: column; gap: 13px; }
 
     .ctrl-section-head {
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 600;
       letter-spacing: 0.38em;
       color: var(--accent);
@@ -141,7 +141,7 @@
     }
 
     .sl-lbl {
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 0.18em;
       color: var(--t2);
     }
@@ -195,7 +195,7 @@
       flex: 1;
       padding: 5px 4px;
       font-family: var(--ui);
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 0.14em;
       color: var(--t2);
       background: transparent;
@@ -210,7 +210,7 @@
     /* ─── NUMBER INPUTS ─── */
     .num-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .num-group { display: flex; flex-direction: column; gap: 4px; }
-    .num-lbl { font-size: 8px; letter-spacing: 0.16em; color: var(--t2); }
+    .num-lbl { font-size: 11px; letter-spacing: 0.16em; color: var(--t2); }
     .num-inp {
       background: var(--panel-2);
       border: 1px solid var(--border-hi);
@@ -239,8 +239,8 @@
     .hero {
       display: grid;
       grid-template-columns: auto auto;
-      justify-content: space-between;
-      gap: 0 24px;
+      justify-content: start;
+      gap: 0 56px;
       align-items: start;
       padding: 16px 20px;
       background: var(--panel);
@@ -250,7 +250,7 @@
     .hero-block { display: flex; flex-direction: column; }
 
     .hero-lbl {
-      font-size: 8px;
+      font-size: 11px;
       letter-spacing: 0.3em;
       color: var(--t2);
       margin-bottom: 3px;
@@ -282,7 +282,7 @@
       display: inline-block;
       margin-top: 7px;
       padding: 2px 8px;
-      font-size: 8px;
+      font-size: 11px;
       letter-spacing: 0.18em;
       font-weight: 600;
       border: 1px solid;
@@ -293,7 +293,7 @@
     .tier-pill.underpowered { color: var(--red);   border-color: var(--red);   background: var(--red-glow); }
 
     .hero-ci {
-      font-size: 9px;
+      font-size: 12px;
       letter-spacing: 0.14em;
       color: var(--t2);
       margin-top: 6px;
@@ -312,10 +312,10 @@
       min-width: max-content;
     }
     .req-label, .req-monthly, .req-detail { white-space: nowrap; }
-    .req-label   { font-size: 8px; letter-spacing: 0.3em; color: var(--t2); }
+    .req-label   { font-size: 11px; letter-spacing: 0.3em; color: var(--t2); }
     .req-total   { font-family: var(--mono); font-size: 30px; color: var(--amber); line-height: 1; }
-    .req-monthly { font-family: var(--mono); font-size: 15px; color: var(--t2); }
-    .req-detail  { font-size: 9px; color: var(--t2); margin-top: 2px; }
+    .req-monthly { font-family: var(--mono); font-size: 18px; color: var(--t2); }
+    .req-detail  { font-size: 11px; color: var(--t2); margin-top: 2px; }
 
     /* ─── STAT CARDS ─── */
     .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -325,9 +325,9 @@
       padding: 10px 12px;
       background: var(--panel);
     }
-    .stat-lbl { font-size: 8px; letter-spacing: 0.22em; color: var(--t2); margin-bottom: 5px; }
-    .stat-val  { font-family: var(--mono); font-size: 17px; color: var(--t1); line-height: 1; }
-    .stat-sub  { font-size: 9px; color: var(--t2); margin-top: 4px; opacity: 0.65; }
+    .stat-lbl { font-size: 11px; letter-spacing: 0.22em; color: var(--t2); margin-bottom: 5px; }
+    .stat-val  { font-family: var(--mono); font-size: 20px; color: var(--t1); line-height: 1; }
+    .stat-sub  { font-size: 11px; color: var(--t2); margin-top: 4px; opacity: 0.65; }
 
     /* ─── CHART ─── */
     .chart-head {
@@ -335,13 +335,13 @@
       justify-content: space-between;
       align-items: center;
     }
-    .chart-title { font-size: 8px; letter-spacing: 0.28em; color: var(--t2); }
+    .chart-title { font-size: 11px; letter-spacing: 0.28em; color: var(--t2); }
     .chart-legend { display: flex; gap: 14px; }
     .legend-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 9px;
+      font-size: 11px;
       color: var(--t2);
     }
     .legend-line { width: 20px; height: 2px; background: var(--accent); }
@@ -411,7 +411,7 @@
     .adv-item:last-child { border-bottom: none; }
     .adv-item:hover, .adv-item.active { background: var(--accent-dim); }
     .adv-item-name {
-      font-size: 11px;
+      font-size: 13px;
       color: var(--t1);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -420,7 +420,7 @@
     }
     .adv-item-meta {
       font-family: var(--mono);
-      font-size: 9px;
+      font-size: 11px;
       color: var(--t2);
       flex-shrink: 0;
     }
@@ -447,7 +447,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 5px 12px;
-      font-size: 9px;
+      font-size: 11px;
       color: var(--t2);
     }
     .adv-loaded-stats span {
@@ -477,7 +477,7 @@
       flex: 1;
       padding: 4px 2px;
       font-family: var(--ui);
-      font-size: 8px;
+      font-size: 11px;
       letter-spacing: 0.10em;
       color: var(--t2);
       background: transparent;
@@ -969,8 +969,8 @@ function initChart() {
           borderWidth: 1,
           titleColor: 'rgba(0,112,168,0.85)',
           bodyColor: '#4e6878',
-          titleFont: { family: "'Overpass Mono', monospace", size: 10 },
-          bodyFont:  { family: "'Overpass Mono', monospace", size: 11 },
+          titleFont: { family: "'Overpass Mono', monospace", size: 12 },
+          bodyFont:  { family: "'Overpass Mono', monospace", size: 13 },
           callbacks: {
             title: items => fmtBudget(items[0].parsed.x) + ' /mo',
             label: item => `${item.dataset.label}: ${item.parsed.y.toFixed(1)}%`,
@@ -984,21 +984,21 @@ function initChart() {
           grid: { color: 'rgba(198,212,224,0.7)' },
           ticks: {
             color: 'rgba(78,104,120,0.8)',
-            font: { family: "'Overpass Mono', monospace", size: 9 },
+            font: { family: "'Overpass Mono', monospace", size: 12 },
             maxTicksLimit: 7,
             callback: v => fmtBudget(v),
           },
-          title: { display: true, text: 'MONTHLY BUDGET', color: 'rgba(78,104,120,0.6)', font: { family: "'Overpass Mono', monospace", size: 8 } },
+          title: { display: true, text: 'MONTHLY BUDGET', color: 'rgba(78,104,120,0.75)', font: { family: "'Overpass Mono', monospace", size: 11 } },
         },
         y: {
           min: 0, max: 30,
           grid: { color: 'rgba(198,212,224,0.7)' },
           ticks: {
             color: 'rgba(78,104,120,0.8)',
-            font: { family: "'Overpass Mono', monospace", size: 9 },
+            font: { family: "'Overpass Mono', monospace", size: 12 },
             callback: v => v + '%',
           },
-          title: { display: true, text: 'MDE (RELATIVE %)', color: 'rgba(78,104,120,0.6)', font: { family: "'Overpass Mono', monospace", size: 8 } },
+          title: { display: true, text: 'MDE (RELATIVE %)', color: 'rgba(78,104,120,0.75)', font: { family: "'Overpass Mono', monospace", size: 11 } },
         },
       },
     },
