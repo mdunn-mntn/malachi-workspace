@@ -43,25 +43,118 @@ framing_state: locked
   tab-collapsed stacks plus the corpus.
 
 ## 1. Introduction
-Brief context: what system/feature/data is involved, and why this ticket exists.
+`include/airflow_debugger/` diagnoses FAILED Airflow tasks and posts the reply to Slack. PR #1285
+(2026-09-03) was meant to make a wrapper failure name the exception its downstream job ended on. It
+does not, on the exact case it was written for, while 53 of 53 tests pass. This ticket builds the
+real-log corpus first, then fixes the parser under it.
 
 ## 2. The Problem
-What exactly is broken, unclear, or needed? Include:
-- Symptoms observed
-- Who reported it / who it affects
-- Impact (data quality, revenue, user experience, etc.)
+
+**The defect is wider than #1285.** `error_region` is destroying the signature on every real driver
+log, not just the acceptance case. Over the 5 real Dataproc driver logs still retrievable:
+`classify(error_region(text))` returns `None` for 5 of 5, while `classify(full_text)` returns a
+signature for 2 of 5. `analyze_batch` (`dataproc_rca.py:478`) classifies `state_message +
+error_region(logs)`, so the whole Spark-side taxonomy is being fed a window that has walked away
+from the error.
+
+**Why the window walks away.** Cloud Logging is fetched with `--order desc`, so entries arrive
+newest first, and it had already split the Python traceback across entries. In the real 14,960-char
+acceptance slab, `Traceback (most recent call last):` occurs once at index 9892, while the three
+strings we need sit at 5812 (`org.postgresql.util.PSQLException`), 8416
+(`java.net.SocketTimeoutException`) and 9763 (`spark_read_host.py`) — all BEFORE the anchor. So
+`text[9892:11892]` runs forward into older entries. **The fix is to reverse the ENTRY LIST before
+joining, not to swap `rfind` for `find`:** the frames precede their own header because the entries
+were reversed, not the characters.
+
+**The stack is tab-joined, so the chain parser never matches.** The real text reads
+`...Thread.run(Thread.java:840)Caused by: java.net.SocketTimeoutException: Connect timed out\tat
+java.base/sun.nio.ch...` — no newline before `Caused by:`, frames glued with `\t` (84 tabs across
+81 lines). `parse.py:112` `_CAUSED_BY` is `^\s*Caused by:` with `re.MULTILINE`: of 5 `Caused by:`
+occurrences only 1 starts a line, and it is the wrong one (a `SparkException` awaitResult wrapper).
+`_EXC_LINE`'s `[^\n]*` then swallows the whole tab-joined frame run.
+
+**`db_unreachable` is not a signature bug.** `classify()` on the FULL driver text returns
+`db_unreachable` correctly; it returns `None` only on `error_region`'s output. Fixing the ordering
+plausibly fixes this with no change to `signatures.py`. Prove that before touching the taxonomy.
+
+**Driver logs live 7 days, and the code assumes 45.** `gcloud logging buckets list
+--project=mntn-prj-prod-00` shows `_Default` `retentionDays=7` (the 400-day bucket is `_Required`,
+admin audit only). `dataproc_rca.py:40` sets `_LOG_FRESHNESS="45d"`, 6.4x wider than the data that
+exists, so its "no driver log via Cloud Logging (check freshness window)" note misdirects. Of 27
+distinct failed Dataproc batches probed, only 5 returned any text; the oldest survivor is
+2026-08-29. **This caps the corpus permanently**, and it is why the Spark-side half of the taxonomy
+(OOM, shuffle, executor loss, TTL, GCS listing) has zero retrievable real examples today.
+
+**The taxonomy is 48 emitted keys, not 44.** `signatures.py` holds 44, and `external_task_rca.py`
+emits four more that are not in `SIGNATURES`: `external_task_target_failed` (fired 6x in 13 days of
+published prod RCA), `external_task_target_skipped`, `external_task_target_unfinished`,
+`external_task_window_mismatch`. A corpus scoped to "the 44" silently omits four live classes.
+
+**All 44 signatures carry `engine="any"`**, so `classify()`'s engine filter (`signatures.py:651-652`)
+is dead code. Any per-engine corpus split has to come from the log, not the signature.
 
 ## 3. Plan of Action
-Numbered steps of the approach taken. Updated as the plan evolves.
-1. Step one
-2. Step two
-3. ...
+1. Framing locked 2026-09-04.
+2. Design: four probes (inventory, corpus harness, parser fixes, CI gate), three adversarial reviews
+   each. Done: 12 reviews, 3 refuted, ~36 required corrections.
+3. Build the corpus with redaction, then fix the parser under it, then the CI gate.
+4. `/pr_gauntlet`, then PR.
 
 ## 4. Investigation & Findings
-What was discovered during analysis. Include:
-- Key queries run (reference files in `queries/`)
-- Data samples and results (reference files in `outputs/`)
-- Unexpected findings or gotchas
+
+**Corpus scope, from scanning 3,627 real logs across 33 dates (2026-07-28 to 2026-09-04) with the
+package's own `parse_log()` + `classify()`.** States: 3,068 success, 245 failed, 173 skipped, 137
+upstream_failed. Of the 245 failed, `classify()` matched 215; 30 unmatched, 22 of which carry error
+text and are therefore genuine taxonomy gaps.
+
+| Bucket | Count | Meaning |
+|---|---|---|
+| (i) real example available now | 28 | fixture + golden reply |
+| (ii) fires in prod, no artifact retained | 7 | named waiver; all live in a driver log or Vertex payload, never the Airflow task log |
+| (iii) never observed in any source | 9 | named waiver |
+
+Bucket (ii): `gcs_list_timeout`, `ttl_exceeded`, `quota_exhaustion`, `model_alias_not_found`,
+`vertex_param_contract`, `executor_oom_yarn`, `driver_oom` — each named in an incident record
+(INC-012/013, INC-005, INC-008, INC-024, INC-003, INC-016, INC-018) with the exact text, but with no
+retained log. Bucket (iii) includes `max_distinct_paths_guard`, whose regex matches a string MNTN
+prod code actually emits (`dags/attribution/url_pattern_pipeline.py:779-780`), so it is reachable
+but unfired.
+
+Engine split of the 245 failed logs: databricks 153, dataproc 31, other 28, vertex 26, unknown 7.
+
+**The framing's kill criterion partly fired.** "Every signature class carries a fixture" is not
+achievable: 16 of 48 have no retrievable example, 7 of them because of a 7-day retention we do not
+control. The deliverable becomes every class in bucket (i), plus a CI-read waiver list naming the
+other 16 so an unfixtured class is a recorded gap rather than an omission.
+
+**Corrections the adversarial pass forced, carried into implementation:**
+- The corpus must vendor the raw Cloud Logging **entry list** (`gcloud ... --format json`), not the
+  `value()`-joined string. Defect (a) lives in the fetch (`dataproc_rca.py:240-247`); a frozen join
+  captures the bug rather than the input.
+- **Real logs carry secrets.** The acceptance log line 73 is
+  `CURRENT vault https://vault.prod.in.mountain.com`, and it carries internal `10.140.4.x` addresses.
+  Redaction is a gate on committing anything, not a nicety.
+- The acceptance assertion must sit on the surface that renders the strings
+  (`slack_block.why` / `followed_cause`), not on the parser alone.
+- `error_region` has four call sites in two modules (`dataproc_rca.py:426,442` and
+  `vertex_rca.py:150,194`), so a Vertex corpus entry is needed to lock the existing reversal in
+  `vertex_rca._messages_text` against a shared-helper refactor.
+- The 2000-char window is fragile: a sweep over the real slab returns the correct root only between
+  4000 and 6000 chars, and 7000 gives the wrong `SparkException`. The bound must derive from the
+  failure, not be a magic number.
+- `exception_chain`'s "deepest = last" assumption breaks after reversal: post-reversal the last
+  `Caused by:` in the window is the newest event, not the deepest cause.
+- `inc012_driveroutput.log` (19,577 bytes, commit `c4ca3da`) is already in the repo and is a real
+  ascending, newline-separated driver log. The corpus must pin BOTH shapes.
+- The `gcs://dataproc-staging/driveroutput.*` fallback path (`dataproc_rca.py:434-444`) was not
+  probed before declaring 22 of 27 driver logs lost. Probe it before finalising bucket (ii).
+- `_JDBC_DRIVER_LOG` (`tests/test_parse.py:527`) is a synthetic reconstruction of this exact batch in
+  the shape prod never emits. Delete or quarantine it rather than leaving it beside the corpus.
+- The proposed `slack_block` gate widening was refuted on a real case: on
+  `tpa_ipdsc_export/ipdsc_ds_65 try2` it appends a wrong message. Fire `followed_cause` only when the
+  Spark dive itself produced the root.
+- The proposed CI secret grep goes red on `origin/main` today: `gserviceaccount\.com` matches
+  `dags/airflow_debugger_daily.py:37` and `dags/airflow_debugger_rapid.py:25`.
 
 ## 5. Solution
 What was done to resolve the issue:
