@@ -73,11 +73,14 @@ LAUNCHER = """
    DOMContentLoaded has already fired and the boot has to be launched directly. Datasets
    can also land after the HTML, hence the poll. */
 (function () {
-  // Mode re-injects this layout, replacing the DOM with fresh placeholder markup. A
-  // window-level once-guard would leave that second copy unbooted and showing dashes,
-  // so the guard lives on the root element instead.
-  var root = document.getElementById('mde');
-  if (!root || root.dataset.mdeBooted) return;
+  // Mode APPENDS a re-injected layout rather than replacing the old one, so two #mde
+  // elements coexist and every getElementById resolves to the stale first copy, which
+  // is already flagged booted. Drop the older copies first, then boot the live one.
+  var roots = document.querySelectorAll('#mde');
+  if (!roots.length) return;
+  for (var i = 0; i < roots.length - 1; i++) roots[i].remove();
+  var root = roots[roots.length - 1];
+  if (root.dataset.mdeBooted) return;
   root.dataset.mdeBooted = '1';
   var tries = 0;
   function go() {

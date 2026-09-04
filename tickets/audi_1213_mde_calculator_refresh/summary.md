@@ -348,3 +348,26 @@ run-rate and detail lines). Boot is now wrapped in try/catch that clears `data-m
 failure, so a partial boot does not poison the next injection with a half-built DOM. Title changed
 from "per-advertiser prefill", which named the mechanism, to "smallest lift a test can detect",
 which names the question the tool answers.
+
+## Root cause of the recurring blank render: Mode APPENDS the layout, 2026-09-03
+
+Three separate fixes were shipped for "the page is blank after a refresh" before the actual cause
+was found, and each was a real but insufficient defect: the whole-document wrapper, the top-level
+`const` redeclaration, and the missing CSS reset. The reason the first two looked like fixes is that
+they are genuinely broken code paths; the reason the page still went blank is this.
+
+**Mode appends a re-injected layout rather than replacing the previous one.** After a Refresh the
+document holds TWO `#mde` elements. Duplicate ids mean `document.getElementById` resolves to the
+FIRST, stale copy for every lookup in the app, including the launcher's own boot guard, which the
+first copy already carries. The launcher therefore returns early, the visible second copy is never
+booted, and the user sees the static placeholder markup with dead controls.
+
+Fix: the launcher takes `document.querySelectorAll('#mde')`, removes every copy but the last, and
+boots that one. Removing the stale copies also restores id uniqueness for the rest of the app, which
+is what makes the ordinary `getElementById` calls throughout the file safe again.
+
+**Why the harness missed it for three rounds.** It replayed the injection as
+`host.innerHTML = frag`, which REPLACES and so leaves exactly one root. The harness reproduced my
+model of Mode rather than Mode. It now appends into a wrapper div, which is what the platform does,
+and asserts the surviving root count is 1 and the live copy renders. A test that encodes the same
+assumption as the code cannot fail the way the code fails.
