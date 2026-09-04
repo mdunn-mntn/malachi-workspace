@@ -475,7 +475,7 @@ setOutcome = function(o) {
     html = sub(
         html,
         '<h1 class="hd-title">mde calculator \u00b7 per-advertiser prefill</h1>',
-        '<h1 class="hd-title">mde calculator \u00b7 smallest lift a test can detect</h1>',
+        '<h1 class="hd-title">mde calculator \u00b7 estimated smallest lift a test can detect</h1>',
         "title says what the tool answers",
     )
 
