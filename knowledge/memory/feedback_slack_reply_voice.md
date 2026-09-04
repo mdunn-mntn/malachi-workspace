@@ -85,6 +85,12 @@ messages. My first draft was flagged as "too generalized," the second as not dir
   the claim and say it is wrong: **"The assumption that doesn't hold is that campaigns running display
   multi-touch have lower TV spend. They don't."** Same fix for "that needs a different explanation" and
   "lives outside that" -> "that leaves your other attributes question" and "isn't in this data."
+- **The opening line needs a subject and a verdict, not pronouns and adjectives.** "Short answer, it's high
+  and it's right, and no it's not ad type" was flagged as strange and confusing. Two faults: **"it" names
+  nothing** (the reader has to guess whether it is the number, the column, or the tab), and **"right" is doing
+  two jobs at once** (the value is correct, and her worry is unfounded). Name the quantity and answer each
+  question separately: **"The 80 to 100% is real, and it's device type, not ad type."** Quote their own figure
+  back as the subject. Avoid "short answer" as a wind-up; just give the short answer.
 - **Cut the shop words for parts of a system.** "leg" was flagged the same way as the metaphors: "that type
   of wording also confuses people." A **leg**, a **side**, an **arm**, a **surface**, a **path** all read as
   internal shorthand. Name the actual thing: "the only leg the holdout measures" -> **"the only ones the ghost
