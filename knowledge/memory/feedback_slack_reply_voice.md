@@ -79,6 +79,15 @@ messages. My first draft was flagged as "too generalized," the second as not dir
 - **When their premise is wrong, say so and keep going.** She wrote "and if that is the case, why...". The
   case did not hold, so the follow-up still needs an answer for a different reason. "Since it's not ad type,
   that needs a different explanation" carries the reader across without making them feel wrong.
+- **Cut the signposting and the assumption-naming. Go straight to the fact.** "That leaves your other
+  attributes question" and "The assumption that doesn't hold is that campaigns running display multi-touch
+  have lower TV spend. They don't" both got flagged as AI voice. The fix is not better phrasing, it is
+  deletion: **"Campaigns running display multi-touch don't have lower TV spend."** Then the numbers.
+  Delete outright: "That leaves...", "The assumption that doesn't hold is...", "The part that's off is...",
+  "What's happening here is...", "To answer your second question...". A new paragraph is already the
+  transition; announcing it is filler. State the correct fact as a plain sentence and let it stand as the
+  correction. **This supersedes my earlier "name the broken assumption" phrasing** — naming it was still a
+  frame around the sentence, and the frame is what reads as machine-written.
 - **Name the thing that is wrong, do not gesture at it.** "The link that breaks is..." was flagged as
   ambiguous: "that type of vagueness confuses people in these explanations." Metaphors for the *structure* of
   an argument (the link, the piece, the part that falls over) make the reader hunt for what you mean. State
