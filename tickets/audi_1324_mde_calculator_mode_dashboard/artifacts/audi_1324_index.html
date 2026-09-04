@@ -832,16 +832,21 @@ function ciFactor() {
   return za / (za + normPPF(S.power));
 }
 
+// Clamp for display only, far above the 30% axis so an off-scale curve is
+// clipped by the axis instead of flattening into a horizontal line inside it.
+const Y_CEIL = 400;
+const clampY = v => Math.max(0, Math.min(isFinite(v) ? v : Y_CEIL, Y_CEIL));
+
 function curvePts() {
   const N = 90, cf = ciFactor();
   const rawPts = [], rawCiHi = [], rawCiLo = [];
   for (let i = 0; i <= N; i++) {
     const spend = Math.pow(10, L_MIN + (i / N) * (Math.log10(1e7) - L_MIN));
     const r = computeMDE(spend, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0, S.cpm, S.impsPerIp);
-    const rawMde = Math.min(r.mdeRel * 100, 35);
-    rawPts.push({ x: spend, y: rawMde });
-    rawCiHi.push({ x: spend, y: Math.min(rawMde * (1 + cf), 35) });
-    rawCiLo.push({ x: spend, y: Math.max(rawMde * (1 - cf), 0) });
+    const rawMde = r.mdeRel * 100;
+    rawPts.push({ x: spend, y: clampY(rawMde) });
+    rawCiHi.push({ x: spend, y: clampY(rawMde * (1 + cf)) });
+    rawCiLo.push({ x: spend, y: clampY(rawMde * (1 - cf)) });
   }
   return { rawPts, rawCiHi, rawCiLo };
 }
@@ -908,10 +913,11 @@ function initChart() {
       const rawR = computeMDE(S.monthlyBudget, S.durationWk, S.holdoutFrac, S.baselineRate, S.alpha, S.power, 1.0, S.cpm, S.impsPerIp);
       const cf = ciFactor();
       [[rawR.mdeRel * 100, 'rgba(0,112,168,0.55)', 'rgba(0,112,168,1)']].forEach(([mde100, whiskerCol, dotCol]) => {
-        const mde = Math.min(mde100, 35);
-        const yMid = ys.getPixelForValue(mde);
-        const yHi  = ys.getPixelForValue(Math.min(mde * (1 + cf), 35));
-        const yLo  = ys.getPixelForValue(Math.max(mde * (1 - cf), 0));
+        const mde = clampY(mde100);
+        const px = v => Math.max(a.top, Math.min(a.bottom, ys.getPixelForValue(clampY(v))));
+        const yMid = px(mde);
+        const yHi  = px(mde * (1 + cf));
+        const yLo  = px(mde * (1 - cf));
         // whisker line
         c.save(); c.beginPath();
         c.strokeStyle = whiskerCol; c.lineWidth = 1.5;
@@ -1106,7 +1112,7 @@ function renderAdvResults(result) {
   box.innerHTML = hint + items.map(a =>
     `<div class="adv-item" data-id="${a.id}">
        <span class="adv-item-name">${a.name}${a.live ? '' : ' · LAPSED'}</span>
-       <span class="adv-item-meta">${a.id} · ${fmtBudget(a.spend30)}${a.live ? '/30d' : ' last active ' + a.lastDay}</span>
+       <span class="adv-item-meta">${a.id} · ${fmtBudget(a.spend30)}${a.live ? '/30d' : ''}</span>
      </div>`).join('');
   box.classList.add('open');
   box.querySelectorAll('.adv-item').forEach(el => {

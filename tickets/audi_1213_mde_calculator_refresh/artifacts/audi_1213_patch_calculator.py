@@ -641,6 +641,54 @@ setOutcome = function(o) {
         "confidence ribbon recedes",
     )
 
+    html = sub(
+        html,
+        """       <span class="adv-item-meta">${a.id} \u00b7 ${fmtBudget(a.spend30)}${a.live ? '/30d' : ' last active ' + a.lastDay}</span>""",
+        """       <span class="adv-item-meta">${a.id} \u00b7 ${fmtBudget(a.spend30)}${a.live ? '/30d' : ''}</span>""",
+        "picker row drops the last-active date so the name is not squeezed out",
+    )
+
+    html = sub(
+        html,
+        """    const rawMde = Math.min(r.mdeRel * 100, 35);
+    rawPts.push({ x: spend, y: rawMde });
+    rawCiHi.push({ x: spend, y: Math.min(rawMde * (1 + cf), 35) });
+    rawCiLo.push({ x: spend, y: Math.max(rawMde * (1 - cf), 0) });""",
+        """    const rawMde = r.mdeRel * 100;
+    rawPts.push({ x: spend, y: clampY(rawMde) });
+    rawCiHi.push({ x: spend, y: clampY(rawMde * (1 + cf)) });
+    rawCiLo.push({ x: spend, y: clampY(rawMde * (1 - cf)) });""",
+        "curve CI derives from the unclamped MDE",
+    )
+
+    html = sub(
+        html,
+        """function curvePts() {
+  const N = 90, cf = ciFactor();""",
+        """// Clamp for display only, far above the 30% axis so an off-scale curve is
+// clipped by the axis instead of flattening into a horizontal line inside it.
+const Y_CEIL = 400;
+const clampY = v => Math.max(0, Math.min(isFinite(v) ? v : Y_CEIL, Y_CEIL));
+
+function curvePts() {
+  const N = 90, cf = ciFactor();""",
+        "display clamp helper",
+    )
+
+    html = sub(
+        html,
+        """        const mde = Math.min(mde100, 35);
+        const yMid = ys.getPixelForValue(mde);
+        const yHi  = ys.getPixelForValue(Math.min(mde * (1 + cf), 35));
+        const yLo  = ys.getPixelForValue(Math.max(mde * (1 - cf), 0));""",
+        """        const mde = clampY(mde100);
+        const px = v => Math.max(a.top, Math.min(a.bottom, ys.getPixelForValue(clampY(v))));
+        const yMid = px(mde);
+        const yHi  = px(mde * (1 + cf));
+        const yLo  = px(mde * (1 - cf));""",
+        "marker whisker derives from the unclamped MDE and stays inside the plot",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:
