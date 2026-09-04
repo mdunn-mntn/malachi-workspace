@@ -444,20 +444,70 @@ def between_q(tbl):
 
 for row, (_, tbl, _fx) in zip(rank_rows, RANKED_SRC):
     q, pv = between_q(tbl)
-    row["p value"] = pv
+    row["Lift p value"] = pv
+
+def cost_spread(df, by, min_k=5):
+    """Cheapest-to-dearest cost ratio for an attribute, with an advertiser-clustered low end.
+
+    Cost per incremental visit is a ratio of two pooled sums and has no closed-form error, so the
+    interval is bootstrapped over advertisers. The pair is picked from the data, so the low end is
+    optimistic and is reported as a spread rather than a p-value."""
+    def spread(d):
+        cp = []
+        for _, g in d.groupby(by, observed=True):
+            iv = g["incremental_visits"].sum()
+            if len(g) >= min_k and iv > 0:
+                cp.append(g["scaled_spend"].sum() / iv)
+        return (max(cp) / min(cp)) if len(cp) >= 2 and min(cp) > 0 else np.nan
+
+    obs = spread(df)
+    if not np.isfinite(obs):
+        return np.nan, np.nan
+    adv = df["advertiser_id"].to_numpy()
+    uniq = np.unique(adv)
+    if len(uniq) < 3:
+        return obs, np.nan
+    where = {a: np.where(adv == a)[0] for a in uniq}
+    draws = []
+    for _ in range(BOOT_DRAWS):
+        rows = np.concatenate([where[a] for a in RNG.choice(uniq, size=len(uniq), replace=True)])
+        v = spread(df.iloc[rows])
+        if np.isfinite(v):
+            draws.append(v)
+    if len(draws) < BOOT_DRAWS // 2:
+        return obs, np.nan
+    return obs, float(np.percentile(draws, 2.5))
+
+
+COST_SRC = {
+    "Bids per household": (freq, "fband"), "Intent band": (bands, "band"),
+    "Creative length mix": (pop, "creative"), "Geographic targeting": (pop, "geo"),
+    "Vertical": (pop, "vertical_name"), "Average frequency": (pop, "freq_bucket"),
+    "High-intent share": (pop, "hi_bucket"), "Average household score": (pop, "score_bucket"),
+    "TV share of spend": (pop, "tv_bucket"), "Advertiser tenure": (pop, "tenure_bucket"),
+    "Visit attribution window": (pop, "vv_level"), "Frequency cap": (pop, "fcap_level"),
+    "Display multi-touch": (pop, "display_flag"), "Audience size": (pop, "aud_bucket"),
+}
+for row in rank_rows:
+    src = COST_SRC.get(row["Attribute"])
+    o, lo = cost_spread(*src) if src else (np.nan, np.nan)
+    row["Dearest costs this many times more"] = o
+    row["Low end of that spread"] = lo
 
 BONFERRONI = 0.05 / len(rank_rows)
 for row in rank_rows:
-    row["Survives testing every attribute"] = "Yes" if row["p value"] < BONFERRONI else "No"
+    row["Survives testing every attribute"] = "Yes" if row["Lift p value"] < BONFERRONI else "No"
 
 ranked = (pd.DataFrame(rank_rows)
-          .sort_values(["p value", "Gap"], ascending=[True, False])
+          .sort_values(["Low end of that spread", "Lift p value"], ascending=[False, True])
           .reset_index(drop=True))
-RANK_ORDER = ["Attribute", "p value", "Survives testing every attribute",
+RANK_ORDER = ["Attribute", "Cheapest setting",
+              "Cost per incremental visit there", "Dearest cost per incremental visit",
+              "Dearest costs this many times more", "Low end of that spread",
+              "Best lift setting is also cheapest",
+              "Lift p value", "Survives testing every attribute",
               "Best setting", "Best lift", "Worst setting", "Worst lift", "Gap",
               "Best beats worst outright",
-              "Cheapest setting", "Cost per incremental visit there",
-              "Dearest cost per incremental visit", "Best lift setting is also cheapest",
               "Campaigns", "Advertisers", "Number of settings", "Campaigns in smallest setting"]
 ranked = ranked[RANK_ORDER]
 
@@ -623,14 +673,15 @@ wb = MntnWorkbook(
 
 wb.table(
     "Ranked hypotheses", ranked,
-    finding="Three attributes separate lift once you allow for having tested fourteen of them",
-    method=f"Ranked on a between-setting test, not the gap. The survives column applies a stricter {BONFERRONI:.4f} bar for having tested {len(rank_rows)}. Bids per household is decided after the auction, see the Bids per household tab.",
+    finding="Ranked on cost per incremental visit, which is the metric to optimise, with the lift test kept beside it",
+    method=f"Cost spread is cheapest against dearest setting, low end from resampling advertisers. That pair is data-picked, so the low end runs optimistic. Lift p value keeps a {BONFERRONI:.4f} bar.",
     formats={"Best lift": FMT.PCT1, "Worst lift": FMT.PCT1, "Gap": FMT.PCT1,
              "Campaigns": FMT.INT, "Advertisers": FMT.INT, "Number of settings": FMT.INT,
-             "Campaigns in smallest setting": FMT.INT, "p value": "0.0000",
+             "Campaigns in smallest setting": FMT.INT, "Lift p value": "0.0000",
+             "Dearest costs this many times more": FMT.MULT, "Low end of that spread": FMT.MULT,
              "Cost per incremental visit there": FMT.USD2,
              "Dearest cost per incremental visit": FMT.USD2},
-    rag={"p value": lambda v: "POS" if v < 0.05 else ("WARN" if v < 0.20 else None)},
+    rag={"Lift p value": lambda v: "POS" if v < 0.05 else ("WARN" if v < 0.20 else None)},
     kind="headline",
     toc="Which attribute separates lift most, ranked",
     query="ti_1313_campaign_base.sql")
@@ -885,6 +936,8 @@ wb.glossary(
         ("Audience size", "The targetable pool, median across delivered days. It overstates what is deliverable, so compare campaigns rather than reading a level. It tracks geographic footprint closely, so it is not an independent attribute."),
         ("Why the bid-count sheet is a warning", "Bid count is decided after the auction, so winning an impression changes which band a household lands in. The single-bid band reads negative, and withholding a bid cannot reduce visits."),
         ("Testing many attributes", "Fourteen attributes were tested on the same campaigns, so roughly one would clear the usual 0.05 bar by chance. The ranked sheet marks which ones survive a stricter bar that accounts for that."),
+        ("Cost spread on the ranked sheet", "How many times dearer the worst setting is than the best, with the low end from resampling advertisers. Both settings are chosen after seeing the data, so treat a low end near 1 as no separation."),
+        ("Share of spend on TV screens", "The device the impression served to, not the ad format, over prospecting delivery only: 93% of that spend reaches a TV device and 7% a phone or tablet. Display multi-touch sits outside this denominator."),
         ("Frequency is over the whole window", "Both frequency sheets count over the full 22 Jun to 31 Aug span, not per week or per month. 11+ bids means 11 or more across ten weeks."),
         ("Everything else", "Every other attribute the ticket names is a column on Campaign detail, and those with enough spread are cut on a sheet and ranked."),
     ], max_entries=27)

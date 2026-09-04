@@ -1186,3 +1186,77 @@ Three sheets still asserted things the re-pulled data no longer supports. All co
 `ti_1313_fcap_stability.sql` deleted: it was the intermediate step that established `update_time` is a refresh
 stamp rather than an edit marker, and it is superseded by `ti_1313_fcap_in_window.sql`. The finding it produced
 is recorded in `data_catalog.md` (18).
+
+## 18. Kirsa's second review round (2026-09-03)
+
+### 18a. "% spend to TV looks very high, is it ad type rather than device?"
+
+**No, it is the device the impression served to.** `pct_spend_tv` reads `summarydata.spend_facts.device_type`
+in `('SET_TOP_BOX','CONNECTED_TV','GAMES_CONSOLE','CONNECTED_DEVICE')` over the window. Actual mix of
+prospecting media spend:
+
+| Device type | Share |
+|---|---|
+| SET_TOP_BOX | 54.8% |
+| CONNECTED_TV | 36.4% |
+| MOBILE | 5.7% |
+| GAMES_CONSOLE | 1.6% |
+| TABLET | 1.4% |
+| PHONE, PC, PERSONAL_COMPUTER, CONNECTED_DEVICE | under 0.1% each |
+
+So TV devices are **92.9%** and phone/tablet **7.1%**. `CONNECTED_DEVICE`, the only catch-all in the TV list,
+is 0.00% of spend, so it is not padding the number. The 80-100% range Kirsa saw is real: within this
+population `pct_spend_tv` runs 0.776 to 0.992, median 0.921, and **99.5% of campaign groups are at or above
+80%**.
+
+### 18b. Why that does not contradict the display multi-touch result
+
+**The two columns have different denominators**, which is the whole reconciliation.
+
+- `pct_spend_tv` is computed over **prospecting campaigns only** (`objective_id = 1 AND funnel_level = 1`),
+  because that is the leg the ghost-bid holdout measures.
+- `pct_spend_display` and `runs_display` are computed over **every campaign in the group**, filtered on
+  `channel_id = 1`, with no objective or funnel restriction.
+
+So a group can be 92% TV *on its prospecting leg* and separately run display multi-touch elsewhere. The data
+confirms they are unrelated: **correlation between the two is −0.021**, median `pct_spend_display` is 0.0000,
+171 of 433 groups run any display, and **56 groups both run display and are at or above 95% TV**. Median
+`pct_spend_tv` is 0.9205 for groups that run display and 0.9211 for those that do not — indistinguishable.
+
+Kirsa's underlying intuition is right that MNTN serves plenty of video off-TV; that volume just sits outside
+the prospecting denominator this ticket measures. Added to the Read me so the next reader does not have to ask.
+
+### 18c. "Significance is on lift, not cost per incremental visit. Can that be revised?"
+
+**She is right, and it is now revised.** The ranked sheet's `p value` was the between-level Cochran Q on lift
+only; the cost columns added earlier carried no test at all.
+
+Cost per incremental visit is a ratio of two pooled sums with no closed-form error, so the test is an
+**advertiser-clustered bootstrap** (600 draws) of the cheapest-to-dearest cost ratio. The sheet now leads with
+cost and keeps the lift test beside it:
+
+| Attribute | Cheapest | Dearest | Ratio | Low end | Lift p |
+|---|---|---|---|---|---|
+| Vertical | $2.60 | $54.36 | 13.1x | 8.20 | 0.000 |
+| Frequency cap | $8.98 | $49.62 | 7.7x | 4.46 | 0.011 |
+| Average frequency | $5.21 | $31.80 | 5.6x | 3.36 | 0.031 |
+| Intent band | $6.95 | $44.76 | 5.2x | 2.59 | 0.783 |
+| Visit attribution window | $6.73 | $43.09 | 8.2x | 2.21 | 0.000 |
+| Geographic targeting | $12.88 | $29.48 | 2.5x | 1.89 | 0.579 |
+| Average household score | $15.81 | $28.10 | 2.5x | 1.59 | 0.000 |
+| High-intent share | $15.13 | $24.52 | 2.0x | 1.35 | 0.002 |
+| Creative length mix | $16.95 | $26.81 | 2.6x | 1.34 | 0.066 |
+| Bids per household | $2.93 | $16.29 | 2.2x | 1.18 | 0.000 |
+| Audience size | $15.36 | $21.38 | 1.2x | 1.18 | 0.158 |
+| Advertiser tenure | $14.92 | $20.84 | 1.1x | 1.14 | 0.581 |
+| TV share of spend | $18.58 | $20.77 | 1.7x | 1.12 | 0.000 |
+| Display multi-touch | $18.74 | $19.84 | 1.1x | 1.01 | 0.367 |
+
+**The two rankings disagree sharply**, which is the point of showing both. Intent band is 4th on cost spread
+and last but one on lift (p=0.783). TV share of spend clears the lift bar (p<0.001) but is second from bottom
+on cost, a 1.12 low end that is effectively no separation. Vertical leads on both.
+
+I dropped a "Cost settings differ" yes/no column before shipping: it read Yes for all fourteen, because the
+cheapest and dearest settings are **picked after seeing the data**, so the low end is optimistic by
+construction. The ordered ratio carries the information honestly and the method line says the pair is
+data-picked.
