@@ -53,9 +53,10 @@ others are reliably wrong.
    date is written by the run of the FOLLOWING day: verified against GCS, `optimizer_backlog_2026-09-03.md`
    was written `2026-09-04T09:19:18Z`, `..._2026-09-02.md` on `09-03T09:17:48Z`, `..._2026-09-01.md`
    on `09-02T09:08:44Z`. So ledger `09-06` is the **09-07 09:00 UTC** run.
-2. **The estimator is not trustworthy yet.** AUDI-1326 / PR #1286 is open, not merged. Until it is,
-   `savings()` reports a per-DAG mean difference off an n=1 baseline with no variance test, so any
-   per-class precision computed from it would inherit that error.
+2. ~~**The estimator is not trustworthy yet.**~~ **CLEARED 2026-09-04T23:17Z:** PR #1286 merged as
+   `4742295` and its Deploy to Prod succeeded. `savings()` now requires 3 sweep-days each side and a
+   90% interval clear of zero. Score against the post-#1286 series only; the pre-merge figures were a
+   per-DAG mean difference off an n=1 baseline with no variance test.
 
 **Do not start before both clear.** Starting early produces numbers that look like an answer and are
 not.

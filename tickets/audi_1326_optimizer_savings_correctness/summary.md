@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1326: Fix the optimizer savings figure and the retry that mass-resolves findings"
-status: in_progress
+status: done
 date: 2026-09-04
 summary: "Gate the savings estimate, fix the retry grace window, fix digest buckets"
-result: "PR 1286 open, gauntlet PASS"
+result: "merged 4742295; first live run pending"
 question: "Can the optimizer's savings figure and resolution rule be made to say only what the data supports, so a retried sweep changes nothing and no dollar figure appears without evidence?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1326: Fix the optimizer savings figure and the retry that mass-resolves findings
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1326
-**Status:** backlog
+**Status:** done
 **Date Started:** 2026-09-04
 **Assignee:** Malachi
 

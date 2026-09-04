@@ -1,10 +1,10 @@
 ---
 doc_type: ticket
 title: "AUDI-1327: Pin the debugger replies to real logs, then fix the downstream-cause parser"
-status: in_progress
+status: done
 date: 2026-09-04
 summary: "Real-log fixture corpus per signature class, then fix ordering, collapsed stacks, db_unreachable"
-result: "PR 1287 open, gauntlet PASS"
+result: "merged 016e161; first live run pending"
 question: "Can the debugger's replies be pinned to logs in the shape production emits, so the 2026-09-03 conversion_signal_backfill failure renders its real cause and a fixture-shape regression fails CI rather than Slack?"
 framing_state: locked
 ---
@@ -12,7 +12,7 @@ framing_state: locked
 # AUDI-1327: Pin the debugger replies to real logs, then fix the downstream-cause parser
 
 **Jira:** https://mntn.atlassian.net/browse/AUDI-1327
-**Status:** backlog
+**Status:** done
 **Date Started:** 2026-09-04
 **Assignee:** Malachi
 
