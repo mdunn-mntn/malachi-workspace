@@ -1239,7 +1239,12 @@ is the `objective_id = 1` miscoding count from §9d and is the wrong number for 
 spend): stage 1 TV $11,054,270 and mobile or tablet $833,438 (7.0%); all stages together TV $12,089,429,
 mobile or tablet $1,198,889 (8.8%) and desktop $324,026. Adding stages 2 and 3 moves the mobile and tablet
 share by under 2 points, so the low figure is not an artefact of the prospecting-only denominator. Raised by
-Kirsa, who expected more mobile and tablet spend. So the share is 93% because
+Kirsa, who expected more mobile and tablet spend. **Reconciliation:** `spend_facts` media spend equals
+`sum_by_campaign_by_day` media spend to the dollar at every funnel level (11,889,535 / 1,203,946 / 519,979 /
+248) on the same 433 groups, so the device table is complete, and the device buckets sum back to that total
+with only $1,192 unattributed at stage 1. **Qualifier the workbook does not yet state:** the device dimension
+exists only on media spend, which is $13,613,708 of the $34,596,466 total. Data and platform spend carry no
+device column, so the 93% is a share of media spend, not of everything the advertiser is billed. So the share is 93% because
 prospecting is a CTV product, not because off-TV video was filtered out. The Read me glossary was always
 correct on this ("Display multi-touch sits outside this denominator") and needs no change.
 
