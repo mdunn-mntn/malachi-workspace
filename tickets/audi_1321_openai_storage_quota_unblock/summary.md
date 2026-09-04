@@ -193,3 +193,64 @@ only for scheduled runs, where logical date and interval start coincide; it is w
   them strictly one at a time.
 - **AUDI-1301 (backlog)** — dedicated OpenAI project, audit logging, and a permissions group; unchanged by
   this ticket.
+
+### The unblock plan for dt=2026-09-03 does not work as written (2026-09-04)
+
+Three things were found while executing the 2026-09-04 handoff. The first two invalidate its step 2.
+
+**1. shopper_graph #307's env var cannot reach the pod it configures.** `OPENAI_FILE_MAX_AGE_HOURS`
+set on the Astro prod deployment's Environment tab is invisible to `delete_all_storage_files.py`.
+Proven from the rendered pod spec of the cleanup task that actually ran
+(`GET .../taskInstances/batch_cleanup_1`, submit `scheduled__2026-09-03T09:00`):
+
+    "env_vars": "[{'name': 'run_date', ...}, {'name': 'env', ...}, {'name': 'yesterday', ...}]"
+    "env_from": []
+    "pod_template_file": null
+    "pod_template_dict": null
+
+`MntnKubePodOperator` builds a fresh pod from `env_vars` plus one mounted secret key
+(`OPENAI_API_KEY` from `env-secrets`). Astro deployment variables populate the scheduler and worker
+environments and, for secret ones, the `env-secrets` k8s secret; neither path reaches a
+KubernetesPodOperator pod, and the operator mounts a single named key rather than the whole secret.
+Confirmed against `origin/main` (63d4c4b), not just the local checkout: both DAGs still pass bare
+`default_env_vars` to `batch_cleanup_1` and `batch_cleanup_2`. Setting the window therefore needs a
+change in `airflow-ti`, not an Astro setting. #307 is deployed (GH Actions run 33890342455, image
+`steelhousedev/openai_batch_runner:gcp-prod`) and is inert until something passes the variable.
+
+**2. The sweep's enumeration is incomplete, so the retention window is not the binding constraint.**
+`batch_cleanup_1` on both DAGs at 2026-09-04 09:00 logged `Deleted 0 of 0 files, having listed at
+least 28.` Four minutes later `batch_fetch` downloaded and deleted 416 OpenAI output files. Those
+416 existed at 09:00 and were not among the 28, so the listing the sweep acts on is not the store.
+
+The `seen` readings are first-page sizes, and the loop ends on any short page:
+
+    if too_young or len(files) < PAGE:
+        break
+
+`order="asc"` puts the oldest file first, so when everything is inside the retention window the
+inner loop breaks on file one and the outer loop breaks immediately; and a page shorter than
+`PAGE` is treated as the last page rather than checking `has_more`. Readings ran 4,622 / 4,621 /
+4,623 / 4,622 through 09-04 05:11, then 28 from 09:00 onward, with no delete in between that could
+explain the drop. This is the same class of defect as AUDI-1321's original finding: the sweep
+reasons about a list it never fully retrieves.
+
+**3. The zero-delete alarm from #305 cannot fire here.** `ALARM_MIN_FILES` defaults to `PAGE`
+(10,000) and `seen` has never exceeded 4,623, so `not deleted and seen >= ALARM_MIN_FILES` stayed
+false through the entire block. `batch_cleanup_1` went green at 09:00 having freed nothing, and
+`batch_submit` died on the storage 400 at 10:45. The threshold was calibrated on an assumed few
+hundred to ~1,200 files a day; the number it is compared against is a partial page, not a count.
+
+**What is still unknown, and the check that settles it.** No log records file sizes, so whether the
+2.5TB is this pipeline's is still unproven either way. dt=2026-09-02 has 895 batches whose ~895
+`part-*` inputs were uploaded 2026-09-03 18:11:49-19:25:38 and are ~20-21h old; 427 of those batches
+were still `in_progress` at 09:44 on 09-04, so their inputs are attached to live batches and their
+outputs have not landed. §0's kill criterion ("if `batch_submit` still returns a storage 400 after a
+sweep that provably deleted its full eligible set, the storage is not ours") is not yet met, because
+the sweep has not provably enumerated its eligible set at all. The discriminating test is to make the
+sweep report `file.bytes` and `file.purpose` per file plus a total, and page on `has_more`. That is a
+shopper_graph-only change, deploys in about two minutes on the workflow already exercised today, and
+answers the ownership question directly instead of by inference.
+
+**Sequencing note.** The five older days (08-27 to 09-01) stay blocked behind this. Do not lower a
+retention window and re-run submit until the sweep can show what it is deleting and how much space
+it frees.
