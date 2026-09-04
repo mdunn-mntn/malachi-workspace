@@ -15,6 +15,14 @@ Slack replies must read like a person typed them, not like an AI report. Malachi
 
 **Why.** Bolded-everything, comma-spliced jargon, em-dashes, and colon-led facts ("Fix:", "Reason:") read as machine-generated and undercut credibility in a live channel. Em-dashes in particular make people assume AI wrote it.
 
+**⭐ THE ONE ROOT CAUSE (TI-1313, 2026-09-03, after seven consecutive rewrites of a single reply).** Every
+correction below is the same mistake: **I reach for a verb, a metaphor, or a frame where a plain statement
+would do.** "The link that breaks", "it reads higher", "is real", "that leaves your other attributes
+question", "the assumption that doesn't hold is", "the only leg", "display runners". None of them was wrong
+on the facts; each one put a layer of language between the reader and the point. **Before sending, take every
+sentence and ask whether it states a fact or describes one.** Delete the describing. The plain version is
+almost always shorter and nobody has ever asked me to make one of these more elaborate.
+
 **How to apply to Slack thread replies.**
 - BLUF. First line is the plain punchline like "Confirmed it's the TTL." Then the why.
 - No em-dashes anywhere. Use a period or start a new sentence. This applies to chat and every outward comm, not just formal deliverables. [[feedback_no_emdash_no_namedrop]]

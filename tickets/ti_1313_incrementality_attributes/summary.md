@@ -1279,3 +1279,26 @@ answers the whole question in one stroke, where re-deriving the denominators did
 The comparison she was making, in her own numbers: the TV tab reads **+12.10% lift for 90 to 99% TV against
 +5.21% under 90%**, and the display tab reads **+10.25% against +9.21%** on a group that is mostly high-TV
 anyway. Routed to memory `feedback_slack_reply_voice`.
+
+### 18e. The reply took seven rewrites, and they were all one mistake
+
+18d recorded three rewrites over the answer's *shape*. Four more followed over its *wording*, and every one
+was the same root cause: reaching for a verb, a metaphor or a frame where a plain statement would do.
+
+| Flagged | Replaced with | Class |
+|---|---|---|
+| "the link that breaks is" | (deleted, state the fact) | metaphor for an argument's structure |
+| "that leaves your other attributes question" | (deleted) | signposting a transition |
+| "the assumption that doesn't hold is" | (deleted) | framing a correction |
+| "it reads higher than you'd expect" | "it's higher than you'd expect" | observer verb |
+| "the 80 to 100% is real" | "the 80 to 100% is correct" | LLM tell |
+| "the only leg the holdout measures" | "the only ones the holdout measures" | shop word for part of a system |
+| "display runners" | "campaigns using display ads" | coined noun |
+
+None was wrong on the facts. Each put a layer of language between the reader and the point. The governing
+rule now sits at the top of `feedback_slack_reply_voice`: **ask whether each sentence states a fact or
+describes one, and delete the describing.**
+
+Two of these superseded guidance I had written earlier the same day. "Name the broken assumption" became
+"delete the frame and state the fact", because naming it was still a frame. That is worth remembering: a
+correction to my own voice rule can itself be too clever.
