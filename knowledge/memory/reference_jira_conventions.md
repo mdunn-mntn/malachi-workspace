@@ -309,3 +309,21 @@ Verified 2026-09-02: `GET /rest/agile/1.0/board/1814/sprint?state=active,future`
 the removed `/rest/api/2/search` still 410s. `GET /rest/agile/1.0/sprint/<id>` gives name/state/
 endDate. Consumed by [[reference_sprint_skill]].
 
+## AUDI Triage service account (provisioned 2026-09-04, ITS-6496)
+
+The debugger files its triage Bugs as **`audi-triage-reporter@mountain.com`** ("AUDI Triage",
+accountId `712020:44bd38ee-c426-4734-a0ed-4f6a69a508ce`), NOT as Malachi. Robin Fox created it after
+Malachi declined a personal API token: the tool is meant to be shared company-wide, so the identity
+has to be user-agnostic.
+
+Access it needs, and why both halves matter:
+- **Jira**: `Developers` role on the AUDI project (Alyson Lefkowitz, 2026-09-03). Operations used are
+  create issue (`/rest/api/2/issue`), add remote link (`/issue/{key}/remotelink`) and search
+  (`/rest/api/3/search/jql`). It never transitions or deletes.
+- **Confluence**: View + Pages **Add** on the **Targeting (TAR)** space (Alyson, 2026-09-04). Confluence
+  Cloud has no separate Edit permission, so Add is what allows editing; the triage step appends a row to
+  the TI On Call Playbook (page `2908061697`). Granting only the Jira role leaves this half 403ing, which
+  is easy to miss because the Bug still files.
+
+Credentials live on the Astro prod deployment as the secret env vars `JIRA_API_TOKEN` and
+`JIRA_USER_EMAIL`. Rotating the token is an Astro variable edit, not a code change.
