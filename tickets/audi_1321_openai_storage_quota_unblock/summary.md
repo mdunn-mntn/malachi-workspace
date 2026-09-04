@@ -347,3 +347,62 @@ the current numbers as a clean recovery until that check is done.
 prefix, and the only DAGs touching it are producers (`keyword_ddp_reporting`, `targeted_signal_crm`).
 The DDP usage report reads it live at month end, so correcting the parquet corrects every reader
 retroactively, provided it is corrected before the monthly run.
+
+### The backfill is bigger than six days, and a 12h input window was making it worse (2026-09-04, late)
+
+**dt=2026-09-02 is not recovered. It is 46% fetched.** Its 1,014 receipts read 468 downloaded, 427
+submitted-not-downloaded, 119 neither. `openai_batch_results/dt=2026-09-02` is 20.3 GB against
+46.2 GB on 2026-08-26. The `product_categorization` rebuild earlier today was correct *relative to
+what had been fetched* and is still short of the real day.
+
+**`product_categorization__record_count` cannot detect this.** It asserts that
+`product_categorization` is at least 99% of `openai_batch_results_joined` at the same dt. Both are
+built from whatever was fetched, so a half-fetched day passes cleanly. The test proves internal
+consistency, never completeness. Anything checking a backfilled day for completeness has to compare
+against the receipt count, not against a sibling table.
+
+This also supersedes the earlier hypothesis about the short DS19 partitions. `targeted_signal`
+`data_source_id=19/dt=2026-09-03` came back at 50.6 GB against ~71 GB normal, and the likelier cause
+is that dt=2026-09-02 itself is 46% complete, not the 08-28 → 09-01 hole. Both remain untested until
+the days are actually whole.
+
+**A 12h input retention window fails live batches.** `batch_transition` on the 119 untransitioned
+receipts for dt=2026-09-02 returned `failed=119, expired=0`, immediately after the 2026-09-04 18:00
+sweep deleted their input files at the 12h mark. The 468 that had already completed were untouched.
+OpenAI's batch completion window is 24h, so an input must outlive it; 12h never could. shopper_graph
+#310 raises the default to 26h and is deployed. Without it, the 2026-09-05 09:00 sweep would have
+deleted dt=2026-09-03's inputs at 07:24 and failed all 1,004 of its batches the same way.
+
+**A batch that lapses is unrecoverable, and so is a completed one whose output was swept.** The 742
+batches a prior session created for dt=2026-08-27 on 09-03 04:53-05:41 came back
+`expired=612, completed=128, in_progress=2`. Harvesting the 130 failed anyway: `batch_fetch` 404s on
+`files.content(output_file_id)`, so those outputs are gone from OpenAI. Every one of the 742 had to
+be re-submitted. Expect the same for 08-28 (791), 08-29 (653), 08-30 (510) and 08-31 (733); 09-01
+has no receipts at all.
+
+**Why those 3,429 batches existed.** On 2026-09-03 a prior session cleared all five blocked days'
+submit runs in parallel, between 04:15 and 06:13. Five days of inputs at ~40 GB each is what
+exhausted the 2.5 TB, and every batch created before the wall hit then sat unfetched until it
+lapsed. One day at a time is not a stylistic preference; parallel replay is what caused this.
+
+### The corrected per-day backfill recipe
+
+The 2026-09-04 handoff says to delete the partial receipts and re-run submit. That is right, but not
+for the stated reason, and the probe step is not optional.
+
+1. **Probe before deleting.** Clear `batch_transition` on the fetch run whose
+   `data_interval_start` is D+1, which reads `dt=D`. It polls every receipt's `openai_batch_id` and
+   prints a `cohort dt=D:` line with the status split. The receipts are NOT empty rows: every one
+   carries a real, unique batch id, so deleting them blind can discard recoverable work.
+2. **Harvest only what the probe says is `completed`,** and expect it to fail: an output file older
+   than the sweep's window is already gone. Clear `batch_fetch` alone, never with downstream, or
+   `batch_post` builds a short partition off a fraction of the day.
+3. **Back up the receipts,** then delete them so the double-submission guard cannot skip the dead
+   batches. `get_files_without_batch` keys on `openai_batch_id.notna()`, **not** `was_submitted`, so
+   a receipt naming an expired batch is treated as already submitted and its file is never retried.
+   That is the trap: without deleting, a re-run submits only the never-attempted files.
+4. **Clear `batch_submit`** on submit `scheduled__D T09:00`. About 1h20m for ~1,260 files.
+5. **Fetch the next day,** then rebuild `product_categorization` and the DS19 outputs once the day is
+   actually whole, not before.
+
+**Do one day at a time and verify the receipt count matches the input count before moving on.**
