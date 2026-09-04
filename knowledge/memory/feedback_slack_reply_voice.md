@@ -85,6 +85,11 @@ messages. My first draft was flagged as "too generalized," the second as not dir
   the claim and say it is wrong: **"The assumption that doesn't hold is that campaigns running display
   multi-touch have lower TV spend. They don't."** Same fix for "that needs a different explanation" and
   "lives outside that" -> "that leaves your other attributes question" and "isn't in this data."
+- **"is real" is an LLM tell. Do not use it.** "The 80 to 100% is real" was flagged as sounding like Claude.
+  Confirming a number: **"checks out"**, "is correct", "that's right", or just state the number again. Same
+  family of tells to avoid in a thread: "it's worth noting", "the key insight", "this is expected behavior",
+  "that's a great question", "let me clarify", "to be clear", "in short". If the phrase would fit in a chatbot
+  answer about any topic, it does not belong in a Slack reply about this one.
 - **The opening line needs a subject and a verdict, not pronouns and adjectives.** "Short answer, it's high
   and it's right, and no it's not ad type" was flagged as strange and confusing. Two faults: **"it" names
   nothing** (the reader has to guess whether it is the number, the column, or the tab), and **"right" is doing
