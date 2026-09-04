@@ -4,7 +4,7 @@ title: "AUDI-1327: Pin the debugger replies to real logs, then fix the downstrea
 status: in_progress
 date: 2026-09-04
 summary: "Real-log fixture corpus per signature class, then fix ordering, collapsed stacks, db_unreachable"
-result: "not started"
+result: "PR 1287 open, gauntlet PASS"
 question: "Can the debugger's replies be pinned to logs in the shape production emits, so the 2026-09-03 conversion_signal_backfill failure renders its real cause and a fixture-shape regression fails CI rather than Slack?"
 framing_state: locked
 ---
@@ -157,11 +157,80 @@ other 16 so an unfixtured class is a recorded gap rather than an omission.
   `dags/airflow_debugger_daily.py:37` and `dags/airflow_debugger_rapid.py:25`.
 
 ## 5. Solution
-What was done to resolve the issue:
-- Code changes (PRs, commits)
-- Configuration changes
-- Recommendations made
-- Dashboards/reports created
+PR [SteelHouse/airflow-ti#1287](https://github.com/SteelHouse/airflow-ti/pull/1287), branch
+`audi-1327-real-log-corpus`, 6 commits, 30 files, 1,976 lines (source +143, the rest corpus and tests).
+
+| Commit | What |
+|---|---|
+| `d5618ba` | Five real prod failures vendored as the entry list their API returned, redacted, with a golden reply per case; `capture_case.py` records the fetch command |
+| `41c3bf4` | `dataproc_rca._logging_messages` returns the driver log in emission order; `exception_chain` reads the failure's own stack via `stack_block`, and `unfold_stack` handles tab-joined frames |
+| `ebee895` | Regold the three replies the parser fix moves |
+| `0f04953` | `followed_cause` fires when the root is a wrapper OR the dive itself produced the root, pinned on the rendered reply |
+| `ee797e7` | Coverage and shape gates: all 48 emitted keys captured or waived, a typed or reordered fixture fails the build |
+| `807082e` | One-line docstrings on the code this branch adds |
+
+**Acceptance met, on the rendered surface.** Driving `orchestrate.investigate` -> `slack_block.render`
+with every external call served from the case's own capture, the Why line reads: "(followed
+downstream) The job never reached the database. The socket timed out before any handshake, so this
+is reachability, not a credential or a query... The dataproc job failed with
+`java.net.SocketTimeoutException: Connect timed out`, raised through
+`org.postgresql.util.PSQLException: The connection attempt failed`, at `spark_read_host.py:27` in
+`pixel_isolation_advertiser_ids_df`."
+
+**Verification.** All four CI steps reproduced locally: ruff clean, **332 tests** (baseline 282),
+personal-paths grep clean, `compileall` OK.
+
+**Recurrence proof, three ways.** Revert only the ordering fix: 9 tests red, including one that
+prints the actual defect, a Why line ending mid-frame at `conversion_signal_backfill_process.py",
+line 44,` — #1285's exact failure mode. Revert only the `exception_chain` half: 1 red, expected
+`SocketTimeoutException`, got `ConnectException: Connection refused` (the driver-teardown exception
+that fires after the real failure). Retype a fixture into ascending newline-separated shape: the
+shape gate goes red.
+
+**Secrets.** Every vendored byte was read and scanned against 23 patterns. Internal hostnames ->
+`redacted-host.invalid` (13 occurrences; the `CURRENT vault https://...` line is present and
+defanged), private IPv4 -> `203.0.113.1` (RFC 5737). Zero `mountain.com` anywhere in the diff.
+
+**Gauntlet.** PASS on a clean round at `thorough`: skeptic 0, stylist 4, all 4 refuted. I re-checked
+each refutation by hand: `_is_stack_line` and `_verified` are private, so `D103` does not apply;
+`_one_line`'s word-boundary truncation drops at most one partial word from a safety collapse; the
+description finding counted the workflow's argument string, not the linted PR body.
+
+## 6. Questions Answered
+- **Q:** Is the #1285 defect confined to the acceptance case?
+  **A:** No. `error_region` destroys the signature on 5 of 5 retrievable real driver logs.
+  `classify(full_text)` finds a signature on 2 of 5; `classify(error_region(text))` finds none on any.
+- **Q:** Is `db_unreachable`'s regex wrong?
+  **A:** No. `classify()` on the full driver text returns it correctly. It failed only on
+  `error_region`'s output, so `signatures.py` needed no change.
+- **Q:** Can every signature class carry a fixture?
+  **A:** No, and this is permanent. Cloud Logging `_Default` retention is 7 days while
+  `dataproc_rca.py:40` sets `_LOG_FRESHNESS="45d"`. 28 of 48 classes are captured, 16 are waived by a
+  CI-read list with a review date, 4 are the `external_task_rca` keys that were outside `SIGNATURES`.
+- **Q:** Is the fix a simple `rfind` -> `find`?
+  **A:** No. Cloud Logging split the traceback across ENTRIES and `--order desc` reversed the entries,
+  so frames precede their own header. The reversal has to happen on the entry list, below the
+  `--order` flag, which is also where the replay seam had to sit for a fetch-order change to be
+  observable in CI.
+
+## 7. Data Documentation Updates
+Routed by `/capture` to `project_airflow_debugger` (the Cloud Logging shape finding and the 7-day
+retention ceiling) and `reference_pr_gauntlet`.
+
+## 8. Open Items / Follow-ups
+- **The corpus cannot be refreshed after 2026-09-10.** The acceptance capture's source expires with
+  the 7-day retention, and CI has no gcloud auth, so nothing can compare the vendored bytes to prod.
+  There is no drift detection.
+- Waiver expiry warns rather than fails unless `DEBUGGER_WAIVER_EXPIRY=1`, which CI does not set, so
+  all 43 waivers will warn past their review dates with nothing forcing the review.
+- CGNAT worker addresses (`100.64.0.0/10`, RFC 6598) are vendored unredacted: not routable, not a
+  credential, but the decision is undocumented.
+- No size ceiling on the corpus. It adds 141,878 bytes across 17 files and `.dockerignore` does not
+  exclude `include/`, so every capture ships inside the Astro prod image.
+- `test_the_application_id_does_not_depend_on_the_fetch_order` is thinner than it looks: none of the
+  three captures carries more than one `MCP_EVENT_LOGGING_CONFIG_BASE64` breadcrumb.
+- `_LOG_FRESHNESS="45d"` still misstates the real 7-day window, so the "check freshness window" note
+  misdirects. Not fixed here.
 
 ## 6. Questions Answered
 Specific questions that were resolved during this ticket:
