@@ -1223,8 +1223,13 @@ confirms they are unrelated: **correlation between the two is −0.021**, median
 171 of 433 groups run any display, and **56 groups both run display and are at or above 95% TV**. Median
 `pct_spend_tv` is 0.9205 for groups that run display and 0.9211 for those that do not — indistinguishable.
 
-Kirsa's underlying intuition is right that MNTN serves plenty of video off-TV; that volume just sits outside
-the prospecting denominator this ticket measures. Added to the Read me so the next reader does not have to ask.
+**Correction (2026-09-04).** An earlier draft of this section said off-TV video is what sits outside the
+denominator. That is wrong on both halves. The 7% mobile and tablet share **inside** prospecting already is
+OTT video on a phone or tablet screen and is counted (§9d). What the denominator excludes is stage 2, stage 3
+and retargeting, and in this cohort that is mostly **CTV** ($1,804,164 of `objective_id = 1` sitting at
+`funnel_level` 2 and 3, §9d) plus display on the 171 groups that run any. So the share is 93% because
+prospecting is a CTV product, not because off-TV video was filtered out. The Read me glossary was always
+correct on this ("Display multi-touch sits outside this denominator") and needs no change.
 
 ### 18c. "Significance is on lift, not cost per incremental visit. Can that be revised?"
 
