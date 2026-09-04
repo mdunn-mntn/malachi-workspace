@@ -543,6 +543,62 @@ setOutcome = function(o) {
         if n:
             EDITS.append(f"scale {sel} {old_px}px -> {new_px}px")
 
+    html = sub(
+        html,
+        """        c.font = "8px 'Overpass Mono', monospace";
+        c.textAlign = 'right';
+        c.fillText(txt, a.right - 6, ys.getPixelForValue(y) + 4);""",
+        """        c.font = "600 13px 'Overpass Mono', monospace";
+        c.textAlign = 'left';
+        c.fillText(txt, a.left + 12, ys.getPixelForValue(y) + 4);""",
+        "tier band labels readable and off the plot edge",
+    )
+
+    html = sub(
+        html,
+        """      [ [0, 5,  'rgba(18,122,72,0.07)'],
+        [5, 10, 'rgba(168,88,0,0.07)'],
+        [10, 35,'rgba(190,23,51,0.06)'] ].forEach(([lo, hi, col]) => {""",
+        """      [ [0, 5,  'rgba(18,122,72,0.05)'],
+        [5, 10, 'rgba(168,88,0,0.04)'],
+        [10, 35,'rgba(190,23,51,0.03)'] ].forEach(([lo, hi, col]) => {""",
+        "tier washes recede behind the data",
+    )
+
+    html = sub(
+        html,
+        """      [[ 2.5, 'rgba(18,122,72,0.55)',  '< 5%  WELL POWERED'],
+       [ 7.5, 'rgba(168,88,0,0.55)',   '5–10%  BORDERLINE'],
+       [ 18,  'rgba(190,23,51,0.5)',   '> 10%  UNDERPOWERED']]""",
+        """      [[ 2.5, 'rgba(18,122,72,0.85)',  'WELL POWERED  ·  UNDER 5%'],
+       [ 7.5, 'rgba(168,88,0,0.85)',   'BORDERLINE  ·  5 TO 10%'],
+       [ 18,  'rgba(190,23,51,0.8)',   'UNDERPOWERED  ·  OVER 10%']]""",
+        "tier labels lead with the verdict",
+    )
+
+    html = sub(
+        html,
+        "    .chart-wrap {\n      flex: 1;\n      position: relative;\n      min-height: 240px;\n    }",
+        "    .chart-wrap {\n      flex: 1;\n      position: relative;\n      min-height: 420px;\n    }",
+        "chart floor",
+    )
+
+    html = sub(
+        html,
+        "    .chart-wrap   { min-height: 280px; max-height: 560px; }",
+        "    .chart-wrap   { min-height: 380px; max-height: 760px; }",
+        "chart ceiling",
+    )
+
+    html = sub(
+        html,
+        """      background-image: radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px);
+      background-size: 28px 28px;""",
+        """      background-image: radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px);
+      background-size: 32px 32px;""",
+        "quieter dot grid",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:

@@ -49,8 +49,8 @@
       content: '';
       position: fixed;
       inset: 0;
-      background-image: radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px);
-      background-size: 28px 28px;
+      background-image: radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px);
+      background-size: 32px 32px;
       pointer-events: none;
       z-index: 0;
     }
@@ -358,7 +358,7 @@
     .chart-wrap {
       flex: 1;
       position: relative;
-      min-height: 240px;
+      min-height: 420px;
     }
 
     .stack-note {
@@ -500,7 +500,7 @@
     .stats        { gap: 8px; }
     .stat         { padding: 7px 10px; }
     .stat-val     { font-size: 13px; }
-    .chart-wrap   { min-height: 280px; max-height: 560px; }
+    .chart-wrap   { min-height: 380px; max-height: 760px; }
 
     /* Narrow-window: stack controls above output so chart isn't squished */
     @media (max-width: 820px) {
@@ -876,9 +876,9 @@ function initChart() {
       const xs = scales.x, ys = scales.y;
 
       // Tier zone fills
-      [ [0, 5,  'rgba(18,122,72,0.07)'],
-        [5, 10, 'rgba(168,88,0,0.07)'],
-        [10, 35,'rgba(190,23,51,0.06)'] ].forEach(([lo, hi, col]) => {
+      [ [0, 5,  'rgba(18,122,72,0.05)'],
+        [5, 10, 'rgba(168,88,0,0.04)'],
+        [10, 35,'rgba(190,23,51,0.03)'] ].forEach(([lo, hi, col]) => {
         c.fillStyle = col;
         c.fillRect(a.left, ys.getPixelForValue(hi), a.width, ys.getPixelForValue(lo) - ys.getPixelForValue(hi));
       });
@@ -894,14 +894,14 @@ function initChart() {
       });
 
       // Tier zone labels (right-aligned)
-      [[ 2.5, 'rgba(18,122,72,0.55)',  '< 5%  WELL POWERED'],
-       [ 7.5, 'rgba(168,88,0,0.55)',   '5–10%  BORDERLINE'],
-       [ 18,  'rgba(190,23,51,0.5)',   '> 10%  UNDERPOWERED']].forEach(([y, col, txt]) => {
+      [[ 2.5, 'rgba(18,122,72,0.85)',  'WELL POWERED  ·  UNDER 5%'],
+       [ 7.5, 'rgba(168,88,0,0.85)',   'BORDERLINE  ·  5 TO 10%'],
+       [ 18,  'rgba(190,23,51,0.8)',   'UNDERPOWERED  ·  OVER 10%']].forEach(([y, col, txt]) => {
         c.save();
         c.fillStyle = col;
-        c.font = "8px 'Overpass Mono', monospace";
-        c.textAlign = 'right';
-        c.fillText(txt, a.right - 6, ys.getPixelForValue(y) + 4);
+        c.font = "600 13px 'Overpass Mono', monospace";
+        c.textAlign = 'left';
+        c.fillText(txt, a.left + 12, ys.getPixelForValue(y) + 4);
         c.restore();
       });
 
