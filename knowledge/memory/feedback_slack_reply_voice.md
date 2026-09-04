@@ -91,6 +91,10 @@ messages. My first draft was flagged as "too generalized," the second as not dir
   family of tells to avoid in a thread: "it's worth noting", "the key insight", "this is expected behavior",
   "that's a great question", "let me clarify", "to be clear", "in short". If the phrase would fit in a chatbot
   answer about any topic, it does not belong in a Slack reply about this one.
+- **Do not narrate what a number "reads" as. Say what it is.** "It reads higher than you'd expect" was
+  flagged as AI-similar; use **"it's higher than you'd expect"**. Same for the whole family of
+  observer verbs I default to: **reads as, sits at, lands at, comes in at, runs at, tracks at, shows up as**.
+  A number is not performing for an audience. "The 11+ band sits at 10.6%" -> "the 11+ band is 10.6%".
 - **The opening line needs a subject and a verdict, not pronouns and adjectives.** "Short answer, it's high
   and it's right, and no it's not ad type" was flagged as strange and confusing. Two faults: **"it" names
   nothing** (the reader has to guess whether it is the number, the column, or the tab), and **"right" is doing
