@@ -79,6 +79,14 @@ messages. My first draft was flagged as "too generalized," the second as not dir
 - **When their premise is wrong, say so and keep going.** She wrote "and if that is the case, why...". The
   case did not hold, so the follow-up still needs an answer for a different reason. "Since it's not ad type,
   that needs a different explanation" carries the reader across without making them feel wrong.
+- **Name the thing that is wrong, do not gesture at it.** "The link that breaks is..." was flagged as
+  ambiguous: "that type of vagueness confuses people in these explanations." Metaphors for the *structure* of
+  an argument (the link, the piece, the part that falls over) make the reader hunt for what you mean. State
+  the claim and say it is wrong: **"The assumption that doesn't hold is that campaigns running display
+  multi-touch have lower TV spend. They don't."** Same fix for "that needs a different explanation" and
+  "lives outside that" -> "that leaves your other attributes question" and "isn't in this data."
+- **Spell out the reader's own abbreviations.** "display MT" became "display multi-touch". Even where they
+  used the short form first, write it out.
 - **Say what the thing does, do not coin a noun for it.** "display runners" was rewritten to **"campaigns
   using display ads"**. Same failure as "pre-flip" and "propagated in": I compress a phrase into a label
   nobody uses. Spell out the phrase, even when it is longer. Also plainify device and platform taxonomy

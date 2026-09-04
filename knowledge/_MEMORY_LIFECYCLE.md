@@ -76,7 +76,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mntn_brand_assets | reference | 2026-07-21 | [doc](memory/reference_mntn_brand_assets.md) |
 | audi-1089-ddp-evals | project | 2026-07-22 | [doc](memory/project_audi_1089_ddp_evals.md) |
 | fangorn-tier-assignment | reference | 2026-07-22 | [doc](memory/reference_fangorn_tier_assignment.md) |
-| feedback_minimize_complexity | feedback | 2026-07-22 | [doc](memory/feedback_minimize_complexity.md) |
 | reference_audience_intent_scoring_dag | reference | 2026-07-22 | [doc](memory/reference_audience_intent_scoring_dag.md) |
 | reference_mntn_campaign_stages | reference | 2026-07-22 | [doc](memory/reference_mntn_campaign_stages.md) |
 | reference-ticket-context-eval-tooling | reference | 2026-07-23 | [doc](memory/reference_ticket_context_eval_tooling.md) |
@@ -232,6 +231,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_xlsx_master_format | reference | 2026-09-02 | [doc](memory/reference_xlsx_master_format.md) |
 | airflow-ti-repo-and-deployment | reference | 2026-09-03 | [doc](memory/reference_airflow_ti.md) |
 | feedback_ghost_holdout_not_frequency_capped | feedback | 2026-09-03 | [doc](memory/feedback_ghost_holdout_not_frequency_capped.md) |
+| feedback_minimize_complexity | feedback | 2026-09-03 | [doc](memory/feedback_minimize_complexity.md) |
 | feedback_report_both_lift_scales | feedback | 2026-09-03 | [doc](memory/feedback_report_both_lift_scales.md) |
 | feedback_slack_reply_voice | feedback | 2026-09-03 | [doc](memory/feedback_slack_reply_voice.md) |
 | feedback_test_must_not_share_code_assumption | feedback | 2026-09-03 | [doc](memory/feedback_test_must_not_share_code_assumption.md) |
