@@ -446,7 +446,7 @@
   <!-- ── HEADER ── -->
   <header>
     <span class="hd-mntn">MNTN</span>
-    <h1 class="hd-title">mde calculator · estimated smallest lift a test can detect</h1>
+    <h1 class="hd-title">mde calculator · smallest estimated lift a test can detect</h1>
     <div class="hd-sep"></div>
     <span class="hd-ref" id="hd-data-ref">INCREMENTALITY · LEWIS–RAO</span>
   </header>
@@ -864,8 +864,16 @@ function initChart() {
         c.fillRect(a.left, ys.getPixelForValue(hi), a.width, ys.getPixelForValue(lo) - ys.getPixelForValue(hi));
       });
 
-      // Horizontal dashed tier lines
-      [ [5, 'rgba(18,122,72,0.35)'], [10, 'rgba(168,88,0,0.35)'] ].forEach(([v, col]) => {
+    },
+
+    // Boundaries and labels draw ABOVE the data. The confidence ribbon can span the whole
+    // plot at a small holdout, and underneath it the tier lines vanish.
+    afterDatasetsDraw(ch) {
+      const { ctx: c, chartArea: a, scales } = ch;
+      if (!a) return;
+      const ys = scales.y;
+
+      [ [5, 'rgba(18,122,72,0.55)'], [10, 'rgba(168,88,0,0.55)'] ].forEach(([v, col]) => {
         const py = ys.getPixelForValue(v);
         c.save(); c.beginPath();
         c.strokeStyle = col; c.lineWidth = 1;
@@ -930,7 +938,7 @@ function initChart() {
     data: {
       datasets: [
         // index 0: raw CI upper — fills to index 1 (lower)
-        { label: '_rawCiHi', data: rawCiHi, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'rgba(0,112,168,0.09)', pointRadius: 0, tension: 0.35, fill: '+1' },
+        { label: '_rawCiHi', data: rawCiHi, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'rgba(0,112,168,0.06)', pointRadius: 0, tension: 0.35, fill: '+1' },
         // index 1: raw CI lower
         { label: '_rawCiLo', data: rawCiLo, borderWidth: 0, borderColor: 'transparent', pointRadius: 0, tension: 0.35, fill: false },
         // index 2: raw MDE main line

@@ -475,7 +475,7 @@ setOutcome = function(o) {
     html = sub(
         html,
         '<h1 class="hd-title">mde calculator \u00b7 per-advertiser prefill</h1>',
-        '<h1 class="hd-title">mde calculator \u00b7 estimated smallest lift a test can detect</h1>',
+        '<h1 class="hd-title">mde calculator \u00b7 smallest estimated lift a test can detect</h1>',
         "title says what the tool answers",
     )
 
@@ -597,6 +597,48 @@ setOutcome = function(o) {
         """      background-image: radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px);
       background-size: 32px 32px;""",
         "quieter dot grid",
+    )
+
+    html = sub(
+        html,
+        """      // Horizontal dashed tier lines
+      [ [5, 'rgba(18,122,72,0.35)'], [10, 'rgba(168,88,0,0.35)'] ].forEach(([v, col]) => {
+        const py = ys.getPixelForValue(v);
+        c.save(); c.beginPath();
+        c.strokeStyle = col; c.lineWidth = 1;
+        c.setLineDash([4, 5]);
+        c.moveTo(a.left, py); c.lineTo(a.right, py);
+        c.stroke(); c.restore();
+      });
+
+      // Tier zone labels (right-aligned)""",
+        """    },
+
+    // Boundaries and labels draw ABOVE the data. The confidence ribbon can span the whole
+    // plot at a small holdout, and underneath it the tier lines vanish.
+    afterDatasetsDraw(ch) {
+      const { ctx: c, chartArea: a, scales } = ch;
+      if (!a) return;
+      const ys = scales.y;
+
+      [ [5, 'rgba(18,122,72,0.55)'], [10, 'rgba(168,88,0,0.55)'] ].forEach(([v, col]) => {
+        const py = ys.getPixelForValue(v);
+        c.save(); c.beginPath();
+        c.strokeStyle = col; c.lineWidth = 1;
+        c.setLineDash([4, 5]);
+        c.moveTo(a.left, py); c.lineTo(a.right, py);
+        c.stroke(); c.restore();
+      });
+
+      // Tier zone labels (right-aligned)""",
+        "tier boundaries and labels draw above the ribbon",
+    )
+
+    html = sub(
+        html,
+        "backgroundColor: 'rgba(0,112,168,0.09)'",
+        "backgroundColor: 'rgba(0,112,168,0.06)'",
+        "confidence ribbon recedes",
     )
 
     OUT.write_text(html)
