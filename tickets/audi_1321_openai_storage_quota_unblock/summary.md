@@ -283,3 +283,67 @@ answers the ownership question directly instead of by inference.
 **Sequencing note.** The five older days (08-27 to 09-01) stay blocked behind this. Do not lower a
 retention window and re-run submit until the sweep can show what it is deleting and how much space
 it frees.
+
+### The quota was ours after all, and dt=2026-09-03 is submitted (2026-09-04, evening)
+
+**The storage went from the ceiling to 4.2 GiB.** With PR #308 and #309 deployed, the sweep on
+submit `scheduled__2026-09-03T09:00` logged:
+
+    Listed 129 files holding 4.2 GiB, 0.2% of the 2.5TB project limit. This pipeline holds 2.8 GiB.
+       input  purpose=batch                80 files  2.8 GiB
+       other  purpose=batch                11 files  1.1 GiB
+       other  purpose=fine-tune            21 files  0.3 GiB
+       other  purpose=assistants            5 files  0.0 GiB
+       other  purpose=fine-tune-results    12 files  0.0 GiB
+
+Everything not this pipeline's totals 1.4 GiB. **§0's kill criterion never fired.** The 2.5 TB was
+a multi-day backlog of our own `part-` inputs that the old short-page listing could not reach: one
+run of the fixed sweep enumerated 5,527 deletable inputs holding 193.4 GiB, aged 21.8h to 54.6h.
+The earlier reading of "28 files" was a first page, never a count. No escalation to Alyson is
+needed and no OpenAI dashboard access is required.
+
+**`batch_submit` for dt=2026-09-03 succeeded** 18:01:52 → 19:24:29 UTC, writing 1,004 receipts to
+`openai_batch_submissions/dt=2026-09-03/`, one per input file. Every prior attempt since 08-28 died
+in about 30 seconds on the storage 400. The submit DAG run is green.
+
+**Two defects found only because the sweep finally reported bytes.** First, the paging cursor can be
+deleted underneath the listing: both DAGs sweep on `0 9 * * *`, so the other run deletes the file our
+`after` cursor names and the 404 aborted the whole run after it had enumerated 5,527 files. PR #309
+stops listing, warns with the cursor id, and deletes what was validly enumerated; a truncated
+listing never trips the quota alarm because its counts are partial. That warning fired on the
+successful run, so the race is real and routine, not theoretical. Second, the retention window was
+wrong in kind, not degree: an input is spent once its batch is created, minutes after upload, while
+only outputs must outlive the next day's fetch. Inputs now expire at 12h and outputs stay at 48h,
+which frees a stalled day without any environment variable the pod cannot receive.
+
+### The dt=2026-09-02 repair, and what it says about the remaining gap
+
+`product_categorization` dt=2026-09-02 rebuilt to 4,336,836,351 bytes across 50 parquet files,
+against 4,342,770,189 / 49 on 2026-08-26: a 0.14% difference. `test_product_categorization` then
+passed. The short 408 MiB partition is backed up at
+`gs://mntn-data-archive-prod/_backups/audi_1321/product_categorization_dt=2026-09-02_20260904/`.
+
+Downstream, `keyword_ddp_reporting manual__consume_dt_2026-09-02` had consumed the short partition
+and written dt=2026-09-03 (the DAG uses `run_date = {{ ds }}`). Both affected outputs were backed up
+under `_backups/audi_1321/`, deleted and rebuilt:
+
+| output | before | after | normal |
+|---|---|---|---|
+| `targeted_signal/data_source_id=19/dt=2026-09-03` | 44.6 GB | 50.6 GB | ~70-72 GB |
+| `targeted_signal_domain/dt=2026-09-03` | 34.2 GB | 36.4 GB | ~44.5 GB |
+
+`data_source_id=13` (110.6 GB) and `=4` (158.3 GB) were never affected; only the DS19 path reads
+`product_categorization`.
+
+**Both rebuilds recovered, and both are still short of a normal day.** That is the open question, not
+a settled finding. The hypothesis is that the DS19 signal for a given day draws on a categorization
+history that still has the 2026-08-28 → 09-01 hole in it, so it cannot reach full size until those
+days are backfilled. **The check that settles it:** after 08-27 through 09-01 are recovered, re-read
+these two partitions. If they rise toward ~71 GB and ~44.5 GB the hypothesis holds; if they stay near
+50.6 GB and 36.4 GB the shortfall has another cause and the rebuild is not yet correct. Do not treat
+the current numbers as a clean recovery until that check is done.
+
+**No downstream cascade.** `external.targeted_signal` is a BigQuery external table over that GCS
+prefix, and the only DAGs touching it are producers (`keyword_ddp_reporting`, `targeted_signal_crm`).
+The DDP usage report reads it live at month end, so correcting the parquet corrects every reader
+retroactively, provided it is corrected before the monthly run.
