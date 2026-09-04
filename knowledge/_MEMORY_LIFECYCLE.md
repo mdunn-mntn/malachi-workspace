@@ -74,7 +74,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | feedback_xlsx_default_output | feedback | 2026-07-21 | [doc](memory/feedback_xlsx_default_output.md) |
 | reference_goal_attainment_report | reference | 2026-07-21 | [doc](memory/reference_goal_attainment_report.md) |
 | reference_mntn_brand_assets | reference | 2026-07-21 | [doc](memory/reference_mntn_brand_assets.md) |
-| reference_mode_dashboard_porting | reference | 2026-07-21 | [doc](memory/reference_mode_dashboard_porting.md) |
 | audi-1089-ddp-evals | project | 2026-07-22 | [doc](memory/project_audi_1089_ddp_evals.md) |
 | fangorn-tier-assignment | reference | 2026-07-22 | [doc](memory/reference_fangorn_tier_assignment.md) |
 | feedback_minimize_complexity | feedback | 2026-07-22 | [doc](memory/feedback_minimize_complexity.md) |
@@ -150,7 +149,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_ticket_framing_gate | reference | 2026-08-12 | [doc](memory/reference_ticket_framing_gate.md) |
 | reference_xlsx_subtitle_caps | reference | 2026-08-12 | [doc](memory/reference_xlsx_subtitle_caps.md) |
 | background_work_liveness | feedback | 2026-08-15 | [doc](memory/feedback_background_work_liveness.md) |
-| feedback_slack_reply_voice | feedback | 2026-08-17 | [doc](memory/feedback_slack_reply_voice.md) |
 | reference_airflow_ti_dev_testing | reference | 2026-08-17 | [doc](memory/reference_airflow_ti_dev_testing.md) |
 | reference_guid_geos_summary_pipeline | reference | 2026-08-17 | [doc](memory/reference_guid_geos_summary_pipeline.md) |
 | feedback_verify_before_volunteering | feedback | 2026-08-18 | [doc](memory/feedback_verify_before_volunteering.md) |
@@ -235,6 +233,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | airflow-ti-repo-and-deployment | reference | 2026-09-03 | [doc](memory/reference_airflow_ti.md) |
 | feedback_ghost_holdout_not_frequency_capped | feedback | 2026-09-03 | [doc](memory/feedback_ghost_holdout_not_frequency_capped.md) |
 | feedback_report_both_lift_scales | feedback | 2026-09-03 | [doc](memory/feedback_report_both_lift_scales.md) |
+| feedback_slack_reply_voice | feedback | 2026-09-03 | [doc](memory/feedback_slack_reply_voice.md) |
 | feedback_verify_agent_findings_before_relaying | feedback | 2026-09-03 | [doc](memory/feedback_verify_agent_findings_before_relaying.md) |
 | project_airflow_debugger | project | 2026-09-03 | [doc](memory/project_airflow_debugger.md) |
 | project_airflow_optimizer | project | 2026-09-03 | [doc](memory/project_airflow_optimizer.md) |
@@ -250,6 +249,7 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_mde_surface_choice | reference | 2026-09-03 | [doc](memory/reference_mde_surface_choice.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-09-03 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_mode_api | reference | 2026-09-03 | [doc](memory/reference_mode_api.md) |
+| reference_mode_dashboard_porting | reference | 2026-09-03 | [doc](memory/reference_mode_dashboard_porting.md) |
 | reference_openai_sdk_pagination | reference | 2026-09-03 | [doc](memory/reference_openai_sdk_pagination.md) |
 | reference_shopper_graph_deploy | reference | 2026-09-03 | [doc](memory/reference_shopper_graph_deploy.md) |
 | reference_slack_debugger_app | reference | 2026-09-03 | [doc](memory/reference_slack_debugger_app.md) |

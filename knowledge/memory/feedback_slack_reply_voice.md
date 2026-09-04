@@ -6,10 +6,10 @@ metadata:
   type: feedback
   originSessionId: b9798d39-963b-4b08-ba77-d3be373da680
 doc_type: memory
-keywords: [slack reply voice, slack thread reply, human prose not AI, no em-dashes, BLUF, conversational, not the Jira bullet shape, live channel credibility, state what it is not what it isnt, no negation lists, plainify analyst jargon, no regression time-travel restamped, cut redundant assertions, no appended ownership routing, no hard-wrapped drafts, paste-ready formatting, one line per paragraph, queries only ask]
+keywords: [slack reply voice, slack thread reply, human prose not AI, no em-dashes, BLUF, conversational, not the Jira bullet shape, live channel credibility, state what it is not what it isnt, no negation lists, plainify analyst jargon, no regression time-travel restamped, cut redundant assertions, no appended ownership routing, no hard-wrapped drafts, paste-ready formatting, one line per paragraph, queries only ask, answer in the asker's order, name their numbers, quote their flawed premise]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-08-17
+last_verified: 2026-09-03
 ---
 Slack replies must read like a person typed them, not like an AI report. Malachi flagged the on-call INC-005 draft as "sounds like AI" and specifically called out em-dashes and colon-heavy formatting.
 
@@ -61,3 +61,28 @@ Slack replies must read like a person typed them, not like an AI report. Malachi
 - **Single sentences.** His instruction was "to the point, succinct, single sentences, clear." One idea per sentence, no clauses stacked with commas or semicolons.
 - **State the caveat as its own short sentence, not a hedge inside another one.** "And yes, dev only had 2 of the 17 sources, so this tested the code, not the data." lands; folding it into the result sentence does not.
 - **Don't narrate the investigation's plumbing.** My first attempt explained the dev bundle re-syncing from main as if it were a finding. The reader only needed "one of my runs was actually running main's code, not the branch."
+
+**Extra lessons from the TI-1313 reply to Kirsa (2026-09-03, took 3 rewrites).** She asked four things in two
+messages. My first draft was flagged as "too generalized," the second as not directly answering.
+
+- **Answer each question, in the order they asked it.** She asked (1) is the TV number too high, (2) is it ad
+  type rather than device, (3) then why does the other tab disagree, (4) is significance on lift not cost. My
+  draft led with (3) because it was the most interesting finding, buried (2), and never plainly answered (1)
+  or (4). **Their order is the reply's outline.** A yes/no question gets a yes or no in the first clause.
+- **Be specific with THEIR numbers, from the tabs they were looking at.** "The denominators differ" is the
+  explanation I understood; it is not the explanation that lands. What landed was "of the 171 running display
+  MT, 112 sit in the 90 to 99% TV bucket and only 59 are under 90%." Pull the actual rows off the sheets they
+  named and quote those figures back.
+- **Find the one link in their reasoning that breaks and quote it.** Kirsa's chain was sound except for a
+  parenthetical: "display MT (aka lower % of TV spend)". Naming that clause and showing it false answers the
+  whole question at once. Do not re-derive the entire chain, locate the broken link.
+- **When their premise is wrong, say so and keep going.** She wrote "and if that is the case, why...". The
+  case did not hold, so the follow-up still needs an answer for a different reason. "Since it's not ad type,
+  that needs a different explanation" carries the reader across without making them feel wrong.
+- **Say what the thing does, do not coin a noun for it.** "display runners" was rewritten to **"campaigns
+  using display ads"**. Same failure as "pre-flip" and "propagated in": I compress a phrase into a label
+  nobody uses. Spell out the phrase, even when it is longer. Also plainify device and platform taxonomy
+  values: `SET_TOP_BOX` and `CONNECTED_TV` became **"streaming and cable boxes"** and **"smart TVs"**, since
+  a reader should not have to know the column's enum to read the sentence.
+- **Confirm the correct half plainly.** She was right that significance keyed on lift. "You're right, it was
+  only testing lift. I've changed it." No hedging, no explaining the bootstrap that replaced it.

@@ -1260,3 +1260,22 @@ I dropped a "Cost settings differ" yes/no column before shipping: it read Yes fo
 cheapest and dearest settings are **picked after seeing the data**, so the low end is optimistic by
 construction. The ordered ratio carries the information honestly and the method line says the pair is
 data-picked.
+
+### 18d. The reply took three rewrites, and why
+
+Worth recording because the failure was not the analysis, it was the answer shape.
+
+Draft 1 explained the denominator difference correctly and was flagged **"too generalized"**. Draft 2 added
+the specific counts and was flagged for not directly answering. What worked was answering **her four
+questions in her order**, each opening with a plain yes or no, and quoting the figures off the tabs she named
+rather than the ones I found interesting.
+
+The load-bearing move was locating the single broken link in her reasoning. Her chain was sound apart from one
+parenthetical, "display MT (aka lower % of TV spend)". Those are not the low-TV campaigns: **112 of the 171
+display multi-touch groups sit in the 90 to 99% TV bucket and only 59 are under 90%**, and median TV share is
+**92.0% for display runners against 92.1% for prospecting only**. Quoting that clause and showing it false
+answers the whole question in one stroke, where re-deriving the denominators did not.
+
+The comparison she was making, in her own numbers: the TV tab reads **+12.10% lift for 90 to 99% TV against
++5.21% under 90%**, and the display tab reads **+10.25% against +9.21%** on a group that is mostly high-TV
+anyway. Routed to memory `feedback_slack_reply_voice`.
