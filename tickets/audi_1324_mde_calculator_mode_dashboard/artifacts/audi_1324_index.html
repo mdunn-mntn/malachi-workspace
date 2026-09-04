@@ -254,7 +254,9 @@
       gap: 4px;
       align-self: center;
       padding-left: 4px;
+      min-width: max-content;
     }
+#mde .req-label, #mde .req-monthly, #mde .req-detail { white-space: nowrap; }
 #mde .req-label { font-size: 8px; letter-spacing: 0.3em; color: var(--t2); }
 #mde .req-total { font-family: var(--mono); font-size: 30px; color: var(--amber); line-height: 1; }
 #mde .req-monthly { font-family: var(--mono); font-size: 15px; color: var(--t2); }
@@ -444,7 +446,7 @@
   <!-- ── HEADER ── -->
   <header>
     <span class="hd-mntn">MNTN</span>
-    <h1 class="hd-title">mde calculator · per-advertiser prefill</h1>
+    <h1 class="hd-title">mde calculator · smallest lift a test can detect</h1>
     <div class="hd-sep"></div>
     <span class="hd-ref" id="hd-data-ref">INCREMENTALITY · LEWIS–RAO</span>
   </header>
@@ -1279,11 +1281,18 @@ function __mdeBoot() {
   root.dataset.mdeBooted = '1';
   var tries = 0;
   function go() {
-    window.__mdeHydrate();
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', __mdeBoot);
-    } else {
-      __mdeBoot();
+    try {
+      window.__mdeHydrate();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', __mdeBoot);
+      } else {
+        __mdeBoot();
+      }
+    } catch (e) {
+      // Leave the guard off so the next injection gets a clean attempt rather than
+      // inheriting a half-booted DOM.
+      root.removeAttribute('data-mde-booted');
+      console.error('MDE calculator failed to boot', e);
     }
   }
   (function wait() {

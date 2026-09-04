@@ -81,11 +81,18 @@ LAUNCHER = """
   root.dataset.mdeBooted = '1';
   var tries = 0;
   function go() {
-    window.__mdeHydrate();
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', __mdeBoot);
-    } else {
-      __mdeBoot();
+    try {
+      window.__mdeHydrate();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', __mdeBoot);
+      } else {
+        __mdeBoot();
+      }
+    } catch (e) {
+      // Leave the guard off so the next injection gets a clean attempt rather than
+      // inheriting a half-booted DOM.
+      root.removeAttribute('data-mde-booted');
+      console.error('MDE calculator failed to boot', e);
     }
   }
   (function wait() {

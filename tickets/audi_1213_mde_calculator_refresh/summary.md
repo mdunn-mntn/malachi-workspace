@@ -340,3 +340,11 @@ user path (focus the search box, type, mousedown a result row) instead of callin
 the IIFE correctly makes those private: picker shows `UnitedHealthcare · LAPSED`, selection prefills
 baseline 2.900 / CPM 22.90 / imps-per-IP 5.80, the lapsed banner renders, and the CVR toggle pulls
 that advertiser's own 0.040% rather than the cohort default.
+
+**Follow-ups after the re-injection fix, 2026-09-03.** The budget block still wrapped one word per
+line: `grid-template-columns: auto auto` lets a track shrink below its content, so the fix is on the
+block rather than the track (`min-width: max-content`, plus `white-space: nowrap` on the label,
+run-rate and detail lines). Boot is now wrapped in try/catch that clears `data-mde-booted` on
+failure, so a partial boot does not poison the next injection with a half-built DOM. Title changed
+from "per-advertiser prefill", which named the mechanism, to "smallest lift a test can detect",
+which names the question the tool answers.

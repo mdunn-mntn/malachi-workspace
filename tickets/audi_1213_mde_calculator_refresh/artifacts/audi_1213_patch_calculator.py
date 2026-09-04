@@ -451,6 +451,34 @@ setOutcome = function(o) {
         "hero grid matches its two remaining blocks",
     )
 
+    html = sub(
+        html,
+        """    .req-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-self: center;
+      padding-left: 4px;
+    }""",
+        """    .req-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-self: center;
+      padding-left: 4px;
+      min-width: max-content;
+    }
+    .req-label, .req-monthly, .req-detail { white-space: nowrap; }""",
+        "budget block sizes to its content instead of wrapping",
+    )
+
+    html = sub(
+        html,
+        '<h1 class="hd-title">mde calculator \u00b7 per-advertiser prefill</h1>',
+        '<h1 class="hd-title">mde calculator \u00b7 smallest lift a test can detect</h1>',
+        "title says what the tool answers",
+    )
+
     OUT.write_text(html)
     print(f"wrote {OUT.relative_to(WORKSPACE)}  {OUT.stat().st_size / 1024:.0f} KB")
     for e in EDITS:

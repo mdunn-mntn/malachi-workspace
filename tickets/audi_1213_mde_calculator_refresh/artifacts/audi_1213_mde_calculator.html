@@ -309,7 +309,9 @@
       gap: 4px;
       align-self: center;
       padding-left: 4px;
+      min-width: max-content;
     }
+    .req-label, .req-monthly, .req-detail { white-space: nowrap; }
     .req-label   { font-size: 8px; letter-spacing: 0.3em; color: var(--t2); }
     .req-total   { font-family: var(--mono); font-size: 30px; color: var(--amber); line-height: 1; }
     .req-monthly { font-family: var(--mono); font-size: 15px; color: var(--t2); }
@@ -519,7 +521,7 @@
   <!-- ── HEADER ── -->
   <header>
     <span class="hd-mntn">MNTN</span>
-    <h1 class="hd-title">mde calculator · per-advertiser prefill</h1>
+    <h1 class="hd-title">mde calculator · smallest lift a test can detect</h1>
     <div class="hd-sep"></div>
     <span class="hd-ref" id="hd-data-ref">INCREMENTALITY · LEWIS–RAO</span>
   </header>
