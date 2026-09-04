@@ -1787,8 +1787,11 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   ("post migration" TODO) → `product_categorization` → `tpa_export`/`mntn_matched_taxonomy_bq`/reporting → DS19.
 - **GCS artifact layout + cadence + ~2-day dt lag (INC-006, 2026-07-29):** the fetch DAG's stages land under
   `gs://mntn-data-archive-prod/shopper_graph/` as **daily `dt=` partitions**: `openai_batch_submissions/` → `openai_batch_results/`
-  (the fetched OpenAI output, ~37GB / ~880 files, ~42MB/file) → `openai_batch_results_joined/` → `product_categorization/`
-  (~3.5GB / ~53 files). **`product_categorization` `dt` lags the run by ~2 days** (dt=07-25 written 07-27T12:50Z; dt=07-26 written
+  (the fetched OpenAI output, ~37GB / ~880 files, ~42MB/file; **re-measured 2026-09-04: ~46 GB/day**) → `openai_batch_results_joined/` →
+  `product_categorization/` (~3.5GB / ~53 files; **re-measured 2026-09-04: ~4.0-4.3 GB across ~50 parquet files**). The input side,
+  `openai_batch_input_formatted/dt=D/`, is **~1,014 files x ~40 MB = 40.3 GB/day** (2026-09-04), so the whole pipeline holds
+  **~100 GB under a 48h retention window** against OpenAI's 2.5 TB per-project file cap — see the storage-quota bullet below.
+  **`product_categorization` `dt` lags the run by ~2 days** (dt=07-25 written 07-27T12:50Z; dt=07-26 written
   07-28T13:34Z), because the OpenAI Batch API step is ~24h async. A run (`mntn_match_incrementals_fetch`, `0 9 * * *`) normally
   finishes `product_categorization` ~13:00-13:34Z, ~4.5h after its 09:00 start. **Consumer:** `keyword_ddp_reporting` (`0 15 * * *`)
   gates on it via an `ExternalTaskSensor` `wait_for_product_categorization` (`external_task_id=batch_post.product_categorization`,
@@ -1800,6 +1803,24 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   also set `was_downloaded=True` unconditionally, stranding skipped batches. Net effect: each retry grabs a few more then dies on the next
   bad batch, so a bad cycle limps forward (07-27 stuck at 928/1101 results, downstream never assembled) but never produces
   `product_categorization`. Fix: PR `SteelHouse/shopper_graph#296` (skip bad batches, gate the `was_downloaded` update). See INC-006 / IMP-010.
+- **`product_categorization` is a dbt PYTHON model with `incremental_strategy="append"` and cannot self-heal (AUDI-1321, 2026-09-04).**
+  `SteelHouse/shopper_graph:dbt/models/mntn_matched/post_batch/product_categorization.py`. When the target `dt` partition already holds
+  data it raises `FileExistsError ... Consider deleting files in the partition before re-running`; a re-run appends rather than
+  overwrites, so **the GCS partition `gs://mntn-data-archive-prod/shopper_graph/product_categorization/dt=D/` must be deleted before the
+  task is cleared.** A normal day is ~4.0-4.3 GB across ~50 parquet files, so a materially smaller partition is SHORT, not slow.
+- **Check WHICH dbt assertion failed before marking `batch_test.test_product_categorization` success (AUDI-1321, 2026-09-04).** The
+  standing "known false failure" applies to **`product_categorization__max_dt` alone** (wall-clock `current_date-2` vs the backfilled
+  `dt`). On 2026-09-04 the failure was **`product_categorization__record_count`** — row count >= 99% of `openai_batch_results_joined` at
+  the same `dt` — and it was correct: a mark-success shipped a **408 MiB** partition, `keyword_ddp_reporting` consumed it, and two
+  downstream partitions had to be backed up, deleted and rebuilt. Memory `feedback_check_which_dbt_assertion_failed`.
+- **`keyword_ddp_reporting` writes DS19 only, and its run name does not name its partition (AUDI-1321, 2026-09-04).** The DAG uses
+  `run_date = "{{ ds }}"`, so the run `manual__consume_dt_2026-09-02` actually wrote `dt=2026-09-03`. `write_targeted_signal_ds_19` →
+  `gs://mntn-data-archive-prod/signals/targeted_signal/data_source_id=19/dt=D/` (normal ~70-72 GB);
+  `write_targeted_signal_ds_19_domain` → `signals/targeted_signal_domain/dt=D/` (normal ~44.5 GB). **`data_source_id=13`
+  (~105-110 GB) and `data_source_id=4` (~157-158 GB) come from other sources and are NOT affected by `product_categorization`.**
+  The chain is sequential — `wait_for_product_categorization >> write_targeted_signal_ds_19 >> write_targeted_signal_ds_13 >>
+  write_targeted_signal_ds_19_domain` — so **clearing `ds_19` and `ds_19_domain` together RACES them** (`ds_19_domain`'s direct
+  upstream `ds_13` stays green and never holds it back). Clear `ds_19`, wait, then clear `ds_19_domain`.
 - **OpenAI file-storage cleanup + the SDK pagination gotcha (INC-007 / AUDI-1042, 2026-07-30):** `batch_cleanup_1/2`
   (identical bookend tasks, `openai/delete_all_storage_files.py`, ~4×/day across both DAGs) purge old OpenAI files to
   stay under the **2.5TB project file-storage quota**; when they stop keeping up, `batch_submit` fails 400 "exceeded your
@@ -1807,8 +1828,12 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   a list response directly — `for file in client.files.list():` — and it AUTO-fetches all pages; there is **NO**
   `.auto_paging_iter()` method (a Stripe idiom → `AttributeError: 'SyncCursorPage[FileObject]' object has no attribute
   'auto_paging_iter'`). The cleanup fix #297 introduced that nonexistent call and crashed every cleanup (deleted 0 files);
-  #298 reverted to direct iteration (the real fix), #299 (manual `has_more` loop) was closed. Detail: memory
-  `reference_openai_sdk_pagination` + `reference_mntn_matched_batch_pipeline`.
+  #298 reverted to direct iteration (the real fix), #299 (manual `has_more` loop) was closed. **Two further traps found since:**
+  `GET /v1/files` caps `limit` at 10,000 and defaults to `created_at desc`, so an age-based sweep sees only the newest window and frees
+  nothing under churn (fixed by `order="asc"`, #306, 2026-09-03); and **a page SHORTER than the requested limit is NOT the last page**,
+  so `if len(files) < PAGE: break` truncates the walk — on 2026-09-04 the sweep logged `Deleted 0 of 0 files, having listed at least 28`
+  four minutes before `batch_fetch` deleted 416 files it had never listed. Page with `after=files[-1].id` until the API returns an EMPTY
+  page. Detail: memory `reference_openai_sdk_pagination` + `reference_mntn_matched_batch_pipeline`.
 - **`data_source_id` does NOT multiply OpenAI cost.** Dedup is on `composite_key` (the query-stripped URL); a URL is
   sent to OpenAI **once** regardless of how many vendors report it. `data_source_id` is retained only for **billing
   attribution** to the source vendor. (augmentor_log DS30 duplicate URLs are absorbed by the anti-join.)

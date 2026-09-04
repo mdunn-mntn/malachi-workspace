@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: feedback
 doc_type: memory
-keywords: [shared working tree, concurrent sessions, git add . sweeps edits, commit attribution, stage specific files, curator specific-files, git status before commit, git stash grabs concurrent work, stale stash pop reverts commits, fast-forward push backlog, no-verify index freshness churn]
+keywords: [shared working tree, concurrent sessions, git add . sweeps edits, commit attribution, stage specific files, curator specific-files, git status before commit, git stash grabs concurrent work, stale stash pop reverts commits, fast-forward push backlog, no-verify index freshness churn, path-limited commit, git commit -- paths, never park work in the index, add-to-commit race, 16ced108, staged handoff swept, AUDI-1321, AUDI-1326]
 domain: [workflow]
 lifecycle: active
-last_verified: 2026-08-20
+last_verified: 2026-09-04
 ---
 
 Multiple Claude Code sessions on this Mac operate on ONE shared git working tree. A `git add . && git commit` in any session stages and commits EVERY uncommitted change in the tree, including another session's in-flight edits.
@@ -41,3 +41,5 @@ Multiple Claude Code sessions on this Mac operate on ONE shared git working tree
 
 **Parallel AGENTS inside one session are the same hazard, and the fix is structural (2026-09-02, `/sprint`).** N ticket agents running concurrently in one session share the same working tree, index, and `origin` — the add-to-commit race and the push race apply exactly as they do across sessions, except there is no human watching each one. The design that removes it: **agents never touch git at all.** They write only inside their own `tickets/<folder>/`, return their findings in a schema, and the dispatcher commits each folder serially. Two shared files still leak through and belong to the dispatcher alone: `knowledge/bq_perf_log.jsonl` (every `bq_run.sh` call appends to it, unlocked — single-line `>>` appends are atomic in practice but it is still shared state, so commit it once at the end, IMP-100) and anything `/capture` writes (`knowledge/` masters, `MEMORY.md`) — hence `/capture` runs one ticket at a time in the dispatcher, never inside an agent. See [[reference_sprint_skill]].
 
+
+**Recurrence 2026-09-04 (AUDI-1321) — the add-to-commit race again, and the guard that would have caught it was not used.** Another session's commit `16ced108` ("AUDI-1326: lock the framing gate") swept my staged `tickets/audi_1321_openai_storage_quota_unblock/outputs/audi_1321_handoff_2026_09_04b.md` into it. Same mechanism as 2026-08-25 and 2026-08-20: the file sat in the SHARED index between my `add` and my `commit`, so the next session to commit claimed it. Nothing lost, attribution wrong again, and the handoff is now unfindable by `git log --grep AUDI-1321`. **Standing conclusion, now on five occurrences: never park work in the index.** Stage and commit in ONE path-limited command — `git add <paths> && git commit -m "..." -- <the same paths>` — so there is no window and no ambiguity about which paths ship.

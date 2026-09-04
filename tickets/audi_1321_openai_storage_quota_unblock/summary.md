@@ -4,7 +4,7 @@ title: "AUDI-1321: OpenAI storage sweep could not see past the newest 10,000 fil
 status: in_progress
 date: 2026-09-03
 summary: "The MNTN Matched keyword pipeline stalled 2026-08-28 on the OpenAI project's 2.5TB storage ceiling. Root cause: the nightly cleanup lists files newest-first and the API caps a page at 10,000, so on a heavy day every slot on that page is younger than the sweep's 48h delete floor and it frees nothing — exactly when churn is highest. Fix shipped in shopper_graph #306 (order=asc + explicit paging); the six blocked days still need backfilling. Split out of AUDI-1191, which caught it live."
-result: "Quota wall RESOLVED and proven 2026-09-03. #306 deployed 15:50; the next cleanup deleted 1,132 of 1,132 files with 0 skips (every run 08-29..09-03 had deleted 0), and batch_submit on submit logical 2026-09-02 then SUCCEEDED at ~19:00 UTC after ~57 minutes — the first green submit since 08-28, where every prior attempt died in ~27 seconds on a storage 400. The §0 kill criterion never triggered: the storage was ours and the list-order defect was the entire cause. shopper_graph #305 (merged + deployed same day) adds the zero-delete alarm. Remaining: backfill dt=2026-08-27..09-01 one day at a time."
+result: "REOPENED 2026-09-04: batch_submit hit the storage 400 again. The 2026-09-03 fix was real but partial — order=asc (shopper_graph #306) cleared the wall once (1,132 of 1,132 deleted, first green submit since 08-28 after ~57 min), and the sweep still breaks its walk on a page shorter than the limit, so it has never enumerated its own store: it logged 28 files four minutes before batch_fetch deleted 416. Measured volumes put the whole pipeline at ~100 GB against the 2.5 TB cap, so 'the storage was ours' is challenged, not settled. #305's zero-delete alarm cannot fire because its 10,000 threshold is compared against a partial page. Next: shopper_graph #308 (page on an empty page, log per-file bytes + purpose). Backfill dt=2026-08-27..09-01 stays blocked behind it."
 question: "Does a correctly ordered file sweep free enough of the OpenAI 2.5TB ceiling for batch_submit to run again, and how much of the 08-27 to 09-01 gap is worth recovering?"
 framing_state: locked
 ---
@@ -75,8 +75,11 @@ the pipeline sat blocked until a human looked.
 7. Clear `keyword_ddp_reporting`'s `wait_for_product_categorization` once the categorization it waits on
    exists.
 
-**Known false failure:** `batch_test.test_product_categorization` compares against wall-clock `max_dt`, so it
-fails on every backfilled fetch day regardless of correctness. Mark it success; do not rerun it.
+**Known false failure — but it is ONE assertion, not the task (corrected 2026-09-04):**
+`product_categorization__max_dt` compares against wall-clock `date_sub(current_date, 2)`, so it fails on every
+backfilled fetch day regardless of correctness. Mark `test_product_categorization` success ONLY when `max_dt` is
+the sole failing assertion. On 2026-09-04 the failure was `product_categorization__record_count` (row count >= 99%
+of `openai_batch_results_joined` at the same `dt`) and it was CORRECT; see §8.
 
 ## 4. Investigation & Findings
 
@@ -177,6 +180,26 @@ only for scheduled runs, where logical date and interval start coincide; it is w
   and deployed; the zero-delete alarm recorded; the "no further submit clears until OpenAI storage is freed"
   blocker cleared.
 
+**Capture 2026-09-04:**
+- `knowledge/memory/reference_airflow_ti.md` — new section: an Astro deployment Environment-tab variable does
+  not reach a `KubernetesPodOperator` pod (rendered pod spec as proof); `env_vars` is a `template_field`; the
+  `STORAGE_ALARM_MIN_FILES` / `OPENAI_FILE_MAX_AGE_HOURS` corollary. Plus the Airflow 3.1.5 REST detail that
+  there is no `/rendered-fields` sub-path.
+- `knowledge/memory/reference_openai_sdk_pagination.md` — TRAP 3 (a short page is not the last page); the
+  "page only while a page comes back full" fix line corrected in place; the 2026-09-03 storage-ownership
+  verdict marked CHALLENGED by the 2026-09-04 sizing (appended, not overwritten).
+- `knowledge/memory/reference_mntn_matched_batch_pipeline.md` — 2026-09-04 section: measured per-stage sizes,
+  the `product_categorization` dbt python-model `FileExistsError`, the `keyword_ddp_reporting` DS19 lineage and
+  the `ds_19` / `ds_19_domain` clearing race; the mark-success and storage-economics lines corrected in place.
+- `knowledge/memory/feedback_check_which_dbt_assertion_failed.md` — NEW.
+- `knowledge/memory/feedback_shared_worktree_commits.md` — the 2026-09-04 occurrence (commit `16ced108` swept
+  this ticket's staged handoff).
+- `knowledge/data_knowledge.md`, `knowledge/data_catalog.md`, `knowledge/bq/external/targeted_signal.md`,
+  `knowledge/glossary.md` — sizes, the python-model gotcha, the DS19 producer/clearing facts, four terms.
+- `knowledge/decisions/0009_storage_ownership_settled_by_byte_inventory.md` — NEW.
+- `on-call/oncall_runbook.md` — the `test_product_categorization` mark-success line now requires naming the
+  failing assertion.
+
 ## 8. Open Items / Follow-ups
 
 - **Backfill `dt=2026-08-27..09-01`, one day at a time** (§3 steps 4-5). All five partial partitions still
@@ -184,8 +207,14 @@ only for scheduled runs, where logical date and interval start coincide; it is w
   AGAIN before its re-run or the double-submission guard trips. `dt=2026-09-01` has no receipts at all.
 - **Price 08-27 before committing to the remaining five** — §0 leaves open whether a recovered day is still
   useful downstream.
-- `batch_test.test_product_categorization` will false-fail on every backfilled fetch day (wall-clock `max_dt`).
-  Mark it success; do not rerun.
+- `batch_test.test_product_categorization` will false-fail on every backfilled fetch day **on the
+  `product_categorization__max_dt` assertion only** (wall-clock `current_date-2`). Mark it success only when
+  `max_dt` is the sole failure. **Corrected 2026-09-04:** that day the failure was
+  `product_categorization__record_count` — `product_categorization` row count >= 99% of
+  `openai_batch_results_joined` at the same `dt` — and it was correct. The mark-success let a **408 MiB**
+  partition through against a ~4.0-4.3 GB normal day; `keyword_ddp_reporting` consumed it and wrote two short
+  downstream partitions that had to be backed up, deleted and rebuilt. Read the assertion name before marking
+  anything green (memory `feedback_check_which_dbt_assertion_failed`).
 - **Clear `keyword_ddp_reporting`'s `wait_for_product_categorization`** once `batch_post.product_categorization`
   lands on the recovered day.
 - **Do not start a backfill while another day's batches are live at OpenAI.** Each submit uploads its whole

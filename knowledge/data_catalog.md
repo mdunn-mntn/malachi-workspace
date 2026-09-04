@@ -271,6 +271,8 @@ per file) from 2026-08-20** with no recovery through 08-31. This tracks a ~6x dr
 - **Read tips:** `pd.read_parquet("gs://.../dt=D/")` over ~1,100 objects took >2 min from a Mac (timed out); copy the partition down first with `gcloud -q storage cp -r`. pandas 3.x reads the three string columns as `str` dtype (pandas 2.x: `object`); `.query()` behaves the same.
 - **Gotcha, object counts are NOT stable evidence of cohort size:** the dead-cohort recovery deletes a partition and the rerun submit rewrites it with new file/batch ids, and a submit that dies mid-way (the 2.5TB file-storage quota, 2026-09-03) leaves a PARTIAL partition (742/791/653/510/733 objects for dt=08-27..08-31; dt=09-01 absent). Nothing in `openai/` deletes receipts and the bucket lifecycle rules (`temp/ tmp/ ...log/ ipdsc*`) do not match `shopper_graph/`. Detail: `data_knowledge.md` § MNTN Matched pipeline, memory `reference_mntn_matched_batch_pipeline`.
 - **Downstream chain:** `openai_batch_results/` → `openai_batch_results_joined/` → `product_categorization/` (`data_knowledge.md` § MNTN Matched pipeline).
+- **Per-day sizes across the sibling prefixes (measured 2026-09-04, AUDI-1321):** `openai_batch_input_formatted/dt=D/` **~1,014 files x ~40 MB = 40.3 GB**; `openai_batch_results/dt=D/` **~46 GB**; `product_categorization/dt=D/` **~4.0-4.3 GB across ~50 parquet files**. Whole pipeline at a 48h retention window ≈ **100 GB** against OpenAI's **2.5 TB** per-project file cap, so ~2.4 TB of that cap is not this pipeline's (`shopper_graph` PR #308 adds per-file `bytes`/`purpose` inventory logging to name the holder). `batch_submit` dies on the FIRST ~40 MB `files.create`, so it needs ~40 GB of headroom, not a clean account.
+- **`product_categorization` is a dbt PYTHON model, `incremental_strategy="append"`** (`shopper_graph:dbt/models/mntn_matched/post_batch/product_categorization.py`): a re-run over a populated `dt` raises `FileExistsError ... Consider deleting files in the partition before re-running`, so **delete the GCS partition before clearing the task**. It cannot self-heal.
 
 ---
 
@@ -2478,6 +2480,20 @@ The upstream inputs to the DDP metering pipeline (source: `audi_1089_ddp_steps.x
   impressions** (~70M/mo) and not deduped to billing grain; use for the DS13/DS19 × vendor *decomposition*,
   then apply first-reporter/credit-split to get $. Companion **`external.targeted_signal_domain`** (`uid,
   domain, dt`; partitioned on `dt`; join on `uid`). Probe query + snapshot in AUDI-1089 `queries/`+`outputs/`.
+  - **Producers and per-day GCS volumes (AUDI-1321, 2026-09-04).** The `data_source_id=19` leaf is written by
+    `keyword_ddp_reporting`'s `write_targeted_signal_ds_19` task to
+    `gs://mntn-data-archive-prod/signals/targeted_signal/data_source_id=19/dt=D/`, **normally ~70-72 GB/day**;
+    `write_targeted_signal_ds_19_domain` writes `signals/targeted_signal_domain/dt=D/`, **normally ~44.5 GB/day**.
+    `data_source_id=13` runs **~105-110 GB/day** and `data_source_id=4` **~157-158 GB/day**, both from other
+    sources. **Only the DS19 leaf depends on `shopper_graph/product_categorization`**, so a short or missing
+    categorization partition cannot explain a DS13 or DS4 anomaly.
+  - **The DAG's run name does not name the partition it wrote:** `keyword_ddp_reporting` uses
+    `run_date = "{{ ds }}"`, so the run `manual__consume_dt_2026-09-02` wrote **`dt=2026-09-03`**. Resolve `dt`
+    from `ds`, never from the run id.
+  - **Rebuild order — clearing `ds_19` and `ds_19_domain` together RACES them.** The task chain is sequential
+    (`wait_for_product_categorization >> write_targeted_signal_ds_19 >> write_targeted_signal_ds_13 >>
+    write_targeted_signal_ds_19_domain`), and `ds_19_domain`'s direct upstream `ds_13` stays green, so it does
+    not wait for the ds_19 rebuild. Clear `ds_19`, wait for it, then clear `ds_19_domain`.
 - **`dw-main-silver.summarydata.v_campaign_group_segment_history`** — SCD **VIEW** over
   `audience.audience_segments`. Cols: `campaign_group_id, audience_id, start_time, end_time, data_source_id,
   data_source_category_id` (**REPEATED** array), `category_info`. Keyed on campaign_group_id+audience_id; the

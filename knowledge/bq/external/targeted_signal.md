@@ -140,10 +140,13 @@ ORDER BY used_rows DESC
 ## Observed facts
 <!-- OBSERVED:FACTS START -->
 - 2026-07-29: hive partitions present in GCS = data_source_id ∈ {4,13,19}; per-day source_data_source_id leaves include {23,24,25,26,28,30,33,36,…}; sampled signal_type_id all = 1; `time` = `<dt> 23:59:59` sentinel while `source_time` holds the real event time.
+- 2026-09-04 (AUDI-1321): per-day GCS volumes by partition — `data_source_id=19` ~70-72 GB, `data_source_id=13` ~105-110 GB, `data_source_id=4` ~157-158 GB; the companion `signals/targeted_signal_domain/dt=D/` ~44.5 GB. The DS19 leaf is written by `keyword_ddp_reporting.write_targeted_signal_ds_19` and is the ONLY leaf downstream of `shopper_graph/product_categorization`; DS13 and DS4 come from other sources.
+- 2026-09-04 (AUDI-1321): `keyword_ddp_reporting` sets `run_date = "{{ ds }}"`, so a run's name does not name the `dt` it wrote (`manual__consume_dt_2026-09-02` wrote `dt=2026-09-03`). Rebuild order matters: the chain `wait_for_product_categorization >> write_targeted_signal_ds_19 >> write_targeted_signal_ds_13 >> write_targeted_signal_ds_19_domain` is sequential, so clearing `ds_19` and `ds_19_domain` together races them — clear `ds_19`, wait, then `ds_19_domain`.
 <!-- OBSERVED:FACTS END -->
 
 ## Changelog
 <!-- CHANGELOG START -->
 - 2026-07-29: skeleton→enriched (cataloged from INFORMATION_SCHEMA + bq show + GCS layout + LIMIT 5 sample; prior tribal knowledge in data_knowledge.md § DDP billing hard logic).
 - 2026-07-29: enriched→verified. Re-introspected live: schema (10 cols) + hive partition [data_source_id, dt, source_data_source_id] unchanged vs source; GCS DS dirs = {4,13,19}, live dt through 2026-07-27. No drift.
+- 2026-09-04: observed facts extended (AUDI-1321) with per-partition daily GCS volumes, the `keyword_ddp_reporting` producer tasks, the `{{ ds }}` run-name/partition mismatch, and the sequential clearing order. No re-introspection, so `schema_synced` / `last_verified` are unchanged.
 <!-- CHANGELOG END -->

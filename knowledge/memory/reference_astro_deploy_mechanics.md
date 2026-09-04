@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [astro deploy, git integration, superseded deploy, CI/CD enforcement, deploy canceled, current_tag, astro deployment inspect, .astro config, deploy_prod.yaml, platform API deploys, airflow REST v2, meteoric-conservation, astro prod image, deploy retrigger, dagRuns logical_date null, taskInstances logs json, deployment api token, deploy history, Retry Git Deploy, 59c81cb build never registered, deploy recovery recipe, PR 1262 readme, deploy to prod gcs sync only]
+keywords: [astro deploy, git integration, superseded deploy, CI/CD enforcement, deploy canceled, current_tag, astro deployment inspect, .astro config, deploy_prod.yaml, platform API deploys, airflow REST v2, meteoric-conservation, astro prod image, deploy retrigger, dagRuns logical_date null, taskInstances logs json, deployment api token, deploy history, Retry Git Deploy, 59c81cb build never registered, deploy recovery recipe, PR 1262 readme, deploy to prod gcs sync only, rendered_fields task instance detail, rendered-fields 422, deployment variable not in KPO pod, Environment tab variable, env-secrets, MntnKubePodOperator env_vars]
 domain: [infra, repos]
 lifecycle: active
-last_verified: 2026-09-02
+last_verified: 2026-09-04
 ---
 **SteelHouse/airflow-ti prod deploys come ONLY from Astro's git integration on `main`.**
 `.github/workflows/deploy_prod.yaml` does NOT deploy the image — it just copies spark/model
@@ -39,6 +39,14 @@ files to GCS. A green deploy_prod CI run says nothing about which image prod run
     `spark_optimizer_daily` handles the missing `ds` by design (falls back internally).
   - Task logs: `GET dags/<id>/dagRuns/<rid>/taskInstances/<task>/logs/<try>` with
     `Accept: application/json` returns `{"content":[{"event":...}]}` structured lines.
+  - Rendered fields: there is **no `/rendered-fields` sub-path** on Airflow 3.1.5 (it 422s — the router reads the
+    next segment as `map_index`). `rendered_fields` comes back on the task-instance DETAIL response,
+    `GET dags/<id>/dagRuns/<rid>/taskInstances/<task>` (2026-09-04).
+
+- **A deployment Environment-tab variable does NOT reach a `KubernetesPodOperator` pod** — it configures the
+  Airflow component pods and `env-secrets`, and `MntnKubePodOperator` builds a fresh pod from the task's
+  `env_vars` plus one named secret key. Passing a new variable to a KPO task needs an `airflow-ti` PR, not an
+  Astro setting. Full proof and the `template_field` workaround: [[reference_airflow_ti]] (2026-09-04, AUDI-1321).
 
 See [[reference_airflow_ti]] for repo conventions, [[project_airflow_optimizer]] /
 [[project_airflow_debugger]] for what runs on the deployment.
