@@ -85,6 +85,11 @@ messages. My first draft was flagged as "too generalized," the second as not dir
   the claim and say it is wrong: **"The assumption that doesn't hold is that campaigns running display
   multi-touch have lower TV spend. They don't."** Same fix for "that needs a different explanation" and
   "lives outside that" -> "that leaves your other attributes question" and "isn't in this data."
+- **Cut the shop words for parts of a system.** "leg" was flagged the same way as the metaphors: "that type
+  of wording also confuses people." A **leg**, a **side**, an **arm**, a **surface**, a **path** all read as
+  internal shorthand. Name the actual thing: "the only leg the holdout measures" -> **"the only ones the ghost
+  bid holdout measures"**; "93% TV on its prospecting leg" -> **"93% TV on their prospecting campaigns"**.
+  Same for **bucket** -> "group" or "range", and **cut** -> say what was compared.
 - **Spell out the reader's own abbreviations.** "display MT" became "display multi-touch". Even where they
   used the short form first, write it out.
 - **Say what the thing does, do not coin a noun for it.** "display runners" was rewritten to **"campaigns
