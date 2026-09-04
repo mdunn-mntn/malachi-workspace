@@ -1113,6 +1113,105 @@ The pre-2026-04-21 plan (compute campaign win rate, apply as sampling probabilit
 
 **Geo-holdout power: client communication when budget is close to threshold (2026-08-27).** For a geo-holdout test with sound design (matched pairs, clean isolation, appropriate duration), power adequacy depends heavily on **baseline metric variance within matched markets**, not raw spend. When a client's budget runs 10–15% below the recommended power model — test design is still valid, but risk of null result increases. **Client-facing principle: flag this gap upfront** ("your planned $278k is close to, but not within our 90% confidence threshold for 5% detection") rather than hope for stat sig. Most clients will accept the risk or bump incrementally (+$10–20k); none want to discover underpowering *after* a null result. State it plainly, give a specific path forward (e.g. "bump Sep/Dec by $10k each"), and let them decide.
 
+### Geo holdout vs IP-level ghost-bid holdout — the head-to-head (2026-09-04)
+
+Written because the file contradicted itself and had no single place that compared the two designs.
+Prompted by Edgar von Trotha asking whether a geo holdout needs LESS spend to hit significance,
+on the reasoning that the holdout cell carries more scale.
+
+**The scale premise is right and the conclusion is still wrong, for a reason that is not sample size.**
+A control DMA does carry more effective sample than a 10% IP holdout: after the cluster design effect,
+a 210-DMA split is worth roughly 2.6M individual-equivalents at a between-market coefficient of
+variation of 0.20, against ~720k for a 90/10 split of a 2M addressable IP pool. On the standard error
+of the lift **as measured**, the two designs land within about a factor of 1.4 of each other. Geo does
+not lose on N.
+
+**Geo loses on dilution.** The ghost-bid control is exactly the IPs the bidder would have served, so the
+measured relative lift IS the relative lift on the exposed. A control DMA holds everyone, and MNTN
+reaches on the order of 1-2% of households in a market, so a true 5% lift among the served shows up at
+the market level multiplied by the addressable share. Formally the observed effect is
+`D = a*p_e / (a*p_e + (1-a)*p_u)`, which collapses to `D = a` when the unreachable population converts
+at the same base rate. The standard error does not shrink with `a` but the signal does, so required
+sample scales as `1/D^2`. Halving reach quadruples the geos or the weeks needed.
+
+Two corollaries that follow and are easy to get backwards:
+- **Adding non-addressable people to the control market strictly reduces power.** They contribute
+  baseline conversion noise and zero incremental signal. "More bodies in the holdout" is the mechanism
+  working against you, not for you.
+- **More people per DMA cannot fix it.** Between-market variance is a property of the market
+  (demographics, category penetration, retail footprint, local seasonality), not a sampling-noise term,
+  so it does not average away. Only the within-market component shrinks with market size, and that
+  component is already negligible at DMA scale.
+
+**The lever that does move geo power is pre-period covariate adjustment** (GeoX/GBR, TBR, CausalImpact,
+augsynth), worth several-fold on the standard error because most between-DMA variance is persistent
+rather than transient. This is why every credible geo vendor is a synthetic-control shop. It is also why
+the recorded client rule at 2026-08-27 above is right that power tracks within-matched-market variance
+rather than raw spend.
+
+**The spend numbers we hold, side by side.** They are not strictly commensurable and should be quoted
+with that caveat: they cross instruments, MDE targets, and spend definitions.
+
+| Design | Threshold on record | Source |
+|---|---|---|
+| IP-level ghost bid, visits readout | ~$200k/month MNTN Stage 1 | TI-884 |
+| IP-level ghost bid, conversions readout | ~$2M/month MNTN Stage 1 | TI-884 |
+| Geo, MNTN's own estimate | $500k+/month to see 2-8% lift, MDE ~15% | Matt Brorby working session 2026-04-20 |
+| Geo, Haus's stated gate | 500-1000 conversions/week AND $10M/year cross-channel | Alex Knorr via Slack 2026-04-30 |
+
+**The structural advantage is not in the table.** Ghost bidding reuses the always-on 10% holdout, so it
+needs no incremental budget and no advertiser consent. A geo test needs both, and the tracker norm for
+geo is a ~50% holdout (LiftLab designs Edgar built used full 98-DMA-pair splits), so the advertiser is
+being asked to turn off half the country. The IP side has no equivalent dial: `control_group_percentage`
+is 0.1 for all 40,676 rows in `integrationprod.advertisers`.
+
+**The one case where the intuition is correct:** if the addressable pool is small enough that a 10%
+control cell yields too few conversions, the control arm genuinely is the binding constraint. The fix is
+a larger IP-level holdout, not a geo split. That is worth ~1.67x on the standard error at 20% vs 10% and
+carries none of the dilution. It is item 1 of the iROAS playbook's open decisions
+("Holdout size policy — is 10% the floor, or allow advertisers to opt up to 20-50%?", line 1429 below),
+so it is an open question rather than a settled no.
+
+**Where geo genuinely wins is the estimand, not the price.** It is device-agnostic (no CTV-impression-IP
+to web-visit-IP join, which biases the ghost-bid visit lift DOWNWARD per TI-1044), it captures offline
+and in-store conversion, it sees walled-garden inventory, it catches cannibalization of organic search
+and other paid channels, and the counterfactual is auditable against the advertiser's own sales rather
+than against MNTN's own bid log. A within-addressable-population holdout is structurally blind to all of
+it. Choose geo when the question is total market incrementality; choose ghost bid when the question is
+lift on the exposed.
+
+**The one head-to-head MNTN has:** ElevenLabs (AID 51660). The customer's geo test and the MNTN
+ghost-bid test both landed at ~0 incremental conversion lift. Its history is also the concentration
+lesson: geo lift appeared in the Bay Area then TX/FL, and diluted away once the campaign went national
+at ~$1M/month. That is the same finding as the 50-test review's "exposure density beats total spend".
+
+**Reconciling this file with itself.** The Ranked Method Reference below ranks geo #1 "Green, feasible
+today" while the power-constraint note above says geo does not work at MNTN budget scale. Both stand as
+written and they are not actually in conflict: the ranking is about *stack* feasibility (no bidder
+changes needed, which is true) and the power note is about *budget* feasibility at our advertisers'
+spend levels. Read the ranking as "what we could run tomorrow if the money existed", not "what to run".
+The geo-favoring block came in with the April 2026 iROAS playbook import, which predates the ghost-bid
+decision.
+
+**Unmeasured parameters that would settle this quantitatively.** Every geo number above rests on
+assumptions, not MNTN measurements. In descending order of leverage: (1) addressable household share
+per DMA per campaign, assumed 1.6%, computable from bid logs as unique reached households per DMA over
+DMA households, and power scales as `1/a^2`; (2) the between-DMA coefficient of variation of conversion
+rates for MNTN advertisers, assumed 0.15-0.20, computable from silver aggregates, and it swings the
+design effect from 13 to 108; (3) the pre-period to post-period R-squared of DMA-level conversion rates
+at campaign grain, assumed 0.90-0.99, which swings the geo MDE roughly fourfold and is the difference
+between "never" and "maybe for the largest advertisers". None of the three has been measured. Do not
+quote the geo MDE as a measured MNTN number.
+
+**A design-validity note that applies to any geo test we review:** with fewer than ~40 clusters,
+standard cluster-robust standard errors are anti-conservative, so a state-level (51) or top-30-DMA test
+will report significance it does not have unless a wild cluster bootstrap is used.
+
+**The MDE calculator does not answer this question.** `audi_1213_mde_calculator.html` is a
+two-proportion binomial on per-IP rates with no cluster count, no intraclass correlation, and no design
+effect anywhere in it. Its N is derived solely as impressions divided by impressions-per-IP. It is valid
+for the ghost-bid IP holdout and for nothing else. See [[reference_mde_surface_choice]].
+
 **Advantages over ITT:**
 - Eliminates coverage dilution by comparing only IPs that would have been served
 - Answers: "Of people who received an impression, what is the incremental lift?"

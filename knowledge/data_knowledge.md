@@ -2456,9 +2456,16 @@ repairs it. Matt does post-hoc rebalancing **within score bands** (adjusting whe
 share of High Intent than the treatment) but **not on bid count**.
 
 **Operating rules that follow.**
-1. **Gate the ghost fraction hard.** Matt's standard is block above 11% and below 7%. TI-1313 uses a tighter
-   9-11% band; loosening it to 7-11% adds 236 campaigns and moves pooled lift from **+7.9% to +10.7%**, which
-   is the thinning artifact, not a real gain. Prefer the tighter band and say why.
+1. **Gate the ghost fraction hard.** Matt's standard is block above 11% and below 7%. **The shipped gate is
+   7% to under 11% as of 2026-09-03** (TI-1313, commit `3d751480`): population 190 to 433 campaign groups,
+   130 to 296 advertisers, pooled visit lift **+7.92% to +9.63%**. (Superseded 2026-09-03: this section
+   previously said TI-1313 used a 9-11% band and that loosening moved lift to +10.7%. The 9-11% band was
+   TI-1313's own recommendation and +10.7% was its pre-change projection; Kirsa and Matt reaffirmed 7-11%
+   and it shipped over that objection, and the re-pull came back +9.63%, not +10.7%.) The analyst read
+   stands: the widening is largely a thinning artifact, and the data cannot say which band is less biased.
+   What is solid is that above 11% is bad and the population barely reaches there (15 of 899 campaign
+   groups at or above 11%, against 65 below 7%). Realized share at campaign grain runs 4.73% to 13.55%,
+   median 8.95%, so it drifts DOWN about four times as often as up.
 2. **Never stratify on bid count.** It is the post-treatment split this defect creates (`data_catalog.md` 14).
 3. **This blocks the incrementality reporting release.** Nick has been given the same stricter-gate guidance
    for his dashboard. Kirsa's position: any presentation of this data needs an explicit asterisk, because a

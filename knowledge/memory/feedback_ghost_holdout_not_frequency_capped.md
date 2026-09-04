@@ -25,8 +25,12 @@ it either — that lowers the percentage without selectively removing the active
 tracking holdout bids on the bidder side. Rogus refused that in Beeswax (fear of leaking into spend and
 pacing); it exists on the MNTN bidder, which runs essentially only Select, so it does not help `partner_id=8`.
 
-**How to apply:** gate hard (block ghost fraction above 11% and below 7%; TI-1313 used a tighter 9-11% and
-loosening to 7-11% moves pooled lift +7.9% → +10.7%, which is artifact). **Never stratify on bid count** —
+**How to apply:** gate hard. **The live gate is 7% to under 11%, shipped 2026-09-03** (TI-1313, `3d751480`):
+population 190 → 433 campaign groups, pooled visit lift +7.92% → **+9.63%**. TI-1313 recommended keeping the
+tighter 9-11% and flagged the widening as a thinning artifact; Kirsa and Matt reaffirmed 7-11% and it shipped
+over that objection. (The +10.7% figure this file carried until 2026-09-04 was the pre-change projection and
+never materialized.) Realized share at campaign grain is 4.73-13.55%, median 8.95%, drifting down ~4x as often
+as up, so "6% to >11%" overstates the upper tail. **Never stratify on bid count** —
 that is the post-treatment split this defect creates. Put an explicit asterisk on any deliverable built from
 ghost-bid lift. Full mechanism, numbers and quotes in `knowledge/data_knowledge.md` §"ROOT CAUSE: ghost bids
 are never counted". Related: [[feedback_report_both_lift_scales]], [[feedback_no_naive_pre_post]].
