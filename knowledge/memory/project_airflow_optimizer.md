@@ -1180,3 +1180,58 @@ a "90% CI" column and the Welch/`MIN_OBSERVATIONS` parenthetical, and new ledger
 
 Full audit with per-defect evidence:
 `tickets/audi_1325_debugger_optimizer_adoption/outputs/audi_1325_mode_savings_audit_2026_09_04.md`.
+
+## 2026-09-05 — the "6 regressions" were 5 artifacts and 1 real one (ipdsc_ds_49)
+
+**5 of the 6 vanish under correct aggregation; `ipdsc_ds_49` survives every correction.** PR #1272
+halved `spark.sql.files.maxPartitionBytes` 128 -> 64 MiB and read-stage **tasks per GiB doubled
+(12.58 -> 26.74)**, executors scaled 48 -> 107 -> 116 under `dynamicAllocation(4,180)`. Dataproc
+DCU-h/day: **10.1-15.7 across 16 pre-fix days -> 18.7 (09-04) -> 24.3 (09-05)**, both above every
+pre-fix day and still rising. Input-normalized `exec_h/GiB` held in [0.0557, 0.0628] across the whole
+pre-fix window despite input growing 36.8%, then 0.0770 / 0.0897 (+43% over the pre-fix max). Per-run
+event logs: pre mean 2.578, sd 0.258, n=17; post 4.261 and 5.350, **z = +6.5 and +10.7**. The fix
+bought a 94% spill reduction and a 28% wall-clock cut for roughly 2x the executor-hours. **Causation
+is mechanistic, not proven** — no revert has been run and the DAG's 7-day `site_network_hourly` input
+stepped +43% on 09-01 (normalizing on that still leaves 0.3013/0.3643 vs a 0.2138-0.2428 pre-fix band).
+**Discriminating test, runnable now, verdict 2026-09-09:** set `maxPartitionBytes` back to 128 (or 96)
+MiB on `ipdsc_ds_49` ONLY, compare `milliDcuSeconds` per GiB of 7-day input, 3 days each side. The
+bands separate by >6 sigma.
+
+**Speculation canary (PR #1271, `site_network_hourly`): kill criterion NOT met, do not kill it.**
+Ryan Kleck's criterion was "executor-hours rise while wall-clock stays flat". Wall-clock did not stay
+flat under either reading (pooled n=17 median -26.5%; hour-matched n=3 +1.49x, sign p=0.75, permutation
+p=0.205), so the precondition fails. And speculation cannot be the cost channel: **killed duplicate
+attempts consumed 11.27 h of 9,214.34 h of slot time across all 19 post-flip runs, 0.12%.** The
+expensive runs are FetchFailed storms (7,295 / 13,362 / 10,080), a pattern that also occurs PRE-flip
+with speculation off (09-03 12:51: 0 speculative attempts, 7,104 FetchFailed) and is already IMP-104.
+The run with the HIGHEST speculation rate (3,141 attempts, 3.77%) was the cheapest and fastest measured.
+
+**`site_network_hourly`'s 65,413-hour "regression" is 19.3x row fanout.** The published after-value
+88,476.1 is the SUM of 22 finding rows on the applied date, 11 of them `state='applied'` clones
+(38,112.6 h); the true DAG-day value is 4,578.5. Normalized against the independent meter it is
+**+0.8%** (1,929.7 DCU-h/GB output vs a 1,091.6-2,659.0 pre-fix band).
+
+**`mark_applied` stamps the clone with the PREVIOUS sweep's `exec_h`** (`ledger.py:383`,
+`exec_h=last.get("exec_h")`), so for `ipdsc_42_monitor`, `guid_log_pivot_ip_vertical_id` and
+`ipdsc_ds_49` **the published "after" was literally the "before" relabelled**. `ipdsc_42_monitor`'s
+after-rate 9.0 is its own 1.5 re-stamped six times; the genuine post-fix run improved ~7x.
+
+**CONTRADICTED — "every entry's `exec_h` is its dag's total for the sweep-day" is false in the data.**
+35 of ~470 DAG-day cells carry two or three distinct values (`site_network_hourly` 2026-08-26 holds
+9.8, 35.3 and 73.7) because `append()` replaces only rows whose `(date, dag_id, key)` the current sweep
+re-emits, so **earlier narrower sweep generations survive in the same cell**. Every "one value per
+DAG-day" correction is therefore a MAX pick and must say so; under MIN the 09-02 -> 09-03 ratio is
+1.41x not 1.25x. The docstring at `ledger.py:280` states the invariant the writer does not enforce.
+
+**Two DIFFERENT events, not one.** Downloads fell to 6 of 200 on 08-27 through 09-01 (repaired by
+`601483d` on 09-02) which DEFLATES `exec_h` and masks regressions; separately the PHS component jumped
+22 -> 150 on 08-26 on a day with a full 200-of-200 download, which INFLATES it. Citing "jobs scanned
+214 -> 344" as evidence of acquisition collapse has the mechanism backwards. **Only 09-02, 09-03 and
+09-04 are known-full sweeps**, and 09-03 is the applied date, so every non-ds_49 verdict rests on n=1
+until the 2026-09-07 sweep gives three full days each side.
+
+**`fangorn_score_monitor` is the only DAG in the entire ledger with a real multi-day after-window**
+(applied 08-27, after n=3): 687.7 -> mean 621.2, -9.7%, and it does NOT regress. Welch is undefined at
+n_before=1.
+
+Verdict doc: `tickets/audi_1325_debugger_optimizer_adoption/outputs/audi_1325_regression_verdict_2026_09_05.md`.
