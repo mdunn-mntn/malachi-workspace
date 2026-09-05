@@ -371,3 +371,63 @@ Part of the cause is not ours: 34 stale `gsutil` processes from two other sessio
 this Mac, 32 of them for 3 days 20 hours (session `590a4308`, copying into `iso_m_I/`) and one for
 2 days 2 hours (spark-events into session `67074af2`). They are not this session's to kill, but
 they are consuming the parallel-copy slots. Worth surfacing to whoever owns those sessions.
+
+## Update 2026-09-05 21:35 UTC — the quota is NOT explained by this project's own files
+
+dt=2026-08-28's `batch_submit` failed at 20:37 with the same
+`400 ... exceeded your file storage quota. Projects are limited to 2.5TB of files`, about 640 of
+1,241 files in. The `airflow-debugger` matched it to the known `openai_file_quota` signature and
+threaded it in `#airflow-debugger` unprompted, which is the AUDI-1191 tool working as intended.
+
+The inventory added in shopper_graph #308 is what makes this readable, and it says something the
+ticket has not said before:
+
+```
+Listed 6221 files holding 198.8 GiB, 7.8% of the 2.5TB project limit.
+This pipeline holds 198.5 GiB of that.
+   input  purpose=batch              4171 files  141.7 GiB
+  output  purpose=batch_output       2011 files   56.8 GiB
+   other  purpose=fine-tune            21 files    0.3 GiB
+Retention: inputs 26.0h, outputs 48.0h.
+Total number of files to delete: 456 holding 17.0 GiB
+Deleted 456 of 456 files
+```
+
+**198.8 GiB is 7.8% of the stated 2.5 TB limit, and the API rejects the upload anyway.** Every file
+this project can enumerate accounts for under 200 GiB. The ceiling is real, the rejection is
+deterministic, and it is not explained by anything the sweep can see or delete.
+
+**This reverses a correction I made earlier in the ticket.** The first handoff said roughly 2.4 TB
+of the ceiling was not this pipeline's. I later recorded that as wrong, on the basis of a sweep
+that read 4.2 GiB total and a submit that then succeeded. That reasoning was bad: the submit
+succeeding after a sweep is equally consistent with a shared pool that our deletions merely made
+room in. The handoff's original reading is the one that survives, and the summary's "storage
+ownership settled" line needs to come out.
+
+Candidate explanations, none confirmed from here:
+
+1. The 2.5 TB is pooled across the organization and other projects hold the rest. The API key can
+   only list its own project, so the sweep would be blind to it, which fits exactly.
+2. Quota accounting lags deletion. Several thousand files were deleted today, and if freed bytes
+   are metered until garbage collection, the project could still read as full.
+3. A limit other than bytes is being reported through the byte-quota message.
+
+**Settling this needs the OpenAI platform dashboard, which is outside this session's access.** The
+question to answer there is what the project's and the organization's actual storage usage is, and
+whether other projects under the same organization hold the balance.
+
+### What this changes operationally
+
+Our own footprint went from 4.2 GiB this morning to 198.8 GiB tonight by holding three days of
+inputs at once: 08-27's 1,261, 09-03's 1,004 and 09-04's roughly 1,000, plus 08-28's 640 partial.
+Whatever the ceiling's true owner, we reach it at around 200 GiB, so **the backfill cannot hold a
+day's inputs alongside two days of live daily runs.** Inputs are spent the moment their batch is
+created, so the 26h window is far more generous than it needs to be. Passing the retention through
+the DAG's `env_vars` as `"{{ var.value.get('openai_input_file_max_age_hours', '26') }}"` would make
+this tunable without a deploy, and is now worth doing rather than optional.
+
+### dt=2026-08-28 is split
+
+640 batches were created before the failure and are live at OpenAI; 601 files were never submitted.
+On retry the double-submission guard skips the 640 that have receipts and submits only the 601, so
+the day still completes. Do not delete the new receipts.
