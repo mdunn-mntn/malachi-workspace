@@ -1333,9 +1333,11 @@ tab rather than omitting it.**
 
 `dw-main-silver.core.media_plan` is keyed on `campaign_group_id` and was already joined into the base query,
 so the column existed all along. It never became a tab because `summarize()` drops any level under five
-campaigns. **Only 3 of the 433 campaign groups in this workbook have a media plan.** Querying the table
-directly for the cohort returns 5 groups (3 at `media_plan_status_id = 3`, 2 at 8), so the count is 3 to 5
-depending on whether inactive plans count.
+campaigns. **Only 3 of the 433 campaign groups in this workbook have a media plan**, and the live table
+confirms exactly those three ids (113746, 114284, 114294), each with an active `media_plan_status_id = 3`
+row. An earlier draft of this line said "3 to 5 depending on whether inactive plans count"; that was a
+misread of a `GROUP BY status_id, is_manual` result, where 114284 and 114294 each appear twice because they
+carry both an active and an inactive row. Distinct groups is 3 either way.
 
 **What removes them is delivery length, not the holdout.** Of the 60 media plan groups in the full pull, 52
 are inside the 7 to 11% validity band and 57 have a live advertiser, but only **3 meet the 75% days live
