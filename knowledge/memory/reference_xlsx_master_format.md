@@ -124,9 +124,9 @@ back into a data JSON once, then build from the JSON through `MntnWorkbook` (rep
 in the doc Changelog; every builder re-run inherits the change. See [[feedback_xlsx_default_output]],
 **v18 (2026-09-02, TI-1313 review — Kirsa/Malachi, four naming and layout rules moved into the build):**
 
-1. **Header jargon is a HARD fail** (`_JARGON_HEADERS`). `Pooled lift` `CI low` `CI high` `% significant` `Heterogeneity` `SE` `ITT` `CPIV` `AOV` are correct and unreadable. Say what the cell holds: **Lift · Low end · High end · % with a clear effect · Campaigns disagree**. Method (`pooled`, `random-effects`) belongs in the subtitle. **A term the AUDIENCE's own field uses is fine** — `p value` was spelled out as "chance of seeing this gap if nothing differs" and the user pulled it straight back: "the people reading this should understand a p-value." The test is whether THIS reader knows it, not whether it is jargon in the abstract.
+1. **Header jargon is a HARD fail** (`_JARGON_HEADERS`). `Pooled lift` `CI low` `CI high` `% significant` `Heterogeneity` `SE` `ITT` `CPIV` `AOV` are correct and unreadable. Say what the cell holds: **Lift · Low end · High end · % with a clear effect · Variation across campaigns** (`Campaigns disagree` was the v18 wording and was itself flagged in v19). Method (`pooled`, `random-effects`) belongs in the subtitle. **A term the AUDIENCE's own field uses is fine** — `p value` was spelled out as "chance of seeing this gap if nothing differs" and the user pulled it straight back: "the people reading this should understand a p-value." The test is whether THIS reader knows it, not whether it is jargon in the abstract.
 2. **Abbreviated headers are a HARD fail** (`_ABBREV_HEADER`: `inc` `conv` `attr` `pct` `freq` `imps` `num` `qty`). The column is as wide as its widest value anyway, so the abbreviation buys nothing. Caught 6 more in the same workbook on its first run, after two manual passes had missed them.
-3. **A negated yes/no header is a HARD fail** (`_NEGATED_HEADER` + `_is_boolish`). `Best and worst do not overlap` over TRUE/FALSE makes TRUE mean "did not". Flip to the positive claim and value it Yes/No: **Best beats worst outright**.
+3. **A negated yes/no header is a HARD fail** (`_NEGATED_HEADER` + `_is_boolish`). `Best and worst do not overlap` over TRUE/FALSE makes TRUE mean "did not". Flip to the positive claim and value it Yes/No: **Best clearly beats worst** (v18 said `Best beats worst outright`; `outright` was flagged in v19).
 4. **Tab names: no `By ` prefix, sentence case** (`_check_tab_name`, HARD). `By intent band` → **Intent band**; `Campaign Detail` → **Campaign detail**. The workbook already names its subject.
 
 **The width bug v5 did NOT fix (v18 does).** `_autosize` measured only the HEADER's longest word, and it decided "is this column text?" with `df[col].dtype == object`. A pandas **Categorical or bool column is text on the sheet and is neither**, so it fell to the numeric branch, sized from three digits, and split `Peak Performanc/e` at width 13. Fix: test `pd.api.types.is_numeric_dtype`, fold the DATA's longest word in beside the header's, and add ~3 units for the bold first column. **Exemption:** `_longest_real_word()` skips machine identifiers (a token with `_`, or longer than the 38 cap) — an 80-char campaign name fits no sane column and must wrap.
@@ -140,3 +140,29 @@ in the doc Changelog; every builder re-run inherits the change. See [[feedback_x
 [[reference_drive_mount_xlsx_delivery]], [[reference_deck_standards]].
 
 **Drive organization and the mv-trash footgun live in [[reference_drive_mount_xlsx_delivery]]** (root = `Tickets/` + `Reference/` + `Personal/`; archive, never delete).
+
+
+**v19 (2026-09-04, TI-1313 — Kirsa and Edgar reading the sheet, 19 headers renamed):** the v18 checks pass a
+header that is *correct English no one here says*. Three classes the linter cannot see:
+
+1. **Regional or literary word choice.** `Dearest cost per incremental visit` -> **Highest**. "Dearest" is
+   British; the user's reaction was "why dearest?". Same family: `outright`, `stands behind`.
+2. **A coined label for a statistic.** `Campaigns disagree` was my own name for I-squared, `Powered` was
+   statistical power, `Reported per real one` was the attribution ratio. Replacements name the thing
+   measured: **Variation across campaigns · Groups with 100+ holdout visits · Reported per incremental
+   conversion**. If the header is a phrase that only makes sense once you know the method, it is coined.
+3. **Any abbreviation the sheet never expands**, including ones that feel like house style: `CG id`,
+   `Advertiser MUVs`, `Attributed IVR`, `Avg`. Write **Campaign group id · Advertiser monthly unique
+   visitors · Attributed visits per impression · Average**. `IVR` is the trap - it looks like a metric name
+   and is actually `attributed_visits / reporting_impressions`, so spelling it out also caught a reader
+   ambiguity.
+
+**Also a pointing-word ban:** `Low end of that spread` and `Of which is the lower baseline alone` refer to a
+neighbouring column the reader has to find. Name the quantity: **Low end of that multiple · Share from the
+lower baseline**. And label the DENOMINATOR when a share has a non-obvious one: `% spend TV` became
+**% media spend TV**, because device exists only on media spend (see `data_catalog.md` `spend_facts`).
+
+**Process rule this establishes: dump every header across every tab and read the list cold before shipping.**
+Reading them in place, tab by tab, hides the odd ones. The 19 renames came out of one `pd.ExcelFile` pass
+that printed all 130 headers with their sheet counts. Related: [[feedback_slack_reply_voice]] - the coined
+term rule is the same one, applied to a column instead of a sentence.
