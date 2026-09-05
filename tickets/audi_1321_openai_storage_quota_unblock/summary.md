@@ -458,3 +458,59 @@ for the stated reason, and the probe step is not optional.
    actually whole, not before.
 
 **Do one day at a time and verify the receipt count matches the input count before moving on.**
+
+---
+
+## Correction, 2026-09-05: the 2.5 TB is a company-shared pool, not this project's own
+
+**This contradicts the "Quota RESOLVED and proven ours" verdict in the front matter and § "The
+storage went from the ceiling to 4.2 GiB". Both are kept above; this section is the settling
+evidence.** Per the rule that a contradiction is appended rather than overwritten, here is each
+side and what decided it.
+
+**The claim as recorded 2026-09-04.** The sweep, with #308 and #309 deployed, enumerated the store
+at 129 files / 4.2 GiB, 0.2% of the cap, of which 1.4 GiB was not this pipeline's. A submit
+succeeded minutes later. Conclusion drawn: the ceiling had been our own multi-day `part-` backlog
+that the short-page listing could never reach, so §0's kill criterion never fired and no dashboard
+access was needed.
+
+**What happened 2026-09-05.** dt=2026-08-28's `batch_submit` failed at 20:37 UTC with the same
+`400 ... Projects are limited to 2.5TB of files`, about 640 of 1,241 files in. Two consecutive
+sweeps then read:
+
+```
+Listed 6221 files holding 198.8 GiB, 7.8% of the 2.5TB project limit. This pipeline holds 198.5 GiB.
+Listed 6040 files holding 191.8 GiB, 7.5% of the 2.5TB project limit. This pipeline holds 191.6 GiB.
+```
+
+Every file the API key can enumerate totals under 200 GiB, 7.8% of the stated cap, and the upload
+is still rejected deterministically.
+
+**What settles it: Malachi, 2026-09-05.** The OpenAI account is the company's default project and
+the 2.5 TB is shared across every team using it. Our key lists only what we uploaded, so the sweep
+is structurally blind to the rest of the pool. That is a person's direct knowledge of an account we
+cannot inspect, on a question our instrumentation cannot answer, so it outranks an inference drawn
+from a partial listing.
+
+**Which reasoning was wrong, specifically.** Not the measurement. The 4.2 GiB reading was correct
+and so was the 198.8. The error was treating "a submit succeeded right after our sweep" as evidence
+that our files had been the ceiling. A shared pool predicts exactly the same observation: our
+deletions made room in someone else's pool. The original handoff of 2026-09-04 read it as
+"roughly 2.4 TB of the ceiling is not this pipeline's", and that reading is restored.
+
+**What follows.**
+
+- **§0's kill criterion is live again.** We cannot free this ceiling and cannot see it. Headroom
+  depends on other teams' usage and can vanish without anything changing on our side.
+- **The zero-delete alarm scoped to our own bytes (#308) was right for a reason we had not
+  established.** A quota filled by another team must never fail `batch_cleanup_1`, which is upstream
+  of every task in both DAGs.
+- **Our own slice is what we control, and it is too fat.** We reached roughly 200 GiB by holding
+  three days of inputs at once. An input is spent the moment its batch is created, minutes after
+  upload, so the 26h window exists only to protect against a re-run needing the file. Cutting the
+  input window to a few hours would take our footprint from about 140 GiB to about 50.
+- **The durable ask is a dedicated OpenAI project for this pipeline.** It converts an unbounded
+  shared risk into a quota we own and can reason about. Until then every submit is racing other
+  teams for space.
+
+Recorded in the plan: `outputs/audi_1321_backfill_plan_2026_09_05.md`.
