@@ -330,3 +330,44 @@ signals to move together.
 
 dt=2026-08-27's `batch_post` continues: `categorization_temp` 16:45-18:07, `mm_taxonomy_update`
 18:07-18:15, `mm_taxonomy_update_bq` 18:15-18:23, `product_categorization` in flight since 18:15.
+
+## Update 2026-09-05 19:20 UTC — dt=2026-08-27 done, dt=2026-08-28 submitting
+
+**dt=2026-08-27 is fully recovered.** Every task on fetch `scheduled__2026-08-28T09:00` is green,
+including all three tests. `product_categorization/dt=2026-08-27/` is 12.47 GiB from 43.21 GiB of
+results.
+
+That 12.47 GiB is the third different size for a "complete" day: 4.0-4.3 on healthy pre-outage days,
+7.5 on dt=09-03, 12.5 here, against 1,004 and 1,261 batches respectively. Size tracks the day's
+volume and is not a completeness check. **The `batch_test` group is the completeness check** and it
+passed here, `record_count` included.
+
+### dt=2026-08-28 cohort probe
+
+```
+cohort dt=2026-08-28: n=791 completed=147 expired=644 in_progress=0 finalizing=0 failed=0
+```
+
+**The 147 completed were not harvested, deliberately.** They completed around 08-29, output
+retention is 48h, so their result files were swept days ago. `download_file` has no exception
+handling around `client.files.content()`, so a 404 on a swept output aborts the whole task rather
+than skipping that batch. The re-submit regenerates all 1,241 inputs anyway, so the harvest could
+only have saved OpenAI spend on 12% of the day, and only if the files still existed. They do not.
+
+Backed up all 791 receipts to
+`gs://mntn-data-archive-prod/_backups/audi_1321/openai_batch_submissions_dt=2026-08-28_20260905/`,
+verified byte-for-byte (4,059,188 bytes both sides), deleted the partition, and cleared
+`batch_submit` on submit `scheduled__2026-08-28T09:00` at 19:20 UTC. Expect about 84 minutes for
+1,241 files, then roughly 7 hours of batch time, so the fetch is due around 04:00 UTC on 09-06,
+comfortably before the 09:00 slot.
+
+### Use `gcloud storage`, not `gsutil`, on this machine
+
+The backup ran 17 minutes under `gsutil -q -m cp -r` and had copied **zero** objects when it was
+killed. `gcloud storage cp -r` copied all 791 in **6 seconds**. Same source, same destination, same
+credential. Use `gcloud storage` for every bulk copy in this ticket.
+
+Part of the cause is not ours: 34 stale `gsutil` processes from two other sessions were running on
+this Mac, 32 of them for 3 days 20 hours (session `590a4308`, copying into `iso_m_I/`) and one for
+2 days 2 hours (spark-events into session `67074af2`). They are not this session's to kill, but
+they are consuming the parallel-copy slots. Worth surfacing to whoever owns those sessions.
