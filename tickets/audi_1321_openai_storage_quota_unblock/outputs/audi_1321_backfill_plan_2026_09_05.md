@@ -137,8 +137,8 @@ It is session-scoped: it dies when this session ends.
 
 ## Update 2026-09-05 07:36 UTC — `batch_fetch` is all-or-nothing
 
-Cleared `batch_fetch` alone on fetch `scheduled__2026-08-28T09:00`. It ran 07:32-07:36, exited
-`success`, and wrote **zero** objects to `openai_batch_results/dt=2026-08-27/`. Its log ends with:
+Cleared `batch_fetch` alone on fetch `scheduled__2026-08-28T09:00`. It ran 07:32-07:36 and exited
+`success` having downloaded nothing. Its log ends with:
 
 ```
 cohort dt=2026-08-27: n=1261 in_progress=169 finalizing=181 completed=911
@@ -159,3 +159,22 @@ half-recovered runs.
 Nothing failed or expired in the cohort at 7.7h of a 24h window, so the day is not at risk yet.
 Retry windows are armed at 11:30, 14:30, 17:30 and 20:30 UTC, all after the 09:00 scheduled fetch
 for dt=09-03 has had the slot.
+
+
+## Caveat 2026-09-05 11:35 UTC — the GCS object counts need re-reading
+
+`gsutil` on this Mac started returning `ReauthUnattendedError`: the credential for
+`malachi@mountain.com` still exists but its reauth challenge expired, and the challenge cannot be
+answered outside an interactive session. Every `gsutil ls` after roughly 07:30 UTC therefore
+returned an empty listing that reads as zero objects rather than as an error, because the failure
+went to stderr.
+
+**The per-day table above was read at 01:30 UTC, before this, and stands.** What does not stand is
+any count taken after: the parent `openai_batch_results/` prefix listed as empty while the daily
+fetch for dt=09-03 was demonstrably writing into it.
+
+The conclusion that dt=2026-08-27 downloaded nothing does not rest on those counts. It rests on the
+task's own log, which printed `completed=911` of `n=1261` and no results-written line.
+
+Fix with `gcloud auth login` in an interactive terminal, then re-read the table before acting on
+any object count.
