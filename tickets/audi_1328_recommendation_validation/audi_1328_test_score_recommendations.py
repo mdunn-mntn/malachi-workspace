@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Regression tests for the two harness defects: the .config() diff parse and the pre_fix_quiet gate.
+"""Regression tests for the harness defects: the .config() diff parse, the pre_fix_quiet gate,
+the recommended key that shipped, and the fired_after_fix window.
 
 Usage:
   python3 -m unittest audi_1328_test_score_recommendations -v
@@ -67,7 +68,17 @@ class ShippedChangesOverRealPullRequests(unittest.TestCase):
             shipped["changed"].get("spark.sql.shuffle.partitions"), ("256", "2048")
         )
 
-    def test_no_attributed_unit_reads_as_an_empty_shipped_change(self):
+    def test_pr_1273_newly_sets_shuffle_partitions_on_the_three_dsc_id_dags(self):
+        for dag_id, value in (("conversion_log_advertiser_id_dsc_id", "3508"),
+                              ("guid_log_advertiser_id_dsc_id", "3400"),
+                              ("site_visit_signal_advertiser_id_dsc_id", "3392")):
+            with self.subTest(dag=dag_id):
+                self.assertEqual(
+                    self.shipped("1273", dag_id)["changed"].get("spark.sql.shuffle.partitions"),
+                    (None, value),
+                )
+
+    def test_the_seven_units_the_multiline_flag_recovered_read_a_real_shipped_change(self):
         for pr_number, dag_id in (
             ("1272", "conv_log_derived_ip"),
             ("1273", "conversion_log_advertiser_id_dsc_id"),
@@ -79,6 +90,11 @@ class ShippedChangesOverRealPullRequests(unittest.TestCase):
         ):
             with self.subTest(pr=pr_number, dag=dag_id):
                 self.assertTrue(self.shipped(pr_number, dag_id)["changed"])
+
+    def test_pr_1276_changes_no_config_key_and_avoids_no_shipped_change_only_via_the_code_diff(self):
+        shipped = self.shipped("1276", "ipdsc_42_monitor")
+        self.assertEqual(shipped["changed"], {})
+        self.assertTrue(shipped["code_changed"])
 
 
 def row(dag_id: str, key: str, date: str, state: str, exec_h: float | None = 10.0, **extra) -> dict:
@@ -151,6 +167,68 @@ class PreFixQuietGate(unittest.TestCase):
                        row("silent_dag", "exec_h", "2026-09-04", "observed")]
         result = run(PRE_FIX_LEDGER + never_fired)
         self.assertEqual(unit_for(result, "silent_dag")["pre_fix_quiet_dates"], "")
+
+
+SPILL_RECOMMENDATION = (
+    "Raise spark.sql.shuffle.partitions so each task holds less data "
+    "(start at 2x the current count); if it still spills, raise spark.executor.memory."
+)
+
+NEWLY_SET_SHUFFLE_PARTITIONS = (
+    ("conversion_log_advertiser_id_dsc_id", "disk_spill:13", "3508"),
+    ("conversion_log_advertiser_id_dsc_id", "disk_spill:24", "3508"),
+    ("guid_log_advertiser_id_dsc_id", "disk_spill:13", "3400"),
+    ("guid_log_advertiser_id_dsc_id", "disk_spill:24", "3400"),
+    ("site_visit_signal_advertiser_id_dsc_id", "disk_spill:7", "3392"),
+    ("site_visit_signal_advertiser_id_dsc_id", "disk_spill:12", "3392"),
+)
+
+
+class RecommendedKeyThatShipped(unittest.TestCase):
+    def score(self, changed: dict) -> tuple[str, str]:
+        shipped = {"resolvable": True, "code_changed": True, "changed": changed}
+        return H.score_alignment(H.parse_recommendation(SPILL_RECOMMENDATION), shipped)
+
+    def test_the_shuffle_partitions_key_is_read_as_a_primary_recommendation(self):
+        self.assertIn("spark.sql.shuffle.partitions",
+                      H.parse_recommendation(SPILL_RECOMMENDATION)["primary"])
+
+    def test_a_recommended_key_that_shipped_is_never_scored_as_a_different_fix(self):
+        for dag_id, finding_key, value in NEWLY_SET_SHUFFLE_PARTITIONS:
+            with self.subTest(dag=dag_id, key=finding_key):
+                verdict, _detail = self.score(
+                    {"spark.sql.shuffle.partitions": (None, value)}
+                )
+                self.assertEqual(verdict, "partially_matched")
+
+    def test_a_recommended_key_absent_from_the_diff_is_still_a_different_fix(self):
+        verdict, _detail = self.score(
+            {"spark.sql.files.maxPartitionBytes": ("268435456", "134217728")}
+        )
+        self.assertEqual(verdict, "different_fix_worked")
+
+    def test_a_recommended_key_that_doubled_is_still_a_full_match(self):
+        verdict, _detail = self.score({"spark.sql.shuffle.partitions": ("2048", "8192"),
+                                       "spark.executor.memory": ("8g", "16g")})
+        self.assertEqual(verdict, "matched")
+
+
+LATE_DEPLOY_LEDGER = [
+    row("late_deploy_dag", "disk_spill:1", "2026-09-02", "chronic"),
+    row("late_deploy_dag", "disk_spill:1", "2026-09-03", "applied", **APPLIED),
+    row("late_deploy_dag", "disk_spill:1", "2026-09-04", "chronic"),
+    row("late_deploy_dag", "exec_h", "2026-09-05", "observed"),
+]
+
+
+class FiredAfterFixWindow(unittest.TestCase):
+    def test_a_firing_between_merge_and_deploy_is_not_a_post_fix_firing(self):
+        result = run(LATE_DEPLOY_LEDGER, effective_from="2026-09-05")
+        self.assertEqual(unit_for(result, "late_deploy_dag")["fired_after_fix"], 0)
+
+    def test_the_same_firing_counts_when_the_fix_is_live_on_merge(self):
+        result = run(LATE_DEPLOY_LEDGER, effective_from="")
+        self.assertEqual(unit_for(result, "late_deploy_dag")["fired_after_fix"], 1)
 
 
 if __name__ == "__main__":

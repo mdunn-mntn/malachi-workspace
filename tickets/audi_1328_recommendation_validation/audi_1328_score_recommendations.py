@@ -262,7 +262,7 @@ def score_alignment(rec: dict, shipped: dict) -> tuple[str, str]:
     violated = [k for k in rec["warned_against"] if k in changed]
     if not changed and not shipped["code_changed"]:
         return "no_shipped_change", "the PR changed nothing attributable to this dag"
-    hits, misses = [], []
+    hits, misses, landed_off_target = [], [], []
     for key in rec["primary"]:
         if key not in changed:
             misses.append(key)
@@ -271,23 +271,28 @@ def score_alignment(rec: dict, shipped: dict) -> tuple[str, str]:
         want = rec["targets"].get(key)
         want_bool = rec["booleans"].get(key)
         if want_bool is not None:
-            hits.append(key) if str(after).lower() == want_bool else misses.append(f"{key}=off_target")
+            ok, note = str(after).lower() == want_bool, f"{key}=off_target"
         elif want is not None:
             got = numeric(after)
             ok = got is not None and want / TARGET_TOLERANCE <= got <= want * TARGET_TOLERANCE
-            hits.append(key) if ok else misses.append(f"{key}={after}_vs_target_{want:g}")
+            note = f"{key}={after}_vs_target_{want:g}"
         elif rec["relative"]:
             b, a = numeric(before), numeric(after)
             ok = b is not None and a is not None and a >= b * RELATIVE_TARGET
-            hits.append(key) if ok else misses.append(f"{key}={before}->{after}_under_2x")
+            note = f"{key}={before}->{after}_under_2x"
         else:
+            ok, note = True, ""
+        if ok:
             hits.append(key)
+        else:
+            misses.append(note)
+            landed_off_target.append(key)
     detail = f"changed={sorted(changed)}"
     if violated:
         detail += f" violates_warning={violated}"
     if hits and not misses:
         return "matched", detail
-    if hits:
+    if hits or landed_off_target:
         return "partially_matched", detail + f" missed={misses}"
     equivalents = {e for k in rec["primary"] for e in EQUIVALENT_LEVERS.get(k, set())} & set(changed)
     if equivalents:
@@ -375,9 +380,9 @@ def analyse(rows: list[dict], repo: str, min_quiet: int, main_ref: str,
         firing = [e["date"] for e in hist
                   if e.get("state") not in HUMAN and e.get("state") not in NON_FIRING]
         watch_from = effective_from or applied
+        in_watch = (lambda d: d >= effective_from) if effective_from else (lambda d: d > applied)
         surface_dates = dates_by_surface.get(surface, [])
-        after = [d for d in surface_dates
-                 if (d >= effective_from if effective_from else d > applied)]
+        after = [d for d in surface_dates if in_watch(d)]
         before = [d for d in surface_dates if d < watch_from]
         quiet = trailing_quiet(after, set(firing))
         measured = hours.get(dag_id, {})
@@ -399,7 +404,7 @@ def analyse(rows: list[dict], repo: str, min_quiet: int, main_ref: str,
             "last_fired": max(firing) if firing else "",
             "ledger_outcome": outcome,
             "sweep_dates_after_fix": len(after),
-            "fired_after_fix": len([d for d in firing if d > applied]),
+            "fired_after_fix": len([d for d in firing if in_watch(d)]),
             "quiet_dates": len(quiet),
             "quiet_date_list": quiet,
             "pre_fix_quiet_dates": pre_fix_quiet,
@@ -516,7 +521,8 @@ def print_forecast(result: dict, fc: dict) -> None:
     print(f"  measured and silent before the fix was live   {len(fc['pre_fix_quiet'])}   "
           f"(unattributable however long they stay quiet)")
     print(f"  still firing after their fix                 {len(fc['still_firing'])}   "
-          f"(scoreable now as fix_not_working)")
+          f"(each firing restarts the quiet run; not scoreable until "
+          f"{result['min_quiet']} quiet sweep-dates follow the last one)")
     print(f"  best case attributable once quiet lands      {len(fc['best_case_attributable'])}   "
           f"across {fc['independent_units']} independent (dag, PR) units")
     print(f"  further complete sweep-dates still needed    {fc['sweeps_short']}")
