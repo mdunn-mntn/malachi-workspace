@@ -1106,3 +1106,77 @@ retention change touches it; it needs `cluster_log_conf` on the Databricks job c
 `TiVertexPipelineOperator` (41 runs/6d) match neither `SPARK_OPERATORS` nor `OPAQUE_OPERATORS` and
 are filed as non-Spark; 5 of the 11 entries are dead names with zero runs.
 
+
+## 2026-09-04 (late) — the Mode savings dashboard is a THIRD, unfixed savings method
+
+**The AUDI-1326 fix does not reach the dashboard.** Mode report `e81786de8403` recomputes savings in
+its OWN SQL — query `5a66e5fad18c` "Savings headline", duplicated byte-identically in `513a4a7a4a71`
+"Savings by surface" — directly over the raw ledger columns. `savings()` in `ledger.py` writes only
+`optimizer_savings.md` and the Slack digest note; the string `savings` appears **0 times** across all
+7 of the report's queries, and the external table has no savings/dollar/delta column. So deploying
+#1286 changes nothing on screen: the Python digest will say "No measured savings to report" while the
+dashboard publishes $960-$1,435. Two MNTN surfaces disagreeing 30-45x with no reconciliation.
+
+**Published 2026-09-04T23:10:58Z: 3,455.2 exec-h / $960.55 all-time, $173,289/yr, 15 DAGs fixed.
+Correct answer on the same ledger: zero measured savings.** Six SQL defects, each verified:
+- `SUM(exec_h) GROUP BY dag_id, surface, DATE(date)` — but **`exec_h` is a DAG-level daily total
+  stamped identically on every finding row for that DAG that day** (`ledger.py:280`). SUM multiplies
+  true executor-hours by the finding count. `site_network_hourly` 2026-09-02: MAX 3,653.1, SUM
+  91,590.6. fangorn's "before" of 6,189.3 is literally 9 x 687.7. MAX instead of SUM: 5,163.0 -> 174.2.
+- The all-time figure multiplies by `DATE_DIFF(CURRENT_DATE(), applied_date, DAY)` — **elapsed
+  calendar days, not observed days. It grows +1,707.8 exec-h / +$474.76 EVERY DAY with no new data.**
+  Same SQL, same frozen ledger: 1,747.4 (09-03) -> 3,455.2 (09-04) -> 5,163.0 (09-05) -> 56,396.5 (10-05).
+- `GREATEST(before_rate - after_rate, 0)` floors every regression at zero inside all four aggregates,
+  so the headline is a one-sided selected sum that **structurally cannot show the program is net
+  negative**. 6 of 15 scored DAGs are regressions; `site_network_hourly` contributes 0 instead of
+  -130,827.9. Unfloored the same sum is **-125,734.2**: the published number has the wrong sign.
+- After-window is inclusive (`d.d >= a.ad`) where the Python uses strict `>`.
+- **No evidence gate at all** — no `outcome='resolved'`, no minimum observations, no interval. 14 of
+  the 15 DAGs were applied 2026-09-03 with ZERO observed after-days and are still `watching`. Exactly
+  the unsoundness AUDI-1326 was opened to kill, reproduced in a surface AUDI-1326 never looked at (its
+  summary.md contains zero occurrences of "mode").
+- 58% of the headline (1,997.1 h) is ONE DAG, `fangorn_score_monitor`, whose true per-finding rate
+  moved ~0.3% (687.7 -> ~685) but whose count-scaled delta is multiplied by 8 calendar days off a
+  **single** before-day.
+
+**Freshness: the report's only schedule fires 06:00 UTC; the sweep rewrites the ledger ~09:19 UTC.**
+Every unattended render is ~21 hours stale. Move the schedule to 10:00 UTC (artifacts land 09:08-09:24
+across 14 observed days). The 3,455.2 on screen exists only because someone refreshed manually at 23:10.
+
+**The external table schema is frozen at 2026-08-28T22:14:35Z with `ignoreUnknownValues=true` despite
+`autodetect=true`.** `prev_exec_h` already exists on 781 of 1,692 rows and is invisible to SQL
+("Unrecognized name"); `partial`, which #1286 adds to every row from the 2026-09-05 sweep on, will be
+dropped the same silent way — so the Mode SQL can never implement the partial-sweep exclusion. Recreate
+the table with an explicit 18-field schema.
+
+**Dollars rest on frozen SQL literals** (`0.278`/exec-h, `0.04`/slot-h) while the report's hero text
+claims "the blended rate from actual Dataproc spend". The sweep already computes the live rate (0.277
+on 2026-09-04); join it instead. The `$0.04` slot-hour constant is sourced NOWHERE in either repo.
+Upstream `billing.py:23` pins `DCU_PER_EXEC_H = 5.44`, "the conservative end of the 5.4-9.9 range" —
+at the top of that range every dollar figure is ~82% higher and nothing re-measures it.
+
+**PR #1286 IS deployed but has never executed.** `astro deployment inspect cmd6bd10c0gl901rfuokgryiq`
+-> `current_tag deploy-2026-09-04T23-19-30`, HEALTHY, description "Merge pull request #1286", DEPLOYED
+23:19:30.328Z after a FAILED 23:17:20 attempt on the same PR. Every savings artifact in prod was
+written by the PRE-fix code at 09:19 UTC that morning, ~14 hours before the merge. First post-fix sweep
+is **2026-09-05 09:00 UTC**. So "115 hours all-time / ~$32" still on disk is expected, not a failed
+deploy. Behavioural test after that sweep: `optimizer_savings.md` should carry an 11-column header with
+a "90% CI" column and the Welch/`MIN_OBSERVATIONS` parenthetical, and new ledger rows should carry
+`partial`. An 8-column table means the image is wrong.
+
+**Three Python defects survive #1286** (found by adversarial probe, not by the original ticket):
+- **The all-time total is a sum over only the jobs that individually passed the 90% gate, with no
+  multiplicity correction.** A 200-rep null simulation driving the real `savings()` on data where every
+  job truly saved zero reported a positive total with a CI excluding zero in **124-131 of 200 reps**,
+  mean +136.5 h against a truth of 0. It is forced, not chance: `total > sum(half_i) >= sqrt(sum(half_i^2))`.
+  Per-job false-positive rate is a correct 4.8-5.0%; the aggregate is 62-64%. Either Holm-adjust the
+  per-job alpha or stop publishing a summed headline and publish the per-job table with its intervals.
+- `shipped()` never resets `outcome` once set to `resolved`, so a job later marked
+  `owner_notified`/`wont_fix` is frozen as a permanent win while running at full pre-fix hours
+  (driven through real `record()`/`mark_applied()`/`set_state()`: 903.9 h counted as saved).
+- A fix's before-window has no lower bound, so on a job with two successive fixes the later fix's
+  baseline averages in the era before the first. Lower-bound `before_days` at the previous
+  `applied_date` for that `(dag_id, surface)`.
+
+Full audit with per-defect evidence:
+`tickets/audi_1325_debugger_optimizer_adoption/outputs/audi_1325_mode_savings_audit_2026_09_04.md`.
