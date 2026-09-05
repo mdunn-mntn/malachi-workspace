@@ -274,3 +274,25 @@ from dt=09-03's whole categorization. 65-67 GiB clears the missing days of blame
 `batch_fetch` started 14:42, and `openai_batch_results/dt=2026-08-27/` held 815 of 1,261 objects at
 15:51. That confirms the `was_submitted` diagnosis directly: same cohort, same task, nothing
 changed but the transition.
+
+## Update 2026-09-05 17:35 UTC — the DS19 question is answered
+
+`write_targeted_signal_ds_19` finished at 17:16 and
+`signals/targeted_signal/data_source_id=19/dt=2026-09-04/` is **67.9 GiB**, against a healthy
+65-67 on 08-25 and 08-26. It is normal, at the top of the range.
+
+**The dt=09-03 shortfall was dt=09-02's incomplete `product_categorization` alone.** dt=09-04 was
+built while 08-28 through 09-01 were still missing and came out full size, so the hole does not
+feed DS19. Two consequences:
+
+- The backfill is about recovering those days' own categorization output. It is not a prerequisite
+  for correct daily DS19 signals, and it is not blocking anything downstream of DS19.
+- The one DS19 partition that is genuinely wrong is `dt=2026-09-03` at 47.1 GiB. It will only be
+  right after dt=09-02 is re-submitted, re-fetched, and its categorization rebuilt, which is
+  Step 5 and stays last.
+
+`targeted_signal_domain/dt=2026-09-04` was still empty at 17:35 because the chain is sequential and
+`write_targeted_signal_ds_13` was running. That is ordering, not a failure.
+
+dt=2026-08-27's `batch_post` is running: `openai_batch_joined` and `taxonomy_vector` both succeeded
+16:30-16:45, `categorization_temp` in flight.
