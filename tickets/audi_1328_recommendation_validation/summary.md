@@ -120,7 +120,7 @@ recursively collected) and any `.config("k", "v")` line in the DAG's `main_pytho
 |---|---|
 | `matched` | Every Spark key the recommendation asks for was changed, and each hit its stated target - a numeric target within a factor of 2, a boolean equal to the requested value, or a "2x the current" ask that at least doubled. |
 | `partially_matched` | Some recommended keys landed and others did not; or a recommended key landed but missed its stated target (including a "2x the current" ask on a key the PR set for the first time, where there is no before-value to double); or none landed but an equivalent lever did (`spark.sql.shuffle.partitions` vs `spark.sql.adaptive.advisoryPartitionSizeInBytes`); or only a secondary parameter moved. |
-| `different_fix_worked` | The PR changed this DAG's config and **not one** of the recommended keys is among the changes, yet the finding still went quiet. The optimizer found a real problem and named the wrong knob. A recommended key that shipped but missed its target is `partially_matched`, never this - see 4h defect 3. |
+| `different_fix_worked` | The PR shipped something for this DAG (a config change, or a code-only change leaving `changed={}`) and **not one** of the recommended keys is among the changes, yet the finding still went quiet. The optimizer found a real problem and named the wrong knob. A recommended key that shipped but missed its target is `partially_matched`, never this - see 4h defect 3. |
 | `no_shipped_change` | The PR touched nothing attributable to this DAG: an empty config diff **and** an untouched model file. **Unreachable for all 16 units in this cohort** - every fix PR edits its DAG's model file, so `code_changed` is always true. Do not report a count for it; see 4g. |
 | `fix_not_working` | The finding fired again on a sweep-date inside the watch window. |
 | `unscoreable` | The `fix_pr` merge commit is not on `origin/main` in the checkout. |
@@ -421,5 +421,5 @@ that a merged `model_task_config.json` change is not live until an Astro deploy.
 - `partial` now lands (183 rows on `2026-09-04`, all `false`). Confirm it keeps landing on `09-05`
   and `09-06`; `partial_window` stays inert for every date before `09-04`.
 - The `dag_went_dark` threshold (20% of a 5-date median) is unvalidated against a known-dead job.
-- If the attributable sample really comes in at 1 unit, decide whether AUDI-1328 reports a sample-size
+- Reading B now yields 7 units, not 1. The sample-size-finding fallback applies only if the deploy question collapses it further.
   finding and closes, rather than publishing a precision number nobody should act on.
