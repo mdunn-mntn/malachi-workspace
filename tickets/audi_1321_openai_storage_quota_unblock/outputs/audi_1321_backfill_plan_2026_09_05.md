@@ -296,3 +296,37 @@ feed DS19. Two consequences:
 
 dt=2026-08-27's `batch_post` is running: `openai_batch_joined` and `taxonomy_vector` both succeeded
 16:30-16:45, `categorization_temp` in flight.
+
+## Update 2026-09-05 18:30 UTC — a real baseline, measured over a healthy week
+
+Two days was too small a sample and made the range look tighter than it is. A full pre-outage week,
+in GiB:
+
+| dt | `data_source_id=19` | `targeted_signal_domain` |
+|---|---|---|
+| 2026-08-20 | 63.3 | 39.5 |
+| 2026-08-21 | 63.2 | 39.6 |
+| 2026-08-22 | 60.9 | 37.9 |
+| 2026-08-23 | 55.9 | 34.5 |
+| 2026-08-24 | 56.8 | 35.0 |
+| 2026-08-25 | 65.3 | 40.6 |
+| 2026-08-26 | 66.9 | 41.6 |
+
+**Healthy DS19 is 55.9-66.9, and healthy domain is 34.5-41.6**, with a clear multi-day dip across
+08-23 and 08-24 that both partitions share. The "65-67 / 40.6-41.6" figure from the earlier update
+was the top of the range, not the range.
+
+Against that:
+
+- `dt=2026-09-04` at **67.9 / 37.9** is healthy. DS19 is marginally above the week's maximum and the
+  domain partition sits mid-range. The conclusion in the previous update stands and is now better
+  supported: the missing days do not feed DS19.
+- `dt=2026-09-03` at **47.1 / 33.9** is short. DS19 is 16% below the week's minimum, which no day in
+  the sample approaches. The domain partition is only just under its minimum, so DS19 is where the
+  damage shows.
+
+Judge future partitions against the range, not against a single good day, and expect the two
+signals to move together.
+
+dt=2026-08-27's `batch_post` continues: `categorization_temp` 16:45-18:07, `mm_taxonomy_update`
+18:07-18:15, `mm_taxonomy_update_bq` 18:15-18:23, `product_categorization` in flight since 18:15.
