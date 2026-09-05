@@ -14,7 +14,8 @@ tags: [shopper_graph, openai, storage, retention]
 
 ## Context
 Decision `0009` deliberately refused to lower the OpenAI retention window until the store had been measured. Once
-`#308`/`#309` measured it (129 files / 4.2 GiB, the 2.5 TB proven to be our own un-swept backlog), lowering the
+`#308`/`#309` measured it (129 files / 4.2 GiB of files visible to our key; the ownership reading of that number is
+retracted in decision `0009`'s 2026-09-05 correction, but the store WAS measured), lowering the
 window became defensible and the split between inputs and outputs became the real question. An input is spent once
 its batch is created, minutes after upload; only outputs must survive until the next day's `batch_fetch`. A short
 input window is therefore what frees a stalled day without needing an environment variable the pod cannot receive.

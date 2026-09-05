@@ -8,7 +8,7 @@ doc_type: memory
 keywords: [shopper_graph, shopper-graph, mntn matched, mntn match backend, deploy workflow, which image, deploy_openai_dockerhub_gcp, deploy_middleware_dockerhub, deploy_dbt_dockerhub, openai_batch_runner, mntn_matched_data_pipeline, DbtImageName, OPEN_AI_BATCH, SHOPPER_GRAPH, batch_fetch, batch_submit, MntnKubePodOperator, image_pull_policy Always, mntn-argocd, argocd, workflow_dispatch, manual deploy, dockerhub, steelhousedev, Argo access IT service desk, OpenAI admin dashboard, Brian McAdams OpenAI account, QA env batch jobs, Select team QA, Ryan Kleck cross-DAG, Victor Savitskiy departed, OpenAI quota increase ticket, INC-006, INC-007, kube_operators.py, ti_argocd_logs, pod logs GCS, VERTICAL_HANDLER COMPLETE, SCRAPING FAILED, VALIDATION PASSED, AUTOPILOT_FROM_URL 429, pr_openai.yml, Dockerfile.test, openai CI no pandas, importorskip pandas, isort flake8 mypy pytest openai, get_s3_bucket f-string, env staging prefix, mntn-data-archive-dev write, staged test dev bucket, github environments dev prod protection_rules, custom_branch_policies, workflow_dispatch no reviewer, deploy_openai_dockerhub_gcp id 192234555, self-merge contradiction, mdunn-mntn merged own PRs, branch protection main, AUDI-1279, shopper_graph#305, shopper_graph#306, patch.dict sys.modules trap, sys.modules stub removed on exit, second copy of module imported, patch never reaches class under test, to_parquet call_count 0, gcsfs missing test image, repo openai dir shadows sdk, namespace package shadowing, openai_wrapper batch_fetcher import, openai_wrapper batch_transitioner import, eef911c]
 domain: [repos, infra, routing-people]
 lifecycle: active
-last_verified: 2026-09-03
+last_verified: 2026-09-05
 ---
 `SteelHouse/shopper_graph` = the **MNTN Matched backend** ("Shopper Graph" is the original name for MNTN
 Matched — Alyson Lefkowitz + Brian McAdams, INC-006 2026-07-30). Its API services the **entire MNTN Match
@@ -154,8 +154,11 @@ only with Brian McAdams' or Alyson Lefkowitz's written OK; a deploy after 09:00Z
   fix shipped via **#298** 2026-07-30 after #297 regressed — INC-007 / IMP-013). **Storage-drop validation is no
   longer pending: it landed 2026-09-03 under AUDI-1321** — `#306` made the sweep list oldest-first, the first run on
   the new image deleted 1,132 of 1,132 files, and `batch_submit` went green for the first time since 08-28. `#305`
-  (merged + deployed the same day) added the zero-delete alarm. See [[reference_openai_sdk_pagination]],
-  [[reference_mntn_matched_batch_pipeline]].
+  (merged + deployed the same day) added the zero-delete alarm. **2026-09-05: the 2.5 TB cap sits on the
+  COMPANY-SHARED default OpenAI project and our key can list only our own uploads, so file hygiene can only
+  ever manage OUR share of it** — the quota-increase ticket and AUDI-1301's dedicated project are the levers
+  that actually change the ceiling. See [[reference_openai_sdk_pagination]],
+  [[reference_mntn_matched_batch_pipeline]], [[feedback_scoped_credential_cannot_prove_ownership]].
 
 See [[reference_airflow_ti]] (our model-repo deploy flow — a different, GCS→bundle path),
 [[reference_oncall_runbook]] (INC-006 fetch bug #296, INC-007 quota AUDI-1042),

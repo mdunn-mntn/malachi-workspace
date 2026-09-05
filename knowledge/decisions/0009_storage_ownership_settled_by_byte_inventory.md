@@ -1,11 +1,11 @@
 ---
 doc_type: decision
 title: "0009 — Settle who holds the OpenAI 2.5 TB with per-file byte inventory logging, not by lowering the retention window"
-summary: "shopper_graph #308 makes the sweep page on an empty page and log per-file bytes + purpose plus a total; no retention-window change and no further submit re-run until it reports, because the pipeline's own measured footprint (~100 GB at 48h) leaves ~2.4 TB unaccounted. OUTCOME 2026-09-04 evening: the inventory reported 129 files / 4.2 GiB and settled the 2.5 TB as our own un-swept backlog"
+summary: "shopper_graph #308 makes the sweep page on an empty page and log per-file bytes + purpose plus a total; no retention-window change and no further submit re-run until it reports, because the pipeline's own measured footprint (~100 GB at 48h) leaves ~2.4 TB unaccounted. OUTCOME 2026-09-04 evening: the inventory reported 129 files / 4.2 GiB, read at the time as settling the 2.5 TB as our own backlog. CORRECTED 2026-09-05: the cap is on a company-shared default project and our key lists only our own uploads, so the inventory bounds our footprint and cannot settle ownership at all"
 status: accepted
 date: 2026-09-04
-last_verified: 2026-09-04
-keywords: [openai storage quota, 2.5TB cap, storage ownership, per-file bytes, file purpose, inventory logging, shopper_graph#308, shopper_graph#307, shopper_graph#309, OPENAI_FILE_MAX_AGE_HOURS, retention window, delete_all_storage_files, short page pagination, after cursor, cursor deleted mid-listing, batch_submit headroom, AUDI-1321, AUDI-1301, 40 GB headroom, 100 GB footprint, 2.4 TB unaccounted, storage ownership settled, 129 files 4.2 GiB, 5527 deletable inputs, 193.4 GiB]
+last_verified: 2026-09-05
+keywords: [openai storage quota, 2.5TB cap, storage ownership, per-file bytes, file purpose, inventory logging, shopper_graph#308, shopper_graph#307, shopper_graph#309, OPENAI_FILE_MAX_AGE_HOURS, retention window, delete_all_storage_files, short page pagination, after cursor, cursor deleted mid-listing, batch_submit headroom, AUDI-1321, AUDI-1301, 40 GB headroom, 100 GB footprint, 2.4 TB unaccounted, storage ownership settled, 129 files 4.2 GiB, 5527 deletable inputs, 193.4 GiB, company shared default project, ownership retracted 2026-09-05, key lists only own uploads, 6221 files 198.8 GiB, scoped credential]
 supersedes: null
 tags: [shopper_graph, openai, storage, observability]
 ---
@@ -74,3 +74,37 @@ arithmetic was a correct steady-state footprint and an incorrect inference. **A 
 day cannot see a store whose cleanup has been failing for a week.** Measuring rather than inferring is what settled
 it; refusing to lower the retention window blind is what kept the measurement clean. The retention window was then
 changed on evidence, in decision `0010`.
+
+## CORRECTION (2026-09-05) — the inventory could never have settled ownership; the cap is on a company-shared project
+
+**The decision above was still the right one to ship. Its OUTCOME section's conclusion is retracted.** Malachi
+confirmed 2026-09-05 that the pipeline runs in the **company-shared default OpenAI project**, and our API key
+can list only the files **we** uploaded. `files.list` is therefore structurally blind to every other team's
+files, so a small total proves only that OUR footprint is small — never that nobody else is in the pool.
+
+**Contradicting evidence, from the same instrument:** two consecutive sweeps read `Listed 6221 files holding
+198.8 GiB, 7.8% of the 2.5TB project limit` and `6040 files holding 191.8 GiB` while `files.create` kept
+returning a deterministic `400` exceeded-quota. Our own numbers never approached the cap; the cap kept firing.
+
+**The bad inference, named so it is not repeated:** a submit succeeding right after our sweep is equally
+consistent with a **shared** pool that our deletions merely made room in. Combined with `batch_submit` dying on
+the FIRST ~40 MB `files.create`, a green submit means "there was room for one file", never "the store is ours".
+The 09-04 byte inventory reproduced the same defect one layer up — "1.4 GiB is not ours" is really "1.4 GiB
+that our key can SEE is not ours".
+
+**What settled it:** a person's direct knowledge of an account our instrumentation cannot inspect. The
+escalation the kill criterion described (ask an OpenAI org owner) was the only move that could ever have
+closed this question, and it was deferred three times because a self-scoped measurement kept looking
+conclusive.
+
+**Consequences:**
+- **Our own footprint peaked near 200 GiB while holding four days of inputs**, and headroom now depends on
+  other teams' usage. Do not size a backfill against the full 2.5 TB; keep standing inventory small (the 26h
+  input window from decision `0010` is what does that).
+- **AUDI-1301 (dedicated OpenAI project + audit logging) is promoted from "durable fix for observability" to
+  the fix for the ambiguity itself** — in a shared default project no amount of our own instrumentation can
+  answer "who is holding the quota".
+- Corrected in place: `data_knowledge.md` § MNTN Matched pipeline, `data_catalog.md`
+  § shopper_graph/openai_batch_submissions, `glossary.md` ("Shared default OpenAI project", "Short page"),
+  memory `reference_mntn_matched_batch_pipeline`, `reference_openai_sdk_pagination`, and the new memory
+  `feedback_scoped_credential_cannot_prove_ownership`.
