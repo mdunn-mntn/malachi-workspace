@@ -195,13 +195,18 @@ contains Databricks `_started_*`/`_committed_*` markers that fail Parquet parsin
 directories and glob `*.parquet` inside each, rather than a single recursive wildcard:
 
 ```bash
-gsutil ls -d "gs://mntn-data-archive-prod/guid_geos_raw/dt=*/hh=*" | sed 's:/*$::' \
+gcloud storage ls -d "gs://mntn-data-archive-prod/guid_geos_raw/dt=*/hh=*" | sed 's:/*$::' \
 | python3 -c 'import json,sys; json.dump({"sourceFormat":"PARQUET",
   "sourceUris":[l.strip()+"/*.parquet" for l in sys.stdin if l.startswith("gs://")],
   "hivePartitioningOptions":{"mode":"AUTO",
     "sourceUriPrefix":"gs://mntn-data-archive-prod/guid_geos_raw/"}}, sys.stdout)' > ggr_def.json
 # then: bq query --location=us-central1 --external_table_definition=ggr::ggr_def.json --use_legacy_sql=false '<sql>'
 ```
+
+**Check `ggr_def.json` has a non-empty `sourceUris` before querying.** An empty list builds a table over
+nothing and the query returns 0 rows with no error. `gsutil ls` is the specific hazard here: on an expired
+reauth it writes `ReauthUnattendedError` to stderr and an EMPTY listing to stdout, so the recipe silently
+produces an empty definition. Use `gcloud storage ls` as above (memory `reference_gsutil_reauth_false_zero`).
 
 **Regression test — advertiser vs platform, per day** (~2 GB/day scanned, all 8 days ≈ 17 GB):
 
