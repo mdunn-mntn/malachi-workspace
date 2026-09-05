@@ -1,6 +1,6 @@
 ---
 doc_type: ticket
-title: "AUDI-1330: savings residual defects"
+title: "AUDI-1351: savings residual defects"
 status: done
 date: 2026-09-05
 summary: "Three savings defects PR #1286 left behind: no multiplicity correction on the summed headline, a stale resolved outcome, and an unbounded before-window. One of them crashes the sweep."
@@ -9,9 +9,9 @@ question: "Do the three savings defects that survived PR #1286 change what the o
 framing_state: "skip: direct follow-on to the AUDI-1326 audit, which named all three defects with evidence before work started"
 ---
 
-# AUDI-1330: savings residual defects
+# AUDI-1351: savings residual defects
 
-**Jira:** https://mntn.atlassian.net/browse/AUDI-1330
+**Jira:** https://mntn.atlassian.net/browse/AUDI-1351
 **Status:** done
 **Date Started:** 2026-09-05
 **Assignee:** Malachi
@@ -67,9 +67,15 @@ Anything not resolved, handed off, or deferred.
 ---
 ## Record
 
-**Jira issue is NOT filed.** Per global §14 that needs Malachi's yes. The folder is local and
-`status` here is the file's own state, not a board state. The code shipped as PR #1290 against
-`SteelHouse/airflow-ti`, branch `audi-1330-savings-residual-defects`, base `016e161`.
+**The branch is named for the wrong key.** This work was scaffolded as AUDI-1330 before the Jira
+issue existed. **AUDI-1330 was already taken** by a triage Bug the debugger's service account
+auto-filed ("[TRIAGE] guid_geos_summary_to_integration/build_tables.build_guid_geos_summary"). The
+real key is **AUDI-1351**, filed 2026-09-05. The branch stays `audi-1330-savings-residual-defects`
+because it is already pushed and PR #1290 is open against it; the PR title and this folder carry the
+correct key. This is the same PR-number/AUDI-number offset trap recorded in `reference_airflow_ti` —
+**always resolve the branch with `gh pr view <N> --json headRefName`, never by the number.**
+
+The code shipped as PR #1290 against `SteelHouse/airflow-ti`, base `016e161`.
 
 ### What was wrong
 
