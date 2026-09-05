@@ -431,3 +431,31 @@ this tunable without a deploy, and is now worth doing rather than optional.
 640 batches were created before the failure and are live at OpenAI; 601 files were never submitted.
 On retry the double-submission guard skips the 640 that have receipts and submits only the 601, so
 the day still completes. Do not delete the new receipts.
+
+## Update 2026-09-05 22:12 UTC — dt=2026-08-28 fully submitted
+
+`batch_submit` succeeded on try 14, 21:42-22:07, and
+`openai_batch_submissions/dt=2026-08-28/` holds **1,241 of 1,241** receipts.
+
+The quota failure was a partial, not a wall. The first attempt reached 866 receipts before the 400,
+not the 640 that was visible mid-run, so the retry only had 375 files to place. Freeing 7 GiB with
+one extra sweep was enough headroom for them. **Retry a quota failure rather than waiting for a
+clean window: each attempt is monotonic progress, because the double-submission guard skips every
+file that already has a receipt.** That is the same guard that traps a dead batch's input, working
+in our favour here.
+
+Batches were created between 19:20 and 22:07, so on the ~7h precedent they complete around
+02:30-05:00 UTC on 09-06. The fetch is `scheduled__2026-08-29T09:00` and needs
+`batch_transition` **then** `batch_fetch`, without downstream, finished before the 09:00 slot.
+The watcher carries a 05:30 UTC marker for it.
+
+`batch_cleanup_2` was cleared to close the submit run cleanly.
+
+### Storage, going forward
+
+The pool is shared company-wide, so the headroom we get is whatever other teams leave. Our own
+slice is the only lever. Tonight it peaked near 200 GiB holding four days of inputs at once. The
+26h input window is the cause and it protects almost nothing, because an input is spent minutes
+after its batch is created. Cutting it to a few hours via a DAG-level
+`"{{ var.value.get('openai_input_file_max_age_hours', '26') }}"` is the change worth making, and it
+needs no image deploy once the DAG passes the variable.
