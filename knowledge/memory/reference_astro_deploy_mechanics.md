@@ -69,3 +69,14 @@ files to GCS. A green deploy_prod CI run says nothing about which image prod run
 
 See [[reference_airflow_ti]] for repo conventions, [[project_airflow_optimizer]] /
 [[project_airflow_debugger]] for what runs on the deployment.
+
+## 2026-09-05 — the retrigger PR worked; the fix for the third form is confirmed
+
+PR #1289 (5 README lines, no functional change) merged 2026-09-05, `origin/main` went `016e161` ->
+`3b5a458`, and the git integration built **`deploy-2026-09-05T19-59-00`, HEALTHY**. That image is the
+first to carry PR #1287. So the remedy for the third form of the superseded-build gap (older SHA won,
+newer registered NO build row, so Retry Git Deploy has nothing to pin) is confirmed: **push any fresh
+commit to main and let the integration build the new HEAD.** A README-only commit is enough.
+
+Timing: merge to HEALTHY was about 12 minutes. `current_tag` from `astro deployment inspect
+cmd6bd10c0gl901rfuokgryiq` is the only evidence that counts; poll it rather than trusting the merge.
