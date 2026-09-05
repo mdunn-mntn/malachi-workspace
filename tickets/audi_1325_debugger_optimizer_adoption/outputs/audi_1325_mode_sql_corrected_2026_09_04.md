@@ -27,7 +27,7 @@ The corrected SQL reproduces that job, those counts and that sentence.
 ### Defect 1 in detail
 
 `sweep.py:306` calls `ledger_mod.savings(ledger_path, today=date, …)` where `date` is the sweep's own
-`--date`. `ledger.py:687-693` pins the run-rate divisor to that value:
+`--date`. `ledger.py:687-694` pins the run-rate divisor to that value:
 
 ```python
 elapsed = max(
@@ -69,6 +69,9 @@ how many kept firing, and how many are still awaiting a verdict.
 
 ### `5a66e5fad18c` "Savings headline"
 
+Full query. Byte-identical to `queries/audi_1325_mode_savings_headline_published.sql` and to the
+`raw_query` the Mode API returns for `5a66e5fad18c`, re-fetched 2026-09-05.
+
 ```sql
 WITH daily AS (
   SELECT dag_id, COALESCE(surface, 'spark') surface, DATE(date) d, SUM(exec_h) exec_h
@@ -89,14 +92,16 @@ SELECT
   ROUND(IFNULL(SUM(IF(surface = 'spark', GREATEST(before_rate - after_rate, 0) * days, 0)), 0), 1) AS exec_hours_saved_all_time,
   ROUND(IFNULL(SUM(IF(surface = 'spark', GREATEST(before_rate - after_rate, 0) * days, 0)) * 0.278, 0), 2) AS dollars_saved_all_time,
   ROUND(IFNULL(SUM(IF(surface = 'spark', GREATEST(before_rate - after_rate, 0), 0)), 0), 1) AS exec_hours_saved_per_day,
-  ROUND(IFNULL(SUM(IF(surface = 'spark', GREATEST(before_rate - after_rate, 0)), 0) * 365 * 0.278, 0), 0) AS est_annual_dollars,
+  ROUND(IFNULL(SUM(IF(surface = 'spark', GREATEST(before_rate - after_rate, 0), 0)) * 365 * 0.278, 0), 0) AS est_annual_dollars,
   (SELECT COUNT(DISTINCT dag_id) FROM applied) AS dags_with_applied_fixes
 FROM rates WHERE after_rate IS NOT NULL
 ```
 
 ### `513a4a7a4a71` "Savings by surface"
 
-Identical CTE block, then:
+**Excerpt: the tail only.** Its CTE block is the same 727 bytes as the headline's above. The whole
+query, re-fetched from the Mode API 2026-09-05, is
+`queries/audi_1325_mode_savings_by_surface_published.sql`.
 
 ```sql
 SELECT surface,
@@ -121,6 +126,8 @@ two local files. Paste it identically into both queries so the page cannot rende
 answers again.
 
 ### Shared CTE block
+
+**Excerpt: the first 2,929 bytes of each corrected query file**, and identical between them.
 
 ```sql
 WITH daily AS (
@@ -210,6 +217,9 @@ WITH daily AS (
 
 ### `5a66e5fad18c` "Savings headline" — corrected tail
 
+**Excerpt: the tail only.** The block above plus this tail is
+`queries/audi_1325_mode_savings_headline_corrected.sql`, whole and to the byte.
+
 ```sql
 SELECT
   ROUND(IFNULL(SUM(IF(surface = 'spark', exec_h_saved, 0)), 0), 1) AS exec_hours_saved_all_time,
@@ -248,6 +258,9 @@ should print it so a stale render is visible rather than silent.
 
 ### `513a4a7a4a71` "Savings by surface" — corrected tail
 
+**Excerpt: the tail only.** The block above plus this tail is
+`queries/audi_1325_mode_savings_by_surface_corrected.sql`, whole and to the byte.
+
 ```sql
 SELECT
   surface,
@@ -272,7 +285,8 @@ quantity the headline returns as `dags_measured`; the two now agree by name.
 ### "Fixes not yet measurable" — repaired reasons
 
 Standalone, does not share the block above (it must keep the jobs the block filters out). Full text:
-`queries/audi_1325_mode_not_yet_measurable.sql`. The reason ladder:
+`queries/audi_1325_mode_not_yet_measurable.sql`. **Excerpt: the reason ladder, lines 76-88 of that
+file:**
 
 ```sql
   CASE
@@ -289,6 +303,12 @@ Standalone, does not share the block above (it must keep the jobs the block filt
     ELSE 'measured'
   END AS why_not_measurable
 ```
+
+`ELSE 'measured'`, line 87 of that file, is an unreachable default. The `WHERE` clause at lines 90-94
+admits a row only when `cleared = 0`, `before_days < 3`, `after_days < 3`, or either variance is
+zero, and those are exactly the four `WHEN` branches above it, so no surviving row can reach the
+`ELSE`. It is left in place as a defensive default rather than removed, so the `CASE` returns a
+string and never `NULL` if the `WHERE` is ever loosened.
 
 `cleared`, `still_firing` and `undecided` are the per-DAG counts of `shipped.outcome` values
 `resolved`, `fix_not_working` and `watching`, and they are returned as columns so the sentence can be
@@ -429,6 +449,48 @@ step0_published_method,step1_max_only,step2_signed_only,step3_all_aggregation_fi
 of flooring it at zero gives -95,123.0. All aggregation fixes with no evidence gate: -5,259.2. The
 2026-09-04 figures (5,163.0 / 174.2 / -125,734.2 / 114.8) were correct for the 1,692-row ledger and
 are superseded, not contradicted.
+
+### Every SQL fence in this doc, checked against its query file
+
+The 09-04 draft's blanket claim that every fence matched its file was wrong: it had a fence nobody
+had run. One fence reproduces a whole query file byte for byte; the other five are excerpts, each now
+labelled as one at its own heading. Byte offsets and dry runs, 2026-09-05, `--dry_run` through
+`bq_run.sh` against `dw-main-bronze` / `us-central1`.
+
+| Fence | Query file | Relation | Dry run of the fence text alone |
+|---|---|---|---|
+| §2 "Savings headline" | `audi_1325_mode_savings_headline_published.sql` | whole file, byte-identical, 1,361 bytes | validated |
+| §2 "Savings by surface" | `audi_1325_mode_savings_by_surface_published.sql` | excerpt: last 421 of 1,148 bytes | `Table "rates" must be qualified with a dataset` |
+| §3 Shared CTE block | both `*_corrected.sql` | excerpt: first 2,929 bytes of each, identical between them | `Syntax error: Unexpected end of script at [83:2]` |
+| §3 headline corrected tail | `audi_1325_mode_savings_headline_corrected.sql` | excerpt: last 1,706 of 4,635 bytes | `Table "scored" must be qualified with a dataset` |
+| §3 by-surface corrected tail | `audi_1325_mode_savings_by_surface_corrected.sql` | excerpt: last 639 of 3,568 bytes | `Table "scored" must be qualified with a dataset` |
+| §3 reason ladder | `audi_1325_mode_not_yet_measurable.sql` | excerpt: lines 76-88 of 95 | `Syntax error: Unexpected string literal` |
+
+An excerpt failing on its own is the expected result and is what makes it an excerpt. Each one
+validates in the whole it belongs to: shared block + headline tail (4,635 bytes) validated, shared
+block + by-surface tail (3,568 bytes) validated, published CTE + by-surface tail (1,148 bytes)
+validated.
+
+The §2 "Savings headline" fence is the one the 09-04 draft broke: it carried a two-argument `IF`
+and failed with *"Signature requires at least 3 arguments"*. It has been re-fetched from the Mode API
+(`GET /api/mntn/reports/e81786de8403/queries/5a66e5fad18c`, `raw_query`), not reconstructed, and is
+byte-identical to both the Mode copy and the local file.
+
+### Every query file dry-runs clean
+
+All eight files under `queries/`, `--dry_run` 2026-09-05, each returning *"Query successfully
+validated"*:
+
+```
+audi_1325_mode_not_yet_measurable.sql            validated
+audi_1325_mode_savings_by_surface_corrected.sql  validated
+audi_1325_mode_savings_by_surface_published.sql  validated
+audi_1325_mode_savings_headline_corrected.sql    validated
+audi_1325_mode_savings_headline_published.sql    validated
+audi_1325_run_rate_divisor_check.sql             validated
+audi_1325_savings_ladder_decomposition.sql       validated
+audi_1325_welch_parity_check.sql                 validated
+```
 
 ---
 
