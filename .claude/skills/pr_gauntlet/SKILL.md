@@ -81,7 +81,10 @@ know another repo's rules, and the reviewers do not run them either. Read its PR
 cost a red `build-and-test` on shopper_graph #308 (2026-09-04): its CI runs
 `mypy --ignore-missing-imports --follow-imports=skip --namespace-packages --explicit-package-bases
 --disallow-untyped-defs openai` and `flake8 --ignore=E501,W503 openai`, and the gauntlet's own
-fixer had added type hints that mypy then rejected.
+fixer had added type hints that mypy then rejected. It also runs `isort`, which classifies that repo's own
+`openai/` directory as first-party, so `from openai import X` sorts AFTER
+`from openai_wrapper...` — #309 went red on that too. Run every linter the job runs, not the
+ones you expect.
 
 Binary/compressed fixtures in the diff get decompressed and grepped too (`zstd -dc | grep`).
 Fix mechanical failures directly (they are deterministic), re-run to green, then proceed.
