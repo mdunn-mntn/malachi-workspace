@@ -178,3 +178,32 @@ task's own log, which printed `completed=911` of `n=1261` and no results-written
 
 Fix with `gcloud auth login` in an interactive terminal, then re-read the table before acting on
 any object count.
+
+## Update 2026-09-05 13:15 UTC — today's 15:00 run is the discriminating test
+
+dt=2026-09-03 finished end to end at 11:5x UTC: fetch `scheduled__2026-09-04T09:00` succeeded
+through `batch_post` and `batch_test`, unattended, with no quota error on the paired submit for
+dt=09-04. That is the first clean daily pair since 08-28.
+
+`keyword_ddp_reporting` runs `0 15 * * *` with `max_active_runs=1` and is not paused. Its
+`scheduled__2026-09-03T15:00` run was never created: the scheduler dropped that interval and moved
+`next_dagrun_logical_date` to 2026-09-04T15:00. **That gap is already covered** by
+`manual__consume_dt_2026-09-02`, which wrote the same partition by hand, so nothing is missing.
+
+Today's `scheduled__2026-09-04T15:00` run fires at 15:00 UTC. Its sensor looks for the fetch run at
+`logical - 6h` = `2026-09-04T09:00`, which is the run that just succeeded, so it should start
+unattended and write `data_source_id=19/dt=2026-09-04` from a whole `product_categorization`.
+
+**This settles the open DS19 question.** dt=2026-09-03's DS19 partition came in at 50.6 GB against
+a normal 70-72 GB, and the two candidate causes were 09-02's own incompleteness and the 08-28 to
+09-01 hole. dt=09-04 is built from a complete day while the hole is still open:
+
+- If `data_source_id=19/dt=2026-09-04` lands near 70-72 GB, the shortfall was 09-02 alone and the
+  backfill is not blocking DS19.
+- If it lands short again, the missing days feed DS19 and the numbers stay unreliable until the
+  backfill finishes.
+
+Measuring it needs the GCS credential repaired first, per the caveat above.
+
+`batch_fetch` for dt=2026-08-27 was re-cleared at 13:13 UTC, cohort age 13.3h, with the fetch slot
+free after the daily run finished.
