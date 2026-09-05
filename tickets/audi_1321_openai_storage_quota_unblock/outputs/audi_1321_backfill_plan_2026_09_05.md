@@ -241,3 +241,36 @@ On this run it last succeeded at 2026-09-04 20:54, three hours **before** the su
 
 Cleared both at 14:40 UTC. Transition is about 6-8 minutes for this cohort size and the download
 about 90 minutes, judging by dt=09-03's 87.
+
+## Update 2026-09-05 15:55 UTC — credential repaired, and the size benchmarks were wrong
+
+`gcloud auth login` was run, so `gsutil` reads are trustworthy again. Measured, in GiB:
+
+| dt | `data_source_id=19` | `targeted_signal_domain` | `product_categorization` | note |
+|---|---|---|---|---|
+| 2026-08-25 | 65.3 | 40.6 | 4.3 | healthy, pre-outage |
+| 2026-08-26 | 66.9 | 41.6 | 4.0 | healthy, pre-outage |
+| 2026-08-27 | 65.8 | 41.2 | 0.0 | signals predate the outage; its own categorization never built |
+| 2026-08-28 | 0.0 | 0.0 | 0.0 | the hole |
+| 2026-09-01 | 0.0 | 0.0 | 0.0 | the hole |
+| 2026-09-02 | 0.0 | 0.0 | 4.0 | categorization built from 468 of 1,014 results |
+| 2026-09-03 | 47.1 | 33.9 | 7.5 | signals written from 09-02's partial; categorization is its own, whole |
+| 2026-09-04 | writing | writing | 0.0 | the 15:00 run, in flight |
+
+**Two benchmarks recorded earlier in this ticket are wrong and are corrected here.** DS19 normal is
+65-67 GiB, not 70-72, and `targeted_signal_domain` normal is 40.6-41.6 GiB, not 44.5. The dt=09-03
+DS19 partition is 47.1 GiB, not the 50.6 quoted earlier. Against the corrected baseline it is 28%
+short and the domain partition is 17% short, which is the same conclusion from better numbers.
+
+**`product_categorization` at 7.5 GiB for dt=09-03 is the odd one.** Healthy days are 4.0-4.3 and
+this is nearly double, from a single `try=1` run of a model that appends. It is not obviously wrong
+and it is not the shortfall's cause, but the "normal is 4.0-4.3 GiB" line should not be used to
+judge a partition as complete until this is explained. Do not chase it while the backfill is open.
+
+The discriminating test is still pending: `data_source_id=19/dt=2026-09-04` is being written now
+from dt=09-03's whole categorization. 65-67 GiB clears the missing days of blame for DS19.
+
+**dt=2026-08-27 is downloading.** `batch_transition` ran 14:35-14:42 and flagged the cohort,
+`batch_fetch` started 14:42, and `openai_batch_results/dt=2026-08-27/` held 815 of 1,261 objects at
+15:51. That confirms the `was_submitted` diagnosis directly: same cohort, same task, nothing
+changed but the transition.
