@@ -4,7 +4,7 @@ title: "AUDI-1321: OpenAI storage sweep could not see past the newest 10,000 fil
 status: in_progress
 date: 2026-09-03
 summary: "The MNTN Matched keyword pipeline stalled 2026-08-28 on the OpenAI project's 2.5TB storage ceiling. Root cause: the nightly cleanup lists files newest-first and the API caps a page at 10,000, so on a heavy day every slot on that page is younger than the sweep's 48h delete floor and it frees nothing — exactly when churn is highest. Fix shipped in shopper_graph #306 (order=asc + explicit paging); the six blocked days still need backfilling. Split out of AUDI-1191, which caught it live."
-result: "REOPENED 2026-09-04: batch_submit hit the storage 400 again. The 2026-09-03 fix was real but partial — order=asc (shopper_graph #306) cleared the wall once (1,132 of 1,132 deleted, first green submit since 08-28 after ~57 min), and the sweep still breaks its walk on a page shorter than the limit, so it has never enumerated its own store: it logged 28 files four minutes before batch_fetch deleted 416. Measured volumes put the whole pipeline at ~100 GB against the 2.5 TB cap, so 'the storage was ours' is challenged, not settled. #305's zero-delete alarm cannot fire because its 10,000 threshold is compared against a partial page. Next: shopper_graph #308 (page on an empty page, log per-file bytes + purpose). Backfill dt=2026-08-27..09-01 stays blocked behind it."
+result: "Quota RESOLVED and proven ours (2026-09-04 evening). With shopper_graph #308 (page to an empty page + per-file byte/purpose inventory) and #309 (survive an `after` cursor deleted mid-listing) deployed, the sweep enumerated the whole OpenAI project store at 129 files / 4.2 GiB, 0.2% of the 2.5 TB cap: this pipeline 2.8 GiB, everything else 1.4 GiB. The ceiling was a multi-day backlog of our own `part-` inputs the short-page listing could never reach; §0's kill criterion never fired, so no escalation and no OpenAI dashboard access is needed. `dt=2026-09-03` submitted (1,004 receipts) and `dt=2026-08-27` re-submitted in full (1,261 receipts) after its 742 old batches probed expired=612/completed=128 and proved unharvestable. Two further defects fixed on the way: a 12h input retention window failed 119 live batches because OpenAI's completion window is 24h (#310 raises the default to 26h, deployed), and the double-submission guard keys on `openai_batch_id.notna()` rather than `was_submitted`, so a dead batch's input is never retried. SEVEN days still to finish: `dt=2026-09-02` is only 46% fetched (468 of 1,014 receipts) and `dt=2026-08-28..09-01` are untouched."
 question: "Does a correctly ordered file sweep free enough of the OpenAI 2.5TB ceiling for batch_submit to run again, and how much of the 08-27 to 09-01 gap is worth recovering?"
 framing_state: locked
 ---
@@ -166,8 +166,14 @@ only for scheduled runs, where logical date and interval start coincide; it is w
   **A:** Yes, on the first run. One sweep on the new image deleted 1,132 of 1,132 eligible files and
   `batch_submit` succeeded about 57 minutes later, after six days of ~27-second storage 400s.
 - **Q:** Is the storage ceiling ours to manage, or a shared-account problem needing OpenAI dashboard access?
-  **A:** Ours. The §0 kill criterion never triggered. Deleting only the files our own sweep owns
-  (`part-*` / `batch_*`) cleared the ceiling, so no other producer was holding the 2.5TB.
+  **A:** Ours, and now proven by measurement rather than by inference. The §0 kill criterion never
+  triggered. **Settled 2026-09-04 evening:** with #308 and #309 deployed the sweep enumerated the whole
+  store at 129 files / 4.2 GiB (0.2% of the cap) — this pipeline 2.8 GiB, everything else 1.4 GiB
+  (fine-tune 0.3, other `purpose=batch` 1.1, assistants and fine-tune-results ~0). One earlier run of the
+  fixed sweep enumerated 5,527 deletable inputs holding 193.4 GiB aged 21.8-54.6h, which is what the
+  ceiling actually was. The 2026-09-04 morning challenge (~2.4 TB apparently unaccounted, from a ~100 GB
+  steady-state footprint) was a correct footprint and a wrong inference: a one-normal-day number cannot
+  see a store whose cleanup has been failing for a week. No escalation to Alyson, no dashboard access.
 - **Q:** Can this failure mode recur silently?
   **A:** No longer. #305 raises on a zero-delete sweep while at least `STORAGE_ALARM_MIN_FILES` (default
   10,000) files are still stored, and on every-eligible-delete-failing.
@@ -200,13 +206,56 @@ only for scheduled runs, where logical date and interval start coincide; it is w
 - `on-call/oncall_runbook.md` — the `test_product_categorization` mark-success line now requires naming the
   failing assertion.
 
+**Capture 2026-09-04 (evening):**
+- `knowledge/memory/reference_openai_sdk_pagination.md` — TRAP 3 marked FIXED (#308); **new TRAP 4**, the `after`
+  cursor file deleted mid-listing by the concurrently scheduled sweep (#309); the OWNERSHIP section rewritten from
+  CHALLENGED to SETTLED with the 129-file / 4.2 GiB inventory, and the trap-2 verdict pointer corrected in place.
+- `knowledge/memory/reference_mntn_matched_batch_pipeline.md` — new 2026-09-04 (evening) section carrying the
+  inventory, the 26h input-retention rule, the unrecoverable-batch rule, the one-day-at-a-time rule, the fetch
+  DAG's `max_active_runs=1`, the `record_count` completeness hole, the cohort-probe recipe and measured task
+  timings; the storage-economics, 09-03 verdict, 2.4 TB and still-open lines all corrected in place; the
+  dead-cohort recovery procedure gained a probe step and the real reason the receipt delete is mandatory.
+- `knowledge/data_knowledge.md` — settled ownership, the fourth pagination trap, the 26h retention rule, the
+  unrecoverable-batch rule, the serial-replay rule with `max_active_runs=1`; the guard's true key
+  (`openai_batch_id.notna()`) added to the receipts bullet, `record_count`'s completeness hole added to the dbt
+  bullet, and the "#305 PR open, NOT deployed" line corrected to merged and deployed.
+- `knowledge/data_catalog.md` § shopper_graph/openai_batch_submissions — the "~2.4 TB is not this pipeline's"
+  line corrected to the measured 4.2 GiB store; receipt-count-as-the-only-completeness-check, the guard key, and
+  the measured task timings added.
+- `knowledge/glossary.md` — three new rows (Input retention window, Cohort probe, Expired batch); Short page and
+  Zero-delete sweep updated to say the partial-page defect is fixed.
+- `knowledge/decisions/0009_storage_ownership_settled_by_byte_inventory.md` — Outcome section: the inventory
+  reported and the answer was ours; the decision was right and its premise was wrong.
+- `knowledge/decisions/0010_openai_input_retention_26h.md` — NEW.
+- `knowledge/memory/feedback_check_which_dbt_assertion_failed.md` — `record_count` PASSING proves nothing about
+  completeness; a test comparing two outputs of the same upstream can only prove consistency.
+- `knowledge/memory/reference_pr_gauntlet.md` — never hand-write `.git/pr_gauntlet_pass`; shopper_graph CI also
+  runs `isort` (`force_single_line`) and treats the repo's own `openai/` directory as first-party.
+- `knowledge/bq/external/targeted_signal.md` — the dt=2026-09-03 rebuild sizes and the open check that settles
+  whether the DS19 shortfall is upstream incompleteness.
+
 ## 8. Open Items / Follow-ups
 
-- **Backfill `dt=2026-08-27..09-01`, one day at a time** (§3 steps 4-5). All five partial partitions still
-  hold `was_submitted=False` receipts with live OpenAI batch ids, so each day's receipts must be deleted
-  AGAIN before its re-run or the double-submission guard trips. `dt=2026-09-01` has no receipts at all.
-- **Price 08-27 before committing to the remaining five** — §0 leaves open whether a recovered day is still
-  useful downstream.
+- **Backfill is SEVEN days, not five, one day at a time (restated 2026-09-04 evening).** `dt=2026-09-02`
+  is 46% fetched, not recovered (468 of 1,014 receipts downloaded), and `dt=2026-08-28`, `08-29`, `08-30`,
+  `08-31`, `09-01` are untouched. `dt=2026-08-27` was re-submitted in full on 2026-09-04 (1,261 receipts)
+  and needs its fetch. **The batch ids on the old partial receipts are NOT live** — 08-27's probed
+  expired=612 / completed=128 / in_progress=2 and even the completed ones 404 on
+  `files.content(output_file_id)`, so budget every remaining day as a full re-submit. Delete each day's
+  receipts first: the guard keys on `openai_batch_id.notna()`, not `was_submitted`, so a dead batch's input
+  file is otherwise never retried and the re-run silently leaves the day short. `dt=2026-09-01` has no
+  receipts at all.
+- **Probe before deleting any day's receipts.** Clear `batch_transition` on the fetch run whose
+  `data_interval_start` is `D+1`; it prints the `cohort dt=D:` status split and is non-destructive apart
+  from flipping `was_submitted=True` on progressed rows. It only examines rows where
+  `was_downloaded == False & was_submitted == False`, so its `n` is not the cohort size.
+- **Keep backfill fetch work out of the 09:00 UTC window.** `mntn_match_incrementals_fetch` has
+  `max_active_runs=1` (submit has 16, verified `GET /dags/{dag_id}`), so any backfill probe or fetch holds
+  the only slot and blocks the daily fetch unless it finishes first.
+- **Re-read the two DS19 partitions once the days are whole.** `targeted_signal/data_source_id=19/dt=2026-09-03`
+  rebuilt to 50.6 GB against ~70-72 GB normal and `targeted_signal_domain/dt=2026-09-03` to 36.4 GB against
+  ~44.5 GB. If they rise after the backfill, the shortfall was upstream incompleteness; if they stay put,
+  the rebuild has another cause. Not a settled finding either way.
 - `batch_test.test_product_categorization` will false-fail on every backfilled fetch day **on the
   `product_categorization__max_dt` assertion only** (wall-clock `current_date-2`). Mark it success only when
   `max_dt` is the sole failure. **Corrected 2026-09-04:** that day the failure was
@@ -315,6 +364,9 @@ successful run, so the race is real and routine, not theoretical. Second, the re
 wrong in kind, not degree: an input is spent once its batch is created, minutes after upload, while
 only outputs must outlive the next day's fetch. Inputs now expire at 12h and outputs stay at 48h,
 which frees a stalled day without any environment variable the pod cannot receive.
+**Superseded later the same day: 12h is below OpenAI's 24h completion window and failed 119 live
+batches; shopper_graph #310 raises the input default to 26h. See the next section and decision
+`knowledge/decisions/0010_openai_input_retention_26h.md`.**
 
 ### The dt=2026-09-02 repair, and what it says about the remaining gap
 

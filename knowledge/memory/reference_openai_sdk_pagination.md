@@ -1,11 +1,11 @@
 ---
 name: reference_openai_sdk_pagination
-description: "Two OpenAI files.list traps: (1) iterating a list response auto-fetches ALL pages and there is NO .auto_paging_iter() (Stripe idiom → AttributeError on SyncCursorPage, shopper_graph#297); (2) GET /v1/files caps limit at 10,000 and defaults to created_at desc, so an age-based cleanup sees only the newest window and frees NOTHING under churn — fix is order='asc' paging (shopper_graph#306); (3) a page SHORTER than the requested limit is NOT the last page, so `len(files) < PAGE: break` truncates the walk and the sweep acts on a list it never retrieved (2026-09-04)."
+description: "Two OpenAI files.list traps: (1) iterating a list response auto-fetches ALL pages and there is NO .auto_paging_iter() (Stripe idiom → AttributeError on SyncCursorPage, shopper_graph#297); (2) GET /v1/files caps limit at 10,000 and defaults to created_at desc, so an age-based cleanup sees only the newest window and frees NOTHING under churn — fix is order='asc' paging (shopper_graph#306); (3) a page SHORTER than the requested limit is NOT the last page, so `len(files) < PAGE: break` truncates the walk and the sweep acts on a list it never retrieved (fixed #308, 2026-09-04); (4) the `after` cursor file can be DELETED mid-listing by the other DAG sweeping on the same cron, and the 404 aborts the run (fixed #309). With all four fixed the store measured 129 files / 4.2 GiB, settling the 2.5 TB as our own backlog."
 metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [openai sdk pagination, openai python sdk, auto_paging_iter, SyncCursorPage, SyncCursorPage FileObject, client.files.list, files.list pagination, has_next_page, get_next_page, next_page_info, after cursor, AttributeError auto_paging_iter, list response auto fetch, cursor page, stripe idiom pagination, delete_all_storage_files, batch_cleanup crash, shopper_graph#297, shopper_graph#298, shopper_graph#299, shopper_graph#305, shopper_graph#306, openai file cleanup pagination, files.list order, order asc, created_at desc default, limit 10000 cap, newest 10000 files window, oldest-first cleanup, age-based cleanup order, Total number of files to delete 0, file storage quota 2.5TB, exceeded your file storage quota, openai file cleanup order defect, deploy_openai_dockerhub_gcp, AUDI-1321, quota wall resolved, first green submit since 08-28, 1132 of 1132 deleted, batch_submit succeeded 57 minutes, kill criterion never triggered, storage was ours, zero-delete alarm, STORAGE_ALARM_MIN_FILES, zero delete looks like quiet day, silent no-op observability, short page is not the last page, len files < PAGE break, after cursor empty page, Deleted 0 of 0 files having listed at least 28, 4622 seen, 416 files deleted by batch_fetch, partial listing, ALARM_MIN_FILES partial page, shopper_graph#307, shopper_graph#308, per-file bytes purpose inventory, 19bc1af, 2.4TB unaccounted, 40 MB per input file, 40.3 GB inputs per day, 46 GB results per day, 100 GB pipeline footprint, storage ownership challenged]
+keywords: [openai sdk pagination, openai python sdk, auto_paging_iter, SyncCursorPage, SyncCursorPage FileObject, client.files.list, files.list pagination, has_next_page, get_next_page, next_page_info, after cursor, AttributeError auto_paging_iter, list response auto fetch, cursor page, stripe idiom pagination, delete_all_storage_files, batch_cleanup crash, shopper_graph#297, shopper_graph#298, shopper_graph#299, shopper_graph#305, shopper_graph#306, openai file cleanup pagination, files.list order, order asc, created_at desc default, limit 10000 cap, newest 10000 files window, oldest-first cleanup, age-based cleanup order, Total number of files to delete 0, file storage quota 2.5TB, exceeded your file storage quota, openai file cleanup order defect, deploy_openai_dockerhub_gcp, AUDI-1321, quota wall resolved, first green submit since 08-28, 1132 of 1132 deleted, batch_submit succeeded 57 minutes, kill criterion never triggered, storage was ours, zero-delete alarm, STORAGE_ALARM_MIN_FILES, zero delete looks like quiet day, silent no-op observability, short page is not the last page, len files < PAGE break, after cursor empty page, Deleted 0 of 0 files having listed at least 28, 4622 seen, 416 files deleted by batch_fetch, partial listing, ALARM_MIN_FILES partial page, shopper_graph#307, shopper_graph#308, per-file bytes purpose inventory, 19bc1af, 2.4TB unaccounted, 40 MB per input file, 40.3 GB inputs per day, 46 GB results per day, 100 GB pipeline footprint, storage ownership challenged, storage ownership settled, 129 files 4.2 GiB, cursor deleted mid-listing, NotFoundError after cursor, 404 on after cursor, paging cursor race, shopper_graph#309, shopper_graph#310, 5527 deletable inputs, 193.4 GiB, OPENAI_FILE_MAX_AGE_HOURS 26h, input retention 26 hours, 12h retention failed batches, purpose=batch inventory]
 domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-09-04
@@ -59,9 +59,9 @@ pipeline for six days.
   never got past the upload. **AUDI-1321's kill criterion never triggered** ("if it still 400s the storage is not
   ours, escalate to Alyson for dashboard access") — deleting only the names our own sweep owns (`part-*` /
   `batch_*`) cleared the 2.5TB, so the storage WAS ours and the list-order defect was the entire cause. No other
-  producer was holding it. **Do not reopen the shared-account hypothesis without new evidence** — new evidence
-  ARRIVED 2026-09-04 (measured daily volumes leave ~2.4 TB unaccounted); read the OWNERSHIP section below before
-  relying on this verdict.
+  producer was holding it. **Do not reopen the shared-account hypothesis without new evidence.** It was reopened
+  2026-09-04 on measured daily volumes (~2.4 TB looked unaccounted) and CLOSED again the same evening by a
+  per-file byte inventory: 129 files / 4.2 GiB, of which 1.4 GiB is not ours. See the OWNERSHIP section below.
 - **Companion alarm (`shopper_graph#305`, merged 18:39 UTC + deployed 2026-09-03):** `delete_all_storage_files.py`
   now **raises** when every eligible delete fails, and when it frees **nothing** while at least
   `STORAGE_ALARM_MIN_FILES` (env, default **10,000**) files are still stored. Normal volume is a few hundred to
@@ -71,7 +71,8 @@ pipeline for six days.
   output has no observability, however green it looks.
 
 **TRAP 3 (AUDI-1321, 2026-09-04) — a SHORT PAGE IS NOT THE LAST PAGE.**
-Independent of traps 1 and 2 and still live in the shipped sweep.
+Independent of traps 1 and 2. **FIXED by `shopper_graph#308`, deployed 2026-09-04** (the walk now ends on an
+EMPTY page); the trap itself is the durable lesson.
 
 - `delete_all_storage_files.py` ends its walk on `if too_young or len(files) < PAGE: break`. `GET /v1/files` can
   return fewer than `limit` rows and still have more behind the cursor, so that loop stops early and the sweep
@@ -93,16 +94,46 @@ Independent of traps 1 and 2 and still live in the shipped sweep.
 - **Rule (same shape as trap 2):** a cleanup that acts on a truncated listing fails silently and looks green.
   Terminate a cursor walk on an EMPTY page, never on a short one.
 
-**OWNERSHIP OF THE 2.5TB — the 2026-09-03 verdict is CHALLENGED by 2026-09-04 sizing (appended, not overwritten).**
-The verdict above ("the storage WAS ours") was inferred from a single green submit after a full sweep. Measured
-sizes now argue the other way: one day of batch inputs is ~1,014 files x ~40 MB = **40.3 GB**, one day of results
-is **~46 GB**, so the whole pipeline at a 48h retention window holds only **~100 GB** against the 2.5 TB cap —
-which leaves **roughly 2.4 TB the pipeline does not account for**. Both readings stand: 09-03's is a live
-end-to-end test, 09-04's is arithmetic on measured GCS volumes; the reconciling hypothesis is that the sweep
-freed enough headroom for one submit without the account ever being mostly ours. **The discriminating check is
-`shopper_graph` PR #308**, which logs per-file `bytes` and `purpose` plus a total, and pages on an empty page —
-it names the holder directly instead of by inference. `batch_submit` dies on the FIRST 40 MB `files.create`, so
-it needs ~40 GB of headroom, not a clean account.
+**TRAP 4 (AUDI-1321, 2026-09-04) — THE `after` CURSOR FILE CAN BE DELETED WHILE YOU ARE STILL LISTING.**
+- Both `mntn_match_incrementals_submit` and `..._fetch` run `batch_cleanup` on `0 9 * * *`, so two sweeps
+  walk the same store concurrently. The other run deletes the file id our `after=` cursor names, the next
+  `files.list(after=<deleted id>)` raises **`NotFoundError` (404)**, and the exception aborted the WHOLE run.
+- **In prod it killed a run that had already enumerated 5,527 deletable inputs holding 193.4 GiB** — every
+  one of them re-listed from scratch the next cycle.
+- **Fix (`shopper_graph#309`, deployed 2026-09-04):** catch `NotFoundError` on the cursor fetch, log a
+  warning naming the cursor id, stop listing, and delete what was VALIDLY enumerated so far. A truncated
+  listing must never trip the quota alarm — its counts are partial, so the alarm is suppressed for that run.
+- **The warning fired on the very next successful run.** This race is ROUTINE, not theoretical: do not treat
+  a cursor 404 as flakiness worth one retry, treat it as the expected steady state of two concurrent sweeps.
+  Same family as the benign `Skipped file-xxx: 404 No such File object` during delete
+  ([[reference_mntn_matched_batch_pipeline]]), but this one is fatal rather than benign because it lands on
+  the LISTING, not on an individual delete.
+- **Rule:** any cursor walk over a store another process is mutating must treat a missing cursor as a normal
+  end-of-walk condition, and must mark its own results as partial so no downstream threshold reads them as a total.
+
+**OWNERSHIP OF THE 2.5TB — SETTLED 2026-09-04: it was OURS. The 09-03 verdict stands; the 09-04 sizing
+challenge is RESOLVED (kept as history, superseded as a claim).**
+Once #308 and #309 shipped, the sweep on submit `scheduled__2026-09-03T09:00` finally enumerated the whole
+store and logged it by bytes and purpose:
+
+    Listed 129 files holding 4.2 GiB, 0.2% of the 2.5TB project limit. This pipeline holds 2.8 GiB.
+       input  purpose=batch                80 files  2.8 GiB
+       other  purpose=batch                11 files  1.1 GiB
+       other  purpose=fine-tune            21 files  0.3 GiB
+       other  purpose=assistants            5 files  0.0 GiB
+       other  purpose=fine-tune-results    12 files  0.0 GiB
+
+- **Everything in the project that is NOT this pipeline totals 1.4 GiB.** There is no other large producer.
+- **The 2.5 TB was a multi-day backlog of our OWN `part-` batch inputs** that the short-page listing (trap 3)
+  could never reach: one run of the fixed sweep enumerated **5,527 deletable inputs holding 193.4 GiB**, aged
+  21.8h to 54.6h. The earlier "28 files" reading was a first page, never a count.
+- **AUDI-1321's §0 kill criterion never fired. No escalation to Alyson and no OpenAI dashboard access is
+  needed.** The "~2.4 TB unaccounted" arithmetic of 2026-09-04 morning was right about the STEADY-STATE
+  footprint (~100 GB at a 48h window) and wrong to infer a foreign holder from it — the gap was our own
+  un-swept history, which a steady-state number cannot see. **Lesson: a footprint computed from one normal
+  day says nothing about a store whose cleanup has been failing for a week.**
+- **`batch_submit` still dies on the FIRST ~40 MB `files.create`**, so a green submit proves "there was room
+  for one file", not "the store is clean". Read the inventory line, not the submit's exit code.
 
 **Provenance (INC-007 / AUDI-1042, 2026-07-30):** the OpenAI file-cleanup rewrite `#297` replaced the proven
 `for file in client.files.list():` with `client.files.list().auto_paging_iter()` → every `batch_cleanup`

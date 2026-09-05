@@ -1,11 +1,11 @@
 ---
 name: feedback_check_which_dbt_assertion_failed
-description: "A known false failure belongs to ONE dbt assertion, never to the task: test_product_categorization is spurious only when product_categorization__max_dt fails alone. Read which assertion failed before marking any dbt test success — on 2026-09-04 it was record_count, it was correct, and marking it green shipped a 408 MiB partition into keyword_ddp_reporting."
+description: "A known false failure belongs to ONE dbt assertion, never to the task: test_product_categorization is spurious only when product_categorization__max_dt fails alone. Read which assertion failed before marking any dbt test success — on 2026-09-04 it was record_count, it was correct, and marking it green shipped a 408 MiB partition into keyword_ddp_reporting. And record_count PASSING proves nothing about completeness: both sides are built from whatever was fetched, so a 46%-fetched day passes it."
 metadata:
   node_type: memory
   type: feedback
 doc_type: memory
-keywords: [mark dbt test success, which assertion failed, batch_test, test_product_categorization, product_categorization__max_dt, product_categorization__record_count, known false failure, false failure is per-assertion, dbt test triage, short partition shipped downstream, keyword_ddp_reporting, openai_batch_results_joined, 99 percent record count, mntn_matched_data_quality, 408 MiB partition, backfill dbt test, mark success footgun, AUDI-1321, IMP-016]
+keywords: [mark dbt test success, which assertion failed, batch_test, test_product_categorization, product_categorization__max_dt, product_categorization__record_count, known false failure, false failure is per-assertion, dbt test triage, short partition shipped downstream, keyword_ddp_reporting, openai_batch_results_joined, 99 percent record count, mntn_matched_data_quality, 408 MiB partition, backfill dbt test, mark success footgun, AUDI-1321, IMP-016, record_count passing proves nothing, internal consistency not completeness, half-fetched day passes, receipt count completeness check, 46 percent fetched, openai_batch_results 20.3 GB]
 domain: [workflow, infra]
 lifecycle: active
 last_verified: 2026-09-04
@@ -17,6 +17,13 @@ last_verified: 2026-09-04
 **How to apply:**
 - Open the failing test's output and read the assertion NAME before any mark-success. In `batch_test` the log names each test; `max_dt` failing **alone**, with `record_count` / `dsc_id__{length,not_null,values}` / `product_category_and_key` green, is the only shape that licenses mark-success.
 - `record_count` failing means the upstream write is short. Do not mark it; find the missing data.
+- **`record_count` PASSING is not evidence the day is complete (added 2026-09-04 evening).** It compares
+  `product_categorization` against `openai_batch_results_joined` at the same `dt`, and BOTH are built from whatever
+  was fetched, so a half-fetched day is internally consistent and passes cleanly. `dt=2026-09-02` passed it at
+  **46% fetched** (468 of 1,014 receipts downloaded; `openai_batch_results` 20.3 GB against 46.2 GB normal), and the
+  `product_categorization` rebuild that "repaired" it was correct relative to a fraction of the day. **A test that
+  compares two outputs of the same upstream can only prove consistency; completeness needs an INDEPENDENT count** —
+  here the receipt count in `openai_batch_submissions/dt=`, never a sibling table.
 - Generalize: any runbook line of the form "X always false-fails, mark it success" must name the assertion, the comparison it makes, and the condition under which it is spurious. A line that names only the task is a footgun, because the task fails for real reasons too.
 - Same class as [[feedback_validated_is_not_correct]] and [[feedback_hold_evidenced_verdict]]: a green mark is a claim about the data, and a claim needs its evidence checked.
 

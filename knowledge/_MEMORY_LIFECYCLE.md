@@ -210,7 +210,6 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | design-ti-999-3p-scoring-at-hhst | project | 2026-08-28 | [doc](memory/design_ti_999_3p_scoring_at_hhst.md) |
 | reference_airflow_log_puller | reference | 2026-08-28 | [doc](memory/reference_airflow_log_puller.md) |
 | feedback_auto_capture_and_ticket_flag | feedback | 2026-08-31 | [doc](memory/feedback_auto_capture_and_ticket_flag.md) |
-| reference_pr_gauntlet | reference | 2026-08-31 | [doc](memory/reference_pr_gauntlet.md) |
 | databricks | reference | 2026-09-01 | [doc](memory/reference_databricks.md) |
 | feedback_gauntlet_findings_not_fixes | feedback | 2026-09-01 | [doc](memory/feedback_gauntlet_findings_not_fixes.md) |
 | reference_astro_metrics_relay | reference | 2026-09-01 | [doc](memory/reference_astro_metrics_relay.md) |
@@ -259,3 +258,4 @@ Active memories, oldest-verified first — the refresh/dedup work-queue. (`healt
 | reference_geo_vs_ip_holdout_power | reference | 2026-09-04 | [doc](memory/reference_geo_vs_ip_holdout_power.md) |
 | reference_mntn_matched_batch_pipeline | reference | 2026-09-04 | [doc](memory/reference_mntn_matched_batch_pipeline.md) |
 | reference_openai_sdk_pagination | reference | 2026-09-04 | [doc](memory/reference_openai_sdk_pagination.md) |
+| reference_pr_gauntlet | reference | 2026-09-04 | [doc](memory/reference_pr_gauntlet.md) |

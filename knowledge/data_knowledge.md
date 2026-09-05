@@ -1812,7 +1812,10 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   standing "known false failure" applies to **`product_categorization__max_dt` alone** (wall-clock `current_date-2` vs the backfilled
   `dt`). On 2026-09-04 the failure was **`product_categorization__record_count`** — row count >= 99% of `openai_batch_results_joined` at
   the same `dt` — and it was correct: a mark-success shipped a **408 MiB** partition, `keyword_ddp_reporting` consumed it, and two
-  downstream partitions had to be backed up, deleted and rebuilt. Memory `feedback_check_which_dbt_assertion_failed`.
+  downstream partitions had to be backed up, deleted and rebuilt. **But `record_count` proves internal consistency, NEVER completeness
+  (2026-09-04 evening):** both sides are built from whatever was fetched, so a half-fetched day passes cleanly — `dt=2026-09-02` passed it
+  at **46% fetched** (468 of 1,014 receipts downloaded, `openai_batch_results` 20.3 GB vs 46.2 GB normal). **Check a backfilled day's
+  completeness against the RECEIPT COUNT, never against a sibling table.** Memory `feedback_check_which_dbt_assertion_failed`.
 - **`keyword_ddp_reporting` writes DS19 only, and its run name does not name its partition (AUDI-1321, 2026-09-04).** The DAG uses
   `run_date = "{{ ds }}"`, so the run `manual__consume_dt_2026-09-02` actually wrote `dt=2026-09-03`. `write_targeted_signal_ds_19` →
   `gs://mntn-data-archive-prod/signals/targeted_signal/data_source_id=19/dt=D/` (normal ~70-72 GB);
@@ -1833,7 +1836,30 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   nothing under churn (fixed by `order="asc"`, #306, 2026-09-03); and **a page SHORTER than the requested limit is NOT the last page**,
   so `if len(files) < PAGE: break` truncates the walk — on 2026-09-04 the sweep logged `Deleted 0 of 0 files, having listed at least 28`
   four minutes before `batch_fetch` deleted 416 files it had never listed. Page with `after=files[-1].id` until the API returns an EMPTY
-  page. Detail: memory `reference_openai_sdk_pagination` + `reference_mntn_matched_batch_pipeline`.
+  page (fixed #308, deployed 2026-09-04). **A fourth trap: the `after` cursor file can be DELETED mid-listing** — both DAGs sweep on
+  `0 9 * * *`, so the other run deletes the file our cursor names and the `NotFoundError` aborted the whole run, once after it had already
+  enumerated 5,527 deletable inputs holding 193.4 GiB. #309 catches it, warns naming the cursor, deletes what was validly enumerated, and
+  suppresses the quota alarm for that run because a truncated listing's counts are partial; the warning fired on the very next successful
+  run, so the race is routine. Detail: memory `reference_openai_sdk_pagination` + `reference_mntn_matched_batch_pipeline`.
+- **The 2.5 TB was OURS, settled by byte inventory (AUDI-1321, 2026-09-04 evening).** With #308 and #309 deployed the sweep enumerated the
+  whole project store: **129 files holding 4.2 GiB, 0.2% of the cap**, this pipeline 2.8 GiB and everything else **1.4 GiB** (fine-tune 0.3,
+  other `purpose=batch` 1.1, assistants and fine-tune-results ~0). It was a multi-day backlog of our own `part-` inputs that the short-page
+  listing could never reach, so **AUDI-1321's kill criterion never fired and no OpenAI dashboard access is needed**. The morning's
+  "~2.4 TB is not ours" arithmetic was a correct steady-state footprint and a WRONG inference: **a one-normal-day footprint cannot see a
+  store whose cleanup has been failing for a week.**
+- **Never set the OpenAI INPUT retention window below 26h (AUDI-1321, 2026-09-04).** OpenAI's batch `completion_window` is **24h**, so an
+  input file must outlive it. With inputs briefly expiring at 12h, `batch_transition` on `dt=2026-09-02`'s 119 untransitioned receipts
+  returned **`failed=119, expired=0`** right after the 18:00 sweep deleted their inputs at the 12h mark; the 468 already-completed batches
+  were untouched. `shopper_graph#310` sets the default to **26h** (outputs stay 48h) and is deployed. Generalizes: a retention window on an
+  async job's INPUT must exceed that job's own completion window, with headroom.
+- **A lapsed OpenAI batch is unrecoverable, and so is a completed one whose output file was swept (AUDI-1321, 2026-09-04).**
+  `dt=2026-08-27`'s 742 batches probed **expired=612, completed=128, in_progress=2**; harvesting the 130 still failed because `batch_fetch`
+  **404s on `files.content(output_file_id)`**. All 742 were re-submitted. Probe an old cohort, expect nothing, budget a full re-submit.
+- **Replay ONE day at a time, and keep backfill fetch work out of the 09:00 UTC window (AUDI-1321, 2026-09-04).** On 2026-09-03 a prior
+  session cleared all five blocked days' submit runs in parallel between 04:15 and 06:13; five days of inputs at ~40 GB each exhausted the
+  2.5 TB and **3,429 batches** created before the wall sat unfetched until they lapsed. `mntn_match_incrementals_fetch` also has
+  **`max_active_runs=1`** (submit has 16, verified `GET /dags/{dag_id}`), so any backfill probe or fetch occupies the single slot and blocks
+  the daily fetch unless it finishes before 09:00 UTC.
 - **`data_source_id` does NOT multiply OpenAI cost.** Dedup is on `composite_key` (the query-stripped URL); a URL is
   sent to OpenAI **once** regardless of how many vendors report it. `data_source_id` is retained only for **billing
   attribution** to the source vendor. (augmentor_log DS30 duplicate URLs are absorbed by the anti-join.)
@@ -1849,12 +1875,15 @@ Code: `SteelHouse/shopper_graph` dbt (`dbt/models/mntn_matched/`) + an `openai/`
   510, 08-31 733 objects (vs ~1,100 originally; alive dt=08-26 untouched at 1113); the dt=09-01 prefix absent. Seen from the AUDI-1279
   side it looked like an unknown external re-submitter; it was our own recovery. Consequences: (1) a per-`dt` object count is not a cohort
   size, compare against `openai_batch_input_formatted/dt=` or the original count; (2) a partial partition trips `get_files_without_batch`'s
-  double-submission guard, so re-running a day needs its receipts deleted AGAIN; (3) `pd.read_parquet` on an absent prefix raises
+  double-submission guard, so re-running a day needs its receipts deleted AGAIN — **the guard keys on
+  `openai_batch_id.notna()`, NOT on `was_submitted`** (`openai/openai_wrapper/batch_submitter.py` builds `submitted_file_names` from
+  `batch_submissions_df.query("openai_batch_id.notna()")`, read from source 2026-09-04), so a receipt naming an EXPIRED or FAILED batch
+  counts as already submitted and its input file is never retried, leaving a partially recovered day silently short; (3) `pd.read_parquet` on an absent prefix raises
   `FileNotFoundError` in `get_batch_ids` (shopper_graph#305 makes the new `assert_cohort_alive` return on it, `get_batch_ids` still raises).
   Not the bucket lifecycle (rules cover `temp/ tmp/ ...log/ ipdsc*` only); nothing in `openai/` deletes receipts. Record:
   `tickets/audi_1191_airflow_spark_debugger/outputs/audi_1191_next_actions_2026_08_31.md` § 2026-09-03 06:50 UTC; GCS re-listed
   2026-09-03 06:45-06:51Z (AUDI-1279 §4.2). Schema of the receipts: `data_catalog.md` § shopper_graph/openai_batch_submissions.
-- **Observability after shopper_graph#305 (AUDI-1279; PR open 2026-09-03, NOT deployed):** `batch_transition` and `batch_fetch` print
+- **Observability after shopper_graph#305 (AUDI-1279; MERGED 2026-09-03 18:39 UTC, commit `85855ce`, DEPLOYED same day):** `batch_transition` and `batch_fetch` print
   one line per receipt `batch=<id> file=<s3_filename> status=<status> submitted_utc=<t> age_h=<x.x> counts=<completed>/<failed>/<total>
   error=<code>: <message>` plus a `cohort dt=<D>: n=.. in_progress=.. ... retrieve_error=.. flagged_now=..` summary, and `batch_fetch`
   exits 1 with `DeadCohortError: dead cohort dt=<D>: 0 of <N> batches progressed <age>h after submit (threshold 12.0h); first error: ...`

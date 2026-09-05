@@ -1,11 +1,11 @@
 ---
 name: reference_mntn_matched_batch_pipeline
-description: "mntn_match_incrementals_{submit,fetch} DAG mechanics: task chains, the cross-DAG contract (a GCS submissions file, NOT an Airflow sensor), backfill order, the identical batch_cleanup bookend, and how image_pull_policy=Always makes a task's image depend on WHEN its pod ran vs deploy time."
+description: "mntn_match_incrementals_{submit,fetch} DAG mechanics: task chains, the cross-DAG contract (a GCS submissions file, NOT an Airflow sensor), backfill order one day at a time, the identical batch_cleanup bookend, the OpenAI input retention floor of 26h (12h fails live batches), why a lapsed batch is unrecoverable, and how image_pull_policy=Always makes a task's image depend on WHEN its pod ran vs deploy time."
 metadata:
   node_type: memory
   type: reference
 doc_type: memory
-keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp_reporting, keyword_ddp not blocked by batch_test, wait_for_product_categorization, ExternalTaskSensor product_categorization, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49, partial receipts partition, rerun submits quota failed, receipts rewritten new batch ids, object count not cohort size, AUDI-1279, shopper_graph#305, DeadCohortError, dead cohort alarm, batch_status.py, DEAD_COHORT_MIN_AGE_HOURS, retrieve_error, per-batch status line, cohort summary line, assert_cohort_alive, retrieve_batch, PYTHONUNBUFFERED, Batch.status literal, request_counts, openai 3.7.0, pandas 3 str dtype, unpinned image, monitor-emr, JobTeamConfig.ML, severity 5 no pagerduty, shopper_graph#306, order asc cleanup, files.list 10000 cap, cleanup deletes nothing, 404 No such File object race, cleanup race two dags, Total number of files to delete 0, quota root cause list order, delete receipts again partial, AUDI-1321, quota wall closed, first green submit since 08-28, batch_submit 57 minutes, 1132 of 1132 deleted, storage was ours, kill criterion never triggered, zero-delete alarm, STORAGE_ALARM_MIN_FILES, shopper_graph 305 merged deployed, 85855ce, shopper_graph#307, shopper_graph#308, per-file bytes purpose inventory, openai_batch_input_formatted 1014 files, 40 MB per input file, 40.3 GB inputs, 46 GB results, 100 GB footprint, 2.4 TB unaccounted, 40 GB headroom, short page break, listed at least 28, ALARM_MIN_FILES partial page, STORAGE_ALARM_MIN_FILES never set, OPENAI_FILE_MAX_AGE_HOURS inert, MntnKubePodOperator env_vars, astro deployment variable not in pod, product_categorization python model, dbt python model append, incremental_strategy append, FileExistsError partition, delete partition before re-running, 408 MiB partition, product_categorization__record_count, keyword_ddp_reporting run_date ds, manual__consume_dt, write_targeted_signal_ds_19, write_targeted_signal_ds_19_domain, write_targeted_signal_ds_13, targeted_signal 70 GB, targeted_signal_domain 44.5 GB, ds_19 ds_19_domain clearing race, sequential task chain]
+keywords: [was_submitted flag, dead cohort, dead-cohort recovery, batch_fetcher status completed, get_files_without_batch, inconsistent state guard, double-submission guard, orphan formatted files, openai batch dashboard access, submit run_date logical date, openai_batch_input_formatted, delete submissions receipts, resubmission procedure, mntn_match_incrementals_submit, mntn_match_incrementals_fetch, batch_submit, batch_transition, batch_fetch, batch_prep, batch_validate, batch_post, batch_cleanup, batch_cleanup_1, batch_cleanup_2, batch_test, submit_batch.py, transition_batch.py, fetch_results.py, batch_transitioner, delete_all_storage_files, openai_batch_submissions, cross-dag contract, gcs submissions file, backfill order, mntn matched batch pipeline, DS19 keyword pipeline, openai batch runner, OPEN_AI_BATCH, SHOPPER_GRAPH, image_pull_policy Always, machine_learning dags, dt yesterday contract, FileNotFoundError submissions, openai file storage quota, 2.5TB quota, 30-day file expiry, openai auto-expire files, storage economics, 75 GiB per day, intermittent quota failure, quota fails intermittently, delete_all_storage_files economics, batch_test dbt tests, product_categorization__max_dt, max_dt freshness test, current_date backfill skew, dbt test backfill footgun, mntn_matched_data_quality, post_batch dbt tests, mark test success backfill, keyword_ddp_reporting, keyword_ddp not blocked by batch_test, wait_for_product_categorization, ExternalTaskSensor product_categorization, OSError errno 99 email red herring, IMP-016, IMP-017, alyson dashboard access, one identical error message, ryan kleck openai org reauthentication, org-side outage, org-ldKlX0Pr81MhoY05W9t6oB1V, cannot find file organization access, okta enterprise sso login, audit logging api.admin, AUDI-1301, dedicated openai project, batch_requests manual test batch, usage tier 5, six-day dead cohort, recovery executed 2026-09-02, batch_6a9843249bcc8190bb3b7f6eccedab49, partial receipts partition, rerun submits quota failed, receipts rewritten new batch ids, object count not cohort size, AUDI-1279, shopper_graph#305, DeadCohortError, dead cohort alarm, batch_status.py, DEAD_COHORT_MIN_AGE_HOURS, retrieve_error, per-batch status line, cohort summary line, assert_cohort_alive, retrieve_batch, PYTHONUNBUFFERED, Batch.status literal, request_counts, openai 3.7.0, pandas 3 str dtype, unpinned image, monitor-emr, JobTeamConfig.ML, severity 5 no pagerduty, shopper_graph#306, order asc cleanup, files.list 10000 cap, cleanup deletes nothing, 404 No such File object race, cleanup race two dags, Total number of files to delete 0, quota root cause list order, delete receipts again partial, AUDI-1321, quota wall closed, first green submit since 08-28, batch_submit 57 minutes, 1132 of 1132 deleted, storage was ours, kill criterion never triggered, zero-delete alarm, STORAGE_ALARM_MIN_FILES, shopper_graph 305 merged deployed, 85855ce, shopper_graph#307, shopper_graph#308, per-file bytes purpose inventory, openai_batch_input_formatted 1014 files, 40 MB per input file, 40.3 GB inputs, 46 GB results, 100 GB footprint, 2.4 TB unaccounted, 40 GB headroom, short page break, listed at least 28, ALARM_MIN_FILES partial page, STORAGE_ALARM_MIN_FILES never set, OPENAI_FILE_MAX_AGE_HOURS inert, MntnKubePodOperator env_vars, astro deployment variable not in pod, product_categorization python model, dbt python model append, incremental_strategy append, FileExistsError partition, delete partition before re-running, 408 MiB partition, product_categorization__record_count, keyword_ddp_reporting run_date ds, manual__consume_dt, write_targeted_signal_ds_19, write_targeted_signal_ds_19_domain, write_targeted_signal_ds_13, targeted_signal 70 GB, targeted_signal_domain 44.5 GB, ds_19 ds_19_domain clearing race, sequential task chain, shopper_graph#309, shopper_graph#310, OPENAI_FILE_MAX_AGE_HOURS 26h, input retention window, 12h retention fails batches, 24h completion window, batch_transition failed=119, expired batch unrecoverable, files.content 404 output swept, cohort probe recipe, cohort dt line, max_active_runs 1 fetch, max_active_runs 16 submit, backfill outside 09:00 window, one day at a time backfill, parallel replay caused the ceiling, 3429 batches lapsed, 46 percent fetched, receipt count completeness check, record_count internal consistency only, batch_submit 84 minutes, product_categorization 31 minutes, write_targeted_signal_ds_19 1.7 hours, storage ownership settled, 129 files 4.2 GiB, 5527 deletable inputs 193.4 GiB]
 domain: [repos, infra]
 lifecycle: active
 last_verified: 2026-09-04
@@ -52,14 +52,27 @@ is therefore the ONLY visibility:
   remain the only AUTOMATED, key-free visibility; human confirmation now exists via Alyson.
 
 ## Dead-cohort recovery procedure (executed 2026-08-29, Matt Brorby approved in #alerts-tpa-pipeline)
+**Step 0, added 2026-09-04: PROBE before deleting anything** (the receipts are not empty rows — every one carries a
+real, unique batch id, so a blind delete can discard recoverable work). Clear `batch_transition` on the fetch run
+whose `data_interval_start` is `D+1`; it polls every receipt and prints the `cohort dt=D:` status split. Recipe and
+its blind spot in the 2026-09-04 (evening) section below.
 1. Delete `gs://mntn-data-archive-prod/shopper_graph/openai_batch_submissions/dt=<D>/` — receipts
-   only; the inputs in `openai_batch_input_formatted/dt=<D>` survive.
+   only; the inputs in `openai_batch_input_formatted/dt=<D>` survive. **The delete is mandatory even when the
+   receipts look "already submitted": the double-submission guard keys on `openai_batch_id.notna()`, not on
+   `was_submitted`, so a receipt naming a DEAD batch makes its input file invisible to the re-run.**
 2. Clear submit run logical `<D>` from `batch_cleanup_1` WITH downstream.
 3. Wait up to 24h for the new batches to complete.
 4. Clear fetch logical `<D+1>` from `batch_transition`.
 5. Clear `keyword_ddp_reporting` `wait_for_product_categorization`.
 
 ## `get_files_without_batch` "Inconsistent state" = a double-submission guard, not flakiness
+**The guard keys on `openai_batch_id.notna()`, NOT on `was_submitted` (read from source 2026-09-04, AUDI-1321).**
+`openai/openai_wrapper/batch_submitter.py` builds `submitted_file_names` from
+`batch_submissions_df.query("openai_batch_id.notna()")`, so a receipt naming an **expired or failed** batch counts as
+"already submitted" and its input file is never retried. Re-running submit on a partially recovered day therefore
+silently leaves it short, with no error. **The receipts must be DELETED first** — that is why every recovery recipe
+starts there. (The AUDI-1321 handoff gave the right step for the wrong reason: it said the rows point at batches that
+died before creation, but every receipt carries a real, unique batch id.)
 `ValueError: Inconsistent state between openai_batch_submissions and openai_batch_input_formatted`
 guards against double-submitting after a PARTIAL/killed try. A later try that fails in <3 min hit the
 GUARD, not the work. 2026-08-28 case: try 1 was killed by k8s MID-PREP (pod deleted while writing
@@ -117,6 +130,12 @@ and tips over on heavier days → the `client.files.create` **`400` fails interm
 self-clears the next as old files expire). A WORKING 48h cleanup holds only ~150 GiB. **Diagnostic tell:**
 intermittent quota `400`s + storage pinned near 2.5 TB ⇒ the cleanup isn't deleting (a code bug), NOT that
 daily volume is huge. (INC-007 / AUDI-1042; the abort/regression bugs in [[reference_openai_sdk_pagination]].)
+**CONFIRMED 2026-09-04 (AUDI-1321), and the corollary matters:** with a sweep that can finally enumerate the
+whole store the project holds **129 files / 4.2 GiB, 0.2% of the cap**, of which only 1.4 GiB is not this
+pipeline's. So the 2.5 TB really was our own un-swept backlog. **A steady-state daily footprint (~100 GB at a
+48h window) cannot be used to infer a foreign holder** — that arithmetic said "~2.4 TB is not ours" on the
+morning of 2026-09-04 and was wrong, because the missing mass was our own history the broken listing could
+not see. Measure the store; do not extrapolate one normal day.
 
 - **UPDATE 2026-09-03 (AUDI-1191; appended, the expiry-plateau account above is INCOMPLETE, not wrong).** The
   30-day expiry explains why the quota failed INTERMITTENTLY; it does not explain the six-day PERMANENT wall.
@@ -255,13 +274,15 @@ The blocker every section above defers to ("no further submit clears until OpenA
 set, the storage is not ours — escalate to Alyson for OpenAI dashboard access." The sweep provably deleted its full set and the
 submit went green on the same run, so **the storage WAS ours and the list-order defect accounted for the entire outage**.
 Deleting only the names our own sweep touches (`part-*` / `batch_*`) cleared the 2.5TB, which also confirms no other producer was
-holding it. Do not reopen the shared-account hypothesis without new evidence. **NEW EVIDENCE ARRIVED 2026-09-04 and this
-verdict is now CHALLENGED, not retracted** — measured daily volumes put the whole pipeline at ~100 GB under a 48h window, leaving
-~2.4 TB of the 2.5 TB cap unaccounted for. Both readings stand; the 2026-09-04 section below carries the reconciliation and the check.
+holding it. Do not reopen the shared-account hypothesis without new evidence. It WAS reopened on 2026-09-04 morning (measured daily
+volumes put the pipeline at ~100 GB under a 48h window, leaving ~2.4 TB apparently unaccounted) and **CLOSED again the same
+evening by a per-file byte inventory: 129 files / 4.2 GiB, 1.4 GiB of it not ours.** This verdict STANDS. The 2026-09-04
+sections below carry the challenge and its resolution in order.
 
-**Still open:** backfill `dt=2026-08-27..09-01` one day at a time per the per-day order above; all five partial partitions still
-hold `was_submitted=False` receipts with LIVE batch ids, so each day's receipts must be deleted AGAIN before its re-run or the
-double-submission guard trips. `dt=2026-09-01` has no receipts at all. Ticket:
+**Still open (restated 2026-09-04 evening — the batch ids on those receipts are NOT live any more):** backfill
+`dt=2026-08-27..09-02`, one day at a time. Each partial partition's receipts must be deleted before its re-run or the
+double-submission guard skips the files, and the batches those receipts name have LAPSED (see the 2026-09-04 evening section).
+`dt=2026-09-01` has no receipts at all; `dt=2026-09-02` is 46% fetched, not recovered. Ticket:
 `tickets/audi_1321_openai_storage_quota_unblock/summary.md`. Trap detail: [[reference_openai_sdk_pagination]].
 
 **Manual fetch runs: `dt read = data_interval_start - 1 day`, and `run_after = data_interval_end`
@@ -285,9 +306,10 @@ partition immediately, POST with explicit `data_interval_start` (the dt you want
 | categorization | `product_categorization/dt=D/` | **~4.0-4.3 GB across ~50 parquet files** |
 
 - **Whole-pipeline footprint at a 48h retention window ≈ 100 GB against OpenAI's 2.5 TB per-project file cap.**
-  That leaves **~2.4 TB the pipeline does not account for** — the 2026-09-03 "the storage was ours" verdict is
-  challenged on this arithmetic, not overturned (both readings kept above). `shopper_graph` **PR #308** adds
-  per-file `bytes` + `purpose` inventory logging plus a total, which names the holder directly.
+  At the time this read as **~2.4 TB the pipeline does not account for**, which challenged the 2026-09-03 "the
+  storage was ours" verdict. **RESOLVED the same evening and the inference was WRONG** — `shopper_graph` #308's
+  inventory measured the whole store at 129 files / 4.2 GiB. The gap was our own multi-day `part-` backlog that
+  the short-page listing could not reach, not a foreign holder. See the 2026-09-04 (evening) section below.
 - **`batch_submit` dies on the FIRST ~40 MB `files.create`, so it needs ~40 GB of headroom, not a clean account.**
   Do not read a green submit as "storage is fine"; read it as "there was room for one file".
 - **The sweep still under-enumerates:** `delete_all_storage_files.py` breaks its walk on a page shorter than
@@ -327,3 +349,58 @@ cleared. Normal day ~4.0-4.3 GB across ~50 parquet files, so a partition materia
   together RACES them**, because `ds_19_domain`'s direct upstream `ds_13` stays green and does not hold it back.
   **Clear `ds_19`, wait for it, THEN clear `ds_19_domain`.**
 
+## 2026-09-04 (evening) — AUDI-1321: ownership SETTLED, and the four rules that came out of the recovery
+
+**The store was ours.** With `#308` (page to an empty page + per-file byte/purpose inventory) and `#309` (survive a
+deleted cursor) deployed, the sweep on submit `scheduled__2026-09-03T09:00` listed **129 files holding 4.2 GiB, 0.2%
+of the 2.5 TB cap**; this pipeline held 2.8 GiB and everything else totalled **1.4 GiB** (fine-tune 0.3, other
+`purpose=batch` 1.1, assistants ~0, fine-tune-results ~0). One earlier run of the fixed sweep enumerated **5,527
+deletable inputs holding 193.4 GiB** aged 21.8-54.6h — a multi-day backlog of our own `part-` inputs the short-page
+listing could never reach. **§0's kill criterion never fired; no escalation and no OpenAI dashboard access needed.**
+`batch_submit` for `dt=2026-09-03` then ran 18:01:52 → 19:24:29 UTC and wrote **1,004 receipts**.
+
+**RULE 1 — never set the OpenAI input retention window below 26h. A 12h window FAILS LIVE BATCHES.**
+OpenAI's `completion_window` is **24h**, so an input file must outlive it. When inputs were briefly set to expire at
+12h, `batch_transition` on `dt=2026-09-02`'s 119 untransitioned receipts returned **`failed=119, expired=0`** —
+immediately after the 2026-09-04 18:00 sweep deleted their input files at the 12h mark. The 468 already-completed
+batches were untouched, which is the tell: only batches still holding their input die. Without the fix the
+2026-09-05 09:00 sweep would have deleted `dt=2026-09-03`'s inputs at 07:24 and failed all 1,004 the same way.
+**`shopper_graph#310` raises the default to 26h and is deployed;** outputs stay at 48h. Generalizes: any retention
+window on an async job's INPUT must exceed that job's own completion window, with headroom.
+
+**RULE 2 — a lapsed batch is unrecoverable, and so is a completed one whose output file was swept.**
+`dt=2026-08-27`'s 742 batches (created 2026-09-03 04:53-05:41) probed as **expired=612, completed=128,
+in_progress=2**. Harvesting the 130 still failed: `batch_fetch` **404s on `files.content(output_file_id)`** because
+the output file is gone from OpenAI. All 742 had to be re-submitted. Expect the same shape for 08-28 (791), 08-29
+(653), 08-30 (510), 08-31 (733); 09-01 has no receipts at all. **Do not plan a recovery around harvesting an old
+cohort** — probe it, expect nothing, and budget a full re-submit.
+
+**RULE 3 — replay ONE day at a time. Parallel replay is what caused the outage's severity.**
+On 2026-09-03 between 04:15 and 06:13 a prior session cleared all five blocked days' submit runs **in parallel**.
+Five days of inputs at ~40 GB each exhausted the 2.5 TB, and every batch created before the wall then sat unfetched
+until it lapsed — **3,429 batches across the five days**. This is a hard operational rule, not a preference.
+
+**RULE 4 — `mntn_match_incrementals_fetch` has `max_active_runs=1` (submit has 16), so backfill fetch work BLOCKS
+the daily fetch.** Verified via `GET /dags/{dag_id}`. Any backfill probe or fetch leaves that one slot occupied, so
+it must FINISH before the 09:00 UTC daily slot. Schedule backfill fetch work outside the 09:00 window. Submit has no
+such constraint, but Rule 3 still caps it at one day.
+
+**`product_categorization__record_count` cannot detect an incomplete day.** It asserts `product_categorization` >=
+99% of `openai_batch_results_joined` at the same `dt`, and BOTH are built from whatever was fetched, so a
+half-fetched day passes cleanly. `dt=2026-09-02` passed it while only **46% fetched** (468 of 1,014 receipts
+downloaded; `openai_batch_results` 20.3 GB against 46.2 GB normal). The test proves internal consistency, never
+completeness. **Completeness is checked against the RECEIPT COUNT, never against a sibling table.** This corrects
+the earlier reading that 09-02 was repaired: its `product_categorization` rebuild was correct relative to what had
+been fetched and is still short of the real day. See [[feedback_check_which_dbt_assertion_failed]].
+
+**Batch-cohort probe recipe (non-destructive, use it before touching any day's receipts).**
+Clear `batch_transition` on the fetch run whose `data_interval_start` is `D+1` (that run reads `dt=D`). It polls
+every receipt's `openai_batch_id` and prints one summary line:
+`cohort dt=D: n=.. in_progress=.. finalizing=.. completed=.. validating=.. failed=.. expired=.. cancelling=..
+cancelled=.. retrieve_error=.. other=.. flagged_now=..`. The only mutation is flipping `was_submitted=True` on rows
+that progressed. **Blind spot: it only examines rows where `was_downloaded == False & was_submitted == False`**, so
+rows already transitioned are invisible to it and `n` is not the cohort size — compare against the receipt count.
+
+**Measured task timings (2026-09-04):** `batch_submit` **~84 min for 1,261 files**, **~82 min for 1,004** (about
+1h20m, so budget a day's re-submit at ~1.5h). `write_targeted_signal_ds_19` **1.7-1.8h** on a normal day.
+`product_categorization` **~31 min**.
