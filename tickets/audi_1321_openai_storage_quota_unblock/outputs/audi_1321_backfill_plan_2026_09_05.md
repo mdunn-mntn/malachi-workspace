@@ -207,3 +207,37 @@ Measuring it needs the GCS credential repaired first, per the caveat above.
 
 `batch_fetch` for dt=2026-08-27 was re-cleared at 13:13 UTC, cohort age 13.3h, with the fetch slot
 free after the daily run finished.
+
+## Update 2026-09-05 14:40 UTC — `batch_fetch` alone is not enough after a re-submit
+
+The 13:13 retry ran with the cohort fully ready and still downloaded nothing:
+
+```
+cohort dt=2026-08-27: n=1261 in_progress=0 finalizing=0 completed=1261
+                      validating=0 failed=0 expired=0 retrieve_error=0
+```
+
+**The gate is not batch completion. It is the `was_submitted` flag on the receipts.** Reading the
+source settles it:
+
+- `fetch_results.py` calls `get_batch_ids()`, which is
+  `read_parquet(openai_batch_submissions/dt=<yesterday>).query("was_downloaded == False & was_submitted == True")`.
+  A fresh submit writes `was_submitted = False`, so that query returns nothing and the download loop
+  never executes.
+- `assert_cohort_alive()` returns early unless **no** receipt has `was_submitted` set. The cohort
+  line is therefore proof that every receipt is still `False`, which is exactly the state in which
+  nothing will be downloaded. The line that looks like progress is the symptom.
+- `batch_transitioner.transition_to_in_progress()` is what flips it: it selects
+  `was_downloaded == False & was_submitted == False` and writes `was_submitted = True` for every
+  batch whose status is in `PROGRESSED_STATUSES`.
+
+So `batch_transition` is a required step after a re-submit, not just the probe the recipe describes.
+On this run it last succeeded at 2026-09-04 20:54, three hours **before** the submit finished at
+23:54, so it had nothing to flag and the two later `batch_fetch` clears could not have worked.
+
+**Corrects Step 1 above and the recipe in `summary.md`.** After a re-submit, clear
+`batch_transition` **and** `batch_fetch`, in that order, and still without downstream. The
+"clear `batch_fetch` alone" rule only applies to a day whose receipts are already transitioned.
+
+Cleared both at 14:40 UTC. Transition is about 6-8 minutes for this cohort size and the download
+about 90 minutes, judging by dt=09-03's 87.
