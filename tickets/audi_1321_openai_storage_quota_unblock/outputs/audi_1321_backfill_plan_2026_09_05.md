@@ -134,3 +134,28 @@ in `mntn_match_incrementals_submit`, `mntn_match_incrementals_fetch`, or `keywor
 naming the failed tasks on a failure. It also emits a READY marker at 07:30 UTC for the 08-27
 fetch and deadline markers at 6h and 2h before the 24h window closes at 23:54 UTC.
 It is session-scoped: it dies when this session ends.
+
+## Update 2026-09-05 07:36 UTC — `batch_fetch` is all-or-nothing
+
+Cleared `batch_fetch` alone on fetch `scheduled__2026-08-28T09:00`. It ran 07:32-07:36, exited
+`success`, and wrote **zero** objects to `openai_batch_results/dt=2026-08-27/`. Its log ends with:
+
+```
+cohort dt=2026-08-27: n=1261 in_progress=169 finalizing=181 completed=911
+                      validating=0 failed=0 expired=0 cancelling=0 cancelled=0 retrieve_error=0
+```
+
+**The task downloads nothing unless every batch in the cohort is complete.** 911 of 1,261 were
+ready and it still wrote nothing. This is the same "succeeds while downloading nothing" behavior
+the first handoff noted, now with the threshold pinned: it is the whole cohort, not a per-batch
+decision. Retrying costs about four minutes and is non-destructive, so the recipe is to retry
+until the cohort line reads all-complete rather than to guess the ready time.
+
+Also note the run's DAG-level state went back to `failed` immediately. That is **not** this fetch
+failing. It is the stale `batch_post.openai_batch_joined` (failed at try 15 on 2026-08-30) that has
+sat in the run since the outage. Read the task states, not the run state, on any of these
+half-recovered runs.
+
+Nothing failed or expired in the cohort at 7.7h of a 24h window, so the day is not at risk yet.
+Retry windows are armed at 11:30, 14:30, 17:30 and 20:30 UTC, all after the 09:00 scheduled fetch
+for dt=09-03 has had the slot.
