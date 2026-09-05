@@ -61,7 +61,7 @@ PROHIBITION = re.compile(
 TARGET_NUM = re.compile(r"to\s*~?\s*([0-9][0-9,]*)")
 BOOL_ASSIGN = re.compile(r"(spark\.[A-Za-z0-9_.]*[A-Za-z0-9])\s*=\s*(true|false)", re.I)
 SIZE_LITERAL = re.compile(r"^([0-9.]+)\s*([kmgt])?b?$", re.I)
-CONFIG_CALL = re.compile(r'^([+-])\s*\.config\(\s*"([^"]+)"\s*,\s*"?([^",)]+)"?')
+CONFIG_CALL = re.compile(r'^([+-])\s*\.config\(\s*"([^"]+)"\s*,\s*"?([^",)]+)"?', re.M)
 MAIN_PY = re.compile(r'"main_python_file_uri":\s*"[^"]*?(models/[^"]+\.py)"')
 
 
@@ -305,11 +305,11 @@ def attribution_failures(unit: dict, hours: dict, detectors: dict, torn: set, re
     seen = hours.get(dag, {})
     out: dict[str, str] = {}
 
-    final_pre_fix = unit["last_pre_fix_date"]
-    if final_pre_fix and unit["last_fired"] and unit["last_fired"] < final_pre_fix:
+    measured_pre_fix_quiet = unit["pre_fix_quiet_dates"]
+    if measured_pre_fix_quiet:
         out["pre_fix_quiet"] = (
-            f"last fired {unit['last_fired']}, already silent on {final_pre_fix}, the final "
-            f"sweep-date before the fix was live from {live} (merged {applied}); "
+            f"last fired {unit['last_fired']}, then measured and silent on "
+            f"{measured_pre_fix_quiet} before the fix was live from {live} (merged {applied}); "
             "it had stopped on its own and the fix cannot be credited"
         )
     missing = [d for d in quiet if d not in seen]
@@ -380,6 +380,9 @@ def analyse(rows: list[dict], repo: str, min_quiet: int, main_ref: str,
                  if (d >= effective_from if effective_from else d > applied)]
         before = [d for d in surface_dates if d < watch_from]
         quiet = trailing_quiet(after, set(firing))
+        measured = hours.get(dag_id, {})
+        pre_fix_quiet = ([d for d in trailing_quiet(before, set(firing)) if d in measured]
+                         if firing else [])
         outcome = next((e["state"] for e in reversed(hist)
                         if e.get("state") in ("resolved", "fix_not_working")), "watching")
         rec = parse_recommendation(fix_text_for(hist))
@@ -399,6 +402,7 @@ def analyse(rows: list[dict], repo: str, min_quiet: int, main_ref: str,
             "fired_after_fix": len([d for d in firing if d > applied]),
             "quiet_dates": len(quiet),
             "quiet_date_list": quiet,
+            "pre_fix_quiet_dates": pre_fix_quiet,
             "exec_h_before": "",
             "exec_h_after": "",
             "recommended_keys": ",".join(rec["primary"]),
@@ -440,6 +444,7 @@ def analyse(rows: list[dict], repo: str, min_quiet: int, main_ref: str,
             else:
                 u["verdict"], u["verdict_detail"] = score_alignment(u["_rec"], shipped)
         u["quiet_date_list"] = ",".join(u["quiet_date_list"])
+        u["pre_fix_quiet_dates"] = ",".join(u["pre_fix_quiet_dates"])
         del u["_rec"]
     return {
         "dates": all_dates,
@@ -470,8 +475,7 @@ def forecast(result: dict) -> dict:
     units = result["units"]
     need = result["min_quiet"]
     blind = [u for u in units if not u["sweep_dates_after_fix"]]
-    pre_fix = [u for u in units if u["last_pre_fix_date"] and u["last_fired"]
-               and u["last_fired"] < u["last_pre_fix_date"]]
+    pre_fix = [u for u in units if u["pre_fix_quiet_dates"]]
     still_firing = [u for u in units if u["fired_after_fix"]]
     live = [u for u in units if u not in pre_fix and u not in still_firing]
     short = max((need - u["quiet_dates"] for u in units if not u["eligible"]), default=0)
@@ -509,7 +513,7 @@ def print_forecast(result: dict, fc: dict) -> None:
     print("SAMPLE FORECAST")
     print(f"  attributed findings                          {len(units)}")
     print(f"  no post-fix sweep-dates observed yet         {len(fc['no_post_fix_dates'])}")
-    print(f"  already silent on the last pre-fix sweep     {len(fc['pre_fix_quiet'])}   "
+    print(f"  measured and silent before the fix was live   {len(fc['pre_fix_quiet'])}   "
           f"(unattributable however long they stay quiet)")
     print(f"  still firing after their fix                 {len(fc['still_firing'])}   "
           f"(scoreable now as fix_not_working)")
