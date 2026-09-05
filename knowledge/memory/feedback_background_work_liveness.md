@@ -43,3 +43,26 @@ Whenever ANY background/async task is outstanding — `Agent(run_in_background:t
   plausible-looking negative, so nothing was misreported — but that is the difference between a `&&`/`||`
   test and a plain command, not a difference in my behaviour. **The habit is still live. Write the command
   bare; use `with_deadline()` from `.claude/scripts/preflight.sh` when a deadline is genuinely needed.**
+
+## 2026-09-05 — a finished workflow reads as a STALL; stop the monitor on completion
+
+`stall_monitor.sh` exits on two conditions only: the watch dir disappears, or mtimes go idle. **A
+workflow that COMPLETES normally leaves its transcript dir in place and its mtimes stop advancing, so
+the monitor fires STALL 15 minutes later on healthy, finished work.** This produced three false alarms
+in one session, each costing a liveness check to dismiss.
+
+**Fix: `TaskStop` the monitor in the same turn you handle the completion notification.** The monitor's
+task id is in the `Monitor` result; hold it alongside the workflow's. Do not rely on the monitor to
+self-terminate.
+
+**The real hang looks different and the distinction matters:** on 2026-09-05 two workflows sat idle
+~12 hours with one agent outstanding each (47/48 and 4/5 started-vs-result in `journal.jsonl`) while
+`TaskOutput(block:false)` still reported `running`. **Cause: expired gcloud credentials.** Agent tool
+calls to `bq_run.sh`, `gcloud storage` and `gsutil` fail with "Reauthentication failed. cannot prompt
+during non-interactive execution" and the agent hangs rather than erroring out. `gcloud auth login`
+cleared it and the resumed runs completed. **So on a long-running data workflow, check
+`gcloud auth list` before diagnosing anything else**, and prefer `Workflow({scriptPath, resumeFromRunId})`
+after `TaskStop` — completed agents replay from cache and only the stuck one re-runs.
+
+**Discriminator:** compare `grep -c '"type":"started"'` against `'"type":"result"'` in the workflow's
+`journal.jsonl`. Equal counts plus idle mtimes means finished, not hung. Unequal plus idle means hung.
