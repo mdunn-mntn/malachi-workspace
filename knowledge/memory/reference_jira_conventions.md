@@ -335,3 +335,22 @@ Access it needs, and why both halves matter:
 
 Credentials live on the Astro prod deployment as the secret env vars `JIRA_API_TOKEN` and
 `JIRA_USER_EMAIL`. Rotating the token is an Astro variable edit, not a code change.
+
+## 2026-09-06 — never name a branch from a guessed AUDI key; file first
+
+**Twice in two days I named a branch and a ticket folder from a key I assumed was next, and both were
+already taken.** `AUDI-1330` -> a triage Bug (`[TRIAGE] guid_geos_summary_to_integration/...`);
+`AUDI-1352` -> another (`[TRIAGE] mntn_match_tpa_export_prep/batch_prep - unclassified`). The real
+keys turned out to be **AUDI-1351** and **AUDI-1354**.
+
+**Cause: the debugger's triage service account (`audi-triage-reporter@mountain.com`) files into AUDI
+continuously, so the key space moves under you and any guessed number is probably taken.**
+
+**Rule: `POST /rest/api/2/issue` FIRST, then name the branch, the worktree and the ticket folder from
+the key it returns.** Filing costs one call and lands `status: Backlog`, which has no board impact —
+there is no reason to defer it. Where a branch is already pushed, leave it (renaming breaks an open
+PR) and put the correct key on the PR title and the ticket folder, then say so in `summary.md`.
+
+**Check before assuming:** `curl -s -u "$USER:$JIRA_API_TOKEN"
+"$JIRA_BASE_URL/rest/api/2/issue/AUDI-XXXX?fields=summary"` returns `errorMessages` when the key is
+free. [[reference_airflow_ti]]
