@@ -1235,3 +1235,66 @@ until the 2026-09-07 sweep gives three full days each side.
 n_before=1.
 
 Verdict doc: `tickets/audi_1325_debugger_optimizer_adoption/outputs/audi_1325_regression_verdict_2026_09_05.md`.
+
+## 2026-09-05 — ipdsc_ds_49 settled: the config change, not the volume, and revert it
+
+**Advertisers were NOT the cause.** Delivering advertisers were flat through the step: 7,005-7,180/day
+from 08-18 to 09-04, with 7,145 on 09-01 itself, the day of the LOWEST impressions (57.6M) and lowest
+media spend in the window. 15 advertisers had a first-ever delivery on 09-01, 0.2% of the base. The raw
+upstream bid stream FELL 8% then 12% across the step. **The growth is 3-4 supply publishers jumping
+5-20x overnight** (Samsung TV+ News 0.55B -> 4.21B events, Paramount Comedy 1.98B -> 6.55B, LG
+Entertainment 1.47B -> 2.21B) while every other publisher stayed flat and the publisher count never
+moved (203-208). Likeliest cause is a **site-to-publisher mapping edit, not demand**: one operator
+edited 53 rows in a 27-minute session at midnight UTC on 09-01, touching Pluto TV, Vizio WatchFree and
+Xumo bundles. That is a LEAD, not a conclusion; settling it needs the Postgres change history.
+
+**The data contains a natural control that separates volume from config.** The job reads a rolling
+7-day window, so the 09-01 step entered gradually and **two runs (09-01, 09-02) carried +7% and +15%
+input while still on the OLD 128 MiB setting.** Their unit cost was 0.272 and 0.257 DCU-h/GiB, dead
+inside the pre-change band of 0.235-0.279 across 30 runs. Volume rose 15%, unit cost did not move.
+Then the setting landed and unit cost went **0.338, 0.408, 0.465** — 30%, 58%, 80% above the pre-change
+mean. **Attribution of the 17.6 DCU-h rise: ~4.7 volume, ~12.9 the config change.** One quarter volume,
+three quarters the setting.
+
+**The mechanical fingerprint volume cannot fake:** work chunks per unit of input sat at 12.3-12.8 across
+all 30 pre-change runs while input itself varied 37%, then jumped to 26.7 the instant the setting landed
+and stayed. Only halving `maxPartitionBytes` does that. Machines grabbed under autoscaling went 48 -> 116.
+
+**Both things the change bought are worth nothing here.**
+- **The spill it eliminated was never billed.** Dataproc's shuffle-storage meter is provisioned PER
+  MACHINE, not per byte spilled — an exact fixed multiple of the machine meter on every run. So the 94%
+  spill cut (24.1 GB disk / 457 GB memory -> 1.4 / 19) recovered nothing on any invoice line, and that
+  meter rose 81% alongside the machine meter.
+- **The speed win evaporated.** Wall-clock went 335s, 358s, 423s against a pre-change average of ~438s.
+  We now pay 2.5x for a job finishing at roughly its original speed. Even at its best the 1.4 minutes
+  bought nothing: the DAG then sits behind an 8-hour sensor waiting on an external file, idling 1-3
+  hours every recent run, and the last sibling to finish was `ipdsc_ds_35` on 7 of the last 9 runs.
+
+**RECOMMENDATION: revert `ipdsc_ds_49` to the 128 MiB default.** Delete the one added line, or revert
+only that file's hunk of commit `9ae505a` — **do NOT revert the whole commit**, it also carries an
+unrelated `conv_log_derived_ip` change that is fine. Cost of being wrong: spill returns to ~30 GB disk
+/ ~450 GB memory and the job takes a minute or two longer, neither billed, neither moving the DAG. The
+residual risk is that the old setting has never run at today's volumes (52.3 GiB max previously, ~71
+GiB at saturation) and spill grows faster than linearly, so the revert run will spill more than it ever
+has (~33 GB over ~63 machines, half a GB each, nowhere near a disk limit). That knee is unmeasured.
+**Reject the alternatives:** capping machines cannot work because ~60% of the increase is real task
+time, not idle machines; 96 MiB is a guess with no measured baseline at any volume.
+
+**Correction to the framing everyone was using: `ipdsc_ds_49` is a TASK inside the DAG
+`tpa_ipdsc_export`, not a DAG.** It is metered on its own, so its cost is not mixed with its siblings.
+
+**What it does, in plain terms:** nightly, it reads 7 days of MNTN's CTV ad-auction records and reduces
+them to one list — for each home IP, which streaming channels that household had an MNTN ad opportunity
+on. Last night: **93.8M addresses across 207 channels**. It is one of 20 such lists merged into the
+nightly file that tells the ad-buying system what is known about each address. **Nothing in live
+campaign setup references it** (0 hits across all 425,054 targeting-segment definitions and all 68,265
+audience definitions), but a hard failure blocks that nightly file for all 20 lists and pages Targeting.
+
+**Unexplained and worth watching:** unit cost is STILL rising at a byte-identical config (0.338 ->
+0.408 -> 0.465). Leading candidate is that smaller chunks weaken the pre-grouping step so more rows
+cross the network, a penalty that grows with volume. Also, both post-change runs read more data than
+the old setting was ever observed handling, so a cost nonlinearity above 52.3 GiB cannot be excluded
+from observation alone.
+
+Full write-up:
+`tickets/audi_1325_debugger_optimizer_adoption/outputs/audi_1325_ipdsc_ds_49_explained_2026_09_05.md`.
