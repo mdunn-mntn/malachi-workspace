@@ -492,3 +492,40 @@ unverified from GCS; the dbt `record_count` pass is the evidence that it is whol
 
 Six days done or in flight: 08-27 and 08-28 recovered, 09-03 and 09-04 healthy. Remaining:
 08-29, 08-30, 08-31, 09-01, then 09-02 last.
+
+## Update 2026-09-06 23:15 UTC — dt=2026-08-29 submitted clean, three days done
+
+`batch_submit` for dt=2026-08-29 succeeded on the first attempt, 22:02-23:14, writing all
+**1,021 of 1,021** receipts with no quota error. `batch_cleanup_1` ran first and made the room.
+
+That is the difference from dt=08-28, which needed a retry: **clear `batch_cleanup_1` together with
+`batch_submit`, not `batch_submit` alone.** The sweep is the first task in the chain for a reason,
+and skipping it is what put 08-28 into a partial upload against a full shared pool.
+
+Cohort probe first: `n=653 completed=164 expired=489`, the same shape as 08-28's 147/644. Receipts
+backed up byte-for-byte (3,347,889 bytes both sides, 653 objects) to
+`_backups/audi_1321/openai_batch_submissions_dt=2026-08-29_20260906/`, then deleted.
+
+Batches were created 22:02-23:14, so they complete around 05:00-06:15 UTC on 09-07. The watcher
+carries a 06:30 marker: `batch_transition` then `batch_fetch` on fetch `scheduled__2026-08-30T09:00`,
+no downstream, before the 09:00 slot.
+
+### Verified now that the credential is back
+
+| partition | size | verdict |
+|---|---|---|
+| `data_source_id=19/dt=2026-09-04` | 67.9 GiB | healthy |
+| `data_source_id=19/dt=2026-09-05` | 68.4 GiB | healthy |
+| `targeted_signal_domain/dt=2026-09-04` | 37.9 GiB | healthy |
+| `targeted_signal_domain/dt=2026-09-05` | 39.3 GiB | healthy |
+| `product_categorization/dt=2026-08-27` | 12.47 GiB | recovered |
+| `product_categorization/dt=2026-08-28` | 12.45 GiB | recovered |
+
+Two consecutive healthy daily DS19 partitions with no intervention, and the two recovered days come
+out within 0.02 GiB of each other on nearly equal batch counts, which is the consistency check the
+sizes were never going to give on their own.
+
+**The GCS credential expires roughly every 17 hours** and its failure mode is a silent empty
+listing, so re-read anything measured near the boundary.
+
+Done: 08-27, 08-28, 08-29 submitted. Remaining: 08-30, 08-31, 09-01, then 09-02 last.
