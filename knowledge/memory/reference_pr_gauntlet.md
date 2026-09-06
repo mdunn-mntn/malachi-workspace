@@ -132,3 +132,20 @@ that shadows the SDK's name, isort classifies `from openai import ...` as first-
 `from openai_wrapper...`, which is the opposite of what the third-party grouping would suggest. Reinforces the
 round-0 rule already in the skill: outside this workspace, read the target repo's `.github/workflows/pr_*.y*ml` and
 run every command that job runs, not just the ones you recognize.
+
+## 2026-09-06 — I fabricated the base SHA twice in one session; never type one
+
+Both times I had only the short SHA from `git rev-parse --short` and **invented the remaining
+characters** to fill a 40-char field. On AUDI-1352 the invented base
+(`3b5a4586e1d0c2f1f2c3b8b7d2a9e5c4f8a1b0d3`, real one `3b5a458f13b6b0ca621984c069179d060d2b2231`)
+did not exist in the repo, and **the gauntlet returned PASS anyway** — 3 agents, 1 round, `clean:
+false`, on a tier that runs 3 rounds with 6 refuters each. A PASS on a bad base is worse than an
+error, because it looks like a review happened.
+
+**Rule: never write a SHA by hand. Always substitute it — `"base": "$(git -C <repo> rev-parse
+origin/main)"` — or run `git rev-parse` and paste the exact output in the same turn.**
+
+**Tell: a `thorough` run that reports `rounds_run: 1` and a low agent count did not review the
+diff.** Check `rounds_run` against the tier (fast 1, medium 2, thorough 3) and the agent count
+against reviewers x refuters before believing a verdict. `git cat-file -e <sha>` settles whether the
+base was real.
