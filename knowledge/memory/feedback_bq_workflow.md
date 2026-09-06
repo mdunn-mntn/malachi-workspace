@@ -150,3 +150,17 @@ Three separate failures before a single query ran. All three look like broken SQ
 
 Also: `gcloud` auth expiring is NOT the MCP Drive connector expiring — they fail independently and on the
 same day looked like one problem.
+
+**`breakglass-editor` covers a BigQuery table rebuild (verified 2026-09-05).** `roles/editor` on
+`mntn-prj-prod-00` includes `bigquery.tables.update`, so
+`bq --location=us-central1 update --external_table_definition=<def.json> <project>:<dataset>.<table>`
+succeeds under it. Request -> ACTIVE took under a minute:
+`gcloud pam grants create --entitlement=breakglass-editor --project=mntn-prj-prod-00
+--location=global --requested-duration=3600s --justification="..."`. Poll `gcloud pam grants describe
+<grant> --format="value(state)"` for `ACTIVE`; the create call returns `APPROVAL_AWAITED`.
+
+**Back the old definition up first** (`bq show --format=prettyjson <table> > before.json`). An
+`--external_table_definition` update REPLACES the whole definition, so a mistake loses the schema with
+no undo. Rebuilding `optimizer.optimization_ledger` this way took it from 16 pinned fields to the full
+18 the writer emits; `prev_exec_h` went from "Unrecognized name" to resolving on 510 of 1,875 rows,
+and `partial` became queryable for the first time.

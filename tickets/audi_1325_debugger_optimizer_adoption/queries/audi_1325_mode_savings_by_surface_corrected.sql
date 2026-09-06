@@ -7,6 +7,7 @@ WITH daily AS (
   FROM `mntn-prj-prod-00.optimizer.optimization_ledger`
   WHERE exec_h IS NOT NULL
     AND COALESCE(state, '') != 'applied'
+    AND NOT COALESCE(partial, FALSE)
   GROUP BY 1, 2, 3
 ), fix_rows AS (
   SELECT
