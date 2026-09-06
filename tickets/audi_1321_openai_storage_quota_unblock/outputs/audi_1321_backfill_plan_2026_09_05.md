@@ -459,3 +459,36 @@ slice is the only lever. Tonight it peaked near 200 GiB holding four days of inp
 after its batch is created. Cutting it to a few hours via a DAG-level
 `"{{ var.value.get('openai_input_file_max_age_hours', '26') }}"` is the change worth making, and it
 needs no image deploy once the DAG passes the variable.
+
+## Update 2026-09-06 09:05 UTC — dt=2026-08-28 recovered, and the max_dt false failure is real
+
+dt=2026-08-28 is complete. `batch_transition` 04:12-04:20 flagged all 1,241 receipts
+(`completed=1241`, nothing expired), `batch_fetch` 04:24-06:01 downloaded 1,241 of 1,241, and
+`batch_post` ran clean 06:05-08:14.
+
+`batch_test.test_product_categorization` went `up_for_retry` twice. **Reading which assertion
+failed is what settled it, and this is the case the earlier warning was written for:**
+
+```
+4 of 6 FAIL 1 product_categorization__max_dt
+6 of 6 PASS   product_categorization__record_count
+Done. PASS=4 WARN=1 ERROR=1 SKIP=0 TOTAL=6
+```
+
+Only the wall-clock freshness assertion failed, and it cannot pass on a dt nine days old.
+`record_count`, the assertion that compares the partition to the joined table, **passed**, so the
+day is complete. Marked `success` by hand, and the run closed green.
+
+Contrast with 2026-09-04, when the same task failed on `record_count` and marking it success let a
+408 MiB partition through. Same task, same symptom, opposite verdict. Read the assertion names.
+
+Note: `PATCH .../taskInstances/{task}` with `update_mask=new_state` sets the state, but the same
+call with `update_mask=note` did not persist a note on this deployment. The reason lives here
+instead.
+
+**GCS credential expired again** roughly 17 hours after `gcloud auth login`, so
+`gcloud storage ls/du` is back to returning empty listings. dt=08-28's partition size is
+unverified from GCS; the dbt `record_count` pass is the evidence that it is whole.
+
+Six days done or in flight: 08-27 and 08-28 recovered, 09-03 and 09-04 healthy. Remaining:
+08-29, 08-30, 08-31, 09-01, then 09-02 last.
