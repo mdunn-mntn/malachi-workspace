@@ -1298,3 +1298,25 @@ from observation alone.
 
 Full write-up:
 `tickets/audi_1325_debugger_optimizer_adoption/outputs/audi_1325_ipdsc_ds_49_explained_2026_09_05.md`.
+
+## 2026-09-06 — a detector fires on a symptom; MNTN is billed on machine-hours. Rank on the bill.
+
+**The `ipdsc_ds_49` case generalizes and it is the most useful thing this program has learned.** Every
+detector fires on a SYMPTOM (disk spill, skew, stragglers, shuffle fetch wait, idle executors). Dataproc
+bills **machine-time**, and the two are not the same quantity. Fixing a symptom can RAISE the bill:
+halving `maxPartitionBytes` cut spill 94% and doubled the work chunks, so autoscaling took 48 -> 116
+machines and cost went 2.5x for a job that now finishes at its original speed.
+
+**Worse, the symptom itself was never billed.** Dataproc's shuffle-storage meter is provisioned PER
+MACHINE, not per byte spilled — an exact fixed multiple of the machine meter on every run. So a spill
+fix recovers nothing on any invoice line by construction, and the meter rises with the machine count
+the fix causes.
+
+**RULE: a finding's rank must come from its effect on machine-hours, not from the size of the symptom.**
+A recommendation is only worth shipping if we can say which meter it moves and in which direction. Where
+we cannot, say so rather than ranking by spill GB.
+
+**Immediate exposure:** on the 2026-09-03 ledger, of 175 open findings `shuffle_fetch_wait` is 70 and
+`disk_spill` 42, together two-thirds of everything open. If spill is structurally unbilled here, that
+family has been ranking work by a quantity nobody pays for. Audit every detector against the meters
+before shipping more of them. [[reference_dataproc_eventlog_profiling]]
